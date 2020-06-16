@@ -40,5 +40,6 @@ urlpatterns = [
     url(r'^redoc/$', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('admin/', admin.site.urls),
     path('v1/auth/', include('breathecode.authenticate.urls', namespace='v1')),
-    path('v1/academy/', include('breathecode.academy.urls', namespace='v1')),
+    path('v1/admissions/', include('breathecode.admissions.urls', namespace='v1')),
+    path('v1/assigments/', include('breathecode.assignments.urls', namespace='v1')),
 ]

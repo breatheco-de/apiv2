@@ -44,8 +44,9 @@ INSTALLED_APPS = [
     'drf_yasg',
     
     'breathecode.authenticate',
-    'breathecode.academy',
+    'breathecode.admissions',
     'breathecode.events',
+    'breathecode.assignments',
 ]
 
 REST_FRAMEWORK = {
