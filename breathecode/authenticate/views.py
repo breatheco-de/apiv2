@@ -45,7 +45,7 @@ def get_github_token(request):
     if url == None:
         raise ValidationError("No callback URL specified")
 
-    url = base64.b64decode(url)
+    url = base64.b64decode(url).decode("utf-8")
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID'),
         "redirect_uri": os.getenv('GITHUB_REDIRECT_URL')+"?url="+url,
