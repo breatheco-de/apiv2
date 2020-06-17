@@ -1,8 +1,8 @@
-import os, requests
+import os, requests, base64
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.http import HttpResponseRedirect
-from rest_framework.exceptions import APIException
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import User, Group
@@ -41,9 +41,14 @@ def get_groups(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_github_token(request):
+    url = request.query_params.get('url', None)
+    if url == None:
+        raise ValidationError("No callback URL specified")
+
+    url = base64.b64decode(url)
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID'),
-        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL'),
+        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL')+"?url="+url,
         "scope": 'user repo read:org',
     }
     return HttpResponseRedirect(redirect_to='https://github.com/login/oauth/authorize?'+urlencode(params))
