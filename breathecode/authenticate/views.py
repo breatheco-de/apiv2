@@ -61,6 +61,10 @@ def save_github_token(request):
     if error:
         raise APIException("Github returned error message")
 
+    url = request.query_params.get('url', None)
+    if url == None:
+        raise ValidationError("No callback URL specified")
+
     payload = {
         'client_id': os.getenv('GITHUB_CLIENT_ID'),
         'client_secret': os.getenv('GITHUB_SECRET'),
@@ -101,7 +105,7 @@ def save_github_token(request):
 
             token, created = Token.objects.get_or_create(user=user)
 
-            return HttpResponseRedirect(redirect_to='https://breatheco.de/login?token='+token.key)
+            return HttpResponseRedirect(redirect_to=url+'?token='+token.key)
         else:
             print("Github error: ", resp.status_code)
             print("Error: ", resp.json())
