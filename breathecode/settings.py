@@ -15,6 +15,8 @@ import os, django_heroku, dj_database_url
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
@@ -37,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    'django.contrib.postgres',
+
     'rest_framework',
     'rest_framework.authtoken',
 
@@ -168,4 +172,9 @@ CORS_ORIGIN_ALLOW_ALL = True
 # https://warehouse.python.org/project/whitenoise/
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-django_heroku.settings(locals())
+SITE_ID=1
+
+ssl_require = os.getenv('ENV') != 'development'
+_locals = locals()
+django_heroku.settings(_locals)
+_locals['DATABASES']['default'] = dj_database_url.config(conn_max_age=django_heroku.MAX_CONN_AGE, ssl_require=ssl_require)
