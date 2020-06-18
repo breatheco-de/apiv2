@@ -15,12 +15,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from breathecode.authenticate.views import get_users, get_groups, CustomAuthToken, get_github_token, save_github_token
+from breathecode.authenticate.views import (
+    get_users, get_users_me, get_groups, CustomAuthToken, get_github_token, save_github_token
+)
 from rest_framework.authtoken import views
 
 app_name='authenticate'
 urlpatterns = [
     path('user/', get_users),
+    path('user/me', get_users_me),
     path('group/', get_groups),
     path('token/', CustomAuthToken.as_view()),
     path('github/', get_github_token),

@@ -15,6 +15,7 @@ requests = "*"
 psycopg2-binary = "*"
 dj-database-url = "*"
 django-heroku = "*"
+django-cors-headers = "*"
 
 [requires]
 python_version = "3.8"

@@ -2,7 +2,7 @@ import os, requests, base64
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.http import HttpResponseRedirect
-from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from django.contrib.auth.models import User, Group
@@ -22,6 +22,18 @@ class CustomAuthToken(ObtainAuthToken):
             'user_id': user.pk,
             'email': user.email
         })
+
+@api_view(['GET'])
+def get_users_me(request):
+
+    try:
+        request.user
+    except User.DoesNotExist:
+        raise PermissionDenied("You don't have a user")
+
+    queryset = User.objects.all().order_by('-date_joined')
+    users = UserSerializer(queryset, many=True)
+    return Response(users.data)
 
 # Create your views here.
 @api_view(['GET'])
