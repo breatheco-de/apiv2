@@ -4,15 +4,22 @@ from django.db import models
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
+class GithubSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    avatar_url = serpy.Field()
+    name = serpy.Field()
 
 # Create your models here.
 class UserSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
-    username = serpy.Field()
     email = serpy.Field()
-    # groups = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    github = GithubSmallSerializer()
 
 
 class GroupSerializer(serpy.Serializer):

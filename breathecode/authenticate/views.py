@@ -31,8 +31,7 @@ def get_users_me(request):
     except User.DoesNotExist:
         raise PermissionDenied("You don't have a user")
 
-    queryset = User.objects.all().order_by('-date_joined')
-    users = UserSerializer(queryset, many=True)
+    users = UserSerializer(request.user)
     return Response(users.data)
 
 # Create your views here.
