@@ -1,6 +1,29 @@
 from django.db import models
 from phonenumber_field.modelfields import PhoneNumberField
 
+ACTIVE = '1'
+INNACTIVE = '2'
+UKNOWN = '0'
+AUTOMATION_STATUS = (
+    (ACTIVE, 'Active'),
+    (INNACTIVE, 'Innactive'),
+    (UKNOWN, 'Uknown'),
+)
+class Automation(models.Model):
+    slug = models.CharField(max_length=150, blank=True, default='', help_text="unique string id that is used to connect incoming leads to automations")
+    name = models.CharField(max_length=100)
+    acp_id = models.PositiveSmallIntegerField(unique=True, help_text="ID asigned in active campaign")
+    status = models.CharField(max_length=1, choices=AUTOMATION_STATUS, default=UKNOWN, help_text="2 = inactive, 1=active")
+    entered = models.PositiveSmallIntegerField(help_text="How many contacts have entered")
+    exited = models.PositiveSmallIntegerField(help_text="How many contacts have exited")
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        tag_imporance = self.slug if self.slug != '' else "unknown"
+        return f"{tag_imporance} -> {self.name}"
+
 STRONG = 'STRONG'
 SOFT = 'SOFT'
 DISCOVERY = 'DISCOVERY'
@@ -13,12 +36,16 @@ TAG_TYPE = (
 )
 class Tag(models.Model):
     slug = models.CharField(max_length=150, unique=True)
-    tag_type = models.CharField(max_length=15, choices=TAG_TYPE, null=True, default=None, help_text="This will be use to determine the type of lead (strong, soft, etc.), if a lead has a tag with type=strong it will be added to the automation for strong leads")
-    acp_id = models.IntegerField(help_text="The id coming from active campaign")
+    tag_type = models.CharField(max_length=15, choices=TAG_TYPE, null=True, default=None, help_text="The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON")
+    acp_id = models.IntegerField(unique=True, help_text="The id coming from active campaign")
     subscribers = models.IntegerField()
+    automation = models.ForeignKey(Automation, on_delete=models.CASCADE, null=True, default=None, help_text="Leads that contain this tag will be asociated to this automation")
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.slug} ({str(self.id)})'
     
 class Contact(models.Model):
     first_name = models.CharField(max_length=150)
@@ -65,7 +92,12 @@ class FormEntry(models.Model):
     utm_medium = models.CharField(max_length=50, blank=True, null=True, default=None)
     utm_campaign = models.CharField(max_length=50, blank=True, null=True, default=None)
     referral_key = models.CharField(max_length=50, blank=True, null=True, default=None)
+    
     tags = models.CharField(max_length=100, blank=True, default='')
+    automations = models.CharField(max_length=100, blank=True, default='')
+
+    tag_objects = models.ManyToManyField(Tag, blank=True)
+    automation_objects = models.ManyToManyField(Automation, blank=True)
 
     street_address = models.CharField(max_length=250, null=True, default=None)
     country = models.CharField(max_length=30)

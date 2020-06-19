@@ -1,6 +1,9 @@
 from django.contrib import admin
 from .models import Academy, Certificate, Cohort, CohortUser
 # Register your models here.
+admin.site.site_header = "BreatheCode"
+admin.site.index_title = "Administration Portal"
+admin.site.site_title = "Administration Portal"
 
 @admin.register(Academy)
 class AcademyAdmin(admin.ModelAdmin):
@@ -22,3 +25,4 @@ class CohortUserAdmin(admin.ModelAdmin):
 @admin.register(Cohort)
 class CohortAdmin(admin.ModelAdmin):
     list_display = ('id', 'slug', 'name', 'created_at')
+
