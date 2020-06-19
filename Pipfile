@@ -19,6 +19,8 @@ django-cors-headers = "*"
 django-phonenumber-field = {extras = ["phonenumberslite"], version = "*"}
 activecampaign-python = "*"
 schema = "*"
+mixer = "*"
+pytest-django = "*"
 
 [requires]
 python_version = "3.8"
@@ -27,3 +29,4 @@ python_version = "3.8"
 start="python manage.py runserver"
 migrate="python manage.py migrate"
 makemigrations="python manage.py makemigrations"
+test="pytest"
