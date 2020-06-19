@@ -1,5 +1,5 @@
 from django.contrib import admin
-from breathecode.authenticate.models import CredentialsGithub
+from .models import CredentialsGithub
 # Register your models here.
 
 @admin.register(CredentialsGithub)

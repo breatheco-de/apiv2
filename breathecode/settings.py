@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
 
+    'phonenumber_field',
+
     'drf_yasg',
     'corsheaders',
     
@@ -51,11 +53,13 @@ INSTALLED_APPS = [
     'breathecode.admissions',
     'breathecode.events',
     'breathecode.assignments',
+    'breathecode.marketing',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'EXCEPTION_HANDLER': 'breathecode.utils.breathecode_exception_handler',
     'PAGE_SIZE': 10,
     'DEFAULT_VERSION': 'v1',
     'DEFAULT_AUTHENTICATION_CLASSES': [

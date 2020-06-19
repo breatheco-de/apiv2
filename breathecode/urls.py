@@ -42,4 +42,5 @@ urlpatterns = [
     path('v1/auth/', include('breathecode.authenticate.urls', namespace='v1')),
     path('v1/admissions/', include('breathecode.admissions.urls', namespace='v1')),
     path('v1/assigments/', include('breathecode.assignments.urls', namespace='v1')),
+    path('v1/marketing/', include('breathecode.marketing.urls', namespace='v1')),
 ]

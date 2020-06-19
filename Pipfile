@@ -16,6 +16,9 @@ psycopg2-binary = "*"
 dj-database-url = "*"
 django-heroku = "*"
 django-cors-headers = "*"
+django-phonenumber-field = {extras = ["phonenumberslite"], version = "*"}
+activecampaign-python = "*"
+schema = "*"
 
 [requires]
 python_version = "3.8"

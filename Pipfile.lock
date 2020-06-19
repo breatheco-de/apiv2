@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "b25142a9b48138ee660963f3396efb0d672d53a6f1bd137b59beb880318262fa"
+            "sha256": "e595a17ca345f2a8b78278cfae0d7b4187ac08d3943c4b315c3895c92ca1f04f"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -16,13 +16,28 @@
         ]
     },
     "default": {
+        "activecampaign-python": {
+            "hashes": [
+                "sha256:ed0e07c6db3f16604e9023a55274ba0047cd23cd9a656869722154a0be981d17"
+            ],
+            "index": "pypi",
+            "version": "==1.0.2"
+        },
         "asgiref": {
             "hashes": [
-                "sha256:7ea1922cfd63c4ac7687069f8bb0e7768ab9b7fc78ff227577d4240b52d6cb7a",
-                "sha256:f803d8b4962cc338d48a72fa498c52f913b160eb16712e2ecdf2a81904daead9"
+                "sha256:7e51911ee147dd685c3c8b805c0ad0cb58d360987b56953878f8c06d2d1c6f1a",
+                "sha256:9fc6fb5d39b8af147ba40765234fa822b39818b12cc80b35ad9b0cef3a476aed"
             ],
             "markers": "python_version >= '3.5'",
-            "version": "==3.2.9"
+            "version": "==3.2.10"
+        },
+        "babel": {
+            "hashes": [
+                "sha256:1aac2ae2d0d8ea368fa90906567f5c08463d98ade155c0c4bfedd6a0f7160e38",
+                "sha256:d670ea0b10f8b723672d3a6abeb87b565b244da220d76b4dba1b66269ec152d4"
+            ],
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
+            "version": "==2.8.0"
         },
         "certifi": {
             "hashes": [
@@ -37,6 +52,14 @@
                 "sha256:fc323ffcaeaed0e0a02bf4d117757b98aed530d9ed4531e3e15460124c106691"
             ],
             "version": "==3.0.4"
+        },
+        "contextlib2": {
+            "hashes": [
+                "sha256:01f490098c18b19d2bd5bb5dc445b2054d2fa97f09a4280ba2c5f3c394c8162e",
+                "sha256:3355078a159fbb44ee60ea80abd0d87b80b78c248643b49aa6d94673b413609b"
+            ],
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
+            "version": "==0.6.0.post1"
         },
         "coreapi": {
             "hashes": [
@@ -83,6 +106,17 @@
             ],
             "index": "pypi",
             "version": "==0.3.1"
+        },
+        "django-phonenumber-field": {
+            "extras": [
+                "phonenumberslite"
+            ],
+            "hashes": [
+                "sha256:2ca3bb0ada0ebc164bd903a981a34f1202a4294006e520b0da961bd7ce9f20a4",
+                "sha256:d4580cc3352f4433962825f9927e6669852c1b40ec484fcb5a74064dabc1201a"
+            ],
+            "index": "pypi",
+            "version": "==4.0.0"
         },
         "djangorestframework": {
             "hashes": [
@@ -185,6 +219,13 @@
             ],
             "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
             "version": "==20.4"
+        },
+        "phonenumberslite": {
+            "hashes": [
+                "sha256:6e1d31d8a5ad1fe280c3f7ba5b9c08da82245d59946ee06856712ef704f59e19",
+                "sha256:7e101c2d0be6ead83e2706c355aaba236df97e9a7b78aed5bda5d4b0eee11178"
+            ],
+            "version": "==8.12.5"
         },
         "psycopg2": {
             "hashes": [
@@ -295,6 +336,14 @@
             ],
             "markers": "python_version < '3.9' and platform_python_implementation == 'CPython'",
             "version": "==0.2.0"
+        },
+        "schema": {
+            "hashes": [
+                "sha256:3a03c2e2b22e6a331ae73750ab1da46916da6ca861b16e6f073ac1d1eba43b71",
+                "sha256:b536f2375b49fdf56f36279addae98bd86a8afbd58b3c32ce363c464bed5fc1c"
+            ],
+            "index": "pypi",
+            "version": "==0.7.2"
         },
         "serpy": {
             "hashes": [
