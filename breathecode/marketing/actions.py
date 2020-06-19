@@ -4,7 +4,7 @@ from .models import FormEntry, Tag
 from schema import Schema, And, Use, Optional, SchemaError
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from activecampaign.client import Client
-client = Client(os.getenv('ACTIVE_CAMPAIGN_KEY'), os.getenv('ACTIVE_CAMPAIGN_URL'))
+client = Client(os.getenv('ACTIVE_CAMPAIGN_URL'), os.getenv('ACTIVE_CAMPAIGN_KEY'))
 
 acp_ids = {
     "strong": "49",
