@@ -18,3 +18,11 @@ class CredentialsGithub(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+class CredentialsQuickBooks(models.Model):
+    quibooks_code = models.CharField(max_length=255, primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
+    quibooks_realmid = models.CharField(max_length=255)
+    
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)

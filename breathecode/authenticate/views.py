@@ -1,15 +1,18 @@
-import os, requests, base64
+import os, requests, base64, logging
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
+from django.conf import settings
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User, Group, AnonymousUser
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.authenticate.serializers import UserSerializer, AuthSerializer, GroupSerializer
 from rest_framework.authtoken.views import ObtainAuthToken
 from urllib.parse import urlencode
+
+logger = logging.getLogger('authenticate')
 
 class CustomAuthToken(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
@@ -26,7 +29,10 @@ class CustomAuthToken(ObtainAuthToken):
 @api_view(['GET'])
 def get_users_me(request):
 
+    logger.error("Get me just called")
     try:
+        if isinstance(request.user, AnonymousUser):
+            raise PermissionDenied("There is not user")    
         request.user
     except User.DoesNotExist:
         raise PermissionDenied("You don't have a user")
@@ -62,29 +68,44 @@ def get_github_token(request):
         "redirect_uri": os.getenv('GITHUB_REDIRECT_URL')+"?url="+url,
         "scope": 'user repo read:org',
     }
-    return HttpResponseRedirect(redirect_to='https://github.com/login/oauth/authorize?'+urlencode(params))
+
+    redirect = 'https://github.com/login/oauth/authorize?'+urlencode(params)
+    if settings.DEBUG:
+        return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
+    else:
+        return HttpResponseRedirect(redirect_to=redirect)
 
 # Create your views here.
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def save_github_token(request):
+
+    logger.debug("Github callback just landed")
+
     error = request.query_params.get('error', False)
+    error_description = request.query_params.get('error_description', '')
     if error:
-        raise APIException("Github returned error message")
+        raise APIException("Github: "+error_description)
 
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationError("No callback URL specified")
+    code = request.query_params.get('code', None)
+    if code == None:
+        raise ValidationError("No github code specified")
 
     payload = {
         'client_id': os.getenv('GITHUB_CLIENT_ID'),
         'client_secret': os.getenv('GITHUB_SECRET'),
         'redirect_uri': os.getenv('GITHUB_REDIRECT_URL'),
-        'code': request.query_params.get('code'),
+        'code': code,
     }
     headers = {'Accept': 'application/json'}
     resp = requests.post('https://github.com/login/oauth/access_token', data=payload, headers=headers)
     if resp.status_code == 200:
+
+        logger.debug("Github responded with 200")
+
         body = resp.json()
         if 'access_token' not in body:
             raise APIException(body['error_description'])

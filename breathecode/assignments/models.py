@@ -19,25 +19,25 @@ REVISION_STATUS = (
 PROJECT = 'PROJECT'
 QUIZ = 'QUIZ'
 LESSON = 'LESSON'
-REPLIT = 'REPLIT'
+EXERCISE = 'EXERCISE'
 TASK_TYPE = (
     (PROJECT, 'project'),
     (QUIZ, 'quiz'),
     (LESSON, 'lesson'),
-    (REPLIT, 'replit'),
+    (EXERCISE, 'Exercise'),
 )
 # Create your models here.
 class Task(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    associated_slug = models.CharField(max_length=150, unique=True)
+    associated_slug = models.CharField(max_length=150)
     title = models.CharField(max_length=150)
 
     task_status = models.CharField(max_length=15, choices=TASK_STATUS, default=PENDING)
-    revision_status = models.CharField(max_length=15, choices=REVISION_STATUS)
+    revision_status = models.CharField(max_length=15, choices=REVISION_STATUS, default=PENDING)
     task_type = models.CharField(max_length=15, choices=TASK_TYPE)
-    github_url = models.CharField(max_length=150, default=True, null=True)
-    live_url = models.CharField(max_length=150, default=True, null=True)
-    description = models.TextField(max_length=450)
+    github_url = models.CharField(max_length=150, blank=True, default=None, null=True)
+    live_url = models.CharField(max_length=150, blank=True, default=None, null=True)
+    description = models.TextField(max_length=450, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
