@@ -10,7 +10,7 @@ AUTOMATION_STATUS = (
     (UKNOWN, 'Uknown'),
 )
 class Automation(models.Model):
-    slug = models.CharField(max_length=150, blank=True, default='', help_text="unique string id that is used to connect incoming leads to automations")
+    slug = models.SlugField(max_length=150, blank=True, default='', help_text="unique string id that is used to connect incoming leads to automations")
     name = models.CharField(max_length=100)
     acp_id = models.PositiveSmallIntegerField(unique=True, help_text="ID asigned in active campaign")
     status = models.CharField(max_length=1, choices=AUTOMATION_STATUS, default=UKNOWN, help_text="2 = inactive, 1=active")
@@ -35,7 +35,7 @@ TAG_TYPE = (
     (OTHER, 'Other'),
 )
 class Tag(models.Model):
-    slug = models.CharField(max_length=150, unique=True)
+    slug = models.SlugField(max_length=150, unique=True)
     tag_type = models.CharField(max_length=15, choices=TAG_TYPE, null=True, default=None, help_text="The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON")
     acp_id = models.IntegerField(unique=True, help_text="The id coming from active campaign")
     subscribers = models.IntegerField()

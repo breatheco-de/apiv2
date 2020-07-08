@@ -26,6 +26,7 @@ urlpatterns = [
     path('user/me', get_users_me, name="user_me"),
     path('group/', get_groups),
     path('token/', CustomAuthToken.as_view()),
+    
     path('github/', get_github_token),
     path('github/callback/', save_github_token),
 ]

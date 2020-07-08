@@ -18,7 +18,7 @@ ACADEMY_STATUS = (
     (DELETED, 'Deleted'),
 )
 class Academy(models.Model):
-    slug = models.CharField(max_length=150, unique=True)
+    slug = models.SlugField(max_length=100, unique=True)
     name = models.CharField(max_length=150)
 
     street_address = models.CharField(max_length=250)
@@ -39,7 +39,7 @@ class Academy(models.Model):
         return self.name
 
 class Certificate(models.Model):
-    slug = models.CharField(max_length=150)
+    slug = models.SlugField(max_length=100)
     name = models.CharField(max_length=150)
 
     logo = models.CharField(max_length=250, blank=True, null=True, default=None)

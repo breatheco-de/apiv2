@@ -29,7 +29,7 @@ TASK_TYPE = (
 # Create your models here.
 class Task(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    associated_slug = models.CharField(max_length=150)
+    associated_slug = models.SlugField(max_length=150)
     title = models.CharField(max_length=150)
 
     task_status = models.CharField(max_length=15, choices=TASK_STATUS, default=PENDING)
