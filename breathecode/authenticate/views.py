@@ -114,6 +114,8 @@ def save_github_token(request):
         resp = requests.get('https://api.github.com/user', headers={'Authorization': 'token '+github_token })
         if resp.status_code == 200:
             github_user = resp.json()
+            logger.debug(github_user)
+            print(github_user)
 
             user = User.objects.filter(email=github_user['email']).first()
             if user is None:
