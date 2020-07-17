@@ -1,7 +1,10 @@
 from django.utils import timezone
 from django.shortcuts import render
 from rest_framework.views import APIView
-from .serializers import AcademySerializer, CohortSerializer, CertificateSerializer
+from .serializers import (
+    AcademySerializer, CohortSerializer, CertificateSerializer,
+    GetCohortSerializer
+)
 from .models import Academy, CohortUser, Certificate, Cohort
 from rest_framework.response import Response
 from rest_framework import status
@@ -46,8 +49,11 @@ class CohortView(APIView):
             now = timezone.now()
             items = items.filter(kickoff_date__gte=now)
 
-        serializer = CohortSerializer(items, many=True)
-        print(serializer.data[0])
+        academy = request.GET.get('academy', None)
+        if academy is not None:
+            items = items.filter(academy__slug__in=academy.split(","))
+
+        serializer = GetCohortSerializer(items, many=True)
         return Response(serializer.data)
 
 

@@ -9,6 +9,23 @@ class UserSerializer(serpy.Serializer):
     username = serpy.Field()
     email = serpy.Field()
 
+class GetCertificateSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    name = serpy.Field()
+
+class GetAcademySerializer(serpy.Serializer):
+    slug = serpy.Field()
+    name = serpy.Field()
+
+class GetCohortSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    slug = serpy.Field()
+    name = serpy.Field()
+    kickoff_date = serpy.Field()
+    certificate = GetCertificateSerializer()
+    academy = GetAcademySerializer()
+
 class AcademySerializer(serializers.ModelSerializer):
     class Meta:
         model = Academy
