@@ -4,5 +4,5 @@ from .models import CredentialsGithub
 
 @admin.register(CredentialsGithub)
 class CredentialsGithubAdmin(admin.ModelAdmin):
-    list_display = ('github_id', 'user', 'email', 'token')
+    list_display = ('github_id', 'user_id', 'email', 'token')
     # fields = ['first_name', 'last_name', ('date_of_birth', 'date_of_death')]

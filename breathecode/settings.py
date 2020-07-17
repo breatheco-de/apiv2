@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'breathecode.coursework',
     'breathecode.assignments',
     'breathecode.marketing',
+    'breathecode.freelance',
 ]
 
 REST_FRAMEWORK = {

@@ -21,6 +21,7 @@ activecampaign-python = "*"
 schema = "*"
 mixer = "*"
 pytest-django = "*"
+pygithub = "*"
 
 [requires]
 python_version = "3.8"
@@ -30,5 +31,4 @@ start="python manage.py runserver"
 migrate="python manage.py migrate"
 makemigrations="python manage.py makemigrations"
 test="pytest"
-
 sync_active_campaign="python manage.py sync_with_active_campaign"
