@@ -23,7 +23,7 @@ class Command(BaseCommand):
             print(f'Sync method for {options["entity"]} no Found!')
         func(options)
 
-    def cohorts(self, options):
+    def academies(self, options):
 
         response = requests.get(f"{HOST}/locations/")
         locations = response.json()
