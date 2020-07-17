@@ -17,7 +17,7 @@ class AcademySerializer(serializers.ModelSerializer):
 class CohortSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cohort
-        fields = ('slug', 'name')
+        fields = ('slug', 'name', 'kickoff_date')
 
 class CertificateSerializer(serializers.ModelSerializer):
         model = Certificate

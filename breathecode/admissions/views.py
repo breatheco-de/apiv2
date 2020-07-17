@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.shortcuts import render
 from rest_framework.views import APIView
 from .serializers import AcademySerializer, CohortSerializer, CertificateSerializer
@@ -39,6 +40,12 @@ class CohortView(APIView):
     """
     def get(self, request, format=None):
         items = Cohort.objects.all()
+
+        upcoming = request.GET.get('upcoming', None)
+        if upcoming is not None:
+            now = timezone.now()
+            items = items.filter(kickoff_date__gte=now)
+
         serializer = CohortSerializer(items, many=True)
         print(serializer.data[0])
         return Response(serializer.data)
