@@ -22,7 +22,7 @@ class Bill(models.Model):
     total_duration_in_hours = models.FloatField(default=0)
     total_price = models.FloatField(default=0)
     
-    reviewer = models.ForeignKey(User, on_delete=models.CASCADE)
+    reviewer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
     paid_at = models.DateTimeField(null=True, default=None)
 

@@ -45,12 +45,11 @@ def change_status(issue, status):
     issue.save()
     return None
 
-def generate_freelancer_bill(reviewer, freelancer):
+def generate_freelancer_bill(freelancer):
 
     open_bill = Bill.objects.filter(freelancer__id=freelancer.id, status='DUE').first()
     if open_bill is None:
         open_bill = Bill(
-            reviewer=reviewer,
             freelancer=freelancer,
         )
         open_bill.save()
@@ -74,4 +73,4 @@ def generate_freelancer_bill(reviewer, freelancer):
     open_bill.total_price = total["price"]
     open_bill.save()
 
-    return None
+    return open_bill

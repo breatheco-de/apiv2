@@ -14,12 +14,11 @@ def sync_issues(modeladmin, request, queryset):
 sync_issues.short_description = "Sync open issues"
 
 def generate_bill(modeladmin, request, queryset):
-    print("Welelele")
     freelancers = queryset.all()
     for freelancer in freelancers:
         try:
             print(f"Genereting bill for {freelancer.user.email}")
-            actions.generate_freelancer_bill(request.user, freelancer)
+            actions.generate_freelancer_bill(freelancer)
         except ValueError as err:
             messages.error(request,err)
 generate_bill.short_description = "Generate bill"
