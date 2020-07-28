@@ -31,7 +31,7 @@ def sync_user_issues(freelancer):
             title=issue.title,
             github_number=issue.number,
             body=issue.body[0:500],
-            url=issue.url,
+            url=issue.html_url,
             freelancer=freelancer,
             duration_in_minutes=hours * 60,
             duration_in_hours=hours,

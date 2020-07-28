@@ -1,10 +1,10 @@
 from django.shortcuts import render
 from rest_framework.response import Response
-from .serializers import BillSerializer
+from .serializers import BillSerializer, SmallIssueSerializer
 from rest_framework import status
 from rest_framework.decorators import api_view
 from .actions import sync_user_issues, generate_freelancer_bill
-from .models import Bill, Freelancer
+from .models import Bill, Freelancer, Issue
 from rest_framework.views import APIView
 
 # Create your views here.
@@ -69,6 +69,30 @@ class SingleBillView(APIView):
 def sync_user_issues(request):
     tags = sync_user_issues()
     return Response(tags, status=status.HTTP_200_OK)
+
+# Create your views here.
+@api_view(['GET'])
+def get_issues(request):
+    issues = Issue.objects.all()
+
+    lookup = {}
+
+    if 'freelancer' in request.GET:
+        userId = request.GET.get('freelancer')
+        lookup['freelancer__id'] = userId
+
+    if 'bill' in request.GET:
+        _id = request.GET.get('bill')
+        lookup['bill__id'] = _id
+
+    if 'status' in request.GET:
+        _status = request.GET.get('status')
+        lookup['status'] = _status.upper()
+
+    issues = issues.filter(**lookup).order_by('-created_at')
+
+    serializer = SmallIssueSerializer(issues, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 # Create your views here.
 @api_view(['GET'])
