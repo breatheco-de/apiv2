@@ -21,7 +21,7 @@ def sync_user_issues(freelancer):
         if _issue is not None:
             continue #jump to the next issue
 
-        p = re.compile("<hrs>(\d)</hrs>")
+        p = re.compile("<hrs>(\d+\.?\d*)</hrs>")
         result = p.search(issue.body)
         hours = 0
         if result is not None:

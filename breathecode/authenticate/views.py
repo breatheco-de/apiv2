@@ -121,9 +121,9 @@ def save_github_token(request):
                     emails = resp.json()
                     primary_emails = [x for x in emails if x["primary"] == True]
                     if len(primary_emails) > 0:
-                        github_user['email'] = primary_emails[0]
+                        github_user['email'] = primary_emails[0]["email"]
                     elif len(emails) > 0:
-                        github_user['email'] = emails[0]
+                        github_user['email'] = emails[0]["email"]
 
             if github_user['email'] is None:
                 raise ValidationError("Imposible to retrieve user email")
