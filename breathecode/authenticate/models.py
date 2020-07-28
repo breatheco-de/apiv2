@@ -9,11 +9,11 @@ class CredentialsGithub(models.Model):
     
     token = models.CharField(max_length=255)
     email = models.CharField(blank=False, unique=True, max_length=150)
-    avatar_url = models.CharField(max_length=255)
-    name = models.CharField(max_length=150)
-    blog = models.CharField(max_length=150)
-    bio = models.CharField(max_length=255)
-    company = models.CharField(max_length=150)
+    avatar_url = models.CharField(max_length=255, blank=True, null=True)
+    name = models.CharField(max_length=150, blank=True, null=True)
+    blog = models.CharField(max_length=150, blank=True, null=True)
+    bio = models.CharField(max_length=255, blank=True, null=True)
+    company = models.CharField(max_length=150, blank=True, null=True)
     twitter_username = models.CharField(max_length=50, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

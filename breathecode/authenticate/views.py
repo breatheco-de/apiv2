@@ -115,13 +115,15 @@ def save_github_token(request):
         if resp.status_code == 200:
             github_user = resp.json()
             logger.debug(github_user)
-            print(github_user)
             if github_user['email'] is None:
                 resp = requests.get('https://api.github.com/user/emails', headers={'Authorization': 'token '+github_token })
                 if resp.status_code == 200:
                     emails = resp.json()
                     primary_emails = [x for x in emails if x["primary"] == True]
-                    github_user['email'] = primary_emails[0]
+                    if len(primary_emails) > 0:
+                        github_user['email'] = primary_emails[0]
+                    elif len(emails) > 0:
+                        github_user['email'] = emails[0]
 
             if github_user['email'] is None:
                 raise ValidationError("Imposible to retrieve user email")
