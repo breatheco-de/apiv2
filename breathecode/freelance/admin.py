@@ -37,8 +37,12 @@ mask_as_paid.short_description = "Mark as PAID"
 
 @admin.register(Freelancer)
 class FreelancerAdmin(admin.ModelAdmin):
-    list_display = ['user_id', 'user']
+    list_display = ['user_id', 'full_name', "email"]
     actions = [sync_issues, generate_bill]
+    def full_name(self, obj):
+        return obj.user.first_name + " " + obj.user.last_name
+    def email(self, obj):
+        return obj.user.email
 
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
@@ -49,6 +53,6 @@ class IssueAdmin(admin.ModelAdmin):
 
 @admin.register(Bill)
 class BillAdmin(admin.ModelAdmin):
-    list_display = ('freelancer','status', 'total_duration_in_hours', 'total_price','paid_at')
+    list_display = ('id', 'freelancer','status', 'total_duration_in_hours', 'total_price','paid_at')
     list_filter = ['status']
     actions = [mask_as_paid]
