@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 from .models import Freelancer,Issue, Bill
+from django.utils.html import format_html
 from . import actions
 # Register your models here.
 
@@ -44,12 +45,15 @@ class FreelancerAdmin(admin.ModelAdmin):
     def email(self, obj):
         return obj.user.email
 
+
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
     search_fields = ['title']
-    list_display = ('id', 'github_number', 'title', 'status', 'duration_in_hours', 'bill_id', 'url')
+    list_display = ('id', 'github_number', 'title', 'status', 'duration_in_hours', 'bill_id', 'github_url')
     list_filter = ['status', 'bill__status']
     actions = [mask_as_done, mask_as_ignored]
+    def github_url(self,obj):
+        return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>open in github</a>", url=obj.url)
 
 @admin.register(Bill)
 class BillAdmin(admin.ModelAdmin):
