@@ -25,3 +25,4 @@ def breathecode_exception_handler(exc, context):
             response.data['status_code'] = response.status_code
 
     return response
+

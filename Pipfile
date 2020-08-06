@@ -22,6 +22,7 @@ schema = "*"
 mixer = "*"
 pytest-django = "*"
 pygithub = "*"
+google-cloud-datastore = "*"
 
 [requires]
 python_version = "3.8"
