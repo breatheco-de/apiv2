@@ -33,6 +33,10 @@ class GroupSerializer(serpy.Serializer):
     name = serpy.Field()
 
 
+
+
+
+
 class AuthSerializer(serializers.Serializer):
     email = serializers.EmailField(label="Email")
     password = serializers.CharField(

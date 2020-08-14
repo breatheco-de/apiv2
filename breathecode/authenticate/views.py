@@ -4,22 +4,49 @@ from rest_framework.response import Response
 from django.http import HttpResponseRedirect, HttpResponse
 from django.conf import settings
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
-from rest_framework.authtoken.models import Token
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import status, serializers
 from django.contrib.auth.models import User, Group, AnonymousUser
-from breathecode.authenticate.models import CredentialsGithub
+from breathecode.authenticate.models import CredentialsGithub, Token
 from breathecode.authenticate.serializers import UserSerializer, AuthSerializer, GroupSerializer
 from rest_framework.authtoken.views import ObtainAuthToken
 from urllib.parse import urlencode
+from rest_framework.views import APIView
 
 logger = logging.getLogger('authenticate')
+ 
+class TemporalTokenView(ObtainAuthToken):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
 
-class CustomAuthToken(ObtainAuthToken):
+        user = request.user
+        Token.objects.filter(token_type='temporal').delete()
+        token = Token.objects.create(user=user, token_type='temporal')
+        token.save()
+        return Response({
+            'token': token.key,
+            'token_type': token.token_type,
+            'expires_at': token.expires_at,
+            'user_id': user.pk,
+            'email': user.email
+        })
+
+class LogoutView(APIView):
+ 
+    def get(self, request):
+        # delete token
+        Token.objects.filter(token_type='login').delete()
+        request.auth.delete()
+        return Response({
+                'message': "User tokens successfully deleted",
+        })
+
+class LoginView(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
         serializer = AuthSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-        token, created = Token.objects.get_or_create(user=user)
+        token, created = Token.objects.get_or_create(user=user, token_type="login")
         return Response({
             'token': token.key,
             'user_id': user.pk,
@@ -148,7 +175,7 @@ def save_github_token(request):
             )
             github_credentials.save()
 
-            token, created = Token.objects.get_or_create(user=user)
+            token, created = Token.objects.get_or_create(user=user, token_type='login')
 
             return HttpResponseRedirect(redirect_to=url+'?token='+token.key)
         else:
