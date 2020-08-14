@@ -22,7 +22,7 @@ class Syllabus(models.Model):
     version = models.PositiveSmallIntegerField()
 
     json = JSONField()
-    github_url = models.URLField(max_length=255, null=True, default=None)
+    github_url = models.URLField(max_length=255, blank=True, null=True, default=None)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
