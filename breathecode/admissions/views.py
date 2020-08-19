@@ -3,7 +3,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from .serializers import (
     AcademySerializer, CohortSerializer, CertificateSerializer,
-    GetCohortSerializer
+    GetCohortSerializer, UserSerializer
 )
 from .models import Academy, CohortUser, Certificate, Cohort
 from rest_framework.response import Response
