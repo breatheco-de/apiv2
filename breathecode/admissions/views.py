@@ -32,7 +32,7 @@ class CohortUserView(APIView):
     """
     def get(self, request, format=None):
         items = CohortUser.objects.all()
-        serializer = AcademySerializer(items, many=True)
+        serializer = UserSerializer(items, many=True)
         return Response(serializer.data)
 
 
