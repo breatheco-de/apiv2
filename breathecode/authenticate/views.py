@@ -7,10 +7,14 @@ from rest_framework.exceptions import APIException, ValidationError, PermissionD
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status, serializers
 from django.contrib.auth.models import User, Group, AnonymousUser
+from django.contrib import messages
 from breathecode.authenticate.models import CredentialsGithub, Token
 from breathecode.authenticate.serializers import UserSerializer, AuthSerializer, GroupSerializer
 from rest_framework.authtoken.views import ObtainAuthToken
 from urllib.parse import urlencode
+from .forms import PickPasswordForm, PasswordChangeCustomForm
+from django.shortcuts import render
+from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
 
 logger = logging.getLogger('authenticate')
@@ -182,3 +186,59 @@ def save_github_token(request):
             print("Github error: ", resp.status_code)
             print("Error: ", resp.json())
             raise APIException("Error from github")
+
+
+
+
+
+
+def change_password(request, token):
+    if request.method == 'POST':
+        form = PasswordChangeCustomForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Important!
+            messages.success(request, 'Your password was successfully updated!')
+            return redirect('change_password')
+        else:
+            messages.error(request, 'Please correct the error below.')
+    else:
+        form = PasswordChangeCustomForm(request.user)
+    return render(request, 'form.html', {
+        'form': form
+    })
+
+def pick_password(request, token):
+    _dict = request.POST.copy()
+    _dict["token"] = token
+    _dict["callback"] = request.GET.get("callback", '')
+
+    form = PickPasswordForm(_dict)
+    if request.method == 'POST':
+        password1 = request.POST.get("password1", None)
+        password2 = request.POST.get("password2", None)
+        if password1 != password2:
+            messages.error(request, 'Passwords don\'t match')
+            return render(request, 'form.html', {
+                'form': form
+            })
+
+        token = Token.get_valid(request.POST.get("token", None))
+        if token is None:
+            messages.error(request, 'Invalid or expired token')
+
+        else:
+            user = token.user
+            user.set_password(password1)
+            user.save()
+            callback = request.POST.get("callback", None)
+            if callback is not None and callback != "":
+                return HttpResponseRedirect(request.POST.get("callback"))
+            else:
+                return render(request, 'message.html', {
+                    'message': 'You password has been reset successfully, you can close this window.'
+                })
+
+    return render(request, 'form.html', {
+        'form': form
+    })

@@ -3,6 +3,7 @@ from .actions import delete_tokens
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from .models import CredentialsGithub, Token
+from .actions import reset_password
 # Register your models here.
 
 def clean_all_tokens(modeladmin, request, queryset):
@@ -15,11 +16,15 @@ def clean_expired_tokens(modeladmin, request, queryset):
     count = delete_tokens(users=user_ids, status='expired')
 clean_expired_tokens.short_description = "Delete EXPIRED tokens"
 
+def send_reset_password(modeladmin, request, queryset):
+    reset_password(users=queryset)
+send_reset_password.short_description = "Send reset password link"
+
 admin.site.unregister(User)
 @admin.register(User)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
-    actions = [clean_all_tokens, clean_expired_tokens]
+    actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
 
 @admin.register(CredentialsGithub)
 class CredentialsGithubAdmin(admin.ModelAdmin):

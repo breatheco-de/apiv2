@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="alert alert-light">{{ intro }}</p>
+<form method="post" class="container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %} 
+    {% csrf_token %}
+    {{ form }}
+    <button type="submit">Save changes</button>
+</form>
+{% endblock %}

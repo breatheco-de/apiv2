@@ -23,6 +23,8 @@ mixer = "*"
 pytest-django = "*"
 pygithub = "*"
 google-cloud-datastore = "*"
+pyfcm = "*"
+twilio = "*"
 
 [requires]
 python_version = "3.8"

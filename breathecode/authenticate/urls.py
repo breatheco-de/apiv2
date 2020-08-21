@@ -16,7 +16,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from .views import (
-    get_users, get_users_me, get_groups, LoginView, LogoutView,TemporalTokenView , get_github_token, save_github_token
+    get_users, get_users_me, get_groups, LoginView, LogoutView,TemporalTokenView , get_github_token, save_github_token,
+    change_password, pick_password
 )
 from rest_framework.authtoken import views
 
@@ -28,6 +29,8 @@ urlpatterns = [
     path('login/', LoginView.as_view()),
     path('logout/', LoginView.as_view()),
     path('token/', TemporalTokenView.as_view()),
+
+    path('password/<str:token>', pick_password, name="pick_password"),
     
     path('github/', get_github_token),
     path('github/callback/', save_github_token),

@@ -56,6 +56,15 @@ class Token(rest_framework.authtoken.models.Token):
             else:
                 self.expires_at = utc_now + timezone.timedelta(minutes=10)
         super().save(*args, **kwargs)
+
+    def create_temp(user):
+        token, created = Token.objects.get_or_create(user=user, token_type="temporal")
+        return token
+
+    def get_valid(token, token_type="temporal"):
+        utc_now = timezone.now()
+        _token = Token.objects.filter(key=token, expires_at__gt=utc_now, token_type=token_type).first()
+        return _token
  
     class Meta:
         # ensure user and name are unique
