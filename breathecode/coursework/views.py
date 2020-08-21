@@ -25,7 +25,7 @@ class SyllabusView(APIView):
     List all snippets, or create a new snippet.
     """
     def get(self, request, course_slug=None, version=None):
-        course = Course.objects.filter(slug=course).first()
+        course = Course.objects.filter(slug=course_slug).first()
         if course is None:
             raise serializers.ValidationError("Course slug not found", code=404)
 

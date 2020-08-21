@@ -3,7 +3,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from .serializers import (
     AcademySerializer, CohortSerializer, CertificateSerializer,
-    GetCohortSerializer
+    GetCohortSerializer, UserSerializer
 )
 from .models import Academy, CohortUser, Certificate, Cohort
 from rest_framework.response import Response
@@ -32,7 +32,7 @@ class CohortUserView(APIView):
     """
     def get(self, request, format=None):
         items = CohortUser.objects.all()
-        serializer = AcademySerializer(items, many=True)
+        serializer = UserSerializer(items, many=True)
         return Response(serializer.data)
 
 
