@@ -63,7 +63,13 @@ class Token(rest_framework.authtoken.models.Token):
 
     def get_valid(token, token_type="temporal"):
         utc_now = timezone.now()
-        _token = Token.objects.filter(key=token, expires_at__gt=utc_now, token_type=token_type).first()
+        # delete expired tokens
+        Token.objects.filter(expires_at__lt=utc_now).delete()
+        # find among any non-expired token
+        _token = Token.objects.filter(key=token, expires_at__gt=utc_now).first()
+        if _token is None:
+            return None
+
         return _token
  
     class Meta:

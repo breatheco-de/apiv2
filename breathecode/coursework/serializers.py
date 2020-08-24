@@ -32,10 +32,19 @@ class SyllabusSerializer(serializers.ModelSerializer):
         exclude = ()
         extra_kwargs = {
             'course': {'read_only': True},
+            'version': {'read_only': True},
         }
 
     def create(self, validated_data):
-        return super(SyllabusSerializer, self).create({ **validated_data, "course": self.context['course'] })
+        previous_syllabus = Syllabus.objects.filter(course__id=self.context['course'].id).order_by('-version').first()
+        version = 1
+        if previous_syllabus is not None:
+            version = previous_syllabus.version + 1
+        return super(SyllabusSerializer, self).create({ 
+            **validated_data, 
+            "course": self.context['course'],
+            "version": version
+        })
 
 class SyllabusUpdateSerializer(serializers.ModelSerializer):
     class Meta:
