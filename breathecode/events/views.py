@@ -1,10 +1,42 @@
 from django.shortcuts import render
 from django.utils import timezone
+from rest_framework.permissions import AllowAny
 from .models import Event, EventType, EventCheckin
+from rest_framework.decorators import api_view, permission_classes
 from .serializers import EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # Create your views here.
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_events(request):
+    items = Event.objects.all()
+    lookup = {}
+
+    if 'city' in request.GET:
+        city = request.GET.get('city')
+        lookup['venue__city__iexact'] = city
+
+    if 'country' in request.GET:
+        value = request.GET.get('city')
+        lookup['venue__country__iexact'] = value
+
+    if 'zip_code' in request.GET:
+        value = request.GET.get('city')
+        lookup['venue__zip_code'] = value
+
+    lookup['starting_at__gte'] = timezone.now()
+    if 'past' in request.GET:
+        if request.GET.get('past') == "true":
+            lookup.pop("starting_at__gte")
+            lookup['starting_at__lte'] = timezone.now()
+        
+    items = items.filter(**lookup).order_by('-created_at')
+    
+    serializer = EventSmallSerializer(items, many=True)
+    return Response(serializer.data)
+
 class EventView(APIView):
     """
     List all snippets, or create a new snippet.
