@@ -4,6 +4,7 @@ from .models import CredentialsGithub
 from django.db import models
 from django.contrib.auth import authenticate
 from rest_framework import serializers
+from django.db.models import Q
 
 class GithubSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -50,14 +51,17 @@ class AuthSerializer(serializers.Serializer):
         password = attrs.get('password')
 
         if email and password:
-            user = authenticate(request=self.context.get('request'),username=email, password=password)
-
-            # The authenticate call simply returns None for is_active=False
-            # users. (Assuming the default ModelBackend authentication
-            # backend.)
+            print(email, password)
+            user = User.objects.filter(Q(email=email) | Q(username=email)).first()
             if not user:
                 msg = 'Unable to log in with provided credentials.'
                 raise serializers.ValidationError(msg, code=403)
+            if user.check_password(password) != True:
+                msg = 'Unable to log in with provided credentials.'
+                raise serializers.ValidationError(msg, code=403)
+            # The authenticate call simply returns None for is_active=False
+            # users. (Assuming the default ModelBackend authentication
+            # backend.)
         else:
             msg = 'Must include "username" and "password".'
             raise serializers.ValidationError(msg, code=403)
