@@ -21,6 +21,10 @@ def get_events(request):
     if 'country' in request.GET:
         value = request.GET.get('country')
         lookup['venue__country__iexact'] = value
+        
+    if 'type' in request.GET:
+        value = request.GET.get('type')
+        lookup['event_type__slug'] = value
 
     if 'zip_code' in request.GET:
         value = request.GET.get('zip_code')
