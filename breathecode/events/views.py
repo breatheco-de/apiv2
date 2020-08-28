@@ -28,7 +28,7 @@ def get_events(request):
 
     if 'academy' in request.GET:
         value = request.GET.get('academy')
-        lookup['academy__slug__in']=value.split(","))
+        lookup['academy__slug__in']=value.split(",")
 
     lookup['starting_at__gte'] = timezone.now()
     if 'past' in request.GET:
