@@ -19,12 +19,20 @@ def get_events(request):
         lookup['venue__city__iexact'] = city
 
     if 'country' in request.GET:
-        value = request.GET.get('city')
+        value = request.GET.get('country')
         lookup['venue__country__iexact'] = value
+        
+    if 'type' in request.GET:
+        value = request.GET.get('type')
+        lookup['event_type__slug'] = value
 
     if 'zip_code' in request.GET:
-        value = request.GET.get('city')
+        value = request.GET.get('zip_code')
         lookup['venue__zip_code'] = value
+
+    if 'academy' in request.GET:
+        value = request.GET.get('academy')
+        lookup['academy__slug__in']=value.split(",")
 
     lookup['starting_at__gte'] = timezone.now()
     if 'past' in request.GET:
