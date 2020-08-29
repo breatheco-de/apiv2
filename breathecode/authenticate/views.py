@@ -16,6 +16,7 @@ from .forms import PickPasswordForm, PasswordChangeCustomForm
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
+from django.utils import timezone
 
 logger = logging.getLogger('authenticate')
  
@@ -47,6 +48,10 @@ class LogoutView(APIView):
 
 class LoginView(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
+        # delete expired tokens
+        utc_now = timezone.now()
+        Token.objects.filter(expires_at__lt=utc_now).delete()
+
         serializer = AuthSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']

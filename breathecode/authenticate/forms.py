@@ -7,7 +7,7 @@ class PickPasswordForm(forms.Form):
     token= forms.CharField(widget=forms.HiddenInput())
     callback= forms.CharField(required=False,widget=forms.HiddenInput())
     password1 = forms.CharField(
-        min_length=10,
+        min_length=8,
         widget=forms.PasswordInput(attrs={
             "type":"password",
             "label": "hello",
