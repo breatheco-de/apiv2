@@ -15,6 +15,12 @@ class GetCourseSerializer(serpy.Serializer):
     updated_at = serpy.Field()
     created_at = serpy.Field()
 
+class SyllabusSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    version = serpy.Field()
+    updated_at = serpy.Field()
+
 class SyllabusGetSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.

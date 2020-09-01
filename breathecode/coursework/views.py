@@ -1,10 +1,11 @@
 from django.shortcuts import render
 from .models import Course, Syllabus
-from .serializers import SyllabusSerializer, GetCourseSerializer, SyllabusGetSerializer
+from .serializers import SyllabusSerializer, GetCourseSerializer, SyllabusGetSerializer, SyllabusSmallSerializer
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status, serializers
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 
 @api_view(['GET'])
 def get_courses(request):
@@ -31,7 +32,9 @@ class SyllabusView(APIView):
 
         syl = None
         if version is None:
-            raise serializers.ValidationError("Syllabus not found", code=400)
+            syl = course.syllabus_set.all()
+            serializer = SyllabusSmallSerializer(syl, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             syl = course.syllabus_set.filter(version=version).first()
         
