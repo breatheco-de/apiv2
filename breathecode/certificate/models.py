@@ -56,7 +56,7 @@ class UserSpecialty(models.Model):
 
     def save(self, *args, **kwargs):
 
-        if self.cohort is not None and self.cohort.academy.id != academy:
+        if self.cohort is not None and self.cohort.academy.id != self.academy.id:
             raise ValidationError("Cohort academy does not match the specified academy for this certificate")
         
         utc_now = timezone.now()
