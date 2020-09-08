@@ -49,6 +49,7 @@ class UserSpecialty(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
     signed_by = models.CharField(max_length=100)
+    signed_by_role = models.CharField(max_length=100, default="Director")
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
