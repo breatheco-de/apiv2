@@ -25,6 +25,7 @@ pygithub = "*"
 google-cloud-datastore = "*"
 pyfcm = "*"
 twilio = "*"
+google-cloud-storage = "*"
 
 [requires]
 python_version = "3.8"
