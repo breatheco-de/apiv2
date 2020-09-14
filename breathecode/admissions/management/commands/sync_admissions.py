@@ -15,6 +15,14 @@ class Command(BaseCommand):
             action='store_true',
             help='Delete and add again',
         )
+        parser.add_argument(
+              '--limit',
+               action='store',
+               dest='limit',
+               type=int,
+               default=0,
+               help='How many to import'
+        )
 
     def handle(self, *args, **options):
         try:
@@ -86,10 +94,21 @@ class Command(BaseCommand):
             User.objects.exclude(email="aalejo@gmail.com").delete()
             CohortUser.objects.all().delete()
 
+        limit = False
+        if 'limit' in options and options['limit']:
+            limit = options['limit']
+
         response = requests.get(f"{HOST}/students/")
         students = response.json()
 
+        total = 0
         for _student in students['data']:
+            total += 1
+            # if limited number of sync options
+            if limit and limit > 0 and total > limit:
+                self.stdout.write(self.style.SUCCESS(f"Stopped at {total} because there was a limit on the command arguments"))
+                return
+
             user = User.objects.filter(email=_student['email']).first()
             if user is None:
                 try:

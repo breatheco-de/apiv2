@@ -9,7 +9,10 @@ ports:
 # List the start up tasks. You can start them in parallel in multiple terminals. See https://www.gitpod.io/docs/config-start-tasks/
 tasks:
     - init: >
+        npm i -g heroku;
         pipenv install;
+        psql -U gitpod -c 'CREATE DATABASE breathecode;';
+        psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode;
         pipenv run migrate;
         pipenv run start;
     - command: echo "hello";

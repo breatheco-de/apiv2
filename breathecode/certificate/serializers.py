@@ -61,6 +61,8 @@ class UserSpecialtySerializer(serpy.Serializer):
     academy = AcademySmallSerializer(many=False)
     cohort = CohortSmallSerializer(required=False,many=False)
 
+    preview_url = serpy.Field()
+
     expires_at = serpy.Field()
     updated_at = serpy.Field()
     created_at = serpy.Field()

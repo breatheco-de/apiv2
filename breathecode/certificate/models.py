@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import JSONField
 from breathecode.admissions.models import Academy, Cohort
+from .actions import certificate_screenshot
 
 # For example: Full-Stack Web Development
 class Specialty(models.Model):
@@ -50,6 +51,8 @@ class UserSpecialty(models.Model):
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
     signed_by = models.CharField(max_length=100)
     signed_by_role = models.CharField(max_length=100, default="Director")
+    
+    preview_url = models.CharField(max_length=250, blank=True, null=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -60,11 +63,16 @@ class UserSpecialty(models.Model):
             raise ValidationError("Cohort academy does not match the specified academy for this certificate")
         
         utc_now = timezone.now()
-        self.token = hashlib.sha1((str(self.user.id) + str(utc_now)).encode("UTF-8")).hexdigest()
+        if self.token is None or self.token == "":
+            self.token = hashlib.sha1((str(self.user.id) + str(utc_now)).encode("UTF-8")).hexdigest()
         
         # set expiration
         if self.specialty.expiration_day_delta is not None:
             self.expires_at = utc_now + timezone.timedelta(days=self.specialty.expiration_day_delta)
         
         super().save(*args, **kwargs)  # Call the "real" save() method.
+
+        certificate_screenshot(self)
+
+
         
