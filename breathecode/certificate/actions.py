@@ -5,9 +5,9 @@ from urllib.parse import urlencode
 BUCKET_NAME = "certificates-breathecode"
 
 def resolve_google_credentials():
-    path = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
-    if not os.path.exists( path ):
-        credentials = os.environ['GOOGLE_SERVICE_KEY']#.replace("\\\\","\\")
+    path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS',None)
+    if path is None or not os.path.exists( path ):
+        credentials = os.getenv('GOOGLE_SERVICE_KEY')#.replace("\\\\","\\")
         with open(path, 'w') as credentials_file:
             credentials_file.write( credentials )
 
