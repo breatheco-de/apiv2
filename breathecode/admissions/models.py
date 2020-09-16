@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
+from .actions import remove_bucket_object, get_bucket_object
 
 class Country(models.Model):
     code = models.CharField(max_length=3, primary_key=True)
@@ -55,6 +56,19 @@ class Certificate(models.Model):
 
     def __str__(self):
         return self.name
+
+    def delete(self, *args, **kwargs):
+        remove_bucket_object("certificate-logo-"+self.slug)
+        super(Image, self).delete(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+
+        obj = get_bucket_object("certificate-logo-"+self.slug)
+        if obj is not None:
+            self.logo = obj.public_url
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.
+
 
 class AcademyCertificate(models.Model):
     certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)

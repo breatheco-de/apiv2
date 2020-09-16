@@ -12,6 +12,8 @@ class UserSerializer(serpy.Serializer):
 class GetCertificateSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
+    description = serpy.Field()
+    logo = serpy.Field()
 
 class GetAcademySerializer(serpy.Serializer):
     slug = serpy.Field()
