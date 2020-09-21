@@ -2,11 +2,13 @@ from django.shortcuts import render
 from rest_framework.response import Response
 from .serializers import PostFormEntrySerializer
 from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view
 from .actions import register_new_lead, sync_tags, sync_automations
 
 # Create your views here.
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def create_lead(request):
     serializer = PostFormEntrySerializer(data=request.data)
     if serializer.is_valid():
