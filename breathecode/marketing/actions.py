@@ -47,6 +47,7 @@ def get_lead_tags(form_entry):
     return tags
 
 def get_lead_automations(form_entry):
+    _automations = []
     if 'automations' not in form_entry or form_entry['automations'] == '':
         return []
     else:
@@ -105,6 +106,7 @@ def register_new_lead(form_entry=None):
                 print(f"error triggering atomation with id {str(automation_id)}", response)
                 raise APIException('Could not add contact to Automation')
             else:
+                print(f"Triggered atomation with id {str(automation_id)}", response)
                 auto = Automation.objects.get(acp_id=automation_id)
                 entry.automation_objects.add(auto)
 
