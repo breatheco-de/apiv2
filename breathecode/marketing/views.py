@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from .serializers import PostFormEntrySerializer
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from .actions import register_new_lead, sync_tags, sync_automations
 
 # Create your views here.
