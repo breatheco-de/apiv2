@@ -41,7 +41,7 @@ def get_lead_tags(form_entry):
 
     tags = list(chain(strong_tags, soft_tags, dicovery_tags, other_tags))
     if len(tags) == 0:
-        print("Tag applied to the contact not found ",_tags)
+        print("Tag applied to the contact not found or has tag_type assigned",_tags)
         raise ValidationError('Tag applied to the contact not found')
 
     return tags

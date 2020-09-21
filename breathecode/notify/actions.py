@@ -15,10 +15,10 @@ if(FIREBASE_KEY and FIREBASE_KEY!=''):
     push_service = FCMNotification(api_key=FIREBASE_KEY)
 
 
-def send_email_message(slug, to, data={}):
+def send_email_message(template_slug, to, data={}):
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED') == 'TRUE':
-        template = get_template_content(slug, data, ["email"])
-        print('Email notification '+slug+' sent')
+        template = get_template_content(template_slug, data, ["email"])
+        print('Email notification '+template_slug+' sent')
         return requests.post(
             f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
             auth=(
