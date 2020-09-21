@@ -41,7 +41,7 @@ def get_lead_tags(form_entry):
 
     tags = list(chain(strong_tags, soft_tags, dicovery_tags, other_tags))
     if len(tags) == 0:
-        print("Tag applied to the contact not found",_tags)
+        print("Tag applied to the contact not found ",_tags)
         raise ValidationError('Tag applied to the contact not found')
 
     return tags
@@ -138,7 +138,7 @@ def sync_tags():
         tags = tags + response['tags']
 
     for tag in tags:
-        t = Tag.objects.filter(acp_id=tag['id']).first()
+        t = Tag.objects.filter(slug=tag['tag']).first()
         if t is None:
             t = Tag(
                 slug=tag['tag'],
