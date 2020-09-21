@@ -1,5 +1,5 @@
 from django.db import models
-from phonenumber_field.modelfields import PhoneNumberField
+from django.core.validators import RegexValidator
 
 ACTIVE = '1'
 INNACTIVE = '2'
@@ -51,7 +51,9 @@ class Contact(models.Model):
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150, null=True, default=None)
     email = models.CharField(max_length=150, unique=True)
-    phone = PhoneNumberField(blank=True, null=True, default=None)
+
+    phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True, default=None) # validators should be a list
 
     language = models.CharField(max_length=2)
     country = models.CharField(max_length=30)
@@ -82,7 +84,9 @@ class FormEntry(models.Model):
     first_name = models.CharField(max_length=150, default='')
     last_name = models.CharField(max_length=150, default='')
     email = models.CharField(max_length=150)
-    phone = PhoneNumberField(blank=True, null=True, default=None)
+
+    phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True, default=None) # validators should be a list
 
     course = models.CharField(max_length=30, null=True, default=None)
     client_comments = models.CharField(max_length=250, blank=True, null=True, default=None)
