@@ -8,6 +8,11 @@ class CountrySerializer(serpy.Serializer):
     code = serpy.Field()
     name = serpy.Field()
 
+class CitySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    name = serpy.Field()
+
 class UserSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -25,7 +30,7 @@ class GetAcademySerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     country = CountrySerializer()
-    city = serpy.Field()
+    city = CitySerializer()
     logo_url = serpy.Field()
 
 class GetCohortSerializer(serpy.Serializer):
