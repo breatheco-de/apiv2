@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Academy, Certificate, Cohort, CohortUser
+from .models import Academy, Certificate, Cohort, CohortUser, Country, City
 from breathecode.assignments.actions import sync_student_tasks
 # Register your models here.
 admin.site.site_header = "BreatheCode"
@@ -9,6 +9,14 @@ admin.site.site_title = "Administration Portal"
 @admin.register(Academy)
 class AcademyAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'city')
+
+@admin.register(Country)
+class CountryAdmin(admin.ModelAdmin):
+    list_display = ('code', 'name')
+
+@admin.register(City)
+class CityAdmin(admin.ModelAdmin):
+    list_display = ('name', 'country')
 
 
 @admin.register(Certificate)

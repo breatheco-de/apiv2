@@ -61,7 +61,7 @@ def get_lead_automations(form_entry):
     automations = Automation.objects.filter(slug__in=_automations)
     count = automations.count()
     if count == 0:
-        raise ValidationError("The specified automation was not found")
+        raise ValidationError(f"The specified automation {form_entry['automations']} was not found")
     
     print(f"found {str(count)} automations")
     return automations.values_list('acp_id', flat=True)

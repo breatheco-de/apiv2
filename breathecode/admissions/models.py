@@ -6,9 +6,15 @@ class Country(models.Model):
     code = models.CharField(max_length=3, primary_key=True)
     name = models.CharField(max_length=30)
 
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
 class City(models.Model):
     name = models.CharField(max_length=30)
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.name
 
 INACTIVE = 'INACTIVE'
 ACTIVE = 'ACTIVE'
@@ -40,6 +46,18 @@ class Academy(models.Model):
     def __str__(self):
         return self.name
 
+    # def delete(self, *args, **kwargs):
+    #     remove_bucket_object("location-"+self.slug)
+    #     super(Image, self).delete(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+
+        obj = get_bucket_object("location-"+self.slug)
+        if obj is not None:
+            self.logo_url = obj.public_url
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.
+
 class Certificate(models.Model):
     slug = models.SlugField(max_length=100)
     name = models.CharField(max_length=150)
@@ -57,9 +75,9 @@ class Certificate(models.Model):
     def __str__(self):
         return self.name
 
-    def delete(self, *args, **kwargs):
-        remove_bucket_object("certificate-logo-"+self.slug)
-        super(Image, self).delete(*args, **kwargs)
+    # def delete(self, *args, **kwargs):
+    #     remove_bucket_object("certificate-logo-"+self.slug)
+    #     super(Image, self).delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
 

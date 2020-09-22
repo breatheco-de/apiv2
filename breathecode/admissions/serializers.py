@@ -2,6 +2,12 @@ import serpy
 from rest_framework import serializers
 from .models import Academy, Cohort, Certificate, CohortUser
 
+class CountrySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    code = serpy.Field()
+    name = serpy.Field()
+
 class UserSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -18,6 +24,9 @@ class GetCertificateSerializer(serpy.Serializer):
 class GetAcademySerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
+    country = CountrySerializer()
+    city = serpy.Field()
+    logo_url = serpy.Field()
 
 class GetCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
