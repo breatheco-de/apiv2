@@ -4,7 +4,9 @@ from .models import FormEntry, Tag, Automation
 from schema import Schema, And, Use, Optional, SchemaError
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from activecampaign.client import Client
+from .utils import AC_Old_Client
 client = Client(os.getenv('ACTIVE_CAMPAIGN_URL'), os.getenv('ACTIVE_CAMPAIGN_KEY'))
+old_client = AC_Old_Client(os.getenv('ACTIVE_CAMPAIGN_URL'), os.getenv('ACTIVE_CAMPAIGN_KEY'))
 
 acp_ids = {
     # "strong": "49",
@@ -55,10 +57,13 @@ def get_lead_automations(form_entry):
         return []
     else:
         _automations = form_entry['automations'].split(",")
-    print("Base automations", _automations)
     
     automations = Automation.objects.filter(slug__in=_automations)
-    print(f"found {str(automations.count())} automations")
+    count = automations.count()
+    if count == 0:
+        raise ValidationError("The specified automation was not found")
+    
+    print(f"found {str(count)} automations")
     return automations.values_list('acp_id', flat=True)
 
     
@@ -74,25 +79,29 @@ def register_new_lead(form_entry=None):
     print("found tags", tags)
     LEAD_TYPE = tags[0].tag_type
     if (automations is None or len(automations) == 0) and len(tags) > 0:
+        if tags[0].automation is None:
+            raise ValidationError('No automation was specified and the the specified tag has no automation either')
+
         automations = [tags[0].automation.acp_id]
 
     contact = {
         "email": form_entry["email"],
-        "firstName": form_entry["first_name"],
-        "lastName": form_entry["last_name"],
+        "first_name": form_entry["first_name"],
+        "last_name": form_entry["last_name"],
         "phone": form_entry["phone"]
     }
     contact = set_optional(contact, 'utm_url', form_entry)
     contact = set_optional(contact, 'utm_location', form_entry, "location")
     contact = set_optional(contact, 'course', form_entry)
-    contact = set_optional(contact, 'utm_language', form_entry)
+    contact = set_optional(contact, 'utm_language', form_entry, "language")
+    contact = set_optional(contact, 'utm_country', form_entry, "country")
     contact = set_optional(contact, 'gclid', form_entry)
     contact = set_optional(contact, 'referral_key', form_entry)
 
     print("ready to send contact with following details: ", contact)
-    response = client.contacts.create_or_update_contact({ "contact": contact })
-    contact_id = response['contact']['id']
-    if 'contact' not in response:
+    response = old_client.contacts.create_contact(contact)
+    contact_id = response['subscriber_id']
+    if 'subscriber_id' not in response:
         print("error adding contact", response)
         raise APIException('Could not save contact in CRM')
 

@@ -97,6 +97,8 @@ class FormEntry(models.Model):
     utm_campaign = models.CharField(max_length=50, blank=True, null=True, default=None)
     referral_key = models.CharField(max_length=50, blank=True, null=True, default=None)
     
+    gclid = models.CharField(max_length=255, blank=True, null=True, default=None)
+    
     tags = models.CharField(max_length=100, blank=True, default='')
     automations = models.CharField(max_length=100, blank=True, default='')
 
