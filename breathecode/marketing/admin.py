@@ -5,7 +5,7 @@ from .models import FormEntry, Tag, Automation
 @admin.register(FormEntry)
 class FormEntryAdmin(admin.ModelAdmin):
     search_fields = ['email', 'first_name', 'last_name', 'phone']
-    list_display = ('storage_status', 'first_name', 'last_name', 'email', 'phone', 'utm_url', 'created_at')
+    list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course', 'utm_url')
     list_filter = ['storage_status', 'tag_objects__tag_type', 'automation_objects__slug']
 
 

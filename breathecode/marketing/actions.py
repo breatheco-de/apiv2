@@ -20,9 +20,12 @@ acp_ids = {
     "referral_key": "27",
 }
 
-def set_optional(contact, key, data):
-    if key in data:
-        contact["field["+acp_ids[key]+",0]"] = data[key]
+def set_optional(contact, key, data, custom_key=None):
+    if custom_key is None:
+        custom_key = key
+
+    if custom_key in data:
+        contact["field["+acp_ids[key]+",0]"] = data[custom_key]
 
     return contact
 
@@ -70,7 +73,7 @@ def register_new_lead(form_entry=None):
     tags = get_lead_tags(form_entry)
     print("found tags", tags)
     LEAD_TYPE = tags[0].tag_type
-    if automations is None or len(automations) == 0:
+    if (automations is None or len(automations) == 0) and len(tags) > 0:
         automations = [tags[0].automation.acp_id]
 
     contact = {
@@ -80,7 +83,7 @@ def register_new_lead(form_entry=None):
         "phone": form_entry["phone"]
     }
     contact = set_optional(contact, 'utm_url', form_entry)
-    contact = set_optional(contact, 'utm_location', form_entry)
+    contact = set_optional(contact, 'utm_location', form_entry, "location")
     contact = set_optional(contact, 'course', form_entry)
     contact = set_optional(contact, 'utm_language', form_entry)
     contact = set_optional(contact, 'gclid', form_entry)

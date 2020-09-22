@@ -35,7 +35,7 @@ sync_tasks.short_description = "Sync Tasks"
 @admin.register(Cohort)
 class CohortAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'name', 'academy__city__name', 'certificate__slug']
-    list_display = ('id', 'slug', 'stage', 'name', 'created_at', 'academy_name', 'certificate_name')
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'certificate_name')
     list_filter = ['stage', 'academy__slug','certificate__slug']
     actions = [sync_tasks]
 
