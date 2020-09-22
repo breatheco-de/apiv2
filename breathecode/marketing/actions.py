@@ -89,6 +89,7 @@ def register_new_lead(form_entry=None):
     contact = set_optional(contact, 'gclid', form_entry)
     contact = set_optional(contact, 'referral_key', form_entry)
 
+    print("ready to send contact with following details: ", contact)
     response = client.contacts.create_or_update_contact({ "contact": contact })
     contact_id = response['contact']['id']
     if 'contact' not in response:
