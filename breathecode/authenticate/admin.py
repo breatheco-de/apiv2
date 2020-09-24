@@ -1,8 +1,7 @@
 from django.contrib import admin
-from .actions import delete_tokens
-from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
-from .models import CredentialsGithub, Token
+from .actions import delete_tokens
+from .models import CredentialsGithub, Token, UserAutentication
 from .actions import reset_password
 # Register your models here.
 
@@ -20,12 +19,6 @@ def send_reset_password(modeladmin, request, queryset):
     reset_password(users=queryset)
 send_reset_password.short_description = "Send reset password link"
 
-admin.site.unregister(User)
-@admin.register(User)
-class UserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
-    actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
-
 @admin.register(CredentialsGithub)
 class CredentialsGithubAdmin(admin.ModelAdmin):
     list_display = ('github_id', 'user_id', 'email', 'token')
@@ -33,5 +26,11 @@ class CredentialsGithubAdmin(admin.ModelAdmin):
 @admin.register(Token)
 class TokenAdmin(admin.ModelAdmin):
     list_display = ('key', 'token_type', 'expires_at', 'user')
+    raw_id_fields = ["user"]
     def get_readonly_fields(self, request, obj=None):
         return ['key']
+
+@admin.register(UserAutentication)
+class UserAdmin(UserAdmin):
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
+    actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]

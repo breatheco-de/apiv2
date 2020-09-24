@@ -1,11 +1,18 @@
 from django.contrib import admin
-from .models import Academy, Certificate, Cohort, CohortUser, Country, City
+from django.contrib.auth.models import User
+from django.contrib.auth.admin import UserAdmin
+from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions
 from breathecode.assignments.actions import sync_student_tasks
 # Register your models here.
 admin.site.site_header = "BreatheCode"
 admin.site.index_title = "Administration Portal"
 admin.site.site_title = "Administration Portal"
 
+@admin.register(UserAdmissions)
+class UserAdmin(UserAdmin):
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
+    # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
+    
 @admin.register(Academy)
 class AcademyAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'city')
@@ -28,6 +35,7 @@ class CertificateAdmin(admin.ModelAdmin):
 class CohortUserAdmin(admin.ModelAdmin):
     list_display = ('get_student', 'cohort', 'role', 'educational_status', 'finantial_status', 'created_at')
     list_filter = ['role', 'educational_status','finantial_status']
+    raw_id_fields = ["user", "cohort"]
 
     def get_student(self, obj):
         return obj.user.first_name + " " + obj.user.last_name + "(" + obj.user.email + ")"
@@ -52,4 +60,6 @@ class CohortAdmin(admin.ModelAdmin):
 
     def certificate_name(self, obj):
         return obj.certificate.name
+
+
 

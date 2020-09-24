@@ -7,6 +7,10 @@ from django.contrib.postgres.fields import JSONField
 from breathecode.admissions.models import Academy, Cohort
 from .actions import certificate_screenshot
 
+class UserCertificate(User):
+    class Meta:
+        proxy = True
+
 # For example: Full-Stack Web Development
 class Specialty(models.Model):
     slug = models.SlugField(max_length=150, unique=True)

@@ -6,6 +6,10 @@ from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
 
+class UserAutentication(User):
+    class Meta:
+        proxy = True
+
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)

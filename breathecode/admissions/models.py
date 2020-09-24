@@ -2,6 +2,13 @@ from django.contrib.auth.models import User
 from django.db import models
 from .actions import remove_bucket_object, get_bucket_object
 
+def get_user_label(self):
+    return f"{self.first_name} {self.last_name} ({self.email})"
+User.add_to_class("__str__", get_user_label)
+class UserAdmissions(User):
+    class Meta:
+        proxy = True
+
 class Country(models.Model):
     code = models.CharField(max_length=3, primary_key=True)
     name = models.CharField(max_length=30)
