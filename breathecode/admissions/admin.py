@@ -11,7 +11,6 @@ admin.site.site_title = "Administration Portal"
 @admin.register(UserAdmissions)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
-    # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
     
 @admin.register(Academy)
 class AcademyAdmin(admin.ModelAdmin):

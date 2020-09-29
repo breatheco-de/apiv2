@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .actions import delete_tokens
-from .models import CredentialsGithub, Token, UserAutentication
+from .models import CredentialsGithub, Token, UserAutentication, Profile
 from .actions import reset_password
 # Register your models here.
 
@@ -34,3 +34,8 @@ class TokenAdmin(admin.ModelAdmin):
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
     actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'avatar_url')
+    # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]

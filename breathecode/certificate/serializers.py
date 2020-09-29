@@ -2,12 +2,18 @@ from .models import Badge, Specialty
 from rest_framework import serializers
 import serpy
 
+class ProfileSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    avatar_url = serpy.Field()
+
 class UserSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    profile = ProfileSmallSerializer(required=False,many=False)
 
 class LayoutDesignSerializer(serpy.Serializer):
     """The serializer schema definition."""

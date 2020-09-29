@@ -2,6 +2,7 @@ import requests, os
 from google.cloud import storage
 from urllib.parse import urlencode
 
+ENVIRONMENT = os.getenv('ENV',None)
 BUCKET_NAME = "certificates-breathecode"
 
 def resolve_google_credentials():
@@ -12,6 +13,9 @@ def resolve_google_credentials():
             credentials_file.write( credentials )
 
 def certificate_screenshot(certificate):
+    if ENVIRONMENT == 'development':
+        return True
+        
     if certificate.preview_url is None:
         file_name = f'{certificate.token}'
         resolve_google_credentials()
