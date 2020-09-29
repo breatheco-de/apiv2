@@ -35,6 +35,7 @@ class Academy(models.Model):
     slug = models.SlugField(max_length=100, unique=True)
     name = models.CharField(max_length=150)
     logo_url = models.CharField(max_length=255)
+    website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)
     city = models.ForeignKey(City, models.SET_NULL, blank=True, null=True)

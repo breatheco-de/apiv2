@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
 from django.utils.html import format_html
-from .models import Badge, Specialty, UserSpecialty, UserCertificate
+from .models import Badge, Specialty, UserSpecialty, UserProxy, LayoutDesign
 
 @admin.register(Badge)
 class BadgeAdmin(admin.ModelAdmin):
@@ -11,6 +11,10 @@ class BadgeAdmin(admin.ModelAdmin):
 
 @admin.register(Specialty)
 class SpecialtyAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name')
+
+@admin.register(LayoutDesign)
+class LayoutDesignAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name')
 
 @admin.register(UserSpecialty)
@@ -27,7 +31,7 @@ class UserSpecialtyAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         return ['token', 'expires_at']
 
-@admin.register(UserCertificate)
+@admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name')
     # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]

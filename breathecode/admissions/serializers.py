@@ -29,8 +29,8 @@ class GetCertificateSerializer(serpy.Serializer):
 class GetAcademySerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
-    country = CountrySerializer()
-    city = CitySerializer()
+    country = CountrySerializer(required=False)
+    city = CitySerializer(required=False)
     logo_url = serpy.Field()
 
 class GetCohortSerializer(serpy.Serializer):

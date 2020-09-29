@@ -24,6 +24,10 @@ def get_cohorts(request):
     academy = request.GET.get('academy', None)
     if academy is not None:
         items = items.filter(academy__slug__in=academy.split(","))
+    
+    location = request.GET.get('location', None)
+    if location is not None:
+        items = items.filter(academy__slug__in=academy.split(","))
 
     items = items.order_by('kickoff_date')
     serializer = GetCohortSerializer(items, many=True)

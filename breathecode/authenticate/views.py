@@ -184,6 +184,11 @@ def save_github_token(request):
             )
             github_credentials.save()
 
+            profile = Profile.objects.filter(user__email=github_user['email']).first()
+            if profile is None:
+                profile = Profile(user=user, avatar_url=github_user['avatar_url'])
+                profile.save()
+
             token, created = Token.objects.get_or_create(user=user, token_type='login')
 
             return HttpResponseRedirect(redirect_to=url+'?token='+token.key)

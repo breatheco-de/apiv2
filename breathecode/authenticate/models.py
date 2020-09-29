@@ -10,6 +10,10 @@ class UserAutentication(User):
     class Meta:
         proxy = True
 
+class Profile(models.Model):
+    user   = models.OneToOneField(User, on_delete=models.CASCADE)
+    avatar_url = models.CharField(max_length=255, blank=True, null=True, default=None)
+
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
