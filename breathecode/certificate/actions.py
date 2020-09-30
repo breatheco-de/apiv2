@@ -16,7 +16,7 @@ def certificate_screenshot(certificate):
     if ENVIRONMENT == 'development':
         return True
         
-    if certificate.preview_url is None:
+    if certificate.preview_url is None or certificate.preview_url == "":
         file_name = f'{certificate.token}'
         resolve_google_credentials()
         client = storage.Client()
@@ -30,6 +30,7 @@ def certificate_screenshot(certificate):
                 'url': f'https://certificate.breatheco.de/preview/{certificate.token}',
                 'device': f'desktop',
                 'delay' : '500',
+                'cacheLimit': '0',
                 'dimension': f'1024xfull',
             })
             r = requests.get(f'https://api.screenshotmachine.com?{query_string}', stream=True)
