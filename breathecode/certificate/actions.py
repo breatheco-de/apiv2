@@ -29,9 +29,8 @@ def certificate_screenshot(certificate):
                 'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
                 'url': f'https://certificate.breatheco.de/preview/{certificate.token}',
                 'device': f'desktop',
-                'delay' : '500',
                 'cacheLimit': '0',
-                'dimension': f'1024xfull',
+                'dimension': f'1024x707',
             })
             r = requests.get(f'https://api.screenshotmachine.com?{query_string}', stream=True)
             if r.status_code == 200:
