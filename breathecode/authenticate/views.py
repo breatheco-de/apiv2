@@ -17,6 +17,7 @@ from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
 from django.utils import timezone
+from .models import Profile
 
 logger = logging.getLogger('authenticate')
  
