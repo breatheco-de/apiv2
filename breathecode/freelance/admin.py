@@ -1,5 +1,5 @@
 from django.contrib import admin, messages
-from .models import Freelancer,Issue, Bill
+from .models import Freelancer, Issue, Bill
 from django.utils.html import format_html
 from . import actions
 # Register your models here.
