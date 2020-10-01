@@ -1,5 +1,4 @@
 from django.contrib import admin
-from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions
 from breathecode.assignments.actions import sync_student_tasks
@@ -11,7 +10,7 @@ admin.site.site_title = "Administration Portal"
 @admin.register(UserAdmissions)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
-    
+
 @admin.register(Academy)
 class AcademyAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'city')
