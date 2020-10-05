@@ -1,7 +1,4 @@
-from django.shortcuts import render
-from django.utils import timezone
 from .utils import resolve_google_credentials, check_params
-from .serializers import ActivitySerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from google.cloud import datastore
@@ -11,6 +8,7 @@ from google.cloud import datastore
 # https://www.programcreek.com/python/example/88825/google.cloud.datastore.Entity
 # https://cloud.google.com/datastore/docs/concepts/entities
 # https://googleapis.dev/python/datastore/latest/index.html
+
 
 class ActivityView(APIView):
     """
@@ -22,13 +20,13 @@ class ActivityView(APIView):
         client = datastore.Client()
         query = client.query(kind='nps_answer')
         query_iter = query.fetch()
-        
+
         return Response(query_iter)
 
     def post(self, request, format=None):
         resolve_google_credentials()
 
-        answer_dict=request.data
+        answer_dict = request.data
 
         check_params(answer_dict, 'comment', 'score', 'user_id')
 
@@ -45,4 +43,4 @@ class ActivityView(APIView):
         })
         client.put(entity)
 
-        return Response(answer_dict, status=status.HTTP_201_CREATED)
+        return Response(answer_dict, status=request.status.HTTP_201_CREATED)
