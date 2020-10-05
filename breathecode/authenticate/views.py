@@ -1,4 +1,7 @@
-import os, requests, base64, logging
+import os
+import requests
+import base64
+import logging
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.http import HttpResponseRedirect, HttpResponse
@@ -20,7 +23,8 @@ from django.utils import timezone
 from .models import Profile
 
 logger = logging.getLogger('authenticate')
- 
+
+
 class TemporalTokenView(ObtainAuthToken):
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -38,14 +42,15 @@ class TemporalTokenView(ObtainAuthToken):
         })
 
 class LogoutView(APIView):
- 
+
     def get(self, request):
         # delete token
         Token.objects.filter(token_type='login').delete()
         request.auth.delete()
         return Response({
-                'message': "User tokens successfully deleted",
+            'message': "User tokens successfully deleted",
         })
+
 
 class LoginView(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
@@ -63,13 +68,14 @@ class LoginView(ObtainAuthToken):
             'email': user.email
         })
 
+
 @api_view(['GET'])
 def get_users_me(request):
 
     logger.error("Get me just called")
     try:
         if isinstance(request.user, AnonymousUser):
-            raise PermissionDenied("There is not user")    
+            raise PermissionDenied("There is not user")
         request.user
     except User.DoesNotExist:
         raise PermissionDenied("You don't have a user")
@@ -77,42 +83,42 @@ def get_users_me(request):
     users = UserSerializer(request.user)
     return Response(users.data)
 
-# Create your views here.
+
 @api_view(['GET'])
 def get_users(request):
     queryset = User.objects.all().order_by('-date_joined')
     users = UserSerializer(queryset, many=True)
     return Response(users.data)
 
-# Create your views here.
+
 @api_view(['GET'])
 def get_groups(request):
     queryset = Group.objects.all()
     groups = GroupSerializer(queryset, many=True)
     return Response(groups.data)
 
-# Create your views here.
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_github_token(request):
     url = request.query_params.get('url', None)
-    if url == None:
+    if url is None:
         raise ValidationError("No callback URL specified")
 
     url = base64.b64decode(url).decode("utf-8")
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID'),
-        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL')+"?url="+url,
+        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL') + "?url=" + url,
         "scope": 'user repo read:org',
     }
 
-    redirect = 'https://github.com/login/oauth/authorize?'+urlencode(params)
+    redirect = 'https://github.com/login/oauth/authorize?' + urlencode(params)
     if settings.DEBUG:
         return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
     else:
         return HttpResponseRedirect(redirect_to=redirect)
 
-# Create your views here.
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def save_github_token(request):
@@ -122,13 +128,13 @@ def save_github_token(request):
     error = request.query_params.get('error', False)
     error_description = request.query_params.get('error_description', '')
     if error:
-        raise APIException("Github: "+error_description)
+        raise APIException("Github: {}".format(error_description))
 
     url = request.query_params.get('url', None)
-    if url == None:
+    if url is None:
         raise ValidationError("No callback URL specified")
     code = request.query_params.get('code', None)
-    if code == None:
+    if code is None:
         raise ValidationError("No github code specified")
 
     payload = {
@@ -164,7 +170,7 @@ def save_github_token(request):
 
             if github_user['email'] is None:
                 raise ValidationError("Imposible to retrieve user email")
-                
+
             user = User.objects.filter(email=github_user['email']).first()
             if user is None:
                 user = User(username=github_user['login'], email=github_user['email'])
@@ -172,16 +178,16 @@ def save_github_token(request):
 
             CredentialsGithub.objects.filter(github_id=github_user['id']).delete()
             github_credentials = CredentialsGithub(
-                github_id = github_user['id'],
+                github_id=github_user['id'],
                 user=user,
-                token = github_token,
-                email = github_user['email'],
-                avatar_url = github_user['avatar_url'],
-                name = github_user['name'],
-                blog = github_user['blog'],
-                bio = github_user['bio'],
-                company = github_user['company'],
-                twitter_username = github_user['twitter_username']
+                token=github_token,
+                email=github_user['email'],
+                avatar_url=github_user['avatar_url'],
+                name=github_user['name'],
+                blog=github_user['blog'],
+                bio=github_user['bio'],
+                company=github_user['company'],
+                twitter_username=github_user['twitter_username']
             )
             github_credentials.save()
 
@@ -190,17 +196,14 @@ def save_github_token(request):
                 profile = Profile(user=user, avatar_url=github_user['avatar_url'])
                 profile.save()
 
-            token, created = Token.objects.get_or_create(user=user, token_type='login')
+            token, created = Token.objects.get_or_create(user=user,
+                                                         token_type='login')
 
             return HttpResponseRedirect(redirect_to=url+'?token='+token.key)
         else:
             print("Github error: ", resp.status_code)
             print("Error: ", resp.json())
             raise APIException("Error from github")
-
-
-
-
 
 
 def change_password(request, token):
@@ -219,6 +222,7 @@ def change_password(request, token):
         'form': form
     })
 
+
 def pick_password(request, token):
     _dict = request.POST.copy()
     _dict["token"] = token
@@ -236,7 +240,7 @@ def pick_password(request, token):
 
         token = Token.get_valid(request.POST.get("token", None))
         if token is None:
-            messages.error(request, 'Invalid or expired token '+str(token))
+            messages.error(request, 'Invalid or expired token ' + str(token))
 
         else:
             user = token.user
