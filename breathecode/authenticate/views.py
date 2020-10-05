@@ -144,7 +144,8 @@ def save_github_token(request):
         'code': code,
     }
     headers = {'Accept': 'application/json'}
-    resp = requests.post('https://github.com/login/oauth/access_token', data=payload, headers=headers)
+    resp = requests.post('https://github.com/login/oauth/access_token',
+                         data=payload, headers=headers)
     if resp.status_code == 200:
 
         logger.debug("Github responded with 200")
@@ -154,12 +155,14 @@ def save_github_token(request):
             raise APIException(body['error_description'])
 
         github_token = body['access_token']
-        resp = requests.get('https://api.github.com/user', headers={'Authorization': 'token '+github_token })
+        resp = requests.get('https://api.github.com/user',
+                            headers={'Authorization': 'token {}'.format(github_token)})
         if resp.status_code == 200:
             github_user = resp.json()
             logger.debug(github_user)
             if github_user['email'] is None:
-                resp = requests.get('https://api.github.com/user/emails', headers={'Authorization': 'token '+github_token })
+                resp = requests.get('https://api.github.com/user/emails',
+                                    headers={'Authorization': 'token {}'.format(github_token)}
                 if resp.status_code == 200:
                     emails = resp.json()
                     primary_emails = [x for x in emails if x["primary"] == True]
