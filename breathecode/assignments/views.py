@@ -1,9 +1,9 @@
-from django.shortcuts import render
 from .models import Task
 from rest_framework.views import APIView
 from .serializers import SmallTaskSerializer, PostTaskSerializer
 from rest_framework.response import Response
 from rest_framework import status
+
 
 class TaskView(APIView):
     """

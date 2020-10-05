@@ -2,12 +2,7 @@ from .utils import resolve_google_credentials, check_params
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from google.cloud import datastore
-# Create your views here.
-
-# DOCUMENTATION RESOURCES
-# https://www.programcreek.com/python/example/88825/google.cloud.datastore.Entity
-# https://cloud.google.com/datastore/docs/concepts/entities
-# https://googleapis.dev/python/datastore/latest/index.html
+from rest_framework import status
 
 
 class ActivityView(APIView):
@@ -43,4 +38,4 @@ class ActivityView(APIView):
         })
         client.put(entity)
 
-        return Response(answer_dict, status=request.status.HTTP_201_CREATED)
+        return Response(answer_dict, status=status.HTTP_201_CREATED)
