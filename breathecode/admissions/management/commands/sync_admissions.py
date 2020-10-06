@@ -89,7 +89,7 @@ class Command(BaseCommand):
             else:
                 try:
                     self.update_cohort(co, _cohort)
-                    self.stdout.write(self.style.SUCCESS(f"Cohort found, updated the kickof date for {_cohort['slug']}"))
+                    self.stdout.write(self.style.SUCCESS(f"Cohort found, updated info for {_cohort['slug']}"))
                 except Exception as e:
                     raise e
 
@@ -160,7 +160,8 @@ class Command(BaseCommand):
         co.save()
 
     def update_cohort(self, cohort, data):
-
+        print("data", datetime.strptime(data['kickoff_date'],DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC')))
+        # return
         stages = {
             'finished': 'ENDED',
             'on-prework': 'PREWORK',
@@ -172,11 +173,12 @@ class Command(BaseCommand):
             raise CommandError(f"Invalid cohort stage {data['stage']}")
 
         cohort.name = data['name']
-        cohort.kickoff_date = datetime.strptime(data['kickoff_date'],DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC')),
+        if 'kickoff_date' in data and data['kickoff_date'] is not None:
+            cohort.kickoff_date = datetime.strptime(data['kickoff_date'],DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
         cohort.current_day = data['current_day']
         cohort.stage = stages[data['stage']]
-        cohort.language = data['stage']
-        if data['ending_date'] is not None:
+        cohort.language = data['language']
+        if 'kickoff_date' in data and data['ending_date'] is not None:
             cohort.ending_date = datetime.strptime(data['ending_date'],DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
         cohort.save()
 
