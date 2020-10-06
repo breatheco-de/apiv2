@@ -44,7 +44,7 @@ class Academy(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     zip_code = models.IntegerField(blank=True, null=True)
     
-    active_campaign_slug = models.SlugField(max_length=100, unique=True)
+    active_campaign_slug = models.SlugField(max_length=100, unique=False, null=True, default=None)
 
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
 
@@ -52,6 +52,9 @@ class Academy(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     logistical_information = models.CharField(max_length=150,  blank=True, null=True)
+
+    def default_ac_slug():
+        return self.slug
 
     def __str__(self):
         return self.name
