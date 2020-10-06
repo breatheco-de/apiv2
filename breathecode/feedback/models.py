@@ -22,3 +22,13 @@ class Answer(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+class SurveyLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, default=None, blank=True, null=True)
+
+    answered_at = models.DateTimeField(null=True, default=None, blank=True)
+    token = models.CharField(max_length=255)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
