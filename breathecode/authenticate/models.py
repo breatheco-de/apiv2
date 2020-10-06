@@ -13,6 +13,9 @@ class UserAutentication(User):
 class Profile(models.Model):
     user   = models.OneToOneField(User, on_delete=models.CASCADE)
     avatar_url = models.CharField(max_length=255, blank=True, null=True, default=None)
+    bio = models.CharField(max_length=255, blank=True, null=True)
+    twitter_username = models.CharField(max_length=50, blank=True, null=True)
+    blog = models.CharField(max_length=150, blank=True, null=True)
 
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)
@@ -82,4 +85,4 @@ class Token(rest_framework.authtoken.models.Token):
  
     class Meta:
         # ensure user and name are unique
-        unique_together = (('user', 'token_type'),)
+        unique_together = (('user', 'key'),)

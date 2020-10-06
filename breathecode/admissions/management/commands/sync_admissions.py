@@ -41,6 +41,7 @@ class Command(BaseCommand):
             if aca is None:
                 a = Academy(
                     slug=loc['slug'],
+                    active_campaign_slug=loc['slug'],
                     name=loc['name'],
                     street_address=loc['address'],
                 )

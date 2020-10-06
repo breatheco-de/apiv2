@@ -16,6 +16,12 @@ def create_user(github_id=None, email=None):
         user = User.objects.get(email=email)
     return user
 
+def create_token(user, hours_length=1):
+    utc_now = timezone.now()
+    expires_at = utc_now + timezone.timedelta(hours=hours_length)
+    token, created = Token.objects.get_or_create(user=user, token_type="temporal", expires_at=expires_at)
+    return token
+
 def delete_tokens(users=None, status='expired'):
     now = timezone.now()
     

@@ -22,17 +22,21 @@ class GetAnswerView(APIView):
             param = self.request.GET.get('user')
             lookup['user__id'] = param
 
-        if 'entity_type' in self.request.GET:
-            param = self.request.GET.get('entity_type')
-            lookup['entity_type'] = param
+        if 'cohort' in self.request.GET:
+            param = self.request.GET.get('cohort')
+            lookup['cohort__slug'] = param
 
-        if 'entity_id' in self.request.GET:
-            param = self.request.GET.get('entity_id')
-            lookup['entity_id'] = param
+        if 'academy' in self.request.GET:
+            param = self.request.GET.get('academy')
+            lookup['academy__id'] = param
 
-        if 'entity_slug' in self.request.GET:
-            param = self.request.GET.get('entity_slug')
-            lookup['entity_slug'] = param
+        if 'mentor' in self.request.GET:
+            param = self.request.GET.get('mentor')
+            lookup['mentor__id'] = param
+
+        if 'event' in self.request.GET:
+            param = self.request.GET.get('event')
+            lookup['event__id'] = param
 
         if 'score' in self.request.GET:
             param = self.request.GET.get('score')

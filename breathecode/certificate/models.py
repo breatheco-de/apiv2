@@ -53,12 +53,14 @@ class LayoutDesign(models.Model):
         return self.name
 
 class UserSpecialty(models.Model):
+    is_cleaned = False
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     specialty = models.ForeignKey(Specialty, on_delete=models.CASCADE)
     token = models.CharField(max_length=40, db_index=True, unique=True)
     expires_at = models.DateTimeField(default=None, blank=True, null=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    layout = models.ForeignKey(LayoutDesign, on_delete=models.CASCADE, null=True, default=None)
+    layout = models.ForeignKey(LayoutDesign, on_delete=models.CASCADE, blank=True, null=True, default=None)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
     signed_by = models.CharField(max_length=100)
     signed_by_role = models.CharField(max_length=100, default="Director")
@@ -68,10 +70,12 @@ class UserSpecialty(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
-    def save(self, *args, **kwargs):
-
+    def clean(self):
         if self.cohort is not None and self.cohort.academy.id != self.academy.id:
             raise ValidationError("Cohort academy does not match the specified academy for this certificate")
+
+        if self.cohort.stage != 'ENDED':
+            raise ValidationError("The student cohort stage has to be 'finished' before you can issue any certificates")
         
         utc_now = timezone.now()
         if self.token is None or self.token == "":
@@ -80,7 +84,14 @@ class UserSpecialty(models.Model):
         # set expiration
         if self.specialty.expiration_day_delta is not None:
             self.expires_at = utc_now + timezone.timedelta(days=self.specialty.expiration_day_delta)
-        
+
+        self.is_cleaned = True
+
+    def save(self, *args, **kwargs):
+
+        if not self.is_cleaned:
+            self.clean()
+
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
         certificate_screenshot(self)

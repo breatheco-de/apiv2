@@ -11,13 +11,15 @@ class UserSerializer(serpy.Serializer):
 
 class AnswerSerializer(serpy.Serializer):
     id = serpy.Field()
+    title = serpy.Field()
     comment = serpy.Field()
     score = serpy.Field()
     user = UserSerializer(required=False)
 
-    enity_type = serpy.Field(required=False)
-    entity_id = serpy.Field(required=False)
-    entity_slug = serpy.Field(required=False)
+    score = serpy.Field()
+    academy = serpy.Field()
+    mentor = serpy.Field()
+    event = serpy.Field()
 
 class AnswerPOSTSerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,7 +43,9 @@ class AnswerPOSTSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        entity = Answer.objects.create(**{ **validated_data, "user": self.context['request'].user})
+
+        user = self.context['request'].user
+        entity = Answer.objects.create(**{ **validated_data, "user": user })
         return entity
 
         

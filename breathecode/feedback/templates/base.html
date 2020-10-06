@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+</head>
+<body>
+    <style>
+        header{  text-align: center; margin-top: 50px;}
+        header img{ max-height: 60px; margin-bottom: 20px;}
+        ul{padding: 0;}
+        ul li{
+            list-style: none;
+        }
+        .errorlist{
+            background: #f9c1b3;
+            border-radius: 5px;
+            padding: 10px;
+        }
+        .helptext{
+            background: #d6f4ff;
+            font-size: 80%;
+            padding: 10px;
+            display: block;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        .helptext ul{ margin: 0; }
+        button[type=submit]{
+            background: #1952fc;
+            color: white;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0px;
+            border: 0;
+            border-radius: 5px;
+        }
+    </style>
+    <header>
+        <img class="img-responsive" src="{{ API_URL }}/static/assets/logo.png" />
+    </header>
+    {% block content %}
+    {% endblock %}
+</body>
+</html>

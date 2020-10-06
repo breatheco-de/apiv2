@@ -43,6 +43,8 @@ class Academy(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     zip_code = models.IntegerField(blank=True, null=True)
+    
+    active_campaign_slug = models.SlugField(max_length=100, unique=True)
 
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
 
@@ -66,6 +68,12 @@ class Academy(models.Model):
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
+PARTIME = 'PART-TIME'
+FULLTIME = 'FULL-TIME'
+SCHEDULE_TYPE = (
+    (PARTIME, 'Part-Time'),
+    (FULLTIME, 'Full-Time'),
+)
 class Certificate(models.Model):
     slug = models.SlugField(max_length=100)
     name = models.CharField(max_length=150)
@@ -74,6 +82,8 @@ class Certificate(models.Model):
     duration_in_hours = models.IntegerField()
     duration_in_days = models.IntegerField()
     week_hours = models.IntegerField(null=True, default=None)
+
+    schedule_type = models.CharField(max_length=15, choices=SCHEDULE_TYPE, default='PART-TIME')
 
     description = models.TextField(max_length=450)
 

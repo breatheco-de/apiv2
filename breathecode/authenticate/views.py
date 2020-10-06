@@ -187,7 +187,12 @@ def save_github_token(request):
 
             profile = Profile.objects.filter(user__email=github_user['email']).first()
             if profile is None:
-                profile = Profile(user=user, avatar_url=github_user['avatar_url'])
+                profile = Profile(user=user, 
+                    avatar_url=github_user['avatar_url'],
+                    blog=github_user['blog'],
+                    bio=github_user['bio'],
+                    twitter_username=github_user['twitter_username']
+                )
                 profile.save()
 
             token, created = Token.objects.get_or_create(user=user, token_type='login')
