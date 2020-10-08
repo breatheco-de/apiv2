@@ -50,8 +50,8 @@ send_to_ac.short_description = "SYNC with Active Campaign"
 @admin.register(FormEntry)
 class FormEntryAdmin(admin.ModelAdmin, ExportCsvMixin):
     search_fields = ['email', 'first_name', 'last_name', 'phone']
-    list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course', 'utm_url')
-    list_filter = ['storage_status', 'tag_objects__tag_type', 'automation_objects__slug']
+    list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course', 'utm_medium', 'utm_url', 'gclid')
+    list_filter = ['storage_status', 'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium', 'location']
     actions = [send_to_ac, "export_as_csv"]
 
 
