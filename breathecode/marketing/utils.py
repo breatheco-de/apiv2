@@ -119,6 +119,9 @@ class AC_Old_Client(object):
 
     def __init__(self, url, apikey):
 
+        if url is None:
+            raise Exception("Invalid URL for active campaign API, have you setup your env variables?")
+
         if not url.startswith("http"):
             self._base_url = "https://" + url
         else:

@@ -16,6 +16,7 @@ acp_ids = {
     "utm_url": "15",
     "utm_location": "18",
     "course": "2",
+    "client_comments": "13",
     "utm_language": "16",
     "utm_country": "19",
     "gclid": "26",
@@ -95,6 +96,7 @@ def register_new_lead(form_entry=None):
     contact = set_optional(contact, 'course', form_entry)
     contact = set_optional(contact, 'utm_language', form_entry, "language")
     contact = set_optional(contact, 'utm_country', form_entry, "country")
+    contact = set_optional(contact, 'client_comments', form_entry, "client_comments")
     contact = set_optional(contact, 'gclid', form_entry)
     contact = set_optional(contact, 'referral_key', form_entry)
 
