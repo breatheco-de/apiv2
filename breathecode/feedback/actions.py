@@ -1,6 +1,6 @@
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.actions import create_token
-from .models import Answer, SurveyLog
+from .models import Answer
 
 strings = {
     "es": {
@@ -13,25 +13,27 @@ strings = {
 
 def send_survey(user, cohort=None):
 
+    answer = Answer(user = user)
+
     question = strings["us"]["question"]
     if cohort is not None: 
         question = strings[cohort.language]["question"]
+        answer.cohort = cohort
+    answer.save()
 
     token = create_token(user, hours_length=48)
-
     data = {
         "QUESTION": question,
-        "LINK": "https://nps.breatheco.de/?token="+token.key
+        "SUBJECT": question,
+        "LINK": f"https://nps.breatheco.de/{answer.id}?token={token.key}"
     }
 
     send_email_message("nps", user.email, data)
 
+    answer.status = "SENT"
+    answer.save()
     # keep track of sent survays until they get answered
-    log = SurveyLog(
-        user = user,
-        token = token
-    )
-    log.save()
+
 
 def answer_survey(user, data):
     answer = Answer.objects.create(**{ **data, "user": user })

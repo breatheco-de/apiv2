@@ -7,6 +7,17 @@ class UserProxy(User):
     class Meta:
         proxy = True
 
+PENDING = 'PENDING'
+SENT = 'SENT'
+ANSWERED = 'ANSWERED'
+EXPIRED = 'EXPIRED'
+SURVEY_STATUS = (
+    (PENDING, 'Pending'),
+    (SENT, 'Sent'),
+    (ANSWERED, 'Answered'),
+    (EXPIRED, 'Expired'),
+)
+
 class Answer(models.Model):
     title = models.CharField(max_length=200, blank=True)
 
@@ -15,20 +26,21 @@ class Answer(models.Model):
     mentor = models.ForeignKey(User, related_name='mentor_set', on_delete=models.SET_NULL, default=None, blank=True, null=True)
     event = models.ForeignKey(Event, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     
-    score = models.CharField(max_length=250, blank=True)
-    comment = models.CharField(max_length=255, blank=True)
+    score = models.CharField(max_length=250, default=None, blank=True, null=True)
+    comment = models.CharField(max_length=255, default=None, blank=True, null=True)
+
+    status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=PENDING)
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+# class SurveyLog(models.Model):
+#     user = models.ForeignKey(User, on_delete=models.CASCADE, default=None, blank=True, null=True)
 
-class SurveyLog(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, default=None, blank=True, null=True)
+#     status = models.CharField(max_length=1, choices=SURVEY_STATUS, default=PENDING)
+#     answer = models.ForeignKey(Answer, on_delete=models.CASCADE, null=True, default=None)
 
-    answered_at = models.DateTimeField(null=True, default=None, blank=True)
-    token = models.CharField(max_length=255)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
+#     created_at = models.DateTimeField(auto_now_add=True, editable=False)
+#     updated_at = models.DateTimeField(auto_now=True, editable=False)

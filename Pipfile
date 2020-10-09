@@ -28,12 +28,14 @@ twilio = "*"
 google-cloud-storage = "*"
 celery = "*"
 redis = "*"
+eventbrite = "*"
 
 [requires]
 python_version = "3.8"
 
 [scripts]
-start="heroku local"
+dev="heroku local"
+start="python manage.py runserver"
 migrate="python manage.py migrate"
 makemigrations="python manage.py makemigrations"
 test="pytest"

@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "16d580877884324a1829c9de0f10e8ea921f9d538e79efaf8cea4e718da8f144"
+            "sha256": "6f7cc771038f32985903f3f92d5458cc4928cc764b2c31471a9ef3cc9b320be4"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -234,6 +234,13 @@
             ],
             "index": "pypi",
             "version": "==1.17.1"
+        },
+        "eventbrite": {
+            "hashes": [
+                "sha256:ddc495520b1df80528b51fc42451f3101c0b00ffd0b2bb48f370980a571caa02"
+            ],
+            "index": "pypi",
+            "version": "==3.3.5"
         },
         "faker": {
             "hashes": [

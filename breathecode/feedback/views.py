@@ -1,8 +1,9 @@
 from django.shortcuts import render
 from django.utils import timezone
 from .models import Answer
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import AnswerPOSTSerializer, AnswerSerializer
+from .serializers import AnswerPUTSerializer, AnswerSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
@@ -51,8 +52,15 @@ class AnswerView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-    def post(self, request, format=None):
-        serializer = AnswerPOSTSerializer(data=request.data, context={"request": request})
+    def put(self, request, answer_id=None):
+        if answer_id is None:
+            raise serializers.ValidationError("Missing answer_id", code=400)
+        
+        answer = Answer.objects.filter(user=request.user,id=answer_id).first()
+        if answer is None:
+            raise ValidationError('This survay does not exist for this user')
+        
+        serializer = AnswerPUTSerializer(answer, data=request.data, context={ "request": request, "answer": answer_id })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

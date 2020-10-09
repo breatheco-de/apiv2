@@ -255,7 +255,6 @@ def save_get_geolocal(contact, form_entry=None):
                     result['postal_code'] = component['long_name']
 
 
-    print("Got result from geolocation api", data)
     contact.country = result['country']
     contact.city = result['locality']
     contact.street_address = result['route']
