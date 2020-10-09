@@ -1,7 +1,7 @@
 import csv
 from django.contrib import admin
 from .models import FormEntry, Tag, Automation
-from .actions import register_new_lead
+from .actions import register_new_lead, save_get_geolocal
 from django.http import HttpResponse
 from django.contrib.admin import SimpleListFilter
 # Register your models here.
@@ -42,11 +42,22 @@ def send_to_ac(modeladmin, request, queryset):
             "language": entry.language,
             "city": entry.city,
             "country": entry.country,
-            "utm_url": entry.utm_url
+            "utm_url": entry.utm_url,
+            "client_comments": entry.client_comments,
         }
         register_new_lead(_entry)
 
-send_to_ac.short_description = "SYNC with Active Campaign"
+def get_geoinfo(modeladmin, request, queryset):
+    entries = queryset.all()
+    for entry in entries:
+        
+        form_enty = {
+            "latitude": entry.latitude,
+            "longitude": entry.longitude,
+        }
+        save_get_geolocal(entry, form_enty)
+
+get_geoinfo.short_description = "Get geo info"
 
 class PPCFilter(SimpleListFilter):
     title = 'Source' # or use _('country') for translated title
@@ -67,7 +78,7 @@ class FormEntryAdmin(admin.ModelAdmin, ExportCsvMixin):
     search_fields = ['email', 'first_name', 'last_name', 'phone']
     list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
     list_filter = ['storage_status', 'location', 'course', PPCFilter, 'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium']
-    actions = [send_to_ac, "export_as_csv"]
+    actions = [send_to_ac, get_geoinfo, "export_as_csv"]
 
 
 def mark_tag_as_strong(modeladmin, request, queryset):

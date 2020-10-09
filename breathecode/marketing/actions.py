@@ -105,13 +105,9 @@ def register_new_lead(form_entry=None):
     contact = set_optional(contact, 'referral_key', form_entry)
 
     entry = FormEntry.objects.get(id=form_entry['id'])
-    if 'latitude' in form_entry and 'longitude' in form_entry:
-        address = get_geolocal(form_entry['latitude'], form_entry['longitude'])
-        entry.country = address['country']
-        entry.city = address['locality']
-        entry.street_address = address['route']
-        entry.zip_code = address['postal_code']
-    entry.save()
+    
+    # save geolocalization info
+    # save_get_geolocal(entry, form_enty)
 
     if 'contact-us' == tags[0].slug:
         send_email_message('new_contact', 'info@4geeksacademy.com', { 
@@ -171,6 +167,11 @@ def register_new_lead(form_entry=None):
 
 def sync_tags():
     response = client.tags.list_all_tags(limit=100)
+
+    if 'tags' not in response:
+        print("Invalid tags incoming from AC")
+        return False
+
     tags = response['tags']
     count = 0
     while len(response['tags']) == 100:
@@ -194,6 +195,10 @@ def sync_tags():
 
 def sync_automations():
     response = client.automations.list_all_automations(limit=100)
+
+    if 'automations' not in response:
+        print("Invalid automations incoming from AC")
+        return False
     # print(response)
     automations = response['automations']
     count = 0
@@ -221,14 +226,13 @@ def sync_automations():
     return response
 
 
-def get_geolocal(lat, long):
-    result = {
-        "country": None,
-        "locality": None,
-        "route": None,
-        "postal_code": None,
-    }
-    resp = requests.get(f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{long}&key={GOOGLE_CLOUD_KEY}")
+def save_get_geolocal(contact, form_entry):
+
+    if 'latitude' not in form_entry or 'longitude' not in form_entry:
+        return False
+
+    result = {}
+    resp = requests.get(f"https://maps.googleapis.com/maps/api/geocode/json?latlng={form_entry['latitude']},{form_entry['longitude']}&key={GOOGLE_CLOUD_KEY}")
     data = resp.json()
     if 'results' in data:
         for address in data['results']:
@@ -241,6 +245,14 @@ def get_geolocal(lat, long):
                     result['route'] = component['long_name']
                 if 'postal_code' in component['types'] and 'postal_code' not in result:
                     result['postal_code'] = component['long_name']
+
+
+    print("Got result from geolocation api", data)
+    contact.country = result['country']
+    contact.city = result['locality']
+    contact.street_address = result['route']
+    contact.zip_code = result['postal_code']
+    contact.save()
     
-    return result
+    return True
 
