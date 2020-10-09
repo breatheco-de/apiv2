@@ -153,8 +153,13 @@ class AC_Old_Client(object):
         if aditional_data is not None:
             for aditional in aditional_data:
                 params.append(aditional)
-        response = requests.request(method, self._base_url+"/admin/api.php", params=params, data=data).json()
-        return self._parse(response)
+        response = requests.request(method, self._base_url+"/admin/api.php", params=params, data=data)
+        if response.status_code >= 200 and response.status_code < 400:
+            data = response.json()
+            return self._parse(data)
+        else:
+            print("Error when saving contact on AC", response.text)
+            raise exception.ActiveCampaignError("Error when saving contact on AC")
 
     def _parse(self, response):
         if response['result_code'] == 1:
