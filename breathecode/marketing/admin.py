@@ -27,7 +27,7 @@ class ExportCsvMixin:
 def send_to_ac(modeladmin, request, queryset):
     entries = queryset.all()
     for entry in entries:
-        register_new_lead(_entry.toFormData())
+        register_new_lead(entry.toFormData())
 
 def get_geoinfo(modeladmin, request, queryset):
     entries = queryset.all()
