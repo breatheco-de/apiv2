@@ -233,10 +233,15 @@ def save_get_geolocal(contact, form_entry=None):
         form_entry = contact.toFormData()
         if 'latitude' not in form_entry or 'longitude' not in form_entry:
             return False
+        if form_entry['latitude'] == '' or form_entry['longitude'] == '' or form_entry['latitude'] is None or form_entry['longitude'] is None:
+            return False
 
     result = {}
     resp = requests.get(f"https://maps.googleapis.com/maps/api/geocode/json?latlng={form_entry['latitude']},{form_entry['longitude']}&key={GOOGLE_CLOUD_KEY}")
     data = resp.json()
+    if 'status' in data and data['status'] == 'INVALID_REQUEST':
+        raise Exception(data['error_message'])
+
     if 'results' in data:
         for address in data['results']:
             for component in address['address_components']:
