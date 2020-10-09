@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from .actions import register_new_lead, sync_tags, sync_automations
+from .tasks import persist_single_lead
 
 # Create your views here.
 @api_view(['POST'])
@@ -14,7 +15,7 @@ def create_lead(request):
     if serializer.is_valid():
         serializer.save()
 
-        register_new_lead(serializer.data)
+        persist_single_lead.delay(serializer.data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -16,8 +16,8 @@ tasks:
         pipenv run start;
       command: >
         npm i -g heroku;
-      # command: >
-      #   redis-server;
+    - command: >
+        redis-server;
 
 
 # Other commands

@@ -33,7 +33,7 @@ redis = "*"
 python_version = "3.8"
 
 [scripts]
-start="python manage.py runserver"
+start="heroku local"
 migrate="python manage.py migrate"
 makemigrations="python manage.py makemigrations"
 test="pytest"

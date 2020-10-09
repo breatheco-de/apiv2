@@ -38,11 +38,11 @@ def set_optional(contact, key, data, custom_key=None):
 
 def get_lead_tags(form_entry):
     if 'tags' not in form_entry or form_entry['tags'] == '':
-        raise ValidationError('You need to specify tags for this entry')
+        raise Exception('You need to specify tags for this entry')
     else:
         _tags = form_entry['tags'].split(",")
         if len(_tags) == 0 or _tags[0] == '':
-            raise ValidationError('The contact tags are empty', 400)
+            raise Exception('The contact tags are empty', 400)
     
     strong_tags = Tag.objects.filter(slug__in=_tags, tag_type='STRONG')
     soft_tags = Tag.objects.filter(slug__in=_tags, tag_type='SOFT')
@@ -52,7 +52,7 @@ def get_lead_tags(form_entry):
     tags = list(chain(strong_tags, soft_tags, dicovery_tags, other_tags))
     if len(tags) == 0:
         print("Tag applied to the contact not found or has tag_type assigned",_tags)
-        raise ValidationError('Tag applied to the contact not found')
+        raise Exception('Tag applied to the contact not found')
 
     return tags
 
@@ -66,7 +66,8 @@ def get_lead_automations(form_entry):
     automations = Automation.objects.filter(slug__in=_automations)
     count = automations.count()
     if count == 0:
-        raise ValidationError(f"The specified automation {form_entry['automations']} was not found")
+        _name = form_entry['automations']
+        raise Exception(f"The specified automation {_name} was not found")
     
     print(f"found {str(count)} automations")
     return automations.values_list('acp_id', flat=True)
@@ -75,7 +76,7 @@ def get_lead_automations(form_entry):
 def register_new_lead(form_entry=None):
     print("form entry", form_entry)
     if form_entry is None:
-        raise ValidationError('You need to specify the form entry data')
+        raise Exception('You need to specify the form entry data')
 
     automations = get_lead_automations(form_entry)
     print("found automations", automations)
@@ -85,7 +86,7 @@ def register_new_lead(form_entry=None):
     LEAD_TYPE = tags[0].tag_type
     if (automations is None or len(automations) == 0) and len(tags) > 0:
         if tags[0].automation is None:
-            raise ValidationError('No automation was specified and the the specified tag has no automation either')
+            raise Exception('No automation was specified and the the specified tag has no automation either')
 
         automations = [tags[0].automation.acp_id]
 
@@ -163,7 +164,7 @@ def register_new_lead(form_entry=None):
 
     form_entry['storage_status'] = 'PERSISTED'
 
-    return form_entry
+    return entry
 
 def sync_tags():
     response = client.tags.list_all_tags(limit=100)
@@ -226,10 +227,12 @@ def sync_automations():
     return response
 
 
-def save_get_geolocal(contact, form_entry):
+def save_get_geolocal(contact, form_entry=None):
 
     if 'latitude' not in form_entry or 'longitude' not in form_entry:
-        return False
+        form_entry = contact.toFormData()
+        if 'latitude' not in form_entry or 'longitude' not in form_entry:
+            return False
 
     result = {}
     resp = requests.get(f"https://maps.googleapis.com/maps/api/geocode/json?latlng={form_entry['latitude']},{form_entry['longitude']}&key={GOOGLE_CLOUD_KEY}")

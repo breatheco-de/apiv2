@@ -141,6 +141,8 @@ class FormEntry(models.Model):
             "country": self.country,
             "utm_url": self.utm_url,
             "client_comments": self.client_comments,
+            "latitude": self.longitude,
+            "longitude": self.latitude,
         }
         return _entry
 
