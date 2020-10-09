@@ -27,25 +27,7 @@ class ExportCsvMixin:
 def send_to_ac(modeladmin, request, queryset):
     entries = queryset.all()
     for entry in entries:
-        
-        _entry = {
-            "id": entry.id,
-            "first_name": entry.first_name,
-            "last_name": entry.last_name,
-            "phone": entry.phone,
-            "email": entry.email,
-            "location": entry.location,
-            "referral_key": entry.referral_key,
-            "course": entry.course,
-            "tags": entry.tags,
-            "automations": entry.automations,
-            "language": entry.language,
-            "city": entry.city,
-            "country": entry.country,
-            "utm_url": entry.utm_url,
-            "client_comments": entry.client_comments,
-        }
-        register_new_lead(_entry)
+        register_new_lead(_entry.toFormData())
 
 def get_geoinfo(modeladmin, request, queryset):
     entries = queryset.all()

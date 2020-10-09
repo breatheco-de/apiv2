@@ -7,7 +7,7 @@ verify_ssl = true
 
 [packages]
 django = "*"
-djangorestframework = "*"
+djangorestframework = "~=3.11.1"
 serpy = "*"
 drf-yasg = "*"
 gunicorn = "*"
@@ -26,6 +26,8 @@ google-cloud-datastore = "*"
 pyfcm = "*"
 twilio = "*"
 google-cloud-storage = "*"
+celery = "*"
+redis = "*"
 
 [requires]
 python_version = "3.8"

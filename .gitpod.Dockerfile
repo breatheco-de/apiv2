@@ -1,5 +1,8 @@
 FROM gitpod/workspace-full:latest
 
+# Install Redis
+RUN sudo apt-get install -y redis-server
+
 # Install PostgreSQL
 RUN sudo apt-get update \
  && sudo apt-get install -y postgresql postgresql-contrib \

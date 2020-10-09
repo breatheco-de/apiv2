@@ -124,3 +124,23 @@ class FormEntry(models.Model):
     def __str__(self):
         return self.first_name + " " + self.last_name
 
+    def toFormData(self):
+        _entry = {
+            "id": self.id,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "phone": self.phone,
+            "email": self.email,
+            "location": self.location,
+            "referral_key": self.referral_key,
+            "course": self.course,
+            "tags": self.tags,
+            "automations": self.automations,
+            "language": self.language,
+            "city": self.city,
+            "country": self.country,
+            "utm_url": self.utm_url,
+            "client_comments": self.client_comments,
+        }
+        return _entry
+
