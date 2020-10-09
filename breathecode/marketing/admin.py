@@ -3,6 +3,7 @@ from django.contrib import admin
 from .models import FormEntry, Tag, Automation
 from .actions import register_new_lead
 from django.http import HttpResponse
+from django.contrib.admin import SimpleListFilter
 # Register your models here.
 
 class ExportCsvMixin:
@@ -47,11 +48,25 @@ def send_to_ac(modeladmin, request, queryset):
 
 send_to_ac.short_description = "SYNC with Active Campaign"
 
+class PPCFilter(SimpleListFilter):
+    title = 'Source' # or use _('country') for translated title
+    parameter_name = 'source'
+
+    def lookups(self, request, model_admin):
+        mediums = ['From PPC', 'Course Report']
+        return [(m, m) for m in mediums]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'From PPC':
+            return queryset.filter(gclid__isnull=False)
+        if self.value() == 'Course Report':
+            return queryset.filter(utm_medium='coursereportschoolpage')
+
 @admin.register(FormEntry)
 class FormEntryAdmin(admin.ModelAdmin, ExportCsvMixin):
     search_fields = ['email', 'first_name', 'last_name', 'phone']
     list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
-    list_filter = ['storage_status', 'location', 'course', 'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium']
+    list_filter = ['storage_status', 'location', 'course', PPCFilter, 'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium']
     actions = [send_to_ac, "export_as_csv"]
 
 
