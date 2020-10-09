@@ -79,7 +79,7 @@ LEAD_TYPE = (
 )
 # Create your models here.
 class FormEntry(models.Model):
-    contact = models.ForeignKey(Contact, on_delete=models.CASCADE, null=True, default=None)
+    contact = models.ForeignKey(Contact, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
     first_name = models.CharField(max_length=150, default='')
     last_name = models.CharField(max_length=150, default='')
@@ -105,13 +105,14 @@ class FormEntry(models.Model):
     tag_objects = models.ManyToManyField(Tag, blank=True)
     automation_objects = models.ManyToManyField(Automation, blank=True)
 
-    street_address = models.CharField(max_length=250, null=True, default=None)
-    country = models.CharField(max_length=30)
-    city = models.CharField(max_length=30)
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, default=None)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, default=None)
-    state = models.CharField(max_length=30, null=True, default=None)
-    zip_code = models.IntegerField(null=True, default=None)
+    street_address = models.CharField(max_length=250, null=True, default=None, blank=True)
+    country = models.CharField(max_length=30, null=True, default=None, blank=True)
+    city = models.CharField(max_length=30, null=True, default=None, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, default=None, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, default=None, blank=True)
+    state = models.CharField(max_length=30, null=True, default=None, blank=True)
+    zip_code = models.IntegerField(null=True, default=None, blank=True)
+    browser_lang = models.CharField(max_length=5, null=True, default=None, blank=True)
 
     # is it saved into active campaign?
     storage_status = models.CharField(max_length=15, choices=STORAGE_SATUS, default=PENDING)

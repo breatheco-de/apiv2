@@ -20,5 +20,6 @@ tasks:
 
 # Other commands
 # python manage.py sync_admissions academies
+# python manage.py sync_admissions certificates
 # python manage.py sync_admissions cohorts
 # python manage.py sync_admissions students --limit=5

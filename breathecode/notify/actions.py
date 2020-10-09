@@ -97,7 +97,10 @@ def get_template_content(slug, data={}, formats=None):
         'API_URL': os.environ.get('API_URL'),
         'COMPANY_NAME': 'BreatheCode',
         'COMPANY_LEGAL_NAME': 'BreatheCode LLC',
-        'COMPANY_ADDRESS': '1801 SW 3rd Ave, Ste 100, Miami'
+        'COMPANY_ADDRESS': '1801 SW 3rd Ave, Ste 100, Miami',
+        'style__success': '#99ccff',
+        'style__danger': '#ffcccc',
+        'style__secondary': '#ededed',
     }
     z = con.copy()   # start with x's keys and values
     z.update(data)

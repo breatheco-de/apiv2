@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>You have a new contact request from {{ full_name }}</h2>
+<table cellpadding="15" cellspacing="0" border="0" align="center" bgcolor="{{ style__secondary }}">
+    <tr><td>
+        <h3>{{ client_comments }}</h3>
+    </tr></td>
+</table>
+<h2>These is the rest of the contact information:</h2>
+<table width="400px" cellpadding="20" cellspacing="0" border="0" align="center" bgcolor="{{ style__primary }}">
+    <tr><td>
+        <table width="100%" cellpadding="5" cellspacing="0" border="0">
+        {% for key, value in data.items %}
+            <tr>
+                <td> {{ key }} </td>
+                <td> {{ value }} </td>
+            </tr>
+        {% endfor %}
+        </table>
+    </tr></td>
+</table>
+{% endblock %}

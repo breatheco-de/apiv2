@@ -1,12 +1,16 @@
-import os, re
+import os, re, requests
 from itertools import chain
 from .models import FormEntry, Tag, Automation
 from schema import Schema, And, Use, Optional, SchemaError
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from activecampaign.client import Client
 from .utils import AC_Old_Client
+from breathecode.notify.actions import send_email_message
+
 client = Client(os.getenv('ACTIVE_CAMPAIGN_URL'), os.getenv('ACTIVE_CAMPAIGN_KEY'))
 old_client = AC_Old_Client(os.getenv('ACTIVE_CAMPAIGN_URL'), os.getenv('ACTIVE_CAMPAIGN_KEY'))
+SAVE_LEADS = os.getenv('SAVE_LEADS',None)
+GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY',None)
 
 acp_ids = {
     # "strong": "49",
@@ -100,6 +104,28 @@ def register_new_lead(form_entry=None):
     contact = set_optional(contact, 'gclid', form_entry)
     contact = set_optional(contact, 'referral_key', form_entry)
 
+    entry = FormEntry.objects.get(id=form_entry['id'])
+    if 'latitude' in form_entry and 'longitude' in form_entry:
+        address = get_geolocal(form_entry['latitude'], form_entry['longitude'])
+        entry.country = address['country']
+        entry.city = address['locality']
+        entry.street_address = address['route']
+        entry.zip_code = address['postal_code']
+    entry.save()
+
+    if 'contact-us' == tags[0].slug:
+        send_email_message('new_contact', 'info@4geeksacademy.com', { 
+            "subject": f"New contact from the website {form_entry['first_name']} {form_entry['last_name']}", 
+            "full_name": form_entry['first_name'] + " " + form_entry['last_name'],
+            "client_comments": form_entry['client_comments'], 
+            "data": { **form_entry, **address },
+        })
+
+    # ENV Variable to fake lead storage
+    if SAVE_LEADS == 'FALSE':
+        print("Ignoring leads because SAVE_LEADS is FALSE on the env variables")
+        return form_entry
+
     print("ready to send contact with following details: ", contact)
     response = old_client.contacts.create_contact(contact)
     contact_id = response['subscriber_id']
@@ -107,7 +133,6 @@ def register_new_lead(form_entry=None):
         print("error adding contact", response)
         raise APIException('Could not save contact in CRM')
 
-    entry = FormEntry.objects.get(id=form_entry['id'])
     if automations:
         for automation_id in automations:
             data = {
@@ -135,6 +160,7 @@ def register_new_lead(form_entry=None):
         response = client.contacts.add_a_tag_to_contact(data)
         if 'contacts' in response:
             entry.tag_objects.add(t.id)
+
 
     entry.storage_status = 'PERSISTED'
     entry.save()
@@ -193,3 +219,28 @@ def sync_automations():
         a.save()
 
     return response
+
+
+def get_geolocal(lat, long):
+    result = {
+        "country": None,
+        "locality": None,
+        "route": None,
+        "postal_code": None,
+    }
+    resp = requests.get(f"https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{long}&key={GOOGLE_CLOUD_KEY}")
+    data = resp.json()
+    if 'results' in data:
+        for address in data['results']:
+            for component in address['address_components']:
+                if 'country' in component['types'] and 'country' not in result:
+                    result['country'] = component['long_name']
+                if 'locality' in component['types'] and 'locality' not in result:
+                    result['locality'] = component['long_name']
+                if 'route' in component['types'] and 'route' not in result:
+                    result['route'] = component['long_name']
+                if 'postal_code' in component['types'] and 'postal_code' not in result:
+                    result['postal_code'] = component['long_name']
+    
+    return result
+
