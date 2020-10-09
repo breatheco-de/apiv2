@@ -112,7 +112,7 @@ class FormEntry(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, default=None, blank=True)
     state = models.CharField(max_length=30, null=True, default=None, blank=True)
     zip_code = models.IntegerField(null=True, default=None, blank=True)
-    browser_lang = models.CharField(max_length=5, null=True, default=None, blank=True)
+    browser_lang = models.CharField(max_length=10, null=True, default=None, blank=True)
 
     # is it saved into active campaign?
     storage_status = models.CharField(max_length=15, choices=STORAGE_SATUS, default=PENDING)
