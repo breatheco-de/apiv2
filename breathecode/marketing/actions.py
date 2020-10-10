@@ -115,7 +115,8 @@ def register_new_lead(form_entry=None):
             "subject": f"New contact from the website {form_entry['first_name']} {form_entry['last_name']}", 
             "full_name": form_entry['first_name'] + " " + form_entry['last_name'],
             "client_comments": form_entry['client_comments'], 
-            "data": { **form_entry, **address },
+            "data": { **form_entry },
+            # "data": { **form_entry, **address },
         })
 
     # ENV Variable to fake lead storage

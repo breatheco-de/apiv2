@@ -2,6 +2,15 @@ from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy
 
+class Organizacion(models.Model):
+    eventbrite_id = models.CharField(unique=True, max_length=30, blank=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
+    eventbrite_key = models.CharField(max_length=255, blank=True, null=True, default=None)
+    name = models.CharField(max_length=100, blank=True, null=True, default=None)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
 ACTIVE = 'ACTIVE'
 DRAFT = 'DRAFT'
 DELETED = 'DELETED'
@@ -10,8 +19,6 @@ VENUE_STATUS = (
     (DRAFT, 'Draft'),
     (DELETED, 'Deleted'),
 )
-
-
 class Venue(models.Model):
     title = models.CharField(max_length=200, blank=True)
     street_address = models.CharField(max_length=250, blank=True)
@@ -25,6 +32,10 @@ class Venue(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     status = models.CharField(max_length=9, choices=VENUE_STATUS, default=DRAFT, blank=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
+    organization = models.ForeignKey(Organizacion, on_delete=models.CASCADE, blank=True, null=True)
+    
+    eventbrite_id = models.CharField(unique=True, max_length=80, blank=True, default=None, null=True)
+    eventbrite_url = models.CharField(max_length=255, blank=True, default=None, null=True)
 
     def __str__(self):
         return self.title
