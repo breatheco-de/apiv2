@@ -20,22 +20,23 @@ VENUE_STATUS = (
     (DELETED, 'Deleted'),
 )
 class Venue(models.Model):
-    title = models.CharField(max_length=200, blank=True)
-    street_address = models.CharField(max_length=250, blank=True)
-    country = models.CharField(max_length=30, blank=True)
-    city = models.CharField(max_length=30, blank=True)
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, default=0)
-    state = models.CharField(max_length=30, blank=True)
-    zip_code = models.IntegerField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-    status = models.CharField(max_length=9, choices=VENUE_STATUS, default=DRAFT, blank=True)
+    title = models.CharField(max_length=200, blank=True, default=None, null=True)
+    street_address = models.CharField(max_length=250, blank=True, default=None, null=True)
+    country = models.CharField(max_length=30, blank=True, default=None, null=True)
+    city = models.CharField(max_length=30, blank=True, default=None, null=True)
+    latitude = models.DecimalField(max_digits=20, decimal_places=15, default=0)
+    longitude = models.DecimalField(max_digits=20, decimal_places=15, default=0)
+    state = models.CharField(max_length=30, blank=True, default=None, null=True)
+    zip_code = models.IntegerField(blank=True, default=None, null=True)
+    status = models.CharField(max_length=9, choices=VENUE_STATUS, default=DRAFT)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     organization = models.ForeignKey(Organizacion, on_delete=models.CASCADE, blank=True, null=True)
     
     eventbrite_id = models.CharField(unique=True, max_length=80, blank=True, default=None, null=True)
     eventbrite_url = models.CharField(max_length=255, blank=True, default=None, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
         return self.title

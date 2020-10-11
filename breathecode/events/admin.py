@@ -31,7 +31,8 @@ def pull_eventbrite_venues(modeladmin, request, queryset):
         for entry in entries:
             sync_org_venues(entry)
     except Exception as e:
-        messages.error(request,str(e))
+        print("error", str(e))
+        messages.error(request,f"There was an error retriving the venues {str(e)}")
 
 @admin.register(Organizacion)
 class OrgAdmin(admin.ModelAdmin):
