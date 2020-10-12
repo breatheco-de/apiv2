@@ -112,7 +112,7 @@ class Event(models.Model):
 
     host = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='host', blank=True, null=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
-    organizacion = models.ForeignKey(Organization, on_delete=models.CASCADE, blank=True, null=True)
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, blank=True, null=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
 
     online_event = models.BooleanField(default=False)

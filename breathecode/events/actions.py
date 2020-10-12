@@ -112,6 +112,8 @@ def update_or_create_event(data, org):
 
     if data['status'] not in status_map:
         raise Exception("Uknown eventbrite status "+data['status'])
+    
+    event = Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).first()
     try:
         venue = None
         if 'venue' in data:
@@ -122,7 +124,6 @@ def update_or_create_event(data, org):
         else:
             print("Event without organizer", data)
 
-        event = Event.objects.filter(eventbrite_id=data['id'], organizacion__id=org.id).first()
         if event is None:
             event = Event(
                 title=data['name']['text'],
@@ -135,8 +136,8 @@ def update_or_create_event(data, org):
                 eventbrite_url=data['url'],
                 status = status_map[data['status']],
                 eventbrite_status=data['status'],
-                organizacion=org,
-                organizer=organizer,
+                organization=org,
+                # organizer=organizer,
                 venue=venue,
             )
         else:
@@ -150,7 +151,7 @@ def update_or_create_event(data, org):
             event.eventbrite_url=data['url']
             event.status= status_map[data['status']]
             event.eventbrite_status=data['status']
-            event.organizer=organizer
+            # event.organizer=organizer
             event.venue=venue
         
         if "published" in data:
