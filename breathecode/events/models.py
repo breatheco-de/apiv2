@@ -14,7 +14,7 @@ class Organization(models.Model):
     eventbrite_id = models.CharField(unique=True, max_length=30, blank=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     eventbrite_key = models.CharField(max_length=255, blank=True, null=True, default=None)
-    name = models.CharField(max_length=100, blank=True, null=True, default=None)
+    name = models.CharField(max_length=100, blank=True, null=True, default='')
 
     sync_status = models.CharField(max_length=9,choices=SYNC_STATUS,default=PENDING,help_text="One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status")
     sync_desc = models.TextField(max_length=255, null=True, default=None, blank=True)
@@ -23,7 +23,10 @@ class Organization(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.name + "("+ str(self.id) +")"
+        if self.name is not None:
+            return self.name + "("+ str(self.id) +")"
+        else:
+            return "Organization "+str(self.id)
 
 class Organizer(models.Model):
     eventbrite_id = models.CharField(unique=True, max_length=30, blank=True)
@@ -38,7 +41,10 @@ class Organizer(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.name + "("+ str(self.id) +")"
+        if self.name is not None:
+            return self.name + "("+ str(self.id) +")"
+        else:
+            return "Organizer "+str(self.id)
 
 ACTIVE = 'ACTIVE'
 DRAFT = 'DRAFT'
@@ -68,7 +74,10 @@ class Venue(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.title + "("+ str(self.id) +")"
+        if self.title is not None:
+            return self.title + "("+ str(self.id) +")"
+        else:
+            return "Venue "+str(self.id)
 
 class EventType(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
@@ -125,7 +134,10 @@ class Event(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.title + "("+ self.id +")"
+        if self.title is not None:
+            return self.title + "("+ str(self.id) +")"
+        else:
+            return "Event "+str(self.id)
 
 class EventCheckin(models.Model):
     email = models.EmailField(max_length=150)

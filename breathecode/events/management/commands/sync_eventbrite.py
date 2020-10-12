@@ -3,6 +3,7 @@ from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from ...models import Organization
 from ...tasks import persist_organization_events
+from django.utils import timezone
 
 class Command(BaseCommand):
     help = 'Sync academies from old breathecode'
@@ -31,7 +32,7 @@ class Command(BaseCommand):
         func(options)
 
     def events(self, options):
-
+        now = timezone.now()
         orgs = Organization.objects.all()
         count = 0
         for org in orgs:
@@ -42,6 +43,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.ERROR(f"Organization {str(org)} is missing evenbrite key or ID"))
             else:
                 org.sync_status = 'PENDING'
+                org.sync_desc = "Running sync_eventbrite command at "+str(now)
                 org.save()
                 persist_organization_events.delay({ "org_id": org.id })
                 count = count + 1
