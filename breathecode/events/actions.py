@@ -94,9 +94,10 @@ def sync_org_events(org):
         org.sync_desc = f"Success with {len(result['events'])} events..."
         org.save()
     except Exception as e:
-        org.sync_status = 'ERROR'
-        org.sync_desc = "Error: "+str(e)
-        org.save()
+        if org is not None:
+            org.sync_status = 'ERROR'
+            org.sync_desc = "Error: "+str(e)
+            org.save()
         raise e
 
     return True
@@ -169,9 +170,10 @@ def update_or_create_event(data, org):
         event.sync_status = 'PERSISTED'
         event.save()
     except Exception as e:
-        event.sync_desc = str(now) + " => " + str(e)
-        event.sync_status = 'ERROR'
-        event.save()
+        if event is not None:
+            event.sync_desc = str(now) + " => " + str(e)
+            event.sync_status = 'ERROR'
+            event.save()
         raise e
     
     return event
