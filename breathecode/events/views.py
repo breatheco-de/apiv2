@@ -40,7 +40,7 @@ def get_events(request):
             lookup.pop("starting_at__gte")
             lookup['starting_at__lte'] = timezone.now()
         
-    items = items.filter(**lookup).order_by('-created_at')
+    items = items.filter(**lookup).order_by('-starting_at')
     
     serializer = EventSmallSerializer(items, many=True)
     return Response(serializer.data)
