@@ -160,6 +160,8 @@ def update_or_create_event(data, org):
             event.published_at=data['published']
         if "logo" in data and data['logo'] is not None:
             event.banner=data['logo']['url']
+        if event.url is None or event.url == "":
+            event.url = event.eventbrite_url
 
         # look for the academy ownership based on organizer first
         if organizer is not None and organizer.academy is not None:
