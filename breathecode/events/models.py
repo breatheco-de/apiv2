@@ -23,7 +23,7 @@ class Organization(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.name + "("+ self.id +")"
+        return self.name + "("+ str(self.id) +")"
 
 class Organizer(models.Model):
     eventbrite_id = models.CharField(unique=True, max_length=30, blank=True)
@@ -38,7 +38,7 @@ class Organizer(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.name + "("+ self.id +")"
+        return self.name + "("+ str(self.id) +")"
 
 ACTIVE = 'ACTIVE'
 DRAFT = 'DRAFT'
@@ -79,7 +79,7 @@ class EventType(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.name + "("+ self.id +")"
+        return self.name + "("+ str(self.id) +")"
 
 EVENT_STATUS = (
     (ACTIVE, 'Active'),
