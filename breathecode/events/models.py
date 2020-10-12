@@ -68,7 +68,7 @@ class Venue(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.title + "("+ self.id +")"
+        return self.title + "("+ str(self.id) +")"
 
 class EventType(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
