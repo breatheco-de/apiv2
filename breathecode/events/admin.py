@@ -3,8 +3,8 @@ from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import HttpResponse
-from .models import Event, Venue, EventType, EventCheckin, Organizacion
-from .actions import sync_org_venues
+from .models import Event, Venue, EventType, EventCheckin, Organization, Organizer
+from .actions import sync_org_venues, sync_org_events
 
 class ExportCsvMixin:
     def export_as_csv(self, request, queryset):
@@ -34,15 +34,32 @@ def pull_eventbrite_venues(modeladmin, request, queryset):
         print("error", str(e))
         messages.error(request,f"There was an error retriving the venues {str(e)}")
 
-@admin.register(Organizacion)
+def pull_eventbrite_events(modeladmin, request, queryset):
+    entries = queryset.all()
+
+    # try:
+    for entry in entries:
+        sync_org_events(entry)
+    # except Exception as e:
+        # print("error", str(e))
+        # messages.error(request,f"There was an error retriving the venues {str(e)}")
+
+@admin.register(Organization)
 class OrgAdmin(admin.ModelAdmin):
     list_display = ('name', 'academy', 'eventbrite_id')
-    actions = [pull_eventbrite_venues]
+    actions = [pull_eventbrite_venues, pull_eventbrite_events]
+
+@admin.register(Organizer)
+class OrgAdmin(admin.ModelAdmin):
+    list_display = ('name', 'academy', 'eventbrite_id', 'organization')
+    actions = []
 
 # Register your models here.
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin, ExportCsvMixin):
-    list_display = ('slug', 'title', 'url')
+    search_fields = ['title']
+    list_display = ('sync_status', 'title', 'eventbrite_status', 'starting_at', 'ending_at', 'sync_desc')
+    list_filter = ['eventbrite_status', 'sync_status']
     actions = ["export_as_csv"]
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
