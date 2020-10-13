@@ -2,6 +2,9 @@ from .models import Event
 from rest_framework import serializers
 import serpy
 
+class CitySerializer(serpy.Serializer):
+    name = serpy.Field()
+
 class UserSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
@@ -11,6 +14,7 @@ class AcademySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    city = CitySerializer(required=False)
 
 class EventTypeSmallSerializer(serpy.Serializer):
     id = serpy.Field()
