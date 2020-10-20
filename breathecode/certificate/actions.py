@@ -47,3 +47,20 @@ def certificate_screenshot(certificate_id):
         if blob is not None:
             certificate.preview_url = blob.public_url
             certificate.save()
+
+def remove_certificate_screenshot(certificate_id):
+    certificate = UserSpecialty.objects.get(id=certificate_id)
+    if certificate.preview_url is None or certificate.preview_url == "":
+        return True
+
+    file_name = f'{certificate.token}'
+    resolve_google_credentials()
+    client = storage.Client()
+    bucket = client.bucket(BUCKET_NAME)
+    blob = bucket.get_blob(file_name)
+    blob.delete()
+
+    certificate.preview_url = ""
+    certificate.save()
+    
+    return True

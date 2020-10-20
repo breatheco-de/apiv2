@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.utils.html import format_html
 from .models import Badge, Specialty, UserSpecialty, UserProxy, LayoutDesign
 from .tasks import take_screenshot
+from .actions import remove_certificate_screenshot
 
 @admin.register(Badge)
 class BadgeAdmin(admin.ModelAdmin):
@@ -21,6 +22,7 @@ class LayoutDesignAdmin(admin.ModelAdmin):
 def screenshot(modeladmin, request, queryset):
     certificate_ids = queryset.values_list('id', flat=True)
     for cert_id in certificate_ids:
+        remove_certificate_screenshot(cert_id)
         take_screenshot.delay(cert_id)
 screenshot.short_description = "Retake Screenshot"
 
