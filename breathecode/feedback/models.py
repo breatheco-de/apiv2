@@ -6,6 +6,9 @@ from breathecode.events.models import Event
 class UserProxy(User):
     class Meta:
         proxy = True
+class CohortProxy(Cohort):
+    class Meta:
+        proxy = True
 
 PENDING = 'PENDING'
 SENT = 'SENT'

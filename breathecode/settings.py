@@ -10,8 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
-import os, django_heroku, dj_database_url, sys
+import os, django_heroku, dj_database_url, sys, logging
 from django.contrib.messages import constants as messages
+from django.utils.log import DEFAULT_LOGGING
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -138,33 +139,61 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-LOGGING = {
+
+
+# Disable Django's logging setup
+LOGGING_CONFIG = None
+
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'info').upper()
+
+logging.config.dictConfig({
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'default': {
+            # exact format is not important, this is the minimum information
+            'format': '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+        },
+        'django.server': DEFAULT_LOGGING['formatters']['django.server'],
+    },
     'handlers': {
+        # console logs to stderr
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'default',
         },
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'filename': './logs/debug.log',
-        },
+        # Add Handler for Rollbar
         'rollbar': {
-            'filters': ['require_debug_false'],
+            # 'filters': ['require_debug_false'],
             'access_token': os.environ.get('ROLLBAR_ACCESS_TOKEN'),
-            'environment': 'production',
+            'environment': ENVIRONMENT,
             'class': 'rollbar.logger.RollbarHandler'
         },
+        'django.server': DEFAULT_LOGGING['handlers']['django.server'],
     },
     'loggers': {
-        'authenticate': {
+        # default for all undefined Python modules
+        '': {
+            'level': 'WARNING',
             'handlers': ['console', 'rollbar'],
-            'level': 'DEBUG',
-            'propagate': True,
         },
+        # Our application code
+        'breathecode': {
+            'level': LOG_LEVEL,
+            'handlers': ['console', 'rollbar'],
+            # Avoid double logging because of root logger
+            'propagate': False,
+        },
+        # Prevent noisy modules from logging to Sentry
+        'noisy_module': {
+            'level': 'ERROR',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+        # Default runserver request logging
+        'django.server': DEFAULT_LOGGING['loggers']['django.server'],
     },
-}
+})
 
 ROLLBAR = {
     'access_token': os.environ.get('ROLLBAR_ACCESS_TOKEN'),

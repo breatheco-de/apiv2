@@ -65,3 +65,14 @@ class AnswerView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    def get(self, request, answer_id=None):
+        if answer_id is None:
+            raise serializers.ValidationError("Missing answer_id", code=400)
+        
+        answer = Answer.objects.filter(user=request.user,id=answer_id).first()
+        if answer is None:
+            raise ValidationError('This survay does not exist for this user')
+        
+        serializer = AnswerPUTSerializer(answer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
