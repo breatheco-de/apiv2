@@ -29,6 +29,7 @@ google-cloud-storage = "*"
 celery = "*"
 redis = "*"
 eventbrite = "*"
+rollbar = "*"
 
 [requires]
 python_version = "3.8"

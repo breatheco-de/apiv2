@@ -17,6 +17,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
+ENVIRONMENT = os.environ.get('ENV')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
@@ -25,7 +26,7 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 SECRET_KEY = '5ar3h@ha%y*dc72z=8-ju7@4xqm0o59*@k*c2i=xacmy2r=%4a'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = (ENVIRONMENT == "development")
 
 ALLOWED_HOSTS = []
 
@@ -77,6 +78,9 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
+    'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareOnly404',
+    # ⬆ This Rollbar should always be first please!
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -85,6 +89,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    # ⬇ Rollber is always last please!
+    'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',
 ]
 
 AUTHENTICATION_BACKENDS = (
@@ -142,15 +149,30 @@ LOGGING = {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': './logs/debug.log',
-        }
+        },
+        'rollbar': {
+            'filters': ['require_debug_false'],
+            'access_token': os.environ.get('ROLLBAR'),
+            'environment': 'production',
+            'class': 'rollbar.logger.RollbarHandler'
+        },
     },
     'loggers': {
         'authenticate': {
-            'handlers': ['console'],
+            'handlers': ['console', 'rollbar'],
             'level': 'DEBUG',
             'propagate': True,
         },
     },
+}
+
+ROLLBAR = {
+    'access_token': os.environ.get('ROLLBAR'),
+    'environment': 'development' if DEBUG else 'production',
+    'branch': 'master',
+    'root': BASE_DIR,
+    # parsed POST variables placed in your output for exception handling
+    'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler',
 }
 
 

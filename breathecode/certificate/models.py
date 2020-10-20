@@ -5,7 +5,6 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import JSONField
 from breathecode.admissions.models import Academy, Cohort
-from .actions import certificate_screenshot
 
 class UserProxy(User):
     class Meta:
@@ -94,7 +93,6 @@ class UserSpecialty(models.Model):
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
-        certificate_screenshot(self)
 
 
         

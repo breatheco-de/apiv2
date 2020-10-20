@@ -1,4 +1,6 @@
 from django.shortcuts import render
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from .models import Specialty, Badge, UserSpecialty
 from .serializers import SpecialtySerializer, UserSpecialtySerializer
 from rest_framework.exceptions import NotFound
@@ -7,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework import status, serializers
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
+from .tasks import take_screenshot
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -31,6 +34,11 @@ def get_certificate(request, token):
 
     serializer = UserSpecialtySerializer(item)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+@receiver(post_save, sender=UserSpecialty)
+def post_save_course_dosomething(sender,instance, **kwargs):
+    if instance.preview_url is None or instance.preview_url == "":
+        take_screenshot.delay(instance.id)
 
 # @api_view(['GET'])
 # def get_single_course(request, course_slug):

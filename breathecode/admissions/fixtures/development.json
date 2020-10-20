@@ -1,0 +1,2624 @@
+[
+{
+    "model": "admissions.country",
+    "pk": "cl",
+    "fields": {
+        "name": "Chile"
+    }
+},
+{
+    "model": "admissions.country",
+    "pk": "es",
+    "fields": {
+        "name": "Spain"
+    }
+},
+{
+    "model": "admissions.country",
+    "pk": "us",
+    "fields": {
+        "name": "USA"
+    }
+},
+{
+    "model": "admissions.country",
+    "pk": "ve",
+    "fields": {
+        "name": "Venezuela"
+    }
+},
+{
+    "model": "admissions.city",
+    "pk": 1,
+    "fields": {
+        "name": "Santiago de Chile",
+        "country": "cl"
+    }
+},
+{
+    "model": "admissions.city",
+    "pk": 2,
+    "fields": {
+        "name": "Miami",
+        "country": "us"
+    }
+},
+{
+    "model": "admissions.city",
+    "pk": 3,
+    "fields": {
+        "name": "Madrid",
+        "country": "es"
+    }
+},
+{
+    "model": "admissions.city",
+    "pk": 4,
+    "fields": {
+        "name": "Caracas",
+        "country": "ve"
+    }
+},
+{
+    "model": "admissions.academy",
+    "pk": 1,
+    "fields": {
+        "slug": "maracaibo",
+        "name": "Maracaibo",
+        "logo_url": "",
+        "website_url": null,
+        "street_address": "Av. 5 de julio. Maracaibo, Venezuela.",
+        "city": null,
+        "country": null,
+        "latitude": null,
+        "longitude": null,
+        "zip_code": null,
+        "active_campaign_slug": "maracaibo",
+        "status": "ACTIVE",
+        "created_at": "2020-10-19T23:14:08.924Z",
+        "updated_at": "2020-10-19T23:14:08.924Z",
+        "logistical_information": null
+    }
+},
+{
+    "model": "admissions.academy",
+    "pk": 2,
+    "fields": {
+        "slug": "el-nacional",
+        "name": "Caracas",
+        "logo_url": "https://storage.googleapis.com/admissions-breathecode/location-el-nacional",
+        "website_url": null,
+        "street_address": "Sede Principal de El Nacional. Los Cortijos de Lourdes, Caracas.",
+        "city": null,
+        "country": null,
+        "latitude": null,
+        "longitude": null,
+        "zip_code": null,
+        "active_campaign_slug": "el-nacional",
+        "status": "ACTIVE",
+        "created_at": "2020-10-19T23:14:09.113Z",
+        "updated_at": "2020-10-19T23:14:09.113Z",
+        "logistical_information": null
+    }
+},
+{
+    "model": "admissions.academy",
+    "pk": 3,
+    "fields": {
+        "slug": "mdc",
+        "name": "MDC",
+        "logo_url": "",
+        "website_url": null,
+        "street_address": "627 SW 27th Ave, Miami, FL 33135",
+        "city": null,
+        "country": null,
+        "latitude": null,
+        "longitude": null,
+        "zip_code": null,
+        "active_campaign_slug": "mdc",
+        "status": "ACTIVE",
+        "created_at": "2020-10-19T23:14:09.293Z",
+        "updated_at": "2020-10-19T23:14:09.293Z",
+        "logistical_information": null
+    }
+},
+{
+    "model": "admissions.academy",
+    "pk": 4,
+    "fields": {
+        "slug": "downtown-miami",
+        "name": "Downtown Miami",
+        "logo_url": "https://storage.googleapis.com/admissions-breathecode/location-downtown-miami",
+        "website_url": null,
+        "street_address": "1801 SW 3rd Ave #100, Miami, FL 33129",
+        "city": 2,
+        "country": "us",
+        "latitude": null,
+        "longitude": null,
+        "zip_code": null,
+        "active_campaign_slug": "downtown-miami",
+        "status": "ACTIVE",
+        "created_at": "2020-10-19T23:14:09.462Z",
+        "updated_at": "2020-10-19T23:34:33.531Z",
+        "logistical_information": null
+    }
+},
+{
+    "model": "admissions.academy",
+    "pk": 5,
+    "fields": {
+        "slug": "santiago-chile",
+        "name": "Santiago",
+        "logo_url": "https://storage.googleapis.com/admissions-breathecode/location-santiago-chile",
+        "website_url": null,
+        "street_address": "Apoquindo 5950 las condes",
+        "city": 1,
+        "country": "cl",
+        "latitude": null,
+        "longitude": null,
+        "zip_code": null,
+        "active_campaign_slug": "santiago-chile",
+        "status": "ACTIVE",
+        "created_at": "2020-10-19T23:14:09.669Z",
+        "updated_at": "2020-10-19T23:34:23.971Z",
+        "logistical_information": null
+    }
+},
+{
+    "model": "admissions.academy",
+    "pk": 6,
+    "fields": {
+        "slug": "madrid-spain",
+        "name": "Madrid",
+        "logo_url": "https://storage.googleapis.com/admissions-breathecode/location-madrid-spain",
+        "website_url": null,
+        "street_address": "Calle López de Hoyos 42, Madrid, España.",
+        "city": 3,
+        "country": "es",
+        "latitude": null,
+        "longitude": null,
+        "zip_code": null,
+        "active_campaign_slug": "madrid-spain",
+        "status": "ACTIVE",
+        "created_at": "2020-10-19T23:14:09.832Z",
+        "updated_at": "2020-10-19T23:34:13.871Z",
+        "logistical_information": null
+    }
+},
+{
+    "model": "admissions.academy",
+    "pk": 7,
+    "fields": {
+        "slug": "other",
+        "name": "Other (probably online)",
+        "logo_url": "",
+        "website_url": null,
+        "street_address": "Online",
+        "city": null,
+        "country": null,
+        "latitude": null,
+        "longitude": null,
+        "zip_code": null,
+        "active_campaign_slug": "other",
+        "status": "ACTIVE",
+        "created_at": "2020-10-19T23:14:10.012Z",
+        "updated_at": "2020-10-19T23:14:10.012Z",
+        "logistical_information": null
+    }
+},
+{
+    "model": "admissions.certificate",
+    "pk": 1,
+    "fields": {
+        "slug": "full-stack",
+        "name": "Full-Stack Software Developer",
+        "logo": "https://storage.googleapis.com/admissions-breathecode/certificate-logo-full-stack",
+        "duration_in_hours": 320,
+        "duration_in_days": 48,
+        "week_hours": 9,
+        "schedule_type": "PART-TIME",
+        "description": "Manages front-end and back-end side of the web",
+        "created_at": "2020-10-19T23:14:17.098Z",
+        "updated_at": "2020-10-19T23:14:17.098Z"
+    }
+},
+{
+    "model": "admissions.certificate",
+    "pk": 2,
+    "fields": {
+        "slug": "web-development",
+        "name": "Web Developer",
+        "logo": null,
+        "duration_in_hours": 126,
+        "duration_in_days": 42,
+        "week_hours": 9,
+        "schedule_type": "PART-TIME",
+        "description": "Create websites using CMS, API's and React.js",
+        "created_at": "2020-10-19T23:14:17.298Z",
+        "updated_at": "2020-10-19T23:14:17.298Z"
+    }
+},
+{
+    "model": "admissions.certificate",
+    "pk": 3,
+    "fields": {
+        "slug": "coding-introduction",
+        "name": "Coding Introduction",
+        "logo": null,
+        "duration_in_hours": 40,
+        "duration_in_days": 5,
+        "week_hours": 8,
+        "schedule_type": "PART-TIME",
+        "description": "Learn how to code and do simple websites",
+        "created_at": "2020-10-19T23:14:17.496Z",
+        "updated_at": "2020-10-19T23:14:17.496Z"
+    }
+},
+{
+    "model": "admissions.certificate",
+    "pk": 4,
+    "fields": {
+        "slug": "full-stack-ft",
+        "name": "Full-Stack Software Developer FT",
+        "logo": "https://storage.googleapis.com/admissions-breathecode/certificate-logo-full-stack-ft",
+        "duration_in_hours": 320,
+        "duration_in_days": 45,
+        "week_hours": 40,
+        "schedule_type": "PART-TIME",
+        "description": "Develop web applications using React.js and building your own API.",
+        "created_at": "2020-10-19T23:14:17.682Z",
+        "updated_at": "2020-10-19T23:14:17.682Z"
+    }
+},
+{
+    "model": "admissions.certificate",
+    "pk": 5,
+    "fields": {
+        "slug": "mentoring",
+        "name": "Become a Mentor",
+        "logo": null,
+        "duration_in_hours": 0,
+        "duration_in_days": 0,
+        "week_hours": null,
+        "schedule_type": "PART-TIME",
+        "description": "Guidelines for teachers and mentors at 4Geeks Academy",
+        "created_at": "2020-10-19T23:14:17.864Z",
+        "updated_at": "2020-10-19T23:14:17.864Z"
+    }
+},
+{
+    "model": "admissions.certificate",
+    "pk": 6,
+    "fields": {
+        "slug": "front-end-development",
+        "name": "Front End Development",
+        "logo": null,
+        "duration_in_hours": 108,
+        "duration_in_days": 36,
+        "week_hours": 9,
+        "schedule_type": "PART-TIME",
+        "description": "Develop applications using HTML,CSS,Javascript and React using headless CMS or API's",
+        "created_at": "2020-10-19T23:14:18.087Z",
+        "updated_at": "2020-10-19T23:14:18.087Z"
+    }
+},
+{
+    "model": "admissions.certificate",
+    "pk": 7,
+    "fields": {
+        "slug": "back-end-development",
+        "name": "Back-End Development",
+        "logo": null,
+        "duration_in_hours": 108,
+        "duration_in_days": 39,
+        "week_hours": 12,
+        "schedule_type": "PART-TIME",
+        "description": "Starting with the basics of Python, then the command line, working with file storage, data structures, building API's, etc.",
+        "created_at": "2020-10-19T23:14:18.365Z",
+        "updated_at": "2020-10-19T23:14:18.365Z"
+    }
+},
+{
+    "model": "admissions.certificate",
+    "pk": 8,
+    "fields": {
+        "slug": "coding-for-executives",
+        "name": "Coding for Executives",
+        "logo": null,
+        "duration_in_hours": 120,
+        "duration_in_days": 30,
+        "week_hours": 4,
+        "schedule_type": "PART-TIME",
+        "description": "Ideal for executives and busy people interested in getting into the world of code.",
+        "created_at": "2020-10-19T23:14:18.572Z",
+        "updated_at": "2020-10-19T23:14:18.572Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 1,
+    "fields": {
+        "slug": "en-i",
+        "name": "EN-I",
+        "kickoff_date": "2016-05-27T00:00:00Z",
+        "ending_date": "2016-08-15T00:00:00Z",
+        "current_day": 1,
+        "stage": "ENDED",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.699Z",
+        "updated_at": "2020-10-19T23:14:26.699Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 2,
+    "fields": {
+        "slug": "en-ii",
+        "name": "EN-II",
+        "kickoff_date": "2016-10-30T00:00:00Z",
+        "ending_date": "2017-03-01T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 2,
+        "certificate": 2,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.707Z",
+        "updated_at": "2020-10-19T23:14:26.707Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 3,
+    "fields": {
+        "slug": "en-iii",
+        "name": "EN-III",
+        "kickoff_date": "2017-04-24T00:00:00Z",
+        "ending_date": "2017-08-15T00:00:00Z",
+        "current_day": 1,
+        "stage": "ENDED",
+        "academy": 2,
+        "certificate": 2,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.715Z",
+        "updated_at": "2020-10-19T23:14:26.715Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 4,
+    "fields": {
+        "slug": "er-pts-i",
+        "name": "ER-PTS-I",
+        "kickoff_date": "2017-01-13T00:00:00Z",
+        "ending_date": "2017-05-25T00:00:00Z",
+        "current_day": 35,
+        "stage": "ENDED",
+        "academy": 2,
+        "certificate": 2,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.721Z",
+        "updated_at": "2020-10-19T23:14:26.721Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 5,
+    "fields": {
+        "slug": "ih-ccs-01-17",
+        "name": "IH-CCS-01-17",
+        "kickoff_date": "2017-07-03T00:00:00Z",
+        "ending_date": "2017-10-19T00:00:00Z",
+        "current_day": 1,
+        "stage": "ENDED",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.727Z",
+        "updated_at": "2020-10-19T23:14:26.727Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 6,
+    "fields": {
+        "slug": "mcbo-1",
+        "name": "MCBO-1",
+        "kickoff_date": "2017-04-15T00:00:00Z",
+        "ending_date": "2017-08-30T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 1,
+        "certificate": 2,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.733Z",
+        "updated_at": "2020-10-19T23:14:26.733Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 7,
+    "fields": {
+        "slug": "mdc-i",
+        "name": "MDC-I",
+        "kickoff_date": "2016-09-05T00:00:00Z",
+        "ending_date": "2016-12-10T00:00:00Z",
+        "current_day": 9,
+        "stage": "ENDED",
+        "academy": 3,
+        "certificate": 2,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.739Z",
+        "updated_at": "2020-10-19T23:14:26.739Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 8,
+    "fields": {
+        "slug": "mdc-ii",
+        "name": "MDC-II",
+        "kickoff_date": "2017-01-24T00:00:00Z",
+        "ending_date": "2017-04-29T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 3,
+        "certificate": 2,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.745Z",
+        "updated_at": "2020-10-19T23:14:26.745Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 9,
+    "fields": {
+        "slug": "mdc-iii",
+        "name": "MDC-III",
+        "kickoff_date": "2017-05-15T00:00:00Z",
+        "ending_date": "2017-08-19T00:00:00Z",
+        "current_day": 6,
+        "stage": "ENDED",
+        "academy": 3,
+        "certificate": 2,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.752Z",
+        "updated_at": "2020-10-19T23:14:26.752Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 10,
+    "fields": {
+        "slug": "mcbo-ii",
+        "name": "MCBO-II",
+        "kickoff_date": "2017-09-10T00:00:00Z",
+        "ending_date": "2017-12-20T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 1,
+        "certificate": 2,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.758Z",
+        "updated_at": "2020-10-19T23:14:26.758Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 11,
+    "fields": {
+        "slug": "mdc-iv",
+        "name": "MDC-IV",
+        "kickoff_date": "2017-09-05T00:00:00Z",
+        "ending_date": "2017-12-09T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 3,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.764Z",
+        "updated_at": "2020-10-19T23:14:26.764Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 12,
+    "fields": {
+        "slug": "en-iv",
+        "name": "EN-IV",
+        "kickoff_date": "2017-09-25T00:00:00Z",
+        "ending_date": "2018-01-18T00:00:00Z",
+        "current_day": 0,
+        "stage": "PREWORK",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.771Z",
+        "updated_at": "2020-10-19T23:14:26.771Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 13,
+    "fields": {
+        "slug": "miami-downtown-i",
+        "name": "Miami (4GA) Downtown I",
+        "kickoff_date": "2017-10-30T00:00:00Z",
+        "ending_date": "2018-05-24T00:00:00Z",
+        "current_day": 5,
+        "stage": "ENDED",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.777Z",
+        "updated_at": "2020-10-19T23:14:26.777Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 14,
+    "fields": {
+        "slug": "ih-ccs-02-2017",
+        "name": "IH-CCS-02-17",
+        "kickoff_date": "2017-11-20T00:00:00Z",
+        "ending_date": "2018-03-22T00:00:00Z",
+        "current_day": 30,
+        "stage": "PREWORK",
+        "academy": 2,
+        "certificate": 2,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.784Z",
+        "updated_at": "2020-10-19T23:14:26.784Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 15,
+    "fields": {
+        "slug": "miami-downtown-ii",
+        "name": "Miami (4GA) Downtown II",
+        "kickoff_date": "2018-02-06T00:00:00Z",
+        "ending_date": "2018-05-25T00:00:00Z",
+        "current_day": 0,
+        "stage": "FINAL_PROJECT",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.791Z",
+        "updated_at": "2020-10-19T23:14:26.791Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 16,
+    "fields": {
+        "slug": "mdc-v",
+        "name": "MDC-V",
+        "kickoff_date": "2018-01-22T00:00:00Z",
+        "ending_date": "2018-05-04T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 3,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.797Z",
+        "updated_at": "2020-10-19T23:14:26.797Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 17,
+    "fields": {
+        "slug": "mcbo-3",
+        "name": "Mcbo III",
+        "kickoff_date": "2018-02-05T00:00:00Z",
+        "ending_date": "2018-05-20T00:00:00Z",
+        "current_day": 0,
+        "stage": "PREWORK",
+        "academy": 1,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.804Z",
+        "updated_at": "2020-10-19T23:14:26.804Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 18,
+    "fields": {
+        "slug": "en-v",
+        "name": "EN-V",
+        "kickoff_date": "2018-02-05T00:00:00Z",
+        "ending_date": "2018-05-31T00:00:00Z",
+        "current_day": 0,
+        "stage": "PREWORK",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.811Z",
+        "updated_at": "2020-10-19T23:14:26.811Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 19,
+    "fields": {
+        "slug": "miami-downtown-iii",
+        "name": "Miami (4GA) Downtown III",
+        "kickoff_date": "2018-04-09T00:00:00Z",
+        "ending_date": "2018-07-27T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.817Z",
+        "updated_at": "2020-10-19T23:14:26.817Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 20,
+    "fields": {
+        "slug": "miami-downtown-iv",
+        "name": "Miami (4GA) Downtown IV",
+        "kickoff_date": "2018-06-12T00:00:00Z",
+        "ending_date": "2018-10-13T00:00:00Z",
+        "current_day": 0,
+        "stage": "STARTED",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.823Z",
+        "updated_at": "2020-10-19T23:14:26.824Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 21,
+    "fields": {
+        "slug": "miami-downtown-v",
+        "name": "Miami (4GA) Downtown V",
+        "kickoff_date": "2018-08-13T00:00:00Z",
+        "ending_date": "2018-12-06T00:00:00Z",
+        "current_day": 0,
+        "stage": "STARTED",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.829Z",
+        "updated_at": "2020-10-19T23:14:26.830Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 22,
+    "fields": {
+        "slug": "miami-downtown-vi",
+        "name": "Miami (4GA) Downtown VI",
+        "kickoff_date": "2018-10-16T00:00:00Z",
+        "ending_date": "2019-02-16T00:00:00Z",
+        "current_day": 1,
+        "stage": "PREWORK",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.838Z",
+        "updated_at": "2020-10-19T23:14:26.838Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 23,
+    "fields": {
+        "slug": "miami-downtown-vii",
+        "name": "Miami (4GA) Downtown VII",
+        "kickoff_date": "2018-12-03T00:00:00Z",
+        "ending_date": "2019-04-15T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.845Z",
+        "updated_at": "2020-10-19T23:14:26.845Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 24,
+    "fields": {
+        "slug": "en-vi",
+        "name": "EN-VI",
+        "kickoff_date": "2018-06-11T00:00:00Z",
+        "ending_date": "2018-11-25T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.851Z",
+        "updated_at": "2020-10-19T23:14:26.851Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 25,
+    "fields": {
+        "slug": "en-vii",
+        "name": "EN-VII",
+        "kickoff_date": "2018-10-08T00:00:00Z",
+        "ending_date": "2019-03-21T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.858Z",
+        "updated_at": "2020-10-19T23:14:26.858Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 26,
+    "fields": {
+        "slug": "ih-ccs-03-18",
+        "name": "IH-CCS-03-18",
+        "kickoff_date": "2018-04-16T00:00:00Z",
+        "ending_date": "2018-08-09T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 2,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.864Z",
+        "updated_at": "2020-10-19T23:14:26.864Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 27,
+    "fields": {
+        "slug": "ih-ccs-04-18",
+        "name": "IH-CCS-04-18",
+        "kickoff_date": "2018-08-13T00:00:00Z",
+        "ending_date": "2018-12-21T00:00:00Z",
+        "current_day": 35,
+        "stage": "STARTED",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.870Z",
+        "updated_at": "2020-10-19T23:14:26.870Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 28,
+    "fields": {
+        "slug": "mcbo-5",
+        "name": "Mcbo V",
+        "kickoff_date": "2019-03-15T00:00:00Z",
+        "ending_date": "2019-07-30T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 1,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.877Z",
+        "updated_at": "2020-10-19T23:14:26.877Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 29,
+    "fields": {
+        "slug": "mcbo-4",
+        "name": "Mcbo IV",
+        "kickoff_date": "2018-08-04T00:00:00Z",
+        "ending_date": "2018-12-21T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 1,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:26.883Z",
+        "updated_at": "2020-10-19T23:14:26.883Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 30,
+    "fields": {
+        "slug": "mdc-vi",
+        "name": "MDC VI",
+        "kickoff_date": "2018-05-14T00:00:00Z",
+        "ending_date": "2018-12-14T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 3,
+        "certificate": 2,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.889Z",
+        "updated_at": "2020-10-19T23:14:26.889Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 31,
+    "fields": {
+        "slug": "mia-prework-i",
+        "name": "Miami Prework I",
+        "kickoff_date": "2018-05-31T00:00:00Z",
+        "ending_date": "2018-06-15T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 4,
+        "certificate": 3,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.897Z",
+        "updated_at": "2020-10-19T23:14:26.897Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 32,
+    "fields": {
+        "slug": "mia-prework-ii",
+        "name": "Miami Prework II",
+        "kickoff_date": "2018-06-28T00:00:00Z",
+        "ending_date": "2018-07-15T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 4,
+        "certificate": 3,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.904Z",
+        "updated_at": "2020-10-19T23:14:26.904Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 33,
+    "fields": {
+        "slug": "miami-prework-iii",
+        "name": "Miami Prework III",
+        "kickoff_date": "2018-07-30T00:00:00Z",
+        "ending_date": "2018-08-15T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 4,
+        "certificate": 3,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.911Z",
+        "updated_at": "2020-10-19T23:14:26.911Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 34,
+    "fields": {
+        "slug": "miami-prework-iv",
+        "name": "Miami Prework IV",
+        "kickoff_date": "2018-08-23T00:00:00Z",
+        "ending_date": "2018-09-12T00:00:00Z",
+        "current_day": 0,
+        "stage": "STARTED",
+        "academy": 4,
+        "certificate": 3,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.917Z",
+        "updated_at": "2020-10-19T23:14:26.917Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 35,
+    "fields": {
+        "slug": "mdc-vii",
+        "name": "MDC VII",
+        "kickoff_date": "2018-09-05T00:00:00Z",
+        "ending_date": "2018-12-14T00:00:00Z",
+        "current_day": 0,
+        "stage": "STARTED",
+        "academy": 3,
+        "certificate": 2,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.924Z",
+        "updated_at": "2020-10-19T23:14:26.924Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 36,
+    "fields": {
+        "slug": "miami-downtown-ft-i",
+        "name": "Miami (4GA) Downtown FT-I",
+        "kickoff_date": "2019-01-28T00:00:00Z",
+        "ending_date": "2019-04-05T00:00:00Z",
+        "current_day": 7,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 4,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.930Z",
+        "updated_at": "2020-10-19T23:14:26.930Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 37,
+    "fields": {
+        "slug": "teachers",
+        "name": "Teachers",
+        "kickoff_date": "2018-09-24T00:00:00Z",
+        "ending_date": "2018-10-30T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 5,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.937Z",
+        "updated_at": "2020-10-19T23:14:26.937Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 38,
+    "fields": {
+        "slug": "miami-prework-v",
+        "name": "Miami Prework V",
+        "kickoff_date": "2018-09-27T00:00:00Z",
+        "ending_date": "2018-10-15T00:00:00Z",
+        "current_day": 0,
+        "stage": "STARTED",
+        "academy": 4,
+        "certificate": 3,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.944Z",
+        "updated_at": "2020-10-19T23:14:26.944Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 39,
+    "fields": {
+        "slug": "miami-prework-vi",
+        "name": "Miami Prework VI",
+        "kickoff_date": "2018-10-25T00:00:00Z",
+        "ending_date": null,
+        "current_day": 0,
+        "stage": "STARTED",
+        "academy": 4,
+        "certificate": 3,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.950Z",
+        "updated_at": "2020-10-19T23:14:26.950Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 40,
+    "fields": {
+        "slug": "miami-prework-vii",
+        "name": "Miami Prework VII",
+        "kickoff_date": "2018-11-29T00:00:00Z",
+        "ending_date": null,
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 3,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.958Z",
+        "updated_at": "2020-10-19T23:14:26.958Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 41,
+    "fields": {
+        "slug": "miami-downtown-viii",
+        "name": "Miami (4GA) Downtown VIII",
+        "kickoff_date": "2019-02-19T00:00:00Z",
+        "ending_date": "2019-06-06T00:00:00Z",
+        "current_day": 16,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.965Z",
+        "updated_at": "2020-10-19T23:14:26.965Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 42,
+    "fields": {
+        "slug": "miami-downtown-ix",
+        "name": "Miami (4GA) Downtown IX",
+        "kickoff_date": "2019-04-08T00:00:00Z",
+        "ending_date": "2019-07-26T00:00:00Z",
+        "current_day": 1,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.972Z",
+        "updated_at": "2020-10-19T23:14:26.972Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 43,
+    "fields": {
+        "slug": "miami-downtown-x",
+        "name": "Miami (4GA) Downtown X",
+        "kickoff_date": "2019-06-18T00:00:00Z",
+        "ending_date": "2019-10-05T00:00:00Z",
+        "current_day": 14,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.979Z",
+        "updated_at": "2020-10-19T23:14:26.979Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 44,
+    "fields": {
+        "slug": "miami-downtown-xi",
+        "name": "Miami (4GA) Downtown XI",
+        "kickoff_date": "2019-08-05T00:00:00Z",
+        "ending_date": "2019-11-22T00:00:00Z",
+        "current_day": 11,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.985Z",
+        "updated_at": "2020-10-19T23:14:26.985Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 45,
+    "fields": {
+        "slug": "miami-downtown-xii",
+        "name": "Miami (4GA) Downtown XII",
+        "kickoff_date": "2019-10-08T00:00:00Z",
+        "ending_date": "2020-02-06T00:00:00Z",
+        "current_day": 8,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.991Z",
+        "updated_at": "2020-10-19T23:14:26.991Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 46,
+    "fields": {
+        "slug": "miami-downtown-xiii",
+        "name": "Miami (4GA) Downtown XIII",
+        "kickoff_date": "2019-12-02T00:00:00Z",
+        "ending_date": "2020-04-03T00:00:00Z",
+        "current_day": 36,
+        "stage": "FINAL_PROJECT",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:26.997Z",
+        "updated_at": "2020-10-19T23:14:26.997Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 47,
+    "fields": {
+        "slug": "mdc-viii",
+        "name": "MDC VIII",
+        "kickoff_date": "2019-01-23T00:00:00Z",
+        "ending_date": "2019-04-26T00:00:00Z",
+        "current_day": 32,
+        "stage": "INACTIVE",
+        "academy": 3,
+        "certificate": 2,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.003Z",
+        "updated_at": "2020-10-19T23:14:27.003Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 48,
+    "fields": {
+        "slug": "ecoem-ii",
+        "name": "ECOEM II",
+        "kickoff_date": "2019-02-11T00:00:00Z",
+        "ending_date": "2019-05-23T00:00:00Z",
+        "current_day": 10,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.009Z",
+        "updated_at": "2020-10-19T23:14:27.009Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 49,
+    "fields": {
+        "slug": "downtown-ft-ii",
+        "name": "Miami (4GA) Downtown FT II",
+        "kickoff_date": "2019-02-11T00:00:00Z",
+        "ending_date": "2019-04-19T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 4,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.015Z",
+        "updated_at": "2020-10-19T23:14:27.015Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 50,
+    "fields": {
+        "slug": "santiagopt1",
+        "name": "Santiago - Part-Time - 1",
+        "kickoff_date": "2019-03-04T00:00:00Z",
+        "ending_date": "2019-06-28T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.024Z",
+        "updated_at": "2020-10-19T23:14:27.024Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 51,
+    "fields": {
+        "slug": "santiago-part-time-2",
+        "name": "Santiago Part-Time - 2",
+        "kickoff_date": "2019-04-23T00:00:00Z",
+        "ending_date": "2019-08-17T00:00:00Z",
+        "current_day": 5,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.030Z",
+        "updated_at": "2020-10-19T23:14:27.031Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 52,
+    "fields": {
+        "slug": "santiago-part-time-3",
+        "name": "Santiago - Part-Time - 3",
+        "kickoff_date": "2019-07-01T00:00:00Z",
+        "ending_date": "2019-10-25T00:00:00Z",
+        "current_day": 8,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.037Z",
+        "updated_at": "2020-10-19T23:14:27.037Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 53,
+    "fields": {
+        "slug": "santiago-part-time-4",
+        "name": "Santiago Part-Time 4",
+        "kickoff_date": "2019-08-20T00:00:00Z",
+        "ending_date": "2019-12-14T00:00:00Z",
+        "current_day": 19,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.043Z",
+        "updated_at": "2020-10-19T23:14:27.043Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 54,
+    "fields": {
+        "slug": "santiago-part-time-5",
+        "name": "Santiago Part-Time 5",
+        "kickoff_date": "2019-10-28T00:00:00Z",
+        "ending_date": "2020-02-21T00:00:00Z",
+        "current_day": 36,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.049Z",
+        "updated_at": "2020-10-19T23:14:27.049Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 55,
+    "fields": {
+        "slug": "santiago-part-time-6",
+        "name": "Santiago Part-Time 6",
+        "kickoff_date": "2019-11-04T00:00:00Z",
+        "ending_date": "2020-02-21T00:00:00Z",
+        "current_day": 2,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.055Z",
+        "updated_at": "2020-10-19T23:14:27.056Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 56,
+    "fields": {
+        "slug": "santiago-full-time-1",
+        "name": "Santiago Full-Time - 1",
+        "kickoff_date": "2019-04-01T00:00:00Z",
+        "ending_date": "2019-06-07T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.062Z",
+        "updated_at": "2020-10-19T23:14:27.062Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 57,
+    "fields": {
+        "slug": "santiago-full-time-2",
+        "name": "Santiago Full-Time 2",
+        "kickoff_date": "2019-06-10T00:00:00Z",
+        "ending_date": "2019-08-16T00:00:00Z",
+        "current_day": 5,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.069Z",
+        "updated_at": "2020-10-19T23:14:27.069Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 58,
+    "fields": {
+        "slug": "santiago-full-time-3",
+        "name": "Santiago Full-Time 3",
+        "kickoff_date": "2019-09-02T00:00:00Z",
+        "ending_date": "2019-11-08T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.075Z",
+        "updated_at": "2020-10-19T23:14:27.075Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 59,
+    "fields": {
+        "slug": "santiago-full-time-4",
+        "name": "Santiago Full-Time 4",
+        "kickoff_date": "2019-12-09T00:00:00Z",
+        "ending_date": "2020-02-14T00:00:00Z",
+        "current_day": 24,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.081Z",
+        "updated_at": "2020-10-19T23:14:27.081Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 60,
+    "fields": {
+        "slug": "santiago-prework-i",
+        "name": "Santiago PreWork",
+        "kickoff_date": "2019-02-19T00:00:00Z",
+        "ending_date": "2019-03-22T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 5,
+        "certificate": 3,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.087Z",
+        "updated_at": "2020-10-19T23:14:27.087Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 61,
+    "fields": {
+        "slug": "miami-prework",
+        "name": "Miami Prework",
+        "kickoff_date": "2019-03-25T00:00:00Z",
+        "ending_date": "2019-04-08T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 3,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.093Z",
+        "updated_at": "2020-10-19T23:14:27.093Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 62,
+    "fields": {
+        "slug": "downtown-ft-iii",
+        "name": "Miami (4GA) Downtown FT III",
+        "kickoff_date": "2019-04-29T00:00:00Z",
+        "ending_date": "2019-06-28T00:00:00Z",
+        "current_day": 10,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 4,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.099Z",
+        "updated_at": "2020-10-19T23:14:27.099Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 63,
+    "fields": {
+        "slug": "downtown-ft-iv",
+        "name": "Miami (4GA) Downtown FT IV",
+        "kickoff_date": "2019-07-01T00:00:00Z",
+        "ending_date": "2019-08-30T00:00:00Z",
+        "current_day": 15,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 4,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.106Z",
+        "updated_at": "2020-10-19T23:14:27.106Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 64,
+    "fields": {
+        "slug": "mdc-ix",
+        "name": "MDC IX",
+        "kickoff_date": "2019-05-13T00:00:00Z",
+        "ending_date": "2019-08-19T00:00:00Z",
+        "current_day": 3,
+        "stage": "INACTIVE",
+        "academy": 3,
+        "certificate": 2,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.113Z",
+        "updated_at": "2020-10-19T23:14:27.113Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 65,
+    "fields": {
+        "slug": "wayra-i",
+        "name": "Wayra-i",
+        "kickoff_date": "2019-06-03T00:00:00Z",
+        "ending_date": "2019-09-20T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.121Z",
+        "updated_at": "2020-10-19T23:14:27.121Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 66,
+    "fields": {
+        "slug": "caracas-pre-work",
+        "name": "Caracas Pre-Work",
+        "kickoff_date": "2019-06-03T00:00:00Z",
+        "ending_date": "2020-07-31T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 3,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.128Z",
+        "updated_at": "2020-10-19T23:14:27.128Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 67,
+    "fields": {
+        "slug": "ecoem-iii",
+        "name": "ECOEM-III",
+        "kickoff_date": "2019-07-29T00:00:00Z",
+        "ending_date": "2019-11-14T00:00:00Z",
+        "current_day": 1,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.135Z",
+        "updated_at": "2020-10-19T23:14:27.135Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 68,
+    "fields": {
+        "slug": "mdc-north-i",
+        "name": "MDC North I",
+        "kickoff_date": "2019-08-05T00:00:00Z",
+        "ending_date": "2019-09-30T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 3,
+        "certificate": 6,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.142Z",
+        "updated_at": "2020-10-19T23:14:27.142Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 69,
+    "fields": {
+        "slug": "downtown-ft-v",
+        "name": "Miami (4GA) Downtown FT V",
+        "kickoff_date": "2019-09-16T00:00:00Z",
+        "ending_date": "2019-11-15T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 4,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.149Z",
+        "updated_at": "2020-10-19T23:14:27.149Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 70,
+    "fields": {
+        "slug": "downtown-ft-vi",
+        "name": "Miami (4GA) Downtown FT VI",
+        "kickoff_date": "2019-11-18T00:00:00Z",
+        "ending_date": "2020-01-24T00:00:00Z",
+        "current_day": 3,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 4,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.156Z",
+        "updated_at": "2020-10-19T23:14:27.156Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 71,
+    "fields": {
+        "slug": "mdc-x",
+        "name": "MDC-X",
+        "kickoff_date": "2019-09-04T00:00:00Z",
+        "ending_date": "2019-12-09T00:00:00Z",
+        "current_day": 1,
+        "stage": "INACTIVE",
+        "academy": 3,
+        "certificate": 2,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.163Z",
+        "updated_at": "2020-10-19T23:14:27.163Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 72,
+    "fields": {
+        "slug": "wayra-ii",
+        "name": "Wayra-II",
+        "kickoff_date": "2019-10-14T00:00:00Z",
+        "ending_date": "2020-02-14T00:00:00Z",
+        "current_day": 2,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.169Z",
+        "updated_at": "2020-10-19T23:14:27.169Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 73,
+    "fields": {
+        "slug": "wecode",
+        "name": "WeCode",
+        "kickoff_date": "2019-11-25T00:00:00Z",
+        "ending_date": "2020-03-27T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.175Z",
+        "updated_at": "2020-10-19T23:14:27.176Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 74,
+    "fields": {
+        "slug": "mad-cohort-0",
+        "name": "Madrid PT Prueba",
+        "kickoff_date": "2020-03-24T00:00:00Z",
+        "ending_date": "2021-12-18T00:00:00Z",
+        "current_day": 1,
+        "stage": "INACTIVE",
+        "academy": 6,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.183Z",
+        "updated_at": "2020-10-19T23:14:27.183Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 75,
+    "fields": {
+        "slug": "santiago-weekend-1",
+        "name": "Santiago Weekend 1",
+        "kickoff_date": "2019-12-07T00:00:00Z",
+        "ending_date": "2020-03-29T00:00:00Z",
+        "current_day": 29,
+        "stage": "STARTED",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.190Z",
+        "updated_at": "2020-10-19T23:14:27.190Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 76,
+    "fields": {
+        "slug": "miami-downtown-xiv",
+        "name": "Miami (4GA) Downtown XIV",
+        "kickoff_date": "2020-02-11T00:00:00Z",
+        "ending_date": "2020-05-30T00:00:00Z",
+        "current_day": 14,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.197Z",
+        "updated_at": "2020-10-19T23:14:27.197Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 77,
+    "fields": {
+        "slug": "miami-downtown-xv",
+        "name": "Miami (4GA) Downtown XV",
+        "kickoff_date": "2020-04-06T00:00:00Z",
+        "ending_date": "2020-07-24T00:00:00Z",
+        "current_day": 70,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.203Z",
+        "updated_at": "2020-10-19T23:14:27.203Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 78,
+    "fields": {
+        "slug": "miami-downtown-xvi",
+        "name": "Miami (4GA) Downtown XVI",
+        "kickoff_date": "2020-05-18T00:00:00Z",
+        "ending_date": "2020-09-04T00:00:00Z",
+        "current_day": 39,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.210Z",
+        "updated_at": "2020-10-19T23:14:27.210Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 79,
+    "fields": {
+        "slug": "miami-downtown-xvii",
+        "name": "Miami (4GA) Downtown XVII",
+        "kickoff_date": "2020-06-22T00:00:00Z",
+        "ending_date": "2020-11-13T00:00:00Z",
+        "current_day": 47,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.217Z",
+        "updated_at": "2020-10-19T23:14:27.217Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 80,
+    "fields": {
+        "slug": "miami-downtown-xviii",
+        "name": "Miami (4GA) Downtown XVIII",
+        "kickoff_date": "2020-07-27T00:00:00Z",
+        "ending_date": "2020-12-18T00:00:00Z",
+        "current_day": 30,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.223Z",
+        "updated_at": "2020-10-19T23:14:27.223Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 81,
+    "fields": {
+        "slug": "miami-downtown-xix",
+        "name": "Miami (4GA) Downtown XIX",
+        "kickoff_date": "2020-09-14T00:00:00Z",
+        "ending_date": "2021-03-19T00:00:00Z",
+        "current_day": 9,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.229Z",
+        "updated_at": "2020-10-19T23:14:27.229Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 82,
+    "fields": {
+        "slug": "miami-downtown-ft-vii",
+        "name": "Miami (4GA) Downtown FT VII",
+        "kickoff_date": "2020-02-03T00:00:00Z",
+        "ending_date": "2020-04-03T00:00:00Z",
+        "current_day": 33,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 4,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.235Z",
+        "updated_at": "2020-10-19T23:14:27.235Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 83,
+    "fields": {
+        "slug": "miami-downtown-ft-viii",
+        "name": "Miami (4GA) Downtown FT VIII",
+        "kickoff_date": "2020-07-02T00:00:00Z",
+        "ending_date": "2020-09-04T00:00:00Z",
+        "current_day": 37,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 4,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.242Z",
+        "updated_at": "2020-10-19T23:14:27.242Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 84,
+    "fields": {
+        "slug": "miami-downtown-ft-ix",
+        "name": "Miami (4GA) Downtown FT IX",
+        "kickoff_date": "2020-09-14T00:00:00Z",
+        "ending_date": "2020-11-20T00:00:00Z",
+        "current_day": 26,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 4,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.250Z",
+        "updated_at": "2020-10-19T23:14:27.250Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 85,
+    "fields": {
+        "slug": "miami-downtown-ft-x",
+        "name": "Miami (4GA) Downtown FT X",
+        "kickoff_date": "2020-11-23T00:00:00Z",
+        "ending_date": "2021-01-29T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 4,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.258Z",
+        "updated_at": "2020-10-19T23:14:27.258Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 86,
+    "fields": {
+        "slug": "miami-downtown-ft-xi",
+        "name": "Miami (4GA) Downtown FT XI",
+        "kickoff_date": "2021-01-11T00:00:00Z",
+        "ending_date": "2021-03-05T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 4,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.266Z",
+        "updated_at": "2020-10-19T23:14:27.266Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 87,
+    "fields": {
+        "slug": "santiago-part-time-7",
+        "name": "Santiago Part-Time 7",
+        "kickoff_date": "2019-12-21T00:00:00Z",
+        "ending_date": "2020-04-09T00:00:00Z",
+        "current_day": 0,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.272Z",
+        "updated_at": "2020-10-19T23:14:27.272Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 88,
+    "fields": {
+        "slug": "mdc-north-ii",
+        "name": "mdc-north-ii",
+        "kickoff_date": "2020-01-13T00:00:00Z",
+        "ending_date": "2020-03-16T00:00:00Z",
+        "current_day": 21,
+        "stage": "INACTIVE",
+        "academy": 3,
+        "certificate": 6,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.278Z",
+        "updated_at": "2020-10-19T23:14:27.278Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 89,
+    "fields": {
+        "slug": "mdc-xi",
+        "name": "MDC-XI",
+        "kickoff_date": "2020-01-13T00:00:00Z",
+        "ending_date": "2020-03-27T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 3,
+        "certificate": 2,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.285Z",
+        "updated_at": "2020-10-19T23:14:27.285Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 90,
+    "fields": {
+        "slug": "programacion-emprendimiento-iii",
+        "name": "Caracas-PT 1",
+        "kickoff_date": "2020-03-16T00:00:00Z",
+        "ending_date": "2020-07-10T00:00:00Z",
+        "current_day": 3,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.293Z",
+        "updated_at": "2020-10-19T23:14:27.293Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 91,
+    "fields": {
+        "slug": "wecode-programacion-xxiii",
+        "name": "Wecode-Programacion-XXIII",
+        "kickoff_date": "2020-05-25T00:00:00Z",
+        "ending_date": "2020-09-10T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.299Z",
+        "updated_at": "2020-10-19T23:14:27.299Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 92,
+    "fields": {
+        "slug": "santiago-part-time-11",
+        "name": "Santiago Part-time 08",
+        "kickoff_date": "2020-03-02T00:00:00Z",
+        "ending_date": "2020-06-19T00:00:00Z",
+        "current_day": 40,
+        "stage": "FINAL_PROJECT",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.305Z",
+        "updated_at": "2020-10-19T23:14:27.305Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 93,
+    "fields": {
+        "slug": "santiago-part-time-09",
+        "name": "Santiago Part-time 09",
+        "kickoff_date": "2020-04-21T00:00:00Z",
+        "ending_date": "2020-08-20T00:00:00Z",
+        "current_day": 21,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.312Z",
+        "updated_at": "2020-10-19T23:14:27.312Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 94,
+    "fields": {
+        "slug": "santiago-part-time-10",
+        "name": "Santiago Part-time 10",
+        "kickoff_date": "2020-07-06T00:00:00Z",
+        "ending_date": "2020-11-27T00:00:00Z",
+        "current_day": 28,
+        "stage": "INACTIVE",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.318Z",
+        "updated_at": "2020-10-19T23:14:27.318Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 95,
+    "fields": {
+        "slug": "santiago-full-time-05",
+        "name": "Santiago Full-time 05",
+        "kickoff_date": "2020-02-24T00:00:00Z",
+        "ending_date": "2020-05-01T00:00:00Z",
+        "current_day": 23,
+        "stage": "ENDED",
+        "academy": 5,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.324Z",
+        "updated_at": "2020-10-19T23:14:27.324Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 96,
+    "fields": {
+        "slug": "santiago-full-time-06",
+        "name": "Santiago Full-time 06",
+        "kickoff_date": "2020-05-11T00:00:00Z",
+        "ending_date": "2020-07-10T00:00:00Z",
+        "current_day": 25,
+        "stage": "STARTED",
+        "academy": 5,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.330Z",
+        "updated_at": "2020-10-19T23:14:27.330Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 97,
+    "fields": {
+        "slug": "santiago-full-time-07",
+        "name": "Santiago Full-time 07",
+        "kickoff_date": "2020-07-27T00:00:00Z",
+        "ending_date": "2020-10-02T00:00:00Z",
+        "current_day": 25,
+        "stage": "INACTIVE",
+        "academy": 5,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.337Z",
+        "updated_at": "2020-10-19T23:14:27.337Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 98,
+    "fields": {
+        "slug": "santiago-full-time-08",
+        "name": "Santiago Full-time 08",
+        "kickoff_date": "2020-10-12T00:00:00Z",
+        "ending_date": "2020-12-18T00:00:00Z",
+        "current_day": 5,
+        "stage": "INACTIVE",
+        "academy": 5,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.344Z",
+        "updated_at": "2020-10-19T23:14:27.344Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 99,
+    "fields": {
+        "slug": "santiago-austro-i",
+        "name": "Santiago Austro I",
+        "kickoff_date": "2020-02-10T00:00:00Z",
+        "ending_date": "2020-04-13T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 5,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.350Z",
+        "updated_at": "2020-10-19T23:14:27.350Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 100,
+    "fields": {
+        "slug": "caracas-ft-1",
+        "name": "Caracas-FT 1",
+        "kickoff_date": "2020-03-30T00:00:00Z",
+        "ending_date": "2020-06-05T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.356Z",
+        "updated_at": "2020-10-19T23:14:27.356Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 101,
+    "fields": {
+        "slug": "madrid-prework",
+        "name": "Madrid Prework",
+        "kickoff_date": "2020-02-03T00:00:00Z",
+        "ending_date": "2030-12-31T00:00:00Z",
+        "current_day": 9,
+        "stage": "INACTIVE",
+        "academy": 6,
+        "certificate": 3,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.364Z",
+        "updated_at": "2020-10-19T23:14:27.364Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 102,
+    "fields": {
+        "slug": "yomequedoencasa",
+        "name": "#YoMeQuedoEnCasa",
+        "kickoff_date": "2020-03-15T00:00:00Z",
+        "ending_date": "2020-04-30T00:00:00Z",
+        "current_day": 5,
+        "stage": "STARTED",
+        "academy": 6,
+        "certificate": 3,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.370Z",
+        "updated_at": "2020-10-19T23:14:27.370Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 103,
+    "fields": {
+        "slug": "quedateencasa",
+        "name": "quedateencasa",
+        "kickoff_date": "2020-03-23T00:00:00Z",
+        "ending_date": "2020-04-30T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 5,
+        "certificate": 3,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.377Z",
+        "updated_at": "2020-10-19T23:14:27.377Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 104,
+    "fields": {
+        "slug": "madrid-pt-i",
+        "name": "Madrid PT I",
+        "kickoff_date": "2020-04-14T00:00:00Z",
+        "ending_date": "2020-09-09T00:00:00Z",
+        "current_day": 29,
+        "stage": "STARTED",
+        "academy": 6,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.384Z",
+        "updated_at": "2020-10-19T23:14:27.384Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 105,
+    "fields": {
+        "slug": "madrid-pt-ii",
+        "name": "Madrid PT II",
+        "kickoff_date": "2020-06-15T00:00:00Z",
+        "ending_date": "2020-10-16T00:00:00Z",
+        "current_day": 23,
+        "stage": "STARTED",
+        "academy": 6,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.390Z",
+        "updated_at": "2020-10-19T23:14:27.390Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 106,
+    "fields": {
+        "slug": "madrid-ft-i",
+        "name": "Madrid FT I",
+        "kickoff_date": "2020-07-15T00:00:00Z",
+        "ending_date": "2020-09-11T00:00:00Z",
+        "current_day": 24,
+        "stage": "STARTED",
+        "academy": 6,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.397Z",
+        "updated_at": "2020-10-19T23:14:27.397Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 107,
+    "fields": {
+        "slug": "madrid-pt-iii",
+        "name": "Madrid PT III",
+        "kickoff_date": "2020-07-30T00:00:00Z",
+        "ending_date": "2020-09-27T00:00:00Z",
+        "current_day": 26,
+        "stage": "INACTIVE",
+        "academy": 6,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.403Z",
+        "updated_at": "2020-10-19T23:14:27.403Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 108,
+    "fields": {
+        "slug": "madrid-ft-ii",
+        "name": "Madrid FT II",
+        "kickoff_date": "2020-10-05T00:00:00Z",
+        "ending_date": "2020-12-11T00:00:00Z",
+        "current_day": 8,
+        "stage": "INACTIVE",
+        "academy": 6,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.411Z",
+        "updated_at": "2020-10-19T23:14:27.411Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 109,
+    "fields": {
+        "slug": "madrid-pt-iv",
+        "name": "Madrid PT IV",
+        "kickoff_date": "2020-09-14T00:00:00Z",
+        "ending_date": "2021-01-29T00:00:00Z",
+        "current_day": 15,
+        "stage": "STARTED",
+        "academy": 6,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.419Z",
+        "updated_at": "2020-10-19T23:14:27.419Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 110,
+    "fields": {
+        "slug": "miami-downtown-pt-xx",
+        "name": "Miami (4GA) Downtown XX",
+        "kickoff_date": "2020-10-27T00:00:00Z",
+        "ending_date": "2021-02-26T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.427Z",
+        "updated_at": "2020-10-19T23:14:27.427Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 111,
+    "fields": {
+        "slug": "miami-downtown-xxi",
+        "name": "Miami (4GA) Downtown XXI",
+        "kickoff_date": "2020-11-16T00:00:00Z",
+        "ending_date": "2021-04-02T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 4,
+        "certificate": 1,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.434Z",
+        "updated_at": "2020-10-19T23:14:27.434Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 112,
+    "fields": {
+        "slug": "madrid-pt-v",
+        "name": "Madrid PT V",
+        "kickoff_date": "2020-10-20T00:00:00Z",
+        "ending_date": "2021-02-23T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 6,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.441Z",
+        "updated_at": "2020-10-19T23:14:27.441Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 113,
+    "fields": {
+        "slug": "santiago-pt-11",
+        "name": "Santiago Part Time 11",
+        "kickoff_date": "2020-08-25T00:00:00Z",
+        "ending_date": "2020-11-25T00:00:00Z",
+        "current_day": 18,
+        "stage": "INACTIVE",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.448Z",
+        "updated_at": "2020-10-19T23:14:27.448Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 114,
+    "fields": {
+        "slug": "mdc-xii",
+        "name": "MDC-XII",
+        "kickoff_date": "2020-09-09T00:00:00Z",
+        "ending_date": "2020-12-11T00:00:00Z",
+        "current_day": 18,
+        "stage": "INACTIVE",
+        "academy": 3,
+        "certificate": 2,
+        "language": "en",
+        "created_at": "2020-10-19T23:14:27.457Z",
+        "updated_at": "2020-10-19T23:14:27.457Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 115,
+    "fields": {
+        "slug": "santiago-part-time-12",
+        "name": "Santiago Part Time 12",
+        "kickoff_date": "2020-11-09T00:00:00Z",
+        "ending_date": "2021-03-12T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.463Z",
+        "updated_at": "2020-10-19T23:14:27.463Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 116,
+    "fields": {
+        "slug": "madrid-pt-vi",
+        "name": "Madrid PT VI",
+        "kickoff_date": "2020-11-23T00:00:00Z",
+        "ending_date": "2021-04-02T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 6,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.470Z",
+        "updated_at": "2020-10-19T23:14:27.470Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 117,
+    "fields": {
+        "slug": "madrid-ft-iii",
+        "name": "Madrid FT III",
+        "kickoff_date": "2021-01-11T00:00:00Z",
+        "ending_date": "2021-03-15T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 6,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.476Z",
+        "updated_at": "2020-10-19T23:14:27.476Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 118,
+    "fields": {
+        "slug": "santiago-pt-13",
+        "name": "Santiago-Pt-13",
+        "kickoff_date": "2021-01-04T00:00:00Z",
+        "ending_date": "2021-05-02T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 5,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.483Z",
+        "updated_at": "2020-10-19T23:14:27.483Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 119,
+    "fields": {
+        "slug": "santiago-ft-9",
+        "name": "Santiago FT 9",
+        "kickoff_date": "2020-12-21T00:00:00Z",
+        "ending_date": "2021-02-28T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 5,
+        "certificate": 4,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.489Z",
+        "updated_at": "2020-10-19T23:14:27.489Z"
+    }
+},
+{
+    "model": "admissions.cohort",
+    "pk": 120,
+    "fields": {
+        "slug": "caracas-pt-xxiii",
+        "name": "Caracas PT XXIII",
+        "kickoff_date": "2020-10-26T00:00:00Z",
+        "ending_date": "2021-02-12T00:00:00Z",
+        "current_day": 0,
+        "stage": "INACTIVE",
+        "academy": 2,
+        "certificate": 1,
+        "language": "es",
+        "created_at": "2020-10-19T23:14:27.496Z",
+        "updated_at": "2020-10-19T23:14:27.496Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 1,
+    "fields": {
+        "user": 2,
+        "cohort": 9,
+        "role": "STUDENT",
+        "finantial_status": "LATE",
+        "educational_status": "SUSPENDED",
+        "created_at": "2020-10-19T23:14:39.396Z",
+        "updated_at": "2020-10-19T23:14:39.396Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 2,
+    "fields": {
+        "user": 2,
+        "cohort": 19,
+        "role": "STUDENT",
+        "finantial_status": "LATE",
+        "educational_status": "SUSPENDED",
+        "created_at": "2020-10-19T23:14:39.401Z",
+        "updated_at": "2020-10-19T23:14:39.401Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 3,
+    "fields": {
+        "user": 2,
+        "cohort": 31,
+        "role": "STUDENT",
+        "finantial_status": "LATE",
+        "educational_status": "SUSPENDED",
+        "created_at": "2020-10-19T23:14:39.404Z",
+        "updated_at": "2020-10-19T23:14:39.404Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 4,
+    "fields": {
+        "user": 2,
+        "cohort": 4,
+        "role": "STUDENT",
+        "finantial_status": "LATE",
+        "educational_status": "SUSPENDED",
+        "created_at": "2020-10-19T23:14:39.407Z",
+        "updated_at": "2020-10-19T23:14:39.407Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 5,
+    "fields": {
+        "user": 3,
+        "cohort": 9,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.414Z",
+        "updated_at": "2020-10-19T23:14:39.414Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 6,
+    "fields": {
+        "user": 3,
+        "cohort": 19,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.417Z",
+        "updated_at": "2020-10-19T23:14:39.417Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 7,
+    "fields": {
+        "user": 4,
+        "cohort": 9,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.423Z",
+        "updated_at": "2020-10-19T23:14:39.423Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 8,
+    "fields": {
+        "user": 5,
+        "cohort": 9,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.431Z",
+        "updated_at": "2020-10-19T23:14:39.431Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 9,
+    "fields": {
+        "user": 6,
+        "cohort": 9,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.437Z",
+        "updated_at": "2020-10-19T23:14:39.437Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 10,
+    "fields": {
+        "user": 7,
+        "cohort": 9,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.443Z",
+        "updated_at": "2020-10-19T23:14:39.443Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 11,
+    "fields": {
+        "user": 8,
+        "cohort": 9,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.449Z",
+        "updated_at": "2020-10-19T23:14:39.449Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 12,
+    "fields": {
+        "user": 9,
+        "cohort": 9,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.456Z",
+        "updated_at": "2020-10-19T23:14:39.456Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 13,
+    "fields": {
+        "user": 10,
+        "cohort": 9,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.461Z",
+        "updated_at": "2020-10-19T23:14:39.461Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 14,
+    "fields": {
+        "user": 11,
+        "cohort": 9,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.468Z",
+        "updated_at": "2020-10-19T23:14:39.468Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 15,
+    "fields": {
+        "user": 12,
+        "cohort": 11,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.473Z",
+        "updated_at": "2020-10-19T23:14:39.473Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 16,
+    "fields": {
+        "user": 13,
+        "cohort": 3,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.479Z",
+        "updated_at": "2020-10-19T23:14:39.479Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 17,
+    "fields": {
+        "user": 14,
+        "cohort": 3,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.485Z",
+        "updated_at": "2020-10-19T23:14:39.485Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 18,
+    "fields": {
+        "user": 15,
+        "cohort": 3,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.492Z",
+        "updated_at": "2020-10-19T23:14:39.492Z"
+    }
+},
+{
+    "model": "admissions.cohortuser",
+    "pk": 19,
+    "fields": {
+        "user": 16,
+        "cohort": 3,
+        "role": "STUDENT",
+        "finantial_status": null,
+        "educational_status": "GRADUATED",
+        "created_at": "2020-10-19T23:14:39.498Z",
+        "updated_at": "2020-10-19T23:14:39.498Z"
+    }
+}
+]

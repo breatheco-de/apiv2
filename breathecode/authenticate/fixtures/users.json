@@ -1,0 +1,290 @@
+[
+{
+    "model": "auth.user",
+    "pk": 1,
+    "fields": {
+        "password": "pbkdf2_sha256$216000$fynOakUGcEVq$xuwY+8xeLFPOl2UFCcOu6CaRlVR4qtT7RJ4a7CCP0A4=",
+        "last_login": null,
+        "is_superuser": true,
+        "username": "alesanchezr",
+        "first_name": "",
+        "last_name": "",
+        "email": "aalejo@gmail.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:13:39.547Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 2,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "a+fakestudent8@4geeks.us",
+        "first_name": "Fake",
+        "last_name": "Studenth",
+        "email": "a+fakestudent8@4geeks.us",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.390Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 3,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "alejandro.leon1223@gmail.com",
+        "first_name": "Alejandro",
+        "last_name": "Leon",
+        "email": "alejandro.leon1223@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.410Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 4,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "edgarbrignoni@icloud.com",
+        "first_name": "Edgar",
+        "last_name": "Brignoni",
+        "email": "edgarbrignoni@icloud.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.420Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 5,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "helberg.david@gmail.com",
+        "first_name": "David",
+        "last_name": "Helberg",
+        "email": "helberg.david@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.427Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 6,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "hexen6@gmail.com",
+        "first_name": "Michael",
+        "last_name": "Venereo",
+        "email": "hexen6@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.434Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 7,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "imjosearce@gmail.com",
+        "first_name": "Jose",
+        "last_name": "Arce",
+        "email": "imjosearce@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.440Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 8,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "josh@littlefishaudio.com",
+        "first_name": "Josh",
+        "last_name": "",
+        "email": "josh@littlefishaudio.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.446Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 9,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "marlon.taylor83@gmail.com",
+        "first_name": "Marlon",
+        "last_name": "Taylor",
+        "email": "marlon.taylor83@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.452Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 10,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "miamigirl2017@outlook.com",
+        "first_name": "Idanis",
+        "last_name": "",
+        "email": "miamigirl2017@outlook.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.458Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 11,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "ximenapuig018@gmail.com",
+        "first_name": "Ximena",
+        "last_name": "Puig",
+        "email": "ximenapuig018@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.464Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 12,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "ziv@gushpanca.com",
+        "first_name": "Ziv",
+        "last_name": "",
+        "email": "ziv@gushpanca.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.470Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 13,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "albitacai@gmail.com",
+        "first_name": "Alba",
+        "last_name": "",
+        "email": "albitacai@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.476Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 14,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "andres-toth@hotmail.com",
+        "first_name": "Andres",
+        "last_name": "",
+        "email": "andres-toth@hotmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.482Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 15,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "bryanalpha1@gmail.com",
+        "first_name": "Bryan",
+        "last_name": "",
+        "email": "bryanalpha1@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.488Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 16,
+    "fields": {
+        "password": "",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "Carlosinfante19@gmail.com",
+        "first_name": "Carlos",
+        "last_name": "",
+        "email": "Carlosinfante19@gmail.com",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2020-10-19T23:14:39.494Z",
+        "groups": [],
+        "user_permissions": []
+    }
+}
+]
