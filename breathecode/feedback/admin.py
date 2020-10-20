@@ -10,7 +10,7 @@ def send_bulk_survey(modeladmin, request, queryset):
     for u in user:
         send_survey(u)
 
-send_bulk_survey.short_description = "Send Survey"
+send_bulk_survey.short_description = "Send General NPS Survey"
 
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):

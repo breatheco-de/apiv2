@@ -4,10 +4,23 @@ from rest_framework.exceptions import ValidationError
 import serpy
 from django.utils import timezone
 
+class GetAcademySerializer(serpy.Serializer):
+    slug = serpy.Field()
+    name = serpy.Field()
+
+class GetCohortSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    name = serpy.Field()
+
 class UserSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+
+class EventTypeSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
 
 class AnswerSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -18,10 +31,10 @@ class AnswerSerializer(serpy.Serializer):
     user = UserSerializer(required=False)
 
     score = serpy.Field()
-    academy = serpy.Field()
-    cohort = serpy.Field()
-    mentor = serpy.Field()
-    event = serpy.Field()
+    academy = GetAcademySerializer(required=False)
+    cohort = GetCohortSerializer(required=False)
+    mentor = UserSerializer(required=False)
+    event = EventTypeSmallSerializer(required=False)
 
 class AnswerPUTSerializer(serializers.ModelSerializer):
     class Meta:

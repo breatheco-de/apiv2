@@ -1,24 +1,39 @@
 from breathecode.notify.actions import send_email_message
+from django.contrib import messages
 from breathecode.authenticate.actions import create_token
 from .models import Answer
+from breathecode.admissions.models import CohortUser
 
 strings = {
     "es": {
-        "question": "¿Qué tan probable es que recomiendes 4Geeks Academy a tus amigos y familiares?"
+        "first": "¿Qué tan probable es que recomiendes",
+        "second": " a tus amigos y familiares?",
     },
-    "us": {
-        "question": "How likely are you to recomend 4Geeks Academy to your friends and family?"
+    "en": {
+        "first": "How likely are you to recommend",
+        "second": "to your friends and family?",
     }
 }
 
 def send_survey(user, cohort=None):
 
     answer = Answer(user = user)
-
-    question = strings["us"]["question"]
     if cohort is not None: 
-        question = strings[cohort.language]["question"]
         answer.cohort = cohort
+    else:
+        cohorts = CohortUser.objects.filter(user__id=user.id).order_by("-cohort__kickoff_date")
+        _count = cohorts.count()
+        if _count == 1:
+            _cohort = cohorts.first().cohort
+            answer.cohort = _cohort
+
+    if answer.cohort is None:
+        messages.error(request,'Impossible to determine the student cohort, maybe it has more than one, or cero.')
+        return False
+
+    answer.academy = answer.cohort.academy
+    question = strings[answer.cohort.language]["first"] + " " + answer.cohort.academy.name + " " + strings[answer.cohort.language]["second"]
+    answer.title = question
     answer.save()
 
     token = create_token(user, hours_length=48)

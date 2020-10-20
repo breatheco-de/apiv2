@@ -152,7 +152,7 @@ LOGGING = {
         },
         'rollbar': {
             'filters': ['require_debug_false'],
-            'access_token': os.environ.get('ROLLBAR'),
+            'access_token': os.environ.get('ROLLBAR_ACCESS_TOKEN'),
             'environment': 'production',
             'class': 'rollbar.logger.RollbarHandler'
         },
@@ -167,7 +167,7 @@ LOGGING = {
 }
 
 ROLLBAR = {
-    'access_token': os.environ.get('ROLLBAR'),
+    'access_token': os.environ.get('ROLLBAR_ACCESS_TOKEN'),
     'environment': 'development' if DEBUG else 'production',
     'branch': 'master',
     'root': BASE_DIR,
