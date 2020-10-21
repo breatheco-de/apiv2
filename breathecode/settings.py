@@ -35,6 +35,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'breathecode.admin_styles',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -61,6 +62,7 @@ INSTALLED_APPS = [
     'breathecode.marketing',
     'breathecode.freelance',
     'breathecode.certificate',
+    'breathecode.monitoring',
 ]
 
 REST_FRAMEWORK = {

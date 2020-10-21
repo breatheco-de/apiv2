@@ -1,6 +1,6 @@
 from django.core.mail import EmailMultiAlternatives
 from rest_framework.exceptions import APIException
-import os
+import os, logging
 from django.template.loader import get_template
 from django.template import Context
 from pyfcm import FCMNotification
@@ -14,12 +14,13 @@ FIREBASE_KEY = os.environ.get('FIREBASE_KEY')
 if(FIREBASE_KEY and FIREBASE_KEY!=''):
     push_service = FCMNotification(api_key=FIREBASE_KEY)
 
+logger = logging.getLogger(__name__)
 
 def send_email_message(template_slug, to, data={}):
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED') == 'TRUE':
         template = get_template_content(template_slug, data, ["email"])
-        print('Email notification '+template_slug+' sent')
-        return requests.post(
+
+        result = requests.post(
             f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
             auth=(
                 "api",
@@ -29,9 +30,17 @@ def send_email_message(template_slug, to, data={}):
                 "to": to,
                 "subject": template['subject'],
                 "text": template['text'],
-                "html": template['html']}).status_code == 200
+                "html": template['html']})
+        
+        if result.status_code != 200:
+            logger.error(f"Error sending email, mailgun status code: {str(result.status_code)}")
+            logger.error(result.text)
+        else:
+            logger.debug('Email notification  '+template_slug+' sent')
+
+        return result.status_code == 200
     else:
-        print('Email not sent because notifications are not enabled')
+        logger.warning('Email not sent because EMAIL_NOTIFICATIONS_ENABLED != TRUE')
         return True
 
 def send_sms(slug, phone_number, data={}):

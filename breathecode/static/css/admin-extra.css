@@ -1,0 +1,17 @@
+.bg-success{
+    background: #196319;
+    color: white;
+}
+.bg-error{
+    background: #972929;
+    color: white;
+}
+.bg-warning{
+    background: #977a29;
+    color: white;
+}
+.badge{
+    font-size: 10px;
+    padding: 3px;
+    border-radius: 5px;
+}
