@@ -51,8 +51,13 @@ def run_app_diagnostig(app, report=False):
         "severity_level": 0
     }
     logger.debug(f"Testing application {app.title}")
+    now = timezone.now()
     _endpoints = app.endpoint_set.all()
     for endpoint in _endpoints:
+        if endpoint.last_check > now - timezone.timedelta(minutes = endpoint.frequency_in_minutes):
+            logger.debug(f"Ignoring {endpoint.url} because frequency hast not been met")
+            continue
+
         e = get_website_text(endpoint)
         if e.status != 'OPERATIONAL':
             if e.severity_level > results["severity_level"]:
