@@ -150,3 +150,6 @@ dmypy.json
 
 # redis
 dump.rdb
+
+# Visual Studio Code
+.vscode/
