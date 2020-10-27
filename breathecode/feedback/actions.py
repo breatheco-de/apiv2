@@ -10,10 +10,14 @@ strings = {
     "es": {
         "first": "¿Qué tan probable es que recomiendes",
         "second": " a tus amigos y familiares?",
+        "highest": "muy probable",
+        "lowest": "no es probable",
     },
     "en": {
         "first": "How likely are you to recommend",
         "second": "to your friends and family?",
+        "highest": "very likely",
+        "lowest": "not likely",
     }
 }
 
@@ -28,24 +32,28 @@ def send_survey(user, cohort=None):
         if _count == 1:
             _cohort = cohorts.first().cohort
             answer.cohort = _cohort
-
+    
     if answer.cohort is None:
         raise Exception(f'Impossible to determine the student cohort, maybe it has more than one, or cero.')
 
     answer.academy = answer.cohort.academy
     question = strings[answer.cohort.language]["first"] + " " + answer.cohort.academy.name + " " + strings[answer.cohort.language]["second"]
     answer.title = question
+    answer.lowest = strings[answer.cohort.language]["lowest"]
+    answer.highest = strings[answer.cohort.language]["highest"]
     answer.save()
 
     token = create_token(user, hours_length=48)
     data = {
         "QUESTION": question,
+        "HIGHEST": answer.highest,
+        "LOWEST": answer.lowest,
         "SUBJECT": question,
         "LINK": f"https://nps.breatheco.de/{answer.id}?token={token.key}"
     }
-
     send_email_message("nps", user.email, data)
-
+    
+    logger.info(f"Survey was sent for user: {str(user.id)}")
     answer.status = "SENT"
     answer.save()
 

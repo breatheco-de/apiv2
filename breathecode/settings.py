@@ -146,7 +146,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Disable Django's logging setup
 LOGGING_CONFIG = None
 
-LOG_LEVEL = os.environ.get('LOG_LEVEL', 'info').upper()
+LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
 
 logging.config.dictConfig({
     'version': 1,

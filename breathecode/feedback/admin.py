@@ -14,7 +14,9 @@ def send_bulk_survey(modeladmin, request, queryset):
     try:
         for u in user:
             send_survey(u)
+        messages.success(request, message="Survey was successfully sent")
     except Exception as e:
+        logger.fatal(str(e))
         messages.error(request, message=str(e))
         
 send_bulk_survey.short_description = "Send General NPS Survey"
