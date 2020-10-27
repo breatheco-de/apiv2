@@ -23,6 +23,9 @@ SURVEY_STATUS = (
 
 class Answer(models.Model):
     title = models.CharField(max_length=200, blank=True)
+    lowest = models.CharField(max_length=50, default='not likely')
+    highest = models.CharField(max_length=50, default='very likely')
+    lang = models.CharField(max_length=3, blank=True, default='en')
 
     cohort = models.ForeignKey(Cohort, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, default=None, blank=True, null=True)

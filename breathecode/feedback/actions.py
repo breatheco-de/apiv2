@@ -1,5 +1,4 @@
 from breathecode.notify.actions import send_email_message
-from django.contrib import messages
 import logging
 from breathecode.authenticate.actions import create_token
 from .models import Answer
@@ -31,10 +30,7 @@ def send_survey(user, cohort=None):
             answer.cohort = _cohort
 
     if answer.cohort is None:
-        messages.error('Impossible to determine the student cohort, maybe it has more than one, or cero.')
-        logger.warning(f'Impossible to determine the student cohort, maybe it has more than one, or cero.')
-        answer.save()
-        return False
+        raise Exception(f'Impossible to determine the student cohort, maybe it has more than one, or cero.')
 
     answer.academy = answer.cohort.academy
     question = strings[answer.cohort.language]["first"] + " " + answer.cohort.academy.name + " " + strings[answer.cohort.language]["second"]
