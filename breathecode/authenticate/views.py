@@ -243,7 +243,7 @@ def pick_password(request, token):
 
         token = Token.get_valid(request.POST.get("token", None))
         if token is None:
-            messages.error(request, 'Invalid or expired token '+str(token))
+            messages.error(request, 'Invalid or expired token ' + str(token))
 
         else:
             user = token.user
