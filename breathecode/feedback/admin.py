@@ -35,8 +35,7 @@ def send_cohort_bulk_survey(modeladmin, request, queryset):
         send_cohort_survey.delay(_id)
 
     logger.info(f"All surveys scheduled to send")
-
-send_bulk_survey.short_description = "Send NPS Survey to all students"
+send_cohort_bulk_survey.short_description = "Send NPS Survey to all cohort students"
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
