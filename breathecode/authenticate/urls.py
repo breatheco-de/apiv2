@@ -25,14 +25,13 @@ app_name='authenticate'
 urlpatterns = [
     path('user/', get_users, name="user"),
     path('user/me', get_users_me, name="user_me"),
-    path('group/', get_groups),
-    path('login/', LoginView.as_view()),
-    path('logout/', LoginView.as_view()),
-    path('token/', TemporalTokenView.as_view()),
+    path('group/', get_groups, name="group"),
+    path('login/', LoginView.as_view(), name="login"),
+    path('logout/', LogoutView.as_view(), name="logout"),
+    path('token/', TemporalTokenView.as_view(), name="token"),
 
     path('password/<str:token>', pick_password, name="pick_password"),
     
-    path('github/', get_github_token),
-    path('github/callback/', save_github_token),
+    path('github/', get_github_token, name="github"),
+    path('github/callback/', save_github_token, name="github_callback"),
 ]
-

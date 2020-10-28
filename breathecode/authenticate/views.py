@@ -18,6 +18,7 @@ from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
 from django.utils import timezone
 from .models import Profile
+from .authentication import ExpiringTokenAuthentication
 
 logger = logging.getLogger('authenticate')
  
@@ -38,13 +39,14 @@ class TemporalTokenView(ObtainAuthToken):
         })
 
 class LogoutView(APIView):
- 
+    authentication_classes: [ExpiringTokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def get(self, request):
-        # delete token
         Token.objects.filter(token_type='login').delete()
         request.auth.delete()
         return Response({
-                'message': "User tokens successfully deleted",
+            'message': "User tokens successfully deleted",
         })
 
 class LoginView(ObtainAuthToken):
