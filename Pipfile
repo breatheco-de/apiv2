@@ -30,7 +30,6 @@ celery = "*"
 redis = "*"
 eventbrite = "*"
 rollbar = "*"
-slack-sdk = "*"
 pillow = "*"
 
 [requires]
