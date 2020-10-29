@@ -12,7 +12,7 @@ from breathecode.authenticate.models import CredentialsGithub, Token
 from breathecode.authenticate.serializers import UserSerializer, AuthSerializer, GroupSerializer
 from rest_framework.authtoken.views import ObtainAuthToken
 from urllib.parse import urlencode
-from .forms import PickPasswordForm, PasswordChangeCustomForm
+# from .forms import PickPasswordForm, PasswordChangeCustomForm
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
@@ -86,12 +86,12 @@ def get_users(request):
     users = UserSerializer(queryset, many=True)
     return Response(users.data)
 
-# Create your views here.
-@api_view(['GET'])
-def get_groups(request):
-    queryset = Group.objects.all()
-    groups = GroupSerializer(queryset, many=True)
-    return Response(groups.data)
+# # Create your views here.
+# @api_view(['GET'])
+# def get_groups(request):
+#     queryset = Group.objects.all()
+#     groups = GroupSerializer(queryset, many=True)
+#     return Response(groups.data)
 
 # Create your views here.
 @api_view(['GET'])
@@ -101,14 +101,15 @@ def get_github_token(request):
     if url == None:
         raise ValidationError("No callback URL specified")
 
-    url = base64.b64decode(url).decode("utf-8")
+    # url = base64.b64decode(url).decode("utf-8")
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID'),
         "redirect_uri": os.getenv('GITHUB_REDIRECT_URL')+"?url="+url,
         "scope": 'user repo read:org',
     }
 
-    redirect = 'https://github.com/login/oauth/authorize?'+urlencode(params)
+    redirect = f'https://github.com/login/oauth/authorize?{urlencode(params)}'
+
     if settings.DEBUG:
         return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
     else:
@@ -205,59 +206,54 @@ def save_github_token(request):
             print("Error: ", resp.json())
             raise APIException("Error from github")
 
+# def change_password(request, token):
+#     if request.method == 'POST':
+#         form = PasswordChangeCustomForm(request.user, request.POST)
+#         if form.is_valid():
+#             user = form.save()
+#             update_session_auth_hash(request, user)  # Important!
+#             messages.success(request, 'Your password was successfully updated!')
+#             return redirect('change_password')
+#         else:
+#             messages.error(request, 'Please correct the error below.')
+#     else:
+#         form = PasswordChangeCustomForm(request.user)
+#     return render(request, 'form.html', {
+#         'form': form
+#     })
 
+# def pick_password(request, token):
+#     _dict = request.POST.copy()
+#     _dict["token"] = token
+#     _dict["callback"] = request.GET.get("callback", '')
 
+#     form = PickPasswordForm(_dict)
+#     if request.method == 'POST':
+#         password1 = request.POST.get("password1", None)
+#         password2 = request.POST.get("password2", None)
+#         if password1 != password2:
+#             messages.error(request, 'Passwords don\'t match')
+#             return render(request, 'form.html', {
+#                 'form': form
+#             })
 
+#         token = Token.get_valid(request.POST.get("token", None))
+#         if token is None:
+#             messages.error(request, 'Invalid or expired token ' + str(token))
 
+#         else:
+#             user = token.user
+#             user.set_password(password1)
+#             user.save()
+#             token.delete()
+#             callback = request.POST.get("callback", None)
+#             if callback is not None and callback != "":
+#                 return HttpResponseRedirect(request.POST.get("callback"))
+#             else:
+#                 return render(request, 'message.html', {
+#                     'message': 'You password has been reset successfully, you can close this window.'
+#                 })
 
-def change_password(request, token):
-    if request.method == 'POST':
-        form = PasswordChangeCustomForm(request.user, request.POST)
-        if form.is_valid():
-            user = form.save()
-            update_session_auth_hash(request, user)  # Important!
-            messages.success(request, 'Your password was successfully updated!')
-            return redirect('change_password')
-        else:
-            messages.error(request, 'Please correct the error below.')
-    else:
-        form = PasswordChangeCustomForm(request.user)
-    return render(request, 'form.html', {
-        'form': form
-    })
-
-def pick_password(request, token):
-    _dict = request.POST.copy()
-    _dict["token"] = token
-    _dict["callback"] = request.GET.get("callback", '')
-
-    form = PickPasswordForm(_dict)
-    if request.method == 'POST':
-        password1 = request.POST.get("password1", None)
-        password2 = request.POST.get("password2", None)
-        if password1 != password2:
-            messages.error(request, 'Passwords don\'t match')
-            return render(request, 'form.html', {
-                'form': form
-            })
-
-        token = Token.get_valid(request.POST.get("token", None))
-        if token is None:
-            messages.error(request, 'Invalid or expired token ' + str(token))
-
-        else:
-            user = token.user
-            user.set_password(password1)
-            user.save()
-            token.delete()
-            callback = request.POST.get("callback", None)
-            if callback is not None and callback != "":
-                return HttpResponseRedirect(request.POST.get("callback"))
-            else:
-                return render(request, 'message.html', {
-                    'message': 'You password has been reset successfully, you can close this window.'
-                })
-
-    return render(request, 'form.html', {
-        'form': form
-    })
+#     return render(request, 'form.html', {
+#         'form': form
+#     })
