@@ -14,6 +14,7 @@ body { margin: 0; padding: 0; min-width: 100%; width: 100% !important; height: 1
 body, table, td, div, p, a { -webkit-font-smoothing: antialiased; text-size-adjust: 100%; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; line-height: 100%; }
 table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse !important; border-spacing: 0; }
 img { border: 0; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+h1{line-height: 100%;}
 #outlook a { padding: 0; }
 .ReadMsgBody { width: 100%; } .ExternalClass { width: 100%; }
 .ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div { line-height: 100%; }
@@ -128,46 +129,6 @@ a, a:hover {
 	width="560" style="border-collapse: collapse; border-spacing: 0; padding: 0; width: inherit;
 	max-width: 560px;" class="wrapper">
 
-	<!-- SOCIAL NETWORKS -->
-	<!-- Image text color should be opposite to background color. Set your url, image src, alt and title. Alt text should fit the image size. Real image size should be x2 -->
-	<tr>
-		<td align="center" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
-			padding-top: 25px;" class="social-icons"><table
-			width="256" border="0" cellpadding="0" cellspacing="0" align="center" style="border-collapse: collapse; border-spacing: 0; padding: 0;">
-			<tr>
-
-				<!-- ICON 1 -->
-				<td align="center" valign="middle" style="margin: 0; padding: 0; padding-left: 10px; padding-right: 10px; border-collapse: collapse; border-spacing: 0;"><a target="_blank"
-					href="https://facebook.com/4GeeksAcademy"
-				style="text-decoration: none;"><img border="0" vspace="0" hspace="0" style="padding: 0; margin: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; border: none; display: inline-block;
-					color: #000000;"
-					alt="F" title="Facebook"
-					width="44" height="44"
-					src="https://assets.breatheco.de/apis/img/images.php?blob&random&cat=icon&tags=facebook,64"></a></td>
-
-				<!-- ICON 2 -->
-				<td align="center" valign="middle" style="margin: 0; padding: 0; padding-left: 10px; padding-right: 10px; border-collapse: collapse; border-spacing: 0;"><a target="_blank"
-					href="https://twitter.com/4GeeksAcademy"
-				style="text-decoration: none;"><img border="0" vspace="0" hspace="0" style="padding: 0; margin: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; border: none; display: inline-block;
-					color: #000000;"
-					alt="T" title="Twitter"
-					width="44" height="44"
-					src="https://assets.breatheco.de/apis/img/images.php?blob&random&cat=icon&tags=twitter,64"></a></td>				
-
-				<!-- ICON 4 -->
-				<td align="center" valign="middle" style="margin: 0; padding: 0; padding-left: 10px; padding-right: 10px; border-collapse: collapse; border-spacing: 0;"><a target="_blank"
-					href="https://instagram.com/4GeeksAcademy"
-				style="text-decoration: none;"><img border="0" vspace="0" hspace="0" style="padding: 0; margin: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; border: none; display: inline-block;
-					color: #000000;"
-					alt="I" title="Instagram"
-					width="44" height="44"
-					src="https://assets.breatheco.de/apis/img/images.php?blob&random&cat=icon&tags=instagram,64"></a></td>
-
-			</tr>
-			</table>
-		</td>
-	</tr>
-
 	<!-- FOOTER -->
 	<!-- Set text color and font family ("sans-serif" or "Georgia, serif"). Duplicate all text styles in links, including line-height -->
 	<tr>
@@ -177,12 +138,7 @@ a, a:hover {
 			color: #999999;
 			font-family: sans-serif;" class="footer">
 
-				This email template was sent to&nbsp;you becouse we&nbsp;want to&nbsp;make the&nbsp;world a&nbsp;better place. You&nbsp;could change your <a href="https://github.com/konsav/email-templates/" target="_blank" style="text-decoration: underline; color: #999999; font-family: sans-serif; font-size: 13px; font-weight: 400; line-height: 150%;">subscription settings</a> anytime.
-
-				<!-- ANALYTICS -->
-				<!--  -->
-				<img width="1" height="1" border="0" vspace="0" hspace="0" style="margin: 0; padding: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; border: none; display: block;"
-				src="https://raw.githubusercontent.com/konsav/email-templates/master/images/tracker.png" />
+				{{ unsubscribe_message }} <a href="{{ API_URL }}" target="_blank" style="text-decoration: underline; color: #999999; font-family: sans-serif; font-size: 13px; font-weight: 400; line-height: 150%;">{{ unsubscribe_label }}</a>
 
 		</td>
 	</tr>

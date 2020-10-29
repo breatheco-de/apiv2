@@ -49,6 +49,7 @@ def send_survey(user, cohort=None):
         "HIGHEST": answer.highest,
         "LOWEST": answer.lowest,
         "SUBJECT": question,
+        "ANSWER_ID": answer.id,
         "LINK": f"https://nps.breatheco.de/{answer.id}?token={token.key}"
     }
     send_email_message("nps", user.email, data)

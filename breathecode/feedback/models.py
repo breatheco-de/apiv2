@@ -13,11 +13,12 @@ class CohortProxy(Cohort):
 PENDING = 'PENDING'
 SENT = 'SENT'
 ANSWERED = 'ANSWERED'
+OPENED = 'OPENED'
 EXPIRED = 'EXPIRED'
 SURVEY_STATUS = (
     (PENDING, 'Pending'),
     (SENT, 'Sent'),
-    (ANSWERED, 'Answered'),
+    (OPENED, 'Opened'),
     (EXPIRED, 'Expired'),
 )
 
@@ -39,6 +40,7 @@ class Answer(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, default=None, blank=True, null=True)
 
+    opened_at = models.DateTimeField(default=None, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

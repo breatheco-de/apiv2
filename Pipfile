@@ -31,6 +31,7 @@ redis = "*"
 eventbrite = "*"
 rollbar = "*"
 slack-sdk = "*"
+pillow = "*"
 
 [requires]
 python_version = "3.8"
