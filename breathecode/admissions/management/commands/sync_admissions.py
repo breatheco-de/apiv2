@@ -96,8 +96,8 @@ class Command(BaseCommand):
     def students(self, options):
 
         if options['override']:
-            User.objects.exclude(email="aalejo@gmail.com").delete()
-            CohortUser.objects.all().delete()
+            ids = CohortUser.objects.filter(role='STUDENT').values_list('user__id', flat=True)
+            User.objects.filter(id__in=ids).delete()
 
         limit = False
         if 'limit' in options and options['limit']:
@@ -117,7 +117,7 @@ class Command(BaseCommand):
             user = User.objects.filter(email=_student['email']).first()
             if user is None:
                 try:
-                    user = self.add_student(_student)
+                    user = self.add_user(_student)
                     self.add_student_cohorts(_student,user)
                     self.stdout.write(self.style.SUCCESS(f"User {_student['email']} added"))
                 except Exception as e:
@@ -125,6 +125,40 @@ class Command(BaseCommand):
                     # self.stdout.write(self.style.SUCCESS(f"Error adding cohort {_cohort['slug']}: {str(e)}"))    
             else:
                 self.stdout.write(self.style.NOTICE(f"User {_student['email']} skipped"))
+
+
+    def teachers(self, options):
+
+        if options['override']:
+            ids = CohortUser.objects.filter(role__in=['STUDENT','ASSISTANT']).values_list('user__id', flat=True)
+            User.objects.filter(id__in=ids).delete()
+
+        limit = False
+        if 'limit' in options and options['limit']:
+            limit = options['limit']
+
+        response = requests.get(f"{HOST}/teachers/")
+        teachers = response.json()
+
+        total = 0
+        for _teacher in teachers['data']:
+            _teacher['email'] = _teacher['username']
+            total += 1
+            # if limited number of sync options
+            if limit and limit > 0 and total > limit:
+                self.stdout.write(self.style.SUCCESS(f"Stopped at {total} because there was a limit on the command arguments"))
+                return
+
+            user = User.objects.filter(email=_teacher['email']).first()
+            if user is None:
+                user = self.add_user(_teacher)
+
+            try:
+                self.add_teacher_cohorts(_teacher,user)
+                self.stdout.write(self.style.SUCCESS(f"User {_teacher['email']} added"))
+            except Exception as e:
+                raise e
+                    # self.stdout.write(self.style.SUCCESS(f"Error adding cohort {_cohort['slug']}: {str(e)}"))    
 
     def add_cohort(self, _cohort):
         academy = Academy.objects.filter(slug=_cohort['location_slug']).first()
@@ -182,16 +216,28 @@ class Command(BaseCommand):
             cohort.ending_date = datetime.strptime(data['ending_date'],DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
         cohort.save()
 
-    def add_student(self, _student):
+    def add_user(self, _user):
         us = User(
-            email=_student['email'],
-            username=_student['email'],
-            first_name=_student['first_name'],
+            email=_user['email'],
+            username=_user['email'],
+            first_name=_user['first_name'],
         )
-        if 'last_name' in _student and _student['last_name'] is not None and _student['last_name'] != '':
-            us.last_name=_student['last_name']
+        if 'last_name' in _user and _user['last_name'] is not None and _user['last_name'] != '':
+            us.last_name=_user['last_name']
         us.save()
         return us
+
+    def add_teacher_cohorts(self, _teacher, us):
+
+        for cohort_slug in _teacher['cohorts']:
+            cohort = Cohort.objects.filter(slug=cohort_slug).first()
+            if cohort is not None:
+                cohort_user = CohortUser(
+                    user=us,
+                    cohort=cohort,
+                    role='TEACHER',
+                )
+                cohort_user.save()
 
     def add_student_cohorts(self, _student, us):
         financial_status = {
