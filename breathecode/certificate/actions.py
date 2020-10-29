@@ -1,10 +1,20 @@
 import requests, os
 from google.cloud import storage
 from urllib.parse import urlencode
-from .models import UserSpecialty
+from .models import UserSpecialty, LayoutDesign
+from breathecode.admissions.models import CohortUser
 
 ENVIRONMENT = os.getenv('ENV',None)
 BUCKET_NAME = "certificates-breathecode"
+
+strings = {
+    "es": {
+        "Main Instructor": "Instructor Principal",
+    },
+    "en": {
+        "Main Instructor": "Main Instructor",
+    }
+}
 
 def resolve_google_credentials():
     path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS',None)
@@ -12,6 +22,51 @@ def resolve_google_credentials():
         credentials = os.getenv('GOOGLE_SERVICE_KEY')#.replace("\\\\","\\")
         with open(path, 'w') as credentials_file:
             credentials_file.write( credentials )
+
+def generate_certificate(user, cohort=None):
+    
+    if cohort is None:
+        cohorts = CohortUser.objects.filter(user__id=user.id)
+        _count = cohorts.count()
+        if _count == 1:
+            _cohort = cohorts.first().cohort
+            cohort = _cohort
+
+    if cohort is None:
+        raise Exception(f"Imposible to obtain the student cohort, maybe it has more than one or none assigned")
+
+    if cohort.certificate is None:
+        raise Exception(f"The cohort has no certificate assigned, please set a certificate for cohort: {cohort.name}")
+
+    if cohort.certificate.specialty is None:
+        raise Exception(f"Specialty has no certificate assigned, please set a certificate on the Specialty model: {cohort.certificate.name}")
+
+    layout = LayoutDesign.objects.filter(slug='default').first()
+    if layout is None:
+        raise Exception(f"Missing a default layout")
+
+    main_teacher = CohortUser.objects.filter(cohort__id=cohort.id, role='TEACHER').first()
+    if main_teacher is None or main_teacher.user is None:
+        raise Exception(f"This cohort does not have a main teacher, please assign it first")
+    else:
+        main_teacher = main_teacher.user
+
+    uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
+    if uspe is None:
+        uspe = UserSpecialty(
+            user = user,
+            cohort = cohort,
+        )
+
+    uspe.specialty = cohort.certificate.specialty
+    uspe.academy = cohort.academy
+    uspe.layout = layout
+    uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
+    uspe.signed_by_role = strings[cohort.language]["Main Instructor"]
+    uspe.save()
+    
+    return uspe
+
 
 def certificate_screenshot(certificate_id):
 

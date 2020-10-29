@@ -1,10 +1,15 @@
+import logging
 import requests, base64, re, json
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
 from django.utils.html import format_html
-from .models import Badge, Specialty, UserSpecialty, UserProxy, LayoutDesign
-from .tasks import remove_screenshot, reset_screenshot
+from breathecode.admissions.admin import CohortAdmin
+from .models import Badge, Specialty, UserSpecialty, UserProxy, LayoutDesign, CohortProxy
+from .tasks import remove_screenshot, reset_screenshot, generate_cohort_certificates
+from .actions import generate_certificate
+
+logger = logging.getLogger(__name__)
 
 @admin.register(Badge)
 class BadgeAdmin(admin.ModelAdmin):
@@ -49,7 +54,36 @@ class UserSpecialtyAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         return ['token', 'expires_at']
 
+def user_bulk_certificate(modeladmin, request, queryset):
+
+    users = queryset.all()
+    try:
+        for u in users:
+            logger.debug(f"Generating certificate for user {u.id}")
+            generate_certificate(u)
+        messages.success(request, message="Certificates generated sucessfully")
+    except Exception as e:
+        logger.exception("Problem generating certificates")
+        messages.error(request, message=str(e))
+
+
+user_bulk_certificate.short_description = "Generate Student Certificate"
+
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name')
-    # actions = [screenshot]
+    actions = [user_bulk_certificate]
+
+def cohort_bulk_certificate(modeladmin, request, queryset):
+
+    cohort_ids = queryset.values_list('id', flat=True)
+    for _id in cohort_ids:
+        logger.debug(f"Scheduling certificate generation for cohort {_id}")
+        generate_cohort_certificates.delay(_id)
+
+cohort_bulk_certificate.short_description = "Generate Cohort Certificates"
+
+@admin.register(CohortProxy)
+class CohortAdmin(CohortAdmin):
+    list_display = ('slug', 'name', 'stage')
+    actions = [cohort_bulk_certificate]

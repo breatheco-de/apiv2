@@ -4,9 +4,12 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import JSONField
-from breathecode.admissions.models import Academy, Cohort
+from breathecode.admissions.models import Academy, Cohort, Certificate
 
 class UserProxy(User):
+    class Meta:
+        proxy = True
+class CohortProxy(Cohort):
     class Meta:
         proxy = True
 
@@ -19,6 +22,8 @@ class Specialty(models.Model):
     description = models.TextField(max_length=500,  blank=True, null=True, default=None)
     # how long it takes to expire, leave null for unlimited
     expiration_day_delta = models.IntegerField(blank=True, null=True, default=None)
+
+    certificate = models.OneToOneField(Certificate, on_delete=models.CASCADE, help_text="This specialty represents only one certificate",blank=True, null=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

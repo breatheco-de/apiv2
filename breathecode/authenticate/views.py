@@ -1,5 +1,6 @@
 import os, requests, base64, logging
 from rest_framework.decorators import api_view, permission_classes
+from django.contrib.auth import update_session_auth_hash
 from rest_framework.response import Response
 from django.http import HttpResponseRedirect, HttpResponse
 from django.conf import settings

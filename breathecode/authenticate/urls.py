@@ -17,7 +17,7 @@ from django.contrib import admin
 from django.urls import path, include
 from .views import (
     get_users, get_users_me, get_groups, LoginView, LogoutView,TemporalTokenView , get_github_token, save_github_token,
-    change_password, pick_password, get_slack_token, save_slack_token
+    change_password, pick_password, get_slack_token, save_slack_token,
 )
 from rest_framework.authtoken import views
 
@@ -31,6 +31,7 @@ urlpatterns = [
     path('token/', TemporalTokenView.as_view()),
 
     path('password/<str:token>', pick_password, name="pick_password"),
+    path('password/form', change_password, name="pick_password"),
     
     path('github/', get_github_token),
     path('github/callback/', save_github_token),

@@ -53,7 +53,7 @@ class Academy(models.Model):
 
     logistical_information = models.CharField(max_length=150,  blank=True, null=True)
 
-    def default_ac_slug():
+    def default_ac_slug(self):
         return self.slug
 
     def __str__(self):
