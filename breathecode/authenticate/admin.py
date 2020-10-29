@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
 from .actions import delete_tokens
 from django.utils.html import format_html
-from .models import CredentialsGithub, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy
+from .models import CredentialsGithub, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy, SlackTeam
 from .actions import reset_password
 # Register your models here.
 
@@ -49,7 +49,7 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         
-        self.slack_callback = f"/v1/auth/slack/callback"
+        self.slack_callback = f"https://app.breatheco.de"
         self.slack_callback = str(base64.urlsafe_b64encode(self.slack_callback.encode("utf-8")), "utf-8")
         return super(ProfileAcademyAdmin, self).get_queryset(request)
     
@@ -60,4 +60,9 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'avatar_url')
+    # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
+
+@admin.register(SlackTeam)
+class SlackTeamAdmin(admin.ModelAdmin):
+    list_display = ('academy', 'name', 'owner', 'updated_at')
     # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]

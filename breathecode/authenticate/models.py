@@ -18,11 +18,18 @@ class Profile(models.Model):
     twitter_username = models.CharField(max_length=50, blank=True, null=True)
     blog = models.CharField(max_length=150, blank=True, null=True)
 
+class Role(models.Model):
+    slug = models.SlugField(max_length=25, primary_key=True)
+    name = models.CharField(max_length=255, blank=True, null=True, default=None)
+    
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 # If the user belongs to an academy administrative staff
 class ProfileAcademy(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    role = models.ForeignKey(Role, on_delete=models.CASCADE)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
