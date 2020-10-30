@@ -4,17 +4,18 @@ from django.urls.base import reverse_lazy
 from rest_framework.test import APITestCase, APIClient, force_authenticate
 from rest_framework import status
 from mixer.backend.django import mixer
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User
 from .models import CredentialsGithub, Token
 from django.http.response import HttpResponseRedirectBase
 import os, json, re, requests, unittest.mock, base64, urllib
 # from pytest_mock import MockerFixture, mocker
-from pprint import pprint
+# from pprint import pprint
 # import pytest_mock
 
 # class BlablablaMock(): #HttpResponseRedirectBase
 
 class FakeResponse():
+    """Simutate Response to be used by mocks"""
     status_code = 200
     data = {}
     def __init__(self, status_code, data):
@@ -25,11 +26,13 @@ class FakeResponse():
         return self.data
 
 class GithubRequestsMock():
+    """Github requests mock"""
     token = "e72e16c7e42f292c6912e7710c838347ae178b4a"
     # class User:
     #     @staticmethod
     @staticmethod
     def user():
+        """Static https://api.github.com/user"""
         return FakeResponse(status_code=200, data={
             "login": "jefer94",
             "id": 3018142,
@@ -79,6 +82,7 @@ class GithubRequestsMock():
 
     @staticmethod
     def user_emails():
+        """Static https://api.github.com/user/emails"""
         return FakeResponse(status_code=200, data=[
             {
                 "email": "jeferson-94@hotmail.com",
@@ -96,13 +100,30 @@ class GithubRequestsMock():
 
     @staticmethod
     def access_token():
+        """Static https://github.com/login/oauth/access_token"""
         return FakeResponse(status_code=200, data={
             "access_token": GithubRequestsMock.token,
             "scope": "repo,gist",
             "token_type": "bearer"
         })
 
+    @staticmethod
+    def apply_get_requests_mock():
+        """Apply get requests mock"""
+        return unittest.mock.Mock(side_effect = lambda k, headers : {
+            'https://api.github.com/user': GithubRequestsMock.user(),
+            'https://api.github.com/user/emails' : GithubRequestsMock.user_emails()
+        }.get(k, 'unhandled request %s'%k))
+
+    @staticmethod
+    def apply_post_requests_mock():
+        """Apply get requests mock"""
+        return unittest.mock.Mock(side_effect = lambda k, data, headers : {
+            'https://github.com/login/oauth/access_token': GithubRequestsMock.access_token()
+        }.get(k, 'unhandled request %s'%k))
+
 class AuthTestCase(APITestCase):
+    """APITestCase with auth methods"""
      # token = None
     user = None
     email = None
@@ -125,6 +146,7 @@ class AuthTestCase(APITestCase):
         github.save()
 
     def create_user(self, email='', password=''):
+        """Get login response"""
         if email == '':
             email = self.email
 
@@ -135,31 +157,9 @@ class AuthTestCase(APITestCase):
         data = { 'email': email, 'password': password }
         return self.client.post(url, data)
 
-    # def force_login(self):
-    #     # self.client.force_login(self.user)
-    #     # token = Token.objects.get(user__email=self.user.email)
-
-    #     if self.user:
-    #         # print(token, 'oooo')
-    #         # token = mixer.blend('auth.Token')
-    #         # response = self.create_user()
-    #         # print('kkk', response.data['token'])
-    #         self.client = APIClient()
-    #         self.client.credentials()
-    #         force_authenticate(self.user)
-    
-    # def force_get(view, url):
-    #     request = factory.get(url)
-    #     force_authenticate(request, user=self.user)
-    #     response = view(request)
-
-    #     # self.client = APIClient()
-    #     #     self.client.credentials()
-    #     #     force_authenticate(self.user)
-
     # Create your tests here.
     def login(self, email='', password=''):
-        """login"""
+        """Login"""
         response = self.create_user(email=email, password=password)
 
         if 'token' in response.data.keys():
@@ -168,12 +168,12 @@ class AuthTestCase(APITestCase):
 
         return response
     
-#@override_settings(STATICFILES_STORAGE=None)
-class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
+class AuthenticateTestSuite(AuthTestCase):
+    """Authentication test suite"""
     # TODO bad password
-    # pytest mock
 
     def test_bad_login(self):
+        """Test /login with incorrect credentials"""
         response = self.create_user(email='Konan@naruto.io', password='Pain!$%')
 
         non_field_errors = response.data['non_field_errors']
@@ -185,8 +185,9 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_login(self):
+        """Test /login"""
         response = self.create_user()
-        tokenPattern = re.compile("^[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
 
         token = str(response.data['token'])
         user_id = int(response.data['user_id'])
@@ -194,13 +195,13 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
 
         self.assertEqual(len(response.data), 3)
         self.assertEqual(len(token), 40)
-        self.assertEqual(bool(tokenPattern.match(token)), True)
+        self.assertEqual(bool(token_pattern.match(token)), True)
         self.assertEqual(user_id, 1)
         self.assertEqual(email, self.email)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_logout_without_token(self):
-        """logout test without token"""
+        """Test /logout without token"""
         self.create_user()
 
         url = reverse_lazy('authenticate:logout')
@@ -215,22 +216,22 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
         self.assertEqual(status_code, 401)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    # def test_logout(self):
-    #     """logout test"""
-    #     # self.login()
-    #     # self.force_login()
-    #     url = reverse_lazy('authenticate:logout')
+    def test_logout(self):
+        """Test /logout"""
+        url = reverse_lazy('authenticate:logout')
 
-    #     response = self.client.get(url)
-    #     print('====', response.data)
-    #     message = str(response.data['message'])
+        self.client.force_authenticate(user=self.user)
 
-    #     self.assertEqual(len(response.data), 1)
-    #     self.assertEqual(message, 'User tokens successfully deleted')
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(url)
+        print('====', response.data)
+        message = str(response.data['message'])
+
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(message, 'User tokens successfully deleted')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_token_without_auth(self):
-        """logout test without token"""
+        """Test /logout without auth"""
         url = reverse_lazy('authenticate:token')
         data = { 'email': self.email, 'password': self.password }
         # return client.post(url, data)
@@ -246,10 +247,10 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_token(self):
-        """logout test"""
+        """Test /token"""
         login_response = self.login()
         token = str(login_response.data['token'])
-        tokenPattern = re.compile("^[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
 
         url = reverse_lazy('authenticate:token')
         data = { 'email': self.email, 'password': self.password }
@@ -263,7 +264,7 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
 
         # self.assertEqual(len(response.data), 2)
         self.assertEqual(len(token), 40)
-        self.assertEqual(bool(tokenPattern.match(token)), True)
+        self.assertEqual(bool(token_pattern.match(token)), True)
         self.assertEqual(token_type, 'temporal')
         # self.assertEqual(expires_at, 'temporal')
         self.assertEqual(user_id, 1)
@@ -271,7 +272,7 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_users_without_auth(self):
-        """logout test without token"""
+        """Test /token without auth"""
         url = reverse_lazy('authenticate:user')
         data = { 'email': self.email, 'password': self.password }
         # return client.post(url, data)
@@ -287,9 +288,10 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_users(self):
+        """Test /users"""
         # self.login()
         url = reverse_lazy('authenticate:user')
-    
+
         self.client.force_authenticate(user=self.user)
         response = self.client.get(url)
 
@@ -299,7 +301,7 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
         first_name = users[0]['first_name']
         last_name = users[0]['last_name']
         github = users[0]['github']
-        
+
         self.assertEqual(1, len(users))
         self.assertEqual(5, len(users[0]))
         self.assertEqual(id, self.user.id)
@@ -309,17 +311,14 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
         self.assertEqual(github, {'avatar_url': None, 'name': None})
 
     def test_user_me_without_auth(self):
-        """logout test without token"""
+        """Test /user/me without auth"""
         url = reverse_lazy('authenticate:user_me')
         data = { 'email': self.email, 'password': self.password }
         # return client.post(url, data)
         # self.client.force_authenticate(user=self.user)
         response = self.client.post(url, data)
-
-
         detail = str(response.data['detail'])
         status_code = int(response.data['status_code'])
-        
 
         self.assertEqual(len(response.data), 2)
         self.assertEqual(detail, 'Authentication credentials were not provided.')
@@ -327,18 +326,19 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_user_me(self):
+        """Test /user/me"""
         # self.login()
         url = reverse_lazy('authenticate:user_me')
         self.client.force_authenticate(user=self.user)
         response = self.client.get(url)
-        
+
         user = response.data
         id = user['id']
         email = user['email']
         first_name = user['first_name']
         last_name = user['last_name']
         github = user['github']
-        
+
         self.assertEqual(5, len(user))
         self.assertEqual(id, self.user.id)
         self.assertEqual(email, self.user.email)
@@ -347,35 +347,25 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
         self.assertEqual(github, {'avatar_url': None, 'name': None})
 
     def test_github_without_url(self):
+        """Test /github without auth"""
         url = reverse_lazy('authenticate:github')
         response = self.client.get(url)
-        
+
         data = response.data
         details = data['details']
         status_code = data['status_code']
-        
+
         self.assertEqual(2, len(data))
         self.assertEqual(details, 'No callback URL specified')
         self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    # @mock.patch('os.listdir')
-    # @mock.patch('django.http.response.HttpResponseRedirectBase.__init__', return_value=None)
-    # def test_github(self, mocker):
     def test_github(self):
-        # spy = mocker.spy(HttpResponseRedirectBase, '__init__')
+        """Test /github"""
         original_url_callback = 'https://google.co.ve'
-        url_callback = urllib.parse.quote(original_url_callback, safe='~()*!.\'')
-        # spy.assert_called_once_with(None)
-
         url = reverse_lazy('authenticate:github')
-        # self.client.force_authenticate(user=self.user)
         params = {'url': 'https://google.co.ve'}
-        # response = self.client.get(url)
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
-        # response = self.client.get(f'{url}?url=url_callback')
-        # response = self.client.get(f'{url}?url={url_callback.encode('utf-8')}')
-
         params = {
             "client_id": os.getenv('GITHUB_CLIENT_ID'),
             "redirect_uri": os.getenv('GITHUB_REDIRECT_URL')+"?url="+original_url_callback,
@@ -383,58 +373,40 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
         }
 
         redirect = f'https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}'
-        
+
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(response.url, redirect)
 
     def test_github_callback_without_code(self):
-        print('======================asdsad2======================')
-        # spy = mocker.spy(HttpResponseRedirectBase, '__init__')
-        original_url_callback = 'https://google.co.ve'
-        url_callback = urllib.parse.quote(original_url_callback, safe='~()*!.\'')
-        # spy.assert_called_once_with(None)
-
+        """Test /github/callback without auth"""
         url = reverse_lazy('authenticate:github_callback')
-        # self.client.force_authenticate(user=self.user)
-        print('s', f'{url}?url={url_callback}')
         params = {'url': 'https://google.co.ve'}
-        print('f', f'{url}?{urllib.parse.urlencode(params)}')
-        # response = self.client.get(url)
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
-        print('sss', response.data)
-        print('sss', response.status_code)
 
         data = response.data
         details = data['details']
         status_code = data['status_code']
-        
+
         self.assertEqual(2, len(data))
         self.assertEqual(details, 'No github code specified')
         self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    # @mock.patch('requests.post', return_value=None)
-    # @unittest.mock.patch('requests.get')
-    @unittest.mock.patch('requests.get', unittest.mock.Mock(side_effect = lambda k, headers : {
-        'https://api.github.com/user': GithubRequestsMock.user(),
-        'https://api.github.com/user/emails' : GithubRequestsMock.user_emails()
-    }.get(k, 'unhandled request %s'%k)))
-    @unittest.mock.patch('requests.post', unittest.mock.Mock(side_effect = lambda k, data, headers : {
-        'https://github.com/login/oauth/access_token': GithubRequestsMock.access_token()
-    }.get(k, 'unhandled request %s'%k)))
+    @unittest.mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
+    @unittest.mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
     def test_github_callback(self):
+        """Test /github/callback"""
         original_url_callback = 'https://google.co.ve'
-        tokenPattern = re.compile("^" + original_url_callback.replace('.', '\.') + "\?token=[0-9a-zA-Z]{,40}$")
-        print("^" + original_url_callback.replace('.', '\.') + "[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile("^" + original_url_callback.replace('.', r'\.') +
+            r"\?token=[0-9a-zA-Z]{,40}$")
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
         params = {'url': original_url_callback, 'code': code}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
-        pprint(response)
-        
+
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(bool(tokenPattern.match(response.url)), True)
+        self.assertEqual(bool(token_pattern.match(response.url)), True)
 
     # def test_change_password_without_token(self):
     #     """logout test without token"""

@@ -8,6 +8,7 @@ pytest-mock = "*"
 pytest-cov = "*"
 coverage = "*"
 mock = "*"
+pylint-django = "*"
 
 [packages]
 django = "*"
@@ -41,6 +42,8 @@ python_version = "3.8"
 
 [scripts]
 dev="heroku local"
+coverage="pytest ./breathecode --disable-pytest-warnings --cov=breathecode --cov-report term-missing"
+lint="pylint ./breathecode --load-plugins pylint_django"
 start="python manage.py runserver"
 migrate="python manage.py migrate"
 makemigrations="python manage.py makemigrations"
