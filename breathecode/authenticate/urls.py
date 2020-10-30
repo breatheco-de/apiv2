@@ -30,8 +30,8 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name="logout"),
     path('token/', TemporalTokenView.as_view(), name="token"),
 
-    # path('password/<str:token>', pick_password, name="pick_password"),
-    # path('password/form', change_password, name="pick_password"),
+    # path('password/<str:token>', pick_password, name="password_token"),
+    # path('password/form', change_password, name="password_form"),
 
     path('github/', get_github_token, name="github"),
     path('github/callback/', save_github_token, name="github_callback"),

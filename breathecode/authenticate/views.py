@@ -214,26 +214,28 @@ def save_github_token(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_slack_token(request):
+    """Generate stack redirect url for authorize"""
     url = request.query_params.get('url', None)
     if url is None:
         raise ValidationError("No callback URL specified")
-    
+
     user_id = request.query_params.get('user', None)
     if user_id is None:
         raise ValidationError("No user specified on the URL")
-    
+
     academy = request.query_params.get('a', None)
     if academy is None:
         raise ValidationError("No academy specified on the URL")
-    
+
     url = base64.b64decode(url).decode("utf-8")
     # Missing scopes!! admin.invites:write, identify
-    scopes = ("app_mentions:read","channels:history","channels:join","channels:read","chat:write","chat:write.customize",
-        "commands","files:read","files:write","groups:history","groups:read","groups:write","incoming-webhook",
-        "team:read","users:read","users:read.email","users.profile:read",
-        "users:read","users:read.email")
+    scopes = ("app_mentions:read", "channels:history", "channels:join", "channels:read",
+        "chat:write", "chat:write.customize", "commands", "files:read", "files:write",
+        "groups:history", "groups:read", "groups:write", "incoming-webhook", "team:read",
+        "users:read", "users:read.email", "users.profile:read", "users:read", "users:read.email")
 
-    payload = str(base64.urlsafe_b64encode(("a="+academy+"&url="+url+"&user="+user_id).encode("utf-8")), "utf-8")
+    query_string = f'a={academy}&url={url}&user={user_id}'.encode("utf-8")
+    payload = str(base64.urlsafe_b64encode(query_string), "utf-8")
     params = {
         "client_id": os.getenv('SLACK_CLIENT_ID'),
         "redirect_uri": os.getenv('SLACK_REDIRECT_URL')+"?payload="+payload,
@@ -252,13 +254,13 @@ def get_slack_token(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def save_slack_token(request):
-
+    """Get Slack token and redirect to authorization route"""
     logger.debug("Slack callback just landed")
 
     error = request.query_params.get('error', False)
     error_description = request.query_params.get('error_description', '')
     if error:
-        raise APIException("Slack: "+error_description)
+        raise APIException("Slack: "+ error_description)
 
     original_payload = request.query_params.get('payload', None)
     payload = request.query_params.get('payload', None)
@@ -275,7 +277,7 @@ def save_slack_token(request):
     if "user" not in payload:
         logger.exception(payload)
         raise ValidationError("No user specified from the slack payload")
-    
+
     if "a" not in payload:
         logger.exception(payload)
         raise ValidationError("No user academy from the slack payload")
