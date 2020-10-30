@@ -96,7 +96,6 @@ class GithubRequestsMock():
 
     @staticmethod
     def access_token():
-        print('HERE')
         return FakeResponse(status_code=200, data={
             "access_token": GithubRequestsMock.token,
             "scope": "repo,gist",
