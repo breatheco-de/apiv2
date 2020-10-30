@@ -22,5 +22,5 @@ def test_email(request, email):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def preview_template(request, slug):
-    template = get_template_content(slug)
+    template = get_template_content(slug, request.GET)
     return HttpResponse(template['html'])

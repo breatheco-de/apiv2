@@ -1,5 +1,6 @@
 import os, requests, base64, logging
 from rest_framework.decorators import api_view, permission_classes
+from django.contrib.auth import update_session_auth_hash
 from rest_framework.response import Response
 from django.http import HttpResponseRedirect, HttpResponse
 from django.conf import settings
@@ -8,11 +9,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status, serializers
 from django.contrib.auth.models import User, Group, AnonymousUser
 from django.contrib import messages
-from breathecode.authenticate.models import CredentialsGithub, Token
-from breathecode.authenticate.serializers import UserSerializer, AuthSerializer, GroupSerializer
 from rest_framework.authtoken.views import ObtainAuthToken
-from urllib.parse import urlencode
-# from .forms import PickPasswordForm, PasswordChangeCustomForm
+from urllib.parse import urlencode, parse_qs
 from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
@@ -20,7 +18,12 @@ from django.utils import timezone
 from .models import Profile
 from .authentication import ExpiringTokenAuthentication
 
-logger = logging.getLogger('authenticate')
+from .forms import PickPasswordForm, PasswordChangeCustomForm
+from .models import Profile, CredentialsGithub, Token, CredentialsSlack, SlackTeam
+from breathecode.admissions.models import Academy
+from .serializers import UserSerializer, AuthSerializer, GroupSerializer
+
+logger = logging.getLogger(__name__)
  
 class TemporalTokenView(ObtainAuthToken):
     permission_classes = [IsAuthenticated]
@@ -206,6 +209,138 @@ def save_github_token(request):
             print("Error: ", resp.json())
             raise APIException("Error from github")
 
+
+# Create your views here.
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_slack_token(request):
+    url = request.query_params.get('url', None)
+    if url is None:
+        raise ValidationError("No callback URL specified")
+    
+    user_id = request.query_params.get('user', None)
+    if user_id is None:
+        raise ValidationError("No user specified on the URL")
+    
+    academy = request.query_params.get('a', None)
+    if academy is None:
+        raise ValidationError("No academy specified on the URL")
+    
+    url = base64.b64decode(url).decode("utf-8")
+    # Missing scopes!! admin.invites:write, identify
+    scopes = ("app_mentions:read","channels:history","channels:join","channels:read","chat:write","chat:write.customize",
+        "commands","files:read","files:write","groups:history","groups:read","groups:write","incoming-webhook",
+        "team:read","users:read","users:read.email","users.profile:read",
+        "users:read","users:read.email")
+
+    payload = str(base64.urlsafe_b64encode(("a="+academy+"&url="+url+"&user="+user_id).encode("utf-8")), "utf-8")
+    params = {
+        "client_id": os.getenv('SLACK_CLIENT_ID'),
+        "redirect_uri": os.getenv('SLACK_REDIRECT_URL')+"?payload="+payload,
+        "scope": ",".join(scopes)
+    }
+    redirect = "https://slack.com/oauth/v2/authorize?"
+    for key in params:
+        redirect += f"{key}={params[key]}&"
+
+    if settings.DEBUG:
+        return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
+    else:
+        return HttpResponseRedirect(redirect_to=redirect)
+
+# Create your views here.
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def save_slack_token(request):
+
+    logger.debug("Slack callback just landed")
+
+    error = request.query_params.get('error', False)
+    error_description = request.query_params.get('error_description', '')
+    if error:
+        raise APIException("Slack: "+error_description)
+
+    original_payload = request.query_params.get('payload', None)
+    payload = request.query_params.get('payload', None)
+    if payload is None:
+        raise ValidationError("No payload specified")
+    else:
+        payload = base64.b64decode(payload).decode("utf-8")
+        payload = parse_qs(payload)
+
+    if "url" not in payload:
+        logger.exception(payload)
+        raise ValidationError("No url specified from the slack payload")
+
+    if "user" not in payload:
+        logger.exception(payload)
+        raise ValidationError("No user specified from the slack payload")
+    
+    if "a" not in payload:
+        logger.exception(payload)
+        raise ValidationError("No user academy from the slack payload")
+
+    academy = Academy.objects.get(id=payload["a"][0])
+    user = User.objects.get(id=payload["user"][0])
+
+    code = request.query_params.get('code', None)
+    if code == None:
+        raise ValidationError("No slack code specified")
+
+    params = {
+        'client_id': os.getenv('SLACK_CLIENT_ID'),
+        'client_secret': os.getenv('SLACK_SECRET'),
+        'redirect_uri': os.getenv('SLACK_REDIRECT_URL')+"?payload="+original_payload,
+        'code': code,
+    }
+    # print("params", params)
+    resp = requests.post('https://slack.com/api/oauth.v2.access', data=params)
+    if resp.status_code == 200:
+
+        logger.debug("Slack responded with 200")
+
+        slack_data = resp.json()
+        if 'access_token' not in slack_data:
+            print("Slack response body", slack_data)
+            raise APIException("Slack error status: "+slack_data['error'])
+
+        slack_data = resp.json()
+        logger.debug(slack_data)
+
+        CredentialsSlack.objects.filter(app_id=slack_data['app_id']).delete()
+        credentials = CredentialsSlack(
+            user=user,
+            app_id = slack_data['app_id'],
+            bot_user_id = slack_data['bot_user_id'],
+            token = slack_data['access_token'],
+            team_id = slack_data['team']['id'],
+            team_name = slack_data['team']['name'],
+            authed_user = slack_data['authed_user']['id'],
+        )
+        credentials.save()
+
+        team = SlackTeam.objects.filter(slack_id=slack_data['team']['id']).first()
+        if team is None:
+            team = SlackTeam(slack_id = slack_data['team']['id'])
+
+        team.name = slack_data['team']['name'],
+        team.owner = user    
+        team.academy = academy    
+        team.save()
+
+        return HttpResponseRedirect(redirect_to=payload["url"][0])
+
+
+def change_password(request, token):
+    if request.method == 'POST':
+        form = PasswordChangeCustomForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Important!
+            messages.success(request, 'Your password was successfully updated!')
+            return redirect('change_password')
+        else:
+            messages.error(request, 'Please correct the error below.')
     else:
         print("Github error: ", resp.status_code)
         print("Error: ", resp.json())

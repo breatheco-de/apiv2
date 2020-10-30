@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 def send_email_message(template_slug, to, data={}):
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED') == 'TRUE':
+
         template = get_template_content(template_slug, data, ["email"])
 
         result = requests.post(
@@ -102,7 +103,7 @@ def send_fcm_notification(slug, user_id, data={}):
 def get_template_content(slug, data={}, formats=None):
     #d = Context({ 'username': username })
     con = {
-        'subject': 'No subject',
+        'SUBJECT': 'No subject',
         'API_URL': os.environ.get('API_URL'),
         'COMPANY_NAME': 'BreatheCode',
         'COMPANY_LEGAL_NAME': 'BreatheCode LLC',
@@ -114,9 +115,13 @@ def get_template_content(slug, data={}, formats=None):
     z = con.copy()   # start with x's keys and values
     z.update(data)
 
-    templates = {
-        "subject": z['subject']
-    }
+    templates = {}
+    if 'SUBJECT' in z:
+        templates["SUBJECT"] = z['SUBJECT']
+        templates["subject"] = z['SUBJECT']
+    elif 'subject' in z:
+        templates["SUBJECT"] = z['subject']
+        templates["subject"] = z['subject']
 
     if formats is None or "email" in formats:
         plaintext = get_template( slug + '.txt')

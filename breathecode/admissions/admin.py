@@ -32,6 +32,7 @@ class CertificateAdmin(admin.ModelAdmin):
 
 @admin.register(CohortUser)
 class CohortUserAdmin(admin.ModelAdmin):
+    search_fields = ['user__email', 'user__first_name', 'user__last_name', 'cohort__slug', 'cohort__name', 'cohort__slug']
     list_display = ('get_student', 'cohort', 'role', 'educational_status', 'finantial_status', 'created_at')
     list_filter = ['role', 'educational_status','finantial_status']
     raw_id_fields = ["user", "cohort"]

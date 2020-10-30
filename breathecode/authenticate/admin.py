@@ -1,7 +1,10 @@
+import base64
 from django.contrib import admin
+from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
 from .actions import delete_tokens
-from .models import CredentialsGithub, Token, UserAutentication, Profile
+from django.utils.html import format_html
+from .models import CredentialsGithub, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy, SlackTeam
 from .actions import reset_password
 # Register your models here.
 
@@ -23,6 +26,10 @@ send_reset_password.short_description = "Send reset password link"
 class CredentialsGithubAdmin(admin.ModelAdmin):
     list_display = ('github_id', 'user_id', 'email', 'token')
 
+@admin.register(CredentialsSlack)
+class CredentialsSlackAdmin(admin.ModelAdmin):
+    list_display = ('user','app_id', 'bot_user_id', 'team_id', 'team_name')
+
 @admin.register(Token)
 class TokenAdmin(admin.ModelAdmin):
     list_display = ('key', 'token_type', 'expires_at', 'user')
@@ -30,12 +37,32 @@ class TokenAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         return ['key']
 
-@admin.register(UserAutentication)
+@admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
     actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
+    
+@admin.register(ProfileAcademy)
+class ProfileAcademyAdmin(admin.ModelAdmin):
+    list_display = ('user', 'academy', 'created_at', 'slack')
+    raw_id_fields = ["user"]
+    
+    def get_queryset(self, request):
+        
+        self.slack_callback = f"https://app.breatheco.de"
+        self.slack_callback = str(base64.urlsafe_b64encode(self.slack_callback.encode("utf-8")), "utf-8")
+        return super(ProfileAcademyAdmin, self).get_queryset(request)
+    
+    def slack(self,obj):
+        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/slack/?a={obj.academy.id}&user={obj.user.id}&url={self.slack_callback}'>connect slack</a>")
+
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'avatar_url')
+    # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
+
+@admin.register(SlackTeam)
+class SlackTeamAdmin(admin.ModelAdmin):
+    list_display = ('academy', 'name', 'owner', 'updated_at')
     # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]

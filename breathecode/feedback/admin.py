@@ -1,9 +1,8 @@
 import logging
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
-
 from .models import Answer, UserProxy, CohortProxy
 from .actions import send_survey
 from .tasks import send_cohort_survey
@@ -12,8 +11,14 @@ logger = logging.getLogger(__name__)
 
 def send_bulk_survey(modeladmin, request, queryset):
     user = queryset.all()
-    for u in user:
-        send_survey(u)
+    try:
+        for u in user:
+            send_survey(u)
+        messages.success(request, message="Survey was successfully sent")
+    except Exception as e:
+        logger.fatal(str(e))
+        messages.error(request, message=str(e))
+        
 send_bulk_survey.short_description = "Send General NPS Survey"
 
 @admin.register(UserProxy)
@@ -30,8 +35,7 @@ def send_cohort_bulk_survey(modeladmin, request, queryset):
         send_cohort_survey.delay(_id)
 
     logger.info(f"All surveys scheduled to send")
-
-send_bulk_survey.short_description = "Send NPS Survey to all students"
+send_cohort_bulk_survey.short_description = "Send NPS Survey to all cohort students"
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
@@ -40,6 +44,8 @@ class CohortAdmin(CohortAdmin):
 # Register your models here.
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin):
-    list_display = ('status', 'user', 'score', 'comment','created_at')
+    search_fields = ['user__first_name', 'user__last_name', 'user__email', 'cohort__slug']
+    list_display = ('status', 'user', 'score', 'comment', 'opened_at', 'cohort', 'created_at')
+    list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
     # def entity(self, object):
     #     return f"{object.entity_slug} (id:{str(object.entity_id)})"

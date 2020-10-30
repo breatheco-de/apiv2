@@ -5,8 +5,9 @@ from rest_framework import serializers
 from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
+from breathecode.admissions.models import Academy
 
-class UserAutentication(User):
+class UserProxy(User):
     class Meta:
         proxy = True
 
@@ -16,6 +17,22 @@ class Profile(models.Model):
     bio = models.CharField(max_length=255, blank=True, null=True)
     twitter_username = models.CharField(max_length=50, blank=True, null=True)
     blog = models.CharField(max_length=150, blank=True, null=True)
+
+class Role(models.Model):
+    slug = models.SlugField(max_length=25, primary_key=True)
+    name = models.CharField(max_length=255, blank=True, null=True, default=None)
+    
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+# If the user belongs to an academy administrative staff
+class ProfileAcademy(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    role = models.ForeignKey(Role, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)
@@ -35,6 +52,40 @@ class CredentialsGithub(models.Model):
 
     def __str__(self):
         return f"{self.email} ({self.user.id})"
+
+class CredentialsSlack(models.Model):
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
+    
+    token = models.CharField(max_length=255)
+    bot_user_id = models.CharField(max_length=50)
+    app_id = models.CharField(max_length=50)
+    
+    authed_user = models.CharField(max_length=50)
+
+    team_id = models.CharField(max_length=50)
+    team_name = models.CharField(max_length=100)
+    
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"Team {self.team_name} ({self.team_id})"
+
+
+class SlackTeam(models.Model):
+    
+    slack_id = models.CharField(max_length=50)
+    name = models.CharField(max_length=100)
+    
+    owner = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"{self.name} ({self.slack_id})"
 
 class CredentialsQuickBooks(models.Model):
     quibooks_code = models.CharField(max_length=255, primary_key=True)

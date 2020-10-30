@@ -25,6 +25,9 @@ class EventTypeSmallSerializer(serpy.Serializer):
 class AnswerSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
+    lowest = serpy.Field()
+    highest = serpy.Field()
+    lang = serpy.Field()
     comment = serpy.Field()
     score = serpy.Field()
     status = serpy.Field()

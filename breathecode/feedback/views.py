@@ -1,12 +1,31 @@
 from django.shortcuts import render
 from django.utils import timezone
+from django.http import HttpResponse
 from .models import Answer
+from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import AnswerPUTSerializer, AnswerSerializer
 from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import status
+from PIL import Image
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def track_survey_open(request, answer_id=None):
+
+    answer = Answer.objects.filter(id=answer_id, status='SENT').first()
+    if answer is not None:
+        answer.status = 'OPENED'
+        answer.opened_at = timezone.now()
+        answer.save()
+    
+    image = Image.new('RGB', (1, 1))
+    response = HttpResponse(content_type="image/png")
+    image.save(response, "PNG")
+    return response
 
 # Create your views here.
 class GetAnswerView(APIView):
