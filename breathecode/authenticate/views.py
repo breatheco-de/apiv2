@@ -18,7 +18,7 @@ from django.utils import timezone
 from .models import Profile
 from .authentication import ExpiringTokenAuthentication
 
-from .forms import PickPasswordForm, PasswordChangeCustomForm
+# from .forms import PickPasswordForm, PasswordChangeCustomForm
 from .models import Profile, CredentialsGithub, Token, CredentialsSlack, SlackTeam
 from breathecode.admissions.models import Academy
 from .serializers import UserSerializer, AuthSerializer, GroupSerializer

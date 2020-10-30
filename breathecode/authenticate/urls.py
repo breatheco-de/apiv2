@@ -16,8 +16,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from .views import (
-    get_users, get_users_me, get_groups, LoginView, LogoutView,TemporalTokenView , get_github_token, save_github_token,
-    change_password, pick_password, get_slack_token, save_slack_token,
+    get_users, get_users_me, LoginView, LogoutView,TemporalTokenView , get_github_token, save_github_token,
+    change_password, get_slack_token, save_slack_token,
 )
 from rest_framework.authtoken import views
 
@@ -38,5 +38,4 @@ urlpatterns = [
 
     path('slack/', get_slack_token, name="slack"),
     path('slack/callback/', save_slack_token, name="slack_callback"),
-]
 ]
