@@ -206,6 +206,11 @@ def save_github_token(request):
             print("Error: ", resp.json())
             raise APIException("Error from github")
 
+    else:
+        print("Github error: ", resp.status_code)
+        print("Error: ", resp.json())
+        raise APIException("Error from github")
+
 # def change_password(request, token):
 #     if request.method == 'POST':
 #         form = PasswordChangeCustomForm(request.user, request.POST)

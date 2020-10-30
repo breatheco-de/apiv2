@@ -7,17 +7,101 @@ from mixer.backend.django import mixer
 from django.contrib.auth.models import User, Group
 from .models import CredentialsGithub, Token
 from django.http.response import HttpResponseRedirectBase
-import os
-import re
-# import pytest_mock
-import mock
-import base64
-import urllib
+import os, json, re, requests, unittest.mock, base64, urllib
 # from pytest_mock import MockerFixture, mocker
 from pprint import pprint
 # import pytest_mock
 
 # class BlablablaMock(): #HttpResponseRedirectBase
+
+class FakeResponse():
+    status_code = 200
+    data = {}
+    def __init__(self, status_code, data):
+        self.data = data
+        self.status_code = status_code
+
+    def json(self):
+        return self.data
+
+class GithubRequestsMock():
+    token = "e72e16c7e42f292c6912e7710c838347ae178b4a"
+    # class User:
+    #     @staticmethod
+    @staticmethod
+    def user():
+        return FakeResponse(status_code=200, data={
+            "login": "jefer94",
+            "id": 3018142,
+            "node_id": "MDQ6VXNlcjMwMTgxNDI=",
+            "avatar_url": "https://avatars2.githubusercontent.com/u/3018142?v=4",
+            "gravatar_id": "",
+            "url": "https://api.github.com/users/jefer94",
+            "html_url": "https://github.com/jefer94",
+            "followers_url": "https://api.github.com/users/jefer94/followers",
+            "following_url": "https://api.github.com/users/jefer94/following{/other_user}",
+            "gists_url": "https://api.github.com/users/jefer94/gists{/gist_id}",
+            "starred_url": "https://api.github.com/users/jefer94/starred{/owner}{/repo}",
+            "subscriptions_url": "https://api.github.com/users/jefer94/subscriptions",
+            "organizations_url": "https://api.github.com/users/jefer94/orgs",
+            "repos_url": "https://api.github.com/users/jefer94/repos",
+            "events_url": "https://api.github.com/users/jefer94/events{/privacy}",
+            "received_events_url": "https://api.github.com/users/jefer94/received_events",
+            "type": "User",
+            "site_admin": False,
+            "name": "Jeferson De Freitas",
+            "company": "@chocoland ",
+            "blog": "https://www.facebook.com/chocoland.framework",
+            "location": "Colombia, Magdalena, Santa Marta, Gaira",
+            "email": "jdefreitaspinto@gmail.com",
+            "hireable": True,
+            "bio": "I am an Computer engineer, Full-stack Developer and React Developer, I likes an API good, the clean code, the good programming practices",
+            "twitter_username": None,
+            "public_repos": 70,
+            "public_gists": 1,
+            "followers": 9,
+            "following": 5,
+            "created_at": "2012-12-11T17:00:30Z",
+            "updated_at": "2020-10-29T19:15:13Z",
+            "private_gists": 0,
+            "total_private_repos": 2,
+            "owned_private_repos": 1,
+            "disk_usage": 211803,
+            "collaborators": 0,
+            "two_factor_authentication": False,
+            "plan": {
+                "name": "free",
+                "space": 976562499,
+                "collaborators": 0,
+                "private_repos": 10000
+            }
+        })
+
+    @staticmethod
+    def user_emails():
+        return FakeResponse(status_code=200, data=[
+            {
+                "email": "jeferson-94@hotmail.com",
+                "primary": False,
+                "verified": True,
+                "visibility": None
+            },
+            {
+                "email": "jdefreitaspinto@gmail.com",
+                "primary": True,
+                "verified": True,
+                "visibility": "public"
+            }
+        ])
+
+    @staticmethod
+    def access_token():
+        print('HERE')
+        return FakeResponse(status_code=200, data={
+            "access_token": GithubRequestsMock.token,
+            "scope": "repo,gist",
+            "token_type": "bearer"
+        })
 
 class AuthTestCase(APITestCase):
      # token = None
@@ -263,6 +347,96 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
         self.assertEqual(last_name, self.user.last_name)
         self.assertEqual(github, {'avatar_url': None, 'name': None})
 
+    def test_github_without_url(self):
+        url = reverse_lazy('authenticate:github')
+        response = self.client.get(url)
+        
+        data = response.data
+        details = data['details']
+        status_code = data['status_code']
+        
+        self.assertEqual(2, len(data))
+        self.assertEqual(details, 'No callback URL specified')
+        self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    # @mock.patch('os.listdir')
+    # @mock.patch('django.http.response.HttpResponseRedirectBase.__init__', return_value=None)
+    # def test_github(self, mocker):
+    def test_github(self):
+        # spy = mocker.spy(HttpResponseRedirectBase, '__init__')
+        original_url_callback = 'https://google.co.ve'
+        url_callback = urllib.parse.quote(original_url_callback, safe='~()*!.\'')
+        # spy.assert_called_once_with(None)
+
+        url = reverse_lazy('authenticate:github')
+        # self.client.force_authenticate(user=self.user)
+        params = {'url': 'https://google.co.ve'}
+        # response = self.client.get(url)
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
+        # response = self.client.get(f'{url}?url=url_callback')
+        # response = self.client.get(f'{url}?url={url_callback.encode('utf-8')}')
+
+        params = {
+            "client_id": os.getenv('GITHUB_CLIENT_ID'),
+            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL')+"?url="+original_url_callback,
+            "scope": 'user repo read:org',
+        }
+
+        redirect = f'https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}'
+        
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertEqual(response.url, redirect)
+
+    def test_github_callback_without_code(self):
+        print('======================asdsad2======================')
+        # spy = mocker.spy(HttpResponseRedirectBase, '__init__')
+        original_url_callback = 'https://google.co.ve'
+        url_callback = urllib.parse.quote(original_url_callback, safe='~()*!.\'')
+        # spy.assert_called_once_with(None)
+
+        url = reverse_lazy('authenticate:github_callback')
+        # self.client.force_authenticate(user=self.user)
+        print('s', f'{url}?url={url_callback}')
+        params = {'url': 'https://google.co.ve'}
+        print('f', f'{url}?{urllib.parse.urlencode(params)}')
+        # response = self.client.get(url)
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
+        print('sss', response.data)
+        print('sss', response.status_code)
+
+        data = response.data
+        details = data['details']
+        status_code = data['status_code']
+        
+        self.assertEqual(2, len(data))
+        self.assertEqual(details, 'No github code specified')
+        self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    # @mock.patch('requests.post', return_value=None)
+    # @unittest.mock.patch('requests.get')
+    @unittest.mock.patch('requests.get', unittest.mock.Mock(side_effect = lambda k, headers : {
+        'https://api.github.com/user': GithubRequestsMock.user(),
+        'https://api.github.com/user/emails' : GithubRequestsMock.user_emails()
+    }.get(k, 'unhandled request %s'%k)))
+    @unittest.mock.patch('requests.post', unittest.mock.Mock(side_effect = lambda k, data, headers : {
+        'https://github.com/login/oauth/access_token': GithubRequestsMock.access_token()
+    }.get(k, 'unhandled request %s'%k)))
+    def test_github_callback(self):
+        original_url_callback = 'https://google.co.ve'
+        tokenPattern = re.compile("^" + original_url_callback.replace('.', '\.') + "\?token=[0-9a-zA-Z]{,40}$")
+        print("^" + original_url_callback.replace('.', '\.') + "[0-9a-zA-Z]{,40}$")
+        code = 'Konan'
+
+        url = reverse_lazy('authenticate:github_callback')
+        params = {'url': original_url_callback, 'code': code}
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
+        pprint(response)
+        
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertEqual(bool(tokenPattern.match(response.url)), True)
+
     # def test_change_password_without_token(self):
     #     """logout test without token"""
     #     password = 'Pain!$%'
@@ -321,80 +495,3 @@ class AuthenticateTestSuite(AuthTestCase): # , Aaaaa
 
     #     self.assertContains(response, 'You password has been reset successfully, you can close this window.')
     #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-    def test_github_without_url(self):
-        url = reverse_lazy('authenticate:github')
-        response = self.client.get(url)
-        
-        data = response.data
-        details = data['details']
-        status_code = data['status_code']
-        
-        self.assertEqual(2, len(data))
-        self.assertEqual(details, 'No callback URL specified')
-        self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    # @mock.patch('os.listdir')
-    # @mock.patch('django.http.response.HttpResponseRedirectBase.__init__', return_value=None)
-    # def test_github(self, mocker):
-    def test_github(self):
-        # spy = mocker.spy(HttpResponseRedirectBase, '__init__')
-        original_url_callback = 'https://google.co.ve'
-        url_callback = urllib.parse.quote(original_url_callback, safe='~()*!.\'')
-        # spy.assert_called_once_with(None)
-
-        url = reverse_lazy('authenticate:github')
-        # self.client.force_authenticate(user=self.user)
-        params = {'url': 'https://google.co.ve'}
-        # response = self.client.get(url)
-        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
-        # response = self.client.get(f'{url}?url=url_callback')
-        # response = self.client.get(f'{url}?url={url_callback.encode('utf-8')}')
-
-        params = {
-            "client_id": os.getenv('GITHUB_CLIENT_ID'),
-            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL')+"?url="+original_url_callback,
-            "scope": 'user repo read:org',
-        }
-
-        redirect = f'https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}'
-        
-        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
-        self.assertEqual(response.url, redirect)
-
-    def test_github_callback(self):
-        print('======================asdsad2======================')
-        # spy = mocker.spy(HttpResponseRedirectBase, '__init__')
-        original_url_callback = 'https://google.co.ve'
-        url_callback = urllib.parse.quote(original_url_callback, safe='~()*!.\'')
-        # spy.assert_called_once_with(None)
-
-        url = reverse_lazy('authenticate:github_callback')
-        # self.client.force_authenticate(user=self.user)
-        print('s', f'{url}?url={url_callback}')
-        aaa = {'url': 'https://google.co.ve'}
-        print('f', f'{url}?{urllib.parse.urlencode(aaa)}')
-        # response = self.client.get(url)
-        response = self.client.get(f'{url}?{urllib.parse.urlencode(aaa)}')
-        print('sss', response.data)
-        print('sss', response.status_code)
-
-        data = response.data
-        details = data['details']
-        status_code = data['status_code']
-        # response = self.client.get(f'{url}?url=url_callback')
-        # response = self.client.get(f'{url}?url={url_callback.encode('utf-8')}')
-
-        params = {
-            "client_id": os.getenv('GITHUB_CLIENT_ID'),
-            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL')+"?url="+original_url_callback,
-            "scope": 'user repo read:org',
-        }
-
-        redirect = f'https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}'
-        
-        self.assertEqual(2, len(data))
-        self.assertEqual(details, 'No github code specified')
-        self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
