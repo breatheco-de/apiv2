@@ -1,3 +1,4 @@
+import os
 from django.contrib.auth.models import User
 from django.db import models
 from .actions import remove_bucket_object, get_bucket_object
@@ -43,7 +44,7 @@ class Academy(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     zip_code = models.IntegerField(blank=True, null=True)
-    
+ 
     active_campaign_slug = models.SlugField(max_length=100, unique=False, null=True, default=None)
 
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
@@ -64,10 +65,10 @@ class Academy(models.Model):
     #     super(Image, self).delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-
-        obj = get_bucket_object("location-"+self.slug)
-        if obj is not None:
-            self.logo_url = obj.public_url
+        if os.environ.get('ENV') != 'development':
+            obj = get_bucket_object(f'location-{self.slug}')
+            if obj is not None:
+                self.logo_url = obj.public_url
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 

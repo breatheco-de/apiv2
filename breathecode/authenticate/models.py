@@ -21,7 +21,7 @@ class Profile(models.Model):
 class Role(models.Model):
     slug = models.SlugField(max_length=25, primary_key=True)
     name = models.CharField(max_length=255, blank=True, null=True, default=None)
-    
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -37,7 +37,7 @@ class ProfileAcademy(models.Model):
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
-    
+
     token = models.CharField(max_length=255)
     email = models.CharField(blank=False, unique=True, max_length=150)
     avatar_url = models.CharField(max_length=255, blank=True, null=True)
@@ -56,16 +56,16 @@ class CredentialsGithub(models.Model):
 class CredentialsSlack(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
-    
+
     token = models.CharField(max_length=255)
     bot_user_id = models.CharField(max_length=50)
     app_id = models.CharField(max_length=50)
-    
+
     authed_user = models.CharField(max_length=50)
 
     team_id = models.CharField(max_length=50)
     team_name = models.CharField(max_length=100)
-    
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -74,13 +74,13 @@ class CredentialsSlack(models.Model):
 
 
 class SlackTeam(models.Model):
-    
+
     slack_id = models.CharField(max_length=50)
     name = models.CharField(max_length=100)
-    
+
     owner = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -91,7 +91,7 @@ class CredentialsQuickBooks(models.Model):
     quibooks_code = models.CharField(max_length=255, primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
     quibooks_realmid = models.CharField(max_length=255)
-    
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -133,7 +133,7 @@ class Token(rest_framework.authtoken.models.Token):
             return None
 
         return _token
- 
+
     class Meta:
         # ensure user and name are unique
         unique_together = (('user', 'key'),)

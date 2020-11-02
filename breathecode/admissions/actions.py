@@ -20,7 +20,7 @@ def remove_bucket_object(file_name=None):
     bucket = client.bucket(BUCKET_NAME)
     blob = bucket.get_blob(file_name)
     blob.delete()
-    
+
     return True
 
 def get_bucket_object(file_name):

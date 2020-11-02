@@ -33,11 +33,6 @@ class GroupSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
 
-
-
-
-
-
 class AuthSerializer(serializers.Serializer):
     email = serializers.EmailField(label="Email")
     password = serializers.CharField(
@@ -51,7 +46,6 @@ class AuthSerializer(serializers.Serializer):
         password = attrs.get('password')
 
         if email and password:
-            print(email, password)
             user = User.objects.filter(Q(email=email) | Q(username=email)).first()
             if not user:
                 msg = 'Unable to log in with provided credentials.'
