@@ -205,8 +205,8 @@ def save_github_token(request):
 
             return HttpResponseRedirect(redirect_to=url+'?token='+token.key)
         else:
-            print("Github error: ", resp.status_code)
-            print("Error: ", resp.json())
+            # print("Github error: ", resp.status_code)
+            # print("Error: ", resp.json())
             raise APIException("Error from github")
 
 
@@ -354,8 +354,8 @@ def change_password(request, token):
         else:
             messages.error(request, 'Please correct the error below.')
     else:
-        print("Github error: ", resp.status_code)
-        print("Error: ", resp.json())
+        # print("Github error: ", resp.status_code)
+        # print("Error: ", resp.json())
         raise APIException("Error from github")
 
 # def change_password(request, token):
