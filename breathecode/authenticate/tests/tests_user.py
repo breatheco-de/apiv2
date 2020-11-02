@@ -8,7 +8,6 @@ from .mixin import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
-    # TODO bad password
     def test_user_without_auth(self):
         """Test /user without auth"""
         url = reverse_lazy('authenticate:user')

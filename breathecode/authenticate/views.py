@@ -267,8 +267,11 @@ def save_slack_token(request):
     if payload is None:
         raise ValidationError("No payload specified")
     else:
-        payload = base64.b64decode(payload).decode("utf-8")
-        payload = parse_qs(payload)
+        try:
+            payload = base64.b64decode(payload).decode("utf-8")
+            payload = parse_qs(payload)
+        except:
+            raise ValidationError("Cannot decode payload in base64")
 
     if "url" not in payload:
         logger.exception(payload)
@@ -276,17 +279,24 @@ def save_slack_token(request):
 
     if "user" not in payload:
         logger.exception(payload)
-        raise ValidationError("No user specified from the slack payload")
+        raise ValidationError("No user id specified from the slack payload")
 
     if "a" not in payload:
         logger.exception(payload)
-        raise ValidationError("No user academy from the slack payload")
+        raise ValidationError("No academy id specified from the slack payload")
 
-    academy = Academy.objects.get(id=payload["a"][0])
-    user = User.objects.get(id=payload["user"][0])
+    try:
+        academy = Academy.objects.get(id=payload["a"][0])
+    except Exception as e:
+        raise ValidationError("Not exist academy with that id") from e
+
+    try:
+        user = User.objects.get(id=payload["user"][0])
+    except Exception as e:
+        raise ValidationError("Not exist user with that id") from e
 
     code = request.query_params.get('code', None)
-    if code == None:
+    if code is None:
         raise ValidationError("No slack code specified")
 
     params = {

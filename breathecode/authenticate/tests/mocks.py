@@ -4,6 +4,14 @@ Collections of mocks used to login in authorize microservice
 from unittest.mock import Mock
 
 
+class GoogleCloudStorageMock():
+    @staticmethod
+    def get_bucket_object():
+        def side_effect():
+            return None
+        return Mock(side_effect=side_effect)
+
+
 class FakeResponse():
     """Simutate Response to be used by mocks"""
     status_code = 200
@@ -18,9 +26,29 @@ class FakeResponse():
         return self.data
 
 
+def requests_mock(routes: dict, method='get'):
+    """Arequests mock"""
+    if method == 'get':
+        print('=---------------------------------------------------------------------------------------------------------------------------------=')
+        print(1)
+        def side_effect (url, headers=None):
+            return routes.get(url, f'unhandled request {url}')
+    elif method == 'post':
+        print('=---------------------------------------------------------------------------------------------------------------------------------=')
+        print(2)
+        def side_effect (url, data=None, headers=None):
+            return routes.get(url, f'unhandled request {url}')
+    else:
+        raise Exception(f'{method} are not implemented too')
+    print('---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
+    print(method, side_effect)
+    return Mock(side_effect=side_effect)
+
+
 class GithubRequestsMock():
     """Github requests mock"""
     token = "e72e16c7e42f292c6912e7710c838347ae178b4a"
+
     @staticmethod
     def user():
         """Static https://api.github.com/user"""
@@ -102,17 +130,19 @@ class GithubRequestsMock():
     @staticmethod
     def apply_get_requests_mock():
         """Apply get requests mock"""
-        return Mock(side_effect = lambda k, headers : {
+        routes = {
             'https://api.github.com/user': GithubRequestsMock.user(),
             'https://api.github.com/user/emails' : GithubRequestsMock.user_emails()
-        }.get(k, 'unhandled request %s'%k))
+        }
+        return requests_mock(routes)
 
     @staticmethod
     def apply_post_requests_mock():
-        """Apply get requests mock"""
-        return Mock(side_effect = lambda k, data, headers : {
+        """Apply post requests mock"""
+        routes = {
             'https://github.com/login/oauth/access_token': GithubRequestsMock.access_token()
-        }.get(k, 'unhandled request %s'%k))
+        }
+        return requests_mock(routes, method='post')
 
 
 class SlackRequestsMock():
@@ -236,14 +266,17 @@ class SlackRequestsMock():
     @staticmethod
     def apply_get_requests_mock():
         """Apply get requests mock"""
-        return Mock(side_effect = lambda k, headers : {
+        routes = {
             'https://api.github.com/user': GithubRequestsMock.user(),
             'https://api.github.com/user/emails' : GithubRequestsMock.user_emails()
-        }.get(k, 'unhandled request %s'%k))
+        }
+        return requests_mock(routes)
 
     @staticmethod
     def apply_post_requests_mock():
         """Apply get requests mock"""
-        return Mock(side_effect = lambda k, data, headers : {
-            'https://slack.com/oauth/v2/authorize': GithubRequestsMock.access_token()
-        }.get(k, 'unhandled request %s'%k))
+        routes =  {
+            # 'https://slack.com/oauth/v2/authorize': GithubRequestsMock.access_token(),
+            'https://slack.com/api/oauth.v2.access': SlackRequestsMock.access(),
+        }
+        return requests_mock(routes, method='post')
