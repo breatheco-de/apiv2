@@ -1,0 +1,17 @@
+{
+  "environments": {
+    "test": {
+        "addons": ["heroku-postgresql:in-dyno"],
+        "scripts": {
+            "test": "pytest"
+        }
+    },
+    "review": {
+        "addons": ["heroku-postgresql:in-dyno"],
+        "scripts": {
+            "test": "pytest",
+            "postdeploy": "python manage.py migrate"
+        }
+    }
+  }
+}
