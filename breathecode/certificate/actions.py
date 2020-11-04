@@ -71,7 +71,7 @@ def generate_certificate(user, cohort=None):
 
 def certificate_screenshot(certificate_id):
 
-    if ENVIRONMENT == 'development':
+    if ENVIRONMENT == 'test':
         return True
         
     certificate = UserSpecialty.objects.get(id=certificate_id)
