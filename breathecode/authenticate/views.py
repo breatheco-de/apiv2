@@ -106,8 +106,8 @@ def get_github_token(request):
 
     # url = base64.b64decode(url).decode("utf-8")
     params = {
-        "client_id": os.getenv('GITHUB_CLIENT_ID'),
-        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL')+"?url="+url,
+        "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
+        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+"?url="+url,
         "scope": 'user repo read:org',
     }
 
@@ -138,9 +138,9 @@ def save_github_token(request):
         raise ValidationError("No github code specified")
 
     payload = {
-        'client_id': os.getenv('GITHUB_CLIENT_ID'),
-        'client_secret': os.getenv('GITHUB_SECRET'),
-        'redirect_uri': os.getenv('GITHUB_REDIRECT_URL'),
+        'client_id': os.getenv('GITHUB_CLIENT_ID', ""),
+        'client_secret': os.getenv('GITHUB_SECRET', ""),
+        'redirect_uri': os.getenv('GITHUB_REDIRECT_URL', ""),
         'code': code,
     }
     headers = {'Accept': 'application/json'}
@@ -237,8 +237,8 @@ def get_slack_token(request):
     query_string = f'a={academy}&url={url}&user={user_id}'.encode("utf-8")
     payload = str(base64.urlsafe_b64encode(query_string), "utf-8")
     params = {
-        "client_id": os.getenv('SLACK_CLIENT_ID'),
-        "redirect_uri": os.getenv('SLACK_REDIRECT_URL')+"?payload="+payload,
+        "client_id": os.getenv('SLACK_CLIENT_ID', ""),
+        "redirect_uri": os.getenv('SLACK_REDIRECT_URL', "")+"?payload="+payload,
         "scope": ",".join(scopes)
     }
     redirect = "https://slack.com/oauth/v2/authorize?"
@@ -300,9 +300,9 @@ def save_slack_token(request):
         raise ValidationError("No slack code specified")
 
     params = {
-        'client_id': os.getenv('SLACK_CLIENT_ID'),
-        'client_secret': os.getenv('SLACK_SECRET'),
-        'redirect_uri': os.getenv('SLACK_REDIRECT_URL')+"?payload="+original_payload,
+        'client_id': os.getenv('SLACK_CLIENT_ID', ""),
+        'client_secret': os.getenv('SLACK_SECRET', ""),
+        'redirect_uri': os.getenv('SLACK_REDIRECT_URL', "")+"?payload="+original_payload,
         'code': code,
     }
     # print("params", params)

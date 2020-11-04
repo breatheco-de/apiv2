@@ -84,8 +84,8 @@ class AuthenticateTestSuite(AuthTestCase):
             "groups:history", "groups:read", "groups:write", "incoming-webhook", "team:read",
             "users:read", "users:read.email", "users.profile:read", "users:read", "users:read.email")
         params = {
-            "client_id": os.getenv('SLACK_CLIENT_ID'),
-            "redirect_uri": os.getenv('SLACK_REDIRECT_URL')+"?payload="+payload,
+            "client_id": os.getenv('SLACK_CLIENT_ID', ""),
+            "redirect_uri": os.getenv('SLACK_REDIRECT_URL', "")+"?payload="+payload,
             "scope": ",".join(scopes)
         }
 

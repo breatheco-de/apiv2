@@ -10,14 +10,14 @@ import requests
 from twilio.rest import Client
 
 push_service = None
-FIREBASE_KEY = os.environ.get('FIREBASE_KEY')
-if(FIREBASE_KEY and FIREBASE_KEY!=''):
+FIREBASE_KEY = os.getenv('FIREBASE_KEY', None)
+if FIREBASE_KEY is not None and FIREBASE_KEY != '':
     push_service = FCMNotification(api_key=FIREBASE_KEY)
 
 logger = logging.getLogger(__name__)
 
 def send_email_message(template_slug, to, data={}):
-    if os.getenv('EMAIL_NOTIFICATIONS_ENABLED') == 'TRUE':
+    if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE':
 
         template = get_template_content(template_slug, data, ["email"])
 
@@ -25,7 +25,7 @@ def send_email_message(template_slug, to, data={}):
             f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
             auth=(
                 "api",
-                os.environ.get('MAILGUN_API_KEY')),
+                os.environ.get('MAILGUN_API_KEY', "")),
             data={
                 "from": f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
                 "to": to,

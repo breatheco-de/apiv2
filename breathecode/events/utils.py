@@ -5,7 +5,7 @@ class Eventbrite(object):
 
     def __init__(self, token = None):
         if token is None:
-            token = os.getenv('EVENTBRITE_KEY',None)
+            token = os.getenv('EVENTBRITE_KEY', "")
 
         self.host = "https://www.eventbriteapi.com/v3"
         self.token = token

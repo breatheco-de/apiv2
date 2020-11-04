@@ -32,8 +32,8 @@ class AuthenticateTestSuite(AuthTestCase):
         params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         params = {
-            "client_id": os.getenv('GITHUB_CLIENT_ID'),
-            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL')+"?url="+original_url_callback,
+            "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
+            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+"?url="+original_url_callback,
             "scope": 'user repo read:org',
         }
 
