@@ -254,9 +254,9 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 SITE_ID=1
 
 _locals = locals()
-# django_heroku.settings(_locals)
+django_heroku.settings(_locals)
 
 # Change 'default' database configuration with $DATABASE_URL.
-# DATABASES = {
-#     'default': dj_database_url.config(default=DATABASE_URL),
-# }
+DATABASES = {
+    'default': dj_database_url.config(default=DATABASE_URL),
+}
