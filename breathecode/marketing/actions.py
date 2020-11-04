@@ -7,8 +7,8 @@ from activecampaign.client import Client
 from .utils import AC_Old_Client
 from breathecode.notify.actions import send_email_message
 
-client = Client(os.getenv('ACTIVE_CAMPAIGN_URL'), os.getenv('ACTIVE_CAMPAIGN_KEY'))
-old_client = AC_Old_Client(os.getenv('ACTIVE_CAMPAIGN_URL'), os.getenv('ACTIVE_CAMPAIGN_KEY'))
+client = Client(os.getenv('ACTIVE_CAMPAIGN_URL', ""), os.getenv('ACTIVE_CAMPAIGN_KEY', ""))
+old_client = AC_Old_Client(os.getenv('ACTIVE_CAMPAIGN_URL', ""), os.getenv('ACTIVE_CAMPAIGN_KEY', ""))
 SAVE_LEADS = os.getenv('SAVE_LEADS',None)
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY',None)
 
