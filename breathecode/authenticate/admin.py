@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
 from .actions import delete_tokens
 from django.utils.html import format_html
-from .models import CredentialsGithub, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy, SlackTeam
+from .models import CredentialsGithub, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy, Role
 from .actions import reset_password
 # Register your models here.
 
@@ -41,7 +41,11 @@ class TokenAdmin(admin.ModelAdmin):
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
     actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
-    
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name')
+
 @admin.register(ProfileAcademy)
 class ProfileAcademyAdmin(admin.ModelAdmin):
     list_display = ('user', 'academy', 'created_at', 'slack')
@@ -60,9 +64,4 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'avatar_url')
-    # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
-
-@admin.register(SlackTeam)
-class SlackTeamAdmin(admin.ModelAdmin):
-    list_display = ('academy', 'name', 'owner', 'updated_at')
     # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]

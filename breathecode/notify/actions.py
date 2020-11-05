@@ -2,9 +2,14 @@ from django.core.mail import EmailMultiAlternatives
 from rest_framework.exceptions import APIException
 import os, logging
 from django.template.loader import get_template
+from django.contrib.auth.models import User
 from django.template import Context
+from django.utils import timezone
 from pyfcm import FCMNotification
-from .models import Device
+from breathecode.authenticate.models import CredentialsSlack
+from breathecode.services.slack import Slack
+from breathecode.admissions.models import Cohort
+from .models import Device, SlackChannel, SlackTeam, SlackUser
 from django.conf import settings
 import requests
 from twilio.rest import Client
@@ -63,6 +68,31 @@ def send_sms(slug, phone_number, data={}):
     except Exception:
         return False
 
+# entity can be a cohort or a user
+def send_slack(slug, slack_entity, data={}):
+
+    template = get_template_content(slug, data, ["email"])
+    
+    if slack_entity.team is None:
+        raise Exception("The entity must belong to a slack team to receive notifications")
+    
+    if slack_entity.team.credentials is None:
+        raise Exception(f"The slack team {slack_entity.team.name} has no valid credentials")
+
+    logger.debug(f"Sending slack message to {str(slack_entity)}")
+
+    try:
+        api = Slack(slack_entity.team.credentials.token)
+        data = api.post("chat.postMessage", {
+            "channel": slack_entity.slack_id,
+            "text": template['text']
+        })
+        logger.debug(f"Notification to {str(slack_entity)} sent")
+        return True
+    except Exception:
+        logger.exception(f"Error sending notification to {str(slack_entity)}")
+        return False
+
 
 def send_fcm(slug, registration_ids, data={}):
     if(len(registration_ids) > 0 and push_service):
@@ -95,7 +125,7 @@ def send_fcm(slug, registration_ids, data={}):
 
 
 def send_fcm_notification(slug, user_id, data={}):
-    device_set = FCMDevice.objects.filter(user=user_id)
+    device_set = Device.objects.filter(user=user_id)
     registration_ids = [device.registration_id for device in device_set]
     send_fcm(slug, registration_ids, data)
 
@@ -138,3 +168,159 @@ def get_template_content(slug, data={}, formats=None):
         templates["sms"] = sms.render(z)
 
     return templates
+
+def sync_slack_team_channel(team_id):
+
+    logger.debug(f"Sync slack team {team_id}: looking for channels")
+
+    team = SlackTeam.objects.filter(id=team_id).first()
+    if team is None:
+        raise Exception("Invalid team id: "+str(team_id))
+
+    credentials = CredentialsSlack.objects.filter(team_id=team.slack_id).first()
+    if credentials is None:
+        raise Exception(f"No credentials found for this team {team_id}")
+
+    # Starting to sync, I need to reset the status
+    team.sync_status = 'INCOMPLETED'
+    team.synqued_at = timezone.now()
+    team.save()
+    
+    api = Slack(credentials.token)
+    data = api.get("conversations.list", {
+        "types": "public_channel,private_channel"
+    })
+    
+    logger.debug(f"Found {str(len(data['channels']))} channels, starting to sync")
+    for channel in data["channels"]:
+
+        # only sync channels
+        if channel["is_channel"] == False and channel['is_group'] == False and channel['is_general'] == False:
+            continue
+        
+        # will raise exception if it fails
+        sync_slack_channel(channel, team)
+    
+    # finished sync, status back to normal
+    team.sync_status = 'COMPLETED'
+    team.save()
+    
+    return True
+
+def sync_slack_team_users(team_id):
+
+    logger.debug(f"Sync slack team {team_id}: looking for users")
+
+    team = SlackTeam.objects.filter(id=team_id).first()
+    if team is None:
+        raise Exception("Invalid team id: "+str(team_id))
+
+    credentials = CredentialsSlack.objects.filter(team_id=team.slack_id).first()
+    if credentials is None:
+        raise Exception(f"No credentials found for this team {team_id}")
+
+    # Starting to sync, I need to reset the status
+    team.sync_status = 'INCOMPLETED'
+    team.synqued_at = timezone.now()
+    team.save()
+    
+    api = Slack(credentials.token)
+    data = api.get("users.list")
+    
+    logger.debug(f"Found {str(len(data['members']))} members, starting to sync")
+    for member in data["members"]:
+
+        # ignore bots
+        if member["is_bot"] or member["name"] == "slackbot":
+            continue
+        
+        # will raise exception if it fails
+        sync_slack_user(member, team)
+    
+    # finished sync, status back to normal
+    team.sync_status = 'COMPLETED'
+    team.save()
+    
+    return True
+
+def sync_slack_user(payload, team=None):
+
+    if team is None and "team_id" in payload:
+        team = SlackTeam.objects.filter(id=payload["team_id"]).first()
+
+    if team is None:
+        raise Exception("Invalid or missing team")
+
+    slack_user = SlackUser.objects.filter(slack_id=payload["id"]).first()
+    user = None
+    if slack_user is None:
+        
+        if "email" not in payload["profile"]:
+            logger.fatal("User without email")
+            logger.fatal(payload)
+            raise Exception("Slack users are not coming with emails from the API")
+        
+
+        user = User.objects.filter(email=payload["profile"]["email"]).first()
+        if user is None:
+            logger.warning(f"Slack user {payload['profile']['email']} has no corresponding user in breathecode")
+
+        slack_user = SlackUser(
+            slack_id = payload["id"],
+            team = team,
+            user = user,
+        )
+
+    slack_user.status_text = payload["profile"]["status_text"]
+    slack_user.status_emoji = payload["profile"]["status_emoji"]
+    
+    if "real_name" in payload:
+        slack_user.real_name = payload["real_name"]
+
+    slack_user.display_name = payload["name"]
+    slack_user.email = payload["profile"]["email"]
+    if user is None:
+        slack_user.sync_status = 'INCOMPLETED'
+        slack_user.sync_message = "No user found on breathecode with this email"
+    else:
+        slack_user.sync_status = 'COMPLETED'
+
+    slack_user.synqued_at = timezone.now()
+    slack_user.save()
+
+    return slack_user
+
+def sync_slack_channel(payload, team=None):
+
+    logger.debug(f"Synching channel {payload['name_normalized']}...")
+
+    if team is None and "team_id" in payload:
+        team = SlackTeam.objects.filter(id=payload["team_id"]).first()
+
+    if team is None:
+        raise Exception("Invalid or missing team")
+
+    slack_channel = SlackChannel.objects.filter(slack_id=payload["id"]).first()
+    channel = None
+    if slack_channel is None:
+        
+        cohort = Cohort.objects.filter(slug=payload["name_normalized"]).first()
+        if cohort is None:
+            logger.warning(f"Slack channel {payload['name_normalized']} has no corresponding cohort in breathecode")
+
+        slack_channel = SlackChannel(
+            slack_id = payload["id"],
+            team = team,
+            sync_status = 'INCOMPLETED',
+            cohort = cohort,
+        )
+
+    slack_channel.name = payload["name_normalized"]
+    slack_channel.topic = payload["topic"]
+    slack_channel.purpose = payload["purpose"]
+
+    slack_channel.synqued_at = timezone.now()
+    slack_channel.sync_status = 'COMPLETED'
+    slack_channel.save()
+
+    return slack_channel

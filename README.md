@@ -12,5 +12,7 @@ cp .env.example .env
 # Run the tests
 
 ```
-DATABSE_URL=sqlite3:///tests.sqlite3 pytest --reuse-db
+pytest
 ```
+
+python manage.py migrate authenticate 0009_auto_20201006_0022

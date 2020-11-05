@@ -19,8 +19,9 @@ from .models import Profile
 from .authentication import ExpiringTokenAuthentication
 
 # from .forms import PickPasswordForm, PasswordChangeCustomForm
-from .models import Profile, CredentialsGithub, Token, CredentialsSlack, SlackTeam
+from .models import Profile, CredentialsGithub, Token, CredentialsSlack
 from breathecode.admissions.models import Academy
+from breathecode.notify.models import SlackTeam
 from .serializers import UserSerializer, AuthSerializer, GroupSerializer
 
 logger = logging.getLogger(__name__)
@@ -232,7 +233,7 @@ def get_slack_token(request):
     scopes = ("app_mentions:read", "channels:history", "channels:join", "channels:read",
         "chat:write", "chat:write.customize", "commands", "files:read", "files:write",
         "groups:history", "groups:read", "groups:write", "incoming-webhook", "team:read",
-        "users:read", "users:read.email", "users.profile:read", "users:read", "users:read.email")
+        "users:read", "users:read.email", "users.profile:read", "users:read")
 
     query_string = f'a={academy}&url={url}&user={user_id}'.encode("utf-8")
     payload = str(base64.urlsafe_b64encode(query_string), "utf-8")
@@ -319,7 +320,8 @@ def save_slack_token(request):
         slack_data = resp.json()
         logger.debug(slack_data)
 
-        CredentialsSlack.objects.filter(app_id=slack_data['app_id']).delete()
+        # delete all previous credentials for the same team
+        CredentialsSlack.objects.filter(app_id=slack_data['app_id'], team_id=slack_data['team']['id']).delete()
         credentials = CredentialsSlack(
             user=user,
             app_id = slack_data['app_id'],
@@ -338,6 +340,7 @@ def save_slack_token(request):
         team.name = slack_data['team']['name'],
         team.owner = user    
         team.academy = academy    
+        team.credentials = credentials    
         team.save()
 
         return HttpResponseRedirect(redirect_to=payload["url"][0])

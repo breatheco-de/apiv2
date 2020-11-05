@@ -1,8 +1,10 @@
-import os
+import os, requests, logging
 from django.contrib.auth.models import User, Group
 from django.utils import timezone
-from .models import Token
+from .models import Token, CredentialsSlack
 from breathecode.notify.actions import send_email_message
+
+logger = logging.getLogger(__name__)
 
 def get_user(github_id=None, email=None):
     user = None
