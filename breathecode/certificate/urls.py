@@ -12,4 +12,3 @@ urlpatterns = [
     # path('course/<str:course_slug>/syllabus', SyllabusView.as_view()),
     # path('course/<str:course_slug>/syllabus/<int:version>', SyllabusView.as_view()),
 ]
-

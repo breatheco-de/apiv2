@@ -5,13 +5,17 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import JSONField
 from breathecode.admissions.models import Academy, Cohort, Certificate
+from pprint import pprint
 
 class UserProxy(User):
     class Meta:
         proxy = True
+
+
 class CohortProxy(Cohort):
     class Meta:
         proxy = True
+
 
 # For example: Full-Stack Web Development
 class Specialty(models.Model):
@@ -78,7 +82,7 @@ class UserSpecialty(models.Model):
         if self.cohort is not None and self.cohort.academy.id != self.academy.id:
             raise ValidationError("Cohort academy does not match the specified academy for this certificate")
 
-        if self.cohort.stage != 'ENDED':
+        if self.cohort and self.cohort.stage != 'ENDED':
             raise ValidationError("The student cohort stage has to be 'finished' before you can issue any certificates")
         
         utc_now = timezone.now()

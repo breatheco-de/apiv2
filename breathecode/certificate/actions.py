@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 from .models import UserSpecialty, LayoutDesign
 from breathecode.admissions.models import CohortUser
 
-ENVIRONMENT = os.getenv('ENV',None)
+ENVIRONMENT = os.getenv('ENV', None)
 BUCKET_NAME = "certificates-breathecode"
 
 strings = {
@@ -17,14 +17,14 @@ strings = {
 }
 
 def resolve_google_credentials():
-    path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS',None)
+    path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
     if path is None or not os.path.exists( path ):
         credentials = os.getenv('GOOGLE_SERVICE_KEY')#.replace("\\\\","\\")
         with open(path, 'w') as credentials_file:
             credentials_file.write( credentials )
 
 def generate_certificate(user, cohort=None):
-    
+
     if cohort is None:
         cohorts = CohortUser.objects.filter(user__id=user.id)
         _count = cohorts.count()
@@ -64,7 +64,7 @@ def generate_certificate(user, cohort=None):
     uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
     uspe.signed_by_role = strings[cohort.language]["Main Instructor"]
     uspe.save()
-    
+
     return uspe
 
 
@@ -72,7 +72,7 @@ def certificate_screenshot(certificate_id):
 
     if ENVIRONMENT == 'development':
         return True
-        
+
     certificate = UserSpecialty.objects.get(id=certificate_id)
     if certificate.preview_url is None or certificate.preview_url == "":
         file_name = f'{certificate.token}'
@@ -86,9 +86,9 @@ def certificate_screenshot(certificate_id):
             query_string = urlencode({
                 'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
                 'url': f'https://certificate.breatheco.de/preview/{certificate.token}',
-                'device': f'desktop',
+                'device': 'desktop',
                 'cacheLimit': '0',
-                'dimension': f'1024x707',
+                'dimension': '1024x707',
             })
             r = requests.get(f'https://api.screenshotmachine.com?{query_string}', stream=True)
             if r.status_code == 200:
@@ -96,7 +96,7 @@ def certificate_screenshot(certificate_id):
                 blob.upload_from_string(r.content)
                 blob.make_public()
             else:
-                print("Invalid reponse code: ",r.status_code)
+                print("Invalid reponse code: ", r.status_code)
         
         # after created, lets save the URL
         if blob is not None:
@@ -117,5 +117,5 @@ def remove_certificate_screenshot(certificate_id):
 
     certificate.preview_url = ""
     certificate.save()
-    
+
     return True

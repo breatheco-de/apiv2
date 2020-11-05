@@ -2,6 +2,7 @@ import os
 from django.contrib.auth.models import User
 from django.db import models
 from .actions import remove_bucket_object, get_bucket_object
+from pprint import pprint
 
 def get_user_label(self):
     return f"{self.first_name} {self.last_name} ({self.email})"
@@ -106,6 +107,12 @@ class Certificate(models.Model):
         obj = get_bucket_object("certificate-logo-"+self.slug)
         if obj is not None:
             self.logo = obj.public_url
+        pprint(obj)
+        print('yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy', obj)
+        print('yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy', obj.public_url)
+        print('yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy', *args)
+        print('yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy', **kwargs)
+        print('yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy', super().save)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
@@ -140,7 +147,7 @@ class Cohort(models.Model):
     ending_date = models.DateTimeField(blank=True, null=True)
     current_day = models.IntegerField()
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
-    
+
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)
 

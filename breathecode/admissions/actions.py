@@ -24,6 +24,8 @@ def remove_bucket_object(file_name=None):
     return True
 
 def get_bucket_object(file_name):
+    from google.cloud import storage # get mock
+
     if file_name is None or file_name == "":
         return False
 
