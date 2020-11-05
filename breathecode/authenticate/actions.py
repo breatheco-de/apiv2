@@ -41,6 +41,7 @@ def reset_password(users=None):
     for user in users:
         token = Token.create_temp(user)
         send_email_message('pick_password', user.email, {
+            "SUBJECT": "You asked to reset your password at BreatheCode",
             "LINK": os.getenv('API_URL') + f"/v1/auth/password/{token}"
         })
     

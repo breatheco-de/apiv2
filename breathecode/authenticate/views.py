@@ -18,7 +18,7 @@ from django.utils import timezone
 from .models import Profile
 from .authentication import ExpiringTokenAuthentication
 
-# from .forms import PickPasswordForm, PasswordChangeCustomForm
+from .forms import PickPasswordForm, PasswordChangeCustomForm
 from .models import Profile, CredentialsGithub, Token, CredentialsSlack
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackTeam
@@ -361,54 +361,54 @@ def change_password(request, token):
         # print("Error: ", resp.json())
         raise APIException("Error from github")
 
-# def change_password(request, token):
-#     if request.method == 'POST':
-#         form = PasswordChangeCustomForm(request.user, request.POST)
-#         if form.is_valid():
-#             user = form.save()
-#             update_session_auth_hash(request, user)  # Important!
-#             messages.success(request, 'Your password was successfully updated!')
-#             return redirect('change_password')
-#         else:
-#             messages.error(request, 'Please correct the error below.')
-#     else:
-#         form = PasswordChangeCustomForm(request.user)
-#     return render(request, 'form.html', {
-#         'form': form
-#     })
+def change_password(request, token):
+    if request.method == 'POST':
+        form = PasswordChangeCustomForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Important!
+            messages.success(request, 'Your password was successfully updated!')
+            return redirect('change_password')
+        else:
+            messages.error(request, 'Please correct the error below.')
+    else:
+        form = PasswordChangeCustomForm(request.user)
+    return render(request, 'form.html', {
+        'form': form
+    })
 
-# def pick_password(request, token):
-#     _dict = request.POST.copy()
-#     _dict["token"] = token
-#     _dict["callback"] = request.GET.get("callback", '')
+def pick_password(request, token):
+    _dict = request.POST.copy()
+    _dict["token"] = token
+    _dict["callback"] = request.GET.get("callback", '')
 
-#     form = PickPasswordForm(_dict)
-#     if request.method == 'POST':
-#         password1 = request.POST.get("password1", None)
-#         password2 = request.POST.get("password2", None)
-#         if password1 != password2:
-#             messages.error(request, 'Passwords don\'t match')
-#             return render(request, 'form.html', {
-#                 'form': form
-#             })
+    form = PickPasswordForm(_dict)
+    if request.method == 'POST':
+        password1 = request.POST.get("password1", None)
+        password2 = request.POST.get("password2", None)
+        if password1 != password2:
+            messages.error(request, 'Passwords don\'t match')
+            return render(request, 'form.html', {
+                'form': form
+            })
 
-#         token = Token.get_valid(request.POST.get("token", None))
-#         if token is None:
-#             messages.error(request, 'Invalid or expired token ' + str(token))
+        token = Token.get_valid(request.POST.get("token", None))
+        if token is None:
+            messages.error(request, 'Invalid or expired token ' + str(token))
 
-#         else:
-#             user = token.user
-#             user.set_password(password1)
-#             user.save()
-#             token.delete()
-#             callback = request.POST.get("callback", None)
-#             if callback is not None and callback != "":
-#                 return HttpResponseRedirect(request.POST.get("callback"))
-#             else:
-#                 return render(request, 'message.html', {
-#                     'message': 'You password has been reset successfully, you can close this window.'
-#                 })
+        else:
+            user = token.user
+            user.set_password(password1)
+            user.save()
+            token.delete()
+            callback = request.POST.get("callback", None)
+            if callback is not None and callback != "":
+                return HttpResponseRedirect(request.POST.get("callback"))
+            else:
+                return render(request, 'message.html', {
+                    'message': 'You password has been reset successfully, you can close this window.'
+                })
 
-#     return render(request, 'form.html', {
-#         'form': form
-#     })
+    return render(request, 'form.html', {
+        'form': form
+    })
