@@ -68,7 +68,7 @@ class SlackUser(models.Model):
 
 class SlackChannel(models.Model):
     cohort = models.OneToOneField(Cohort, on_delete=models.CASCADE, blank=True, null=True, default=None)
-    academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True, null=True, default=None)
+    # academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True, null=True, default=None)
     
     slack_id = models.CharField(max_length=50)
     team = models.ForeignKey(SlackTeam, on_delete=models.CASCADE)
