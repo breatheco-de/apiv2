@@ -42,6 +42,7 @@ class TemporalTokenView(ObtainAuthToken):
             'email': user.email
         })
 
+
 class LogoutView(APIView):
     authentication_classes: [ExpiringTokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -70,13 +71,29 @@ class LoginView(ObtainAuthToken):
         })
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
+def get_token_info(request, token):
+
+    token = Token.objects.filter(key=token).first()
+    
+    if token is None or token.expires_at < timezone.now():
+        raise PermissionDenied("Expired or invalid token")
+    
+    return Response({
+        'token': token.key,
+        'token_type': token.token_type,
+        'expires_at': token.expires_at,
+        'user_id': token.user.pk
+    })
+
+@api_view(['GET'])
 def get_users_me(request):
 
     logger.error("Get me just called")
     try:
         if isinstance(request.user, AnonymousUser):
             raise PermissionDenied("There is not user")    
-        request.user
+
     except User.DoesNotExist:
         raise PermissionDenied("You don't have a user")
 

@@ -56,7 +56,28 @@ class CohortUserView(APIView):
     """
     def get(self, request, format=None):
         items = CohortUser.objects.all()
-        serializer = UserSerializer(items, many=True)
+
+        roles = request.GET.get('roles', None)
+        if roles is not None:
+            items = items.filter(role__in=roles.split(","))
+
+        finantial_status = request.GET.get('finantial_status', None)
+        if finantial_status is not None:
+            items = items.filter(finantial_status__in=finantial_status.split(","))
+
+        educational_status = request.GET.get('educational_status', None)
+        if educational_status is not None:
+            items = items.filter(educational_status__in=educational_status.split(","))
+        
+        academy = request.GET.get('academy', None)
+        if academy is not None:
+            items = items.filter(cohort__academy__slug__in=academy.split(","))
+        
+        cohorts = request.GET.get('cohorts', None)
+        if cohorts is not None:
+            items = items.filter(cohort__slug__in=cohorts.split(","))
+
+        serializer = UserSerializer([u.user for u in items], many=True)
         return Response(serializer.data)
 
 
