@@ -4,7 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from .serializers import (
     AcademySerializer, CohortSerializer, CertificateSerializer,
-    GetCohortSerializer, UserSerializer
+    GetCohortSerializer, UserSerializer, UserSerializerMD
 )
 from .models import Academy, CohortUser, Certificate, Cohort
 from rest_framework.response import Response
@@ -77,7 +77,7 @@ class CohortUserView(APIView):
         if cohorts is not None:
             items = items.filter(cohort__slug__in=cohorts.split(","))
 
-        serializer = UserSerializer([u.user for u in items], many=True)
+        serializer = UserSerializerMD([u.user for u in items], many=True)
         return Response(serializer.data)
 
 
