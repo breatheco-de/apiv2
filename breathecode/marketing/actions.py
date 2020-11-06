@@ -256,10 +256,18 @@ def save_get_geolocal(contact, form_entry=None):
                     result['postal_code'] = component['long_name']
 
 
-    contact.country = result['country']
-    contact.city = result['locality']
-    contact.street_address = result['route']
-    contact.zip_code = result['postal_code']
+    if 'country' in result:
+        contact.country = result['country']
+    
+    if 'locality' in result:
+        contact.city = result['locality']
+    
+    if 'route' in result:
+        contact.street_address = result['route']
+    
+    if 'postal_code' in result:
+        contact.zip_code = result['postal_code']
+        
     contact.save()
     
     return True
