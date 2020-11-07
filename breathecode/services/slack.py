@@ -1,4 +1,6 @@
-import requests
+import requests, logging
+
+logger = logging.getLogger(__name__)
 
 class Slack:
     HOST = "https://slack.com/api/"
@@ -33,7 +35,7 @@ class Slack:
             if data["ok"] == False:
                 raise Exception("Slack API Error "+data["error"])
             else:
-                print(data)
+                logger.debug(f"Successfull call {method_name}: /{action_name}")
                 return data
         else:
             raise Exception(f"Unable to communicate with Slack API, error: {resp.status_code}")
