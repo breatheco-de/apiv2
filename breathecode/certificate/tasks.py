@@ -32,7 +32,7 @@ def reset_screenshot(self, certificate_id):
     return True
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def generate_cohort_certificates(self,cohort_id):
+def generate_cohort_certificates(self, cohort_id):
     cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role='STUDENT', educational_status='GRADUATED')
     logger.debug(f"Generating gertificate for {str(cohort_users.count())} students that GRADUATED")
     for cu in cohort_users:

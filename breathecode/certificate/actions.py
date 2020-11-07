@@ -19,6 +19,9 @@ strings = {
 def resolve_google_credentials():
     path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
     if path is None or not os.path.exists( path ):
+        if os.getenv('ENV') == 'development':
+            return
+
         credentials = os.getenv('GOOGLE_SERVICE_KEY')#.replace("\\\\","\\")
         with open(path, 'w') as credentials_file:
             credentials_file.write( credentials )
@@ -43,11 +46,11 @@ def generate_certificate(user, cohort=None):
 
     layout = LayoutDesign.objects.filter(slug='default').first()
     if layout is None:
-        raise Exception(f"Missing a default layout")
+        raise Exception("Missing a default layout")
 
     main_teacher = CohortUser.objects.filter(cohort__id=cohort.id, role='TEACHER').first()
     if main_teacher is None or main_teacher.user is None:
-        raise Exception(f"This cohort does not have a main teacher, please assign it first")
+        raise Exception("This cohort does not have a main teacher, please assign it first")
     else:
         main_teacher = main_teacher.user
 
@@ -68,10 +71,10 @@ def generate_certificate(user, cohort=None):
     return uspe
 
 
-def certificate_screenshot(certificate_id):
+def certificate_screenshot(certificate_id: int):
 
-    if ENVIRONMENT == 'development':
-        return True
+    # if ENVIRONMENT == 'development':
+    #     return True
 
     certificate = UserSpecialty.objects.get(id=certificate_id)
     if certificate.preview_url is None or certificate.preview_url == "":
@@ -99,7 +102,7 @@ def certificate_screenshot(certificate_id):
                 print("Invalid reponse code: ", r.status_code)
         
         # after created, lets save the URL
-        if blob is not None:
+        else:
             certificate.preview_url = blob.public_url
             certificate.save()
 

@@ -40,10 +40,10 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     #     CertificateBreathecodeMock.apply_resolve_google_credentials_mock())
     # @patch('breathecode.certificate.actions.resolve_google_credentials',
     #     CertificateBreathecodeMock.apply_resolve_google_credentials_mock())
-    # @patch(f'{__name__}.open', mock_open())
     # @patch.object('__main__.open', mock_open())
     # @patch('google.cloud.storage.client.Client', autospec=True)
     # @patch('google.cloud.storage.client.Client' MagicMock())
+    # @patch('builtins.open', mock_open())
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -62,28 +62,26 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
 
         # x.return_value = FakeGoogleCloudStorageClientMock
         # open = mock_open()
-        m = mock_open()
-        with patch(f'{__name__}.open', m):
-            certificate = mixer.blend('admissions.Certificate')
-            # certificate.token = self.token
-            certificate.save()
+        certificate = mixer.blend('admissions.Certificate')
+        # certificate.token = self.token
+        certificate.save()
 
-            # user as certificate
-            user_specialty = mixer.blend('certificate.UserSpecialty')
-            user_specialty.token = self.token
-            user_specialty.save()
+        # user as certificate
+        user_specialty = mixer.blend('certificate.UserSpecialty')
+        user_specialty.token = self.token
+        user_specialty.save()
 
-            user = mixer.blend('auth.User')
-            user.save()
-            self.user = user
+        user = mixer.blend('auth.User')
+        user.save()
+        self.user = user
 
-            cohort = mixer.blend('admissions.Cohort')
-            cohort.certificate = certificate
-            cohort.save()
-            self.cohort = cohort
+        cohort = mixer.blend('admissions.Cohort')
+        cohort.certificate = certificate
+        cohort.save()
+        self.cohort = cohort
 
-            cohort_user = mixer.blend('admissions.CohortUser')
-            cohort_user.user = user
-            cohort_user.cohort = cohort
-            cohort_user.save()
-            self.cohort_user = cohort_user
+        cohort_user = mixer.blend('admissions.CohortUser')
+        cohort_user.user = user
+        cohort_user.cohort = cohort
+        cohort_user.save()
+        self.cohort_user = cohort_user

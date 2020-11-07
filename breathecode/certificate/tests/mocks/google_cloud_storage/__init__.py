@@ -12,14 +12,26 @@ GOOGLE_CLOUD_PATH = {
     'blob': 'google.cloud.storage.Blob'
 }
 
+google_cloud_instances = {
+    'client': None,
+    'bucket': None,
+    'blob': None
+}
+
 def apply_google_cloud_blob_mock():
     """Apply Storage Blob Mock"""
-    return Mock(side_effect=BlobMock)
+    mock = BlobMock
+    google_cloud_instances['blob'] = mock
+    return Mock(side_effect=mock)
 
 def apply_google_cloud_bucket_mock():
     """Apply Storage Bucket Mock"""
-    return Mock(side_effect=BucketMock)
+    mock = BucketMock
+    google_cloud_instances['bucket'] = mock
+    return Mock(side_effect=mock)
 
 def apply_google_cloud_client_mock():
     """Apply Storage Client Mock"""
-    return Mock(side_effect=ClientMock)
+    mock = ClientMock
+    google_cloud_instances['client'] = mock
+    return Mock(side_effect=mock)
