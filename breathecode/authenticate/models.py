@@ -25,6 +25,9 @@ class Role(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    def __str__(self):
+        return f"{self.name} ({self.slug})"
+
 # If the user belongs to an academy administrative staff
 class ProfileAcademy(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -71,21 +74,6 @@ class CredentialsSlack(models.Model):
 
     def __str__(self):
         return f"Team {self.team_name} ({self.team_id})"
-
-
-class SlackTeam(models.Model):
-
-    slack_id = models.CharField(max_length=50)
-    name = models.CharField(max_length=100)
-
-    owner = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
-    academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    def __str__(self):
-        return f"{self.name} ({self.slack_id})"
 
 class CredentialsQuickBooks(models.Model):
     quibooks_code = models.CharField(max_length=255, primary_key=True)

@@ -165,7 +165,7 @@ logging.config.dictConfig({
         # Add Handler for Rollbar
         'rollbar': {
             # 'filters': ['require_debug_false'],
-            'access_token': os.environ.get('ROLLBAR_ACCESS_TOKEN'),
+            'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ""),
             'environment': ENVIRONMENT,
             'class': 'rollbar.logger.RollbarHandler'
         },
@@ -196,7 +196,7 @@ logging.config.dictConfig({
 })
 
 ROLLBAR = {
-    'access_token': os.environ.get('ROLLBAR_ACCESS_TOKEN'),
+    'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ""),
     'environment': 'development' if DEBUG else 'production',
     'branch': 'master',
     'root': BASE_DIR,

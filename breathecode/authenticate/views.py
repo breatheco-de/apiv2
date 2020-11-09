@@ -18,9 +18,10 @@ from django.utils import timezone
 from .models import Profile
 from .authentication import ExpiringTokenAuthentication
 
-# from .forms import PickPasswordForm, PasswordChangeCustomForm
-from .models import Profile, CredentialsGithub, Token, CredentialsSlack, SlackTeam
+from .forms import PickPasswordForm, PasswordChangeCustomForm
+from .models import Profile, CredentialsGithub, Token, CredentialsSlack
 from breathecode.admissions.models import Academy
+from breathecode.notify.models import SlackTeam
 from .serializers import UserSerializer, AuthSerializer, GroupSerializer
 
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ class TemporalTokenView(ObtainAuthToken):
             'user_id': user.pk,
             'email': user.email
         })
+
 
 class LogoutView(APIView):
     authentication_classes: [ExpiringTokenAuthentication]
@@ -69,13 +71,29 @@ class LoginView(ObtainAuthToken):
         })
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
+def get_token_info(request, token):
+
+    token = Token.objects.filter(key=token).first()
+    
+    if token is None or token.expires_at < timezone.now():
+        raise PermissionDenied("Expired or invalid token")
+    
+    return Response({
+        'token': token.key,
+        'token_type': token.token_type,
+        'expires_at': token.expires_at,
+        'user_id': token.user.pk
+    })
+
+@api_view(['GET'])
 def get_users_me(request):
 
     logger.error("Get me just called")
     try:
         if isinstance(request.user, AnonymousUser):
             raise PermissionDenied("There is not user")    
-        request.user
+
     except User.DoesNotExist:
         raise PermissionDenied("You don't have a user")
 
@@ -106,8 +124,8 @@ def get_github_token(request):
 
     # url = base64.b64decode(url).decode("utf-8")
     params = {
-        "client_id": os.getenv('GITHUB_CLIENT_ID'),
-        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL')+"?url="+url,
+        "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
+        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+"?url="+url,
         "scope": 'user repo read:org',
     }
 
@@ -138,9 +156,9 @@ def save_github_token(request):
         raise ValidationError("No github code specified")
 
     payload = {
-        'client_id': os.getenv('GITHUB_CLIENT_ID'),
-        'client_secret': os.getenv('GITHUB_SECRET'),
-        'redirect_uri': os.getenv('GITHUB_REDIRECT_URL'),
+        'client_id': os.getenv('GITHUB_CLIENT_ID', ""),
+        'client_secret': os.getenv('GITHUB_SECRET', ""),
+        'redirect_uri': os.getenv('GITHUB_REDIRECT_URL', ""),
         'code': code,
     }
     headers = {'Accept': 'application/json'}
@@ -232,13 +250,13 @@ def get_slack_token(request):
     scopes = ("app_mentions:read", "channels:history", "channels:join", "channels:read",
         "chat:write", "chat:write.customize", "commands", "files:read", "files:write",
         "groups:history", "groups:read", "groups:write", "incoming-webhook", "team:read",
-        "users:read", "users:read.email", "users.profile:read", "users:read", "users:read.email")
+        "users:read", "users:read.email", "users.profile:read", "users:read")
 
     query_string = f'a={academy}&url={url}&user={user_id}'.encode("utf-8")
     payload = str(base64.urlsafe_b64encode(query_string), "utf-8")
     params = {
-        "client_id": os.getenv('SLACK_CLIENT_ID'),
-        "redirect_uri": os.getenv('SLACK_REDIRECT_URL')+"?payload="+payload,
+        "client_id": os.getenv('SLACK_CLIENT_ID', ""),
+        "redirect_uri": os.getenv('SLACK_REDIRECT_URL', "")+"?payload="+payload,
         "scope": ",".join(scopes)
     }
     redirect = "https://slack.com/oauth/v2/authorize?"
@@ -300,9 +318,9 @@ def save_slack_token(request):
         raise ValidationError("No slack code specified")
 
     params = {
-        'client_id': os.getenv('SLACK_CLIENT_ID'),
-        'client_secret': os.getenv('SLACK_SECRET'),
-        'redirect_uri': os.getenv('SLACK_REDIRECT_URL')+"?payload="+original_payload,
+        'client_id': os.getenv('SLACK_CLIENT_ID', ""),
+        'client_secret': os.getenv('SLACK_SECRET', ""),
+        'redirect_uri': os.getenv('SLACK_REDIRECT_URL', "")+"?payload="+original_payload,
         'code': code,
     }
     # print("params", params)
@@ -319,7 +337,8 @@ def save_slack_token(request):
         slack_data = resp.json()
         logger.debug(slack_data)
 
-        CredentialsSlack.objects.filter(app_id=slack_data['app_id']).delete()
+        # delete all previous credentials for the same team
+        CredentialsSlack.objects.filter(app_id=slack_data['app_id'], team_id=slack_data['team']['id']).delete()
         credentials = CredentialsSlack(
             user=user,
             app_id = slack_data['app_id'],
@@ -338,6 +357,7 @@ def save_slack_token(request):
         team.name = slack_data['team']['name'],
         team.owner = user    
         team.academy = academy    
+        team.credentials = credentials    
         team.save()
 
         return HttpResponseRedirect(redirect_to=payload["url"][0])
@@ -358,54 +378,54 @@ def change_password(request, token):
         # print("Error: ", resp.json())
         raise APIException("Error from github")
 
-# def change_password(request, token):
-#     if request.method == 'POST':
-#         form = PasswordChangeCustomForm(request.user, request.POST)
-#         if form.is_valid():
-#             user = form.save()
-#             update_session_auth_hash(request, user)  # Important!
-#             messages.success(request, 'Your password was successfully updated!')
-#             return redirect('change_password')
-#         else:
-#             messages.error(request, 'Please correct the error below.')
-#     else:
-#         form = PasswordChangeCustomForm(request.user)
-#     return render(request, 'form.html', {
-#         'form': form
-#     })
+def change_password(request, token):
+    if request.method == 'POST':
+        form = PasswordChangeCustomForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Important!
+            messages.success(request, 'Your password was successfully updated!')
+            return redirect('change_password')
+        else:
+            messages.error(request, 'Please correct the error below.')
+    else:
+        form = PasswordChangeCustomForm(request.user)
+    return render(request, 'form.html', {
+        'form': form
+    })
 
-# def pick_password(request, token):
-#     _dict = request.POST.copy()
-#     _dict["token"] = token
-#     _dict["callback"] = request.GET.get("callback", '')
+def pick_password(request, token):
+    _dict = request.POST.copy()
+    _dict["token"] = token
+    _dict["callback"] = request.GET.get("callback", '')
 
-#     form = PickPasswordForm(_dict)
-#     if request.method == 'POST':
-#         password1 = request.POST.get("password1", None)
-#         password2 = request.POST.get("password2", None)
-#         if password1 != password2:
-#             messages.error(request, 'Passwords don\'t match')
-#             return render(request, 'form.html', {
-#                 'form': form
-#             })
+    form = PickPasswordForm(_dict)
+    if request.method == 'POST':
+        password1 = request.POST.get("password1", None)
+        password2 = request.POST.get("password2", None)
+        if password1 != password2:
+            messages.error(request, 'Passwords don\'t match')
+            return render(request, 'form.html', {
+                'form': form
+            })
 
-#         token = Token.get_valid(request.POST.get("token", None))
-#         if token is None:
-#             messages.error(request, 'Invalid or expired token ' + str(token))
+        token = Token.get_valid(request.POST.get("token", None))
+        if token is None:
+            messages.error(request, 'Invalid or expired token ' + str(token))
 
-#         else:
-#             user = token.user
-#             user.set_password(password1)
-#             user.save()
-#             token.delete()
-#             callback = request.POST.get("callback", None)
-#             if callback is not None and callback != "":
-#                 return HttpResponseRedirect(request.POST.get("callback"))
-#             else:
-#                 return render(request, 'message.html', {
-#                     'message': 'You password has been reset successfully, you can close this window.'
-#                 })
+        else:
+            user = token.user
+            user.set_password(password1)
+            user.save()
+            token.delete()
+            callback = request.POST.get("callback", None)
+            if callback is not None and callback != "":
+                return HttpResponseRedirect(request.POST.get("callback"))
+            else:
+                return render(request, 'message.html', {
+                    'message': 'You password has been reset successfully, you can close this window.'
+                })
 
-#     return render(request, 'form.html', {
-#         'form': form
-#     })
+    return render(request, 'form.html', {
+        'form': form
+    })

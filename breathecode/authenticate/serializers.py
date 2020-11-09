@@ -23,7 +23,9 @@ class UserSerializer(serpy.Serializer):
     github = serpy.MethodField()
 
     def get_github(self, obj):
-        github = CredentialsGithub.objects.get(user=obj.id)
+        github = CredentialsGithub.objects.filter(user=obj.id).first()
+        if github is None:
+            return None
         return GithubSmallSerializer(github).data
 
 

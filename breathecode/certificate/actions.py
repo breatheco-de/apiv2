@@ -17,14 +17,15 @@ strings = {
 }
 
 def resolve_google_credentials():
-    path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
+    path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS',"")
     if path is None or not os.path.exists( path ):
         if os.getenv('ENV') == 'development':
             return
 
-        credentials = os.getenv('GOOGLE_SERVICE_KEY')#.replace("\\\\","\\")
-        with open(path, 'w') as credentials_file:
-            credentials_file.write( credentials )
+        credentials = os.getenv('GOOGLE_SERVICE_KEY', None)
+        if credentials is not None:
+            with open(path, 'w') as credentials_file:
+                credentials_file.write( credentials )
 
 def generate_certificate(user, cohort=None):
 

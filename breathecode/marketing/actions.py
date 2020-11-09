@@ -7,8 +7,8 @@ from activecampaign.client import Client
 from .utils import AC_Old_Client
 from breathecode.notify.actions import send_email_message
 
-client = Client(os.getenv('ACTIVE_CAMPAIGN_URL'), os.getenv('ACTIVE_CAMPAIGN_KEY'))
-old_client = AC_Old_Client(os.getenv('ACTIVE_CAMPAIGN_URL'), os.getenv('ACTIVE_CAMPAIGN_KEY'))
+client = Client(os.getenv('ACTIVE_CAMPAIGN_URL', ""), os.getenv('ACTIVE_CAMPAIGN_KEY', ""))
+old_client = AC_Old_Client(os.getenv('ACTIVE_CAMPAIGN_URL', ""), os.getenv('ACTIVE_CAMPAIGN_KEY', ""))
 SAVE_LEADS = os.getenv('SAVE_LEADS',None)
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY',None)
 
@@ -256,10 +256,18 @@ def save_get_geolocal(contact, form_entry=None):
                     result['postal_code'] = component['long_name']
 
 
-    contact.country = result['country']
-    contact.city = result['locality']
-    contact.street_address = result['route']
-    contact.zip_code = result['postal_code']
+    if 'country' in result:
+        contact.country = result['country']
+    
+    if 'locality' in result:
+        contact.city = result['locality']
+    
+    if 'route' in result:
+        contact.street_address = result['route']
+    
+    if 'postal_code' in result:
+        contact.zip_code = result['postal_code']
+        
     contact.save()
     
     return True

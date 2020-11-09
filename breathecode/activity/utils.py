@@ -2,11 +2,12 @@ import os, re
 from rest_framework.exceptions import ValidationError
 
 def resolve_google_credentials():
-    path = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
+    path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS',"")
     if not os.path.exists( path ):
-        credentials = os.environ['GOOGLE_SERVICE_KEY']#.replace("\\\\","\\")
-        with open(path, 'w') as credentials_file:
-            credentials_file.write( credentials )
+        credentials = os.getenv('GOOGLE_SERVICE_KEY',None)
+        if credentials is not None:
+            with open(path, 'w') as credentials_file:
+                credentials_file.write( credentials )
 
 def check_params(body, *args):
     msg = ''

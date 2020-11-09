@@ -1,4 +1,27 @@
+import logging
 from rest_framework.views import exception_handler
+from breathecode.authenticate.models import ProfileAcademy
+logger = logging.getLogger(__name__)
+
+def localize_query(query, request, matcher=None):
+
+    # not a part of the staff, cannot access all info
+    
+    if request.user.is_staff == True:
+        return query
+
+    academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list('academy__id', flat=True)
+    kwargs = {}
+    if matcher is None:
+        kwargs["academy__id__in"] = academy_ids
+    else:
+        kwargs[matcher] = academy_ids
+
+    logger.debug(f"Localizing academies: [{','.join([ str(i) for i in academy_ids])}]")
+    # only cohorts from that academy
+    query = query.filter(**kwargs)
+
+    return query
 
 def breathecode_exception_handler(exc, context):
     # This is to be used with the Django REST Framework (DRF) as its
