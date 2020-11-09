@@ -13,8 +13,9 @@ from ..mocks import (
     apply_google_cloud_client_mock,
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
-    # google_cloud_instances
+    # GOOGLE_CLOUD_INSTANCES
 )
+
 
 class ActionGenerateCertificateTestCase(CertificateTestCase):
     """Tests action generate_certificate"""

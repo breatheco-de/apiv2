@@ -1,7 +1,9 @@
 """
 Collections of mixins used to login in authorize microservice
 """
-from unittest.mock import patch, mock_open, create_autospec, MagicMock
+import os
+from unittest.mock import patch
+from urllib.parse import urlencode
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
 from .development_environment import DevelopmentEnvironment
@@ -26,6 +28,18 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     teacher_user = None
     teacher_cohort = None
     teacher_cohort_user = None
+
+    def generate_screenshotmachine_url(self):
+        """Generate screenshotmachine url"""
+        certificate = self.user_specialty
+        query_string = urlencode({
+            'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
+            'url': f'https://certificate.breatheco.de/preview/{certificate.token}',
+            'device': 'desktop',
+            'cacheLimit': '0',
+            'dimension': '1024x707',
+        })
+        return f'https://api.screenshotmachine.com?{query_string}'
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

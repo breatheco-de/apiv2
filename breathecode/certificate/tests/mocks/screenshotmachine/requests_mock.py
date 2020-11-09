@@ -20,5 +20,6 @@ class ResponseMock():
         """Convert Response to JSON"""
         return self.data
 
-def get_mock(url: str):
+def get_mock(url: str, stream=False):
+    """Requests get mock"""
     return ResponseMock(data='ok', status_code=200)
