@@ -9,13 +9,7 @@ class BucketMock():
         self.name = name
 
     def get_blob(self, blob_name):
-        file = self.files.get(blob_name)
-
-        # if not file:
-        #     file = BlobMock(blob_name, self)
-        #     self.files[blob_name] = file
-
-        return file
+        return self.files.get(blob_name)
 
     def blob(self, blob_name):
         self.files[blob_name] = BlobMock(blob_name, self)
