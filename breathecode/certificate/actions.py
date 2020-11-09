@@ -36,7 +36,7 @@ def generate_certificate(user, cohort=None):
             cohort = _cohort
 
     if cohort is None:
-        raise Exception(f"Imposible to obtain the student cohort, maybe it has more than one or none assigned")
+        raise Exception("Imposible to obtain the student cohort, maybe it has more than one or none assigned")
 
     if cohort.certificate is None:
         raise Exception(f"The cohort has no certificate assigned, please set a certificate for cohort: {cohort.name}")
