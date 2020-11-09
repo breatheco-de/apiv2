@@ -5,10 +5,10 @@ import re
 from unittest.mock import patch
 from django.core.exceptions import ValidationError
 from breathecode.admissions.models import Certificate
-from ..actions import generate_certificate, strings
-from .mixins import CertificateTestCase
+from ...actions import generate_certificate, strings
+from ..mixins import CertificateTestCase
 # from .mocks import CertificateBreathecodeMock
-from .mocks import (
+from ..mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,
     apply_google_cloud_bucket_mock,
@@ -111,5 +111,5 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertEqual(len(certificate.token), 40)
         self.assertEqual(bool(token_pattern.match(certificate.token)), True)
 
-        # created_at
-        # updated_at
+        # TODO created_at
+        # TODO updated_at

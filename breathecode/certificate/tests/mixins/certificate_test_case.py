@@ -2,11 +2,8 @@
 Collections of mixins used to login in authorize microservice
 """
 from unittest.mock import patch, mock_open, create_autospec, MagicMock
-# from django.urls.base import reverse_lazy
 from rest_framework.test import APITestCase
-# from django.test import TransactionTestCase
 from mixer.backend.django import mixer
-# from .mocks import CertificateBreathecodeMock, GoogleCloudMock, FakeGoogleCloudStorageClientMock
 from .development_environment import DevelopmentEnvironment
 from ..mocks import (
     GOOGLE_CLOUD_PATH,
@@ -17,7 +14,7 @@ from ..mocks import (
 
 # class CertificateTestCase(TransactionTestCase, DevelopmentEnvironment):
 class CertificateTestCase(APITestCase, DevelopmentEnvironment):
-    """CertificateTestCase with Slack methods"""
+    """APITestCase with Certificate models"""
     token = '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
     user = None
     cohort = None

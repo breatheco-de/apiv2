@@ -100,7 +100,7 @@ def certificate_screenshot(certificate_id: int):
                 blob.make_public()
             else:
                 print("Invalid reponse code: ", r.status_code)
-        
+
         # after created, lets save the URL
         else:
             certificate.preview_url = blob.public_url

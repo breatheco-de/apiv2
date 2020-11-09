@@ -2,8 +2,8 @@
 Tasks tests
 """
 # from ..tasks import add
-from ..actions import resolve_google_credentials
-from .mixins import CertificateTestCase
+from ...actions import resolve_google_credentials
+from ..mixins import CertificateTestCase
 
 class ActionResolveGoogleCredentialsTestCase(CertificateTestCase):
     """Tests action resolve_google_credentials"""
