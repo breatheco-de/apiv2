@@ -1,11 +1,14 @@
 import logging
 from rest_framework.views import exception_handler
 from breathecode.authenticate.models import ProfileAcademy
+from django.contrib.auth.models import AnonymousUser
 logger = logging.getLogger(__name__)
 
 def localize_query(query, request, matcher=None):
 
     # not a part of the staff, cannot access all info
+    if isinstance(request.user, AnonymousUser):
+        return query
     
     if request.user.is_staff == True:
         return query
