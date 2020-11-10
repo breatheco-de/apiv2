@@ -156,6 +156,11 @@ logging.config.dictConfig({
         },
         'django.server': DEFAULT_LOGGING['formatters']['django.server'],
     },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse',
+        },
+    },
     'handlers': {
         # console logs to stderr
         'console': {
@@ -164,10 +169,10 @@ logging.config.dictConfig({
         },
         # Add Handler for Rollbar
         'rollbar': {
-            # 'filters': ['require_debug_false'],
+            'filters': ['require_debug_false'],
             'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ""),
             'environment': ENVIRONMENT,
-            'class': 'rollbar.logger.RollbarHandler'
+            'class': 'rollbar.logger.RollbarHandler',
         },
         'django.server': DEFAULT_LOGGING['handlers']['django.server'],
     },

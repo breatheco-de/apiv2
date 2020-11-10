@@ -1,4 +1,4 @@
-from breathecode.notify.actions import send_email_message
+from breathecode.notify.actions import send_email_message, send_slack
 import logging
 from breathecode.authenticate.actions import create_token
 from .models import Answer
@@ -12,12 +12,14 @@ strings = {
         "second": " a tus amigos y familiares?",
         "highest": "muy probable",
         "lowest": "no es probable",
+        "button_label": "Responder",
     },
     "en": {
         "first": "How likely are you to recommend",
         "second": "to your friends and family?",
         "highest": "very likely",
         "lowest": "not likely",
+        "button_label": "Answer the question",
     }
 }
 
@@ -50,9 +52,12 @@ def send_survey(user, cohort=None):
         "LOWEST": answer.lowest,
         "SUBJECT": question,
         "ANSWER_ID": answer.id,
+        "BUTTON": strings[answer.cohort.language]["button_label"],
         "LINK": f"https://nps.breatheco.de/{answer.id}?token={token.key}"
     }
+    
     send_email_message("nps", user.email, data)
+    send_slack("nps", user.slackuser, data)
     
     logger.info(f"Survey was sent for user: {str(user.id)}")
     answer.status = "SENT"

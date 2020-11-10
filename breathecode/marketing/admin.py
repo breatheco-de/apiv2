@@ -1,7 +1,7 @@
 import csv
 from django.contrib import admin
 from .models import FormEntry, Tag, Automation
-from .actions import register_new_lead, save_get_geolocal
+from .actions import register_new_lead, save_get_geolocal, get_facebook_lead_info
 from django.http import HttpResponse
 from django.contrib.admin import SimpleListFilter
 # Register your models here.
@@ -28,6 +28,13 @@ def send_to_ac(modeladmin, request, queryset):
     entries = queryset.all()
     for entry in entries:
         register_new_lead(entry.toFormData())
+send_to_ac.short_description = "⏫ Upload to Active Campaign"
+
+def fetch_more_facebook_info(modeladmin, request, queryset):
+    entries = queryset.all()
+    for entry in entries:
+        get_facebook_lead_info(entry.id)
+fetch_more_facebook_info.short_description = "♺ Download more info from facebook"
 
 def get_geoinfo(modeladmin, request, queryset):
     entries = queryset.all()
@@ -38,8 +45,7 @@ def get_geoinfo(modeladmin, request, queryset):
             "longitude": entry.longitude,
         }
         save_get_geolocal(entry, form_enty)
-
-get_geoinfo.short_description = "Get geo info"
+get_geoinfo.short_description = "🌐 Get GEO info"
 
 class PPCFilter(SimpleListFilter):
     title = 'Source' # or use _('country') for translated title
@@ -60,7 +66,7 @@ class FormEntryAdmin(admin.ModelAdmin, ExportCsvMixin):
     search_fields = ['email', 'first_name', 'last_name', 'phone']
     list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
     list_filter = ['storage_status', 'location', 'course', PPCFilter, 'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium']
-    actions = [send_to_ac, get_geoinfo, "export_as_csv"]
+    actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, "export_as_csv"]
 
 
 def mark_tag_as_strong(modeladmin, request, queryset):

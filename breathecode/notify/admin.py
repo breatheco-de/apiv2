@@ -35,6 +35,7 @@ class SlackTeamAdmin(admin.ModelAdmin):
 @admin.register(SlackUser)
 class SlackUserAdmin(admin.ModelAdmin):
     search_fields = ['display_name', 'real_name', 'email', 'user__email', 'user__first_name', 'user__last_name']
+    raw_id_fields = ["user"]
     list_display = ('slack_id', 'sync_status', 'user_link', 'display_name', 'real_name', 'email', 'updated_at')
     list_filter = ['sync_status', 'team__slack_id', 'team__academy__slug']
     # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]

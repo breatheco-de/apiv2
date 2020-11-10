@@ -1,6 +1,6 @@
 from django.core.mail import EmailMultiAlternatives
 from rest_framework.exceptions import APIException
-import os, logging
+import os, logging, json
 from django.template.loader import get_template
 from django.contrib.auth.models import User
 from django.template import Context
@@ -71,7 +71,10 @@ def send_sms(slug, phone_number, data={}):
 # entity can be a cohort or a user
 def send_slack(slug, slack_entity, data={}):
 
-    template = get_template_content(slug, data, ["email"])
+    template = get_template_content(slug, data, ["slack"])
+    
+    if slack_entity is None:
+        raise Exception("No slack entity (user or cohort) was found or given")
     
     if slack_entity.team is None:
         raise Exception("The entity must belong to a slack team to receive notifications")
@@ -82,10 +85,15 @@ def send_slack(slug, slack_entity, data={}):
     logger.debug(f"Sending slack message to {str(slack_entity)}")
 
     try:
+        payload = json.loads(template['slack'])
+        if "blocks" in payload:
+            payload = payload["blocks"]
+
         api = Slack(slack_entity.team.credentials.token)
         data = api.post("chat.postMessage", {
             "channel": slack_entity.slack_id,
-            "text": template['text']
+            "blocks": payload,
+            "parse": "full"
         })
         logger.debug(f"Notification to {str(slack_entity)} sent")
         return True
@@ -129,6 +137,11 @@ def send_fcm_notification(slug, user_id, data={}):
     registration_ids = [device.registration_id for device in device_set]
     send_fcm(slug, registration_ids, data)
 
+def notify_all(slug, user, data):
+    
+    send_email_message("nps", user.email, data)
+    send_slack("nps", user.slackuser, data)
+
 
 def get_template_content(slug, data={}, formats=None):
     #d = Context({ 'username': username })
@@ -158,6 +171,10 @@ def get_template_content(slug, data={}, formats=None):
         html = get_template(slug + '.html')
         templates["text"] = plaintext.render(z)
         templates["html"] = html.render(z)
+
+    if formats is not None and "slack" in formats:
+        fms = get_template(slug + '.slack')
+        templates["slack"] = fms.render(z)
 
     if formats is not None and "fms" in formats:
         fms = get_template(slug + '.fms')

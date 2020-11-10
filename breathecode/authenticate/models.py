@@ -72,8 +72,21 @@ class CredentialsSlack(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+class CredentialsFacebook(models.Model):
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True)
+
+    token = models.CharField(max_length=255)
+    expires_at = models.DateTimeField()
+    facebook_id = models.BigIntegerField(null=True, default=None)
+    email = models.CharField(blank=False, null=True, default=None, max_length=150)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
     def __str__(self):
-        return f"Team {self.team_name} ({self.team_id})"
+        return f"Team {str(self.user)}"
 
 class CredentialsQuickBooks(models.Model):
     quibooks_code = models.CharField(max_length=255, primary_key=True)

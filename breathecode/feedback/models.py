@@ -21,7 +21,6 @@ SURVEY_STATUS = (
     (OPENED, 'Opened'),
     (EXPIRED, 'Expired'),
 )
-
 class Answer(models.Model):
     title = models.CharField(max_length=200, blank=True)
     lowest = models.CharField(max_length=50, default='not likely')

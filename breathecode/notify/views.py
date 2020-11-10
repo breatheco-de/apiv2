@@ -23,17 +23,22 @@ def post_save_cohort(sender, **kwargs):
     logger.debug(instance)
 
 
-# Create your views here.
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def preview_template(request, slug):
     template = get_template_content(slug, request.GET)
     return HttpResponse(template['html'])
 
-# Create your views here.
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def test_email(request, email):
+    # tags = sync_user_issues()
+    # return Response(tags, status=status.HTTP_200_OK)
+    pass
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def process_interaction(request):
     # tags = sync_user_issues()
     # return Response(tags, status=status.HTTP_200_OK)
     pass

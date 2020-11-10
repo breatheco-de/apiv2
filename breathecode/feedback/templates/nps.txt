@@ -1,6 +1,10 @@
 {% extends "base.txt" %}
 {% block content %}
-Hello! Please click on the following button to pick your password:
 
-{{ LINK }}
+Please take 2 min to answer the following question:
+
+{{ QUESTION }
+
+Click here to vote: {{ LINK }}
+
 {% endblock %}
