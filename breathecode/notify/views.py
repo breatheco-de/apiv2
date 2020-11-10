@@ -54,54 +54,56 @@ def get_student_info(request):
     team_id = request.POST["team_id"]
     content = request.POST["text"]
 
-    user = ProfileAcademy.objects.filter(user__slackuser__slack_id=user_id, academy__slackteam__slack_id=team_id).first()
-    if user is None:
-        return Response("You don't have permissions to query students on this team", status=status.HTTP_200_OK)
-
-    slack = Slack()
-    data = slack.parse_command(content)
-    
-    if len(data["users"]) == 0:
-        raise Exception("No usernames found on the command")
-
-    cohort_users = CohortUser.objects.filter(user__slackuser__slack_id=data["users"][0], role='STUDENT')
-    user = cohort_users.first()
-    if user is None:
-        raise Exception("Student not found on any cohort")
-
-    user = user.user
-    cohorts = [c.cohort for c in cohort_users]
-
-    avatar_url = os.getenv("API_URL","") + "/static/img/avatar.png"
-    github_username = "Undefined"
-    phone = "Undefined"
     try:
-        github_username = user.profile.github_username
-        avatar_url = user.profile.avatar_url
-        phone = user.profile.phone
-    except Profile.DoesNotExist:
-        pass
+        user = ProfileAcademy.objects.filter(user__slackuser__slack_id=user_id, academy__slackteam__slack_id=team_id).first()
+        if user is None:
+            raise Exception("You don't have permissions to query students on this team")
 
-    def get_string(_s):
-        if _s is None:
-            return "Undefined"
-        else:
-            return _s
+        slack = Slack()
+        data = slack.parse_command(content)
+        
+        if len(data["users"]) == 0:
+            raise Exception("No usernames found on the command")
 
-    response = {
-        "blocks": []
-    }
-    response["blocks"].append({
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": f"*Student Name:* {user.first_name} {user.last_name}\n*Github*: {github_username}\n*Phone*: {phone}\n*Cohorts:*: {','.join([c.name for c in cohorts])}\n*Education Status:* {','.join([c.educational_status for c in cohort_users])}\n*Finantial Status:* {','.join([get_string(c.finantial_status) for c in cohort_users])}"
-        },
-        "accessory": {
-            "type": "image",
-            "image_url": avatar_url,
-            "alt_text": f"{user.first_name} {user.last_name}"
+        cohort_users = CohortUser.objects.filter(user__slackuser__slack_id=data["users"][0], role='STUDENT')
+        user = cohort_users.first()
+        if user is None:
+            raise Exception(f"Student {str(data['users'][0])} not found on any cohort")
+
+        user = user.user
+        cohorts = [c.cohort for c in cohort_users]
+
+        avatar_url = os.getenv("API_URL","") + "/static/img/avatar.png"
+        github_username = "Undefined"
+        phone = "Undefined"
+        try:
+            github_username = user.profile.github_username
+            avatar_url = user.profile.avatar_url
+            phone = user.profile.phone
+        except Profile.DoesNotExist:
+            pass
+
+        def get_string(_s):
+            if _s is None:
+                return "Undefined"
+            else:
+                return _s
+
+        response = {
+            "blocks": []
         }
-    })
-
-    return Response(response, status=status.HTTP_200_OK)
+        response["blocks"].append({
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Student Name:* {user.first_name} {user.last_name}\n*Github*: {github_username}\n*Phone*: {phone}\n*Cohorts:*: {','.join([c.name for c in cohorts])}\n*Education Status:* {','.join([c.educational_status for c in cohort_users])}\n*Finantial Status:* {','.join([get_string(c.finantial_status) for c in cohort_users])}"
+            },
+            "accessory": {
+                "type": "image",
+                "image_url": avatar_url,
+                "alt_text": f"{user.first_name} {user.last_name}"
+            }
+        })
+        return Response(response, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response(str(e), status=status.HTTP_200_OK)
