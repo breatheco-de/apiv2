@@ -1,8 +1,8 @@
 import requests, os
-from google.cloud import storage
 from urllib.parse import urlencode
-from .models import UserSpecialty, LayoutDesign
 from breathecode.admissions.models import CohortUser
+from .models import UserSpecialty, LayoutDesign
+from ..services.google_cloud import Storage
 
 ENVIRONMENT = os.getenv('ENV', None)
 BUCKET_NAME = "certificates-breathecode"
@@ -80,13 +80,13 @@ def certificate_screenshot(certificate_id: int):
     certificate = UserSpecialty.objects.get(id=certificate_id)
     if certificate.preview_url is None or certificate.preview_url == "":
         file_name = f'{certificate.token}'
-        resolve_google_credentials()
-        client = storage.Client()
-        bucket = client.bucket(BUCKET_NAME)
-        blob = bucket.get_blob(file_name)
+        # resolve_google_credentials()
+
+        storage = Storage()
+        file = storage.file(BUCKET_NAME, file_name)
 
         # if the file does not exist
-        if blob is None:
+        if file.blob is None:
             query_string = urlencode({
                 'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
                 'url': f'https://certificate.breatheco.de/preview/{certificate.token}',
@@ -96,28 +96,24 @@ def certificate_screenshot(certificate_id: int):
             })
             r = requests.get(f'https://api.screenshotmachine.com?{query_string}', stream=True)
             if r.status_code == 200:
-                blob = bucket.blob(file_name)
-                blob.upload_from_string(r.content)
-                blob.make_public()
+                file.upload(r.content, public=True)
             else:
                 print("Invalid reponse code: ", r.status_code)
 
         # after created, lets save the URL
         else:
-            certificate.preview_url = blob.public_url
+            certificate.preview_url = file.url()
             certificate.save()
 
 def remove_certificate_screenshot(certificate_id):
     certificate = UserSpecialty.objects.get(id=certificate_id)
     if certificate.preview_url is None or certificate.preview_url == "":
-        return True
+        return False
 
-    file_name = f'{certificate.token}'
-    resolve_google_credentials()
-    client = storage.Client()
-    bucket = client.bucket(BUCKET_NAME)
-    blob = bucket.get_blob(file_name)
-    blob.delete()
+    file_name = certificate.token
+    storage = Storage()
+    file = storage.file(BUCKET_NAME, file_name)
+    file.delete()
 
     certificate.preview_url = ""
     certificate.save()

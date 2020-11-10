@@ -13,3 +13,8 @@ from .screenshotmachine import (
     SCREENSHOTMACHINE_INSTANCES,
     apply_requests_get_mock,
 )
+from .credentials import (
+    CREDENTIALS_PATH,
+    CREDENTIALS_INSTANCES,
+    apply_resolve_credentials_mock,
+)

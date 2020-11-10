@@ -17,3 +17,6 @@ class BlobMock():
 
     def delete(self):
         return None
+
+    def delete_blob(self):
+        return None
