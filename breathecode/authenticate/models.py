@@ -5,6 +5,7 @@ from rest_framework import serializers
 from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
+from django.core.validators import RegexValidator
 from breathecode.admissions.models import Academy
 
 class UserProxy(User):
@@ -15,7 +16,15 @@ class Profile(models.Model):
     user   = models.OneToOneField(User, on_delete=models.CASCADE)
     avatar_url = models.CharField(max_length=255, blank=True, null=True, default=None)
     bio = models.CharField(max_length=255, blank=True, null=True)
+
+    phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, default='') # validators should be a list
+    
     twitter_username = models.CharField(max_length=50, blank=True, null=True)
+    github_username = models.CharField(max_length=50, blank=True, null=True)
+    portfolio_url = models.CharField(max_length=50, blank=True, null=True)
+    linkedin_url = models.CharField(max_length=50, blank=True, null=True)
+
     blog = models.CharField(max_length=150, blank=True, null=True)
 
 class Role(models.Model):

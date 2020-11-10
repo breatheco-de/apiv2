@@ -1,4 +1,4 @@
-import logging, re
+import logging, re, os
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.shortcuts import render
@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from breathecode.admissions.models import Cohort, CohortUser
-from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, Profile
 from .actions import get_template, get_template_content
 from .models import Device
 from .serializers import DeviceSerializer
@@ -72,10 +72,15 @@ def get_student_info(request):
     user = user.user
     cohorts = [c.cohort for c in cohort_users]
 
-    avatar_url = "https://www.melbournesmilecentre.com.au/wp-content/uploads/2019/01/dentist-avatar.png"
-    github = CredentialsGithub.objects.filter(user=user).first()
-    if github is not None and github.avatar_url is not None:
-        avatar_url = github.avatar_url
+    avatar_url = os.getenv("API_URL","") + "/static/avatar.png"
+    github_username = ""
+    phone = ""
+    try:
+        github_username = user.profile.github_username
+        avatar_url = user.profile.avatar_url
+        phone = user.profile.phone
+    except Profile.DoesNotExist:
+        pass
 
     def get_string(_s):
         if _s is None:
@@ -90,7 +95,7 @@ def get_student_info(request):
         "type": "section",
         "text": {
             "type": "mrkdwn",
-            "text": f"*Student Name:* {user.first_name} {user.last_name}\n*Cohorts:*: {','.join([c.name for c in cohorts])}\n*Education Status:* {','.join([c.educational_status for c in cohort_users])}\n*Finantial Status:* {','.join([get_string(c.finantial_status) for c in cohort_users])}"
+            "text": f"*Student Name:* {user.first_name} {user.last_name}\n*Github*: {github_username}\n*Phone*: {phone}\n*Cohorts:*: {','.join([c.name for c in cohorts])}\n*Education Status:* {','.join([c.educational_status for c in cohort_users])}\n*Finantial Status:* {','.join([get_string(c.finantial_status) for c in cohort_users])}"
         },
         "accessory": {
             "type": "image",
