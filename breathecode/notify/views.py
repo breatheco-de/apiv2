@@ -72,9 +72,9 @@ def get_student_info(request):
     user = user.user
     cohorts = [c.cohort for c in cohort_users]
 
-    avatar_url = os.getenv("API_URL","") + "/static/avatar.png"
-    github_username = ""
-    phone = ""
+    avatar_url = os.getenv("API_URL","") + "/static/img/avatar.png"
+    github_username = "Undefined"
+    phone = "Undefined"
     try:
         github_username = user.profile.github_username
         avatar_url = user.profile.avatar_url

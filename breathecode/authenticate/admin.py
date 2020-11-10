@@ -83,5 +83,5 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'avatar_url')
+    list_display = ('user', 'phone', 'github_username','avatar_url')
     # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
