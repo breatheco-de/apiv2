@@ -2,8 +2,8 @@ import logging
 from django.contrib import admin, messages
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
-from breathecode.admissions.admin import CohortAdmin
-from .models import Answer, UserProxy, CohortProxy
+from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
+from .models import Answer, UserProxy, CohortProxy, CohortUserProxy
 from .actions import send_survey
 from .tasks import send_cohort_survey
 
@@ -25,6 +25,22 @@ send_bulk_survey.short_description = "Send General NPS Survey"
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name')
     actions = [send_bulk_survey]
+
+def send_bulk_cohort_user_survey(modeladmin, request, queryset):
+    cus = queryset.all()
+    try:
+        for cu in cus:
+            send_survey(cu.user, cu.cohort)
+        messages.success(request, message="Survey was successfully sent")
+    except Exception as e:
+        logger.fatal(str(e))
+        messages.error(request, message=str(e))
+        
+send_bulk_cohort_user_survey.short_description = "Send General NPS Survey"
+
+@admin.register(CohortUserProxy)
+class CohortUserAdmin(CohortUserAdmin):
+    actions = [send_bulk_cohort_user_survey]
 
 def send_cohort_bulk_survey(modeladmin, request, queryset):
     logger.debug(f"Send bulk survey called")

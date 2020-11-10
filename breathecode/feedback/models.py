@@ -1,11 +1,16 @@
 from django.db import models
 from django.contrib.auth.models import User
-from breathecode.admissions.models import Academy, Cohort
+from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.events.models import Event
 
 class UserProxy(User):
     class Meta:
         proxy = True
+
+class CohortUserProxy(CohortUser):
+    class Meta:
+        proxy = True
+        
 class CohortProxy(Cohort):
     class Meta:
         proxy = True
