@@ -15,7 +15,7 @@ def command(only=None):
             if only == "staff":
                 user = ProfileAcademy.objects.filter(user__slackuser__slack_id=context['user_id'], academy__slackteam__slack_id=context['team_id']).first()
                 if user is None:
-                    raise Exception("You don't have permissions to query students on this team")
+                    raise Exception(f"Your user {context['user_id']} don't have permissions to query students on this team")
 
             kwargs["user_id"] = context['user_id']
             kwargs["team_id"] = context['team_id']
