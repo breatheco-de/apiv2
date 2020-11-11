@@ -2,7 +2,9 @@ import os, requests, sys, pytz
 from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from ...models import Academy, Certificate, Cohort, User, CohortUser
+from breathecode.authenticate.models import Profile
 
+API_URL = os.getenv("API_URL","")
 HOST = os.environ.get("OLD_BREATHECODE_API")
 DATETIME_FORMAT="%Y-%m-%d"
 class Command(BaseCommand):
@@ -125,6 +127,18 @@ class Command(BaseCommand):
                     # self.stdout.write(self.style.SUCCESS(f"Error adding cohort {_cohort['slug']}: {str(e)}"))    
             else:
                 self.stdout.write(self.style.NOTICE(f"User {_student['email']} skipped"))
+
+            profile = None
+            try:
+                profile = user.profile
+            except Profile.DoesNotExist:
+                profile = Profile(user=user)
+
+            profile.avatar_url = API_URL + "/static/img/avatar.png"
+            profile.bio=_student["bio"]
+            profile.phone=_student["phone"] if _student["phone"] is not None else ""
+            profile.github_username=_student["github"]
+            profile.save()
 
 
     def teachers(self, options):

@@ -1,12 +1,16 @@
-import requests, logging
+import requests, logging, re
 
 logger = logging.getLogger(__name__)
 
 class Slack:
     HOST = "https://slack.com/api/"
     headers = {}
+    patterns = {
+        "users": r"\<@([^|]+)\|([^>]+)>",
+        "command": r"^(\w+)\s"
+    }
 
-    def __init__(self, token):
+    def __init__(self, token=None):
         self.token = token
 
     def get(self, action_name, request_data={}):
@@ -16,6 +20,9 @@ class Slack:
         return self._call("POST", action_name, json=request_data)
 
     def _call(self, method_name, action_name, params=None, json=None):
+
+        if self.token is None:
+            raise Exception("Missing slack token")
 
         if method_name != "GET":
             self.headers = {
@@ -40,3 +47,19 @@ class Slack:
                 return data
         else:
             raise Exception(f"Unable to communicate with Slack API, error: {resp.status_code}")
+
+    def parse_command(self, content):
+
+        response = {}
+
+        matches = re.findall(self.patterns["command"], content)
+        if len(matches) != 1:
+            raise Exception("Imposible to determine command")
+        response["command"] = matches[0]
+
+        matches = re.findall(self.patterns["users"], content)
+        response["users"] = [u[0] for u in matches]
+
+        return response
+
+            

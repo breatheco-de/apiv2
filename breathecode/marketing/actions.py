@@ -1,11 +1,15 @@
-import os, re, requests
+import os, re, requests, logging
 from itertools import chain
+from django.utils import timezone
 from .models import FormEntry, Tag, Automation
 from schema import Schema, And, Use, Optional, SchemaError
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from activecampaign.client import Client
 from .utils import AC_Old_Client
 from breathecode.notify.actions import send_email_message
+from breathecode.authenticate.models import CredentialsFacebook
+
+logger = logging.getLogger(__name__)
 
 client = Client(os.getenv('ACTIVE_CAMPAIGN_URL', ""), os.getenv('ACTIVE_CAMPAIGN_KEY', ""))
 old_client = AC_Old_Client(os.getenv('ACTIVE_CAMPAIGN_URL', ""), os.getenv('ACTIVE_CAMPAIGN_KEY', ""))
@@ -17,6 +21,7 @@ acp_ids = {
     # "soft": "48",
     # "newsletter_list": "3",
 
+    "utm_source": "34",
     "utm_url": "15",
     "utm_location": "18",
     "course": "2",
@@ -272,3 +277,40 @@ def save_get_geolocal(contact, form_entry=None):
     
     return True
 
+def get_facebook_lead_info(lead_id, academy_id=None):
+
+    now = timezone.now()
+
+    lead = FormEntry.objects.filter(lead_id=lead_id).first()
+    if lead is None:
+        raise APIException(f"Invalid lead id: {lead_id}")
+
+    credential = CredentialsFacebook.objects.filter(academy__id=academy_id, expires_at__gte=now).first()
+    if credential is None:
+        raise APIException("No active facebook credentials to get the leads")
+
+    params = {
+        "access_token": credential.token
+    }
+    resp = requests.get(f'https://graph.facebook.com/v8.0/{lead_id}/', params=params)
+    if resp.status_code == 200:
+        logger.debug("Facebook responded with 200")
+        data = resp.json()
+        if "field_data" in data:
+            lead.utm_campaign == data["ad_id"]
+            lead.utm_medium == data["ad_id"]
+            lead.utm_source == 'facebook'
+            for field in data["field_data"]:
+                if field["name"] == "first_name" or field["name"] == "full_name":
+                    lead.first_name == field["values"]
+                elif field["name"] == "last_name":
+                    lead.last_name == field["values"]
+                elif field["name"] == "email":
+                    lead.email == field["values"]
+                elif field["name"] == "phone":
+                    lead.phone == field["values"]
+            lead.save()
+        else:
+            logger.fatal("No information about the lead")
+    else:
+        logger.fatal("Imposible to connect to facebook API and retrieve lead information")

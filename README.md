@@ -15,4 +15,15 @@ cp .env.example .env
 pytest
 ```
 
-python manage.py migrate authenticate 0009_auto_20201006_0022
+# Fixtures
+
+Fixtures are fake data ideal for development.
+
+Saving new fixtures
+```
+python manage.py dumpdata auth > ./breathecode/admissions/fixtures/users.json
+```
+Loading all fixtures
+```
+pipenv run python manage.py loaddata breathecode/*/fixtures/*.json
+```

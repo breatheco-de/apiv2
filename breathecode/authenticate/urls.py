@@ -19,7 +19,7 @@ from django.urls import path
 from .views import (
     get_users, get_users_me, LoginView, LogoutView,TemporalTokenView , get_github_token,
     save_github_token, get_slack_token, save_slack_token, pick_password, change_password,
-    get_token_info
+    get_token_info, get_facebook_token, save_facebook_token
 )
 
 app_name='authenticate'
@@ -40,4 +40,7 @@ urlpatterns = [
 
     path('slack/', get_slack_token, name="slack"),
     path('slack/callback/', save_slack_token, name="slack_callback"),
+    
+    path('facebook/', get_facebook_token, name="facebook"),
+    path('facebook/callback/', save_facebook_token, name="facebook_callback"),
 ]

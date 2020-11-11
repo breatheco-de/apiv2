@@ -19,7 +19,7 @@ from .models import Profile
 from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm
-from .models import Profile, CredentialsGithub, Token, CredentialsSlack
+from .models import Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackTeam
 from .serializers import UserSerializer, AuthSerializer, GroupSerializer
@@ -359,6 +359,150 @@ def save_slack_token(request):
         team.academy = academy    
         team.credentials = credentials    
         team.save()
+
+        return HttpResponseRedirect(redirect_to=payload["url"][0])
+
+
+
+# Create your views here.
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_facebook_token(request):
+    """Generate stack redirect url for authorize"""
+    url = request.query_params.get('url', None)
+    if url is None:
+        raise ValidationError("No callback URL specified")
+
+    user_id = request.query_params.get('user', None)
+    if user_id is None:
+        raise ValidationError("No user specified on the URL")
+
+    academy = request.query_params.get('a', None)
+    if academy is None:
+        raise ValidationError("No academy specified on the URL")
+
+    url = base64.b64decode(url).decode("utf-8")
+    # Missing scopes!! admin.invites:write, identify
+    scopes = ("email",
+        "ads_read", "business_management", "leads_retrieval", "pages_manage_metadata", "pages_read_engagement",
+    )
+    query_string = f'a={academy}&url={url}&user={user_id}'.encode("utf-8")
+    payload = str(base64.urlsafe_b64encode(query_string), "utf-8")
+    params = {
+        "client_id": os.getenv('FACEBOOK_CLIENT_ID', ""),
+        "redirect_uri": os.getenv('FACEBOOK_REDIRECT_URL', ""),
+        "scope": ",".join(scopes),
+        "state": payload
+    }
+    redirect = "https://www.facebook.com/v8.0/dialog/oauth?"
+    for key in params:
+        redirect += f"{key}={params[key]}&"
+
+    if settings.DEBUG:
+        return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
+    else:
+        return HttpResponseRedirect(redirect_to=redirect)
+
+
+
+# Create your views here.
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def save_facebook_token(request):
+    """Save facebook token"""
+    logger.debug("Facebook callback just landed")
+    print(request.GET)
+    error = request.query_params.get('error_code', False)
+    error_description = request.query_params.get('error_message', '')
+    if error:
+        raise APIException("Facebook: "+ error_description)
+
+    original_payload = request.query_params.get('state', None)
+    payload = request.query_params.get('state', None)
+    if payload is None:
+        raise ValidationError("No payload specified")
+    else:
+        try:
+            payload = base64.b64decode(payload).decode("utf-8")
+            payload = parse_qs(payload)
+        except:
+            raise ValidationError("Cannot decode payload in base64")
+
+    if "url" not in payload:
+        logger.exception(payload)
+        raise ValidationError("No url specified from the slack payload")
+
+    if "user" not in payload:
+        logger.exception(payload)
+        raise ValidationError("No user id specified from the slack payload")
+
+    if "a" not in payload:
+        logger.exception(payload)
+        raise ValidationError("No academy id specified from the slack payload")
+
+    try:
+        academy = Academy.objects.get(id=payload["a"][0])
+    except Exception as e:
+        raise ValidationError("Not exist academy with that id") from e
+
+    try:
+        user = User.objects.get(id=payload["user"][0])
+    except Exception as e:
+        raise ValidationError("Not exist user with that id") from e
+
+    # token = request.query_params.get('token', None)
+    # if token == None:
+    #     raise ValidationError("No facebook token specified")
+
+    code = request.query_params.get('code', None)
+    if code is None:
+        raise ValidationError("No slack code specified")
+
+    params = {
+        'client_id': os.getenv('FACEBOOK_CLIENT_ID', ""),
+        'client_secret': os.getenv('FACEBOOK_SECRET', ""),
+        'redirect_uri': os.getenv('FACEBOOK_REDIRECT_URL', ""),
+        'code': code,
+    }
+    resp = requests.post('https://graph.facebook.com/v8.0/oauth/access_token', data=params)
+    if resp.status_code == 200:
+
+        logger.debug("Facebook responded with 200")
+
+        facebook_data = resp.json()
+        if 'access_token' not in facebook_data:
+            logger.debug("Facebook response body")
+            logger.debug(facebook_data)
+            raise APIException("Facebook error status: "+facebook_data['error_message'])
+
+        # delete all previous credentials for the same team
+        CredentialsFacebook.objects.filter(user_id=user.id).delete()
+
+        utc_now = timezone.now()
+        expires_at = utc_now + timezone.timedelta(milliseconds=facebook_data['expires_in'])
+        
+        credentials = CredentialsFacebook(
+            user=user,
+            academy=academy,
+            expires_at = expires_at,
+            token = facebook_data['access_token'],
+        )
+        credentials.save()
+
+        params = {
+            'access_token': facebook_data['access_token'],
+            'fields': 'id,email',
+        }
+        resp = requests.post('https://graph.facebook.com/me', data=params)
+        if resp.status_code == 200:
+            logger.debug("Facebook responded with 200")
+            facebook_data = resp.json()
+            if "email" in facebook_data:
+                credentials.email = facebook_data['email']
+            if "id" in facebook_data:
+                credentials.facebook_id = facebook_data['id']
+            credentials.save()
+
 
         return HttpResponseRedirect(redirect_to=payload["url"][0])
 

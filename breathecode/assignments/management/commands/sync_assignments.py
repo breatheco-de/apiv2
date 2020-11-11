@@ -3,6 +3,7 @@ from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from ...models import Task, User
 from ...actions import sync_student_tasks
+from django.db.models import Count
 
 HOST = os.environ.get("OLD_BREATHECODE_API")
 DATETIME_FORMAT="%Y-%m-%d"
@@ -23,6 +24,14 @@ class Command(BaseCommand):
             default=None,
             help='Cohorts slugs to sync',
         )
+        parser.add_argument(
+              '--limit',
+               action='store',
+               dest='limit',
+               type=int,
+               default=0,
+               help='How many to import'
+        )
 
     def handle(self, *args, **options):
         try:
@@ -33,11 +42,24 @@ class Command(BaseCommand):
 
     def tasks(self, options):
 
+        limit = False
+        if 'limit' in options and options['limit']:
+            limit = options['limit']
+
         if options['students'] is not None:
             emails = options['students'].split(",")
+            total = 0
             for email in emails:
+                total += 1
+                if limit and limit > 0 and total > limit:
+                    self.stdout.write(self.style.SUCCESS(f"Stopped at {total} because there was a limit on the command arguments"))
+                    return
+                
                 user = User.objects.filter(email=email).first()
                 if user is None:
                     raise CommandError(f"Student {email} not found new API")
 
                 sync_student_tasks(user)
+        # else:
+        #     users = UserCohort.objects.all()
+        #     Members.objects.values('designation').annotate(dcount=Count('designation'))
