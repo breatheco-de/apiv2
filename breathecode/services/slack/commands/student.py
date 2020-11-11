@@ -3,7 +3,7 @@ import os
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import Profile
 from ..command import command
-from ..utils import to_string
+from ..utils import to_string, jump
 
 """
 Possible parameters for this command:
@@ -35,11 +35,10 @@ def render_student(user_id):
         raise Exception(f"Student {user_id} not found on any cohort")
 
     user = user.user
-    cohorts = [c.cohort for c in cohort_users]
 
     avatar_url = os.getenv("API_URL","") + "/static/img/avatar.png"
-    github_username = "Undefined"
-    phone = "Undefined"
+    github_username = "not set"
+    phone = "not set"
     try:
         github_username = user.profile.github_username
         avatar_url = user.profile.avatar_url
@@ -51,7 +50,16 @@ def render_student(user_id):
         "type": "section",
         "text": {
             "type": "mrkdwn",
-            "text": f"*Student Name:* {user.first_name} {user.last_name}\n*Github*: {github_username}\n*Phone*: {phone}\n*Cohorts:*: {','.join([c.name for c in cohorts])}\n*Education Status:* {','.join([to_string(c.educational_status) for c in cohort_users])}\n*Finantial Status:* {','.join([to_string(c.finantial_status) for c in cohort_users])}"
+            "text": f"""
+*Student Name:* {user.first_name} {user.last_name}
+*Github*: {github_username}
+*Phone*: {phone}
+*Email:* {user.email}
+*Cohorts:* 
+```
+{jump().join([('- '+cu.cohort.name + ' (' + to_string(cu.educational_status) + '/💰' + to_string(cu.finantial_status) + ')') for cu in cohort_users])}
+```
+"""
         },
         "accessory": {
             "type": "image",
