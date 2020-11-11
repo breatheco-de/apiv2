@@ -96,7 +96,7 @@ def get_student_info(request):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*Student Name:* {user.first_name} {user.last_name}\n*Github*: {github_username}\n*Phone*: {phone}\n*Cohorts:*: {','.join([c.name for c in cohorts])}\n*Education Status:* {','.join([c.educational_status for c in cohort_users])}\n*Finantial Status:* {','.join([get_string(c.finantial_status) for c in cohort_users])}"
+                "text": f"*Student Name:* {user.first_name} {user.last_name}\n*Github*: {github_username}\n*Phone*: {phone}\n*Cohorts:*: {','.join([c.name for c in cohorts])}\n*Education Status:* {','.join([get_string(c.educational_status) for c in cohort_users])}\n*Finantial Status:* {','.join([get_string(c.finantial_status) for c in cohort_users])}"
             },
             "accessory": {
                 "type": "image",
@@ -104,6 +104,9 @@ def get_student_info(request):
                 "alt_text": f"{user.first_name} {user.last_name}"
             }
         })
+
+        logger.debug("Slack reponse")
+        logger.debug(response)
         return Response(response, status=status.HTTP_200_OK)
     except Exception as e:
         return Response(str(e), status=status.HTTP_200_OK)
