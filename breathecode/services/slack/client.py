@@ -22,7 +22,7 @@ class Slack:
             raise Exception("Missing slack token")
 
         if method_name != "GET":
-            self.headers = { 
+            self.headers = {
                 "Authorization": "Bearer "+self.token,
                 "Content-type": "application/json",
             }
@@ -32,8 +32,9 @@ class Slack:
                 **params,
             }
 
-        resp = requests.request(method=method_name,url=self.HOST+action_name, headers=self.headers, params=params, json=json)
-        
+        resp = requests.request(method=method_name,url=self.HOST+action_name, headers=self.headers,
+            params=params, json=json)
+
         if resp.status_code == 200:
             data = resp.json()
             if data["ok"] == False:
@@ -67,5 +68,3 @@ class Slack:
         else:
             commands.cohorts.execute(**response)
             raise Exception("No implementation has been found for this command")
-
-

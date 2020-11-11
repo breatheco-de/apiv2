@@ -5,7 +5,9 @@ from urllib.parse import urlencode
 BUCKET_NAME = "admissions-breathecode"
 
 def resolve_google_credentials():
-    path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS',"")
+    if os.getenv('ENV') == 'development':
+        return
+    path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
     if path is None or not os.path.exists( path ):
         credentials = os.getenv('GOOGLE_SERVICE_KEY',None)
         if credentials is not None:
@@ -25,6 +27,8 @@ def remove_bucket_object(file_name=None):
     return True
 
 def get_bucket_object(file_name):
+    from google.cloud import storage # get mock
+
     if file_name is None or file_name == "":
         return False
 

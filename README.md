@@ -11,8 +11,14 @@ cp .env.example .env
 
 # Run the tests
 
-```
+```bash
 pytest
+```
+
+# Run coverage
+
+```bash
+pytest ./breathecode --disable-pytest-warnings --cov=breathecode --cov-report term-missing
 ```
 
 # Fixtures
