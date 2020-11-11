@@ -2,7 +2,7 @@ import requests, logging
 
 logger = logging.getLogger(__name__)
 
-class Slack:
+class Facebook:
     HOST = "https://graph.facebook.com/v8.0/"
     headers = {}
 
