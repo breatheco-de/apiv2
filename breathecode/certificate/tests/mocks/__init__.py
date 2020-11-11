@@ -18,3 +18,10 @@ from .credentials import (
     CREDENTIALS_INSTANCES,
     apply_resolve_credentials_mock,
 )
+from .actions import (
+    ACTIONS_PATH,
+    ACTIONS_INSTANCES,
+    apply_certificate_screenshot_mock,
+    apply_generate_certificate_mock,
+    apply_remove_certificate_screenshot_mock,
+)

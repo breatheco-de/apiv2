@@ -78,6 +78,7 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
         cohort_user = mixer.blend('admissions.CohortUser')
         cohort_user.user = user
         cohort_user.cohort = cohort
+        cohort_user.educational_status = 'GRADUATED'
         cohort_user.save()
         self.cohort_user = cohort_user
 

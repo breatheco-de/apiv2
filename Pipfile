@@ -9,6 +9,7 @@ pytest-cov = "*"
 coverage = "*"
 mock = "*"
 pylint-django = "*"
+celery = {extras = ["pytest"], version = "*"}
 
 [packages]
 django = "*"
