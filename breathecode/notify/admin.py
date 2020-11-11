@@ -1,4 +1,4 @@
-import logging
+import logging, csv
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
@@ -8,8 +8,27 @@ from breathecode.admissions.admin import CohortAdmin
 from django.utils.html import format_html
 from django.template.defaultfilters import escape
 from django.urls import reverse
+from django.http import HttpResponse
 
 logger = logging.getLogger(__name__)
+
+class ExportCsvMixin:
+    def export_as_csv(self, request, queryset):
+
+        meta = self.model._meta
+        field_names = [field.name for field in meta.fields]
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename={}.csv'.format(meta)
+        writer = csv.writer(response)
+
+        writer.writerow(field_names)
+        for obj in queryset:
+            row = writer.writerow([getattr(obj, field) for field in field_names])
+
+        return response
+
+    export_as_csv.short_description = "Export Selected"
 
 # Register your models here.
 @admin.register(Device)
@@ -33,12 +52,12 @@ class SlackTeamAdmin(admin.ModelAdmin):
     actions = [sync_channels, sync_users]
 
 @admin.register(SlackUser)
-class SlackUserAdmin(admin.ModelAdmin):
+class SlackUserAdmin(admin.ModelAdmin, ExportCsvMixin):
     search_fields = ['display_name', 'real_name', 'email', 'user__email', 'user__first_name', 'user__last_name']
     raw_id_fields = ["user"]
     list_display = ('slack_id', 'sync_status', 'user_link', 'display_name', 'real_name', 'email', 'updated_at')
     list_filter = ['sync_status', 'team__slack_id', 'team__academy__slug']
-    # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
+    actions = ['export_as_csv']
     def user_link(self, obj):
         if obj.user is not None:
             return format_html('<a href="%s">%s</a>' % (reverse("admin:auth_user_change", args=(obj.user.id,)) , escape(obj)))
@@ -46,11 +65,11 @@ class SlackUserAdmin(admin.ModelAdmin):
             return "Missing BC user"
 
 @admin.register(SlackChannel)
-class SlackChannelAdmin(admin.ModelAdmin):
+class SlackChannelAdmin(admin.ModelAdmin, ExportCsvMixin):
     search_fields = ['name', 'cohort__name']
     list_display = ('slack_id', 'sync_status', 'cohort_link', 'name', 'synqued_at')
     list_filter = ['sync_status', 'team__slack_id', 'team__academy__slug']
-    # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
+    actions = ['export_as_csv']
     def cohort_link(self, obj):
         if obj.cohort is not None:
             return format_html('<a href="%s">%s</a>' % (reverse("admin:auth_user_change", args=(obj.cohort.id,)) , escape(obj)))

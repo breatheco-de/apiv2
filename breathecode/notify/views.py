@@ -100,7 +100,7 @@ def get_student_info(request):
             },
             "accessory": {
                 "type": "image",
-                "image_url": avatar_url,
+                "image_url": get_string(avatar_url),
                 "alt_text": f"{user.first_name} {user.last_name}"
             }
         })
