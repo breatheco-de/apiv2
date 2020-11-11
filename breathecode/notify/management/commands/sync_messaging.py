@@ -3,7 +3,7 @@ from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
 from ...models import SlackTeam
-from ...actions import sync_slack_team_users, sync_slack_team_channel
+from ...tasks import async_slack_team_users, async_slack_team_channel
 from breathecode.admissions.models import CohortUser
 from django.db.models import Count
 
@@ -51,7 +51,7 @@ class Command(BaseCommand):
 
         teams = SlackTeam.objects.all()
         for team in teams:
-            sync_slack_team_users(team.id)
+            async_slack_team_users.delay(team.id)
 
     def slack_channels(self, options):
 
@@ -62,6 +62,6 @@ class Command(BaseCommand):
 
         teams = SlackTeam.objects.all()
         for team in teams:
-            sync_slack_team_channel(team.id)
+            async_slack_team_channel.delay(team.id)
 
 
