@@ -31,7 +31,7 @@ class SlackTeam(models.Model):
     slack_id = models.CharField(max_length=50)
     name = models.CharField(max_length=100)
 
-    owner = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True)
     credentials = models.OneToOneField(CredentialsSlack, on_delete=models.CASCADE, blank=True)
     
@@ -49,12 +49,21 @@ class SlackUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
     
     slack_id = models.CharField(max_length=50)
-    team = models.ForeignKey(SlackTeam, on_delete=models.CASCADE)
     status_text = models.CharField(max_length=255, blank=True, null=True)
     status_emoji = models.CharField(max_length=100, blank=True, null=True)
     real_name = models.CharField(max_length=100, blank=True, null=True)
     display_name = models.CharField(max_length=100, blank=True, null=True)
     email = models.CharField(max_length=100, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return self.email
+
+class SlackUserTeam(models.Model):
+    slack_user = models.ForeignKey(SlackUser, on_delete=models.CASCADE)
+    slack_team = models.ForeignKey(SlackTeam, on_delete=models.CASCADE)
 
     sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED)
     sync_message = models.CharField(max_length=100, blank=True, null=True, default=None, help_text="Contains any success or error messages depending on the status")
@@ -62,9 +71,6 @@ class SlackUser(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    def __str__(self):
-        return self.email
 
 class SlackChannel(models.Model):
     cohort = models.OneToOneField(Cohort, on_delete=models.CASCADE, blank=True, null=True, default=None)

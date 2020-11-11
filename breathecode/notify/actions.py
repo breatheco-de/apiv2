@@ -8,8 +8,8 @@ from django.utils import timezone
 from pyfcm import FCMNotification
 from breathecode.authenticate.models import CredentialsSlack
 from breathecode.services.slack import client
-from breathecode.admissions.models import Cohort
-from .models import Device, SlackChannel, SlackTeam, SlackUser
+from breathecode.admissions.models import Cohort, CohortUser
+from .models import Device, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
 from django.conf import settings
 import requests
 from twilio.rest import Client
@@ -278,15 +278,29 @@ def sync_slack_user(payload, team=None):
             raise Exception("Slack users are not coming with emails from the API")
         
 
-        user = User.objects.filter(email=payload["profile"]["email"]).first()
-        if user is None:
-            logger.warning(f"Slack user {payload['profile']['email']} has no corresponding user in breathecode")
+        cohort_user = CohortUser.objects.filter(user__email=payload["profile"]["email"], cohort__academy__id=team.academy.id).first()
+        if cohort_user is None:
+            logger.warning(f"Skipping slack user {payload['profile']['email']}, has no corresponding user in this academy/team")
+        else:
+            user = cohort_user.user
 
         slack_user = SlackUser(
             slack_id = payload["id"],
-            team = team,
             user = user,
         )
+        slack_user.save()
+
+        user_team = SlackUserTeam(
+            slack_team=team,
+            slack_user=slack_user,
+        )
+        if user is None:
+            user_team.sync_status = 'INCOMPLETED'
+            user_team.sync_message = "No user found on breathecode with this email"
+        else:
+            user_team.sync_status = 'COMPLETED'
+
+        user_team.save()
 
     slack_user.status_text = payload["profile"]["status_text"]
     slack_user.status_emoji = payload["profile"]["status_emoji"]
@@ -296,12 +310,6 @@ def sync_slack_user(payload, team=None):
 
     slack_user.display_name = payload["name"]
     slack_user.email = payload["profile"]["email"]
-    if user is None:
-        slack_user.sync_status = 'INCOMPLETED'
-        slack_user.sync_message = "No user found on breathecode with this email"
-    else:
-        slack_user.sync_status = 'COMPLETED'
-
     slack_user.synqued_at = timezone.now()
     slack_user.save()
 
