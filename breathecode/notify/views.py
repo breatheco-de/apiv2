@@ -58,5 +58,4 @@ def slack_command(request):
         logger.debug(response)
         return Response(response, status=status.HTTP_200_OK)
     except Exception as e:
-        raise e
         return Response(str(e), status=status.HTTP_200_OK)
