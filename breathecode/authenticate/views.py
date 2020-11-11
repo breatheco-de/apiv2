@@ -337,8 +337,8 @@ def save_slack_token(request):
         slack_data = resp.json()
         logger.debug(slack_data)
 
-        # delete all previous credentials for the same team
-        CredentialsSlack.objects.filter(app_id=slack_data['app_id'], team_id=slack_data['team']['id']).delete()
+        # delete all previous credentials for the same team and cohort
+        CredentialsSlack.objects.filter(app_id=slack_data['app_id'], team_id=slack_data['team']['id'], user=user).delete()
         credentials = CredentialsSlack(
             user=user,
             app_id = slack_data['app_id'],
