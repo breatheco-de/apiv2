@@ -4,7 +4,6 @@ Tasks tests
 from unittest.mock import patch, call
 from ...tasks import generate_cohort_certificates
 from ..mixins import CertificateTestCase
-from ...models import UserSpecialty
 from ..mocks import (
     ACTIONS_PATH,
     ACTIONS_INSTANCES,
