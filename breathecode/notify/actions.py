@@ -7,7 +7,7 @@ from django.template import Context
 from django.utils import timezone
 from pyfcm import FCMNotification
 from breathecode.authenticate.models import CredentialsSlack
-from breathecode.services.slack import Slack
+from breathecode.services.slack import client
 from breathecode.admissions.models import Cohort
 from .models import Device, SlackChannel, SlackTeam, SlackUser
 from django.conf import settings
@@ -89,7 +89,7 @@ def send_slack(slug, slack_entity, data={}):
         if "blocks" in payload:
             payload = payload["blocks"]
 
-        api = Slack(slack_entity.team.credentials.token)
+        api = client.Slack(slack_entity.team.credentials.token)
         data = api.post("chat.postMessage", {
             "channel": slack_entity.slack_id,
             "blocks": payload,
@@ -203,7 +203,7 @@ def sync_slack_team_channel(team_id):
     team.synqued_at = timezone.now()
     team.save()
     
-    api = Slack(credentials.token)
+    api = client.Slack(credentials.token)
     data = api.get("conversations.list", {
         "types": "public_channel,private_channel"
     })
@@ -241,7 +241,7 @@ def sync_slack_team_users(team_id):
     team.synqued_at = timezone.now()
     team.save()
     
-    api = Slack(credentials.token)
+    api = client.Slack(credentials.token)
     data = api.get("users.list")
     
     logger.debug(f"Found {str(len(data['members']))} members, starting to sync")
