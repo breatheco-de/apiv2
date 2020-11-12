@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def get_cohorts(request):
+def get_cohorts(request, id=None):
 
 
     items = Cohort.objects.all()
@@ -129,9 +129,22 @@ class CohortView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-    def get(self, request, format=None):
-        items = Cohort.objects.all()
+    def get(self, request, cohort_id=None):
 
+        if cohort_id is not None:
+            item = None
+            if str.isnumeric(cohort_id):
+                item = Cohort.objects.filter(id=int(cohort_id)).first()
+            else:
+                item = Cohort.objects.filter(slug=cohort_id).first()
+                
+            if item is None:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+            serializer = GetCohortSerializer(item, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        items = Cohort.objects.all()
         upcoming = request.GET.get('upcoming', None)
         if upcoming is not None:
             now = timezone.now()
