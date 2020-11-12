@@ -272,35 +272,35 @@ def sync_slack_user(payload, team=None):
     user = None
     if slack_user is None:
         
+        slack_user = SlackUser(
+            slack_id = payload["id"],
+        )
+        slack_user.save()
+        
         if "email" not in payload["profile"]:
             logger.fatal("User without email")
             logger.fatal(payload)
             raise Exception("Slack users are not coming with emails from the API")
         
 
-        cohort_user = CohortUser.objects.filter(user__email=payload["profile"]["email"], cohort__academy__id=team.academy.id).first()
-        if cohort_user is None:
-            logger.warning(f"Skipping slack user {payload['profile']['email']}, has no corresponding user in this academy/team")
-        else:
-            user = cohort_user.user
+    cohort_user = CohortUser.objects.filter(user__email=payload["profile"]["email"], cohort__academy__id=team.academy.id).first()
+    if cohort_user is not None:
+        user = cohort_user.user
 
-        slack_user = SlackUser(
-            slack_id = payload["id"],
-            user = user,
-        )
-        slack_user.save()
-
+    user_team = SlackUserTeam.objects.filter(slack_team=team, slack_user=slack_user).first()
+    if user_team is None:
+        logger.debug("Creating teamuser for "+str(team)+" -> "+str(slack_user))
         user_team = SlackUserTeam(
             slack_team=team,
             slack_user=slack_user,
         )
-        if user is None:
-            user_team.sync_status = 'INCOMPLETED'
-            user_team.sync_message = "No user found on breathecode with this email"
-        else:
-            user_team.sync_status = 'COMPLETED'
-
-        user_team.save()
+        
+    if user is None:
+        user_team.sync_status = 'INCOMPLETED'
+        user_team.sync_message = "No user found on breathecode with this email"
+    else:
+        user_team.sync_status = 'COMPLETED'
+    user_team.save()
 
     slack_user.status_text = payload["profile"]["status_text"]
     slack_user.status_emoji = payload["profile"]["status_emoji"]
@@ -309,6 +309,7 @@ def sync_slack_user(payload, team=None):
         slack_user.real_name = payload["real_name"]
 
     slack_user.display_name = payload["name"]
+    slack_user.user = user
     slack_user.email = payload["profile"]["email"]
     slack_user.synqued_at = timezone.now()
     slack_user.save()

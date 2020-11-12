@@ -20,21 +20,21 @@ def execute(users, **context):
     if len(users) == 0:
         raise Exception("No usernames found on the command")
 
+    cohort_users = CohortUser.objects.filter(user__slackuser__slack_id=users[0], role='STUDENT')
+    user = cohort_users.first()
+    if user is None:
+        raise Exception(f"Student {users[0]} not found on any cohort")
+
+    user = user.user
+
     response = {
         "blocks": []
     }
-    response["blocks"].append(render_student(user_id=users[0]))
+    response["blocks"].append(render_student(user))
 
     return response
 
-def render_student(user_id):
-
-    cohort_users = CohortUser.objects.filter(user__slackuser__slack_id=user_id, role='STUDENT')
-    user = cohort_users.first()
-    if user is None:
-        raise Exception(f"Student {user_id} not found on any cohort")
-
-    user = user.user
+def render_student(user):
 
     avatar_url = os.getenv("API_URL","") + "/static/img/avatar.png"
     github_username = "not set"

@@ -356,7 +356,7 @@ def save_slack_token(request):
         if team is None:
             team = SlackTeam(slack_id = slack_data['team']['id'])
 
-        team.name = slack_data['team']['name'],
+        team.name = slack_data['team']['name']
         team.owner = user    
         team.academy = academy    
         team.credentials = credentials    
