@@ -59,7 +59,7 @@ class SlackUser(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.email
+        return self.slack_id
 
 class SlackUserTeam(models.Model):
     slack_user = models.ForeignKey(SlackUser, on_delete=models.CASCADE)

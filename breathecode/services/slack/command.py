@@ -12,11 +12,13 @@ def command(only=None):
                 raise Exception("Missing scope information on slack command")
             context = kwargs["context"]
 
+            profile = None
             if only == "staff":
-                user = ProfileAcademy.objects.filter(user__slackuser__slack_id=context['user_id'], academy__slackteam__slack_id=context['team_id']).first()
-                if user is None:
-                    raise Exception(f"Your user don't have permissions to query this student, do you belong to its academy?")
+                profile = ProfileAcademy.objects.filter(user__slackuser__slack_id=context['user_id'], academy__slackteam__slack_id=context['team_id']).first()
+                if profile is None:
+                    raise Exception(f"Your user {context['user_id']} don't have permissions to query this student, are you a staff on this academy?")
 
+            kwargs["academy"] = profile.academy if profile is not None else None
             kwargs["user_id"] = context['user_id']
             kwargs["team_id"] = context['team_id']
             kwargs["channel_id"] = context['channel_id']

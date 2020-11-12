@@ -8,6 +8,7 @@ from ..utils import to_string, jump
 """
 Possible parameters for this command:
 - users: Array of user slack_ids mentioned inside the slack command text content
+- academy: breathecode.admissions.Academy object with the current academy information
 - user_id: Slack user ID of the message author
 - team_id: Slack team_id where the message was posted
 - channel_id: Slack channel_id where the message was posted
@@ -15,26 +16,26 @@ Possible parameters for this command:
 
 """
 @command(only='staff')
-def execute(users, **context):
+def execute(users, academy, **context):
 
     if len(users) == 0:
         raise Exception("No usernames found on the command")
 
-    cohort_users = CohortUser.objects.filter(user__slackuser__slack_id=users[0], role='STUDENT')
+    cohort_users = CohortUser.objects.filter(user__slackuser__slack_id=users[0], role='STUDENT', cohort__academy__id=academy.id)
     user = cohort_users.first()
     if user is None:
-        raise Exception(f"Student {users[0]} not found on any cohort")
+        raise Exception(f"Student {users[0]} not found on any cohort for "+academy.name)
 
     user = user.user
 
     response = {
         "blocks": []
     }
-    response["blocks"].append(render_student(user))
+    response["blocks"].append(render_student(user, cohort_users))
 
     return response
 
-def render_student(user):
+def render_student(user, cohort_users):
 
     avatar_url = os.getenv("API_URL","") + "/static/img/avatar.png"
     github_username = "not set"
@@ -57,7 +58,7 @@ def render_student(user):
 *Email:* {user.email}
 *Cohorts:* 
 ```
-{jump().join([('- '+cu.cohort.name + ' (' + to_string(cu.educational_status) + '/💰' + to_string(cu.finantial_status) + ')') for cu in cohort_users])}
+{jump().join([('- '+cu.cohort.name + ': 🎓' + to_string(cu.educational_status) + ' and 💰' + to_string(cu.finantial_status)) for cu in cohort_users])}
 ```
 """
         },
