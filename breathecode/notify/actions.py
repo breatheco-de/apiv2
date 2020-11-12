@@ -281,15 +281,16 @@ def sync_slack_user(payload, team=None):
             logger.fatal("User without email")
             logger.fatal(payload)
             raise Exception("Slack users are not coming with emails from the API")
-        
 
     cohort_user = CohortUser.objects.filter(user__email=payload["profile"]["email"], cohort__academy__id=team.academy.id).first()
     if cohort_user is not None:
         user = cohort_user.user
+    else:
+        logger.warning(f"Skipping user {payload['profile']['email']} because its not a member of any cohort in {team.academy.name}")
+        return False
 
     user_team = SlackUserTeam.objects.filter(slack_team=team, slack_user=slack_user).first()
     if user_team is None:
-        logger.debug("Creating teamuser for "+str(team)+" -> "+str(slack_user))
         user_team = SlackUserTeam(
             slack_team=team,
             slack_user=slack_user,

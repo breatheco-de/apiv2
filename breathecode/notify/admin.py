@@ -4,6 +4,7 @@ from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 from .models import Device, SlackTeam, SlackChannel, SlackUser, UserProxy, CohortProxy, SlackTeam, SlackUserTeam
 from .actions import sync_slack_team_users, sync_slack_team_channel, send_slack
+from .tasks import async_slack_team_users
 from breathecode.admissions.admin import CohortAdmin
 from django.utils.html import format_html
 from django.template.defaultfilters import escape
@@ -44,7 +45,7 @@ sync_channels.short_description = "Import channels from slack"
 def sync_users(modeladmin, request, queryset):
     teams = queryset.all()
     for team in teams:
-        sync_slack_team_users(team.id)
+        async_slack_team_users.delay(team.id)
 sync_users.short_description = "Import users from slack"
 @admin.register(SlackTeam)
 class SlackTeamAdmin(admin.ModelAdmin):
