@@ -8,7 +8,7 @@ from ..utils import to_string, jump
 """
 Possible parameters for this command:
 - users: Array of user slack_ids mentioned inside the slack command text content
-- academy: breathecode.admissions.Academy object with the current academy information
+- academies: List of ids of all the academies the current user belongs to
 - user_id: Slack user ID of the message author
 - team_id: Slack team_id where the message was posted
 - channel_id: Slack channel_id where the message was posted
@@ -16,15 +16,15 @@ Possible parameters for this command:
 
 """
 @command(only='staff')
-def execute(users, academy, **context):
+def execute(users, academies, **context):
 
     if len(users) == 0:
         raise Exception("No usernames found on the command")
 
-    cohort_users = CohortUser.objects.filter(user__slackuser__slack_id=users[0], role='STUDENT', cohort__academy__id=academy.id)
+    cohort_users = CohortUser.objects.filter(user__slackuser__slack_id=users[0], role='STUDENT', cohort__academy__id__in=[academies])
     user = cohort_users.first()
     if user is None:
-        raise Exception(f"Student {users[0]} not found on any cohort for "+academy.name)
+        raise Exception(f"Student {users[0]} not found on any cohort for your available academies, if you feel you should have access to this information maybe you need to be added to the relevant academy for this student")
 
     user = user.user
 
