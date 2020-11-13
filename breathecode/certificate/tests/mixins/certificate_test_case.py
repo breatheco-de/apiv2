@@ -44,7 +44,7 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def generate_successful_models(self):
+    def generate_successful_models(self, language: str=None):
         certificate = mixer.blend('admissions.Certificate')
         certificate.save()
         self.certificate = certificate
@@ -72,6 +72,10 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
         cohort = mixer.blend('admissions.Cohort')
         cohort.certificate = certificate
         cohort.stage = 'ENDED'
+
+        if language:
+            cohort.language = language
+
         cohort.save()
         self.cohort = cohort
 

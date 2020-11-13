@@ -17,7 +17,10 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     @patch(ACTIONS_PATH['generate_certificate'], apply_generate_certificate_mock())
     # @patch(ACTIONS_PATH['remove_certificate_screenshot'], apply_remove_certificate_screenshot_mock())
     def test_generate_cohort_certificates_return_true_and_call_certificate_screenshot(self):
-        """generate_cohort_certificates don't call open in development environment"""
+        """
+        generate_cohort_certificates return_true_and_call_certificate_screenshot, just issue one
+        certificate because it's student
+        """
         ACTIONS_INSTANCES['generate_certificate'].call_args_list = []
         self.generate_successful_models()
 

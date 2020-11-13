@@ -18,6 +18,7 @@ pytest
 # Run coverage
 
 ```bash
+docker-compose up -d
 pytest ./breathecode --disable-pytest-warnings --cov=breathecode --cov-report term-missing
 ```
 
@@ -26,10 +27,11 @@ pytest ./breathecode --disable-pytest-warnings --cov=breathecode --cov-report te
 Fixtures are fake data ideal for development.
 
 Saving new fixtures
-```
+```bash
 python manage.py dumpdata auth > ./breathecode/admissions/fixtures/users.json
 ```
+
 Loading all fixtures
-```
+```bash
 pipenv run python manage.py loaddata breathecode/*/fixtures/*.json
 ```

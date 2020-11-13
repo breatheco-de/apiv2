@@ -89,14 +89,45 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate(self):
+    def test_generate_certificate_lang_en(self):
         """generate_certificate"""
-        self.generate_successful_models()
+        self.generate_successful_models('en')
         certificate = generate_certificate(self.cohort_user.user)
         token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
 
         self.assertEqual(len(certificate.__dict__), 15)
         self.assertEqual(certificate.id, 2)
+        self.assertEqual(strings[self.cohort.language]["Main Instructor"], 'Main Instructor')
+        self.assertEqual(certificate.specialty, self.cohort.certificate.specialty)
+        self.assertEqual(certificate.academy, self.cohort.academy)
+        self.assertEqual(certificate.layout, self.layout_design)
+        self.assertEqual(certificate.signed_by, (f'{self.teacher_cohort_user.user.first_name} '
+            f'{self.teacher_cohort_user.user.last_name}'))
+        self.assertEqual(certificate.signed_by_role, strings[self.cohort.language]
+            ["Main Instructor"])
+        self.assertEqual(certificate.user, self.cohort_user.user)
+        self.assertEqual(certificate.cohort, self.cohort_user.cohort)
+        self.assertEqual(certificate.cohort, self.cohort_user.cohort)
+        self.assertEqual(certificate.preview_url, None)
+        self.assertEqual(certificate.is_cleaned, True)
+        self.assertEqual(len(certificate.token), 40)
+        self.assertEqual(bool(token_pattern.match(certificate.token)), True)
+
+        # TODO created_at
+        # TODO updated_at
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_generate_certificate_lang_es(self):
+        """generate_certificate"""
+        self.generate_successful_models('es')
+        certificate = generate_certificate(self.cohort_user.user)
+        token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
+
+        self.assertEqual(len(certificate.__dict__), 15)
+        self.assertEqual(certificate.id, 2)
+        self.assertEqual(strings[self.cohort.language]["Main Instructor"], 'Instructor Principal')
         self.assertEqual(certificate.specialty, self.cohort.certificate.specialty)
         self.assertEqual(certificate.academy, self.cohort.academy)
         self.assertEqual(certificate.layout, self.layout_design)
