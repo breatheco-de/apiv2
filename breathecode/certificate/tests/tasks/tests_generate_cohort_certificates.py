@@ -22,7 +22,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         certificate because it's student
         """
         ACTIONS_INSTANCES['generate_certificate'].call_args_list = []
-        self.generate_successful_models()
+        self.generate_models(specialty=True, layout=True, teacher=True, stage=True)
 
         self.assertEqual(generate_cohort_certificates(self.cohort_user.id), None)
 

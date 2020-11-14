@@ -36,7 +36,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     @patch(SCREENSHOTMACHINE_PATH['get'], apply_requests_get_mock())
     def test_certificate_screenshot_with_valid_id(self):
         """certificate_screenshot don't call open in development environment"""
-        self.generate_successful_models()
+        self.generate_models(specialty=True, layout=True, teacher=True, stage=True)
         url = self.generate_screenshotmachine_url()
 
         self.assertEqual(certificate_screenshot(self.certificate.id), None)
@@ -50,7 +50,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     @patch(SCREENSHOTMACHINE_PATH['get'], apply_requests_get_mock())
     def test_certificate_screenshot_with_valid_id_cover_else_path(self):
         """certificate_screenshot don't call open in development environment"""
-        self.generate_successful_models()
+        self.generate_models(specialty=True, layout=True, teacher=True, stage=True)
         url = self.generate_screenshotmachine_url()
 
         self.assertEqual(certificate_screenshot(self.certificate.id), None)

@@ -5,8 +5,9 @@ The only certificates the application can generate right now are based on specia
 - [x] The status of the cohort has to be ENDED for any certificate to be issues to any student.
 - [x] If the cohort language is in spanish, the certificate must be in spanish.
 - [x] The cohort must have a teacher before any certificate can be issue.
-- [ ] The Cohort.current_day must be equal to the Certificate.duration_in_days in order to be able to issue a certificate.
-- [ ] The student status must be UP_TO_DATE or FULLY_PAID to be able to receive a certificate.
-- [ ] The student must have 0 tasks with task_type='PROJECT' and task_status PENDING to be able to receive a certificate.
+- [x] The Cohort.current_day must be equal to the Certificate.duration_in_days in order to be able to issue a certificate.
+- [x] The student status must be UP_TO_DATE or FULLY_PAID to be able to receive a certificate.
+- [x] The student must have 0 tasks with task_type='PROJECT' and task_status PENDING to be able to receive a certificate.
 - [x] After a certificate has been issues a png must exist on a google bucket.
 - [x] Each certificate must have a unique key.
+assistance

@@ -1,6 +1,10 @@
+"""
+Certificate actions
+"""
 import requests, os
 from urllib.parse import urlencode
-from breathecode.admissions.models import CohortUser
+from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
+from breathecode.assignments.models import Task, PROJECT, PENDING
 from .models import UserSpecialty, LayoutDesign
 from ..services.google_cloud import Storage
 
@@ -18,21 +22,31 @@ strings = {
 
 def generate_certificate(user, cohort=None):
 
-    if cohort is None:
-        cohorts = CohortUser.objects.filter(user__id=user.id)
-        _count = cohorts.count()
-        if _count == 1:
-            _cohort = cohorts.first().cohort
-            cohort = _cohort
+    cohort_user = CohortUser.objects.filter(user__id=user.id).first()
+    tasks = Task.objects.filter(user__id=user.id, task_type='PROJECT')
+    tasks_count_pending = sum(task.task_status == 'PENDING' for task in tasks)
+
+    if not cohort and cohort_user:
+        cohort = cohort_user.cohort
 
     if cohort is None:
         raise Exception("Imposible to obtain the student cohort, maybe it has more than one or none assigned")
+
+    if tasks_count_pending:
+        raise Exception(f'The student have {tasks_count_pending} pending task')
+
+    if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status ==
+        UP_TO_DATE):
+        raise Exception(f'Payment error, finantial_status=`{cohort_user.finantial_status}`')
 
     if cohort.certificate is None:
         raise Exception(f"The cohort has no certificate assigned, please set a certificate for cohort: {cohort.name}")
 
     if cohort.certificate.specialty is None:
         raise Exception(f"Specialty has no certificate assigned, please set a certificate on the Specialty model: {cohort.certificate.name}")
+
+    if cohort.current_day != cohort.certificate.duration_in_days:
+        raise Exception("cohort.current_day is not equal to certificate.duration_in_days")
 
     layout = LayoutDesign.objects.filter(slug='default').first()
     if layout is None:

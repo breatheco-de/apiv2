@@ -20,7 +20,6 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     def test_generate_cohort_certificates_return_true_and_call_certificate_screenshot(self):
         """generate_cohort_certificates don't call open in development environment"""
         # ACTIONS_INSTANCES['generate_certificate'].call_args_list = []
-        # self.generate_successful_models()
 
         # self.assertEqual(generate_cohort_certificates(self.cohort_user.id), None)
 
