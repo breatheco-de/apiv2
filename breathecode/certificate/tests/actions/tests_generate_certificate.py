@@ -55,8 +55,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.generate_models(finantial_status=FULLY_PAID)
 
         try:
-            self.assertEqual(generate_certificate(self.cohort_user.user,
-                                                  self.cohort_user.cohort), None)
+            certificate = generate_certificate(self.cohort_user.user, self.cohort_user.cohort)
+            self.assertEqual(certificate, None)
 
         except Certificate.specialty.RelatedObjectDoesNotExist as error:
             self.assertEqual(str(error), 'Certificate has no specialty.')
