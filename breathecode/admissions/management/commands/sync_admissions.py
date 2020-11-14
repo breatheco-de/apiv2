@@ -133,12 +133,12 @@ class Command(BaseCommand):
                 profile = user.profile
             except Profile.DoesNotExist:
                 profile = Profile(user=user)
+                profile.avatar_url = API_URL + "/static/img/avatar.png"
+                profile.bio=_student["bio"]
+                profile.phone=_student["phone"] if _student["phone"] is not None else ""
+                profile.github_username=_student["github"]
+                profile.save()
 
-            profile.avatar_url = API_URL + "/static/img/avatar.png"
-            profile.bio=_student["bio"]
-            profile.phone=_student["phone"] if _student["phone"] is not None else ""
-            profile.github_username=_student["github"]
-            profile.save()
 
 
     def teachers(self, options):

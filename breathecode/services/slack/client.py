@@ -1,16 +1,13 @@
-import requests, logging, re
-
+import requests, logging, re, os
+from . import commands
+from breathecode.services.slack.commands import student, cohort
 logger = logging.getLogger(__name__)
 
 class Slack:
     HOST = "https://slack.com/api/"
     headers = {}
-    patterns = {
-        "users": r"\<@([^|]+)\|([^>]+)>",
-        "command": r"^(\w+)\s"
-    }
 
-    def __init__(self, token=None):
+    def __init__(self, token=None, command=None):
         self.token = token
 
     def get(self, action_name, request_data={}):
@@ -48,18 +45,26 @@ class Slack:
         else:
             raise Exception(f"Unable to communicate with Slack API, error: {resp.status_code}")
 
-    def parse_command(self, content):
+    def execute_command(self, context):
 
+        patterns = {
+            "users": r"\<@([^|]+)\|([^>]+)>",
+            "command": r"^(\w+)\s?"
+        }
+        content = context["text"]
         response = {}
 
-        matches = re.findall(self.patterns["command"], content)
-        if len(matches) != 1:
+        _commands = re.findall(patterns["command"], content)
+        if len(_commands) != 1:
             raise Exception("Imposible to determine command")
-        response["command"] = matches[0]
 
-        matches = re.findall(self.patterns["users"], content)
+        matches = re.findall(patterns["users"], content)
         response["users"] = [u[0] for u in matches]
 
-        return response
-
-            
+        response["context"] = context
+        
+        if hasattr(commands, _commands[0]):
+            return getattr(commands, _commands[0]).execute(**response)
+        else:
+            commands.cohorts.execute(**response)
+            raise Exception("No implementation has been found for this command")

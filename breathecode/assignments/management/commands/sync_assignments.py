@@ -1,8 +1,10 @@
 import os, requests, sys, pytz
 from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
-from ...models import Task, User
+from django.contrib.auth.models import User
+from ...models import Task
 from ...actions import sync_student_tasks
+from breathecode.admissions.models import CohortUser
 from django.db.models import Count
 
 HOST = os.environ.get("OLD_BREATHECODE_API")
@@ -43,12 +45,12 @@ class Command(BaseCommand):
     def tasks(self, options):
 
         limit = False
+        total = 0
         if 'limit' in options and options['limit']:
             limit = options['limit']
 
         if options['students'] is not None:
             emails = options['students'].split(",")
-            total = 0
             for email in emails:
                 total += 1
                 if limit and limit > 0 and total > limit:
@@ -60,6 +62,24 @@ class Command(BaseCommand):
                     raise CommandError(f"Student {email} not found new API")
 
                 sync_student_tasks(user)
-        # else:
-        #     users = UserCohort.objects.all()
-        #     Members.objects.values('designation').annotate(dcount=Count('designation'))
+        else:
+            users = CohortUser.objects.filter(role='STUDENT').values('user').annotate(dcount=Count('user'))
+            for u in users:
+                if limit and limit > 0 and total > limit:
+                    self.stdout.write(self.style.SUCCESS(f"Stopped at {total} because there was a limit on the command arguments"))
+                    return
+
+                user = User.objects.get(id=u["user"])
+                if user.task_set.count() == 0:
+                    self.stdout.write(self.style.SUCCESS(f"Fetching tasks for student {user.email}"))
+                else:
+                    self.stdout.write(self.style.NOTICE(f"Tasks already fetched for {user.email}"))
+                    continue
+
+                total += 1
+                try:
+                    sync_student_tasks(user)
+                except Exception as e:
+                    self.stdout.write(self.style.NOTICE(f"Error synching student stasks for {user.email}"))
+
+
