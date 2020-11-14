@@ -2,6 +2,7 @@ import os, requests, base64, logging
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import update_session_auth_hash
 from rest_framework.response import Response
+from django.db.models import Q
 from django.http import HttpResponseRedirect, HttpResponse
 from django.conf import settings
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
@@ -308,6 +309,7 @@ def save_slack_token(request):
     except Exception as e:
         raise ValidationError("Not exist academy with that id") from e
 
+    user = None
     try:
         user = User.objects.get(id=payload["user"][0])
     except Exception as e:
@@ -337,8 +339,8 @@ def save_slack_token(request):
         slack_data = resp.json()
         logger.debug(slack_data)
 
-        # delete all previous credentials for the same team
-        CredentialsSlack.objects.filter(app_id=slack_data['app_id'], team_id=slack_data['team']['id']).delete()
+        # delete all previous credentials for the same team and cohort
+        CredentialsSlack.objects.filter(app_id=slack_data['app_id'], team_id=slack_data['team']['id'], user__id=user.id).delete()
         credentials = CredentialsSlack(
             user=user,
             app_id = slack_data['app_id'],
@@ -350,11 +352,11 @@ def save_slack_token(request):
         )
         credentials.save()
 
-        team = SlackTeam.objects.filter(slack_id=slack_data['team']['id']).first()
+        team = SlackTeam.objects.filter(academy__id=academy.id, slack_id=slack_data['team']['id']).filter(Q(credentials__id=credentials.id) | Q(credentials__isnull=True)).first()
         if team is None:
             team = SlackTeam(slack_id = slack_data['team']['id'])
 
-        team.name = slack_data['team']['name'],
+        team.name = slack_data['team']['name']
         team.owner = user    
         team.academy = academy    
         team.credentials = credentials    

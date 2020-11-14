@@ -60,6 +60,7 @@ class GetAcademySerializer(serpy.Serializer):
 class GetCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
     kickoff_date = serpy.Field()
@@ -67,6 +68,12 @@ class GetCohortSerializer(serpy.Serializer):
     stage = serpy.Field()
     certificate = GetCertificateSerializer()
     academy = GetAcademySerializer()
+
+
+"""
+            ↓ EDIT SERLIZERS ↓
+"""
+
 
 class AcademySerializer(serializers.ModelSerializer):
     class Meta:
