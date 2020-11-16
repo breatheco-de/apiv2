@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 @permission_classes([AllowAny])
 def get_cohorts(request, id=None):
 
-
     items = Cohort.objects.all()
 
     # filter only to the local academy
@@ -36,7 +35,7 @@ def get_cohorts(request, id=None):
     academy = request.GET.get('academy', None)
     if academy is not None:
         items = items.filter(academy__slug__in=academy.split(","))
-    
+
     location = request.GET.get('location', None)
     if location is not None:
         items = items.filter(academy__slug__in=academy.split(","))
