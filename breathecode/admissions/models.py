@@ -188,8 +188,10 @@ class CohortUser(models.Model):
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
     role = models.CharField(max_length=9, choices=COHORT_ROLE, default=STUDENT)
 
-    finantial_status = models.CharField(max_length=15, choices=FINANTIAL_STATUS, default=None, null=True)
-    educational_status = models.CharField(max_length=15, choices=EDU_STATUS, default=None, null=True)
+    finantial_status = models.CharField(max_length=15, choices=FINANTIAL_STATUS, default=None,
+        null=True)
+    educational_status = models.CharField(max_length=15, choices=EDU_STATUS, default=None,
+        null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
