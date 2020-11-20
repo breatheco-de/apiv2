@@ -28,7 +28,7 @@ def get_cohorts(request, id=None):
     items = localize_query(items, request)
 
     upcoming = request.GET.get('upcoming', None)
-    if upcoming is not None:
+    if upcoming == 'true':
         now = timezone.now()
         items = items.filter(kickoff_date__gte=now)
 
@@ -36,9 +36,10 @@ def get_cohorts(request, id=None):
     if academy is not None:
         items = items.filter(academy__slug__in=academy.split(","))
 
+    # TODO implement location
     location = request.GET.get('location', None)
     if location is not None:
-        items = items.filter(academy__slug__in=academy.split(","))
+        items = items.filter(academy__slug__in=location.split(","))
 
     items = items.order_by('kickoff_date')
     serializer = GetCohortSerializer(items, many=True)
@@ -97,10 +98,7 @@ class CohortUserView(APIView):
             raise serializers.ValidationError("Missing user_id or cohort_id", code=400)
 
         cu = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id)
-        print(cu, CohortUser.objects.all())
-        print(cu, CohortUser.objects.filter(user__id=user_id), CohortUser.objects.filter(cohort__id=cohort_id))
         cu = localize_query(cu, request, "cohort__academy__in").first() # only form this academy
-        print(cu)
 
         if cu is None:
             raise serializers.ValidationError('Specified cohort and user could not be found')
