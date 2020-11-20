@@ -104,7 +104,7 @@ def certificate_screenshot(certificate_id: int):
                 print("Invalid reponse code: ", r.status_code)
 
         # after created, lets save the URL
-        else:
+        if file.blob is not None:
             certificate.preview_url = file.url()
             certificate.save()
 
