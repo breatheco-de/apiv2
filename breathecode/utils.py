@@ -9,11 +9,12 @@ def localize_query(query, request, matcher=None):
     # not a part of the staff, cannot access all info
     if isinstance(request.user, AnonymousUser):
         return query
-    
+
     if request.user.is_staff == True:
         return query
 
-    academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list('academy__id', flat=True)
+    academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list('academy__id',
+        flat=True)
     kwargs = {}
     if matcher is None:
         kwargs["academy__id__in"] = academy_ids

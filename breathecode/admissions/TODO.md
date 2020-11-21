@@ -1,4 +1,5 @@
 ## ENDPOINT Tests
+
 * [ ]  GET `/cohort/user`: Cohort users can be listed and the following filters must work: `roles` (many roles separated by comma), `cohorts` (many cohort slugs separated by comma, `academy` (many academy slugs separated by comma), `finantial_status` (many comma separated) and `educational_status` (many comma separated).
 * [ ]  GET `/cohort`: list of cohort objects and the following filters must work: `upcoming=true` (many roles separated by comma), `academy` (many slugs separated by comma, `location` (many slugs separated by comma).
 * [ ]  PUT `/user` update basic user info (the email cannot be updated with this endpoint)
@@ -8,7 +9,7 @@
 * [ ]  DELETE `/cohort` deletes a cohort, the cohort must be empty (no students), instead of deleting the cohort it will mark it its status as "DELETED".
 * [ ]  DELETE `/cohort/<id>/user` deletes a user from a particular cohort, the authenticated user must be a staff member of the same academy that the cohort belongs to.
 
-## FUNCION tests
+## FUNCTION tests
 * [ ]  An academy cannot be created without city, and country.
 * [ ]  A cohort cannot be created without a certificate, academy.
 * [ ]  A student cannot be created without a cohort.

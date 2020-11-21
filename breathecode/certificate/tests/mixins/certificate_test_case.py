@@ -7,6 +7,7 @@ from urllib.parse import urlencode
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
 from breathecode.assignments.models import PENDING, PROJECT
+from breathecode.certificate.models import UserSpecialty
 from .development_environment import DevelopmentEnvironment
 from ..mocks import (
     GOOGLE_CLOUD_PATH,
@@ -30,6 +31,11 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     teacher_cohort = None
     teacher_cohort_user = None
     task = None
+
+    def user_specialty_has_preview_url(self, certificate_id):
+        """preview_url is set?"""
+        certificate = UserSpecialty.objects.get(id=certificate_id)
+        return certificate.preview_url is not None
 
     def generate_screenshotmachine_url(self):
         """Generate screenshotmachine url"""

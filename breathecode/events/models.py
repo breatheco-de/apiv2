@@ -35,7 +35,7 @@ class Organizer(models.Model):
     description = models.TextField(max_length=500, blank=True, null=True, default=None)
 
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
+    # academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

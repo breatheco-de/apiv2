@@ -86,6 +86,7 @@ class CohortSerializer(serializers.ModelSerializer):
         fields = ('slug', 'name', 'kickoff_date')
 
 class CertificateSerializer(serializers.ModelSerializer):
+    class Meta:
         model = Certificate
         fields = ['id', 'slug', 'name']
 
