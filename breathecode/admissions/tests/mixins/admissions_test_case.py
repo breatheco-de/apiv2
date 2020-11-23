@@ -19,7 +19,7 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
     def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
-            finantial_status=''):
+            finantial_status='', educational_status=''):
         if academy or profile_academy:
             self.academy = mixer.blend('admissions.Academy')
 
@@ -51,6 +51,9 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
             if finantial_status:
                 kargs['finantial_status'] = finantial_status
+
+            if educational_status:
+                kargs['educational_status'] = educational_status
 
             self.cohort_user = mixer.blend('admissions.CohortUser', **kargs)
 

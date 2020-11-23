@@ -36,7 +36,6 @@ def get_cohorts(request, id=None):
     if academy is not None:
         items = items.filter(academy__slug__in=academy.split(","))
 
-    # TODO implement location
     location = request.GET.get('location', None)
     if location is not None:
         items = items.filter(academy__slug__in=location.split(","))
@@ -130,6 +129,7 @@ class CohortView(APIView):
     List all snippets, or create a new snippet.
     """
     def get(self, request, cohort_id=None):
+        print('upcoming', 'asdasd')
 
         if cohort_id is not None:
             item = None
@@ -146,7 +146,8 @@ class CohortView(APIView):
 
         items = Cohort.objects.all()
         upcoming = request.GET.get('upcoming', None)
-        if upcoming is not None:
+        print(upcoming, 'asdasd')
+        if upcoming == 'true':
             now = timezone.now()
             items = items.filter(kickoff_date__gte=now)
 

@@ -107,6 +107,36 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_id_user_id_delete_with_id_with_bad_user_id(self):
+        """Test /cohort/:id/user/:id without auth"""
+        self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
+            cohort_user=True)
+        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': self.cohort.id,
+            'user_id': 9999})
+        data = {
+            'certificate': self.certificate.id
+        }
+        response = self.client.delete(url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_id_user_id_delete_with_id_with_bad_cohort_id(self):
+        """Test /cohort/:id/user/:id without auth"""
+        self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
+            cohort_user=True)
+        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': 9999,
+            'user_id': self.user.id})
+        data = {
+            'certificate': self.certificate.id
+        }
+        response = self.client.delete(url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_delete_with_id(self):
         """Test /cohort/:id/user/:id without auth"""
         self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,

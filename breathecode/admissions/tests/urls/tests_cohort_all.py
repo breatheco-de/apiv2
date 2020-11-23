@@ -5,7 +5,6 @@ import re
 from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from datetime import datetime
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,

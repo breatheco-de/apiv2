@@ -126,11 +126,139 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_user_with_data_with_finantial_status(self):
         """Test /cohort/user without auth"""
-        # TODO finantial status in generate models
         self.generate_models(authenticate=True, cohort_user=True, finantial_status='LATE')
         base_url = reverse_lazy('admissions:cohort_user')
         print(self.cohort_user.finantial_status)
         url = f'{base_url}?finantial_status={self.cohort_user.finantial_status}'
+        response = self.client.get(url)
+        json = response.json()
+        print(json)
+        expected = [{
+            'id': self.cohort_user.id,
+            'role': self.cohort_user.role,
+            'finantial_status': self.cohort_user.finantial_status,
+            'educational_status': self.cohort_user.educational_status,
+            'created_at': re.sub(r'\+00:00$', 'Z', self.cohort_user.created_at.isoformat()),
+            'user': {
+                'id': self.cohort_user.user.id,
+                'first_name': self.cohort_user.user.first_name,
+                'last_name': self.cohort_user.user.last_name,
+                'email': self.cohort_user.user.email,
+            },
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_user_with_data_with_bad_educational_status(self):
+        """Test /cohort/user without auth"""
+        self.generate_models(authenticate=True, cohort_user=True)
+        base_url = reverse_lazy('admissions:cohort_user')
+        url = f'{base_url}?educational_status=they-killed-kenny'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_user_with_data_with_educational_status(self):
+        """Test /cohort/user without auth"""
+        self.generate_models(authenticate=True, cohort_user=True, educational_status='GRADUATED')
+        base_url = reverse_lazy('admissions:cohort_user')
+        print(self.cohort_user.finantial_status)
+        url = f'{base_url}?educational_status={self.cohort_user.educational_status}'
+        response = self.client.get(url)
+        json = response.json()
+        print(json)
+        expected = [{
+            'id': self.cohort_user.id,
+            'role': self.cohort_user.role,
+            'finantial_status': self.cohort_user.finantial_status,
+            'educational_status': self.cohort_user.educational_status,
+            'created_at': re.sub(r'\+00:00$', 'Z', self.cohort_user.created_at.isoformat()),
+            'user': {
+                'id': self.cohort_user.user.id,
+                'first_name': self.cohort_user.user.first_name,
+                'last_name': self.cohort_user.user.last_name,
+                'email': self.cohort_user.user.email,
+            },
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_user_with_data_with_bad_academy(self):
+        """Test /cohort/user without auth"""
+        self.generate_models(authenticate=True, cohort_user=True)
+        base_url = reverse_lazy('admissions:cohort_user')
+        url = f'{base_url}?academy=they-killed-kenny'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_user_with_data_with_academy(self):
+        """Test /cohort/user without auth"""
+        self.generate_models(authenticate=True, cohort_user=True, educational_status='GRADUATED')
+        base_url = reverse_lazy('admissions:cohort_user')
+        print(self.cohort_user.finantial_status)
+        url = f'{base_url}?academy={self.cohort_user.cohort.academy.slug}'
+        response = self.client.get(url)
+        json = response.json()
+        print(json)
+        expected = [{
+            'id': self.cohort_user.id,
+            'role': self.cohort_user.role,
+            'finantial_status': self.cohort_user.finantial_status,
+            'educational_status': self.cohort_user.educational_status,
+            'created_at': re.sub(r'\+00:00$', 'Z', self.cohort_user.created_at.isoformat()),
+            'user': {
+                'id': self.cohort_user.user.id,
+                'first_name': self.cohort_user.user.first_name,
+                'last_name': self.cohort_user.user.last_name,
+                'email': self.cohort_user.user.email,
+            },
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_user_with_data_with_bad_cohorts(self):
+        """Test /cohort/user without auth"""
+        self.generate_models(authenticate=True, cohort_user=True)
+        base_url = reverse_lazy('admissions:cohort_user')
+        url = f'{base_url}?cohorts=they-killed-kenny'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_user_with_data_with_cohorts(self):
+        """Test /cohort/user without auth"""
+        self.generate_models(authenticate=True, cohort_user=True, educational_status='GRADUATED')
+        base_url = reverse_lazy('admissions:cohort_user')
+        print(self.cohort_user.finantial_status)
+        url = f'{base_url}?cohorts={self.cohort_user.cohort.slug}'
         response = self.client.get(url)
         json = response.json()
         print(json)
