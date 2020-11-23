@@ -10,7 +10,6 @@ from ..mocks import (
     ACTIONS_INSTANCES,
     apply_generate_certificate_mock,
 )
-from pprint import pprint
 
 class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """Tests action generate_cohort_certificates"""
@@ -28,5 +27,4 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
 
         csv = BadgeAdmin(Certificate, None)
         # return
-        pprint(csv.__dict__)
         self.assertEqual(csv.__dict__, 1)

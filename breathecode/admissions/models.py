@@ -2,7 +2,6 @@ import os
 from django.contrib.auth.models import User
 from django.db import models
 from .actions import remove_bucket_object, get_bucket_object
-from pprint import pprint
 
 def get_user_label(self):
     return f"{self.first_name} {self.last_name} ({self.email})"

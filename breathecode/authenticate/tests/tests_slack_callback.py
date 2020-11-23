@@ -4,11 +4,10 @@ Test cases for /user
 import base64
 import urllib
 from unittest import mock
-from pprint import pprint
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from .mixin import AuthTestCase, SlackTestCase
-from .mocks import SlackRequestsMock, GoogleCloudStorageMock
+from .mocks import SlackRequestsMock
 
 
 class AuthenticateTestSuite(AuthTestCase, SlackTestCase):

@@ -47,7 +47,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.generate_models(authenticate=True, cohort_user=True)
         response = self.client.get(url)
         json = response.json()
-        print(json)
         expected = [{
             'id': self.cohort_user.id,
             'role': self.cohort_user.role,
@@ -89,7 +88,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
         url = f'{base_url}?roles={self.cohort_user.role}'
         response = self.client.get(url)
         json = response.json()
-        print(json)
         expected = [{
             'id': self.cohort_user.id,
             'role': self.cohort_user.role,
@@ -128,11 +126,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.generate_models(authenticate=True, cohort_user=True, finantial_status='LATE')
         base_url = reverse_lazy('admissions:cohort_user')
-        print(self.cohort_user.finantial_status)
         url = f'{base_url}?finantial_status={self.cohort_user.finantial_status}'
         response = self.client.get(url)
         json = response.json()
-        print(json)
         expected = [{
             'id': self.cohort_user.id,
             'role': self.cohort_user.role,
@@ -171,11 +167,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.generate_models(authenticate=True, cohort_user=True, educational_status='GRADUATED')
         base_url = reverse_lazy('admissions:cohort_user')
-        print(self.cohort_user.finantial_status)
         url = f'{base_url}?educational_status={self.cohort_user.educational_status}'
         response = self.client.get(url)
         json = response.json()
-        print(json)
         expected = [{
             'id': self.cohort_user.id,
             'role': self.cohort_user.role,
@@ -214,11 +208,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.generate_models(authenticate=True, cohort_user=True, educational_status='GRADUATED')
         base_url = reverse_lazy('admissions:cohort_user')
-        print(self.cohort_user.finantial_status)
         url = f'{base_url}?academy={self.cohort_user.cohort.academy.slug}'
         response = self.client.get(url)
         json = response.json()
-        print(json)
         expected = [{
             'id': self.cohort_user.id,
             'role': self.cohort_user.role,
@@ -257,11 +249,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.generate_models(authenticate=True, cohort_user=True, educational_status='GRADUATED')
         base_url = reverse_lazy('admissions:cohort_user')
-        print(self.cohort_user.finantial_status)
         url = f'{base_url}?cohorts={self.cohort_user.cohort.slug}'
         response = self.client.get(url)
         json = response.json()
-        print(json)
         expected = [{
             'id': self.cohort_user.id,
             'role': self.cohort_user.role,
@@ -289,7 +279,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.put(url, data)
         json = response.json()
-        print(json)
 
         self.assertEqual(json, {'status_code': 400, 'details': 'Missing user_id or cohort_id'})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

@@ -129,7 +129,6 @@ class CohortView(APIView):
     List all snippets, or create a new snippet.
     """
     def get(self, request, cohort_id=None):
-        print('upcoming', 'asdasd')
 
         if cohort_id is not None:
             item = None
@@ -146,7 +145,6 @@ class CohortView(APIView):
 
         items = Cohort.objects.all()
         upcoming = request.GET.get('upcoming', None)
-        print(upcoming, 'asdasd')
         if upcoming == 'true':
             now = timezone.now()
             items = items.filter(kickoff_date__gte=now)

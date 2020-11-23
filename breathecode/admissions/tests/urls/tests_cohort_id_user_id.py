@@ -92,14 +92,12 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.put(url, data)
         json = response.json()
-        print(json)
         expected = {
             'id': self.cohort_user.id,
             'role': self.cohort_user.role,
             'educational_status': self.cohort_user.educational_status,
             'finantial_status': self.cohort_user.finantial_status,
         }
-        print(expected)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

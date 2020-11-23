@@ -5,7 +5,6 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import JSONField
 from breathecode.admissions.models import Academy, Cohort, Certificate
-from pprint import pprint
 
 class UserProxy(User):
     class Meta:

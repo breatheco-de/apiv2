@@ -65,7 +65,6 @@ class academyTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.post(url, data)
         json = response.json()
-        print(json)
 
         self.assertEqual(json, {
             'slug': ['This field is required.'],
@@ -88,7 +87,6 @@ class academyTestSuite(AdmissionsTestCase):
         }
         response = self.client.post(url, data)
         json = response.json()
-        print(json)
 
         expected = { 'id': 1 }
         expected.update(data)
