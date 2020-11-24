@@ -12,6 +12,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins import AdmissionsTestCase
+from ..utils import GenerateModels
 
 class CohortTestSuite(AdmissionsTestCase):
     """Test /cohort"""
@@ -217,6 +218,210 @@ class CohortTestSuite(AdmissionsTestCase):
                 'logo_url': self.cohort.academy.logo_url,
             },
         }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_with_data_with_academy_with_comma(self):
+        """Test /cohort without auth"""
+        self.generate_models(authenticate=True, cohort=True, profile_academy=True,
+            impossible_kickoff_date=True)
+        base_url = reverse_lazy('admissions:cohort')
+        url = f'{base_url}?academy={self.academy.slug},they-killed-kenny'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'id': self.cohort.id,
+            'slug': self.cohort.slug,
+            'name': self.cohort.name,
+            'kickoff_date': f'{self.cohort.kickoff_date.isoformat()}Z',
+            'ending_date': self.cohort.ending_date,
+            'stage': self.cohort.stage,
+            'certificate': {
+                'slug': self.cohort.certificate.slug,
+                'name': self.cohort.certificate.name,
+                'description': self.cohort.certificate.description,
+                'logo': self.cohort.certificate.logo,
+            },
+            'academy': {
+                'slug': self.cohort.academy.slug,
+                'name': self.cohort.academy.name,
+                'country': self.cohort.academy.country,
+                'city': self.cohort.academy.city,
+                'logo_url': self.cohort.academy.logo_url,
+            },
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_with_ten_datas_with_academy_with_comma(self):
+        """Test /cohort without auth"""
+        models = [GenerateModels(authenticate=True, cohort=True, profile_academy=True,
+            impossible_kickoff_date=True) for index in range(0, 10)]
+        self.client.force_authenticate(user=models[0].user)
+        base_url = reverse_lazy('admissions:cohort')
+        params = ','.join([model.academy.slug for model in models])
+        url = f'{base_url}?academy={params}'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'id': model.cohort.id,
+            'slug': model.cohort.slug,
+            'name': model.cohort.name,
+            'kickoff_date': f'{model.cohort.kickoff_date.isoformat()}Z',
+            'ending_date': model.cohort.ending_date,
+            'stage': model.cohort.stage,
+            'certificate': {
+                'slug': model.cohort.certificate.slug,
+                'name': model.cohort.certificate.name,
+                'description': model.cohort.certificate.description,
+                'logo': model.cohort.certificate.logo,
+            },
+            'academy': {
+                'slug': model.cohort.academy.slug,
+                'name': model.cohort.academy.name,
+                'country': model.cohort.academy.country,
+                'city': model.cohort.academy.city,
+                'logo_url': model.cohort.academy.logo_url,
+            },
+        } for model in models]
+        json.sort(key=lambda x: x['id'])
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_with_data_with_bad_location(self):
+        """Test /cohort without auth"""
+        self.generate_models(authenticate=True, cohort=True, profile_academy=True,
+            impossible_kickoff_date=True)
+        base_url = reverse_lazy('admissions:cohort')
+        url = f'{base_url}?location=they-killed-kenny'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_with_data_with_location(self):
+        """Test /cohort without auth"""
+        self.generate_models(authenticate=True, cohort=True, profile_academy=True,
+            impossible_kickoff_date=True)
+        base_url = reverse_lazy('admissions:cohort')
+        url = f'{base_url}?location={self.academy.slug}'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'id': self.cohort.id,
+            'slug': self.cohort.slug,
+            'name': self.cohort.name,
+            'kickoff_date': f'{self.cohort.kickoff_date.isoformat()}Z',
+            'ending_date': self.cohort.ending_date,
+            'stage': self.cohort.stage,
+            'certificate': {
+                'slug': self.cohort.certificate.slug,
+                'name': self.cohort.certificate.name,
+                'description': self.cohort.certificate.description,
+                'logo': self.cohort.certificate.logo,
+            },
+            'academy': {
+                'slug': self.cohort.academy.slug,
+                'name': self.cohort.academy.name,
+                'country': self.cohort.academy.country,
+                'city': self.cohort.academy.city,
+                'logo_url': self.cohort.academy.logo_url,
+            },
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_with_data_with_location_with_comma(self):
+        """Test /cohort without auth"""
+        self.generate_models(authenticate=True, cohort=True, profile_academy=True,
+            impossible_kickoff_date=True)
+        base_url = reverse_lazy('admissions:cohort')
+        url = f'{base_url}?location={self.academy.slug},they-killed-kenny'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'id': self.cohort.id,
+            'slug': self.cohort.slug,
+            'name': self.cohort.name,
+            'kickoff_date': f'{self.cohort.kickoff_date.isoformat()}Z',
+            'ending_date': self.cohort.ending_date,
+            'stage': self.cohort.stage,
+            'certificate': {
+                'slug': self.cohort.certificate.slug,
+                'name': self.cohort.certificate.name,
+                'description': self.cohort.certificate.description,
+                'logo': self.cohort.certificate.logo,
+            },
+            'academy': {
+                'slug': self.cohort.academy.slug,
+                'name': self.cohort.academy.name,
+                'country': self.cohort.academy.country,
+                'city': self.cohort.academy.city,
+                'logo_url': self.cohort.academy.logo_url,
+            },
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_with_ten_datas_with_location_with_comma(self):
+        """Test /cohort without auth"""
+        # self.generate_models(authenticate=True, cohort=True, profile_academy=True,
+        #     impossible_kickoff_date=True)
+        models = [GenerateModels(authenticate=True, cohort=True, profile_academy=True,
+            impossible_kickoff_date=True) for index in range(0, 10)]
+        # models[0].authenticate()
+        self.client.force_authenticate(user=models[0].user)
+        base_url = reverse_lazy('admissions:cohort')
+        params = ','.join([model.academy.slug for model in models])
+        url = f'{base_url}?location={params}'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'id': model.cohort.id,
+            'slug': model.cohort.slug,
+            'name': model.cohort.name,
+            'kickoff_date': f'{model.cohort.kickoff_date.isoformat()}Z',
+            'ending_date': model.cohort.ending_date,
+            'stage': model.cohort.stage,
+            'certificate': {
+                'slug': model.cohort.certificate.slug,
+                'name': model.cohort.certificate.name,
+                'description': model.cohort.certificate.description,
+                'logo': model.cohort.certificate.logo,
+            },
+            'academy': {
+                'slug': model.cohort.academy.slug,
+                'name': model.cohort.academy.name,
+                'country': model.cohort.academy.country,
+                'city': model.cohort.academy.city,
+                'logo_url': model.cohort.academy.logo_url,
+            },
+        } for model in models]
+        json.sort(key=lambda x: x['id'])
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

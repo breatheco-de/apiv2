@@ -146,3 +146,4 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.delete(url, data)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.count_cohort_user(), 0)

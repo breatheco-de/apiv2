@@ -13,6 +13,8 @@ urlpatterns = [
     path('cohort/user/', CohortUserView.as_view(), name="cohort_user"),
 
     # update a cohort user information
+    path('cohort/<int:cohort_id>/user', CohortUserView.as_view(),
+        name="cohort_id_user"),
     path('cohort/<int:cohort_id>/user/<int:user_id>', CohortUserView.as_view(),
         name="cohort_id_user_id"),
     path('cohort/<str:cohort_id>', CohortView.as_view(), name="cohort_id"),

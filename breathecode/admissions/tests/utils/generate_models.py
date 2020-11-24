@@ -5,12 +5,10 @@ from datetime import datetime
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
 from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatter
-from ...models import CohortUser, Cohort
-# from .models import Academy, CohortUser, Certificate, Cohort
 
-class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
-    """AdmissionsTestCase with auth methods"""
-     # token = None
+class GenerateModels(APITestCase, DevelopmentEnvironment, DateFormatter):
+    """AdmissionsTestCase wrapper to allow multiple instances"""
+    # token = None
     user = None
     password = 'pass1234'
     certificate = None
@@ -19,20 +17,11 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
     profile_academy = None
     cohort_user = None
 
-    def count_cohort(self):
-        return Cohort.objects.count()
-
-    def count_cohort_user(self):
-        return CohortUser.objects.count()
-
-    def count_cohort_stage(self, cohort_id):
-        cohort = Cohort.objects.get(id=cohort_id)
-        return cohort.stage
-
-    def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
+    def __init__(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
             finantial_status='', educational_status=''):
-        # isinstance(True, bool)
+        # super()
+
         if academy or profile_academy:
             self.academy = mixer.blend('admissions.Academy')
 
@@ -70,10 +59,10 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
             self.cohort_user = mixer.blend('admissions.CohortUser', **kargs)
 
-        if authenticate:
-            self.client.force_authenticate(user=self.user)
-
         if profile_academy:
             self.profile_academy = mixer.blend('authenticate.ProfileAcademy', user=self.user,
                 certificate=self.certificate, academy=self.academy)
 
+    def authenticate(self):
+        if self.user:
+            self.client.force_authenticate(user=self.user)
