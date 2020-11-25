@@ -1,4 +1,4 @@
-import logging
+import logging, pytz
 from django.utils import timezone
 from django.shortcuts import render
 from django.contrib.auth.models import AnonymousUser
@@ -18,6 +18,12 @@ from rest_framework import status
 from breathecode.utils import localize_query
 
 logger = logging.getLogger(__name__)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_timezones(request, id=None):
+    # timezones = [(x, x) for x in pytz.common_timezones]
+    return Response(pytz.common_timezones)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
