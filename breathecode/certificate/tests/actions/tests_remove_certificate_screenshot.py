@@ -39,7 +39,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     @patch(SCREENSHOTMACHINE_PATH['get'], apply_requests_get_mock())
     def test_remove_certificate_screenshot_with_valid_id(self):
         """remove_certificate_screenshot don't call open in development environment"""
-        self.generate_successful_models()
+        self.generate_models(specialty=True, layout=True, teacher=True, stage=True)
         self.assertEqual(remove_certificate_screenshot(self.certificate.id), False)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -49,7 +49,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     @patch(CREDENTIALS_PATH['resolve_credentials'], apply_resolve_credentials_mock())
     def test_remove_certificate_screenshot_with_valid_id_cover_else_path(self):
         """remove_certificate_screenshot don't call open in development environment"""
-        self.generate_successful_models()
+        self.generate_models(specialty=True, layout=True, teacher=True, stage=True)
 
         certificate = UserSpecialty.objects.get(id=self.certificate.id)
         certificate.preview_url = 'asdasdasd'

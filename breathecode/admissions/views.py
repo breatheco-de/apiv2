@@ -22,24 +22,24 @@ logger = logging.getLogger(__name__)
 @permission_classes([AllowAny])
 def get_cohorts(request, id=None):
 
-
     items = Cohort.objects.all()
 
     # filter only to the local academy
     items = localize_query(items, request)
 
     upcoming = request.GET.get('upcoming', None)
-    if upcoming is not None:
+    if upcoming == 'true':
         now = timezone.now()
         items = items.filter(kickoff_date__gte=now)
 
     academy = request.GET.get('academy', None)
     if academy is not None:
         items = items.filter(academy__slug__in=academy.split(","))
-    
+
+    # TODO implement location
     location = request.GET.get('location', None)
     if location is not None:
-        items = items.filter(academy__slug__in=academy.split(","))
+        items = items.filter(academy__slug__in=location.split(","))
 
     items = items.order_by('kickoff_date')
     serializer = GetCohortSerializer(items, many=True)
@@ -80,11 +80,11 @@ class CohortUserView(APIView):
         educational_status = request.GET.get('educational_status', None)
         if educational_status is not None:
             items = items.filter(educational_status__in=educational_status.split(","))
-        
+
         academy = request.GET.get('academy', None)
         if academy is not None:
             items = items.filter(cohort__academy__slug__in=academy.split(","))
-        
+
         cohorts = request.GET.get('cohorts', None)
         if cohorts is not None:
             items = items.filter(cohort__slug__in=cohorts.split(","))
@@ -96,13 +96,13 @@ class CohortUserView(APIView):
 
         if cohort_id is None or user_id is None:
             raise serializers.ValidationError("Missing user_id or cohort_id", code=400)
-        
-        cu = CohortUser.objects.filter(user__id=user_id,cohort__id=cohort_id)
+
+        cu = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id)
         cu = localize_query(cu, request, "cohort__academy__in").first() # only form this academy
 
         if cu is None:
             raise serializers.ValidationError('Specified cohort and user could not be found')
-        
+
         serializer = CohortUserPUTSerializer(cu, data=request.data, context={ "request": request })
         if serializer.is_valid():
             serializer.save()
@@ -137,7 +137,7 @@ class CohortView(APIView):
                 item = Cohort.objects.filter(id=int(cohort_id)).first()
             else:
                 item = Cohort.objects.filter(slug=cohort_id).first()
-                
+
             if item is None:
                 return Response(status=status.HTTP_404_NOT_FOUND)
 
@@ -161,8 +161,7 @@ class CohortView(APIView):
 
         if cohort_id is None:
             raise serializers.ValidationError("Missing cohort_id", code=400)
-        
-        
+
         cohort = Cohort.objects.filter(id=cohort_id)
         cohort = localize_query(cohort, request).first() # only from this academy
         if cohort is None:
