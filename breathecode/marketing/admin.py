@@ -1,6 +1,6 @@
 import csv
 from django.contrib import admin
-from .models import FormEntry, Tag, Automation
+from .models import FormEntry, Tag, Automation, ShortLink
 from .actions import register_new_lead, save_get_geolocal, get_facebook_lead_info
 from django.http import HttpResponse
 from django.contrib.admin import SimpleListFilter
@@ -94,4 +94,11 @@ class AutomationAdmin(admin.ModelAdmin, ExportCsvMixin):
     search_fields = ['slug', 'name']
     list_display = ('id', 'acp_id', 'slug', 'name', 'status', 'entered', 'exited')
     list_filter = ['status']
+    actions = ["export_as_csv"]
+
+@admin.register(ShortLink)
+class ShortLinkAdmin(admin.ModelAdmin, ExportCsvMixin):
+    search_fields = ['slug', 'destination']
+    list_display = ('id', 'slug', 'hits', 'active', 'destination_status', 'destination')
+    list_filter = ['destination_status', 'active']
     actions = ["export_as_csv"]

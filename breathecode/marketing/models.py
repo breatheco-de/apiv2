@@ -1,4 +1,7 @@
+import string, datetime
 from django.db import models
+from django.contrib.auth.models import User
+from breathecode.admissions.models import Academy
 from django.core.validators import RegexValidator
 
 ACTIVE = '1'
@@ -152,3 +155,31 @@ class FormEntry(models.Model):
             "longitude": self.latitude,
         }
         return _entry
+
+_ACTIVE = 'ACTIVE'
+NOT_FOUND = 'NOT_FOUND'
+DESTINATION_STATUS = (
+    (_ACTIVE, 'Active'),
+    (NOT_FOUND, 'Not found'),
+)
+class ShortLink(models.Model):
+    slug = models.SlugField(max_length=150, unique=True)
+    destination = models.URLField()
+    hits = models.IntegerField(default=0)
+    active = models.BooleanField(default=True)
+    destination_status = models.CharField(max_length=15, choices=DESTINATION_STATUS, default=_ACTIVE)
+
+    utm_content = models.CharField(max_length=250, null=True, default=None, blank=True)
+    utm_medium = models.CharField(max_length=50, blank=True, null=True, default=None)
+    utm_campaign = models.CharField(max_length=50, blank=True, null=True, default=None)
+    utm_source = models.CharField(max_length=50, blank=True, null=True, default=None)
+
+    # Status
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"{str(self.hits)} {self.slug}"

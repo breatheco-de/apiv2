@@ -8,7 +8,7 @@ def localize_query(query, request, matcher=None):
 
     # not a part of the staff, cannot access all info
     if isinstance(request.user, AnonymousUser):
-        return query
+        return None
     
     if request.user.is_staff == True:
         return query

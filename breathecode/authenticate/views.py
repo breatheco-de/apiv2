@@ -23,7 +23,7 @@ from .forms import PickPasswordForm, PasswordChangeCustomForm
 from .models import Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackTeam
-from .serializers import UserSerializer, AuthSerializer, GroupSerializer
+from .serializers import UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer
 
 logger = logging.getLogger(__name__)
  
@@ -104,8 +104,15 @@ def get_users_me(request):
 # Create your views here.
 @api_view(['GET'])
 def get_users(request):
-    queryset = User.objects.all().order_by('-date_joined')
-    users = UserSerializer(queryset, many=True)
+
+    query = User.objects.all()
+
+    name = request.GET.get('name', None)
+    if name is not None:
+        query = query.filter(Q(first_name__icontains=name) | Q(last_name__icontains=name))
+
+    query = query.order_by('-date_joined')
+    users = UserSmallSerializer(query, many=True)
     return Response(users.data)
 
 # # Create your views here.
