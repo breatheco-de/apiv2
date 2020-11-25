@@ -5,7 +5,7 @@
 * [ ]  PUT `/user` update basic user info (the email cannot be updated with this endpoint)
 * [ ]  PUT `/cohort/<id>` update basic info.
 * [ ]  POST `/academy/cohort` creates a new cohort, the academy ID will be obtained from the logged user, it cannot be passed on the cohort information.
-* [ ]  POST `/cohort/<id>/user` creates a new user into a particular cohort, the cohort ID must be specified on the URL and it cannot belong to a different academy than the logged in user.
+* [x]  POST `/cohort/<id>/user` creates a new user into a particular cohort, the cohort ID must be specified on the URL and it cannot belong to a different academy than the logged in user.
 * [x]  DELETE `/cohort/<id>` deletes a cohort, the cohort must be empty (no students), instead of deleting the cohort it will mark it its status as "DELETED".
 * [x]  DELETE `/cohort/<id>/user/<id>` deletes a user from a particular cohort, the authenticated user must be a staff member of the same academy that the cohort belongs to.
 

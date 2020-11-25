@@ -4,10 +4,13 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny
+from rest_framework.parsers import JSONParser
+from django.contrib.auth.models import User
 from .serializers import (
     AcademySerializer, CohortSerializer, CertificateSerializer,
     GetCohortSerializer, UserSerializer, CohortUserSerializer,
-    GETCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer
+    GETCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
+    CohortUserPOSTSerializer
 )
 from .models import Academy, CohortUser, Certificate, Cohort, STUDENT, DELETED
 from breathecode.authenticate.models import ProfileAcademy
@@ -15,6 +18,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
 from breathecode.utils import localize_query
+from django.http import QueryDict
+from django.db.utils import IntegrityError
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +95,33 @@ class CohortUserView(APIView):
 
         serializer = GETCohortUserSerializer(items, many=True)
         return Response(serializer.data)
+
+    def post(self, request, cohort_id=None):
+
+        user_id = request.data.get('user')
+        if cohort_id is None or user_id is None:
+            raise serializers.ValidationError("Missing cohort_id or user_id", code=400)
+
+        if User.objects.filter(id=user_id).count() == 0:
+            raise serializers.ValidationError("invalid user_id", code=400)
+
+        cohort = Cohort.objects.filter(id=cohort_id)
+        if not cohort:
+            raise serializers.ValidationError("invalid cohort_id", code=400)
+
+        cohort = localize_query(cohort, request).first() # only from this academy
+
+        if cohort is None:
+            logger.debug(f"Cohort not be found in related academies")
+            raise serializers.ValidationError('Specified cohort not be found')
+
+        try:
+            cohort_user = CohortUser.objects.create(user_id=user_id, cohort_id=cohort_id)
+        except IntegrityError:
+            raise serializers.ValidationError('Error saving cohort user')
+
+        serializer = CohortUserSerializer(instance=cohort_user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, cohort_id=None, user_id=None):
 
