@@ -1,9 +1,9 @@
-import logging
+import logging, re
 from django.utils import timezone
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework import serializers
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import JSONParser
 from django.contrib.auth.models import User
 from .serializers import (
@@ -20,6 +20,7 @@ from rest_framework import status
 from breathecode.utils import localize_query
 from django.http import QueryDict
 from django.db.utils import IntegrityError
+from rest_framework.exceptions import ParseError, PermissionDenied
 
 logger = logging.getLogger(__name__)
 
@@ -232,6 +233,51 @@ class CohortView(APIView):
             cohort_user.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+class AcademyCohortView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+
+        user_id = request.user.id
+        profile_academy = ProfileAcademy.objects.filter(user_id=user_id).first()
+
+        if profile_academy is None:
+            raise PermissionDenied(detail='Specified academy not be found')
+
+        if request.data.get('academy') or request.data.get('academy_id'):
+            raise ParseError(detail='academy and academy_id field is not allowed')
+
+        certificate_id = request.data.get('certificate')
+        if certificate_id is None:
+            raise ParseError(detail='certificate field is missing')
+
+        certificate = Certificate.objects.filter(id=certificate_id).first()
+        if certificate is None:
+            raise ParseError(detail='specified certificate not be found')
+
+        if request.data.get('current_day'):
+            raise ParseError(detail='current_day field is not allowed')
+
+        data = {
+            'academy': profile_academy.academy,
+            'current_day': 0,
+        }
+
+        for key in request.data:
+            data[key] = request.data.get(key)
+
+        data['certificate'] = certificate
+
+        serializer = CohortSerializer(data=data, context=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class CertificateView(APIView):
     """

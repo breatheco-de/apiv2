@@ -81,15 +81,26 @@ class AcademySerializer(serializers.ModelSerializer):
         model = Academy
         fields = ['id', 'slug', 'name', 'street_address']
 
-class CohortSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date')
 
 class CertificateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Certificate
         fields = ['id', 'slug', 'name']
+
+
+class CohortSerializer(serializers.ModelSerializer):
+    academy = AcademySerializer(many=False, read_only=True, required=False)
+    certificate = CertificateSerializer(many=False, read_only=True, required=False)
+    # academy = serializers.PrimaryKeyRelatedField(many=False, read_only=True, required=False)
+    # certificate = serializers.PrimaryKeyRelatedField(many=False, read_only=True, required=False)
+
+    class Meta:
+        model = Cohort
+        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'certificate',
+            'ending_date', 'stage', 'language', 'created_at', 'updated_at')
+
+    def create(self, validated_data):
+        return Cohort.objects.create(**self.context)
 
 class CohortPUTSerializer(serializers.ModelSerializer):
     slug = serializers.SlugField(required=False)

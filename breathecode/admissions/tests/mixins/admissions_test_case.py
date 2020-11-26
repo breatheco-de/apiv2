@@ -19,8 +19,8 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
     profile_academy = None
     cohort_user = None
 
-    def count_cohort(self):
-        return Cohort.objects.count()
+    def get_cohort(self, id):
+        return Cohort.objects.get(id=id)
 
     def count_cohort_user(self):
         return CohortUser.objects.count()
@@ -33,6 +33,8 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
             finantial_status='', educational_status=''):
         # isinstance(True, bool)
+        self.maxDiff = None
+
         if academy or profile_academy:
             self.academy = mixer.blend('admissions.Academy')
 

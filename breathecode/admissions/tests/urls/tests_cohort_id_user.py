@@ -109,6 +109,23 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     r'\+00:00$', 'Z',
                     self.cohort.kickoff_date.isoformat()
                 ),
+                'current_day': self.cohort.current_day,
+                'academy': {
+                    'id': self.cohort.academy.id,
+                    'name': self.cohort.academy.name,
+                    'slug': self.cohort.academy.slug,
+                    'street_address': self.cohort.academy.street_address,
+                },
+                'certificate': {
+                    'id': self.cohort.certificate.id,
+                    'name': self.cohort.certificate.name,
+                    'slug': self.cohort.certificate.slug,
+                },
+                'ending_date': self.cohort.ending_date,
+                'stage': self.cohort.stage,
+                'language': self.cohort.language,
+                'created_at': re.sub(r'\+00:00$', 'Z', self.cohort.created_at.isoformat()),
+                'updated_at': re.sub(r'\+00:00$', 'Z', self.cohort.updated_at.isoformat()),
             },
         }
 
