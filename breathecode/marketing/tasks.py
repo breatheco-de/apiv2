@@ -1,5 +1,6 @@
 from celery import shared_task, Task
-from .models import FormEntry
+from django.db.models import F
+from .models import FormEntry, ShortLink
 from .actions import register_new_lead, save_get_geolocal
 
 class BaseTaskWithRetry(Task):
@@ -26,3 +27,7 @@ def persist_single_lead(self, form_data):
         save_get_geolocal(entry, form_data)
     
     return True
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def update_link_viewcount(self, slug):
+    ShortLink.objects.filter(slug=slug).update(hits=F('hits') + 1)

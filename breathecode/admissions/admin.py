@@ -1,4 +1,6 @@
+import pytz
 from django.contrib import admin
+from django import forms 
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions
@@ -8,12 +10,20 @@ admin.site.site_header = "BreatheCode"
 admin.site.index_title = "Administration Portal"
 admin.site.site_title = "Administration Portal"
 
+timezones = [(x, x) for x in pytz.common_timezones]
+
 @admin.register(UserAdmissions)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff')
-    
+
+class AcademyForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+       super(AcademyForm, self).__init__(*args, **kwargs)
+       if self.instance.id:
+           self.fields['timezone'] = forms.ChoiceField(choices=timezones)
 @admin.register(Academy)
 class AcademyAdmin(admin.ModelAdmin):
+    form = AcademyForm
     list_display = ('slug', 'name', 'city')
 
 @admin.register(Country)
@@ -48,8 +58,15 @@ def sync_tasks(modeladmin, request, queryset):
 
 sync_tasks.short_description = "Sync Tasks"
 
+class CohortForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+       super(CohortForm, self).__init__(*args, **kwargs)
+       if self.instance.id:
+           self.fields['timezone'] = forms.ChoiceField(choices=timezones)
+
 @admin.register(Cohort)
 class CohortAdmin(admin.ModelAdmin):
+    form = CohortForm
     search_fields = ['slug', 'name', 'academy__city__name', 'certificate__slug']
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'certificate_name')
     list_filter = ['stage', 'academy__slug','certificate__slug']
@@ -60,6 +77,8 @@ class CohortAdmin(admin.ModelAdmin):
 
     def certificate_name(self, obj):
         return obj.certificate.name
+
+
 
 
 

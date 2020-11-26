@@ -1,6 +1,7 @@
-import logging, re
+import logging, re, pytz
 from django.utils import timezone
 from django.shortcuts import render
+from django.contrib.auth.models import AnonymousUser
 from rest_framework.views import APIView
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -26,12 +27,19 @@ logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def get_timezones(request, id=None):
+    # timezones = [(x, x) for x in pytz.common_timezones]
+    return Response(pytz.common_timezones)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def get_cohorts(request, id=None):
 
     items = Cohort.objects.all()
 
-    # filter only to the local academy
-    items = localize_query(items, request)
+    if isinstance(request.user, AnonymousUser) == False:
+        # filter only to the local academy
+        items = localize_query(items, request)
 
     upcoming = request.GET.get('upcoming', None)
     if upcoming == 'true':

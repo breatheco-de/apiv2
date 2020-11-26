@@ -49,6 +49,8 @@ class Academy(models.Model):
 
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
 
+    timezone = models.CharField(max_length=50, null=True, default=None)
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -140,6 +142,8 @@ class Cohort(models.Model):
     ending_date = models.DateTimeField(blank=True, null=True)
     current_day = models.IntegerField()
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
+    
+    timezone = models.CharField(max_length=50, null=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)

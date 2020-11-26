@@ -1,12 +1,15 @@
 import os
-from django.shortcuts import render
+from urllib import parse
+from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
 from rest_framework.response import Response
-from .serializers import PostFormEntrySerializer
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
+from .serializers import PostFormEntrySerializer
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
-from .tasks import persist_single_lead
+from .tasks import persist_single_lead, update_link_viewcount
+from .models import ShortLink
 
 # Create your views here.
 @api_view(['POST'])
@@ -78,3 +81,28 @@ def sync_tags_with_active_campaign(request):
 def sync_automations_with_active_campaign(request):
     tags = sync_automations()
     return Response(tags, status=status.HTTP_200_OK)
+
+def redirect_link(request, link_slug):
+    short_link = ShortLink.objects.filter(slug=link_slug, active=True).first()
+    if short_link is None:
+        return HttpResponseNotFound("URL not found")
+
+    update_link_viewcount.delay(short_link.slug)
+
+    params = {}
+    if short_link.utm_source is not None:
+        params["utm_source"] = short_link.utm_source
+    if short_link.utm_content is not None:
+        params["utm_content"] = short_link.utm_content
+    if short_link.utm_medium is not None:
+        params["utm_medium"] = short_link.utm_medium
+    if short_link.utm_campaign is not None:
+        params["utm_campaign"] = short_link.utm_campaign
+
+    destination_params = {}
+    url_parts = short_link.destination.split('?')
+    if len(url_parts) > 1:
+        destination_params = dict(parse.parse_qsl(url_parts[1]))
+    
+    params = { **destination_params, **params }
+    return HttpResponseRedirect(redirect_to=url_parts[0]+"?"+parse.urlencode(params))

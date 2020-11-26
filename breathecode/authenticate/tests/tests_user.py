@@ -35,12 +35,10 @@ class AuthenticateTestSuite(AuthTestCase):
         email = users[0]['email']
         first_name = users[0]['first_name']
         last_name = users[0]['last_name']
-        github = users[0]['github']
 
         self.assertEqual(1, len(users))
-        self.assertEqual(5, len(users[0]))
+        self.assertEqual(4, len(users[0]))
         self.assertEqual(id, self.user.id)
         self.assertEqual(email, self.user.email)
         self.assertEqual(first_name, self.user.first_name)
         self.assertEqual(last_name, self.user.last_name)
-        self.assertEqual(github, {'avatar_url': None, 'name': None})
