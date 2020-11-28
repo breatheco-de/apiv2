@@ -167,6 +167,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         cohort = self.get_cohort(2)
+        assert cohort is not None
         expected = {
             'id': cohort.id,
             'slug': cohort.slug,
@@ -175,9 +176,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': cohort.current_day,
             'academy': {
                 'id': cohort.academy.id,
-                'name': cohort.academy.name,
                 'slug': cohort.academy.slug,
+                'name': cohort.academy.name,
                 'street_address': cohort.academy.street_address,
+                'country': cohort.academy.country.code,
+                'city': cohort.academy.city.id,
             },
             'certificate': {
                 'id': cohort.certificate.id,

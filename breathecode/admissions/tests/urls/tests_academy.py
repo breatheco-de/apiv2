@@ -52,6 +52,8 @@ class academyTestSuite(AdmissionsTestCase):
             'name': self.academy.name,
             'slug': self.academy.slug,
             'street_address': self.academy.street_address,
+            'country': self.academy.country.code,
+            'city': self.academy.city.id,
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -67,6 +69,8 @@ class academyTestSuite(AdmissionsTestCase):
         json = response.json()
 
         self.assertEqual(json, {
+            'city': ['This field is required.'],
+            'country': ['This field is required.'],
             'slug': ['This field is required.'],
             'name': ['This field is required.'],
             'street_address': ['This field is required.']
@@ -79,16 +83,23 @@ class academyTestSuite(AdmissionsTestCase):
     def test_academy_new_element(self):
         """Test /academy without auth"""
         url = reverse_lazy('admissions:academy')
-        self.generate_models(authenticate=True)
+        self.generate_models(authenticate=True, country=True)
+        print(self.country.__dict__)
+        print(self.city.__dict__)
+        print('asdasdasdsadasdasdsadasdsadsa')
         data = {
             'slug': 'oh-my-god',
             'name': 'they killed kenny',
-            'street_address': 'you bastards'
+            'street_address': 'you bastards',
+            'country': self.country.code,
+            'city': self.city.id,
         }
         response = self.client.post(url, data)
         json = response.json()
 
-        expected = { 'id': 1 }
+        expected = {
+            'id': 1,
+        }
         expected.update(data)
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

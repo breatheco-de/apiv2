@@ -18,9 +18,15 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
     cohort = None
     profile_academy = None
     cohort_user = None
+    city = None
+    country = None
+    user_two = None
 
     def get_cohort(self, id):
-        return Cohort.objects.get(id=id)
+        try:
+            return Cohort.objects.get(id=id)
+        except Cohort.DoesNotExist:
+            return None
 
     def count_cohort_user(self):
         return CohortUser.objects.count()
@@ -31,9 +37,15 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
     def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
-            finantial_status='', educational_status=''):
+            finantial_status='', educational_status='', city=False, country=False, user_two=True):
         # isinstance(True, bool)
         self.maxDiff = None
+
+        if city or country:
+            self.city = mixer.blend('admissions.City')
+
+        if country:
+            self.country = mixer.blend('admissions.Country')
 
         if academy or profile_academy:
             self.academy = mixer.blend('admissions.Academy')
@@ -57,6 +69,11 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
             self.user = mixer.blend('auth.User')
             self.user.set_password(self.password)
             self.user.save()
+
+        if user_two:
+            self.user_two = mixer.blend('auth.User')
+            self.user_two.set_password(self.password)
+            self.user_two.save()
 
         if cohort_user:
             kargs = {}

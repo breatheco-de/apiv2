@@ -77,13 +77,9 @@ def generate_certificate(user, cohort=None):
 
 def certificate_screenshot(certificate_id: int):
 
-    # if ENVIRONMENT == 'development':
-    #     return True
-
     certificate = UserSpecialty.objects.get(id=certificate_id)
     if certificate.preview_url is None or certificate.preview_url == "":
         file_name = f'{certificate.token}'
-        # resolve_google_credentials()
 
         storage = Storage()
         file = storage.file(BUCKET_NAME, file_name)

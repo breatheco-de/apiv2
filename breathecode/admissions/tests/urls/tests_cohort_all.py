@@ -94,8 +94,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'academy': {
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
-                'country': self.cohort.academy.country,
-                'city': self.cohort.academy.city,
+                'country': {
+                    'code': self.cohort.academy.country.code,
+                    'name': self.cohort.academy.country.name,
+                },
+                'city': {
+                    'name': self.cohort.academy.city.name,
+                },
                 'logo_url': self.cohort.academy.logo_url,
             },
         }]
@@ -143,8 +148,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'academy': {
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
-                'country': self.cohort.academy.country,
-                'city': self.cohort.academy.city,
+                'country': {
+                    'code': self.cohort.academy.country.code,
+                    'name': self.cohort.academy.country.name,
+                },
+                'city': {
+                    'name': self.cohort.academy.city.name,
+                },
                 'logo_url': self.cohort.academy.logo_url,
             },
         }]
@@ -178,8 +188,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'academy': {
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
-                'country': self.cohort.academy.country,
-                'city': self.cohort.academy.city,
+                'country': {
+                    'code': self.cohort.academy.country.code,
+                    'name': self.cohort.academy.country.name,
+                },
+                'city': {
+                    'name': self.cohort.academy.city.name,
+                },
                 'logo_url': self.cohort.academy.logo_url,
             },
         }]
@@ -213,8 +228,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'academy': {
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
-                'country': self.cohort.academy.country,
-                'city': self.cohort.academy.city,
+                'country': {
+                    'code': self.cohort.academy.country.code,
+                    'name': self.cohort.academy.country.name,
+                },
+                'city': {
+                    'name': self.cohort.academy.city.name,
+                },
                 'logo_url': self.cohort.academy.logo_url,
             },
         }]
@@ -264,8 +284,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'academy': {
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
-                'country': self.cohort.academy.country,
-                'city': self.cohort.academy.city,
+                'country': {
+                    'code': self.cohort.academy.country.code,
+                    'name': self.cohort.academy.country.name,
+                },
+                'city': {
+                    'name': self.cohort.academy.city.name,
+                },
                 'logo_url': self.cohort.academy.logo_url,
             },
         }]
@@ -298,8 +323,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'academy': {
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
-                'country': self.cohort.academy.country,
-                'city': self.cohort.academy.city,
+                'country': {
+                    'code': self.cohort.academy.country.code,
+                    'name': self.cohort.academy.country.name,
+                },
+                'city': {
+                    'name': self.cohort.academy.city.name,
+                },
                 'logo_url': self.cohort.academy.logo_url,
             },
         }]

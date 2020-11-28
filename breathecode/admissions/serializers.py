@@ -77,9 +77,12 @@ class GetCohortSerializer(serpy.Serializer):
 
 
 class AcademySerializer(serializers.ModelSerializer):
+    country = CountrySerializer(required=True)
+    city = CitySerializer(required=True)
+
     class Meta:
         model = Academy
-        fields = ['id', 'slug', 'name', 'street_address']
+        fields = ['id', 'slug', 'name', 'street_address', 'country', 'city']
 
 
 class CertificateSerializer(serializers.ModelSerializer):
@@ -89,10 +92,8 @@ class CertificateSerializer(serializers.ModelSerializer):
 
 
 class CohortSerializer(serializers.ModelSerializer):
-    academy = AcademySerializer(many=False, read_only=True, required=False)
-    certificate = CertificateSerializer(many=False, read_only=True, required=False)
-    # academy = serializers.PrimaryKeyRelatedField(many=False, read_only=True, required=False)
-    # certificate = serializers.PrimaryKeyRelatedField(many=False, read_only=True, required=False)
+    academy = AcademySerializer(many=False, required=False, read_only=True)
+    certificate = CertificateSerializer(many=False, required=False, read_only=True)
 
     class Meta:
         model = Cohort
@@ -113,7 +114,8 @@ class CohortPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cohort
-        fields = ('slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language', 'certificate')
+        fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
+            'certificate')
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
     """The serializer schema definition."""
@@ -121,7 +123,7 @@ class UserDJangoRestSerializer(serializers.ModelSerializer):
     # id = serializers.IntegerField()
     # first_name = serializers.CharField()
     # last_name = serializers.CharField()
-    # email = serializers.CharField()
+    email = serializers.CharField(read_only=True)
     # profile = ProfileSerializer(required=False)
 
     class Meta:
@@ -130,24 +132,19 @@ class UserDJangoRestSerializer(serializers.ModelSerializer):
         # fields = ['id', 'user']
 
 class CohortUserSerializer(serializers.ModelSerializer):
-# class CohortUserSerializer(serializers.Serializer):
     cohort = CohortSerializer(many=False, read_only=True)
     user = UserDJangoRestSerializer(many=False, read_only=True)
-    # cohort = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
-    # user = serializers.PrimaryKeyRelatedField(many=False, read_only=True)
-    # cohort = serializers.IntegerField()
-    # user = serializers.IntegerField()
 
     class Meta:
         model = CohortUser
-        fields = ['id', 'user', 'cohort']
-        # fields = ['id', 'user']
+        fields = ['id', 'user', 'cohort', 'role']
 
-    # def create(self, validated_data):
-    #     validated_data['cohort_id'] = validated_data.pop('cohort')
-    #     validated_data['user_id'] = validated_data.pop('user')
+    def create(self, validated_data):
+        # relationships, thank you amazing and incredible serializer!
+        cohort = self.context.get('cohort')
+        user = self.context.get('user')
 
-    #     return CohortUser.objects.create(**validated_data)
+        return CohortUser.objects.create(**validated_data, cohort_id=cohort, user_id=user)
 
 class CohortUserPOSTSerializer(serpy.Serializer):
     """The serializer schema definition."""

@@ -86,6 +86,7 @@ class CohortTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
         expected = {
+            'id': self.cohort.id,
             'slug': self.cohort.slug,
             'name': self.cohort.name,
             'kickoff_date': re.sub(r'\+00:00$', 'Z', self.cohort.kickoff_date.isoformat()),
@@ -93,6 +94,37 @@ class CohortTestSuite(AdmissionsTestCase):
             'current_day': self.cohort.current_day,
             'stage': self.cohort.stage,
             'language': self.cohort.language,
+            'certificate': self.cohort.certificate.id,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_id_put_with_id_with_data_in_body(self):
+        """Test /cohort/:id without auth"""
+        self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        url = reverse_lazy('admissions:cohort_id', kwargs={'cohort_id': self.cohort.id})
+        data = {
+            'certificate': self.certificate.id,
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'current_day': self.cohort.current_day + 1,
+            'language': 'es',
+        }
+        response = self.client.put(url, data)
+        json = response.json()
+        expected = {
+            'id': self.cohort.id,
+            'slug': data['slug'],
+            'name': data['name'],
+            'kickoff_date': re.sub(r'\+00:00$', 'Z', self.cohort.kickoff_date.isoformat()),
+            'ending_date': self.cohort.ending_date,
+            'current_day': data['current_day'],
+            'stage': self.cohort.stage,
+            'language': data['language'],
             'certificate': self.cohort.certificate.id,
         }
 
@@ -124,8 +156,13 @@ class CohortTestSuite(AdmissionsTestCase):
             'academy': {
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
-                'country': self.cohort.academy.country,
-                'city': self.cohort.academy.city,
+                'country': {
+                    'code': self.cohort.academy.country.code,
+                    'name': self.cohort.academy.country.name,
+                },
+                'city': {
+                    'name': self.cohort.academy.city.name,
+                },
                 'logo_url': self.cohort.academy.logo_url,
             },
         }
@@ -174,6 +211,13 @@ class CohortTestSuite(AdmissionsTestCase):
                 'country': self.cohort.academy.country,
                 'city': self.cohort.academy.city,
                 'logo_url': self.cohort.academy.logo_url,
+                'country': {
+                    'code': self.cohort.academy.country.code,
+                    'name': self.cohort.academy.country.name,
+                },
+                'city': {
+                    'name': self.cohort.academy.city.name,
+                },
             },
         }
 

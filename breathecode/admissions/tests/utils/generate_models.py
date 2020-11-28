@@ -45,24 +45,24 @@ class GenerateModels(APITestCase, DevelopmentEnvironment, DateFormatter):
             self.user.set_password(self.password)
             self.user.save()
 
-        if cohort_user:
-            kargs = {}
+        # if cohort_user:
+        #     kargs = {}
 
-            kargs['user'] = self.user
-            kargs['cohort'] = self.cohort
+        #     kargs['user'] = self.user
+        #     kargs['cohort'] = self.cohort
 
-            if finantial_status:
-                kargs['finantial_status'] = finantial_status
+        #     if finantial_status:
+        #         kargs['finantial_status'] = finantial_status
 
-            if educational_status:
-                kargs['educational_status'] = educational_status
+        #     if educational_status:
+        #         kargs['educational_status'] = educational_status
 
-            self.cohort_user = mixer.blend('admissions.CohortUser', **kargs)
+        #     self.cohort_user = mixer.blend('admissions.CohortUser', **kargs)
 
         if profile_academy:
             self.profile_academy = mixer.blend('authenticate.ProfileAcademy', user=self.user,
                 certificate=self.certificate, academy=self.academy)
 
-    def authenticate(self):
-        if self.user:
-            self.client.force_authenticate(user=self.user)
+    # def authenticate(self):
+    #     if self.user:
+    #         self.client.force_authenticate(user=self.user)
