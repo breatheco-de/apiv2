@@ -15,9 +15,9 @@
 * [x]  A student cannot be created without a cohort.
 * [x]  A student cannot be added to a cohort twice.
 * [x]  There can only be one main instructor in a cohort.
-* [ ]  A student cannot join a cohort with the same certificate more than once unless it was marked as `POSTPONED` on the previous ones.
-* [ ]  A student cannot be marked as 'GRADUATED' if its financial status is 'LATE'
-* [ ]  A student cannot be marked as 'GRADUATED" if it has at least 1 assignment with task_type=PROJECT and status TASK_STATUS= PENDING.
+* [x]  A student cannot join a cohort with the same certificate more than once unless it was marked as `POSTPONED` on the previous ones.
+* [x]  A student cannot be marked as 'GRADUATED' if its financial status is 'LATE'
+* [x]  A student cannot be marked as 'GRADUATED" if it has at least 1 assignment with task_type=PROJECT and status TASK_STATUS= PENDING.
 
 ## Integration with notify app
 * [ ]  When a cohort is created a new slack channel must be created as well.

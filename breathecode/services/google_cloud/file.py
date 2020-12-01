@@ -1,6 +1,4 @@
-import requests, logging
-# from google.cloud import storage
-from google.cloud.storage import Bucket
+import logging
 
 logger = logging.getLogger(__name__)
 

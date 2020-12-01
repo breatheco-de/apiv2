@@ -21,12 +21,14 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
     city = None
     country = None
     user_two = None
+    cohort_two = None
+    task = None
 
     def get_cohort(self, id):
-        try:
-            return Cohort.objects.get(id=id)
-        except Cohort.DoesNotExist:
-            return None
+        return Cohort.objects.filter(id=id).first()
+        
+    def get_cohort_user(self, id):
+        return CohortUser.objects.filter(id=id).first()
 
     def count_cohort_user(self):
         return CohortUser.objects.count()
@@ -37,7 +39,8 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
     def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
-            finantial_status='', educational_status='', city=False, country=False, user_two=True):
+            finantial_status='', educational_status='', city=False, country=False, user_two=True,
+            cohort_two=False, task=False, task_status='', task_type=''):
         # isinstance(True, bool)
         self.maxDiff = None
 
@@ -65,10 +68,32 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
             self.cohort = mixer.blend('admissions.Cohort', **kargs)
 
-        if user or authenticate or profile_academy or cohort_user:
+        if cohort_two:
+            kargs = {}
+
+            if profile_academy:
+                kargs['certificate'] = self.certificate
+                kargs['academy'] = self.academy
+
+            self.cohort_two = mixer.blend('admissions.Cohort', **kargs)
+
+        if user or authenticate or profile_academy or cohort_user or task:
             self.user = mixer.blend('auth.User')
             self.user.set_password(self.password)
             self.user.save()
+
+        if task:
+            kargs = {
+                'user': self.user
+            }
+
+            if task_status:
+                kargs['task_status'] = task_status
+
+            if task_type:
+                kargs['task_type'] = task_type
+
+            self.task = mixer.blend('assignments.Task', **kargs)
 
         if user_two:
             self.user_two = mixer.blend('auth.User')

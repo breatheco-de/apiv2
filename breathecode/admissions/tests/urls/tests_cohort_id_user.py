@@ -138,6 +138,24 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_id_user_post_with_two_cohort_with_the_same_certificate(self):
+        """Test /cohort/:id/user without auth"""
+        self.generate_models(authenticate=True, cohort=True, cohort_two=True, user=True,
+            profile_academy=True, cohort_user=True, user_two=True)
+        url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': self.cohort_two.id})
+        data = {
+            'user':  self.user.id,
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {'status_code': 500, 'details': 'Specified certificate are used for other cohort'}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_post_twice(self):
         """Test /cohort/:id/user without auth"""
         self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
@@ -230,6 +248,51 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         expected = {
             'status_code': 500,
             'details': 'There can only be one main instructor in a cohort',
+        }
+        print(json)
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_id_user_post_with_unsuccess_task(self):
+        """Test /cohort/:id/user without auth"""
+        self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
+            task=True, task_status='PENDING', task_type='PROJECT')
+        url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': self.cohort.id})
+        data = {
+            'user':  self.user.id,
+            'educational_status': 'GRADUATED',
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {
+            'status_code': 500,
+            'details': 'User has tasks with status pending',
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_id_user_post_with_unsuccess_finantial_status(self):
+        """Test /cohort/:id/user without auth"""
+        self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
+        url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': self.cohort.id})
+        data = {
+            'user':  self.user.id,
+            'educational_status': 'GRADUATED',
+            'finantial_status': 'LATE',
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {
+            'status_code': 500,
+            'details': 'Cannot be marked as `GRADUATED` if its financial status is `LATE`',
         }
 
         self.assertEqual(json, expected)

@@ -22,6 +22,7 @@ from breathecode.utils import localize_query
 from django.http import QueryDict
 from django.db.utils import IntegrityError
 from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
+from breathecode.assignments.models import Task
 
 logger = logging.getLogger(__name__)
 
@@ -120,9 +121,16 @@ class CohortUserView(APIView):
         serializer = GETCohortUserSerializer(items, many=True)
         return Response(serializer.data)
 
-    def post(self, request, cohort_id=None):
+    def count_certificates_by_cohort(self, cohort, user_id):
+        return (CohortUser.objects.filter(user_id=user_id, cohort__certificate=cohort.certificate)
+            .exclude(educational_status='POSTPONED').count())
 
-        user_id = request.data.get('user')
+    def validations(self, request, cohort_id=None, user_id=None, matcher=None,
+            disable_cohort_user_just_once=False, disable_certificate_validations=False):
+
+        if user_id is None:
+            user_id = request.data.get('user')
+
         if cohort_id is None or user_id is None:
             raise serializers.ValidationError("Missing cohort_id or user_id", code=400)
 
@@ -139,12 +147,31 @@ class CohortUserView(APIView):
             logger.debug(f"Cohort not be found in related academies")
             raise serializers.ValidationError('Specified cohort not be found')
 
-        if CohortUser.objects.filter(user_id=user_id, cohort_id=cohort_id).count():
+        if not disable_cohort_user_just_once and CohortUser.objects.filter(user_id=user_id,
+                cohort_id=cohort_id).count():
             raise serializers.ValidationError('That user exist in this cohort')
+
+        if not disable_certificate_validations and self.count_certificates_by_cohort(
+                cohort, user_id) > 0:
+            raise serializers.ValidationError('Specified certificate are used for other cohort')
 
         role = request.data.get('role')
         if role == 'TEACHER' and CohortUser.objects.filter(role=role, cohort_id=cohort_id).count():
             raise serializers.ValidationError('There can only be one main instructor in a cohort')
+
+        cohort_user = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id).first()
+
+        is_graduated = request.data.get('educational_status') == 'GRADUATED'
+        is_late = (True if cohort_user and cohort_user.finantial_status == 'LATE' else request.data
+            .get('finantial_status') == 'LATE')
+        if is_graduated and is_late:
+            raise serializers.ValidationError(('Cannot be marked as `GRADUATED` if its financial '
+                'status is `LATE`'))
+
+        has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
+            task_type='PROJECT').count()
+        if is_graduated and has_tasks:
+            raise serializers.ValidationError('User has tasks with status pending')
 
         data = {}
 
@@ -153,24 +180,27 @@ class CohortUserView(APIView):
 
         data['cohort'] = cohort_id
 
-        serializer = CohortUserSerializer(data=data, context=data)
+        return {
+            'data': data,
+            'cohort': cohort,
+            'cohort_user': cohort_user,
+        }
+
+    def post(self, request, cohort_id=None):
+        validations = self.validations(request, cohort_id, matcher="cohort__academy__in")
+
+        serializer = CohortUserSerializer(data=validations['data'], context=validations['data'])
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, cohort_id=None, user_id=None):
+        validations = self.validations(request, cohort_id, user_id, "cohort__academy__in",
+            disable_cohort_user_just_once=True, disable_certificate_validations=True)
 
-        if cohort_id is None or user_id is None:
-            raise serializers.ValidationError("Missing user_id or cohort_id", code=400)
-
-        cu = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id)
-        cu = localize_query(cu, request, "cohort__academy__in").first() # only form this academy
-
-        if cu is None:
-            raise serializers.ValidationError('Specified cohort and user could not be found')
-
-        serializer = CohortUserPUTSerializer(cu, data=request.data, context={ "request": request })
+        serializer = CohortUserPUTSerializer(validations['cohort_user'], data=validations['data'],
+            context={"request": request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
