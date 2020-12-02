@@ -49,11 +49,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
         json = response.json()
         print(json)
         expected = [{
-            'id': self.cohort_user.id,
             'role': self.cohort_user.role,
             'finantial_status': self.cohort_user.finantial_status,
             'educational_status': self.cohort_user.educational_status,
             'created_at': re.sub(r'\+00:00$', 'Z', self.cohort_user.created_at.isoformat()),
+            'cohort': {
+                'id': self.cohort_user.cohort.id,
+                'kickoff_date': self.cohort_user.cohort.kickoff_date,
+                'name': self.cohort_user.cohort.name,
+                'slug': self.cohort_user.cohort.slug,
+                'stage': self.cohort_user.cohort.stage,
+            },
             'user': {
                 'id': self.cohort_user.user.id,
                 'first_name': self.cohort_user.user.first_name,
@@ -91,11 +97,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
         json = response.json()
         print(json)
         expected = [{
-            'id': self.cohort_user.id,
             'role': self.cohort_user.role,
             'finantial_status': self.cohort_user.finantial_status,
             'educational_status': self.cohort_user.educational_status,
             'created_at': re.sub(r'\+00:00$', 'Z', self.cohort_user.created_at.isoformat()),
+            'cohort': {
+                'id': self.cohort_user.cohort.id,
+                'kickoff_date': self.cohort_user.cohort.kickoff_date,
+                'name': self.cohort_user.cohort.name,
+                'slug': self.cohort_user.cohort.slug,
+                'stage': self.cohort_user.cohort.stage,
+            },
             'user': {
                 'id': self.cohort_user.user.id,
                 'first_name': self.cohort_user.user.first_name,
@@ -135,11 +147,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
         json = response.json()
         print(json)
         expected = [{
-            'id': self.cohort_user.id,
             'role': self.cohort_user.role,
             'finantial_status': self.cohort_user.finantial_status,
             'educational_status': self.cohort_user.educational_status,
             'created_at': re.sub(r'\+00:00$', 'Z', self.cohort_user.created_at.isoformat()),
+            'cohort': {
+                'id': self.cohort_user.cohort.id,
+                'kickoff_date': self.cohort_user.cohort.kickoff_date,
+                'name': self.cohort_user.cohort.name,
+                'slug': self.cohort_user.cohort.slug,
+                'stage': self.cohort_user.cohort.stage,
+            },
             'user': {
                 'id': self.cohort_user.user.id,
                 'first_name': self.cohort_user.user.first_name,

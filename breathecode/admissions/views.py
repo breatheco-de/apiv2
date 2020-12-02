@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny
 from .serializers import (
     AcademySerializer, CohortSerializer, CertificateSerializer,
     GetCohortSerializer, UserSerializer, CohortUserSerializer,
-    GETCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer
+    GETCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
 )
 from .models import Academy, CohortUser, Certificate, Cohort
 from breathecode.authenticate.models import ProfileAcademy
@@ -96,6 +96,10 @@ class CohortUserView(APIView):
         cohorts = request.GET.get('cohorts', None)
         if cohorts is not None:
             items = items.filter(cohort__slug__in=cohorts.split(","))
+
+        users = request.GET.get('users', None)
+        if users is not None:
+            items = items.filter(user__id__in=users.split(","))
 
         serializer = GETCohortUserSerializer(items, many=True)
         return Response(serializer.data)

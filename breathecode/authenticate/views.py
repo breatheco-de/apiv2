@@ -16,14 +16,18 @@ from django.shortcuts import render
 from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
 from django.utils import timezone
-from .models import Profile
+from .models import Profile, ProfileAcademy
 from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm
 from .models import Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackTeam
-from .serializers import UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer
+from breathecode.utils import localize_query
+from .serializers import (
+    UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
+    StaffSerializer, StaffPOSTSerializer
+)
 
 logger = logging.getLogger(__name__)
  
@@ -54,6 +58,42 @@ class LogoutView(APIView):
         return Response({
             'message': "User tokens successfully deleted",
         })
+
+class StaffView(APIView):
+
+    def get(self, request):
+        items = ProfileAcademy.objects.all()
+        items = localize_query(items, request) # only form this academy
+
+        roles = request.GET.get('roles', None)
+        if roles is not None:
+            items = items.filter(role__in=roles.split(","))
+
+        serializer = GETProfileAcademy(items, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, format=None):
+        serializer = StaffPOSTSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, academy_id=None, user_id=None):
+
+        if academy_id is None or user_id is None:
+            raise serializers.ValidationError("Missing user_id or academy_id", code=400)
+        
+        academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list('academy__id', flat=True)
+        if academy_id not in academy_ids:
+            raise serializers.ValidationError('You ar enot allowed to manipulate users for this academy')
+
+        profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id).first()
+        if profile is None:
+            raise serializers.ValidationError('Specified academy and user its not a staff member')
+
+        profile.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 class LoginView(ObtainAuthToken):
     def post(self, request, *args, **kwargs):
