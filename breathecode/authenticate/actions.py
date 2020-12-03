@@ -38,11 +38,17 @@ def delete_tokens(users=None, status='expired'):
     return count
 
 def reset_password(users=None):
+
+    if users is None or len(users) == 0:
+        raise Exception("Missing users")
+
     for user in users:
         token = Token.create_temp(user)
-        send_email_message('pick_password', user.email, {
+
+        # returns true or false if the email was send
+        return send_email_message('pick_password', user.email, {
             "SUBJECT": "You asked to reset your password at BreatheCode",
-            "LINK": os.getenv('API_URL') + f"/v1/auth/password/{token}"
+            "LINK": os.getenv('API_URL','') + f"/v1/auth/password/{token}"
         })
     
     return True
