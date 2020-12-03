@@ -87,6 +87,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     def test_cohort_id_user_post(self):
         """Test /cohort/:id/user without auth"""
         self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
+        models_dict = self.all_cohort_user_dict()
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': self.cohort.id})
         data = {
             'user':  self.user.id,
@@ -135,6 +136,16 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+        cohort_user = self.get_cohort_user(1)
+        cohort_user_two = cohort_user.__dict__.copy()
+        cohort_user_two.update(data)
+        cohort_user_two['user_id'] = cohort_user_two['user']
+        cohort_user_two['cohort_id'] = self.cohort.id
+        del cohort_user_two['user']
+        models_dict.append(self.remove_dinamics_fields(cohort_user_two))
+
+        self.assertEqual(self.all_cohort_user_dict(), models_dict)
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -177,6 +188,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     def test_cohort_id_user_post_one_teacher(self):
         """Test /cohort/:id/user without auth"""
         self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
+        models_dict = self.all_cohort_user_dict()
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': self.cohort.id})
         data = {
             'user':  self.user.id,
@@ -226,12 +238,22 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+        cohort_user = self.get_cohort_user(1)
+        cohort_user_two = cohort_user.__dict__.copy()
+        cohort_user_two.update(data)
+        cohort_user_two['user_id'] = cohort_user_two['user']
+        cohort_user_two['cohort_id'] = self.cohort.id
+        del cohort_user_two['user']
+        models_dict.append(self.remove_dinamics_fields(cohort_user_two))
+
+        self.assertEqual(self.all_cohort_user_dict(), models_dict)
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_post_two_teacher(self):
         """Test /cohort/:id/user without auth"""
-        self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
+        self.generate_models(authenticate=True, cohort=True, user_two=True, profile_academy=True)
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': self.cohort.id})
         data = {
             'user':  self.user.id,

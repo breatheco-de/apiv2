@@ -36,7 +36,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_user_post_without_data(self):
         """Test /academy/cohort without auth"""
-        self.generate_models(authenticate=True, user=True)
+        self.generate_models(authenticate=True)
+        model_dict = self.get_user_dict(1)
         url = reverse_lazy('admissions:user')
         data = {}
         response = self.client.put(url, data)
@@ -47,11 +48,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'last_name': self.user.last_name,
             'email': self.user.email,
         }
-        print(json)
-        print(expected)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_user(), 1)
+        self.assertEqual(self.get_user_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -59,6 +60,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_user_post(self):
         """Test /academy/cohort without auth"""
         self.generate_models(authenticate=True, user=True)
+        model_dict = self.get_user_dict(1)
         url = reverse_lazy('admissions:user')
         data = {
             'first_name':  'Socrates',
@@ -73,5 +75,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'email': self.user.email,
         }
 
+        model_dict.update(data)
+
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_user(), 1)
+        self.assertEqual(self.get_user_dict(1), model_dict)

@@ -4,8 +4,9 @@ Collections of mixins used to login in authorize microservice
 from datetime import datetime
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
+from django.contrib.auth.models import User
 from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatter
-from ...models import CohortUser, Cohort
+from ...models import CohortUser, Cohort, Academy, Certificate, Cohort
 # from .models import Academy, CohortUser, Certificate, Cohort
 
 class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
@@ -24,22 +25,94 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
     cohort_two = None
     task = None
 
+    def remove_model_state(self, dict):
+        result = None
+        if dict:
+            result = dict.copy()
+            del result['_state']
+        return result
+
+    def remove_updated_at(self, dict):
+        result = None
+        if dict:
+            result = dict.copy()
+            if 'updated_at' in result:
+                del result['updated_at']
+        return result
+
+    def remove_dinamics_fields(self, dict):
+        return self.remove_updated_at(self.remove_model_state(dict))
+
+    def get_academy(self, id):
+        return Academy.objects.filter(id=id).first()
+
+    def get_academy_dict(self, id):
+        data = Academy.objects.filter(id=id).first()
+        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+
+    def get_certificate_dict(self, id):
+        data = Certificate.objects.filter(id=id).first()
+        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+
+    def get_cohort_user_dict(self, id):
+        data = CohortUser.objects.filter(id=id).first()
+        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+
+    def get_user_dict(self, id):
+        data = User.objects.filter(id=id).first()
+        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+
+    def get_cohort_dict(self, id):
+        data = Cohort.objects.filter(id=id).first()
+        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+
+    def all_cohort_dict(self):
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
+            Cohort.objects.filter()]
+
+    def all_academy_dict(self):
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
+            Academy.objects.filter()]
+
+    def all_cohort_user_dict(self):
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
+            CohortUser.objects.filter()]
+
+    def all_user_dict(self):
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
+            User.objects.filter()]
+
     def get_cohort(self, id):
         return Cohort.objects.filter(id=id).first()
         
     def get_cohort_user(self, id):
         return CohortUser.objects.filter(id=id).first()
 
+    def get_user(self, id):
+        return User.objects.filter(id=id).first()
+
     def count_cohort_user(self):
         return CohortUser.objects.count()
+
+    def count_user(self):
+        return User.objects.count()
 
     def count_cohort_stage(self, cohort_id):
         cohort = Cohort.objects.get(id=cohort_id)
         return cohort.stage
 
+    def count_academy(self):
+        return Academy.objects.count()
+
+    def count_certificate(self):
+        return Certificate.objects.count()
+
+    def count_cohort(self):
+        return Cohort.objects.count()
+
     def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
-            finantial_status='', educational_status='', city=False, country=False, user_two=True,
+            finantial_status='', educational_status='', city=False, country=False, user_two=False,
             cohort_two=False, task=False, task_status='', task_type=''):
         # isinstance(True, bool)
         self.maxDiff = None
@@ -120,4 +193,3 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
         if profile_academy:
             self.profile_academy = mixer.blend('authenticate.ProfileAcademy', user=self.user,
                 certificate=self.certificate, academy=self.academy)
-

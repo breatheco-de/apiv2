@@ -117,6 +117,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         """Test /cohort/:id/user/:id without auth"""
         self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
             cohort_user=True)
+        model_dict = self.get_cohort_user_dict(1)
         url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': self.cohort.id,
             'user_id': self.user.id})
         data = {
@@ -133,6 +134,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort_user(), 1)
+        self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

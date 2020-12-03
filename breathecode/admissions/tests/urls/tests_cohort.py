@@ -38,14 +38,16 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort_user(), 0)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_with_data(self):
         """Test /cohort without auth"""
-        url = reverse_lazy('admissions:cohort')
         self.generate_models(authenticate=True, cohort=True)
+        model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
+        url = reverse_lazy('admissions:cohort')
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -77,6 +79,8 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -98,6 +102,7 @@ class CohortTestSuite(AdmissionsTestCase):
     def test_cohort_with_data_with_upcoming_false(self):
         """Test /cohort without auth"""
         self.generate_models(authenticate=True, cohort=True)
+        model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         base_url = reverse_lazy('admissions:cohort')
         url = f'{base_url}?upcoming=false'
         response = self.client.get(url)
@@ -131,6 +136,8 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -138,6 +145,7 @@ class CohortTestSuite(AdmissionsTestCase):
     def test_cohort_with_data_with_upcoming_true_without_data(self):
         """Test /cohort without auth"""
         self.generate_models(authenticate=True, cohort=True)
+        model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         base_url = reverse_lazy('admissions:cohort')
         url = f'{base_url}?upcoming=true'
         response = self.client.get(url)
@@ -145,6 +153,8 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -152,6 +162,7 @@ class CohortTestSuite(AdmissionsTestCase):
     def test_cohort_with_data_with_upcoming_true(self):
         """Test /cohort without auth"""
         self.generate_models(authenticate=True, cohort=True, impossible_kickoff_date=True)
+        model_dict = self.get_cohort_dict(1)
         base_url = reverse_lazy('admissions:cohort')
         url = f'{base_url}?upcoming=true'
         response = self.client.get(url)
@@ -185,6 +196,8 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -193,6 +206,7 @@ class CohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         self.generate_models(authenticate=True, cohort=True, profile_academy=True,
             impossible_kickoff_date=True)
+        model_dict = self.get_cohort_dict(1)
         base_url = reverse_lazy('admissions:cohort')
         url = f'{base_url}?academy=they-killed-kenny'
         response = self.client.get(url)
@@ -200,6 +214,8 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -208,6 +224,7 @@ class CohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         self.generate_models(authenticate=True, cohort=True, profile_academy=True,
             impossible_kickoff_date=True)
+        model_dict = self.get_cohort_dict(1)
         base_url = reverse_lazy('admissions:cohort')
         url = f'{base_url}?academy={self.academy.slug}'
         response = self.client.get(url)
@@ -241,6 +258,8 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -249,6 +268,7 @@ class CohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         self.generate_models(authenticate=True, cohort=True, profile_academy=True,
             impossible_kickoff_date=True)
+        model_dict = self.get_cohort_dict(1)
         base_url = reverse_lazy('admissions:cohort')
         url = f'{base_url}?academy={self.academy.slug},they-killed-kenny'
         response = self.client.get(url)
@@ -282,14 +302,18 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_with_ten_datas_with_academy_with_comma(self):
         """Test /cohort without auth"""
+        self.maxDiff = None
         models = [GenerateModels(authenticate=True, cohort=True, profile_academy=True,
             impossible_kickoff_date=True) for index in range(0, 10)]
+        models_dict = self.all_cohort_dict()
         self.client.force_authenticate(user=models[0].user)
         base_url = reverse_lazy('admissions:cohort')
         params = ','.join([model.academy.slug for model in models])
@@ -326,6 +350,7 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_cohort_dict(), models_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -334,6 +359,7 @@ class CohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         self.generate_models(authenticate=True, cohort=True, profile_academy=True,
             impossible_kickoff_date=True)
+        model_dict = self.get_cohort_dict(1)
         base_url = reverse_lazy('admissions:cohort')
         url = f'{base_url}?location=they-killed-kenny'
         response = self.client.get(url)
@@ -341,6 +367,8 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -349,6 +377,7 @@ class CohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         self.generate_models(authenticate=True, cohort=True, profile_academy=True,
             impossible_kickoff_date=True)
+        model_dict = self.get_cohort_dict(1)
         base_url = reverse_lazy('admissions:cohort')
         url = f'{base_url}?location={self.academy.slug}'
         response = self.client.get(url)
@@ -382,6 +411,8 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -390,6 +421,7 @@ class CohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         self.generate_models(authenticate=True, cohort=True, profile_academy=True,
             impossible_kickoff_date=True)
+        model_dict = self.get_cohort_dict(1)
         base_url = reverse_lazy('admissions:cohort')
         url = f'{base_url}?location={self.academy.slug},they-killed-kenny'
         response = self.client.get(url)
@@ -423,17 +455,17 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_with_ten_datas_with_location_with_comma(self):
         """Test /cohort without auth"""
-        # self.generate_models(authenticate=True, cohort=True, profile_academy=True,
-        #     impossible_kickoff_date=True)
         models = [GenerateModels(authenticate=True, cohort=True, profile_academy=True,
             impossible_kickoff_date=True) for index in range(0, 10)]
-        # models[0].authenticate()
+        models_dict = self.all_cohort_dict()
         self.client.force_authenticate(user=models[0].user)
         base_url = reverse_lazy('admissions:cohort')
         params = ','.join([model.academy.slug for model in models])
@@ -470,3 +502,4 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_cohort_dict(), models_dict)

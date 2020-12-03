@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.utils import timezone
+from rest_framework import status
 from rest_framework.permissions import AllowAny
 from .models import Event, EventType, EventCheckin
 from rest_framework.decorators import api_view, permission_classes

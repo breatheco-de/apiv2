@@ -36,14 +36,16 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_certificate(), 0)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_with_data(self):
         """Test /certificate without auth"""
-        url = reverse_lazy('admissions:certificate')
         self.generate_models(authenticate=True, certificate=True)
+        model_dict = self.remove_dinamics_fields(self.certificate.__dict__)
+        url = reverse_lazy('admissions:certificate')
         response = self.client.get(url)
         json = response.json()
 
@@ -53,3 +55,5 @@ class CertificateTestSuite(AdmissionsTestCase):
             'slug': self.certificate.slug,
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_certificate(), 1)
+        self.assertEqual(self.get_certificate_dict(1), model_dict)

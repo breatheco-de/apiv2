@@ -155,8 +155,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_post(self):
         """Test /academy/cohort without auth"""
+        self.assertEqual(self.count_cohort(), 0)
         self.generate_models(authenticate=True, user=True, profile_academy=True,
             certificate=True)
+        self.assertEqual(self.count_cohort(), 1)
+        models_dict = self.all_cohort_dict()
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'certificate':  self.certificate.id,
@@ -193,8 +196,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'created_at': re.sub(r'\+00:00$', 'Z', cohort.created_at.isoformat()),
             'updated_at': re.sub(r'\+00:00$', 'Z', cohort.updated_at.isoformat()),
         }
-        print(json)
-        print(expected)
+
+        del data['kickoff_date']
+        cohort_two = cohort.__dict__.copy()
+        cohort_two.update(data)
+        cohort_two['certificate_id'] = cohort_two['certificate']
+        del cohort_two['certificate']
+        models_dict.append(self.remove_dinamics_fields(cohort_two))
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_cohort_dict(), models_dict)

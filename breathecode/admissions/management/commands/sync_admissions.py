@@ -245,7 +245,7 @@ class Command(BaseCommand):
 
         for cohort_slug in _teacher['cohorts']:
             cohort = Cohort.objects.filter(slug=cohort_slug).first()
-            if cohort is not None:
+            if cohort is None:
                 cohort_user = CohortUser(
                     user=us,
                     cohort=cohort,
@@ -276,7 +276,7 @@ class Command(BaseCommand):
 
         for cohort_slug in _student['cohorts']:
             cohort = Cohort.objects.filter(slug=cohort_slug).first()
-            if cohort is not None:
+            if cohort is None:
                 cohort_user = CohortUser(
                     user=us,
                     cohort=cohort,

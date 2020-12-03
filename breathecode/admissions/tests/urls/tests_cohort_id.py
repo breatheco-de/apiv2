@@ -79,6 +79,7 @@ class CohortTestSuite(AdmissionsTestCase):
     def test_cohort_id_put_with_id(self):
         """Test /cohort/:id without auth"""
         self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         url = reverse_lazy('admissions:cohort_id', kwargs={'cohort_id': self.cohort.id})
         data = {
             'certificate': self.certificate.id
@@ -99,6 +100,8 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -106,6 +109,7 @@ class CohortTestSuite(AdmissionsTestCase):
     def test_cohort_id_put_with_id_with_data_in_body(self):
         """Test /cohort/:id without auth"""
         self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        model_dict = self.get_cohort_dict(1)
         url = reverse_lazy('admissions:cohort_id', kwargs={'cohort_id': self.cohort.id})
         data = {
             'certificate': self.certificate.id,
@@ -114,6 +118,9 @@ class CohortTestSuite(AdmissionsTestCase):
             'current_day': self.cohort.current_day + 1,
             'language': 'es',
         }
+        model_dict.update(data)
+        model_dict['certificate_id'] = model_dict['certificate']
+        del model_dict['certificate']
         response = self.client.put(url, data)
         json = response.json()
         expected = {
@@ -130,6 +137,8 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -137,6 +146,7 @@ class CohortTestSuite(AdmissionsTestCase):
     def test_cohort_id_get_with_id(self):
         """Test /cohort/:id without auth"""
         self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         url = reverse_lazy('admissions:cohort_id', kwargs={'cohort_id': self.cohort.id})
         response = self.client.get(url)
         json = response.json()
@@ -169,6 +179,8 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -189,6 +201,7 @@ class CohortTestSuite(AdmissionsTestCase):
     def test_cohort_id_get_with_slug(self):
         """Test /cohort/:id without auth"""
         self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         url = reverse_lazy('admissions:cohort_id', kwargs={'cohort_id': self.cohort.slug})
         response = self.client.get(url)
         json = response.json()
@@ -223,6 +236,8 @@ class CohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.count_cohort(), 1)
+        self.assertEqual(self.get_cohort_dict(1), model_dict)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
