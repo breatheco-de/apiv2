@@ -19,6 +19,22 @@ class GithubSmallSerializer(serpy.Serializer):
     avatar_url = serpy.Field()
     name = serpy.Field()
 
+class AcademySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    name = serpy.Field()
+    slug = serpy.Field()
+
+class ProfileAcademySmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    academy = AcademySerializer()
+    role = serpy.MethodField()
+
+    def get_role(self,obj):
+        return obj.role.slug
+
 class AcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -51,12 +67,16 @@ class UserSerializer(serpy.Serializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     github = serpy.MethodField()
-
+    roles = serpy.MethodField()
+    
     def get_github(self, obj):
         github = CredentialsGithub.objects.filter(user=obj.id).first()
         if github is None:
             return None
         return GithubSmallSerializer(github).data
+    def get_roles(self, obj):
+        roles = ProfileAcademy.objects.filter(user=obj.id)
+        return ProfileAcademySmallSerializer(roles, many=True).data
 
 
 class GroupSerializer(serpy.Serializer):
