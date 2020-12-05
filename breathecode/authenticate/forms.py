@@ -3,6 +3,18 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.forms.widgets import PasswordInput
 from django import forms
 
+class ResetPasswordForm(forms.Form):
+    callback= forms.CharField(required=False,widget=forms.HiddenInput())
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            "label": "email",
+            "class":"form-control",
+        }),
+    )
+    def __init__(self, params, *args, **kwargs):
+        super(forms.Form, self).__init__(params,*args, **kwargs)
+        self.fields['callback'].widget.attrs.update({'initial': params.get('callback')})
+
 class PickPasswordForm(forms.Form):
     token= forms.CharField(widget=forms.HiddenInput())
     callback= forms.CharField(required=False,widget=forms.HiddenInput())

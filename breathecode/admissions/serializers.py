@@ -35,17 +35,6 @@ class UserSerializer(serpy.Serializer):
     email = serpy.Field()
     profile = ProfileSerializer(required=False)
 
-class GETCohortUserSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
-    id = serpy.Field()
-    user = UserSerializer()
-    user = UserSerializer()
-    role = serpy.Field()
-    finantial_status = serpy.Field()
-    educational_status = serpy.Field()
-    created_at = serpy.Field()
-
 class GetCertificateSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -73,6 +62,25 @@ class GetCohortSerializer(serpy.Serializer):
     certificate = GetCertificateSerializer()
     academy = GetAcademySerializer()
 
+class GetSmallCohortSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    kickoff_date = serpy.Field()
+    ending_date = serpy.Field()
+    stage = serpy.Field()
+
+class GETCohortUserSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    user = UserSerializer()
+    cohort = GetSmallCohortSerializer()
+    role = serpy.Field()
+    finantial_status = serpy.Field()
+    educational_status = serpy.Field()
+    created_at = serpy.Field()
 
 """
             ↓ EDIT SERLIZERS ↓

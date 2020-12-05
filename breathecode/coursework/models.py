@@ -21,7 +21,7 @@ class Syllabus(models.Model):
 
     version = models.PositiveSmallIntegerField()
 
-    json = JSONField()
+    json = models.JSONField()
     github_url = models.URLField(max_length=255, blank=True, null=True, default=None)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
 
