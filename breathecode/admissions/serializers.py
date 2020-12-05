@@ -23,6 +23,7 @@ class UserSmallSerializer(serpy.Serializer):
 class ProfileSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     avatar_url = serpy.Field()
 
 class UserSerializer(serpy.Serializer):
@@ -46,12 +47,14 @@ class GETCohortUserSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 class GetCertificateSerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
     description = serpy.Field()
     logo = serpy.Field()
 
 class GetAcademySerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
     country = CountrySerializer(required=False)

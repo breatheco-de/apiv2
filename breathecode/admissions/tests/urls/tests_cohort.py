@@ -58,12 +58,14 @@ class CohortTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'certificate': {
+                'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
                 'name': self.cohort.certificate.name,
                 'description': self.cohort.certificate.description,
                 'logo': self.cohort.certificate.logo,
             },
             'academy': {
+                'id': self.cohort.academy.id,
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
                 'country': {
@@ -115,12 +117,14 @@ class CohortTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'certificate': {
+                'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
                 'name': self.cohort.certificate.name,
                 'description': self.cohort.certificate.description,
                 'logo': self.cohort.certificate.logo,
             },
             'academy': {
+                'id': self.cohort.academy.id,
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
                 'country': {
@@ -175,12 +179,14 @@ class CohortTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'certificate': {
+                'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
                 'name': self.cohort.certificate.name,
                 'description': self.cohort.certificate.description,
                 'logo': self.cohort.certificate.logo,
             },
             'academy': {
+                'id': self.cohort.academy.id,
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
                 'country': {
@@ -237,12 +243,14 @@ class CohortTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'certificate': {
+                'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
                 'name': self.cohort.certificate.name,
                 'description': self.cohort.certificate.description,
                 'logo': self.cohort.certificate.logo,
             },
             'academy': {
+                'id': self.cohort.academy.id,
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
                 'country': {
@@ -281,12 +289,14 @@ class CohortTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'certificate': {
+                'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
                 'name': self.cohort.certificate.name,
                 'description': self.cohort.certificate.description,
                 'logo': self.cohort.certificate.logo,
             },
             'academy': {
+                'id': self.cohort.academy.id,
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
                 'country': {
@@ -328,12 +338,14 @@ class CohortTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'certificate': {
+                'id': model.cohort.certificate.id,
                 'slug': model.cohort.certificate.slug,
                 'name': model.cohort.certificate.name,
                 'description': model.cohort.certificate.description,
                 'logo': model.cohort.certificate.logo,
             },
             'academy': {
+                'id': model.cohort.academy.id,
                 'slug': model.cohort.academy.slug,
                 'name': model.cohort.academy.name,
                 'country': {
@@ -390,12 +402,14 @@ class CohortTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'certificate': {
+                'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
                 'name': self.cohort.certificate.name,
                 'description': self.cohort.certificate.description,
                 'logo': self.cohort.certificate.logo,
             },
             'academy': {
+                'id': self.cohort.academy.id,
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
                 'country': {
@@ -434,12 +448,14 @@ class CohortTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'certificate': {
+                'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
                 'name': self.cohort.certificate.name,
                 'description': self.cohort.certificate.description,
                 'logo': self.cohort.certificate.logo,
             },
             'academy': {
+                'id': self.cohort.academy.id,
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
                 'country': {
@@ -480,12 +496,14 @@ class CohortTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'certificate': {
+                'id': model.cohort.certificate.id,
                 'slug': model.cohort.certificate.slug,
                 'name': model.cohort.certificate.name,
                 'description': model.cohort.certificate.description,
                 'logo': model.cohort.certificate.logo,
             },
             'academy': {
+                'id': model.cohort.academy.id,
                 'slug': model.cohort.academy.slug,
                 'name': model.cohort.academy.name,
                 'country': {

@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from google.cloud import datastore
 from rest_framework import status
+from breathecode.services.google_cloud import Datastore
 # Create your views here.
 
 # DOCUMENTATION RESOURCES
@@ -18,6 +19,8 @@ class ActivityView(APIView):
     List all snippets, or create a new snippet.
     """
     def get(self, request, format=None):
+        # datastore = Datastore()
+        # return datastore.fetch(kind='nps_answer')
 
         resolve_google_credentials()
         client = datastore.Client()
@@ -47,3 +50,20 @@ class ActivityView(APIView):
         client.put(entity)
 
         return Response(answer_dict, status=status.HTTP_201_CREATED)
+
+        # answer_dict=request.data
+        # check_params(answer_dict, 'comment', 'score', 'user_id')
+
+        # datastore = Datastore()
+        # datastore.update('nps_answer', {
+        #     'comment': 'Personal',
+        #     'score': False,
+        #     'user_id': 4,
+        #     'certificate': answer_dict['certificate'] if 'certificate' in answer_dict else None,
+        #     'academy': answer_dict['academy'] if 'academy' in answer_dict else None,
+        #     'cohort': answer_dict['cohort'] if 'cohort' in answer_dict else None,
+        #     'mentor': answer_dict['mentor'] if 'mentor' in answer_dict else None
+        # })
+
+        # return Response(answer_dict, status=status.HTTP_201_CREATED)
+

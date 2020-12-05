@@ -139,8 +139,6 @@ class Command(BaseCommand):
                 profile.github_username=_student["github"]
                 profile.save()
 
-
-
     def teachers(self, options):
 
         if options['override']:
@@ -245,7 +243,7 @@ class Command(BaseCommand):
 
         for cohort_slug in _teacher['cohorts']:
             cohort = Cohort.objects.filter(slug=cohort_slug).first()
-            if cohort is None:
+            if cohort and not CohortUser.objects.filter(user=us, cohort=cohort).count():
                 cohort_user = CohortUser(
                     user=us,
                     cohort=cohort,
@@ -276,7 +274,7 @@ class Command(BaseCommand):
 
         for cohort_slug in _student['cohorts']:
             cohort = Cohort.objects.filter(slug=cohort_slug).first()
-            if cohort is None:
+            if cohort and not CohortUser.objects.filter(user=us, cohort=cohort).count():
                 cohort_user = CohortUser(
                     user=us,
                     cohort=cohort,

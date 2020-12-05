@@ -158,12 +158,14 @@ class CohortTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'certificate': {
+                'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
                 'name': self.cohort.certificate.name,
                 'description': self.cohort.certificate.description,
                 'logo': self.cohort.certificate.logo,
             },
             'academy': {
+                'id': self.cohort.academy.id,
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
                 'country': {
@@ -213,12 +215,14 @@ class CohortTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'certificate': {
+                'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
                 'name': self.cohort.certificate.name,
                 'description': self.cohort.certificate.description,
                 'logo': self.cohort.certificate.logo,
             },
             'academy': {
+                'id': self.cohort.academy.id,
                 'slug': self.cohort.academy.slug,
                 'name': self.cohort.academy.name,
                 'country': self.cohort.academy.country,
