@@ -20,7 +20,7 @@ from django.utils import timezone
 from .models import Profile, ProfileAcademy
 from .authentication import ExpiringTokenAuthentication
 
-from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm
+from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm
 from .models import Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook
 from .actions import reset_password
 from breathecode.admissions.models import Academy
@@ -98,6 +98,7 @@ class StaffView(APIView):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 class LoginView(ObtainAuthToken):
+    
     def post(self, request, *args, **kwargs):
         # delete expired tokens
         utc_now = timezone.now()
@@ -636,6 +637,53 @@ def pick_password(request, token):
                 return render(request, 'message.html', {
                     'message': 'You password has been reset successfully, you can close this window.'
                 })
+
+    return render(request, 'form.html', {
+        'form': form
+    })
+
+def login_html_view(request):
+
+    _dict = request.GET.copy()
+    form = LoginForm(_dict)
+
+    if request.method == 'POST':
+
+        try:
+
+            url = request.POST.get("url", None)
+            if url is None or url == "":
+                raise Exception("Invalid redirect url, you must specify a url to redirect to")
+                
+            email = request.POST.get("email", None)
+            password = request.POST.get("password", None)
+
+            if email and password:
+                user = User.objects.filter(Q(email=email) | Q(username=email)).first()
+                if not user:
+                    msg = 'Unable to log in with provided credentials.'
+                    raise Exception(msg)
+                if user.check_password(password) != True:
+                    msg = 'Unable to log in with provided credentials.'
+                    raise Exception(msg)
+                # The authenticate call simply returns None for is_active=False
+                # users. (Assuming the default ModelBackend authentication
+                # backend.)
+            else:
+                msg = 'Must include "username" and "password".'
+                raise Exception(msg, code=403)
+
+            return HttpResponseRedirect(url)
+
+        except Exception as e:
+            messages.error(request, e.message if hasattr(e, 'message') else e)
+            return render(request, 'form.html', {
+                'form': form
+            })
+    else:
+        url = request.GET.get("url", None)
+        if url is None or url == "":
+            messages.error(request, "You must specify a 'url' (querystring) to redirect to after successfull login")
 
     return render(request, 'form.html', {
         'form': form

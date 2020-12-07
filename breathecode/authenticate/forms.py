@@ -15,6 +15,24 @@ class ResetPasswordForm(forms.Form):
         super(forms.Form, self).__init__(params,*args, **kwargs)
         self.fields['callback'].widget.attrs.update({'initial': params.get('callback')})
 
+class LoginForm(forms.Form):
+    url= forms.CharField(required=False,widget=forms.HiddenInput())
+    email = forms.EmailField(
+        widget=forms.EmailInput(attrs={
+            "label": "email",
+            "class":"form-control",
+        }),
+    )
+    password = forms.CharField(
+        min_length=8,
+        widget=forms.PasswordInput(attrs={
+                "type":"password",
+                "class":"form-control",
+            }))
+    def __init__(self, params, *args, **kwargs):
+        super(forms.Form, self).__init__(params,*args, **kwargs)
+        self.fields['url'].widget.attrs.update({'initial': params.get('url')})
+
 class PickPasswordForm(forms.Form):
     token= forms.CharField(widget=forms.HiddenInput())
     callback= forms.CharField(required=False,widget=forms.HiddenInput())
