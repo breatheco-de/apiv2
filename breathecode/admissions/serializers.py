@@ -1,5 +1,6 @@
 import serpy
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from .models import Academy, Cohort, Certificate, CohortUser
 
 class CountrySerializer(serpy.Serializer):
@@ -22,6 +23,7 @@ class UserSmallSerializer(serpy.Serializer):
 class ProfileSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     avatar_url = serpy.Field()
 
 class UserSerializer(serpy.Serializer):
@@ -34,12 +36,14 @@ class UserSerializer(serpy.Serializer):
     profile = ProfileSerializer(required=False)
 
 class GetCertificateSerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
     description = serpy.Field()
     logo = serpy.Field()
 
 class GetAcademySerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
     country = CountrySerializer(required=False)
@@ -84,19 +88,31 @@ class GETCohortUserSerializer(serpy.Serializer):
 
 
 class AcademySerializer(serializers.ModelSerializer):
+    country = CountrySerializer(required=True)
+    city = CitySerializer(required=True)
+
     class Meta:
         model = Academy
-        fields = ['id', 'slug', 'name', 'street_address']
+        fields = ['id', 'slug', 'name', 'street_address', 'country', 'city']
 
-class CohortSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Cohort
-        fields = ('slug', 'name', 'kickoff_date')
 
 class CertificateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Certificate
         fields = ['id', 'slug', 'name']
+
+
+class CohortSerializer(serializers.ModelSerializer):
+    academy = AcademySerializer(many=False, required=False, read_only=True)
+    certificate = CertificateSerializer(many=False, required=False, read_only=True)
+
+    class Meta:
+        model = Cohort
+        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'certificate',
+            'ending_date', 'stage', 'language', 'created_at', 'updated_at')
+
+    def create(self, validated_data):
+        return Cohort.objects.create(**self.context)
 
 class CohortPUTSerializer(serializers.ModelSerializer):
     slug = serializers.SlugField(required=False)
@@ -109,15 +125,52 @@ class CohortPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cohort
-        fields = ('slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language', 'certificate')
+        fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
+            'certificate')
+
+class UserDJangoRestSerializer(serializers.ModelSerializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    # id = serializers.IntegerField()
+    # first_name = serializers.CharField()
+    # last_name = serializers.CharField()
+    email = serializers.CharField(read_only=True)
+    # profile = ProfileSerializer(required=False)
+
+    class Meta:
+        model = User
+        fields = ['id', 'first_name', 'last_name', 'email']
+        # fields = ['id', 'user']
 
 class CohortUserSerializer(serializers.ModelSerializer):
-    cohort = CohortSerializer(many=False)
-    user = UserSerializer(many=False)
+    cohort = CohortSerializer(many=False, read_only=True)
+    user = UserDJangoRestSerializer(many=False, read_only=True)
 
     class Meta:
         model = CohortUser
-        fields = ['id', 'user', 'cohort']
+        fields = ['id', 'user', 'cohort', 'role']
+
+    def create(self, validated_data):
+        # relationships, thank you amazing and incredible serializer!
+        cohort = self.context.get('cohort')
+        user = self.context.get('user')
+
+        return CohortUser.objects.create(**validated_data, cohort_id=cohort, user_id=user)
+
+class CohortUserPOSTSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    cohort = serpy.Field()
+    user = serpy.Field()
+
+# class CohortUserSerializer(serializers.ModelSerializer):
+#     cohort = CohortSerializer(many=False)
+#     user = UserSerializer(many=False)
+
+#     class Meta:
+#         model = CohortUser
+#         fields = ['id', 'user', 'cohort']
 
 class CohortUserPUTSerializer(serializers.ModelSerializer):
 

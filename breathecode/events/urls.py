@@ -9,4 +9,3 @@ urlpatterns = [
     path('type/', EventTypeView.as_view()),
     path('checkin/', EventCheckinView.as_view()),
 ]
-

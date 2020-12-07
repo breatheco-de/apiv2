@@ -1,4 +1,4 @@
-import requests, logging
+import logging
 from google.cloud import storage
 from .credentials import resolve_credentials
 from .file import File

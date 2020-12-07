@@ -47,7 +47,7 @@ class SyllabusSerializer(serializers.ModelSerializer):
         if previous_syllabus is not None:
             version = previous_syllabus.version + 1
         return super(SyllabusSerializer, self).create({ 
-            **validated_data, 
+            **validated_data,
             "course": self.context['course'],
             "version": version
         })

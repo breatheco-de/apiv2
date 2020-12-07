@@ -15,6 +15,7 @@ def localize_query(query, request, matcher=None):
 
     academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list('academy__id',
         flat=True)
+
     kwargs = {}
     if matcher is None:
         kwargs["academy__id__in"] = academy_ids

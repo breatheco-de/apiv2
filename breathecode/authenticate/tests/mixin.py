@@ -7,8 +7,6 @@ import urllib
 from django.urls.base import reverse_lazy
 from rest_framework.test import APITestCase, APIClient
 from mixer.backend.django import mixer
-from pprint import pprint
-
 
 class DevelopmentEnvironment():
     def __init__(self):

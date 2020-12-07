@@ -12,14 +12,41 @@ cp .env.example .env
 # Run the tests
 
 ```bash
+docker-compose up -d
 pytest
 ```
 
 # Run coverage
 
+Report in console
+
 ```bash
 docker-compose up -d
 pytest ./breathecode --disable-pytest-warnings --cov=breathecode --cov-report term-missing
+```
+
+Report with HTML
+
+```bash
+docker-compose up -d
+pytest ./breathecode --disable-pytest-warnings --cov=breathecode --cov-report html
+```
+
+Report with XML
+
+```bash
+docker-compose up -d
+pytest ./breathecode --disable-pytest-warnings --cov=breathecode --cov-report xml
+```
+
+Report with cover file
+
+```bash
+docker-compose up -d
+pytest ./breathecode --disable-pytest-warnings --cov=breathecode --cov-report annotate
+
+# remove cover files
+find . -name "*.py,cover" -type f -delete
 ```
 
 # Fixtures

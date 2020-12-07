@@ -1,8 +1,7 @@
 import os
 from django.contrib.auth.models import User
 from django.db import models
-from .actions import remove_bucket_object, get_bucket_object
-from pprint import pprint
+from .actions import get_bucket_object
 
 def get_user_label(self):
     return f"{self.first_name} {self.last_name} ({self.email})"
@@ -40,8 +39,8 @@ class Academy(models.Model):
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)
-    city = models.ForeignKey(City, models.SET_NULL, blank=True, null=True)
-    country = models.ForeignKey(Country, models.SET_NULL, blank=True, null=True)
+    city = models.ForeignKey(City, on_delete=models.CASCADE)
+    country = models.ForeignKey(Country, on_delete=models.CASCADE)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     zip_code = models.IntegerField(blank=True, null=True)
@@ -68,7 +67,7 @@ class Academy(models.Model):
     #     super(Image, self).delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-        if os.getenv('ENV',"") == 'production':
+        if os.getenv('ENV', "") == 'production':
             obj = get_bucket_object(f'location-{self.slug}')
             if obj is not None:
                 self.logo_url = obj.public_url

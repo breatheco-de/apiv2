@@ -4,7 +4,7 @@ Certificate actions
 import requests, os
 from urllib.parse import urlencode
 from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
-from breathecode.assignments.models import Task, PROJECT, PENDING
+from breathecode.assignments.models import Task
 from .models import UserSpecialty, LayoutDesign
 from ..services.google_cloud import Storage
 
@@ -77,13 +77,9 @@ def generate_certificate(user, cohort=None):
 
 def certificate_screenshot(certificate_id: int):
 
-    # if ENVIRONMENT == 'development':
-    #     return True
-
     certificate = UserSpecialty.objects.get(id=certificate_id)
     if certificate.preview_url is None or certificate.preview_url == "":
         file_name = f'{certificate.token}'
-        # resolve_google_credentials()
 
         storage = Storage()
         file = storage.file(BUCKET_NAME, file_name)

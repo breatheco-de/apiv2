@@ -1,5 +1,4 @@
 from .blob_mock import BlobMock
-# from google.cloud.storage import Blob as BlobMock
 
 class BucketMock():
     name = None

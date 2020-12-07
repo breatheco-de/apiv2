@@ -32,7 +32,6 @@ class AuthenticateTestSuite(AuthTestCase):
     #     self.client.force_authenticate(user=self.user)
 
     #     response = self.client.get(url)
-    #     print('====', response.data)
     #     message = str(response.data['message'])
 
     #     self.assertEqual(len(response.data), 1)
