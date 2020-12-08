@@ -41,7 +41,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('v1/auth/', include('breathecode.authenticate.urls', namespace='auth')),
     path('v1/admissions/', include('breathecode.admissions.urls', namespace='admissions')),
-    path('v1/assigments/', include('breathecode.assignments.urls', namespace='assignments')),
+    path('v1/assignment/', include('breathecode.assignments.urls', namespace='assignments')),
     path('v1/freelance/', include('breathecode.freelance.urls', namespace='freelance')),
     path('v1/events/', include('breathecode.events.urls', namespace='events')),
     path('v1/feedback/', include('breathecode.feedback.urls', namespace='feedback')),
