@@ -262,6 +262,7 @@ _locals = locals()
 django_heroku.settings(_locals)
 
 # Change 'default' database configuration with $DATABASE_URL.
+# https://github.com/jacobian/dj-database-url#url-schema
 DATABASES = {
     'default': dj_database_url.config(default=DATABASE_URL),
 }

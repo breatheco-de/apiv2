@@ -28,7 +28,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         model_dict = self.remove_dinamics_fields(models[0].__dict__)
         command = Command()
         
-        self.assertEqual(command.cohort_users(), None)
+        self.assertEqual(command.handle(), None)
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.all_cohort_user_dict(), [model_dict])
 

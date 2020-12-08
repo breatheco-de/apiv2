@@ -5,13 +5,14 @@
 * [x]  PUT `/user` update basic user info (the email cannot be updated with this endpoint)
 * [x]  PUT `/cohort/<id>` update basic info.
 * [x]  POST `/academy/cohort` creates a new cohort, the academy ID will be obtained from the logged user, it cannot be passed on the cohort information.
-* [x]  POST `/cohort/<id>/user` creates a new user into a particular cohort, the cohort ID must be specified on the URL and it cannot belong to a different academy than the logged in user.
+* [ ]  POST `/cohort/<id>/user` creates a new user into a particular cohort, the cohort ID must be specified on the URL and it cannot belong to a different academy than the logged in user.
 * [x]  DELETE `/cohort/<id>` deletes a cohort, the cohort must be empty (no students), instead of deleting the cohort it will mark it its status as "DELETED".
 * [x]  DELETE `/cohort/<id>/user/<id>` deletes a user from a particular cohort, the authenticated user must be a staff member of the same academy that the cohort belongs to.
 
 ## FUNCTION tests
 * [x]  An academy cannot be created without city, and country.
 * [x]  A cohort cannot be created without a certificate, academy.
+* [ ]  A cohort cannot be change to ENDED if any student is still ACTIVE on that particular cohort.
 * [x]  A student cannot be created without a cohort.
 * [x]  A student cannot be added to a cohort twice.
 * [x]  There can only be one main instructor in a cohort.
