@@ -25,21 +25,19 @@ class AuthenticateTestSuite(AuthTestCase):
 
     def test_user_me(self):
         """Test /user/me"""
-        # self.login()
         url = reverse_lazy('authenticate:user_me')
         self.client.force_authenticate(user=self.user)
         response = self.client.get(url)
+        json = response.json()
 
-        user = response.data
-        id = user['id']
-        email = user['email']
-        first_name = user['first_name']
-        last_name = user['last_name']
-        github = user['github']
-
-        self.assertEqual(5, len(user))
-        self.assertEqual(id, self.user.id)
-        self.assertEqual(email, self.user.email)
-        self.assertEqual(first_name, self.user.first_name)
-        self.assertEqual(last_name, self.user.last_name)
-        self.assertEqual(github, {'avatar_url': None, 'name': None})
+        self.assertEqual(json, {
+            'id': self.user.id,
+            'email': self.user.email,
+            'first_name': self.user.first_name,
+            'last_name': self.user.last_name,
+            'github': {
+                'avatar_url': None,
+                'name': None,
+            },
+            'roles': [],
+        })

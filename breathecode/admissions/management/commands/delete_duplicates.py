@@ -6,17 +6,12 @@ from ...models import Academy, Certificate, Cohort, User, CohortUser
 HOST = os.environ.get("OLD_BREATHECODE_API")
 DATETIME_FORMAT="%Y-%m-%d"
 class Command(BaseCommand):
-    help = 'Sync academies from old breathecode'
+    help = 'Delete duplicate cohort users imported from old breathecode'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def handle(self, *args, **options):
-        try:
-            func = getattr(self,options['entity'],'entity_not_found') 
-        except TypeError:
-            print(f'Delete method for {options["entity"]} no Found!')
-
-        func(options)
-
-    def cohort_users(self):
         # acc
         result = []
 
@@ -59,3 +54,5 @@ class Command(BaseCommand):
             # bulk delete but cohort user with that id
             (CohortUser.objects.filter(user__id=user, cohort__id=cohort)
                 .exclude(id=id).delete())
+
+        self.stdout.write(self.style.SUCCESS(f'Remove duplicates from cohort users has ended'))

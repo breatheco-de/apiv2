@@ -56,9 +56,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'created_at': re.sub(r'\+00:00$', 'Z', self.cohort_user.created_at.isoformat()),
             'cohort': {
                 'id': self.cohort_user.cohort.id,
-                'kickoff_date': self.cohort_user.cohort.kickoff_date,
-                'name': self.cohort_user.cohort.name,
                 'slug': self.cohort_user.cohort.slug,
+                'name': self.cohort_user.cohort.name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    self.cohort_user.cohort.kickoff_date.isoformat()
+                ),
+                'ending_date': self.cohort_user.cohort.ending_date,
                 'stage': self.cohort_user.cohort.stage,
             },
             'user': {
@@ -109,9 +113,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'created_at': re.sub(r'\+00:00$', 'Z', self.cohort_user.created_at.isoformat()),
             'cohort': {
                 'id': self.cohort_user.cohort.id,
-                'kickoff_date': self.cohort_user.cohort.kickoff_date,
-                'name': self.cohort_user.cohort.name,
                 'slug': self.cohort_user.cohort.slug,
+                'name': self.cohort_user.cohort.name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    self.cohort_user.cohort.kickoff_date.isoformat()
+                ),
+                'ending_date': self.cohort_user.cohort.ending_date,
                 'stage': self.cohort_user.cohort.stage,
             },
             'user': {
@@ -138,19 +146,33 @@ class CohortUserTestSuite(AdmissionsTestCase):
         url = f'{base_url}?roles={self.cohort_user.role},they-killed-kenny'
         response = self.client.get(url)
         json = response.json()
+
         expected = [{
-            'id': self.cohort_user.id,
-            'role': self.cohort_user.role,
-            'finantial_status': self.cohort_user.finantial_status,
-            'educational_status': self.cohort_user.educational_status,
-            'created_at': re.sub(r'\+00:00$', 'Z', self.cohort_user.created_at.isoformat()),
+            # 'id': self.cohort_user.id,
             'user': {
                 'id': self.cohort_user.user.id,
                 'first_name': self.cohort_user.user.first_name,
                 'last_name': self.cohort_user.user.last_name,
                 'email': self.cohort_user.user.email,
             },
+            'cohort': {
+                'id': self.cohort_user.cohort.id,
+                'slug': self.cohort_user.cohort.slug,
+                'name': self.cohort_user.cohort.name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    self.cohort_user.cohort.kickoff_date.isoformat()
+                ),
+                'ending_date': self.cohort_user.cohort.ending_date,
+                'stage': self.cohort_user.cohort.stage,
+            },
+            'role': self.cohort_user.role,
+            'finantial_status': self.cohort_user.finantial_status,
+            'educational_status': self.cohort_user.educational_status,
+            'created_at': re.sub(r'\+00:00$', 'Z', self.cohort_user.created_at.isoformat()),
         }]
+        # print(json)
+        # print(expected)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -192,9 +214,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'created_at': re.sub(r'\+00:00$', 'Z', self.cohort_user.created_at.isoformat()),
             'cohort': {
                 'id': self.cohort_user.cohort.id,
-                'kickoff_date': self.cohort_user.cohort.kickoff_date,
-                'name': self.cohort_user.cohort.name,
                 'slug': self.cohort_user.cohort.slug,
+                'name': self.cohort_user.cohort.name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    self.cohort_user.cohort.kickoff_date.isoformat()
+                ),
+                'ending_date': self.cohort_user.cohort.ending_date,
                 'stage': self.cohort_user.cohort.stage,
             },
             'user': {
@@ -222,7 +248,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': self.cohort_user.id,
+            # 'id': self.cohort_user.id,
             'role': self.cohort_user.role,
             'finantial_status': self.cohort_user.finantial_status,
             'educational_status': self.cohort_user.educational_status,
@@ -232,6 +258,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': self.cohort_user.user.first_name,
                 'last_name': self.cohort_user.user.last_name,
                 'email': self.cohort_user.user.email,
+            },
+            'cohort': {
+                'id': self.cohort_user.cohort.id,
+                'slug': self.cohort_user.cohort.slug,
+                'name': self.cohort_user.cohort.name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    self.cohort_user.cohort.kickoff_date.isoformat()
+                ),
+                'ending_date': self.cohort_user.cohort.ending_date,
+                'stage': self.cohort_user.cohort.stage,
             },
         }]
 
@@ -269,7 +306,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': self.cohort_user.id,
+            # 'id': self.cohort_user.id,
             'role': self.cohort_user.role,
             'finantial_status': self.cohort_user.finantial_status,
             'educational_status': self.cohort_user.educational_status,
@@ -279,6 +316,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': self.cohort_user.user.first_name,
                 'last_name': self.cohort_user.user.last_name,
                 'email': self.cohort_user.user.email,
+            },
+            'cohort': {
+                'id': self.cohort_user.cohort.id,
+                'slug': self.cohort_user.cohort.slug,
+                'name': self.cohort_user.cohort.name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    self.cohort_user.cohort.kickoff_date.isoformat()
+                ),
+                'ending_date': self.cohort_user.cohort.ending_date,
+                'stage': self.cohort_user.cohort.stage,
             },
         }]
 
@@ -300,7 +348,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': self.cohort_user.id,
+            # 'id': self.cohort_user.id,
             'role': self.cohort_user.role,
             'finantial_status': self.cohort_user.finantial_status,
             'educational_status': self.cohort_user.educational_status,
@@ -310,6 +358,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': self.cohort_user.user.first_name,
                 'last_name': self.cohort_user.user.last_name,
                 'email': self.cohort_user.user.email,
+            },
+            'cohort': {
+                'id': self.cohort_user.cohort.id,
+                'slug': self.cohort_user.cohort.slug,
+                'name': self.cohort_user.cohort.name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    self.cohort_user.cohort.kickoff_date.isoformat()
+                ),
+                'ending_date': self.cohort_user.cohort.ending_date,
+                'stage': self.cohort_user.cohort.stage,
             },
         }]
 
@@ -347,7 +406,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': self.cohort_user.id,
+            # 'id': self.cohort_user.id,
             'role': self.cohort_user.role,
             'finantial_status': self.cohort_user.finantial_status,
             'educational_status': self.cohort_user.educational_status,
@@ -357,6 +416,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': self.cohort_user.user.first_name,
                 'last_name': self.cohort_user.user.last_name,
                 'email': self.cohort_user.user.email,
+            },
+            'cohort': {
+                'id': self.cohort_user.cohort.id,
+                'slug': self.cohort_user.cohort.slug,
+                'name': self.cohort_user.cohort.name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    self.cohort_user.cohort.kickoff_date.isoformat()
+                ),
+                'ending_date': self.cohort_user.cohort.ending_date,
+                'stage': self.cohort_user.cohort.stage,
             },
         }]
 
@@ -377,7 +447,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': self.cohort_user.id,
+            # 'id': self.cohort_user.id,
             'role': self.cohort_user.role,
             'finantial_status': self.cohort_user.finantial_status,
             'educational_status': self.cohort_user.educational_status,
@@ -387,6 +457,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': self.cohort_user.user.first_name,
                 'last_name': self.cohort_user.user.last_name,
                 'email': self.cohort_user.user.email,
+            },
+            'cohort': {
+                'id': self.cohort_user.cohort.id,
+                'slug': self.cohort_user.cohort.slug,
+                'name': self.cohort_user.cohort.name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    self.cohort_user.cohort.kickoff_date.isoformat()
+                ),
+                'ending_date': self.cohort_user.cohort.ending_date,
+                'stage': self.cohort_user.cohort.stage,
             },
         }]
 
@@ -424,7 +505,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': self.cohort_user.id,
+            # 'id': self.cohort_user.id,
             'role': self.cohort_user.role,
             'finantial_status': self.cohort_user.finantial_status,
             'educational_status': self.cohort_user.educational_status,
@@ -434,6 +515,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': self.cohort_user.user.first_name,
                 'last_name': self.cohort_user.user.last_name,
                 'email': self.cohort_user.user.email,
+            },
+            'cohort': {
+                'id': self.cohort_user.cohort.id,
+                'slug': self.cohort_user.cohort.slug,
+                'name': self.cohort_user.cohort.name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    self.cohort_user.cohort.kickoff_date.isoformat()
+                ),
+                'ending_date': self.cohort_user.cohort.ending_date,
+                'stage': self.cohort_user.cohort.stage,
             },
         }]
 
