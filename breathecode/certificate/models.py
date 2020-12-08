@@ -83,11 +83,11 @@ class UserSpecialty(models.Model):
 
         if self.cohort and self.cohort.stage != 'ENDED':
             raise ValidationError("The student cohort stage has to be 'finished' before you can issue any certificates")
-        
+
         utc_now = timezone.now()
         if self.token is None or self.token == "":
             self.token = hashlib.sha1((str(self.user.id) + str(utc_now)).encode("UTF-8")).hexdigest()
-        
+
         # set expiration
         if self.specialty.expiration_day_delta is not None:
             self.expires_at = utc_now + timezone.timedelta(days=self.specialty.expiration_day_delta)

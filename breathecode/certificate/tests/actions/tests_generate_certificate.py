@@ -5,6 +5,11 @@ import re
 from unittest.mock import patch
 from django.core.exceptions import ValidationError
 from breathecode.admissions.models import Certificate
+from breathecode.tests.mocks import (
+    CELERY_PATH,
+    apply_celery_shared_task_mock,
+)
+
 from ...actions import generate_certificate, strings
 from ..mixins import CertificateTestCase
 from ....admissions.models import FULLY_PAID, UP_TO_DATE, LATE
@@ -24,6 +29,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_has_finantial_status_none(self):
         """generate_certificate has error without specialty"""
         self.generate_models()
@@ -37,6 +43,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_has_finantial_status_late(self):
         """generate_certificate has error without specialty"""
         self.generate_models(finantial_status=LATE)
@@ -50,6 +57,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_has_no_specialty(self):
         """generate_certificate has error without specialty"""
         self.generate_models(finantial_status=FULLY_PAID)
@@ -64,6 +72,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_has_no_specialty_without_layout(self):
         """generate_certificate has error without layout"""
         self.generate_models(finantial_status=FULLY_PAID, specialty=True, finished=True)
@@ -77,6 +86,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_without_finish_cohort(self):
         """generate_certificate has error without main_teacher"""
         self.generate_models(finantial_status=FULLY_PAID, specialty=True, layout=True)
@@ -91,6 +101,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_has_no_main_teacher(self):
         """generate_certificate has error without main_teacher"""
         self.generate_models(finantial_status=FULLY_PAID, specialty=True, layout=True, finished=True)
@@ -105,6 +116,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_with_bad_stage(self):
         """generate_certificate has bad stage"""
         self.generate_models(finantial_status=FULLY_PAID, specialty=True, finished=True, layout=True, teacher=True)
@@ -119,6 +131,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_with_task_pending(self):
         """generate_certificate"""
         self.generate_models('es', finantial_status=UP_TO_DATE, specialty=True, finished=True,
@@ -133,6 +146,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_lang_en(self):
         """generate_certificate"""
         self.generate_models('en', finantial_status=FULLY_PAID, specialty=True, finished=True, layout=True, teacher=True,
@@ -166,6 +180,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_lang_es(self):
         """generate_certificate"""
         self.generate_models('es', finantial_status=UP_TO_DATE, specialty=True, finished=True, layout=True, teacher=True, stage=True)

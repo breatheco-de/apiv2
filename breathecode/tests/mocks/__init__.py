@@ -13,3 +13,8 @@ from .screenshotmachine import (
     SCREENSHOTMACHINE_INSTANCES,
     apply_requests_get_mock,
 )
+from .celery import (
+    CELERY_PATH,
+    CELERY_INSTANCES,
+    apply_celery_shared_task_mock,
+)
