@@ -658,6 +658,7 @@ def login_html_view(request):
             email = request.POST.get("email", None)
             password = request.POST.get("password", None)
 
+            user = None
             if email and password:
                 user = User.objects.filter(Q(email=email) | Q(username=email)).first()
                 if not user:
@@ -673,7 +674,8 @@ def login_html_view(request):
                 msg = 'Must include "username" and "password".'
                 raise Exception(msg, code=403)
 
-            return HttpResponseRedirect(url)
+            token, created = Token.objects.get_or_create(user=user, token_type='login')
+            return HttpResponseRedirect(url+"?token="+str(token))
 
         except Exception as e:
             messages.error(request, e.message if hasattr(e, 'message') else e)
