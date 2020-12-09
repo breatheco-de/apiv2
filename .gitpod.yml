@@ -14,7 +14,7 @@ tasks:
         psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode &&
         (cp -n .env.example .env || true) && 
         pipenv run migrate && 
-        pipenv run python manage.py loaddata breathecode/*/fixtures/*.json &&
+        pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
         pipenv run start
     - command: >
         npm i -g heroku;
