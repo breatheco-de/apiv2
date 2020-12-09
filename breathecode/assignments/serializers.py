@@ -60,7 +60,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
                 raise ValidationException('Only the task owner can modify its status')
             if "live_url" in data and data["live_url"] != self.instance.live_url:
                 raise ValidationException('Only the task owner can modify its live_url')
-            if "github_url" in data and data["github_url"] != self.instance.live_url:
+            if "github_url" in data and data["github_url"] != self.instance.github_url:
                 raise ValidationException('Only the task owner can modify its github_url')
 
         if "revision_status" in data and data["revision_status"] != self.instance.revision_status:
