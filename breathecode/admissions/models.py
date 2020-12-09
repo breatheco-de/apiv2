@@ -39,8 +39,8 @@ class Academy(models.Model):
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)
-    city = models.ForeignKey(City, on_delete=models.CASCADE)
-    country = models.ForeignKey(Country, on_delete=models.CASCADE)
+    city = models.ForeignKey(City, on_delete=models.CASCADE, null=True)
+    country = models.ForeignKey(Country, on_delete=models.CASCADE, null=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     zip_code = models.IntegerField(blank=True, null=True)

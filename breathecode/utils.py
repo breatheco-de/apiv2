@@ -1,4 +1,5 @@
 import logging
+from rest_framework.exceptions import APIException
 from rest_framework.views import exception_handler
 from breathecode.authenticate.models import ProfileAcademy
 from django.contrib.auth.models import AnonymousUser
@@ -27,6 +28,13 @@ def localize_query(query, request, matcher=None):
     query = query.filter(**kwargs)
 
     return query
+
+
+
+class ValidationException(APIException):
+    status_code = 400
+    default_detail = 'There is an error in your request'
+    default_code = 'client_error'
 
 def breathecode_exception_handler(exc, context):
     # This is to be used with the Django REST Framework (DRF) as its
