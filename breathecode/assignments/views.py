@@ -3,12 +3,14 @@ from .models import Task
 from django.db.models import Q
 from rest_framework.views import APIView
 from django.contrib.auth.models import AnonymousUser
-from breathecode.utils import localize_query
-from breathecode.admissions.models import CohortUser
+from breathecode.utils import localize_query, ValidationException
+from breathecode.admissions.models import CohortUser, Cohort
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import PostTaskSerializer, TaskGETSerializer, PUTTaskSerializer
 from rest_framework.response import Response
 from rest_framework import status
+
+from .actions import sync_cohort_tasks
 
 @api_view(['GET'])
 def get_tasks(request, id=None):
@@ -61,6 +63,21 @@ def get_tasks(request, id=None):
     serializer = TaskGETSerializer(items, many=True)
     return Response(serializer.data)
 
+
+@api_view(['POST'])
+def sync_cohort_tasks_view(request, cohort_id=None):
+    item = Cohort.objects.filter(id=cohort_id).first()
+    if item is None:
+        raise ValidationException("Cohort not found")
+
+    syncronized = sync_cohort_tasks(item)
+    if len(syncronized) == 0:
+        raise ValidationException("No tasks updated")
+
+    serializer = TaskGETSerializer(syncronized, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class TaskView(APIView):
     """
     List all snippets, or create a new snippet.
@@ -70,7 +87,7 @@ class TaskView(APIView):
         if task_id is not None:
             item = Task.objects.filter(id=task_id).first()
             if item is None:
-                raise serializers.ValidationError("Task not found", code=404)
+                raise ValidationException("Task not found")
 
             serializer = SmallTaskSerializer(item, many=False)
             return Response(serializer.data)
@@ -80,7 +97,7 @@ class TaskView(APIView):
     def put(self, request, task_id):
         item = Task.objects.filter(id=task_id).first()
         if item is None:
-            raise serializers.ValidationError("Task not found", code=404)
+            raise ValidationException("Task not found")
         
         serializer = PUTTaskSerializer(item, data=request.data, context={ "request": request })
         if serializer.is_valid():
@@ -91,7 +108,7 @@ class TaskView(APIView):
     def post(self, request, user_id=None):
 
         if user_id is None:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationException("Invalid user_id")
 
         serializer = PostTaskSerializer(data=request.data, context={ "request": request, "user_id": user_id })
         if serializer.is_valid():
