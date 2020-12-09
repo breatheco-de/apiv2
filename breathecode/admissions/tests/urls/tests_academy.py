@@ -75,8 +75,8 @@ class academyTestSuite(AdmissionsTestCase):
         json = response.json()
 
         self.assertEqual(json, {
-            'city': ['This field is required.'],
-            'country': ['This field is required.'],
+            # 'city': ['This field is required.'],
+            # 'country': ['This field is required.'],
             'slug': ['This field is required.'],
             'name': ['This field is required.'],
             'street_address': ['This field is required.']
