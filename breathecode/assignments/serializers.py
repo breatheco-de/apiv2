@@ -68,7 +68,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
             student_academies = CohortUser.objects.filter(user__id=self.instance.user.id, role="STUDENT").values_list('cohort__academy__id', flat=True)
             
             # the logged in user could be a teacher from the same cohort as the student
-            teacher = CohortUser.objects.filter(cohort__id__in=student_cohorts, role="TEACHER", user__id=self.context['request'].user.id).first()
+            teacher = CohortUser.objects.filter(cohort__id__in=student_cohorts, role__in=["TEACHER", "ASSISTANT"], user__id=self.context['request'].user.id).first()
 
             # the logged in user could be a staff member from the same academy that the student belongs
             staff = ProfileAcademy.objects.filter(academy__id__in=student_academies, user__id=self.context['request'].user.id).first()
