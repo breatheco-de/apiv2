@@ -27,6 +27,42 @@ def track_survey_open(request, answer_id=None):
     image.save(response, "PNG")
     return response
 
+# @api_view(['GET'])
+# @permission_classes([AllowAny])
+# def list_answers(request, answer_id=None):
+
+#     items = Answer.objects.all()
+#     lookup = {}
+
+#     if 'user' in request.GET:
+#         param = request.GET.get('user')
+#         lookup['user__id'] = param
+
+#     if 'cohort' in request.GET:
+#         param = request.GET.get('cohort')
+#         lookup['cohort__slug'] = param
+
+#     if 'academy' in request.GET:
+#         param = request.GET.get('academy')
+#         lookup['academy__id'] = param
+
+#     if 'mentor' in request.GET:
+#         param = request.GET.get('mentor')
+#         lookup['mentor__id'] = param
+
+#     if 'event' in request.GET:
+#         param = request.GET.get('event')
+#         lookup['event__id'] = param
+
+#     if 'score' in request.GET:
+#         param = request.GET.get('score')
+#         lookup['score'] = param
+
+#     items = items.filter(**lookup).order_by('-created_at')
+    
+#     serializer = AnswerSerializer(items, many=True)
+#     return Response(serializer.data)
+
 # Create your views here.
 class GetAnswerView(APIView):
     """
@@ -34,7 +70,7 @@ class GetAnswerView(APIView):
     """
     permission_classes = [AllowAny]
     def get(self, request, format=None):
-        
+
         items = Answer.objects.all()
         lookup = {}
 
@@ -66,6 +102,8 @@ class GetAnswerView(APIView):
         
         serializer = AnswerSerializer(items, many=True)
         return Response(serializer.data)
+        
+        
 
 class AnswerView(APIView):
     """
@@ -82,7 +120,7 @@ class AnswerView(APIView):
         serializer = AnswerPUTSerializer(answer, data=request.data, context={ "request": request, "answer": answer_id })
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
     def get(self, request, answer_id=None):
@@ -94,4 +132,5 @@ class AnswerView(APIView):
             raise ValidationError('This survay does not exist for this user')
         
         serializer = AnswerPUTSerializer(answer)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    

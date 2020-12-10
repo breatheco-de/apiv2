@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 strings = {
     "es": {
         "first": "¿Qué tan probable es que recomiendes",
-        "second": " a tus amigos y familiares?",
+        "second": "a tus amigos y familiares?",
         "highest": "muy probable",
         "lowest": "no es probable",
         "button_label": "Responder",
@@ -43,6 +43,7 @@ def send_survey(user, cohort=None):
     answer.title = question
     answer.lowest = strings[answer.cohort.language]["lowest"]
     answer.highest = strings[answer.cohort.language]["highest"]
+    answer.lang = answer.cohort.language
     answer.save()
 
     token = create_token(user, hours_length=48)
@@ -57,7 +58,8 @@ def send_survey(user, cohort=None):
     }
     
     send_email_message("nps", user.email, data)
-    send_slack("nps", user.slackuser, data)
+    if hasattr(user, 'slackuser'):
+        send_slack("nps", user.slackuser, data)
     
     logger.info(f"Survey was sent for user: {str(user.id)}")
     answer.status = "SENT"
