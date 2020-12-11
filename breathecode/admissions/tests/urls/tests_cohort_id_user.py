@@ -159,7 +159,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'status_code': 500, 'details': 'Specified certificate are used for other cohort'}
+        expected = {'status_code': 500, 'details': 'This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort as POSTPONED before cotinuing'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

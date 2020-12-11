@@ -157,6 +157,7 @@ class CohortTestSuite(AdmissionsTestCase):
             'kickoff_date': re.sub(r'\+00:00$', 'Z', self.cohort.kickoff_date.isoformat()),
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
+            'language': self.cohort.language,
             'certificate': {
                 'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
@@ -213,6 +214,7 @@ class CohortTestSuite(AdmissionsTestCase):
             'name': self.cohort.name,
             'kickoff_date': re.sub(r'\+00:00$', 'Z', self.cohort.kickoff_date.isoformat()),
             'ending_date': self.cohort.ending_date,
+            'language': self.cohort.language,
             'stage': self.cohort.stage,
             'certificate': {
                 'id': self.cohort.certificate.id,
