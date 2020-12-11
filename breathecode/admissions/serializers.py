@@ -56,6 +56,7 @@ class GetCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    language = serpy.Field()
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     stage = serpy.Field()

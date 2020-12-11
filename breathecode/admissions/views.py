@@ -157,7 +157,7 @@ class CohortUserView(APIView):
 
         if not disable_certificate_validations and self.count_certificates_by_cohort(
                 cohort, user_id) > 0:
-            raise serializers.ValidationError('Specified certificate are used for other cohort')
+            raise serializers.ValidationError('This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort as POSTPONED before cotinuing')
 
         role = request.data.get('role')
         if role == 'TEACHER' and CohortUser.objects.filter(role=role, cohort_id=cohort_id).count():

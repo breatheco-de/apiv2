@@ -679,7 +679,7 @@ def login_html_view(request):
 
         except Exception as e:
             messages.error(request, e.message if hasattr(e, 'message') else e)
-            return render(request, 'form.html', {
+            return render(request, 'login.html', {
                 'form': form
             })
     else:
@@ -687,6 +687,6 @@ def login_html_view(request):
         if url is None or url == "":
             messages.error(request, "You must specify a 'url' (querystring) to redirect to after successfull login")
 
-    return render(request, 'form.html', {
+    return render(request, 'login.html', {
         'form': form
     })
