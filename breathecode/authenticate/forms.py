@@ -33,11 +33,6 @@ class LoginForm(forms.Form):
         super(forms.Form, self).__init__(params,*args, **kwargs)
         self.fields['url'].widget.attrs.update({'initial': params.get('url')})
 
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        ctx['redirect_url'] = self.request.GET.get('url', None)
-        return ctx
-
 class PickPasswordForm(forms.Form):
     token= forms.CharField(widget=forms.HiddenInput())
     callback= forms.CharField(required=False,widget=forms.HiddenInput())

@@ -688,5 +688,6 @@ def login_html_view(request):
             messages.error(request, "You must specify a 'url' (querystring) to redirect to after successfull login")
 
     return render(request, 'login.html', {
-        'form': form
+        'form': form,
+        'redirect_url': request.GET.get("url", None)
     })
