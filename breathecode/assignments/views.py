@@ -1,23 +1,24 @@
+import logging
 from django.shortcuts import render
-from .models import Task
 from django.db.models import Q
 from rest_framework.views import APIView
 from django.contrib.auth.models import AnonymousUser
 from breathecode.utils import localize_query, ValidationException
 from breathecode.admissions.models import CohortUser, Cohort
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import PostTaskSerializer, TaskGETSerializer, PUTTaskSerializer
 from rest_framework.response import Response
 from rest_framework import status
-
+from .models import Task
+from .serializers import PostTaskSerializer, TaskGETSerializer, PUTTaskSerializer
 from .actions import sync_cohort_tasks
+
+logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 def get_tasks(request, id=None):
 
-
     items = Task.objects.all()
-
+    logger.debug(f"Found {items.count()} tasks")
     if isinstance(request.user, AnonymousUser) == False:
         # filter only to the local academy
         items = localize_query(items, request, "cohort__academy__id__in")
@@ -28,7 +29,7 @@ def get_tasks(request, id=None):
 
     user = request.GET.get('user', None)
     if user is not None:
-        items = items.filter(user__in=user.split(","))
+        items = items.filter(user__id__in=user.split(","))
 
     # tasks these cohorts (not the users, but the tasts belong to the cohort)
     cohort = request.GET.get('cohort', None)
@@ -44,7 +45,6 @@ def get_tasks(request, id=None):
     teacher = request.GET.get('teacher', None)
     if teacher is not None:
         teacher_cohorts = CohortUser.objects.filter(user__id__in=teacher.split(","), role="TEACHER").values_list('cohort__id', flat=True)
-        print(teacher_cohorts)
         items = items.filter(user__cohortuser__cohort__id__in=teacher_cohorts, user__cohortuser__role="STUDENT")
 
     task_status = request.GET.get('task_status', None)

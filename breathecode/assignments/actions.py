@@ -1,7 +1,9 @@
 
-import requests, os
+import requests, os, logging
 from .models import Task, User
 from breathecode.admissions.models import CohortUser
+
+logger = logging.getLogger(__name__)
 
 HOST = os.environ.get("OLD_BREATHECODE_API")
 def sync_student_tasks(user):
@@ -58,6 +60,7 @@ def sync_student_tasks(user):
         task.save()
 
         syncronized.append(task)
+    logger.debug(f"Added {len(syncronized)} tasks for student {user.email}")
     return syncronized
 
 def sync_cohort_tasks(cohort):
