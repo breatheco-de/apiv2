@@ -125,13 +125,32 @@ class AnswerIdTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_answer_id_put_without_score(self):
+    def test_answer_id_put_without_comment(self):
         """Test /answer/:id without auth"""
         model = self.generate_models(authenticate=True, answer=True, user=True,
             answer_status='SENT')
         db = self.model_to_dict(model, 'answer')
         url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
         response = self.client.put(url, {})
+        json = response.json()
+
+        self.assertEqual(json, {'non_field_errors': ['Missing comments']})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_answer_dict(), [db])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_answer_id_put_without_score(self):
+        """Test /answer/:id without auth"""
+        model = self.generate_models(authenticate=True, answer=True, user=True,
+            answer_status='SENT')
+        db = self.model_to_dict(model, 'answer')
+        data = {
+            'comment': 'They killed kenny',
+        }
+        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
+        response = self.client.put(url, data)
         json = response.json()
 
         self.assertEqual(json, {'non_field_errors': ['Score must be between 1 and 10']})
@@ -148,7 +167,8 @@ class AnswerIdTestSuite(FeedbackTestCase):
         db = self.model_to_dict(model, 'answer')
         url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
         data = {
-            'score': 0
+            'comment': 'They killed kenny',
+            'score': 0,
         }
         response = self.client.put(url, data)
         json = response.json()
@@ -167,7 +187,8 @@ class AnswerIdTestSuite(FeedbackTestCase):
         db = self.model_to_dict(model, 'answer')
         url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
         data = {
-            'score': 11
+            'comment': 'They killed kenny',
+            'score': 11,
         }
         response = self.client.put(url, data)
         json = response.json()
@@ -190,7 +211,8 @@ class AnswerIdTestSuite(FeedbackTestCase):
 
             score = str(number)
             data = {
-                'score': score
+                'comment': 'They killed kenny',
+                'score': score,
             }
             response = self.client.put(url, data)
             json = response.json()
@@ -202,7 +224,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
                 'highest': model['answer'].highest,
                 'lang': model['answer'].lang,
                 'score': score,
-                'comment': model['answer'].comment,
+                'comment': data['comment'],
                 'status': 'ANSWERED',
                 'opened_at': model['answer'].opened_at,
                 'created_at': datetime_to_iso_format(model['answer'].created_at),
@@ -226,6 +248,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
 
             db['score'] = score
             db['status'] = 'ANSWERED'
+            db['comment'] = data['comment']
             db['token_id'] = None
 
             self.assertEqual(dicts, [db])
@@ -240,7 +263,8 @@ class AnswerIdTestSuite(FeedbackTestCase):
         db = self.model_to_dict(model, 'answer')
         url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
         data = {
-            'score': 1
+            'comment': 'They killed kenny',
+            'score': 1,
         }
         self.client.put(url, data)
         response = self.client.put(url, data)
@@ -251,6 +275,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
 
         db['score'] = '1'
         db['status'] = 'ANSWERED'
+        db['comment'] = data['comment']
         db['token_id'] = None
 
         self.assertEqual(self.all_answer_dict(), [db])
