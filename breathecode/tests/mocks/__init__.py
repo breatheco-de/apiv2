@@ -18,3 +18,8 @@ from .celery import (
     CELERY_INSTANCES,
     apply_celery_shared_task_mock,
 )
+from .django_contrib import (
+    DJANGO_CONTRIB_PATH,
+    DJANGO_CONTRIB_INSTANCES,
+    apply_django_contrib_messages_mock,
+)

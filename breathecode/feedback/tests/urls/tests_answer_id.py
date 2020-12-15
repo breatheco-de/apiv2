@@ -226,6 +226,8 @@ class AnswerIdTestSuite(FeedbackTestCase):
 
             db['score'] = score
             db['status'] = 'ANSWERED'
+            db['token_id'] = None
+
             self.assertEqual(dicts, [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -249,4 +251,6 @@ class AnswerIdTestSuite(FeedbackTestCase):
 
         db['score'] = '1'
         db['status'] = 'ANSWERED'
+        db['token_id'] = None
+
         self.assertEqual(self.all_answer_dict(), [db])

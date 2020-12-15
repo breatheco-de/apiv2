@@ -1,6 +1,8 @@
 """
 Collections of mixins used to login in authorize microservice
 """
+from breathecode.authenticate.actions import create_token
+from breathecode.authenticate.models import Token
 from datetime import datetime
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
@@ -136,17 +138,11 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
             finantial_status='', educational_status='', city=False, country=False, mentor=False,
             cohort_two=False, task=False, task_status='', task_type='', answer=False,
-            answer_status='', lang=''):
+            answer_status='', lang='', event=False, answer_score=0, cohort_user_role=''):
         # isinstance(True, bool)
         self.maxDiff = None
 
         models = {}
-
-        if city or country:
-            models['city'] = mixer.blend('admissions.City')
-
-        if country:
-            models['country'] = mixer.blend('admissions.Country')
 
         if academy or profile_academy:
             models['academy'] = mixer.blend('admissions.Academy')
@@ -201,11 +197,22 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
             models['mentor'].set_password(self.password)
             models['mentor'].save()
 
+        if event:
+            kargs = {}
+
+            if academy:
+                kargs['academy'] = models['academy']
+
+            models['event'] = mixer.blend('events.Event', **kargs)
+
         if cohort_user:
             kargs = {}
 
             kargs['user'] = models['user']
             kargs['cohort'] = models['cohort']
+
+            if cohort_user_role:
+                kargs['role'] = cohort_user_role
 
             if finantial_status:
                 kargs['finantial_status'] = finantial_status
@@ -223,7 +230,11 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
                 user=models['user'], certificate=models['certificate'], academy=models['academy'])
 
         if answer:
-            kargs = {}
+            token = create_token(models['user'], hours_length=48)
+
+            kargs = {
+                'token_id': Token.objects.filter(key=token).values_list('id', flat=True).first()
+            }
 
             if user:
                 kargs['user'] = models['user']
@@ -237,10 +248,16 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
             if academy:
                 kargs['academy'] = models['academy']
 
+            if event:
+                kargs['event'] = models['event']
+            else:
+                kargs['event'] = None
+
             if answer_status:
                 kargs['status'] = answer_status
 
-            kargs['event'] = None
+            if answer_score:
+                kargs['score'] = answer_score
 
             models['answer'] = mixer.blend('feedback.Answer', **kargs)
         
