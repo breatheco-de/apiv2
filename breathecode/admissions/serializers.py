@@ -140,10 +140,11 @@ class CohortPUTSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        slug = data['slug']
-        cohort = Cohort.objects.filter(slug=slug).first()
-        if cohort is not None and self.instance.slug != slug:
-            raise ValidationError('Slug already exists for another cohort')
+
+        if "slug" in data:
+            cohort = Cohort.objects.filter(slug=data["slug"]).first()
+            if cohort is not None and self.instance.slug != data["slug"]:
+                raise ValidationError('Slug already exists for another cohort')
         
         return data
 
