@@ -23,3 +23,8 @@ from .django_contrib import (
     DJANGO_CONTRIB_INSTANCES,
     apply_django_contrib_messages_mock,
 )
+from .mailgun import (
+    MAILGUN_PATH,
+    MAILGUN_INSTANCES,
+    apply_requests_post_mock,
+)

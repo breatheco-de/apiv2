@@ -1,6 +1,8 @@
 """
 Collections of mixins used to login in authorize microservice
 """
+import os
+from unittest.mock import call
 from breathecode.authenticate.actions import create_token
 from breathecode.authenticate.models import Token
 from datetime import datetime
@@ -8,8 +10,10 @@ from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
 from django.contrib.auth.models import User
 from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatter
+from breathecode.notify.actions import get_template_content
 from ...models import Answer
-# from .models import Academy, CohortUser, Certificate, Cohort
+from ...actions import strings
+
 
 class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
     """FeedbackTestCase with auth methods"""
@@ -45,29 +49,6 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
     def remove_dinamics_fields(self, dict):
         return self.remove_updated_at(self.remove_model_state(dict))
 
-    # def get_academy(self, id):
-    #     return Academy.objects.filter(id=id).first()
-
-    # def get_academy_dict(self, id):
-    #     data = Academy.objects.filter(id=id).first()
-    #     return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
-
-    # def get_certificate_dict(self, id):
-    #     data = Certificate.objects.filter(id=id).first()
-    #     return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
-
-    # def get_cohort_user_dict(self, id):
-    #     data = CohortUser.objects.filter(id=id).first()
-    #     return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
-
-    # def get_user_dict(self, id):
-    #     data = User.objects.filter(id=id).first()
-    #     return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
-
-    # def get_cohort_dict(self, id):
-    #     data = Cohort.objects.filter(id=id).first()
-    #     return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
-
     def all_cohort_dict(self):
         return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
             Answer.objects.filter()]
@@ -76,18 +57,6 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
         if key in models:
             return self.remove_dinamics_fields(models[key].__dict__)
 
-    # def all_academy_dict(self):
-    #     return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-    #         Academy.objects.filter()]
-
-    # def all_cohort_user_dict(self):
-    #     return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-    #         CohortUser.objects.filter()]
-
-    # def all_user_dict(self):
-    #     return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-    #         User.objects.filter()]
-
     def all_answer_dict(self):
         return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
             Answer.objects.filter()]
@@ -95,33 +64,20 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
     def remove_all_answer(self):
         Answer.objects.all().delete()
 
-    # def get_answer(self, id: int):
-    #     return Answer.objects.filter(id=id).first()
-        
-    # def get_cohort_user(self, id):
-    #     return CohortUser.objects.filter(id=id).first()
+    def all_token(self):
+        return Token.objects.filter().values_list('key', flat=True)
 
-    # def get_user(self, id):
-    #     return User.objects.filter(id=id).first()
+    def get_token(self, id=None):
+        kwargs = {}
+        if id:
+            kwargs['id'] = id
+        return Token.objects.filter(**kwargs).values_list('key', flat=True).first()
 
-    # def count_cohort_user(self):
-    #     return CohortUser.objects.count()
+    def count_token(self):
+        return Token.objects.count()
 
     def count_answer(self):
         return Answer.objects.count()
-
-    # def count_cohort_stage(self, cohort_id):
-    #     cohort = Cohort.objects.get(id=cohort_id)
-    #     return cohort.stage
-
-    # def count_academy(self):
-    #     return Academy.objects.count()
-
-    # def count_certificate(self):
-    #     return Certificate.objects.count()
-
-    # def count_cohort(self):
-    #     return Cohort.objects.count()
 
     def check_opened_at_and_remove_it(self, model: dict) -> dict:
         self.assertTrue('opened_at' in model)
@@ -134,12 +90,67 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
     def check_all_opened_at_and_remove_it(self, models: list[dict]) -> list[dict]:
         return [self.check_opened_at_and_remove_it(model) for model in models]
 
+    def check_email_contain_a_correct_token(self, lang, academy, dicts, mock, model):
+        token = self.get_token()
+        question = strings[lang]["first"] + " " + academy + " " + strings[lang]["second"]
+        link = f"https://nps.breatheco.de/{dicts[0]['id']}?token={token}"
+
+        args_list = mock.call_args_list
+
+        template = get_template_content("nps", {
+            "QUESTION": question,
+            "HIGHEST": dicts[0]['highest'],
+            "LOWEST": dicts[0]['lowest'],
+            "SUBJECT": question,
+            "ANSWER_ID": dicts[0]['id'],
+            "BUTTON": strings[lang]["button_label"],
+            "LINK": link,
+        }, ["email"])
+
+        self.assertEqual(args_list, [call(
+            'https://api.mailgun.net/v3/None/messages',
+            auth=('api', os.environ.get('MAILGUN_API_KEY', "")),
+            data={
+                "from": f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
+                "to": model['user'].email,
+                "subject": template['subject'],
+                "text": template['text'],
+                "html": template['html']})])
+        
+        html = template['html']
+        del template['html']
+        self.assertEqual(template, {
+            'SUBJECT': question,
+            'subject': question,
+            'text': '\n'
+                    '\n'
+                    'Please take 2 min to answer the following question:\n'
+                    '\n'
+                    '{{ QUESTION }\n' 
+                    '\n'
+                    'Click here to vote: '
+                    f'{link}'
+                    '\n'
+                    '\n'
+                    '\n'
+                    '\n'
+                    'The BreatheCode Team'
+        })
+        if lang == 'es':
+            print('===================================================================================')
+            print(html)
+            assert False
+        self.assertTrue(isinstance(token, str))
+        self.assertTrue(token)
+        self.assertTrue(link in html)
+
     def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
             finantial_status='', educational_status='', city=False, country=False, mentor=False,
             cohort_two=False, task=False, task_status='', task_type='', answer=False,
-            answer_status='', lang='', event=False, answer_score=0, cohort_user_role=''):
-        # isinstance(True, bool)
+            answer_status='', lang='', event=False, answer_score=0, cohort_user_role='',
+            cohort_user_two=False):
+        os.environ['EMAIL_NOTIFICATIONS_ENABLED'] = 'TRUE'
         self.maxDiff = None
 
         models = {}
@@ -222,6 +233,22 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
             models['cohort_user'] = mixer.blend('admissions.CohortUser', **kargs)
 
+        if cohort_user_two:
+            kargs = {}
+
+            kargs['user'] = models['user']
+
+            if cohort_user_role:
+                kargs['role'] = cohort_user_role
+
+            if finantial_status:
+                kargs['finantial_status'] = finantial_status
+
+            if educational_status:
+                kargs['educational_status'] = educational_status
+
+            models['cohort_user_two'] = mixer.blend('admissions.CohortUser', **kargs)
+
         if authenticate:
             self.client.force_authenticate(user=models['user'])
 
@@ -262,4 +289,3 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
             models['answer'] = mixer.blend('feedback.Answer', **kargs)
         
         return models
-

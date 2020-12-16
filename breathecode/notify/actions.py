@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 def send_email_message(template_slug, to, data={}):
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE':
-
         template = get_template_content(template_slug, data, ["email"])
 
         result = requests.post(
