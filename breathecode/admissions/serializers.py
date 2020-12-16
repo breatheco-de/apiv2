@@ -115,6 +115,15 @@ class CohortSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return Cohort.objects.create(**self.context)
 
+    def validate(self, data):
+
+        # cohort slug cannot be used by another cohort
+        cohort = Cohort.objects.filter(slug=data['slug']).first()
+        if cohort is not None:
+            raise ValidationError('This cohort slug is already taken')
+
+        return data
+
 class CohortPUTSerializer(serializers.ModelSerializer):
     slug = serializers.SlugField(required=False)
     name = serializers.CharField(required=False)
@@ -128,6 +137,15 @@ class CohortPUTSerializer(serializers.ModelSerializer):
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
             'certificate')
+
+    def validate(self, data):
+
+        slug = data['slug']
+        cohort = Cohort.objects.filter(slug=slug).first()
+        if cohort is not None and self.instance.slug != slug:
+            raise ValidationError('Slug already exists for another cohort')
+        
+        return data
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
     """The serializer schema definition."""

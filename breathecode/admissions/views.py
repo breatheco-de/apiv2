@@ -274,7 +274,7 @@ class CohortView(APIView):
             logger.debug(f"Cohort not be found in related academies")
             raise serializers.ValidationError('Specified cohort not be found')
         
-        serializer = CohortPUTSerializer(cohort, data=request.data, context={ "request": request })
+        serializer = CohortPUTSerializer(cohort, data=request.data, context={ "request": request, "cohort_id": cohort_id })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -315,7 +315,7 @@ class AcademyCohortView(APIView):
         profile_academy = ProfileAcademy.objects.filter(user_id=user_id).first()
 
         if profile_academy is None:
-            raise PermissionDenied(detail='Specified academy not be found')
+            raise PermissionDenied(detail="You don't belong to any academy")
 
         if request.data.get('academy') or request.data.get('academy_id'):
             raise ParseError(detail='academy and academy_id field is not allowed')
