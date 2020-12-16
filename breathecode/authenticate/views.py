@@ -25,7 +25,7 @@ from .models import Profile, CredentialsGithub, Token, CredentialsSlack, Credent
 from .actions import reset_password
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackTeam
-from breathecode.utils import localize_query
+from breathecode.utils import localize_query, capable_of
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, StaffPOSTSerializer
@@ -61,8 +61,9 @@ class LogoutView(APIView):
             'message': "User tokens successfully deleted",
         })
 
-class StaffView(APIView):
+class MemberView(APIView):
 
+    @capable_of('read_member')
     def get(self, request):
         items = ProfileAcademy.objects.all()
         items = localize_query(items, request) # only form this academy
@@ -74,13 +75,15 @@ class StaffView(APIView):
         serializer = GETProfileAcademy(items, many=True)
         return Response(serializer.data)
 
-    def post(self, request, format=None):
+    @capable_of('crud_member')
+    def post(self, request, academy_id=None):
         serializer = StaffPOSTSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @capable_of('crud_member')
     def delete(self, request, academy_id=None, user_id=None):
 
         if academy_id is None or user_id is None:
@@ -88,7 +91,7 @@ class StaffView(APIView):
         
         academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list('academy__id', flat=True)
         if academy_id not in academy_ids:
-            raise serializers.ValidationError('You ar enot allowed to manipulate users for this academy')
+            raise serializers.ValidationError('You are not allowed to manipulate users for this academy')
 
         profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id).first()
         if profile is None:

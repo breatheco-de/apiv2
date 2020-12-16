@@ -27,9 +27,17 @@ class Profile(models.Model):
 
     blog = models.CharField(max_length=150, blank=True, null=True)
 
+class Capability(models.Model):
+    slug = models.SlugField(max_length=25, primary_key=True)
+    description = models.CharField(max_length=255, blank=True, null=True, default=None)
+
+    def __str__(self):
+        return f"{self.slug}"
+
 class Role(models.Model):
     slug = models.SlugField(max_length=25, primary_key=True)
     name = models.CharField(max_length=255, blank=True, null=True, default=None)
+    capabilities = models.ManyToManyField(Capability)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -37,14 +45,25 @@ class Role(models.Model):
     def __str__(self):
         return f"{self.name} ({self.slug})"
 
+
 # If the user belongs to an academy administrative staff
 class ProfileAcademy(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
 
+    first_name = models.CharField(max_length=100, default=None, null=True)
+    last_name = models.CharField(max_length=100, default=None, null=True)
+    address = models.CharField(max_length=255, default=None, null=True)
+
+    phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, default='') # validators should be a list
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"{self.user.email} for academy ({self.academy.name})"
 
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)
