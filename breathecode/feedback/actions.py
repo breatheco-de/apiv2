@@ -63,7 +63,9 @@ def send_survey(user, cohort=None):
         "LINK": f"https://nps.breatheco.de/{answer.id}?token={token.key}"
     }
     
-    send_email_message("nps", user.email, data)
+    if user.email:
+        send_email_message("nps", user.email, data)
+
     if hasattr(user, 'slackuser'):
         send_slack("nps", user.slackuser, data)
     

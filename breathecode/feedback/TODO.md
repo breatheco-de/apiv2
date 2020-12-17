@@ -2,7 +2,7 @@
 - [x] In the admin, I can send NPS surveys to an entire cohort
 - [x] In the admin I can send NPS survey to just one CohortUser.
 - [ ] NPS surveys must be sent to email and slack (if available).
-- [ ] The link on the email must include a valid token and a valid URL.
+- [x] The link on the email must include a valid token and a valid URL.
 - [x] When the survey is answered the status must be OPENED and then the score and comments must be properly filled.
 - [x] When a survey is answered the token must be deleted.
 - [ ] A NPS survey can be resent and the token will reset to another, the previous one must be deleted.

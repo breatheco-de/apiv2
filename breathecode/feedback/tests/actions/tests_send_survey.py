@@ -116,8 +116,6 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'token_id': 1,
         }]
 
-        # print(mock.call_args_list)
-
         dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
             datetime) and answer.pop('created_at')]
         self.assertEqual(dicts, expected)

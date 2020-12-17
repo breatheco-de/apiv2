@@ -136,20 +136,15 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
                     '\n'
                     'The BreatheCode Team'
         })
-        if lang == 'es':
-            print('===================================================================================')
-            print(html)
-            assert False
         self.assertTrue(isinstance(token, str))
         self.assertTrue(token)
         self.assertTrue(link in html)
 
     def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
-            finantial_status='', educational_status='', city=False, country=False, mentor=False,
-            cohort_two=False, task=False, task_status='', task_type='', answer=False,
-            answer_status='', lang='', event=False, answer_score=0, cohort_user_role='',
-            cohort_user_two=False):
+            finantial_status='', educational_status='', mentor=False, cohort_two=False, task=False,
+            task_status='', task_type='', answer=False, answer_status='', lang='', event=False,
+            answer_score=0, cohort_user_role='', cohort_user_two=False, slackuser=False):
         os.environ['EMAIL_NOTIFICATIONS_ENABLED'] = 'TRUE'
         self.maxDiff = None
 
@@ -185,10 +180,17 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
             models['cohort_two'] = mixer.blend('admissions.Cohort', **kargs)
 
-        if user or authenticate or profile_academy or cohort_user or task:
+        if user or authenticate or profile_academy or cohort_user or task or slackuser:
             models['user'] = mixer.blend('auth.User')
             models['user'].set_password(self.password)
             models['user'].save()
+
+        if slackuser:
+            kargs = {
+                'user': models['user'],
+            }
+
+            models['slackuser'] = mixer.blend('notify.SlackUser', **kargs)
 
         if task:
             kargs = {

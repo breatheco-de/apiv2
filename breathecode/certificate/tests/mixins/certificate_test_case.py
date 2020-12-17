@@ -56,74 +56,62 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
                         specialty=False, finished=False, finantial_status=None, task=None):
         """Generate models"""
         certificate = mixer.blend('admissions.Certificate')
-        certificate.save()
         self.certificate = certificate
 
         if layout:
-            layout_design = mixer.blend('certificate.LayoutDesign')
-            layout_design.slug = 'default'
-            layout_design.save()
+            layout_design = mixer.blend('certificate.LayoutDesign', slug='default')
             self.layout_design = layout_design
 
         if specialty:
-            specialty = mixer.blend('certificate.Specialty')
-            specialty.certificate = certificate
-            specialty.save()
+            specialty = mixer.blend('certificate.Specialty', certificate=certificate)
             self.specialty = specialty
 
-        # user as certificate
-        user_specialty = mixer.blend('certificate.UserSpecialty')
-        user_specialty.token = self.token
-        user_specialty.save()
+        user_specialty = mixer.blend('certificate.UserSpecialty', token=self.token)
         self.user_specialty = user_specialty
 
         user = mixer.blend('auth.User')
-        user.save()
         self.user = user
 
         if task:
-            task = mixer.blend('assignments.Task')
-            task.user = user
-            task.revision_status = PENDING
-            task.task_type = PROJECT
-            task.save()
+            kargs = {
+                'user': user,
+                'revision_status': PENDING,
+                'task_type': PROJECT,
+            }
+
+            task = mixer.blend('assignments.Task', **kargs)
             self.task = task
 
-        cohort = mixer.blend('admissions.Cohort')
+        kargs = {
+            'certificate': certificate
+        }
 
         if finished:
-            cohort.current_day = certificate.duration_in_days
-
-        cohort.certificate = certificate
+            kargs['current_day'] = certificate.duration_in_days
 
         if stage:
-            cohort.stage = 'ENDED'
+            kargs['stage'] = 'ENDED'
 
         if language:
-            cohort.language = language
+            kargs['language'] = language
 
-        cohort.save()
+        cohort = mixer.blend('admissions.Cohort', **kargs)
         self.cohort = cohort
 
-        cohort_user = mixer.blend('admissions.CohortUser')
-        cohort_user.user = user
-        cohort_user.cohort = cohort
-        cohort_user.educational_status = 'GRADUATED'
+        kargs = {}
 
         if finantial_status:
-            cohort_user.finantial_status = finantial_status
+            kargs['finantial_status'] = finantial_status
 
-        cohort_user.save()
+        cohort_user = mixer.blend('admissions.CohortUser', user=user, cohort=cohort,
+            educational_status='GRADUATED', **kargs)
+        
         self.cohort_user = cohort_user
 
         if teacher:
             teacher_user = mixer.blend('auth.User')
-            teacher_user.save()
             self.teacher_user = user
 
-            teacher_cohort_user = mixer.blend('admissions.CohortUser')
-            teacher_cohort_user.user = teacher_user
-            teacher_cohort_user.cohort = cohort
-            teacher_cohort_user.role = 'TEACHER'
-            teacher_cohort_user.save()
+            teacher_cohort_user = mixer.blend('admissions.CohortUser', user=teacher_user,
+                cohort=cohort, role='TEACHER')
             self.teacher_cohort_user = teacher_cohort_user
