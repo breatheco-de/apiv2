@@ -206,11 +206,22 @@ def sync_slack_team_channel(team_id):
     
     api = client.Slack(credentials.token)
     data = api.get("conversations.list", {
-        "types": "public_channel,private_channel"
+        "types": "public_channel,private_channel",
+        "limit": 300,
     })
+
+    channels = data['channels']
+    while 'response_metadata' in data and 'next_cursor' in data['response_metadata'] and data['response_metadata']['next_cursor'] != "":
+        print("Next cursor: ", data['response_metadata']['next_cursor'])
+        data = api.get("conversations.list", { 
+            "limit": 300, 
+            "cursor": data['response_metadata']['next_cursor'],
+            "types": "public_channel,private_channel",
+        })
+        channels = channels + data['channels']
     
-    logger.debug(f"Found {str(len(data['channels']))} channels, starting to sync")
-    for channel in data["channels"]:
+    logger.debug(f"Found {str(len(channels))} channels, starting to sync")
+    for channel in channels:
 
         # only sync channels
         if channel["is_channel"] == False and channel['is_group'] == False and channel['is_general'] == False:
@@ -251,8 +262,8 @@ def sync_slack_team_users(team_id):
         data = api.get("users.list", { "limit": 300, "cursor": data['response_metadata']['next_cursor'] })
         members = members + data['members']
     
-    logger.debug(f"Found {str(len(data['members']))} members, starting to sync")
-    for member in data["members"]:
+    logger.debug(f"Found {str(len(members))} members, starting to sync")
+    for member in members:
 
         # ignore bots
         if member["is_bot"] or member["name"] == "slackbot":
