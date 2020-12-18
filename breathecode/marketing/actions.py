@@ -157,7 +157,7 @@ def register_new_lead(form_entry=None):
                 raise APIException('Could not add contact to Automation')
             else:
                 print(f"Triggered atomation with id {str(automation_id)}", response)
-                auto = Automation.objects.get(acp_id=automation_id)
+                auto = Automation.objects.filter(acp_id=automation_id, ac_academy=ac_academy).first()
                 entry.automation_objects.add(auto)
 
     for t in tags:
