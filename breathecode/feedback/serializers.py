@@ -47,7 +47,7 @@ class AnswerSerializer(serpy.Serializer):
 class AnswerPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
-        exclude = ('token',)
+        exclude = ()
 
     def validate(self, data):
         utc_now = timezone.now()
@@ -68,10 +68,7 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
 
         return data
 
-    # def create(self, validated_data):
     def update(self, instance, validated_data):
-
-
         instance.score = validated_data['score']
         instance.status = 'ANSWERED'
         # instance.token = None
@@ -80,8 +77,7 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
             instance.comment = validated_data['comment']
 
         instance.save()
-
-        Token.objects.filter(id=instance.token_id).delete()
+        Token.objects.filter(key=self.context['request'].auth).delete()
 
         return instance
 

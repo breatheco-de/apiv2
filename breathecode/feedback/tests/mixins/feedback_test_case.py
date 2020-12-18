@@ -3,6 +3,8 @@ Collections of mixins used to login in authorize microservice
 """
 import os
 from unittest.mock import call
+
+from django.db.models.expressions import F
 from breathecode.authenticate.actions import create_token
 from breathecode.authenticate.models import Token
 from datetime import datetime
@@ -186,12 +188,16 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
         self.assertEqual(args_list, expected)
 
+    def auth_with_token(self, user):
+        token = Token.objects.create(user=user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+
     def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
             finantial_status='', educational_status='', mentor=False, cohort_two=False, task=False,
             task_status='', task_type='', answer=False, answer_status='', lang='', event=False,
             answer_score=0, cohort_user_role='', cohort_user_two=False, slack_user=False,
-            slack_team=False, credentials_slack=False):
+            slack_team=False, credentials_slack=False, manual_authenticate=False):
         os.environ['EMAIL_NOTIFICATIONS_ENABLED'] = 'TRUE'
         self.maxDiff = None
 
@@ -227,7 +233,8 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
             models['cohort_two'] = mixer.blend('admissions.Cohort', **kargs)
 
-        if user or authenticate or profile_academy or cohort_user or task or slack_user:
+        if (user or authenticate or profile_academy or cohort_user or task or slack_user or
+                manual_authenticate):
             models['user'] = mixer.blend('auth.User')
             models['user'].set_password(self.password)
             models['user'].save()
@@ -315,15 +322,18 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
         if authenticate:
             self.client.force_authenticate(user=models['user'])
 
+        if manual_authenticate:
+            self.auth_with_token(models['user'])
+
         if profile_academy:
             models['profile_academy'] = mixer.blend('authenticate.ProfileAcademy',
                 user=models['user'], certificate=models['certificate'], academy=models['academy'])
 
         if answer:
-            token = create_token(models['user'], hours_length=48)
+            # token = create_token(models['user'], hours_length=48)
 
             kargs = {
-                'token_id': Token.objects.filter(key=token).values_list('id', flat=True).first()
+                # 'token_id': Token.objects.filter(key=token).values_list('id', flat=True).first()
             }
 
             if user:

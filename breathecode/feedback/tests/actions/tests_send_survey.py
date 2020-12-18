@@ -82,7 +82,6 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'status': 'PENDING',
             'title': f'How likely are you to recommend {academy} to your friends and family?',
             'user_id': 1,
-            'token_id': 1,
         }]
 
         dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
@@ -124,7 +123,6 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'status': 'SENT',
             'title': f'How likely are you to recommend {academy} to your friends and family?',
             'user_id': 1,
-            'token_id': 1,
         }]
 
         dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
@@ -165,7 +163,6 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'status': 'PENDING',
             'title': f'How likely are you to recommend {academy} to your friends and family?',
             'user_id': 1,
-            'token_id': 1,
         }]
 
         dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
@@ -206,7 +203,6 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'status': 'SENT',
             'title': f'How likely are you to recommend {academy} to your friends and family?',
             'user_id': 1,
-            'token_id': 1,
         }]
 
         dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
@@ -248,7 +244,6 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'status': 'SENT',
             'title': f'¿Qué tan probable es que recomiendes {academy} a tus amigos y familiares?',
             'user_id': 1,
-            'token_id': 1,
         }]
 
         dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],

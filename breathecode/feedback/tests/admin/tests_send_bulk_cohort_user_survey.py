@@ -71,7 +71,6 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'status': 'SENT',
             'title': f'How likely are you to recommend {academy} to your friends and family?',
             'user_id': key,
-            'token_id': key,
         } for academy, key in academies]
 
         dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],

@@ -249,7 +249,6 @@ class AnswerIdTestSuite(FeedbackTestCase):
             db['score'] = score
             db['status'] = 'ANSWERED'
             db['comment'] = data['comment']
-            db['token_id'] = None
 
             self.assertEqual(dicts, [db])
 
@@ -258,7 +257,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_id_put_twice(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(authenticate=True, answer=True, user=True,
+        model = self.generate_models(manual_authenticate=True, answer=True, user=True,
             answer_status='SENT')
         db = self.model_to_dict(model, 'answer')
         url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
@@ -267,15 +266,17 @@ class AnswerIdTestSuite(FeedbackTestCase):
             'score': 1,
         }
         self.client.put(url, data)
+
+        self.auth_with_token(model['user'])
         response = self.client.put(url, data)
         json = response.json()
 
+        # assert False
         self.assertEqual(json, {'non_field_errors': ['You have already voted']})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         db['score'] = '1'
         db['status'] = 'ANSWERED'
         db['comment'] = data['comment']
-        db['token_id'] = None
 
         self.assertEqual(self.all_answer_dict(), [db])

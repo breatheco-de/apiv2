@@ -38,7 +38,7 @@ class Answer(models.Model):
     academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     mentor = models.ForeignKey(User, related_name='mentor_set', on_delete=models.SET_NULL, default=None, blank=True, null=True)
     event = models.ForeignKey(Event, on_delete=models.SET_NULL, default=None, blank=True, null=True)
-    token = models.ForeignKey(Token, on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    token = models.OneToOneField(Token, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     
     score = models.CharField(max_length=250, default=None, blank=True, null=True)
     comment = models.CharField(max_length=255, default=None, blank=True, null=True)
