@@ -9,8 +9,8 @@ from rest_framework.authtoken import views
 app_name='marketing'
 urlpatterns = [
     path('lead', create_lead),
-    path('tag/sync', sync_tags_with_active_campaign),
-    path('automation/sync', sync_automations_with_active_campaign),
+    path('academy/<int:academy_id>/tag/sync', sync_tags_with_active_campaign),
+    path('academy/<int:academt_id>/automation/sync', sync_automations_with_active_campaign),
     
     path('facebook/lead', receive_facebook_lead),
 ]

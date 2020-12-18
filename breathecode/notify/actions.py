@@ -147,7 +147,6 @@ def notify_all(slug, user, data):
 def get_template_content(slug, data={}, formats=None):
     #d = Context({ 'username': username })
     con = {
-        'SUBJECT': 'No subject',
         'API_URL': os.environ.get('API_URL'),
         'COMPANY_NAME': 'BreatheCode',
         'COMPANY_LEGAL_NAME': 'BreatheCode LLC',
@@ -166,6 +165,9 @@ def get_template_content(slug, data={}, formats=None):
     elif 'subject' in z:
         templates["SUBJECT"] = z['subject']
         templates["subject"] = z['subject']
+    else:
+        templates["SUBJECT"] = 'No subject specified',
+        templates["subject"] = 'No subject specified'
 
     if formats is None or "email" in formats:
         plaintext = get_template( slug + '.txt')

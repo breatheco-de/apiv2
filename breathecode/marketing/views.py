@@ -6,10 +6,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
+from breathecode.utils import APIException
 from .serializers import PostFormEntrySerializer
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
 from .tasks import persist_single_lead, update_link_viewcount
-from .models import ShortLink
+from .models import ShortLink, ActiveCampaignAcademy
+
 
 # Create your views here.
 @api_view(['POST'])
@@ -19,7 +21,8 @@ def create_lead(request):
     if serializer.is_valid():
         serializer.save()
 
-        persist_single_lead.delay(serializer.data)
+        # persist_single_lead.delay(serializer.data)
+        register_new_lead(serializer.data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -72,14 +75,24 @@ def receive_facebook_lead(request):
 
 # Create your views here.
 @api_view(['GET'])
-def sync_tags_with_active_campaign(request):
-    tags = sync_tags()
+def sync_tags_with_active_campaign(request, academy_id):
+    
+    academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    if academy is None:
+        raise APIException('Academy not found')
+
+    tags = sync_tags(academy)
     return Response(tags, status=status.HTTP_200_OK)
 
 # Create your views here.
 @api_view(['GET'])
-def sync_automations_with_active_campaign(request):
-    tags = sync_automations()
+def sync_automations_with_active_campaign(request, academy_id):
+    
+    academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    if academy is None:
+        raise APIException('Academy not found')
+
+    tags = sync_automations(academy)
     return Response(tags, status=status.HTTP_200_OK)
 
 def redirect_link(request, link_slug):
