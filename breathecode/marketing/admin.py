@@ -131,7 +131,7 @@ mark_tag_as_other.short_description = "Mark tags as OTHER"
 class TagAdmin(admin.ModelAdmin, ExportCsvMixin):
     search_fields = ['slug']
     list_display = ('id', 'slug', 'tag_type', 'acp_id', 'subscribers')
-    list_filter = ['tag_type']
+    list_filter = ['tag_type', 'ac_academy__academy__slug']
     actions = [mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery, mark_tag_as_other, "export_as_csv"]
 
 @admin.register(Automation)
@@ -139,7 +139,7 @@ class AutomationAdmin(admin.ModelAdmin, ExportCsvMixin):
     search_fields = ['slug', 'name']
     list_display = ('id', 'acp_id', 'slug', 'name', 'status', 'entered', 'exited')
     list_filter = ['status']
-    actions = ["export_as_csv"]
+    actions = ["export_as_csv", 'ac_academy__academy__slug']
 
 @admin.register(ShortLink)
 class ShortLinkAdmin(admin.ModelAdmin, ExportCsvMixin):
