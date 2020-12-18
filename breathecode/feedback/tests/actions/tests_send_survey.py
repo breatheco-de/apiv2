@@ -1,12 +1,8 @@
 """
 Test /answer
 """
-from breathecode.notify.actions import get_template_content
-import os
 from datetime import datetime
-from unittest.mock import call, patch
-from django.urls.base import reverse_lazy
-from rest_framework import status
+from unittest.mock import patch
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,

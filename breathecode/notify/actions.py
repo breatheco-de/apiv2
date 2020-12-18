@@ -89,19 +89,14 @@ def send_slack(slug, slack_entity, data={}):
             payload = payload["blocks"]
 
         api = client.Slack(slack_entity.team.credentials.token)
-        print('data')
         data = api.post("chat.postMessage", {
             "channel": slack_entity.slack_id,
             "blocks": payload,
             "parse": "full"
         })
-        print('data')
-        print(data)
         logger.debug(f"Notification to {str(slack_entity)} sent")
         return True
-    except Exception as e:
-        print(e)
-        print(str(e))
+    except Exception:
         logger.exception(f"Error sending notification to {str(slack_entity)}")
         return False
 
@@ -150,7 +145,7 @@ def notify_all(slug, user, data):
 def get_template_content(slug, data={}, formats=None):
     #d = Context({ 'username': username })
     con = {
-        'SUBJECT': 'No subjectSlackUser(',
+        'SUBJECT': 'No subject',
         'API_URL': os.environ.get('API_URL'),
         'COMPANY_NAME': 'BreatheCode',
         'COMPANY_LEGAL_NAME': 'BreatheCode LLC',
