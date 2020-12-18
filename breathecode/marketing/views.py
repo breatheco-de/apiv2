@@ -21,8 +21,7 @@ def create_lead(request):
     if serializer.is_valid():
         serializer.save()
 
-        # persist_single_lead.delay(serializer.data)
-        register_new_lead(serializer.data)
+        persist_single_lead.delay(serializer.data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

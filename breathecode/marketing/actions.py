@@ -206,6 +206,7 @@ def sync_tags(ac_academy):
             t = Tag(
                 slug=tag['tag'],
                 acp_id=tag['id'],
+                ac_academy=ac_academy,
             )
 
         t.subscribers = tag['subscriber_count']
@@ -235,6 +236,7 @@ def sync_automations(ac_academy):
             a = Automation(
                 name=auto['name'],
                 acp_id=auto['id'],
+                ac_academy=ac_academy,
             )
         a.entered = auto['entered']
         a.exited = auto['exited']
