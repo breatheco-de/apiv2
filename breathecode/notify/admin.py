@@ -37,12 +37,14 @@ class DeviceAdmin(admin.ModelAdmin):
     list_display = ('user', 'registration_id')
 
 def sync_channels(modeladmin, request, queryset):
+    logger.debug(f"Bulk sync channels")
     teams = queryset.all()
     for team in teams:
         sync_slack_team_channel(team.id)
 sync_channels.short_description = "Import channels from slack"
 
 def sync_users(modeladmin, request, queryset):
+    logger.debug(f"Bulk sync channels")
     teams = queryset.all()
     for team in teams:
         async_slack_team_users.delay(team.id)

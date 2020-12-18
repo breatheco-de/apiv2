@@ -60,5 +60,5 @@ python manage.py dumpdata auth > ./breathecode/admissions/fixtures/users.json
 
 Loading all fixtures
 ```bash
-pipenv run python manage.py loaddata breathecode/*/fixtures/*.json
+pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json
 ```
