@@ -149,8 +149,8 @@ class TagAdmin(admin.ModelAdmin, ExportCsvMixin):
 class AutomationAdmin(admin.ModelAdmin, ExportCsvMixin):
     search_fields = ['slug', 'name']
     list_display = ('id', 'acp_id', 'slug', 'name', 'status', 'entered', 'exited')
-    list_filter = ['status']
-    actions = ["export_as_csv", 'ac_academy__academy__slug']
+    list_filter = ['status', 'ac_academy__academy__slug']
+    actions = ["export_as_csv"]
 
 @admin.register(ShortLink)
 class ShortLinkAdmin(admin.ModelAdmin, ExportCsvMixin):
