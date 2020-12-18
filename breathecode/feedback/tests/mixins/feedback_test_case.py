@@ -115,7 +115,9 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
                 "to": model['user'].email,
                 "subject": template['subject'],
                 "text": template['text'],
-                "html": template['html']})])
+                "html": template['html']
+            }
+        )])
         
         html = template['html']
         del template['html']
@@ -140,11 +142,56 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
         self.assertTrue(token)
         self.assertTrue(link in html)
 
+    def check_stack_contain_a_correct_token(self, lang, academy, dicts, mock, model):
+        token = self.get_token()
+        slack_token = model['slack_team'].credentials.token
+        slack_id = model['slack_user'].slack_id
+        args_list = mock.call_args_list
+        question = strings[lang]["first"] + " " + academy + " " + strings[lang]["second"]
+        answer = strings[lang]["button_label"]
+
+        expected = [call(
+            method='POST',
+            url='https://slack.com/api/chat.postMessage',
+            headers={
+                'Authorization':
+                f'Bearer {slack_token}',
+                'Content-type': 'application/json'
+            },
+            params=None,
+            json={
+                'channel': slack_id,
+                'blocks': [{
+                    'type': 'header',
+                    'text': {
+                        'type': 'plain_text',
+                        'text': question,
+                        'emoji': True
+                    }
+                }, {
+                    'type': 'actions',
+                    'elements': [{
+                        'type': 'button',
+                        'text': {
+                            'type': 'plain_text',
+                            'text': answer,
+                            'emoji': True
+                        },
+                        'url': f'https://nps.breatheco.de/1?token={token}'
+                    }]
+                }],
+                'parse': 'full'
+            }
+        )]
+
+        self.assertEqual(args_list, expected)
+
     def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
             finantial_status='', educational_status='', mentor=False, cohort_two=False, task=False,
             task_status='', task_type='', answer=False, answer_status='', lang='', event=False,
-            answer_score=0, cohort_user_role='', cohort_user_two=False, slackuser=False):
+            answer_score=0, cohort_user_role='', cohort_user_two=False, slack_user=False,
+            slack_team=False, credentials_slack=False):
         os.environ['EMAIL_NOTIFICATIONS_ENABLED'] = 'TRUE'
         self.maxDiff = None
 
@@ -180,17 +227,31 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
             models['cohort_two'] = mixer.blend('admissions.Cohort', **kargs)
 
-        if user or authenticate or profile_academy or cohort_user or task or slackuser:
+        if user or authenticate or profile_academy or cohort_user or task or slack_user:
             models['user'] = mixer.blend('auth.User')
             models['user'].set_password(self.password)
             models['user'].save()
 
-        if slackuser:
+        if credentials_slack:
+            models['credentials_slack'] = mixer.blend('authenticate.CredentialsSlack')
+
+        if slack_team:
+            kargs = {}
+
+            if credentials_slack:
+                kargs['credentials'] = models['credentials_slack']
+
+            models['slack_team'] = mixer.blend('notify.SlackTeam', **kargs)
+
+        if slack_user:
             kargs = {
                 'user': models['user'],
             }
 
-            models['slackuser'] = mixer.blend('notify.SlackUser', **kargs)
+            if slack_team:
+                kargs['team'] = models['slack_team']
+
+            models['slack_user'] = mixer.blend('notify.SlackUser', **kargs)
 
         if task:
             kargs = {

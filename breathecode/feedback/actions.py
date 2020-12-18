@@ -67,6 +67,7 @@ def send_survey(user, cohort=None):
         send_email_message("nps", user.email, data)
 
     if hasattr(user, 'slackuser'):
+        print(type(user.slackuser))
         send_slack("nps", user.slackuser, data)
     
     logger.info(f"Survey was sent for user: {str(user.id)}")

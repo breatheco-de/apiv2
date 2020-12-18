@@ -28,3 +28,8 @@ from .mailgun import (
     MAILGUN_INSTANCES,
     apply_requests_post_mock,
 )
+from .slack import (
+    SLACK_PATH,
+    SLACK_INSTANCES,
+    apply_slack_requests_request_mock,
+)

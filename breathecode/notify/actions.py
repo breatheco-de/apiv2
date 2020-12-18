@@ -75,9 +75,9 @@ def send_slack(slug, slack_entity, data={}):
     if slack_entity is None:
         raise Exception("No slack entity (user or cohort) was found or given")
     
-    if slack_entity.team is None:
+    if not hasattr(slack_entity, 'team') or slack_entity.team is None:
         raise Exception("The entity must belong to a slack team to receive notifications")
-    
+
     if slack_entity.team.credentials is None:
         raise Exception(f"The slack team {slack_entity.team.name} has no valid credentials")
 
@@ -89,14 +89,19 @@ def send_slack(slug, slack_entity, data={}):
             payload = payload["blocks"]
 
         api = client.Slack(slack_entity.team.credentials.token)
+        print('data')
         data = api.post("chat.postMessage", {
             "channel": slack_entity.slack_id,
             "blocks": payload,
             "parse": "full"
         })
+        print('data')
+        print(data)
         logger.debug(f"Notification to {str(slack_entity)} sent")
         return True
-    except Exception:
+    except Exception as e:
+        print(e)
+        print(str(e))
         logger.exception(f"Error sending notification to {str(slack_entity)}")
         return False
 
@@ -145,7 +150,7 @@ def notify_all(slug, user, data):
 def get_template_content(slug, data={}, formats=None):
     #d = Context({ 'username': username })
     con = {
-        'SUBJECT': 'No subject',
+        'SUBJECT': 'No subjectSlackUser(',
         'API_URL': os.environ.get('API_URL'),
         'COMPANY_NAME': 'BreatheCode',
         'COMPANY_LEGAL_NAME': 'BreatheCode LLC',
