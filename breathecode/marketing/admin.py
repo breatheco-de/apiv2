@@ -1,5 +1,6 @@
 import csv, logging
 from django.contrib import admin, messages
+from django import forms 
 from .models import FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy
 from .actions import (
     register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
@@ -127,8 +128,18 @@ def mark_tag_as_other(modeladmin, request, queryset):
     queryset.update(tag_type='OTHER')
 mark_tag_as_other.short_description = "Mark tags as OTHER"
 
+class CustomTagModelForm(forms.ModelForm):
+    class Meta:
+        model = Tag
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super(CustomTagModelForm, self).__init__(*args, **kwargs)
+        self.fields['automation'].queryset = Automation.objects.filter(ac_academy=self.instance.ac_academy.id)# or something else
+
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin, ExportCsvMixin):
+    form = CustomTagModelForm
     search_fields = ['slug']
     list_display = ('id', 'slug', 'tag_type', 'acp_id', 'subscribers')
     list_filter = ['tag_type', 'ac_academy__academy__slug']
