@@ -41,5 +41,6 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     @patch(CREDENTIALS_PATH['resolve_credentials'], apply_resolve_credentials_mock())
     def test_remove_certificate_screenshot_with_valid_id_cover_else_path(self):
         """remove_certificate_screenshot don't call open in development environment"""
-        self.generate_models(specialty=True, layout=True, teacher=True, stage=True)
-        self.assertEqual(remove_certificate_screenshot(self.user_specialty.id), True)
+        model = self.generate_models(specialty=True, layout_design=True, teacher=True, stage=True,
+            user_specialty=True)
+        self.assertEqual(remove_certificate_screenshot(model['user_specialty'].id), True)

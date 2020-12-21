@@ -40,10 +40,11 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         """certificate_screenshot don't call open in development environment"""
         SCREENSHOTMACHINE_INSTANCES['get'].call_args_list = []
 
-        self.generate_models(specialty=True, layout=True, teacher=True, stage=True)
-        url = self.generate_screenshotmachine_url()
+        model = self.generate_models(specialty=True, layout_design=True, teacher=True, stage=True,
+            certificate=True, user_specialty=True)
+        url = self.generate_screenshotmachine_url(model['user_specialty'])
 
-        self.assertEqual(certificate_screenshot(self.certificate.id), None)
+        self.assertEqual(certificate_screenshot(model['certificate'].id), None)
         self.assertEqual(SCREENSHOTMACHINE_INSTANCES['get'].call_args_list, [call(url,
             stream=True)])
-        self.assertEqual(self.user_specialty_has_preview_url(self.certificate.id), True)
+        self.assertEqual(self.user_specialty_has_preview_url(model['certificate'].id), True)

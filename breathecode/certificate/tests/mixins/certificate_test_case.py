@@ -9,6 +9,7 @@ from mixer.backend.django import mixer
 from breathecode.assignments.models import PENDING, PROJECT
 from breathecode.certificate.models import UserSpecialty
 from .development_environment import DevelopmentEnvironment
+from ...models import Certificate, Cohort
 from ..mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,
@@ -20,26 +21,21 @@ from ..mocks import (
 class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     """APITestCase with Certificate models"""
     token = '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
-    user = None
-    cohort = None
-    cohort_user = None
-    certificate = None
-    specialty = None
-    user_specialty = None
-    layout_design = None
-    teacher_user = None
-    teacher_cohort = None
-    teacher_cohort_user = None
-    task = None
+
+    def count_cohort(self):
+        return Cohort.objects.count()
+
+    def count_certificate(self):
+        return Certificate.objects.count()
 
     def user_specialty_has_preview_url(self, certificate_id):
         """preview_url is set?"""
         certificate = UserSpecialty.objects.get(id=certificate_id)
         return certificate.preview_url is not None
 
-    def generate_screenshotmachine_url(self):
+    def generate_screenshotmachine_url(self, user_specialty):
         """Generate screenshotmachine url"""
-        certificate = self.user_specialty
+        certificate = user_specialty
         query_string = urlencode({
             'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
             'url': f'https://certificate.breatheco.de/preview/{certificate.token}',
@@ -52,66 +48,83 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def generate_models(self, language: str=None, stage=False, teacher=False, layout=False,
-                        specialty=False, finished=False, finantial_status=None, task=None):
+    def generate_models(self, language='', stage=False, teacher=False, layout_design=False,
+            specialty=False, finished=False, finantial_status=None, task=None, cohort=False,
+            certificate=False, teacher_user=False, user_specialty=False, user=False,
+            cohort_user=False):
         """Generate models"""
-        certificate = mixer.blend('admissions.Certificate')
-        self.certificate = certificate
+        models = {}
 
-        if layout:
-            layout_design = mixer.blend('certificate.LayoutDesign', slug='default')
-            self.layout_design = layout_design
+        if certificate or specialty or cohort or cohort_user or teacher:
+            models['certificate'] = mixer.blend('admissions.Certificate')
+
+        if layout_design:
+            models['layout_design'] = mixer.blend('certificate.LayoutDesign', slug='default')
 
         if specialty:
-            specialty = mixer.blend('certificate.Specialty', certificate=certificate)
-            self.specialty = specialty
+            kargs = {}
 
-        user_specialty = mixer.blend('certificate.UserSpecialty', token=self.token)
-        self.user_specialty = user_specialty
+            if certificate:
+                kargs['certificate'] = models['certificate']
+            
+            models['specialty'] = mixer.blend('certificate.Specialty', **kargs)
 
-        user = mixer.blend('auth.User')
-        self.user = user
+        if user_specialty:
+            models['user_specialty'] = mixer.blend('certificate.UserSpecialty', token=self.token)
+
+        if user or cohort_user or task:
+            models['user'] = mixer.blend('auth.User')
 
         if task:
             kargs = {
-                'user': user,
+                'user': models['user'],
                 'revision_status': PENDING,
                 'task_type': PROJECT,
             }
 
-            task = mixer.blend('assignments.Task', **kargs)
-            self.task = task
+            models['task'] = mixer.blend('assignments.Task', **kargs)
 
-        kargs = {
-            'certificate': certificate
-        }
+        if cohort or cohort_user or teacher:
+            kargs = {
+                'certificate': models['certificate'],
+            }
 
-        if finished:
-            kargs['current_day'] = certificate.duration_in_days
+            if finished:
+                kargs['current_day'] = models['certificate'].duration_in_days
 
-        if stage:
-            kargs['stage'] = 'ENDED'
+            if stage:
+                kargs['stage'] = 'ENDED'
 
-        if language:
-            kargs['language'] = language
+            if language:
+                kargs['language'] = language
 
-        cohort = mixer.blend('admissions.Cohort', **kargs)
-        self.cohort = cohort
+            models['cohort'] = mixer.blend('admissions.Cohort', **kargs)
 
-        kargs = {}
+        if cohort_user:
+            kargs = {
+                'educational_status': 'GRADUATED',
+                'user': models['user'],
+                'cohort': models['cohort'],
+            }
 
-        if finantial_status:
-            kargs['finantial_status'] = finantial_status
+            if finantial_status:
+                kargs['finantial_status'] = finantial_status
 
-        cohort_user = mixer.blend('admissions.CohortUser', user=user, cohort=cohort,
-            educational_status='GRADUATED', **kargs)
-        
-        self.cohort_user = cohort_user
+            models['cohort_user'] = mixer.blend('admissions.CohortUser', **kargs)
 
-        if teacher:
-            teacher_user = mixer.blend('auth.User')
+        if teacher or teacher_user:
+            models['teacher_user'] = mixer.blend('auth.User')
             self.teacher_user = user
 
-            teacher_cohort_user = mixer.blend('admissions.CohortUser', user=teacher_user,
-                cohort=cohort, role='TEACHER')
-            self.teacher_cohort_user = teacher_cohort_user
+        if teacher:
+            kargs = {
+                'user': models['teacher_user'],
+                'cohort': models['cohort'],
+                'role': 'TEACHER',
+            }
+
+            print(kargs)
+
+            models['teacher_cohort_user'] = mixer.blend('admissions.CohortUser', **kargs)
+        
+        return models

@@ -22,9 +22,10 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         certificate because it's student
         """
         ACTIONS_INSTANCES['generate_certificate'].call_args_list = []
-        self.generate_models(specialty=True, layout=True, teacher=True, stage=True)
+        model = self.generate_models(specialty=True, layout_design=True, teacher=True, stage=True,
+            cohort_user=True)
 
-        self.assertEqual(generate_cohort_certificates(self.cohort_user.id), None)
+        self.assertEqual(generate_cohort_certificates(model['cohort_user'].id), None)
 
         self.assertEqual(ACTIONS_INSTANCES['generate_certificate'].call_args_list, 
-            [call(self.cohort_user.user, self.cohort_user.cohort)])
+            [call(model['cohort_user'].user, model['cohort_user'].cohort)])
