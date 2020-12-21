@@ -22,11 +22,48 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     """APITestCase with Certificate models"""
     token = '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
 
+    def remove_model_state(self, dict):
+        result = None
+        if dict:
+            result = dict.copy()
+            del result['_state']
+        return result
+
+    def remove_updated_at(self, dict):
+        result = None
+        if dict:
+            result = dict.copy()
+            if 'updated_at' in result:
+                del result['updated_at']
+        return result
+
+    def remove_dinamics_fields(self, dict):
+        return self.remove_updated_at(self.remove_model_state(dict))
+
+    def model_to_dict(self, models: dict, key: str) -> dict:
+        if key in models:
+            return self.remove_dinamics_fields(models[key].__dict__)
+
     def count_cohort(self):
         return Cohort.objects.count()
 
     def count_certificate(self):
         return Certificate.objects.count()
+
+    def count_user_specialty(self):
+        return UserSpecialty.objects.count()
+
+    def all_cohort_dict(self):
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
+            Cohort.objects.filter()]
+
+    def all_certificate_dict(self):
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
+            Certificate.objects.filter()]
+
+    def all_user_specialty_dict(self):
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
+            UserSpecialty.objects.filter()]
 
     def user_specialty_has_preview_url(self, certificate_id):
         """preview_url is set?"""
