@@ -52,6 +52,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'score': None,
             'status': 'SENT',
             'title': f'How likely are you to recommend {academy} to your friends and family?',
+            'token_id': key,
             'user_id': key,
         } for academy, key in academies]
 
@@ -85,6 +86,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'score': None,
             'status': 'SENT',
             'title': f'How likely are you to recommend {academy} to your friends and family?',
+            'token_id': key,
             'user_id': key,
         } for academy, key in academies]
 

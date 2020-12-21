@@ -81,6 +81,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'score': None,
             'status': 'PENDING',
             'title': f'How likely are you to recommend {academy} to your friends and family?',
+            'token_id': 1,
             'user_id': 1,
         }]
 
@@ -122,6 +123,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'score': None,
             'status': 'SENT',
             'title': f'How likely are you to recommend {academy} to your friends and family?',
+            'token_id': 1,
             'user_id': 1,
         }]
 
@@ -162,6 +164,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'score': None,
             'status': 'PENDING',
             'title': f'How likely are you to recommend {academy} to your friends and family?',
+            'token_id': 1,
             'user_id': 1,
         }]
 
@@ -202,6 +205,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'score': None,
             'status': 'SENT',
             'title': f'How likely are you to recommend {academy} to your friends and family?',
+            'token_id': 1,
             'user_id': 1,
         }]
 
@@ -243,6 +247,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'score': None,
             'status': 'SENT',
             'title': f'¿Qué tan probable es que recomiendes {academy} a tus amigos y familiares?',
+            'token_id': 1,
             'user_id': 1,
         }]
 

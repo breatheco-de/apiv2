@@ -47,7 +47,7 @@ class AnswerSerializer(serpy.Serializer):
 class AnswerPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
-        exclude = ()
+        exclude = ('token',)
 
     def validate(self, data):
         utc_now = timezone.now()

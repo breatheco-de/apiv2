@@ -49,9 +49,9 @@ def send_survey(user, cohort=None):
 
     token = create_token(user, hours_length=48)
 
-    # token_id = Token.objects.filter(key=token).values_list('id', flat=True).first()
-    # answer.token_id = token_id
-    # answer.save()
+    token_id = Token.objects.filter(key=token).values_list('id', flat=True).first()
+    answer.token_id = token_id
+    answer.save()
 
     data = {
         "QUESTION": question,
