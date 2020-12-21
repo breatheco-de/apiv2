@@ -25,7 +25,6 @@ strings = {
 }
 
 def send_survey(user, cohort=None):
-
     answer = Answer(user = user)
     if cohort is not None: 
         answer.cohort = cohort
@@ -37,15 +36,34 @@ def send_survey(user, cohort=None):
             answer.cohort = _cohort
     
     if answer.cohort is None:
-        raise Exception(f'Impossible to determine the student cohort, maybe it has more than one, or cero.')
+        message = 'Impossible to determine the student cohort, maybe it has more than one, or cero.'
+        logger.info(message)
+        raise Exception(message)
 
-    answer.academy = answer.cohort.academy
-    question = strings[answer.cohort.language]["first"] + " " + answer.cohort.academy.name + " " + strings[answer.cohort.language]["second"]
-    answer.title = question
-    answer.lowest = strings[answer.cohort.language]["lowest"]
-    answer.highest = strings[answer.cohort.language]["highest"]
-    answer.lang = answer.cohort.language
-    answer.save()
+    has_slackuser = hasattr(user, 'slackuser')
+
+    if not user.email and not has_slackuser:
+        message = f'User not have email and slack, this survey cannot be send: {str(user.id)}'
+        logger.info(message)
+        raise Exception(message)
+
+    question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user,
+        status='SENT').count()
+
+    question = (f'{strings[answer.cohort.language]["first"]} {answer.cohort.academy.name} '
+        f'{strings[answer.cohort.language]["second"]}')
+
+    if question_was_sent_previously:
+        answer = Answer.objects.filter(cohort=answer.cohort, user=user, status='SENT').first()
+        Token.objects.filter(id=answer.token_id).delete()
+
+    else:
+        answer.academy = answer.cohort.academy
+        answer.title = question
+        answer.lowest = strings[answer.cohort.language]["lowest"]
+        answer.highest = strings[answer.cohort.language]["highest"]
+        answer.lang = answer.cohort.language
+        answer.save()
 
     token = create_token(user, hours_length=48)
 
@@ -60,22 +78,25 @@ def send_survey(user, cohort=None):
         "SUBJECT": question,
         "ANSWER_ID": answer.id,
         "BUTTON": strings[answer.cohort.language]["button_label"],
-        "LINK": f"https://nps.breatheco.de/{answer.id}?token={token.key}"
+        "LINK": f"https://nps.breatheco.de/{answer.id}?token={token.key}",
     }
-    
+
     if user.email:
         send_email_message("nps", user.email, data)
 
     if hasattr(user, 'slackuser'):
-        print(type(user.slackuser))
         send_slack("nps", user.slackuser, data)
     
-    logger.info(f"Survey was sent for user: {str(user.id)}")
-    answer.status = "SENT"
-    answer.save()
-
-    return True
     # keep track of sent survays until they get answered
+    if not question_was_sent_previously:
+        logger.info(f"Survey was sent for user: {str(user.id)}")
+        answer.status = "SENT"
+        answer.save()
+        return True
+
+    else:
+        logger.info(f"Survey was resent for user: {str(user.id)}")
+        return True
 
 
 def answer_survey(user, data):
