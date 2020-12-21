@@ -57,6 +57,7 @@ class CohortTestSuite(AdmissionsTestCase):
             'kickoff_date': re.sub(r'\+00:00$', 'Z', self.cohort.kickoff_date.isoformat()),
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
+            'language': self.cohort.language,
             'certificate': {
                 'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
@@ -116,6 +117,7 @@ class CohortTestSuite(AdmissionsTestCase):
             'kickoff_date': re.sub(r'\+00:00$', 'Z', self.cohort.kickoff_date.isoformat()),
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
+            'language': self.cohort.language,
             'certificate': {
                 'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
@@ -178,6 +180,7 @@ class CohortTestSuite(AdmissionsTestCase):
             'kickoff_date': f'{self.cohort.kickoff_date.isoformat()}Z',
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
+            'language': self.cohort.language,
             'certificate': {
                 'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
@@ -242,6 +245,7 @@ class CohortTestSuite(AdmissionsTestCase):
             'kickoff_date': f'{self.cohort.kickoff_date.isoformat()}Z',
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
+            'language': self.cohort.language,
             'certificate': {
                 'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
@@ -288,6 +292,7 @@ class CohortTestSuite(AdmissionsTestCase):
             'kickoff_date': f'{self.cohort.kickoff_date.isoformat()}Z',
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
+            'language': self.cohort.language,
             'certificate': {
                 'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
@@ -337,6 +342,7 @@ class CohortTestSuite(AdmissionsTestCase):
             'kickoff_date': f'{model.cohort.kickoff_date.isoformat()}Z',
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
+            'language': model.cohort.language,
             'certificate': {
                 'id': model.cohort.certificate.id,
                 'slug': model.cohort.certificate.slug,
@@ -401,6 +407,7 @@ class CohortTestSuite(AdmissionsTestCase):
             'kickoff_date': f'{self.cohort.kickoff_date.isoformat()}Z',
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
+            'language': self.cohort.language,
             'certificate': {
                 'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
@@ -447,6 +454,7 @@ class CohortTestSuite(AdmissionsTestCase):
             'kickoff_date': f'{self.cohort.kickoff_date.isoformat()}Z',
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
+            'language': self.cohort.language,
             'certificate': {
                 'id': self.cohort.certificate.id,
                 'slug': self.cohort.certificate.slug,
@@ -495,6 +503,7 @@ class CohortTestSuite(AdmissionsTestCase):
             'kickoff_date': f'{model.cohort.kickoff_date.isoformat()}Z',
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
+            'language': model.cohort.language,
             'certificate': {
                 'id': model.cohort.certificate.id,
                 'slug': model.cohort.certificate.slug,

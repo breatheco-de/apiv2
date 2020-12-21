@@ -6,7 +6,7 @@ from .actions import delete_tokens
 from django.utils.html import format_html
 from .models import (
     CredentialsGithub, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy, Role,
-    CredentialsFacebook
+    CredentialsFacebook, Capability
 )
 from .actions import reset_password
 # Register your models here.
@@ -62,6 +62,10 @@ class UserAdmin(UserAdmin):
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name')
+
+@admin.register(Capability)
+class CapabilityAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'description')
 
 @admin.register(ProfileAcademy)
 class ProfileAcademyAdmin(admin.ModelAdmin):

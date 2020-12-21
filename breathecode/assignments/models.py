@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
+from breathecode.admissions.models import Cohort
 
 PENDING = 'PENDING'
 DONE = 'DONE'
@@ -38,6 +39,8 @@ class Task(models.Model):
     github_url = models.CharField(max_length=150, blank=True, default=None, null=True)
     live_url = models.CharField(max_length=150, blank=True, default=None, null=True)
     description = models.TextField(max_length=450, blank=True)
+
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

@@ -1,13 +1,33 @@
 {
   "environments": {
     "test": {
+        "env": {
+            "ENV": {
+                "description": "It can be development or production",
+                "value": "development"
+            },
+            "LOG_LEVEL": {
+                "description": "Shows everything on the console",
+                "value": "DEBUG"
+            }
+        },
         "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
         "scripts": {
             "test": "pytest"
         }
     },
     "review": {
-        "addons": ["heroku-postgresql:in-dyno"],
+        "env": {
+            "ENV": {
+                "description": "It can be development or production",
+                "value": "development"
+            },
+            "LOG_LEVEL": {
+                "description": "Shows everything on the console",
+                "value": "DEBUG"
+            }
+        },
+        "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"],
         "scripts": {
             "test": "pytest",
             "postdeploy": "python manage.py migrate"

@@ -4,6 +4,28 @@ from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy
 from django.core.validators import RegexValidator
 
+INCOMPLETED = 'INCOMPLETED'
+COMPLETED = 'COMPLETED'
+SYNC_STATUS = (
+    (INCOMPLETED, 'Incompleted'),
+    (COMPLETED, 'Completed'),
+)
+class ActiveCampaignAcademy(models.Model):
+    ac_key = models.CharField(max_length=150)
+    ac_url = models.CharField(max_length=150)
+
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+
+    sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED, help_text="Automatically set when interacting with the Active Campaign API")
+    sync_message = models.CharField(max_length=100, blank=True, null=True, default=None, help_text="Contains any success or error messages depending on the status")
+    last_interaction_at = models.DateTimeField(default=None, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"{self.academy.name}"
+
 ACTIVE = '1'
 INNACTIVE = '2'
 UKNOWN = '0'
@@ -15,10 +37,12 @@ AUTOMATION_STATUS = (
 class Automation(models.Model):
     slug = models.SlugField(max_length=150, blank=True, default='', help_text="unique string id that is used to connect incoming leads to automations")
     name = models.CharField(max_length=100)
-    acp_id = models.PositiveSmallIntegerField(unique=True, help_text="ID asigned in active campaign")
+    acp_id = models.PositiveIntegerField(help_text="ID asigned in active campaign")
     status = models.CharField(max_length=1, choices=AUTOMATION_STATUS, default=UKNOWN, help_text="2 = inactive, 1=active")
     entered = models.PositiveSmallIntegerField(help_text="How many contacts have entered")
     exited = models.PositiveSmallIntegerField(help_text="How many contacts have exited")
+
+    ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -38,11 +62,13 @@ TAG_TYPE = (
     (OTHER, 'Other'),
 )
 class Tag(models.Model):
-    slug = models.SlugField(max_length=150, unique=True)
+    slug = models.SlugField(max_length=150)
     tag_type = models.CharField(max_length=15, choices=TAG_TYPE, null=True, default=None, help_text="The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON")
-    acp_id = models.IntegerField(unique=True, help_text="The id coming from active campaign")
+    acp_id = models.IntegerField(help_text="The id coming from active campaign")
     subscribers = models.IntegerField()
     automation = models.ForeignKey(Automation, on_delete=models.CASCADE, null=True, default=None, help_text="Leads that contain this tag will be asociated to this automation")
+
+    ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -61,6 +87,8 @@ class Contact(models.Model):
     language = models.CharField(max_length=2)
     country = models.CharField(max_length=30)
     city = models.CharField(max_length=30)
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -127,6 +155,9 @@ class FormEntry(models.Model):
     # is it saved into active campaign?
     storage_status = models.CharField(max_length=15, choices=STORAGE_SATUS, default=PENDING)
     lead_type = models.CharField(max_length=15, choices=LEAD_TYPE, null=True, default=None)
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
+    ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

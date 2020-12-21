@@ -19,7 +19,7 @@ from django.urls import path
 from .views import (
     get_users, get_users_me, LoginView, LogoutView,TemporalTokenView , get_github_token,
     save_github_token, get_slack_token, save_slack_token, pick_password, change_password,
-    get_token_info, get_facebook_token, save_facebook_token, StaffView, reset_password_view,
+    get_token_info, get_facebook_token, save_facebook_token, MemberView, reset_password_view,
     login_html_view,
 )
 
@@ -27,8 +27,8 @@ app_name='authenticate'
 urlpatterns = [
     path('user/', get_users, name="user"),
     path('user/me', get_users_me, name="user_me"),
-    path('user/staff', StaffView.as_view()),
-    path('user/staff/<int:user_id>/academy/<int:academy_id>', StaffView.as_view()),
+    path('academy/<int:academy_id>/member', MemberView.as_view()),
+    path('academy/<int:academy_id>/member/<int:user_id>', MemberView.as_view()),
     # path('group/', get_groups, name="group"),
 
     path('view/login', login_html_view, name="login_view"), # html login form

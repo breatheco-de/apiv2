@@ -1,7 +1,7 @@
 import os, re, requests, logging
 from itertools import chain
 from django.utils import timezone
-from .models import FormEntry, Tag, Automation
+from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy
 from schema import Schema, And, Use, Optional, SchemaError
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from activecampaign.client import Client
@@ -11,8 +11,6 @@ from breathecode.authenticate.models import CredentialsFacebook
 
 logger = logging.getLogger(__name__)
 
-client = Client(os.getenv('ACTIVE_CAMPAIGN_URL', ""), os.getenv('ACTIVE_CAMPAIGN_KEY', ""))
-old_client = AC_Old_Client(os.getenv('ACTIVE_CAMPAIGN_URL', ""), os.getenv('ACTIVE_CAMPAIGN_KEY', ""))
 SAVE_LEADS = os.getenv('SAVE_LEADS',None)
 GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY',None)
 
@@ -41,7 +39,7 @@ def set_optional(contact, key, data, custom_key=None):
 
     return contact
 
-def get_lead_tags(form_entry):
+def get_lead_tags(ac_academy, form_entry):
     if 'tags' not in form_entry or form_entry['tags'] == '':
         raise Exception('You need to specify tags for this entry')
     else:
@@ -49,30 +47,30 @@ def get_lead_tags(form_entry):
         if len(_tags) == 0 or _tags[0] == '':
             raise Exception('The contact tags are empty', 400)
     
-    strong_tags = Tag.objects.filter(slug__in=_tags, tag_type='STRONG')
-    soft_tags = Tag.objects.filter(slug__in=_tags, tag_type='SOFT')
-    dicovery_tags = Tag.objects.filter(slug__in=_tags, tag_type='DISCOVERY')
-    other_tags = Tag.objects.filter(slug__in=_tags, tag_type='OTHER')
+    strong_tags = Tag.objects.filter(slug__in=_tags, tag_type='STRONG', ac_academy=ac_academy)
+    soft_tags = Tag.objects.filter(slug__in=_tags, tag_type='SOFT', ac_academy=ac_academy)
+    dicovery_tags = Tag.objects.filter(slug__in=_tags, tag_type='DISCOVERY', ac_academy=ac_academy)
+    other_tags = Tag.objects.filter(slug__in=_tags, tag_type='OTHER', ac_academy=ac_academy)
 
     tags = list(chain(strong_tags, soft_tags, dicovery_tags, other_tags))
     if len(tags) == 0:
-        print("Tag applied to the contact not found or has tag_type assigned",_tags)
-        raise Exception('Tag applied to the contact not found')
+        logger.error("Tag applied to the contact not found or has tag_type assigned",str(_tags))
+        raise Exception('Tag applied to the contact not found or has not tag_type assigned')
 
     return tags
 
-def get_lead_automations(form_entry):
+def get_lead_automations(ac_academy, form_entry):
     _automations = []
     if 'automations' not in form_entry or form_entry['automations'] == '':
         return []
     else:
         _automations = form_entry['automations'].split(",")
     
-    automations = Automation.objects.filter(slug__in=_automations)
+    automations = Automation.objects.filter(slug__in=_automations, ac_academy=ac_academy)
     count = automations.count()
     if count == 0:
         _name = form_entry['automations']
-        raise Exception(f"The specified automation {_name} was not found")
+        raise Exception(f"The specified automation {_name} was not found for this AC Academy")
     
     print(f"found {str(count)} automations")
     return automations.values_list('acp_id', flat=True)
@@ -83,10 +81,17 @@ def register_new_lead(form_entry=None):
     if form_entry is None:
         raise Exception('You need to specify the form entry data')
 
-    automations = get_lead_automations(form_entry)
+    if 'location' not in form_entry or form_entry['location'] is None:
+        raise Exception('Missing location information')
+
+    ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry['location']).first()
+    if ac_academy is None:
+        raise Exception(f"No academy found with slug {form_entry['location']}")
+
+    automations = get_lead_automations(ac_academy, form_entry)
     print("found automations", automations)
 
-    tags = get_lead_tags(form_entry)
+    tags = get_lead_tags(ac_academy, form_entry)
     print("found tags", tags)
     LEAD_TYPE = tags[0].tag_type
     if (automations is None or len(automations) == 0) and len(tags) > 0:
@@ -116,7 +121,7 @@ def register_new_lead(form_entry=None):
     # save_get_geolocal(entry, form_enty)
 
     if 'contact-us' == tags[0].slug:
-        send_email_message('new_contact', 'info@4geeksacademy.com', { 
+        send_email_message('new_contact', ac_academy.academy.marketing_email, { 
             "subject": f"New contact from the website {form_entry['first_name']} {form_entry['last_name']}", 
             "full_name": form_entry['first_name'] + " " + form_entry['last_name'],
             "client_comments": form_entry['client_comments'], 
@@ -130,12 +135,14 @@ def register_new_lead(form_entry=None):
         return form_entry
 
     print("ready to send contact with following details: ", contact)
+    old_client = AC_Old_Client(ac_academy.ac_url, ac_academy.ac_key)
     response = old_client.contacts.create_contact(contact)
     contact_id = response['subscriber_id']
     if 'subscriber_id' not in response:
         print("error adding contact", response)
         raise APIException('Could not save contact in CRM')
 
+    client = Client(ac_academy.ac_url, ac_academy.ac_key)
     if automations:
         for automation_id in automations:
             data = {
@@ -150,7 +157,7 @@ def register_new_lead(form_entry=None):
                 raise APIException('Could not add contact to Automation')
             else:
                 print(f"Triggered atomation with id {str(automation_id)}", response)
-                auto = Automation.objects.get(acp_id=automation_id)
+                auto = Automation.objects.filter(acp_id=automation_id, ac_academy=ac_academy).first()
                 entry.automation_objects.add(auto)
 
     for t in tags:
@@ -172,7 +179,14 @@ def register_new_lead(form_entry=None):
 
     return entry
 
-def sync_tags():
+def test_ac_connection(ac_academy):
+    client = Client(ac_academy.ac_url, ac_academy.ac_key)
+    response = client.tags.list_all_tags(limit=1)
+    return response
+
+def sync_tags(ac_academy):
+
+    client = Client(ac_academy.ac_url, ac_academy.ac_key)
     response = client.tags.list_all_tags(limit=100)
 
     if 'tags' not in response:
@@ -187,20 +201,22 @@ def sync_tags():
         tags = tags + response['tags']
 
     for tag in tags:
-        t = Tag.objects.filter(slug=tag['tag']).first()
+        t = Tag.objects.filter(slug=tag['tag'], ac_academy=ac_academy).first()
         if t is None:
             t = Tag(
                 slug=tag['tag'],
                 acp_id=tag['id'],
-                subscribers=tag['subscriber_count'],
+                ac_academy=ac_academy,
             )
-        else:
-            t.subscribers = tag['subscriber_count']
+
+        t.subscribers = tag['subscriber_count']
         t.save()
 
     return response
 
-def sync_automations():
+def sync_automations(ac_academy):
+
+    client = Client(ac_academy.ac_url, ac_academy.ac_key)
     response = client.automations.list_all_automations(limit=100)
 
     if 'automations' not in response:
@@ -215,19 +231,16 @@ def sync_automations():
         automations = automations + response['automations']
 
     for auto in automations:
-        a = Automation.objects.filter(acp_id=auto['id']).first()
+        a = Automation.objects.filter(acp_id=auto['id'], ac_academy=ac_academy).first()
         if a is None:
             a = Automation(
                 name=auto['name'],
                 acp_id=auto['id'],
-                entered=auto['entered'],
-                exited=auto['exited'],
-                status=auto['status'],
+                ac_academy=ac_academy,
             )
-        else:
-            a.entered = auto['entered']
-            a.exited = auto['exited']
-            a.status = auto['status']
+        a.entered = auto['entered']
+        a.exited = auto['exited']
+        a.status = auto['status']
         a.save()
 
     return response

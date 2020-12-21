@@ -1,10 +1,16 @@
-import csv
-from django.contrib import admin
-from .models import FormEntry, Tag, Automation, ShortLink
-from .actions import register_new_lead, save_get_geolocal, get_facebook_lead_info
+import csv, logging
+from django.contrib import admin, messages
+from django import forms 
+from .models import FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy
+from .actions import (
+    register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
+    sync_tags, sync_automations,
+)
 from django.http import HttpResponse
 from django.contrib.admin import SimpleListFilter
 # Register your models here.
+
+logger = logging.getLogger(__name__)
 
 class ExportCsvMixin:
     def export_as_csv(self, request, queryset):
@@ -23,6 +29,46 @@ class ExportCsvMixin:
         return response
 
     export_as_csv.short_description = "Export Selected"
+
+def test_ac(modeladmin, request, queryset):
+    entries = queryset.all()
+    try:
+        for entry in entries:
+            test_ac_connection(entry)
+        messages.success(request, message="Connection was a success")
+    except Exception as e:
+        logger.fatal(str(e))
+        messages.error(request, message=str(e))
+test_ac.short_description = "♼ Test connection to Active Campaign"
+
+def sync_ac_tags(modeladmin, request, queryset):
+    entries = queryset.all()
+    try:
+        for entry in entries:
+            sync_tags(entry)
+        messages.success(request, message="Tags imported successfully")
+    except Exception as e:
+        logger.fatal(str(e))
+        messages.error(request, message=str(e))
+sync_ac_tags.short_description = "♼ Sync AC Tags"
+
+def sync_ac_automations(modeladmin, request, queryset):
+    entries = queryset.all()
+    try:
+        for entry in entries:
+            sync_automations(entry)
+        messages.success(request, message="Automations imported successfully")
+    except Exception as e:
+        logger.fatal(str(e))
+        messages.error(request, message=str(e))
+sync_ac_automations.short_description = "♼ Sync AC Automations"
+
+@admin.register(ActiveCampaignAcademy)
+class ACAcademyAdmin(admin.ModelAdmin, ExportCsvMixin):
+    search_fields = ['academy__name', 'academy__slug']
+    list_display = ('id', 'academy', 'ac_url', 'sync_status', 'last_interaction_at', 'sync_message')
+    list_filter = ['academy__slug','sync_status']
+    actions = [test_ac, sync_ac_tags, sync_ac_automations]
 
 def send_to_ac(modeladmin, request, queryset):
     entries = queryset.all()
@@ -82,18 +128,28 @@ def mark_tag_as_other(modeladmin, request, queryset):
     queryset.update(tag_type='OTHER')
 mark_tag_as_other.short_description = "Mark tags as OTHER"
 
+class CustomTagModelForm(forms.ModelForm):
+    class Meta:
+        model = Tag
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super(CustomTagModelForm, self).__init__(*args, **kwargs)
+        self.fields['automation'].queryset = Automation.objects.filter(ac_academy=self.instance.ac_academy.id)# or something else
+
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin, ExportCsvMixin):
+    form = CustomTagModelForm
     search_fields = ['slug']
     list_display = ('id', 'slug', 'tag_type', 'acp_id', 'subscribers')
-    list_filter = ['tag_type']
+    list_filter = ['tag_type', 'ac_academy__academy__slug']
     actions = [mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery, mark_tag_as_other, "export_as_csv"]
 
 @admin.register(Automation)
 class AutomationAdmin(admin.ModelAdmin, ExportCsvMixin):
     search_fields = ['slug', 'name']
     list_display = ('id', 'acp_id', 'slug', 'name', 'status', 'entered', 'exited')
-    list_filter = ['status']
+    list_filter = ['status', 'ac_academy__academy__slug']
     actions = ["export_as_csv"]
 
 @admin.register(ShortLink)

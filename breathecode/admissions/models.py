@@ -1,5 +1,6 @@
 import os
 from django.contrib.auth.models import User
+from django.core.validators import RegexValidator
 from django.db import models
 from .actions import get_bucket_object
 
@@ -39,8 +40,20 @@ class Academy(models.Model):
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)
-    city = models.ForeignKey(City, on_delete=models.CASCADE)
-    country = models.ForeignKey(Country, on_delete=models.CASCADE)
+    
+    marketing_email = models.EmailField(blank=True, null=True, default=None)
+    phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+    marketing_phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True, default=None) # validators should be a list
+    
+    twitter_handle = models.CharField(max_length=15, blank=True, null=True, default=None) 
+    facebook_handle = models.CharField(max_length=30, blank=True, null=True, default=None)
+    instagram_handle = models.CharField(max_length=30, blank=True, null=True, default=None)
+    github_handle = models.CharField(max_length=20, blank=True, null=True, default=None)
+    linkedin_url = models.URLField(blank=True, null=True, default=None)
+    youtube_url = models.URLField(blank=True, null=True, default=None)
+    
+    city = models.ForeignKey(City, on_delete=models.CASCADE, null=True)
+    country = models.ForeignKey(Country, on_delete=models.CASCADE, null=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     zip_code = models.IntegerField(blank=True, null=True)

@@ -44,7 +44,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {
-            'detail': 'Specified academy not be found',
+            'detail': "You don't belong to any academy",
             'status_code': status.HTTP_403_FORBIDDEN
         }
 
