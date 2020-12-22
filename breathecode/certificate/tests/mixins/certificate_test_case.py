@@ -1,7 +1,7 @@
 """
 Collections of mixins used to login in authorize microservice
 """
-import os
+import os, re
 from unittest.mock import patch
 from urllib.parse import urlencode
 from rest_framework.test import APITestCase
@@ -21,12 +21,25 @@ from ..mocks import (
 class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     """APITestCase with Certificate models"""
     token = '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
+    token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
+
+    def check_all_token(self, models: dict):
+        return [model for model in models if self.token_pattern.match(model['token']) and
+            model.pop('token')]
 
     def remove_model_state(self, dict):
         result = None
         if dict:
             result = dict.copy()
             del result['_state']
+        return result
+
+    def remove_created_at(self, dict):
+        result = None
+        if dict:
+            result = dict.copy()
+            if 'created_at' in result:
+                del result['created_at']
         return result
 
     def remove_updated_at(self, dict):
@@ -38,7 +51,7 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
         return result
 
     def remove_dinamics_fields(self, dict):
-        return self.remove_updated_at(self.remove_model_state(dict))
+        return self.remove_updated_at(self.remove_model_state(self.remove_created_at(dict)))
 
     def model_to_dict(self, models: dict, key: str) -> dict:
         if key in models:
@@ -88,17 +101,19 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     def generate_models(self, language='', stage=False, teacher=False, layout_design=False,
             specialty=False, finished=False, finantial_status=None, task=None, cohort=False,
             certificate=False, teacher_user=False, user_specialty=False, user=False,
-            cohort_user=False):
+            cohort_user=False, models={}):
         """Generate models"""
-        models = {}
+        self.maxDiff = None
+        models = models.copy()
 
-        if certificate or specialty or cohort or cohort_user or teacher:
+        if not 'certificate' in models and (certificate or specialty or cohort or cohort_user or
+                teacher):
             models['certificate'] = mixer.blend('admissions.Certificate')
 
-        if layout_design:
+        if not 'layout_design' in models and layout_design:
             models['layout_design'] = mixer.blend('certificate.LayoutDesign', slug='default')
 
-        if specialty:
+        if not 'specialty' in models and specialty:
             kargs = {}
 
             if certificate:
@@ -106,13 +121,13 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
             
             models['specialty'] = mixer.blend('certificate.Specialty', **kargs)
 
-        if user_specialty:
+        if not 'user_specialty' in models and user_specialty:
             models['user_specialty'] = mixer.blend('certificate.UserSpecialty', token=self.token)
 
-        if user or cohort_user or task:
+        if not 'user' in models and (user or cohort_user or task):
             models['user'] = mixer.blend('auth.User')
 
-        if task:
+        if not 'task' in models and task:
             kargs = {
                 'user': models['user'],
                 'revision_status': PENDING,
@@ -121,7 +136,7 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
 
             models['task'] = mixer.blend('assignments.Task', **kargs)
 
-        if cohort or cohort_user or teacher:
+        if not 'cohort' in models and (cohort or cohort_user or teacher):
             kargs = {
                 'certificate': models['certificate'],
             }
@@ -137,7 +152,7 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
 
             models['cohort'] = mixer.blend('admissions.Cohort', **kargs)
 
-        if cohort_user:
+        if not 'cohort_user' in models and cohort_user:
             kargs = {
                 'educational_status': 'GRADUATED',
                 'user': models['user'],
@@ -149,18 +164,16 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
 
             models['cohort_user'] = mixer.blend('admissions.CohortUser', **kargs)
 
-        if teacher or teacher_user:
+        if not 'teacher_user' in models and (teacher or teacher_user):
             models['teacher_user'] = mixer.blend('auth.User')
             self.teacher_user = user
 
-        if teacher:
+        if not 'teacher_cohort_user' in models and teacher:
             kargs = {
                 'user': models['teacher_user'],
                 'cohort': models['cohort'],
                 'role': 'TEACHER',
             }
-
-            print(kargs)
 
             models['teacher_cohort_user'] = mixer.blend('admissions.CohortUser', **kargs)
         

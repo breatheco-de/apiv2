@@ -68,9 +68,42 @@ class AdminCohortBulkCertificateTestCase(CertificateTestCase):
         self.assertEqual(self.all_cohort_dict(), [db_cohort])
         self.assertEqual(self.all_certificate_dict(), [db_certificate])
 
-    # @patch(ACTIONS_PATH['certificate_screenshot'], apply_certificate_screenshot_mock())
-    # @patch(ACTIONS_PATH['generate_certificate'], apply_generate_certificate_mock())
-    # @patch(ACTIONS_PATH['remove_certificate_screenshot'], apply_remove_certificate_screenshot_mock())
+    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
+    def test_cohort_bulk_certificate_with_cohort_with_required_models_but_bad_status(self):
+        """cohort_bulk_certificate don't call open in development environment"""
+        request = HttpRequest()
+        mock = DJANGO_CONTRIB_INSTANCES['messages']
+        mock.success.call_args_list = []
+        mock.error.call_args_list = []
+
+        models = [self.generate_models('en', specialty=True, finished=True,
+            layout_design=True, teacher=True, stage=True, cohort_user=True, certificate=True)]
+
+        params = models.copy()[0]
+        del params['user']
+        del params['cohort_user']
+        
+        models = models + [self.generate_models('en', cohort_user=True, models=params) for _ in
+            range(0, 2)]
+
+        self.assertEqual(self.count_user_specialty(), 0)
+        self.assertEqual(self.count_certificate(), 1)
+        self.assertEqual(cohort_bulk_certificate(None, request, Cohort.objects.filter()), None)
+
+        db_cohort = [self.model_to_dict(models[0], 'cohort')]
+        db_certificate = [self.model_to_dict(models[0], 'certificate')]
+
+        for _ in range(0, 3):
+
+            self.assertEqual(mock.success.call_args_list, [call(request, message='Scheduled certificate'
+                ' generation')])
+            self.assertEqual(mock.error.call_args_list, [])
+
+        self.assertEqual(self.check_all_token(self.all_user_specialty_dict()), [])
+
+        self.assertEqual(self.all_cohort_dict(), db_cohort)
+        self.assertEqual(self.all_certificate_dict(), db_certificate)
+
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     def test_cohort_bulk_certificate_with_cohort_with_required_models(self):
         """cohort_bulk_certificate don't call open in development environment"""
@@ -81,59 +114,44 @@ class AdminCohortBulkCertificateTestCase(CertificateTestCase):
 
         models = [self.generate_models('en', finantial_status=UP_TO_DATE, specialty=True, finished=True,
             layout_design=True, teacher=True, stage=True, cohort_user=True, certificate=True)]
-        
-        models = models + [self.generate_models('en', finantial_status=UP_TO_DATE, specialty=True,
-            finished=True, teacher=True, stage=True, cohort_user=True, certificate=True) for _ in
-            range(0, 2)]
 
-        db_cohort = []
-        db_certificate = []
+        params = models.copy()[0]
+        del params['user']
+        del params['cohort_user']
+        
+        models = models + [self.generate_models('en', finantial_status=UP_TO_DATE, cohort_user=True,
+            models=params) for _ in range(0, 2)]
 
         self.assertEqual(self.count_user_specialty(), 0)
-        self.assertEqual(self.count_certificate(), 3)
+        self.assertEqual(self.count_certificate(), 1)
         self.assertEqual(cohort_bulk_certificate(None, request, Cohort.objects.filter()), None)
 
-        for model in models:
-            db_cohort = db_cohort + [self.model_to_dict(model, 'cohort')]
-            db_certificate = db_certificate + [self.model_to_dict(model, 'certificate')]
+        db_cohort = [self.model_to_dict(models[0], 'cohort')]
+        db_certificate = [self.model_to_dict(models[0], 'certificate')]
+
+        for _ in range(0, 3):
 
             self.assertEqual(mock.success.call_args_list, [call(request, message='Scheduled certificate'
                 ' generation')])
             self.assertEqual(mock.error.call_args_list, [])
 
-        self.assertEqual(self.count_user_specialty(), 3)
+        first_name = models[0]['teacher_user'].first_name
+        last_name = models[0]['teacher_user'].last_name
+
+        expected = [{
+            'id': id,
+            'user_id': 1 if id == 1 else id + 1,
+            'specialty_id': 1,
+            'expires_at': None,
+            'academy_id': 1,
+            'layout_id': 1,
+            'cohort_id': 1,
+            'signed_by': f'{first_name} {last_name}',
+            'signed_by_role': 'Main Instructor',
+            'preview_url': None,
+        } for id in range(1, 4)]
+
+        self.assertEqual(self.check_all_token(self.all_user_specialty_dict()), expected)
+
         self.assertEqual(self.all_cohort_dict(), db_cohort)
         self.assertEqual(self.all_certificate_dict(), db_certificate)
-
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
-    # def test_generate_certificate_lang_es(self):
-    #     """generate_certificate"""
-    #     model = self.generate_models('es', finantial_status=UP_TO_DATE, specialty=True, finished=True,
-    #         layout_design=True, teacher=True, stage=True, cohort_user=True, certificate=True)
-    #     certificate = generate_certificate(model['cohort_user'].user)
-    #     token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
-
-    #     self.assertEqual(model['cohort'].current_day, model['certificate'].duration_in_days)
-    #     self.assertEqual(len(certificate.__dict__), 15)
-    #     self.assertEqual(certificate.id, 1)
-    #     self.assertEqual(strings[model['cohort'].language]["Main Instructor"], 'Instructor Principal')
-    #     self.assertEqual(certificate.specialty, model['cohort'].certificate.specialty)
-    #     self.assertEqual(certificate.academy, model['cohort'].academy)
-    #     self.assertEqual(certificate.layout, model['layout_design'])
-
-    #     first_name = model['teacher_cohort_user'].user.first_name
-    #     last_name = model['teacher_cohort_user'].user.last_name
-
-    #     self.assertEqual(certificate.signed_by, f'{first_name} {last_name}')
-    #     self.assertEqual(certificate.signed_by_role, strings[model['cohort'].language]
-    #         ["Main Instructor"])
-    #     self.assertEqual(certificate.user, model['cohort_user'].user)
-    #     self.assertEqual(certificate.cohort, model['cohort_user'].cohort)
-    #     # self.assertEqual(certificate.cohort, model['cohort_user'].cohort)
-    #     self.assertEqual(certificate.preview_url, None)
-    #     self.assertEqual(certificate.is_cleaned, True)
-    #     self.assertEqual(len(certificate.token), 40)
-    #     self.assertEqual(bool(token_pattern.match(certificate.token)), True)
