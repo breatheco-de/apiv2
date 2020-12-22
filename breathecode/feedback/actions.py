@@ -57,7 +57,7 @@ def send_survey(user, cohort=None):
     }
     
     send_email_message("nps", user.email, data)
-    send_slack("nps", user.slackuser, data)
+    send_slack("nps", user.slackuser, answer.cohort.academy.slackteam, data=data)
     
     logger.info(f"Survey was sent for user: {str(user.id)}")
     answer.status = "SENT"

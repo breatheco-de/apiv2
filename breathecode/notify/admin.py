@@ -97,7 +97,7 @@ def test_user_notification(modeladmin, request, queryset):
     users = queryset.all()
     for u in users:
         logger.debug(f"Testing slack notification for {u.id}")
-        send_slack("test_message", u.slackuser, { "MESSAGE": "Hello World" })
+        send_slack("test_message", slackuser=u.slackuser, data={ "MESSAGE": "Hello World" })
         
 test_user_notification.short_description = "💬 Send slack test notification"
 
@@ -111,7 +111,7 @@ def test_cohort_notification(modeladmin, request, queryset):
     cohorts = queryset.all()
     for c in cohorts:
         logger.debug(f"Testing slack notification for cohort {c.id}")
-        send_slack("test_message", c.slackchannel, { "MESSAGE": "Hello World" })
+        send_slack("test_message", slackchannel=c.slackchannel, data={ "MESSAGE": "Hello World" })
 
 test_cohort_notification.short_description = "💬 Send slack test notification"
 

@@ -22,7 +22,7 @@ if FIREBASE_KEY is not None and FIREBASE_KEY != '':
 logger = logging.getLogger(__name__)
 
 def send_email_message(template_slug, to, data={}):
-    print("blalalal")
+
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE':
 
         template = get_template_content(template_slug, data, ["email"])
@@ -70,25 +70,29 @@ def send_sms(slug, phone_number, data={}):
         return False
 
 # entity can be a cohort or a user
-def send_slack(slug, slackuser=None, slackchannel=None, data={}):
+def send_slack(slug, slackuser=None, team=None, slackchannel=None, data={}):
 
-    if user is None and cohort is None:
+    remitent_id = None
+    if slackuser is None and slackchannel is None:
         raise Exception("No slack entity (user or cohort) was found or given")
     
-    team = None
-    if slackuser is not None:
-        if slackuser.team is None:
-            raise Exception("The user must belong to a slack team to receive notifications")
-        else:
-            team = slackuser.team
+    print("sending....")
+    credentials = None
+    if team is not None:
+        credentials = team.owner.credentialsslack
     
+    if slackuser is not None:
+        remitent_id = slackuser.slack_id
+
     if slackchannel is not None:
+        if remitent_id is None:
+            remitent_id = slackchannel.slack_id
+
         if slackchannel.team is None:
             raise Exception(f"The slack channel {slackchannel.name} must belong to a slack team")
-        elif team is None:
-            team = slackchannel.team
-
-    return send_slack_raw(slug, team.owner.credentialsslack.token, slack_entity.slack_id, data)
+        elif credentials is None:
+            credentials = slackchannel.team.owner.credentialsslack
+    return send_slack_raw(slug, credentials.token, remitent_id, data)
 
 # if would like to specify slack channel or user id and team 
 def send_slack_raw(slug, token, channel_id, data={}):
