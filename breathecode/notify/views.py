@@ -34,6 +34,12 @@ def preview_template(request, slug):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def preview_slack_template(request, slug):
+    template = get_template_content(slug, request.GET, ['slack'])
+    return HttpResponse(template['slack'])
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def test_email(request, email):
     # tags = sync_user_issues()
     # return Response(tags, status=status.HTTP_200_OK)

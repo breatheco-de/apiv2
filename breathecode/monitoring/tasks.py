@@ -1,7 +1,7 @@
 from celery import shared_task, Task
-from .actions import run_app_diagnostig
+from .actions import run_app_diagnostic
 from .models import Application
-from breathecode.notify.actions import send_email_message
+from breathecode.notify.actions import send_email_message, send_slack_raw
 import logging
 
 # Get an instance of a logger
@@ -16,9 +16,31 @@ class BaseTaskWithRetry(Task):
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def monitor_app(self,app_id):
     app = Application.objects.get(id=app_id)
-    result = run_app_diagnostig(app)
+
+    now = timezone.now()
+    if app.paused_until is not None and app.paused_until > now:
+        logger.debug("Ignoring application monitor because its paused")
+        return True
+
+    result = run_app_diagnostic(app)
     if result["status"] != "OPERATIONAL":
-        send_email_message("diagnostig", app.notify_email, {
-            "subject": f"Errors have been found on {app.title} diagnostig",
-            "details": result["text"]
-        })
+        details = ""
+        if "special_status_text" is not None:
+            details = result["special_status_text"]
+        else:
+            details = result["text"]
+
+        if app.notify_email is not None:
+            send_email_message("diagnostic", app.notify_email, {
+                "subject": f"Errors have been found on {app.title} diagnostic",
+                "details": details
+            })
+        if app.notify_slack_channel is not None:
+            send_slack_raw("diagnostic", app.notify_slack_channel.slack_id, {
+                "subject": f"Errors have been found on {app.title} diagnostic",
+                **result,
+            })
+
+        return False
+    
+    return True

@@ -72,8 +72,6 @@ def send_sms(slug, phone_number, data={}):
 # entity can be a cohort or a user
 def send_slack(slug, slack_entity, data={}):
 
-    template = get_template_content(slug, data, ["slack"])
-    
     if slack_entity is None:
         raise Exception("No slack entity (user or cohort) was found or given")
     
@@ -83,23 +81,29 @@ def send_slack(slug, slack_entity, data={}):
     if slack_entity.team.credentials is None:
         raise Exception(f"The slack team {slack_entity.team.name} has no valid credentials")
 
-    logger.debug(f"Sending slack message to {str(slack_entity)}")
+    return send_slack_raw(slug, slack_entity.team.credentials.token, slack_entity.slack_id, data)
 
+# if would like to specify slack channel or user id and team 
+def send_slack_raw(slug, token, channel_id, data={}):
+
+    template = get_template_content(slug, data, ["slack"])
+    
+    logger.debug(f"Sending slack message to {str(channel_id)}")
     try:
         payload = json.loads(template['slack'])
         if "blocks" in payload:
             payload = payload["blocks"]
 
-        api = client.Slack(slack_entity.team.credentials.token)
+        api = client.Slack(token)
         data = api.post("chat.postMessage", {
-            "channel": slack_entity.slack_id,
+            "channel": channel_id,
             "blocks": payload,
             "parse": "full"
         })
-        logger.debug(f"Notification to {str(slack_entity)} sent")
+        logger.debug(f"Notification to {str(channel_id)} sent")
         return True
     except Exception:
-        logger.exception(f"Error sending notification to {str(slack_entity)}")
+        logger.exception(f"Error sending notification to {str(channel_id)}")
         return False
 
 

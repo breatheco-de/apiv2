@@ -11,19 +11,31 @@ def get_website_text(endp):
     headers = {
         'User-Agent': USER_AGENT
     }
-    r = requests.get(url, headers=headers)
 
-    logger.debug(f"Tested {url} {r.status_code}")
+    status_code = 404
+    status_text = ""
+    try:
+        r = requests.get(url, headers=headers)
+        status_code = r.status_code
+        status_text = r.text
+    except requests.Timeout:
+        status_code = 500
+        status_text = "Connection Timeout"
+    except requests.ConnectionError:
+        status_code = 404
+        status_text = "Connection Error"
+
+    logger.debug(f"Tested {url} {status_code}")
     endp.last_check = timezone.now()
-    if r.status_code > 399:
+    if status_code > 399:
         endp.status = 'CRITICAL'
         endp.severity_level = 100
         endp.status_text = "Status above 399"
-    elif r.status_code > 299:
+    elif status_code > 299:
         endp.status = 'MINOR'
         endp.severity_level = 5
         endp.status_text = "Status in the 3xx range, maybe a cached reponse?"
-    elif r.status_code > 199:
+    elif status_code > 199:
         endp.severity_level = 5
         endp.status = 'OPERATIONAL'
         endp.status_text = "Status withing the 2xx range"
@@ -32,20 +44,20 @@ def get_website_text(endp):
         endp.severity_level = 0
         endp.status_text = "Uknown status code, lower than 200"
 
-    if endp.test_pattern is not None and endp.test_pattern != "" and r.status_code == 200:
+    if endp.test_pattern is not None and endp.test_pattern != "" and status_code == 200:
         if not re.search(endp.test_pattern, r.text):
             endp.status = 'MINOR'
             endp.severity_level = 5
             endp.status_text = f"Status is 200 but regex {endp.test_pattern} was rejected"
 
-    endp.status_code = r.status_code
-    endp.response_text = r.text
+    endp.status_code = status_code
+    endp.response_text = status_text
     endp.save()
         
     return endp
 
 
-def run_app_diagnostig(app, report=False):
+def run_app_diagnostic(app, report=False):
 
     results = {
         "severity_level": 0
@@ -56,6 +68,10 @@ def run_app_diagnostig(app, report=False):
     for endpoint in _endpoints:
         if endpoint.last_check is not None and endpoint.last_check > now - timezone.timedelta(minutes = endpoint.frequency_in_minutes):
             logger.debug(f"Ignoring {endpoint.url} because frequency hast not been met")
+            continue
+
+        if endpoint.paused_until is not None and endpoint.paused_until > now:
+            logger.debug(f"Ignoring endpoint:{endpoint.url} monitor because its paused")
             continue
 
         e = get_website_text(endpoint)
@@ -75,6 +91,7 @@ def run_app_diagnostig(app, report=False):
         results["status"] = 'MINOR'
 
     results["text"] = json.dumps(results, indent=4)
+    results["url"] = endpoint.url
 
     app.status = results["status"]
     app.response_text = results["text"]

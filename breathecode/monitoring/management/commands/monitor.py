@@ -37,4 +37,4 @@ class Command(BaseCommand):
             count += 1
             monitor_app.delay(a.id)
         
-        self.stdout.write(self.style.SUCCESS(f"Enqueued {count} apps for diagnostig"))
+        self.stdout.write(self.style.SUCCESS(f"Enqueued {count} apps for diagnostic"))
