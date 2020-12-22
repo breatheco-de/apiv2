@@ -70,18 +70,25 @@ def send_sms(slug, phone_number, data={}):
         return False
 
 # entity can be a cohort or a user
-def send_slack(slug, slack_entity, data={}):
+def send_slack(slug, slackuser=None, slackchannel=None, data={}):
 
-    if slack_entity is None:
+    if user is None and cohort is None:
         raise Exception("No slack entity (user or cohort) was found or given")
     
-    if slack_entity.team is None:
-        raise Exception("The entity must belong to a slack team to receive notifications")
+    team = None
+    if slackuser is not None:
+        if slackuser.team is None:
+            raise Exception("The user must belong to a slack team to receive notifications")
+        else:
+            team = slackuser.team
     
-    if slack_entity.team.credentials is None:
-        raise Exception(f"The slack team {slack_entity.team.name} has no valid credentials")
+    if slackchannel is not None:
+        if slackchannel.team is None:
+            raise Exception(f"The slack channel {slackchannel.name} must belong to a slack team")
+        elif team is None:
+            team = slackchannel.team
 
-    return send_slack_raw(slug, slack_entity.team.credentials.token, slack_entity.slack_id, data)
+    return send_slack_raw(slug, team.owner.credentialsslack.token, slack_entity.slack_id, data)
 
 # if would like to specify slack channel or user id and team 
 def send_slack_raw(slug, token, channel_id, data={}):

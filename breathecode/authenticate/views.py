@@ -405,14 +405,15 @@ def save_slack_token(request):
         )
         credentials.save()
 
-        team = SlackTeam.objects.filter(academy__id=academy.id, slack_id=slack_data['team']['id']).filter(Q(credentials__id=credentials.id) | Q(credentials__isnull=True)).first()
+        team = SlackTeam.objects.filter(academy__id=academy.id, slack_id=slack_data['team']['id']).first()
         if team is None:
-            team = SlackTeam(slack_id = slack_data['team']['id'])
+            team = SlackTeam(
+                slack_id = slack_data['team']['id'],
+                owner=user,
+                academy = academy    
+            )
 
         team.name = slack_data['team']['name']
-        team.owner = user    
-        team.academy = academy    
-        team.credentials = credentials    
         team.save()
 
         return HttpResponseRedirect(redirect_to=payload["url"][0])
