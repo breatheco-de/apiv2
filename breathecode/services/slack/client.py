@@ -1,6 +1,7 @@
-import requests, logging, re, os
-from . import commands
+import requests, logging, re, os, json, inspect
+from .decorator import commands, actions
 from breathecode.services.slack.commands import student, cohort
+from breathecode.services.slack.actions import monitoring
 logger = logging.getLogger(__name__)
 
 class Slack:
@@ -66,5 +67,41 @@ class Slack:
         if hasattr(commands, _commands[0]):
             return getattr(commands, _commands[0]).execute(**response)
         else:
-            commands.cohorts.execute(**response)
             raise Exception("No implementation has been found for this command")
+
+    def execute_action(self, context):
+
+        payload = json.loads(context["payload"])
+
+        if "actions" not in payload or len(payload["actions"])==0:
+            raise Exception("Imposible to determine action")
+
+        try:
+            _data = json.loads(payload["actions"][0]["action_id"])
+            action_class = _data.pop("class", None)
+            method = _data.pop("method", None)
+            payload["action_state"] = _data
+
+        except:
+            raise Exception("Invalid slack action format, must be ajson with class and method properties at least")
+        
+        logger.debug(f"Executing {action_class} => {method}")
+        if hasattr(actions, action_class):
+            logger.debug(f"Action found")
+            _module = getattr(actions, action_class) #get action module
+
+            if not hasattr(_module, action_class.capitalize()):
+                raise Exception(f"Class {action_class.capitalize()} not found in module {action_class}")
+            _class = getattr(_module, action_class.capitalize())(payload) #factory the class
+
+            if not hasattr(_class, method):
+                raise Exception(f"Method {method} not found in slack action class {action_class.capitalize()}")
+            response = getattr(_class, method)(payload=payload) # call action method
+
+            if "response_url" in payload and response:
+                resp = requests.post(payload["response_url"], json=response)
+                return resp.status_code == 200
+            else:
+                return True
+        else:
+            raise Exception(f"No implementation has been found for this action: {action_class}")

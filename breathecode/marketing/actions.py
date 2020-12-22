@@ -72,7 +72,7 @@ def get_lead_automations(ac_academy, form_entry):
         _name = form_entry['automations']
         raise Exception(f"The specified automation {_name} was not found for this AC Academy")
     
-    print(f"found {str(count)} automations")
+    logger.debug(f"found {str(count)} automations")
     return automations.values_list('acp_id', flat=True)
 
     
@@ -89,10 +89,10 @@ def register_new_lead(form_entry=None):
         raise Exception(f"No academy found with slug {form_entry['location']}")
 
     automations = get_lead_automations(ac_academy, form_entry)
-    print("found automations", automations)
+    logger.debug("found automations", automations)
 
     tags = get_lead_tags(ac_academy, form_entry)
-    print("found tags", tags)
+    logger.debug("found tags", tags)
     LEAD_TYPE = tags[0].tag_type
     if (automations is None or len(automations) == 0) and len(tags) > 0:
         if tags[0].automation is None:
@@ -131,15 +131,15 @@ def register_new_lead(form_entry=None):
 
     # ENV Variable to fake lead storage
     if SAVE_LEADS == 'FALSE':
-        print("Ignoring leads because SAVE_LEADS is FALSE on the env variables")
+        logger.debug("Ignoring leads because SAVE_LEADS is FALSE on the env variables")
         return form_entry
 
-    print("ready to send contact with following details: ", contact)
+    logger.debug("ready to send contact with following details: ", contact)
     old_client = AC_Old_Client(ac_academy.ac_url, ac_academy.ac_key)
     response = old_client.contacts.create_contact(contact)
     contact_id = response['subscriber_id']
     if 'subscriber_id' not in response:
-        print("error adding contact", response)
+        logger.error("error adding contact", response)
         raise APIException('Could not save contact in CRM')
 
     client = Client(ac_academy.ac_url, ac_academy.ac_key)
@@ -153,10 +153,10 @@ def register_new_lead(form_entry=None):
             }
             response = client.contacts.add_a_contact_to_an_automation(data)
             if 'contacts' not in response:
-                print(f"error triggering atomation with id {str(automation_id)}", response)
+                logger.error(f"error triggering atomation with id {str(automation_id)}", response)
                 raise APIException('Could not add contact to Automation')
             else:
-                print(f"Triggered atomation with id {str(automation_id)}", response)
+                logger.debug(f"Triggered atomation with id {str(automation_id)}", response)
                 auto = Automation.objects.filter(acp_id=automation_id, ac_academy=ac_academy).first()
                 entry.automation_objects.add(auto)
 
@@ -190,7 +190,7 @@ def sync_tags(ac_academy):
     response = client.tags.list_all_tags(limit=100)
 
     if 'tags' not in response:
-        print("Invalid tags incoming from AC")
+        logger.error("Invalid tags incoming from AC")
         return False
 
     tags = response['tags']
@@ -234,10 +234,10 @@ def sync_automations(ac_academy):
         a = Automation.objects.filter(acp_id=auto['id'], ac_academy=ac_academy).first()
         if a is None:
             a = Automation(
-                name=auto['name'],
                 acp_id=auto['id'],
                 ac_academy=ac_academy,
             )
+        a.name = auto['name']
         a.entered = auto['entered']
         a.exited = auto['exited']
         a.status = auto['status']

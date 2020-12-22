@@ -1,7 +1,7 @@
 import os
 
 from breathecode.admissions.models import Cohort, CohortUser
-from ..command import command
+from ..decorator import command
 from ..utils import to_string
 
 """

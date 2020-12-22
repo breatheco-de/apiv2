@@ -2,7 +2,7 @@ import os
 
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import Profile
-from ..command import command
+from ..decorator import command
 from ..utils import to_string, jump
 
 """

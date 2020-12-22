@@ -22,6 +22,10 @@ if FIREBASE_KEY is not None and FIREBASE_KEY != '':
 logger = logging.getLogger(__name__)
 
 def send_email_message(template_slug, to, data={}):
+<<<<<<< HEAD
+=======
+
+>>>>>>> 187a15cf0efdb74dd06c5034990ec09c9e8078c7
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE':
         template = get_template_content(template_slug, data, ["email"])
 
@@ -68,36 +72,60 @@ def send_sms(slug, phone_number, data={}):
         return False
 
 # entity can be a cohort or a user
-def send_slack(slug, slack_entity, data={}):
+def send_slack(slug, slackuser=None, team=None, slackchannel=None, data={}):
 
-    template = get_template_content(slug, data, ["slack"])
-    
-    if slack_entity is None:
+    remitent_id = None
+    if slackuser is None and slackchannel is None:
         raise Exception("No slack entity (user or cohort) was found or given")
     
-    if not hasattr(slack_entity, 'team') or slack_entity.team is None:
-        raise Exception("The entity must belong to a slack team to receive notifications")
+    credentials = None
+    if team is not None:
+        credentials = team.owner.credentialsslack
+    
+    if slackuser is not None:
+        remitent_id = slackuser.slack_id
 
-    if slack_entity.team.credentials is None:
-        raise Exception(f"The slack team {slack_entity.team.name} has no valid credentials")
+    if slackchannel is not None:
+        if remitent_id is None:
+            remitent_id = slackchannel.slack_id
 
-    logger.debug(f"Sending slack message to {str(slack_entity)}")
+        if slackchannel.team is None:
+            raise Exception(f"The slack channel {slackchannel.name} must belong to a slack team")
+        elif credentials is None:
+            credentials = slackchannel.team.owner.credentialsslack
+    return send_slack_raw(slug, credentials.token, remitent_id, data)
 
+# if would like to specify slack channel or user id and team 
+def send_slack_raw(slug, token, channel_id, data={}):
+
+    
+    logger.debug(f"Sending slack message to {str(channel_id)}")
     try:
-        payload = json.loads(template['slack'])
-        if "blocks" in payload:
-            payload = payload["blocks"]
+        if "slack_payload" in data:
+            payload = data["slack_payload"]
+            print(payload)
+        else:
+            template = get_template_content(slug, data, ["slack"])
+            payload = json.loads(template['slack'])
+            if "blocks" in payload:
+                payload = payload["blocks"]
 
-        api = client.Slack(slack_entity.team.credentials.token)
+        # for modals mainly
+        meta = ""
+        if "private_metadata" in payload:
+            meta = payload["private_metadata"]
+
+        api = client.Slack(token)
         data = api.post("chat.postMessage", {
-            "channel": slack_entity.slack_id,
+            "channel": channel_id,
+            "private_metadata": meta,
             "blocks": payload,
             "parse": "full"
         })
-        logger.debug(f"Notification to {str(slack_entity)} sent")
+        logger.debug(f"Notification to {str(channel_id)} sent")
         return True
     except Exception:
-        logger.exception(f"Error sending notification to {str(slack_entity)}")
+        logger.exception(f"Error sending notification to {str(channel_id)}")
         return False
 
 
@@ -157,17 +185,18 @@ def get_template_content(slug, data={}, formats=None):
     z.update(data)
 
     templates = {}
-    if 'SUBJECT' in z:
-        templates["SUBJECT"] = z['SUBJECT']
-        templates["subject"] = z['SUBJECT']
-    elif 'subject' in z:
-        templates["SUBJECT"] = z['subject']
-        templates["subject"] = z['subject']
-    else:
-        templates["SUBJECT"] = 'No subject specified',
-        templates["subject"] = 'No subject specified'
 
     if formats is None or "email" in formats:
+        if 'SUBJECT' in z:
+            templates["SUBJECT"] = z['SUBJECT']
+            templates["subject"] = z['SUBJECT']
+        elif 'subject' in z:
+            templates["SUBJECT"] = z['subject']
+            templates["subject"] = z['subject']
+        else:
+            templates["SUBJECT"] = 'No subject specified',
+            templates["subject"] = 'No subject specified'
+            
         plaintext = get_template( slug + '.txt')
         html = get_template(slug + '.html')
         templates["text"] = plaintext.render(z)

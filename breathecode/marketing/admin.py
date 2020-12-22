@@ -74,7 +74,7 @@ def send_to_ac(modeladmin, request, queryset):
     entries = queryset.all()
     for entry in entries:
         register_new_lead(entry.toFormData())
-send_to_ac.short_description = "⏫ Upload to Active Campaign"
+send_to_ac.short_description = "⨁ Add lead to automations in AC"
 
 def fetch_more_facebook_info(modeladmin, request, queryset):
     entries = queryset.all()

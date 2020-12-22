@@ -31,9 +31,11 @@ class SlackTeam(models.Model):
     slack_id = models.CharField(max_length=50)
     name = models.CharField(max_length=100)
 
+    # the owner represents the channel
+    # his/her credentials are used for interaction with the Slack API
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
+    
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True)
-    credentials = models.OneToOneField(CredentialsSlack, on_delete=models.SET_NULL, blank=True, null=True, default=None)
     
     sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED, help_text="Automatically set when synqued from slack")
     sync_message = models.CharField(max_length=100, blank=True, null=True, default=None, help_text="Contains any success or error messages depending on the status")
