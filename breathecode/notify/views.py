@@ -15,6 +15,7 @@ from .actions import get_template, get_template_content
 from .models import Device
 from .tasks import async_slack_action
 from .serializers import DeviceSerializer
+from breathecode.services.slack.client import Slack
 
 logger = logging.getLogger(__name__)
 
