@@ -32,7 +32,7 @@ def monitor_app(self,app_id):
                 "details": result["details"]
             })
         if app.notify_slack_channel is not None:
-            send_slack_raw("diagnostic", app.academy.slackteam.credentials.token, app.notify_slack_channel.slack_id, {
+            send_slack_raw("diagnostic", app.academy.slackteam.owner.credentialsslack.token, app.notify_slack_channel.slack_id, {
                 "subject": f"Errors have been found on {app.title} diagnostic",
                 **result,
             })

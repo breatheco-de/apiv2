@@ -70,10 +70,14 @@ def run_app_diagnostic(app, report=False):
     for endpoint in _endpoints:
         if endpoint.last_check is not None and endpoint.last_check > now - timezone.timedelta(minutes = endpoint.frequency_in_minutes):
             logger.debug(f"Ignoring {endpoint.url} because frequency hast not been met")
+            endpoint.status_text = "Ignored because its paused"
+            endpoint.save()
             continue
 
         if endpoint.paused_until is not None and endpoint.paused_until > now:
             logger.debug(f"Ignoring endpoint:{endpoint.url} monitor because its paused")
+            endpoint.status_text = "Ignored because its paused"
+            endpoint.save()
             continue
 
         e = get_website_text(endpoint)
