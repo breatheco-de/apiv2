@@ -1,6 +1,6 @@
 from django.utils import timezone
 import logging, datetime, hashlib, requests, json, re
-
+from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint
 logger = logging.getLogger(__name__)
 USER_AGENT="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
 
@@ -59,8 +59,10 @@ def get_website_text(endp):
 
 def run_app_diagnostic(app, report=False):
 
+    failed_endpoints = [] #data to be send to slack
     results = {
-        "severity_level": 0
+        "severity_level": 0,
+        "details": ""
     }
     logger.debug(f"Testing application {app.title}")
     now = timezone.now()
@@ -78,10 +80,12 @@ def run_app_diagnostic(app, report=False):
         if e.status != 'OPERATIONAL':
             if e.severity_level > results["severity_level"]:
                 results["severity_level"] = e.severity_level
-
+            if e.special_status_text:
+                results["details"] += e.special_status_text
             if e.status not in results:
                 results[e.status] = []
             results[e.status].append(e.url)
+            failed_endpoints.append(e)
 
     if results["severity_level"] == 0:
         results["status"] = 'OPERATIONAL'
@@ -90,11 +94,19 @@ def run_app_diagnostic(app, report=False):
     else:
         results["status"] = 'MINOR'
 
-    results["text"] = json.dumps(results, indent=4)
     results["url"] = endpoint.url
+    results["text"] = json.dumps(results, indent=4)
 
     app.status = results["status"]
-    app.response_text = results["text"]
+
+    results["slack_payload"] =  render_snooze_text_endpoint(failed_endpoints) #converting to json to send to slack
+
+    if results["details"] != "":
+        app.response_text = results["details"]
+    else:
+        results["details"] = results["text"]
+        app.response_text = results["text"]
+
     app.save()
 
     return results

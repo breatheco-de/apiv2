@@ -13,7 +13,7 @@ def test_app(modeladmin, request, queryset):
     for app in appications:
         result = run_app_diagnostic(app)
         if result["status"] != "OPERATIONAL" and app.notify_slack_channel is not None:
-            send_slack_raw("diagnostic", app.notify_slack_channel.slack_id, {
+            send_slack_raw("diagnostic", app.academy.slackteam.credentials.token, app.notify_slack_channel.slack_id, {
                 "subject": f"Errors have been found on {app.title} diagnostic",
                 **result,
             })
@@ -45,7 +45,7 @@ test_endpoint.short_description = "Test Endpoint"
 # Register your models here.
 @admin.register(Endpoint)
 class EndpointAdmin(admin.ModelAdmin):
-    list_display = ('url', 'current_status', 'test_pattern', 'status_code', 'last_check')
+    list_display = ('url', 'current_status', 'test_pattern', 'status_code', 'paused_until', 'last_check')
     actions=[test_endpoint]
     
     def current_status(self,obj):

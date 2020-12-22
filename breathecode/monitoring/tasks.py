@@ -25,19 +25,14 @@ def monitor_app(self,app_id):
 
     result = run_app_diagnostic(app)
     if result["status"] != "OPERATIONAL":
-        details = ""
-        if "special_status_text" is not None:
-            details = result["special_status_text"]
-        else:
-            details = result["text"]
 
         if app.notify_email is not None:
             send_email_message("diagnostic", app.notify_email, {
                 "subject": f"Errors have been found on {app.title} diagnostic",
-                "details": details
+                "details": result["details"]
             })
         if app.notify_slack_channel is not None:
-            send_slack_raw("diagnostic", app.notify_slack_channel.slack_id, {
+            send_slack_raw("diagnostic", app.academy.slackteam.credentials.token, app.notify_slack_channel.slack_id, {
                 "subject": f"Errors have been found on {app.title} diagnostic",
                 **result,
             })

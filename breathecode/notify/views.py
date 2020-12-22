@@ -13,8 +13,8 @@ from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, Profile
 from .actions import get_template, get_template_content
 from .models import Device
+from .tasks import async_slack_action
 from .serializers import DeviceSerializer
-from breathecode.services.slack.client import Slack
 
 logger = logging.getLogger(__name__)
 
@@ -45,12 +45,16 @@ def test_email(request, email):
     # return Response(tags, status=status.HTTP_200_OK)
     pass
 
-@api_view(['GET'])
+@api_view(['POST'])
 @permission_classes([AllowAny])
 def process_interaction(request):
-    # tags = sync_user_issues()
-    # return Response(tags, status=status.HTTP_200_OK)
-    pass
+    try:
+        async_slack_action.delay(request.POST)
+        logger.debug("Slack action enqueued")
+        return Response(None, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.exception("Error processing slack action")
+        return Response(str(e), status=status.HTTP_200_OK)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

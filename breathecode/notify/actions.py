@@ -86,17 +86,27 @@ def send_slack(slug, slack_entity, data={}):
 # if would like to specify slack channel or user id and team 
 def send_slack_raw(slug, token, channel_id, data={}):
 
-    template = get_template_content(slug, data, ["slack"])
     
     logger.debug(f"Sending slack message to {str(channel_id)}")
     try:
-        payload = json.loads(template['slack'])
-        if "blocks" in payload:
-            payload = payload["blocks"]
+        if "slack_payload" in data:
+            payload = data["slack_payload"]
+            print(payload)
+        else:
+            template = get_template_content(slug, data, ["slack"])
+            payload = json.loads(template['slack'])
+            if "blocks" in payload:
+                payload = payload["blocks"]
+
+        # for modals mainly
+        meta = ""
+        if "private_metadata" in payload:
+            meta = payload["private_metadata"]
 
         api = client.Slack(token)
         data = api.post("chat.postMessage", {
             "channel": channel_id,
+            "private_metadata": meta,
             "blocks": payload,
             "parse": "full"
         })
