@@ -163,17 +163,18 @@ def get_template_content(slug, data={}, formats=None):
     z.update(data)
 
     templates = {}
-    if 'SUBJECT' in z:
-        templates["SUBJECT"] = z['SUBJECT']
-        templates["subject"] = z['SUBJECT']
-    elif 'subject' in z:
-        templates["SUBJECT"] = z['subject']
-        templates["subject"] = z['subject']
-    else:
-        templates["SUBJECT"] = 'No subject specified',
-        templates["subject"] = 'No subject specified'
 
     if formats is None or "email" in formats:
+        if 'SUBJECT' in z:
+            templates["SUBJECT"] = z['SUBJECT']
+            templates["subject"] = z['SUBJECT']
+        elif 'subject' in z:
+            templates["SUBJECT"] = z['subject']
+            templates["subject"] = z['subject']
+        else:
+            templates["SUBJECT"] = 'No subject specified',
+            templates["subject"] = 'No subject specified'
+            
         plaintext = get_template( slug + '.txt')
         html = get_template(slug + '.html')
         templates["text"] = plaintext.render(z)

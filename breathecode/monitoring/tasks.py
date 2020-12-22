@@ -1,3 +1,4 @@
+from django.utils import timezone
 from celery import shared_task, Task
 from .actions import run_app_diagnostic
 from .models import Application
