@@ -59,10 +59,20 @@ class LayoutDesign(models.Model):
     def __str__(self):
         return self.name
 
+
+PENDING = 'PENDING'
+PERSISTED = 'PERSISTED'
+ERROR = 'ERROR'
+STORAGE_STATUS = (
+    (PENDING, 'Pending'),
+    (PERSISTED, 'Persisted'),
+    (ERROR, 'Error'),
+)
 class UserSpecialty(models.Model):
     is_cleaned = False
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    status_text = models.CharField(max_length=255, default=None, null=True, blank=True)
     specialty = models.ForeignKey(Specialty, on_delete=models.CASCADE)
     token = models.CharField(max_length=40, db_index=True, unique=True)
     expires_at = models.DateTimeField(default=None, blank=True, null=True)

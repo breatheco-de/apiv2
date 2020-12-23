@@ -22,10 +22,6 @@ if FIREBASE_KEY is not None and FIREBASE_KEY != '':
 logger = logging.getLogger(__name__)
 
 def send_email_message(template_slug, to, data={}):
-<<<<<<< HEAD
-=======
-
->>>>>>> 187a15cf0efdb74dd06c5034990ec09c9e8078c7
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE':
         template = get_template_content(template_slug, data, ["email"])
 
