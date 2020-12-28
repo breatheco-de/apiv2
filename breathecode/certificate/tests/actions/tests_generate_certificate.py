@@ -160,7 +160,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
 
         self.assertEqual(model['cohort'].current_day, model['certificate'].duration_in_days)
-        self.assertEqual(len(certificate.__dict__), 15)
+        self.assertEqual(len(certificate.__dict__), 16)
         self.assertEqual(certificate.id, 1)
         self.assertEqual(strings[model['cohort'].language]["Main Instructor"], 'Main Instructor')
         self.assertEqual(certificate.specialty, model['cohort'].certificate.specialty)
@@ -196,7 +196,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
 
         self.assertEqual(model['cohort'].current_day, model['certificate'].duration_in_days)
-        self.assertEqual(len(certificate.__dict__), 15)
+        self.assertEqual(len(certificate.__dict__), 16)
         self.assertEqual(certificate.id, 1)
         self.assertEqual(strings[model['cohort'].language]["Main Instructor"], 'Instructor Principal')
         self.assertEqual(certificate.specialty, model['cohort'].certificate.specialty)

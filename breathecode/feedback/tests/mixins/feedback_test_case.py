@@ -144,7 +144,7 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
         self.assertTrue(token)
         self.assertTrue(link in html)
 
-    def check_stack_contain_a_correct_token(self, lang, academy, dicts, mock, model):
+    def check_stack_contain_a_correct_token(self, lang, academy, mock, model):
         token = self.get_token()
         slack_token = model['slack_team'].credentials.token
         slack_id = model['slack_user'].slack_id
@@ -163,6 +163,7 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
             params=None,
             json={
                 'channel': slack_id,
+                'private_metadata': '',
                 'blocks': [{
                     'type': 'header',
                     'text': {
@@ -197,7 +198,8 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
             finantial_status='', educational_status='', mentor=False, cohort_two=False, task=False,
             task_status='', task_type='', answer=False, answer_status='', lang='', event=False,
             answer_score=0, cohort_user_role='', cohort_user_two=False, slack_user=False,
-            slack_team=False, credentials_slack=False, manual_authenticate=False):
+            slack_team=False, credentials_slack=False, manual_authenticate=False,
+            slack_team_owner=False):
         os.environ['EMAIL_NOTIFICATIONS_ENABLED'] = 'TRUE'
         self.maxDiff = None
 
@@ -217,6 +219,8 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
             if profile_academy:
                 kargs['certificate'] = models['certificate']
+            
+            if academy or profile_academy:
                 kargs['academy'] = models['academy']
 
             if impossible_kickoff_date:
@@ -234,16 +238,24 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
             models['cohort_two'] = mixer.blend('admissions.Cohort', **kargs)
 
         if (user or authenticate or profile_academy or cohort_user or task or slack_user or
-                manual_authenticate):
+                manual_authenticate or slack_team):
             models['user'] = mixer.blend('auth.User')
             models['user'].set_password(self.password)
             models['user'].save()
 
         if credentials_slack:
-            models['credentials_slack'] = mixer.blend('authenticate.CredentialsSlack')
+            # models['owner_user'] = mixer.blend('auth.User')
+            models['credentials_slack'] = mixer.blend('authenticate.CredentialsSlack',
+                user=models['user'])
 
         if slack_team:
             kargs = {}
+
+            if academy or profile_academy:
+                kargs['academy'] = models['academy']
+
+            if slack_team_owner:
+                kargs['owner'] = models['user']
 
             if credentials_slack:
                 kargs['credentials'] = models['credentials_slack']

@@ -72,12 +72,14 @@ def send_slack(slug, slackuser=None, team=None, slackchannel=None, data={}):
 
     remitent_id = None
     if slackuser is None and slackchannel is None:
-        raise Exception("No slack entity (user or cohort) was found or given")
-    
+        message = "No slack entity (user or cohort) was found or given"
+        logger.error(message)
+        raise Exception(message)
+
     credentials = None
-    if team is not None:
+    if team is not None and hasattr(team.owner, 'credentialsslack'):
         credentials = team.owner.credentialsslack
-    
+
     if slackuser is not None:
         remitent_id = slackuser.slack_id
 
@@ -86,16 +88,24 @@ def send_slack(slug, slackuser=None, team=None, slackchannel=None, data={}):
             remitent_id = slackchannel.slack_id
 
         if slackchannel.team is None:
-            raise Exception(f"The slack channel {slackchannel.name} must belong to a slack team")
+            message = f"The slack channel {slackchannel.name} must belong to a slack team"
+            logger.error(message)
+            raise Exception(message)
         elif credentials is None:
             credentials = slackchannel.team.owner.credentialsslack
-    return send_slack_raw(slug, credentials.token, remitent_id, data)
+
+    if credentials:
+        return send_slack_raw(slug, credentials.token, remitent_id, data)
+
+    else:
+        message = "Team owner not has slack credentials"
+        logger.error(message)
+        raise Exception(message)
 
 # if would like to specify slack channel or user id and team 
 def send_slack_raw(slug, token, channel_id, data={}):
-
-    
     logger.debug(f"Sending slack message to {str(channel_id)}")
+
     try:
         if "slack_payload" in data:
             payload = data["slack_payload"]

@@ -84,8 +84,8 @@ def send_survey(user, cohort=None):
     if user.email:
         send_email_message("nps", user.email, data)
 
-    if hasattr(user, 'slackuser'):
-        send_slack("nps", user.slackuser, data)
+    if hasattr(user, 'slackuser') and hasattr(answer.cohort.academy, 'slackteam'):
+        send_slack("nps", user.slackuser, answer.cohort.academy.slackteam, data=data)
     
     # keep track of sent survays until they get answered
     if not question_was_sent_previously:

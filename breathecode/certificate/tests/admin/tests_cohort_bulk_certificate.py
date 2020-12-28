@@ -149,6 +149,7 @@ class AdminCohortBulkCertificateTestCase(CertificateTestCase):
             'signed_by': f'{first_name} {last_name}',
             'signed_by_role': 'Main Instructor',
             'preview_url': None,
+            'status_text': None,
         } for id in range(1, 4)]
 
         self.assertEqual(self.check_all_token(self.all_user_specialty_dict()), expected)
