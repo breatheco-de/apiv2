@@ -1,6 +1,7 @@
 """
 Admin tests
 """
+from breathecode.certificate.tests.mocks.google_cloud_storage import GOOGLE_CLOUD_PATH, apply_google_cloud_blob_mock, apply_google_cloud_bucket_mock, apply_google_cloud_client_mock
 from breathecode.admissions.models import UP_TO_DATE
 from unittest.mock import patch, call
 
@@ -11,7 +12,7 @@ from breathecode.tests.mocks import (
     apply_django_contrib_messages_mock,
 )
 from ...admin import cohort_bulk_certificate
-from ...models import Certificate, Cohort
+from ...models import Certificate, Cohort, PERSISTED
 from ..mixins import CertificateTestCase
 from ..mocks import (
     ACTIONS_PATH,
@@ -21,6 +22,9 @@ from ..mocks import (
 
 class AdminCohortBulkCertificateTestCase(CertificateTestCase):
     """Tests action cohort_bulk_certificate"""
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     # @patch(ACTIONS_PATH['certificate_screenshot'], apply_certificate_screenshot_mock())
     @patch(ACTIONS_PATH['generate_certificate'], apply_generate_certificate_mock())
     # @patch(ACTIONS_PATH['remove_certificate_screenshot'], apply_remove_certificate_screenshot_mock())
@@ -43,6 +47,9 @@ class AdminCohortBulkCertificateTestCase(CertificateTestCase):
         self.assertEqual(self.count_cohort(), 0)
         self.assertEqual(self.count_certificate(), 0)
 
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     # @patch(ACTIONS_PATH['certificate_screenshot'], apply_certificate_screenshot_mock())
     @patch(ACTIONS_PATH['generate_certificate'], apply_generate_certificate_mock())
     # @patch(ACTIONS_PATH['remove_certificate_screenshot'], apply_remove_certificate_screenshot_mock())
@@ -68,6 +75,9 @@ class AdminCohortBulkCertificateTestCase(CertificateTestCase):
         self.assertEqual(self.all_cohort_dict(), [db_cohort])
         self.assertEqual(self.all_certificate_dict(), [db_certificate])
 
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     def test_cohort_bulk_certificate_with_cohort_with_required_models_but_bad_status(self):
         """cohort_bulk_certificate don't call open in development environment"""
@@ -99,11 +109,29 @@ class AdminCohortBulkCertificateTestCase(CertificateTestCase):
                 ' generation')])
             self.assertEqual(mock.error.call_args_list, [])
 
-        self.assertEqual(self.check_all_token(self.all_user_specialty_dict()), [])
+        expected = [{
+            'academy_id': 1,                                                                                                                      
+            'cohort_id': 1,                                                                                                                       
+            'expires_at': None,                                                                                                                   
+            'id': id,                                                                                                                              
+            'layout_id': None,                                                                                                                    
+            'signed_by': '',
+            'signed_by_role': 'Director',
+            'specialty_id': 1,
+            'status': 'ERROR',
+            'status_text': 'Payment error, finantial_status=`None`',
+            'user_id': 1 if id == 1 else id + 1,
+        } for id in range(1, 4)]
+
+        dicts = self.check_all_preview_url(self.check_all_token(self.all_user_specialty_dict()))
+        self.assertEqual(dicts, expected)
 
         self.assertEqual(self.all_cohort_dict(), db_cohort)
         self.assertEqual(self.all_certificate_dict(), db_certificate)
 
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     def test_cohort_bulk_certificate_with_cohort_with_required_models(self):
         """cohort_bulk_certificate don't call open in development environment"""
@@ -148,11 +176,12 @@ class AdminCohortBulkCertificateTestCase(CertificateTestCase):
             'cohort_id': 1,
             'signed_by': f'{first_name} {last_name}',
             'signed_by_role': 'Main Instructor',
-            'preview_url': None,
             'status_text': None,
+            'status': PERSISTED,
         } for id in range(1, 4)]
 
-        self.assertEqual(self.check_all_token(self.all_user_specialty_dict()), expected)
+        dicts = self.check_all_preview_url(self.check_all_token(self.all_user_specialty_dict()))
+        self.assertEqual(dicts, expected)
 
         self.assertEqual(self.all_cohort_dict(), db_cohort)
         self.assertEqual(self.all_certificate_dict(), db_certificate)

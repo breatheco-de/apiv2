@@ -1,15 +1,11 @@
 """
 Tasks tests
 """
+from breathecode.certificate.models import PERSISTED
 import re
 from unittest.mock import patch
 from django.core.exceptions import ValidationError
 from breathecode.admissions.models import Certificate
-from breathecode.tests.mocks import (
-    CELERY_PATH,
-    apply_celery_shared_task_mock,
-)
-
 from ...actions import generate_certificate, strings
 from ..mixins import CertificateTestCase
 from ....admissions.models import FULLY_PAID, UP_TO_DATE, LATE
@@ -29,7 +25,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_has_finantial_status_none(self):
         """generate_certificate has error without specialty"""
         model = self.generate_models(cohort_user=True)
@@ -43,7 +38,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_has_finantial_status_late(self):
         """generate_certificate has error without specialty"""
         model = self.generate_models(finantial_status=LATE, cohort_user=True)
@@ -57,7 +51,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_has_no_specialty(self):
         """generate_certificate has error without specialty"""
         model = self.generate_models(finantial_status=FULLY_PAID, cohort_user=True)
@@ -72,7 +65,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_has_no_specialty_without_layout(self):
         """generate_certificate has error without layout"""
         model = self.generate_models(finantial_status=FULLY_PAID, specialty=True, finished=True,
@@ -87,7 +79,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_without_finish_cohort(self):
         """generate_certificate has error without main_teacher"""
         model = self.generate_models(finantial_status=FULLY_PAID, specialty=True, layout_design=True,
@@ -103,7 +94,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_has_no_main_teacher(self):
         """generate_certificate has error without main_teacher"""
         model = self.generate_models(finantial_status=FULLY_PAID, specialty=True, layout_design=True,
@@ -119,7 +109,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_with_bad_stage(self):
         """generate_certificate has bad stage"""
         model = self.generate_models(finantial_status=FULLY_PAID, specialty=True, finished=True,
@@ -135,7 +124,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_with_task_pending(self):
         """generate_certificate"""
         model = self.generate_models('es', finantial_status=UP_TO_DATE, specialty=True, finished=True,
@@ -150,72 +138,68 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_lang_en(self):
         """generate_certificate"""
         model = self.generate_models('en', finantial_status=FULLY_PAID, specialty=True, finished=True,
             layout_design=True, teacher=True, stage=True, cohort_user=True, certificate=True)
 
         certificate = generate_certificate(model['cohort_user'].user)
-        token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
-
-        self.assertEqual(model['cohort'].current_day, model['certificate'].duration_in_days)
-        self.assertEqual(len(certificate.__dict__), 16)
-        self.assertEqual(certificate.id, 1)
-        self.assertEqual(strings[model['cohort'].language]["Main Instructor"], 'Main Instructor')
-        self.assertEqual(certificate.specialty, model['cohort'].certificate.specialty)
-        self.assertEqual(certificate.academy, model['cohort'].academy)
-        self.assertEqual(certificate.layout, model['layout_design'])
 
         first_name = model['teacher_cohort_user'].user.first_name
         last_name = model['teacher_cohort_user'].user.last_name
+        expected = [{
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': f'{first_name} {last_name}',
+            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'specialty_id': 1,
+            'status': PERSISTED,
+            'status_text': None,
+            'user_id': 1,
+            'is_cleaned': True,
+        }]
 
-        self.assertEqual(certificate.signed_by, f'{first_name} {last_name}')
-        self.assertEqual(certificate.signed_by_role, strings[model['cohort'].language]
-            ["Main Instructor"])
-        self.assertEqual(certificate.user, model['cohort_user'].user)
-        self.assertEqual(certificate.cohort, model['cohort_user'].cohort)
-        self.assertEqual(certificate.cohort, model['cohort_user'].cohort)
-        self.assertEqual(certificate.preview_url, None)
-        self.assertEqual(certificate.is_cleaned, True)
-        self.assertEqual(len(certificate.token), 40)
-        self.assertEqual(bool(token_pattern.match(certificate.token)), True)
+        dicts = self.check_all_token(self.all_user_specialty_dict())
 
-        # TODO created_at
-        # TODO updated_at
+        self.assertEqual(model['cohort'].current_day, model['certificate'].duration_in_days)
+        dicts = self.check_all_token(self.all_model_dict([certificate]))
+        self.assertEqual(dicts, expected)
+
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(CELERY_PATH['shared_task'], apply_celery_shared_task_mock())
     def test_generate_certificate_lang_es(self):
         """generate_certificate"""
         model = self.generate_models('es', finantial_status=UP_TO_DATE, specialty=True, finished=True,
             layout_design=True, teacher=True, stage=True, cohort_user=True, certificate=True)
-        certificate = generate_certificate(model['cohort_user'].user)
-        token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
 
-        self.assertEqual(model['cohort'].current_day, model['certificate'].duration_in_days)
-        self.assertEqual(len(certificate.__dict__), 16)
-        self.assertEqual(certificate.id, 1)
-        self.assertEqual(strings[model['cohort'].language]["Main Instructor"], 'Instructor Principal')
-        self.assertEqual(certificate.specialty, model['cohort'].certificate.specialty)
-        self.assertEqual(certificate.academy, model['cohort'].academy)
-        self.assertEqual(certificate.layout, model['layout_design'])
+        certificate = generate_certificate(model['cohort_user'].user)
 
         first_name = model['teacher_cohort_user'].user.first_name
         last_name = model['teacher_cohort_user'].user.last_name
+        expected = [{
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': f'{first_name} {last_name}',
+            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'specialty_id': 1,
+            'status': PERSISTED,
+            'status_text': None,
+            'user_id': 1,
+            'is_cleaned': True,
+        }]
 
-        self.assertEqual(certificate.signed_by, f'{first_name} {last_name}')
-        self.assertEqual(certificate.signed_by_role, strings[model['cohort'].language]
-            ["Main Instructor"])
-        self.assertEqual(certificate.user, model['cohort_user'].user)
-        self.assertEqual(certificate.cohort, model['cohort_user'].cohort)
-        # self.assertEqual(certificate.cohort, model['cohort_user'].cohort)
-        self.assertEqual(certificate.preview_url, None)
-        self.assertEqual(certificate.is_cleaned, True)
-        self.assertEqual(len(certificate.token), 40)
-        self.assertEqual(bool(token_pattern.match(certificate.token)), True)
+        dicts = self.check_all_token(self.all_user_specialty_dict())
 
-        # TODO created_at
-        # TODO updated_at
+        self.assertEqual(model['cohort'].current_day, model['certificate'].duration_in_days)
+        dicts = self.check_all_token(self.all_model_dict([certificate]))
+        self.assertEqual(dicts, expected)

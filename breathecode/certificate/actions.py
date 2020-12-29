@@ -5,7 +5,7 @@ import requests, os, logging
 from urllib.parse import urlencode
 from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
 from breathecode.assignments.models import Task
-from .models import UserSpecialty, LayoutDesign
+from .models import ERROR, PERSISTED, UserSpecialty, LayoutDesign
 from ..services.google_cloud import Storage
 
 
@@ -23,6 +23,33 @@ strings = {
     }
 }
 
+def report_certificate_error(message: str, user, cohort, layout=None):
+    try:
+        uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
+        if uspe is None:
+            uspe = UserSpecialty(
+                user = user,
+                cohort = cohort,
+            )
+
+        uspe.specialty = cohort.certificate.specialty
+        uspe.academy = cohort.academy
+        uspe.status_text = message
+        uspe.status = ERROR
+        uspe.preview_url = None
+
+        if layout:
+            uspe.layout = layout
+        # uspe.is_cleaned = True
+
+        uspe.save()
+    except Exception as e:
+        logger.error('User Specialty should not be saved')
+        logger.error(str(e))
+
+    logger.error(message)
+    return Exception(message)
+
 def generate_certificate(user, cohort=None):
     cohort_user = CohortUser.objects.filter(user__id=user.id).first()
     tasks = Task.objects.filter(user__id=user.id, task_type='PROJECT')
@@ -33,46 +60,38 @@ def generate_certificate(user, cohort=None):
 
     if cohort is None:
         message = "Imposible to obtain the student cohort, maybe it has more than one or none assigned"
-        logger.error(message)
-        raise Exception(message)
+        raise report_certificate_error(message, user, cohort)
 
     if tasks_count_pending:
         message = f'The student have {tasks_count_pending} pending task'
-        logger.error(message)
-        raise Exception(message)
+        raise report_certificate_error(message, user, cohort)
 
     if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status ==
         UP_TO_DATE):
         message = f'Payment error, finantial_status=`{cohort_user.finantial_status}`'
-        logger.error(message)
-        raise Exception(message)
+        raise report_certificate_error(message, user, cohort)
 
     if cohort.certificate is None:
         message = f"The cohort has no certificate assigned, please set a certificate for cohort: {cohort.name}"
-        logger.error(message)
-        raise Exception(message)
+        raise report_certificate_error(message, user, cohort)
 
     if cohort.certificate.specialty is None:
         message = f"Specialty has no certificate assigned, please set a certificate on the Specialty model: {cohort.certificate.name}"
-        logger.error(message)
-        raise Exception(message)
+        raise report_certificate_error(message, user, cohort)
 
     if cohort.current_day != cohort.certificate.duration_in_days:
         message = "cohort.current_day is not equal to certificate.duration_in_days"
-        logger.error(message)
-        raise Exception(message)
+        raise report_certificate_error(message, user, cohort)
 
     layout = LayoutDesign.objects.filter(slug='default').first()
     if layout is None:
         message = "Missing a default layout"
-        logger.error(message)
-        raise Exception(message)
+        raise report_certificate_error(message, user, cohort)
 
     main_teacher = CohortUser.objects.filter(cohort__id=cohort.id, role='TEACHER').first()
     if main_teacher is None or main_teacher.user is None:
         message = "This cohort does not have a main teacher, please assign it first"
-        logger.error(message)
-        raise Exception(message)
+        raise report_certificate_error(message, user, cohort, layout)
     else:
         main_teacher = main_teacher.user
 
@@ -88,6 +107,7 @@ def generate_certificate(user, cohort=None):
     uspe.layout = layout
     uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
     uspe.signed_by_role = strings[cohort.language]["Main Instructor"]
+    uspe.status = PERSISTED
     uspe.save()
 
     return uspe

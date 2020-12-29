@@ -22,10 +22,16 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     """APITestCase with Certificate models"""
     token = '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
     token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
+    preview_url_pattern = re.compile("^https:\/\/storage\.cloud\.google\.com\/certificates-"
+        "breathecode\/[0-9a-zA-Z]{,40}$")
 
     def check_all_token(self, models: dict):
         return [model for model in models if self.token_pattern.match(model['token']) and
             model.pop('token')]
+
+    def check_all_preview_url(self, models: dict):
+        return [model for model in models if self.preview_url_pattern.match(model['preview_url']) and
+            model.pop('preview_url')]
 
     def remove_model_state(self, dict):
         result = None
@@ -77,6 +83,9 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     def all_user_specialty_dict(self):
         return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
             UserSpecialty.objects.filter()]
+
+    def all_model_dict(self, models: list[dict]):
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in models]
 
     def user_specialty_has_preview_url(self, certificate_id):
         """preview_url is set?"""

@@ -8,6 +8,9 @@ cp .env.example .env
 
 [Read the docs](https://documenter.getpostman.com/view/2432393/T1LPC6ef)
 
+# Online editor
+
+[Gitpod](https://gitpod.io/#https://github.com/breatheco-de/apiv2)
 
 # Run the tests
 
