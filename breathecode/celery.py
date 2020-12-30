@@ -6,12 +6,10 @@ from celery.signals import task_failure
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'breathecode.settings')
-REDIS_URL = os.getenv('REDIS_URL', None)
+REDIS_URL = os.getenv('REDIS_URL',None)
+
 
 app = Celery('celery_breathecode')
-
-if os.getenv('CELERY_DISABLE_SCHEDULER'):
-    app.conf.update(task_always_eager=True)
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.

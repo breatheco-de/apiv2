@@ -18,18 +18,3 @@ from .celery import (
     CELERY_INSTANCES,
     apply_celery_shared_task_mock,
 )
-from .django_contrib import (
-    DJANGO_CONTRIB_PATH,
-    DJANGO_CONTRIB_INSTANCES,
-    apply_django_contrib_messages_mock,
-)
-from .mailgun import (
-    MAILGUN_PATH,
-    MAILGUN_INSTANCES,
-    apply_requests_post_mock,
-)
-from .slack import (
-    SLACK_PATH,
-    SLACK_INSTANCES,
-    apply_slack_requests_request_mock,
-)

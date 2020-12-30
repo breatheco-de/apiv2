@@ -1,7 +1,7 @@
 """
 Collections of mixins used to login in authorize microservice
 """
-import os, re
+import os
 from unittest.mock import patch
 from urllib.parse import urlencode
 from rest_framework.test import APITestCase
@@ -9,7 +9,6 @@ from mixer.backend.django import mixer
 from breathecode.assignments.models import PENDING, PROJECT
 from breathecode.certificate.models import UserSpecialty
 from .development_environment import DevelopmentEnvironment
-from ...models import Certificate, Cohort
 from ..mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,
@@ -21,71 +20,26 @@ from ..mocks import (
 class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     """APITestCase with Certificate models"""
     token = '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
-    token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
-
-    def check_all_token(self, models: dict):
-        return [model for model in models if self.token_pattern.match(model['token']) and
-            model.pop('token')]
-
-    def remove_model_state(self, dict):
-        result = None
-        if dict:
-            result = dict.copy()
-            del result['_state']
-        return result
-
-    def remove_created_at(self, dict):
-        result = None
-        if dict:
-            result = dict.copy()
-            if 'created_at' in result:
-                del result['created_at']
-        return result
-
-    def remove_updated_at(self, dict):
-        result = None
-        if dict:
-            result = dict.copy()
-            if 'updated_at' in result:
-                del result['updated_at']
-        return result
-
-    def remove_dinamics_fields(self, dict):
-        return self.remove_updated_at(self.remove_model_state(self.remove_created_at(dict)))
-
-    def model_to_dict(self, models: dict, key: str) -> dict:
-        if key in models:
-            return self.remove_dinamics_fields(models[key].__dict__)
-
-    def count_cohort(self):
-        return Cohort.objects.count()
-
-    def count_certificate(self):
-        return Certificate.objects.count()
-
-    def count_user_specialty(self):
-        return UserSpecialty.objects.count()
-
-    def all_cohort_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Cohort.objects.filter()]
-
-    def all_certificate_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Certificate.objects.filter()]
-
-    def all_user_specialty_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            UserSpecialty.objects.filter()]
+    user = None
+    cohort = None
+    cohort_user = None
+    certificate = None
+    specialty = None
+    user_specialty = None
+    layout_design = None
+    teacher_user = None
+    teacher_cohort = None
+    teacher_cohort_user = None
+    task = None
 
     def user_specialty_has_preview_url(self, certificate_id):
         """preview_url is set?"""
         certificate = UserSpecialty.objects.get(id=certificate_id)
         return certificate.preview_url is not None
 
-    def generate_screenshotmachine_url(self, user_specialty):
+    def generate_screenshotmachine_url(self):
         """Generate screenshotmachine url"""
-        certificate = user_specialty
+        certificate = self.user_specialty
         query_string = urlencode({
             'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
             'url': f'https://certificate.breatheco.de/preview/{certificate.token}',
@@ -98,83 +52,78 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def generate_models(self, language='', stage=False, teacher=False, layout_design=False,
-            specialty=False, finished=False, finantial_status=None, task=None, cohort=False,
-            certificate=False, teacher_user=False, user_specialty=False, user=False,
-            cohort_user=False, models={}):
+    def generate_models(self, language: str=None, stage=False, teacher=False, layout=False,
+                        specialty=False, finished=False, finantial_status=None, task=None):
         """Generate models"""
-        self.maxDiff = None
-        models = models.copy()
+        certificate = mixer.blend('admissions.Certificate')
+        certificate.save()
+        self.certificate = certificate
 
-        if not 'certificate' in models and (certificate or specialty or cohort or cohort_user or
-                teacher):
-            models['certificate'] = mixer.blend('admissions.Certificate')
+        if layout:
+            layout_design = mixer.blend('certificate.LayoutDesign')
+            layout_design.slug = 'default'
+            layout_design.save()
+            self.layout_design = layout_design
 
-        if not 'layout_design' in models and layout_design:
-            models['layout_design'] = mixer.blend('certificate.LayoutDesign', slug='default')
+        if specialty:
+            specialty = mixer.blend('certificate.Specialty')
+            specialty.certificate = certificate
+            specialty.save()
+            self.specialty = specialty
 
-        if not 'specialty' in models and specialty:
-            kargs = {}
+        # user as certificate
+        user_specialty = mixer.blend('certificate.UserSpecialty')
+        user_specialty.token = self.token
+        user_specialty.save()
+        self.user_specialty = user_specialty
 
-            if certificate:
-                kargs['certificate'] = models['certificate']
-            
-            models['specialty'] = mixer.blend('certificate.Specialty', **kargs)
+        user = mixer.blend('auth.User')
+        user.save()
+        self.user = user
 
-        if not 'user_specialty' in models and user_specialty:
-            models['user_specialty'] = mixer.blend('certificate.UserSpecialty', token=self.token)
+        if task:
+            task = mixer.blend('assignments.Task')
+            task.user = user
+            task.revision_status = PENDING
+            task.task_type = PROJECT
+            task.save()
+            self.task = task
 
-        if not 'user' in models and (user or cohort_user or task):
-            models['user'] = mixer.blend('auth.User')
+        cohort = mixer.blend('admissions.Cohort')
 
-        if not 'task' in models and task:
-            kargs = {
-                'user': models['user'],
-                'revision_status': PENDING,
-                'task_type': PROJECT,
-            }
+        if finished:
+            cohort.current_day = certificate.duration_in_days
 
-            models['task'] = mixer.blend('assignments.Task', **kargs)
+        cohort.certificate = certificate
 
-        if not 'cohort' in models and (cohort or cohort_user or teacher):
-            kargs = {
-                'certificate': models['certificate'],
-            }
+        if stage:
+            cohort.stage = 'ENDED'
 
-            if finished:
-                kargs['current_day'] = models['certificate'].duration_in_days
+        if language:
+            cohort.language = language
 
-            if stage:
-                kargs['stage'] = 'ENDED'
+        cohort.save()
+        self.cohort = cohort
 
-            if language:
-                kargs['language'] = language
+        cohort_user = mixer.blend('admissions.CohortUser')
+        cohort_user.user = user
+        cohort_user.cohort = cohort
+        cohort_user.educational_status = 'GRADUATED'
 
-            models['cohort'] = mixer.blend('admissions.Cohort', **kargs)
+        if finantial_status:
+            cohort_user.finantial_status = finantial_status
 
-        if not 'cohort_user' in models and cohort_user:
-            kargs = {
-                'educational_status': 'GRADUATED',
-                'user': models['user'],
-                'cohort': models['cohort'],
-            }
+        cohort_user.save()
+        self.cohort_user = cohort_user
 
-            if finantial_status:
-                kargs['finantial_status'] = finantial_status
-
-            models['cohort_user'] = mixer.blend('admissions.CohortUser', **kargs)
-
-        if not 'teacher_user' in models and (teacher or teacher_user):
-            models['teacher_user'] = mixer.blend('auth.User')
+        if teacher:
+            teacher_user = mixer.blend('auth.User')
+            teacher_user.save()
             self.teacher_user = user
 
-        if not 'teacher_cohort_user' in models and teacher:
-            kargs = {
-                'user': models['teacher_user'],
-                'cohort': models['cohort'],
-                'role': 'TEACHER',
-            }
-
-            models['teacher_cohort_user'] = mixer.blend('admissions.CohortUser', **kargs)
-        
-        return models
+            teacher_cohort_user = mixer.blend('admissions.CohortUser')
+            teacher_cohort_user.user = teacher_user
+            teacher_cohort_user.cohort = cohort
+            teacher_cohort_user.role = 'TEACHER'
+            teacher_cohort_user.save()
+            self.teacher_cohort_user = teacher_cohort_user

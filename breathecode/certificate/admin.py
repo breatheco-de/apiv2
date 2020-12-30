@@ -11,7 +11,6 @@ from django.http import HttpResponse
 
 logger = logging.getLogger(__name__)
 
-
 class ExportCsvMixin:
     def export_as_csv(self, request, queryset):
 
@@ -30,21 +29,17 @@ class ExportCsvMixin:
 
     export_as_csv.short_description = "Export Selected as CSV"
 
-
 @admin.register(Badge)
 class BadgeAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name')
-
 
 @admin.register(Specialty)
 class SpecialtyAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name')
 
-
 @admin.register(LayoutDesign)
 class LayoutDesignAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name')
-
 
 def screenshot(modeladmin, request, queryset):
     certificate_ids = queryset.values_list('id', flat=True)
@@ -53,14 +48,12 @@ def screenshot(modeladmin, request, queryset):
     messages.success(request, message="Screenshots scheduled correctly")
 screenshot.short_description = "🔄 RETAKE Screenshot"
 
-
 def delete_screenshot(modeladmin, request, queryset):
     certificate_ids = queryset.values_list('id', flat=True)
     for cert_id in certificate_ids:
         remove_screenshot.delay(cert_id)
     messages.success(request, message="Screenshots scheduled for deletion")
 delete_screenshot.short_description = "⛔️ DELETE Screenshot"
-
 
 def export_user_specialty_csv(self, request, queryset):
     response = HttpResponse(content_type='text/csv')
@@ -71,7 +64,6 @@ def export_user_specialty_csv(self, request, queryset):
         row = writer.writerow([obj.user.first_name, obj.user.last_name, obj.specialty.name, obj.academy.name, obj.cohort.name, f"https://certificate.breatheco.de/{obj.token}", f"https://certificate.breatheco.de/pdf/{obj.token}"])
 
     return response
-
 
 export_user_specialty_csv.short_description = "⬇️ Export Selected"
 @admin.register(UserSpecialty)
@@ -93,8 +85,8 @@ class UserSpecialtyAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         return ['token', 'expires_at']
 
-
 def user_bulk_certificate(modeladmin, request, queryset):
+
     users = queryset.all()
     try:
         for u in users:
@@ -104,6 +96,8 @@ def user_bulk_certificate(modeladmin, request, queryset):
     except Exception as e:
         logger.exception("Problem generating certificates")
         messages.error(request, message=str(e))
+
+
 user_bulk_certificate.short_description = "🎖 Generate Student Certificate"
 
 @admin.register(UserProxy)
@@ -111,10 +105,7 @@ class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name')
     actions = [user_bulk_certificate]
 
-
 def cohort_bulk_certificate(modeladmin, request, queryset):
-    # import messages here thanks to poor implementation of mocking
-    from django.contrib import messages
 
     cohort_ids = queryset.values_list('id', flat=True)
     for _id in cohort_ids:
@@ -122,8 +113,8 @@ def cohort_bulk_certificate(modeladmin, request, queryset):
         generate_cohort_certificates.delay(_id)
 
     messages.success(request, message="Scheduled certificate generation")
-cohort_bulk_certificate.short_description = "🥇 Generate Cohort Certificates"
 
+cohort_bulk_certificate.short_description = "🥇 Generate Cohort Certificates"
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):

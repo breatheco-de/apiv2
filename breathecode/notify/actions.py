@@ -22,7 +22,9 @@ if FIREBASE_KEY is not None and FIREBASE_KEY != '':
 logger = logging.getLogger(__name__)
 
 def send_email_message(template_slug, to, data={}):
+
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE':
+
         template = get_template_content(template_slug, data, ["email"])
 
         result = requests.post(
@@ -72,14 +74,13 @@ def send_slack(slug, slackuser=None, team=None, slackchannel=None, data={}):
 
     remitent_id = None
     if slackuser is None and slackchannel is None:
-        message = "No slack entity (user or cohort) was found or given"
-        logger.error(message)
-        raise Exception(message)
-
+        raise Exception("No slack entity (user or cohort) was found or given")
+    
+    print("sending....")
     credentials = None
-    if team is not None and hasattr(team.owner, 'credentialsslack'):
+    if team is not None:
         credentials = team.owner.credentialsslack
-
+    
     if slackuser is not None:
         remitent_id = slackuser.slack_id
 
@@ -88,24 +89,16 @@ def send_slack(slug, slackuser=None, team=None, slackchannel=None, data={}):
             remitent_id = slackchannel.slack_id
 
         if slackchannel.team is None:
-            message = f"The slack channel {slackchannel.name} must belong to a slack team"
-            logger.error(message)
-            raise Exception(message)
+            raise Exception(f"The slack channel {slackchannel.name} must belong to a slack team")
         elif credentials is None:
             credentials = slackchannel.team.owner.credentialsslack
-
-    if credentials:
-        return send_slack_raw(slug, credentials.token, remitent_id, data)
-
-    else:
-        message = "Team owner not has slack credentials"
-        logger.error(message)
-        raise Exception(message)
+    return send_slack_raw(slug, credentials.token, remitent_id, data)
 
 # if would like to specify slack channel or user id and team 
 def send_slack_raw(slug, token, channel_id, data={}):
-    logger.debug(f"Sending slack message to {str(channel_id)}")
 
+    
+    logger.debug(f"Sending slack message to {str(channel_id)}")
     try:
         if "slack_payload" in data:
             payload = data["slack_payload"]
