@@ -1,5 +1,6 @@
-import os
+import os, datetime
 from urllib import parse
+
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import AnonymousUser
@@ -132,6 +133,16 @@ def get_leads(request, id=None):
     academy = request.GET.get('academy', None)
     if academy is not None:
         items = items.filter(academy__slug__in=academy.split(","))
+
+    start = request.GET.get('start', None)
+    if start is not None:
+        start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
+        items = items.filter(created_at__gte=start_date)
+
+    end = request.GET.get('end', None)
+    if end is not None:
+        end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
+        items = items.filter(created_at__lte=end_date)
 
     items = items.order_by('created_at')
     serializer = FormEntrySerializer(items, many=True)

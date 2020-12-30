@@ -2,6 +2,11 @@ import serpy
 from .models import FormEntry
 from rest_framework import serializers
 
+class AcademySmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
 class FormEntrySerializer(serpy.Serializer):
     id = serpy.Field()
     course = serpy.Field()
@@ -14,6 +19,7 @@ class FormEntrySerializer(serpy.Serializer):
     tags = serpy.Field()
     country = serpy.Field()
     lead_type = serpy.Field()
+    academy = AcademySmallSerializer()
     created_at = serpy.Field()
 
 class PostFormEntrySerializer(serializers.ModelSerializer):
