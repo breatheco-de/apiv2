@@ -49,7 +49,7 @@ class SlackTeam(models.Model):
 
 class SlackUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
-    
+
     slack_id = models.CharField(max_length=50)
     status_text = models.CharField(max_length=255, blank=True, null=True)
     status_emoji = models.CharField(max_length=100, blank=True, null=True)

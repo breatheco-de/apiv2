@@ -26,7 +26,7 @@ def create_token(user, hours_length=1):
 
 def delete_tokens(users=None, status='expired'):
     now = timezone.now()
-    
+
     tokens = Token.objects.all()
     if users is not None:
         tokens = tokens.filter(user__id__in=[users])
