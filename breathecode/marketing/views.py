@@ -159,9 +159,15 @@ def get_leads_report(request, id=None):
         # filter only to the local academy
         items = localize_query(items, request)
 
+    group_by = request.GET.get('by', 'location,created_at__date,course')
+    if group_by != '':
+        group_by = group_by.split(",")
+    else:
+        group_by = ['location', 'created_at__date', 'course']
+
     academy = request.GET.get('academy', None)
     if academy is not None:
-        items = items.filter(academy__slug__in=academy.split(","))
+        items = items.filter(location__in=academy.split(","))
 
     start = request.GET.get('start', None)
     if start is not None:
@@ -173,6 +179,6 @@ def get_leads_report(request, id=None):
         end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
         items = items.filter(created_at__lte=end_date)
     
-    items = items.values('academy__slug', 'created_at__date', 'course').annotate(total_leads=Count('academy__slug'))
+    items = items.values(*group_by).annotate(total_leads=Count('location'))
     # items = items.order_by('created_at')
     return Response(items)
