@@ -139,11 +139,18 @@ class Event(models.Model):
         else:
             return "Event "+str(self.id)
 
+PENDING = 'PENDING'
+DONE = 'DONE'
+CHECKIN_STATUS = (
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+)
 class EventCheckin(models.Model):
     email = models.EmailField(max_length=150)
 
     attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    status = models.CharField(max_length=9, choices=CHECKIN_STATUS, default=PENDING)
     
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -152,21 +159,21 @@ class EventCheckin(models.Model):
         return self.email
 
 
-PURCHASED = 'PURCHASED'
-ATTENDED = 'ATTENDED'
-TICKET_STATUS = (
-    (PURCHASED, 'Purchased'),
-    (ATTENDED, 'Attended'),
-)
-class EventTicket(models.Model):
-    email = models.EmailField(max_length=150)
+# PURCHASED = 'PURCHASED'
+# ATTENDED = 'ATTENDED'
+# TICKET_STATUS = (
+#     (PURCHASED, 'Purchased'),
+#     (ATTENDED, 'Attended'),
+# )
+# class EventTicket(models.Model):
+#     email = models.EmailField(max_length=150)
 
-    attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True)
-    event = models.ForeignKey(Event, on_delete=models.CASCADE)
-    status = models.CharField(max_length=9, choices=TICKET_STATUS, default=PURCHASED)
+#     attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True)
+#     event = models.ForeignKey(Event, on_delete=models.CASCADE)
+#     status = models.CharField(max_length=9, choices=TICKET_STATUS, default=PURCHASED)
     
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
+#     created_at = models.DateTimeField(auto_now_add=True, editable=False)
+#     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
-    def __str__(self):
-        return self.email
+#     def __str__(self):
+#         return self.email
