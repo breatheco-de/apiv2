@@ -1,11 +1,18 @@
 FROM gitpod/workspace-full:latest
 
-# Install Redis
-RUN sudo apt-get install -y redis-server
+# Redis
+#   redis-server
 
-# Install PostgreSQL
+# PostgreSQL
+#    postgresql
+#    postgresql-contrib
+
+# Python
+#    python3
+#    python3-pip
+
 RUN sudo apt-get update \
- && sudo apt-get install -y postgresql postgresql-contrib \
+ && sudo apt-get install -y redis-server postgresql postgresql-contrib python3 python3-pip \
  && sudo apt-get clean \
  && sudo rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
 
@@ -20,6 +27,8 @@ RUN mkdir -p ~/.pg_ctl/bin ~/.pg_ctl/data ~/.pg_ctl/sockets \
 ENV PATH="$PATH:$HOME/.pg_ctl/bin"
 ENV PGHOSTADDR="127.0.0.1"
 ENV PGDATABASE="postgres"
+
+RUN pip install pipenv
 
 # This is a bit of a hack. At the moment we have no means of starting background
 # tasks from a Dockerfile. This workaround checks, on each bashrc eval, if the
