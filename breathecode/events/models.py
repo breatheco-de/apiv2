@@ -99,7 +99,6 @@ EVENT_STATUS = (
 # Create your models here.
 class Event(models.Model):
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
-    # slug = models.SlugField(max_length=150, unique=True)
     exerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
     title = models.CharField(max_length=255, blank=True, default=None, null=True)
     lang = models.CharField(max_length=2, blank=True, default=None, null=True)

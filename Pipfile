@@ -10,7 +10,6 @@ coverage = "*"
 mock = "*"
 pylint-django = "*"
 celery = {extras = ["pytest"], version = "*"}
-pylint = "*"
 
 [packages]
 django = "*"

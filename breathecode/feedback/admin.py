@@ -9,72 +9,38 @@ from .tasks import send_cohort_survey
 
 logger = logging.getLogger(__name__)
 
-
 def send_bulk_survey(modeladmin, request, queryset):
-    # mocking tools are poor to apply it
-    from django.contrib import messages
-
     user = queryset.all()
-    errors = {}
-
-    for u in user:
-        try:
+    try:
+        for u in user:
             send_survey(u)
-        except Exception as e:
-            error = str(e)
-
-            if error in errors:
-                errors[error] += 1
-            else:
-                errors[error] = 1
-
-            logger.fatal(error)
-            
-    if errors:
-        message = ' - '.join([f'{error} ({errors[error]})' for error in errors.keys()])
-        messages.error(request, message=message)
-    else:
-        messages.success(request, message="Survey was successfully sent")    
+        messages.success(request, message="Survey was successfully sent")
+    except Exception as e:
+        logger.fatal(str(e))
+        messages.error(request, message=str(e))
+        
 send_bulk_survey.short_description = "Send General NPS Survey"
-
 
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name')
     actions = [send_bulk_survey]
 
-
 def send_bulk_cohort_user_survey(modeladmin, request, queryset):
-    from django.contrib import messages
-
     cus = queryset.all()
-    errors = {}
-
-    for cu in cus:
-        try:
+    try:
+        for cu in cus:
             send_survey(cu.user, cu.cohort)
-        except Exception as e:
-            error = str(e)
-
-            if error in errors:
-                errors[error] += 1
-            else:
-                errors[error] = 1
-
-            logger.fatal(error)
-
-    if errors:
-        message = ' - '.join([f'{error} ({errors[error]})' for error in errors.keys()])
-        messages.error(request, message=message)
-    else:
         messages.success(request, message="Survey was successfully sent")
+    except Exception as e:
+        logger.fatal(str(e))
+        messages.error(request, message=str(e))
+        
 send_bulk_cohort_user_survey.short_description = "Send General NPS Survey"
-
 
 @admin.register(CohortUserProxy)
 class CohortUserAdmin(CohortUserAdmin):
     actions = [send_bulk_cohort_user_survey]
-
 
 def send_cohort_bulk_survey(modeladmin, request, queryset):
     logger.debug(f"Send bulk survey called")
@@ -87,12 +53,10 @@ def send_cohort_bulk_survey(modeladmin, request, queryset):
     logger.info(f"All surveys scheduled to send")
 send_cohort_bulk_survey.short_description = "Send NPS Survey to all cohort students"
 
-
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
     actions = [send_cohort_bulk_survey]
-
-
+    
 # Register your models here.
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin):

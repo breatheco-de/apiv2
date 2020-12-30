@@ -144,7 +144,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # Disable Django's logging setup
 LOGGING_CONFIG = None
 
-# TODO: implement log level for testing
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
 
 logging.config.dictConfig({
