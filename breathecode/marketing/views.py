@@ -147,3 +147,33 @@ def get_leads(request, id=None):
     items = items.order_by('created_at')
     serializer = FormEntrySerializer(items, many=True)
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_leads_report(request, id=None):
+
+    items = FormEntry.objects.all()
+
+    if isinstance(request.user, AnonymousUser) == False:
+        # filter only to the local academy
+        items = localize_query(items, request)
+
+    academy = request.GET.get('academy', None)
+    if academy is not None:
+        items = items.filter(academy__slug__in=academy.split(","))
+
+    start = request.GET.get('start', None)
+    if start is not None:
+        start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
+        items = items.filter(created_at__gte=start_date)
+
+    end = request.GET.get('end', None)
+    if end is not None:
+        end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
+        items = items.filter(created_at__lte=end_date)
+
+    items = items.order_by('created_at')
+    result = {
+        "total": items.count()
+    }
+    return Response(result)
