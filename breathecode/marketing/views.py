@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, F, Func, Value, CharField
 from breathecode.utils import APIException, localize_query
 from .serializers import PostFormEntrySerializer, FormEntrySerializer
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
@@ -180,5 +180,15 @@ def get_leads_report(request, id=None):
         items = items.filter(created_at__lte=end_date)
     
     items = items.values(*group_by).annotate(total_leads=Count('location'))
+
+    if "created_at__date" in group_by:
+        items = items.annotate(
+            created_date=Func(
+                F('created_at'),
+                Value('YYYYMMDD'),
+                function='to_char',
+                output_field=CharField()
+            )
+        )
     # items = items.order_by('created_at')
     return Response(items)
