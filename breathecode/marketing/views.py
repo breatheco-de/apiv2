@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
+from django.db.models import Count, Sum
 from breathecode.utils import APIException, localize_query
 from .serializers import PostFormEntrySerializer, FormEntrySerializer
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
@@ -171,9 +172,7 @@ def get_leads_report(request, id=None):
     if end is not None:
         end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
         items = items.filter(created_at__lte=end_date)
-
-    items = items.order_by('created_at')
-    result = {
-        "total": items.count()
-    }
-    return Response(result)
+    
+    items = items.values('academy__slug', 'created_at__date', 'course').annotate(total_leads=Count('academy__slug'))
+    # items = items.order_by('created_at')
+    return Response(items)
