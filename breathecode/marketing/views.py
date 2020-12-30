@@ -2,15 +2,16 @@ import os
 from urllib import parse
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
+from django.contrib.auth.models import AnonymousUser
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
-from breathecode.utils import APIException
-from .serializers import PostFormEntrySerializer
+from breathecode.utils import APIException, localize_query
+from .serializers import PostFormEntrySerializer, FormEntrySerializer
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
 from .tasks import persist_single_lead, update_link_viewcount
-from .models import ShortLink, ActiveCampaignAcademy
+from .models import ShortLink, ActiveCampaignAcademy, FormEntry
 
 
 # Create your views here.
@@ -118,3 +119,20 @@ def redirect_link(request, link_slug):
     
     params = { **destination_params, **params }
     return HttpResponseRedirect(redirect_to=url_parts[0]+"?"+parse.urlencode(params))
+
+@api_view(['GET'])
+def get_leads(request, id=None):
+
+    items = FormEntry.objects.all()
+
+    if isinstance(request.user, AnonymousUser) == False:
+        # filter only to the local academy
+        items = localize_query(items, request)
+
+    academy = request.GET.get('academy', None)
+    if academy is not None:
+        items = items.filter(academy__slug__in=academy.split(","))
+
+    items = items.order_by('created_at')
+    serializer = FormEntrySerializer(items, many=True)
+    return Response(serializer.data)
