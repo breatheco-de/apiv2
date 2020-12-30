@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.http import HttpResponse
 from .models import Answer
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound
 from rest_framework.permissions import AllowAny
 from .serializers import AnswerPUTSerializer, AnswerSerializer
 from rest_framework.response import Response
@@ -80,7 +80,7 @@ class AnswerDetailView(APIView):
         answer = Answer.objects.filter(user=request.user,id=answer_id).first()
 
         if answer is None:
-            raise ValidationError('This survay does not exist for this user')
+            raise NotFound('This survay does not exist for this user')
 
         return answer
 

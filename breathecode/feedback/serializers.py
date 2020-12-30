@@ -60,9 +60,6 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
         if answer.status == 'ANSWERED':
             raise ValidationError('You have already voted')
 
-        if not 'comment' in data:
-            raise ValidationError('Missing comments')
-
         if not 'score' in data or int(data['score']) > 10 or int(data['score']) < 1:
             raise ValidationError('Score must be between 1 and 10')
 

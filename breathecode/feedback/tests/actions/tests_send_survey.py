@@ -38,7 +38,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
-    def test_send_survey_wit_one_user_with_two_cohort(self):
+    def test_send_survey_with_one_user_with_two_cohort(self):
         """Test /answer without auth"""
         model = self.generate_models(cohort_user=True, cohort_user_two=True)
         
@@ -275,4 +275,3 @@ class SendSurveyTestSuite(FeedbackTestCase):
         self.assertEqual(self.count_token(), 1)
         self.check_email_contain_a_correct_token('es', academy, dicts, mock_mailgun, model)
         self.check_stack_contain_a_correct_token('es', academy, mock_slack, model)
-

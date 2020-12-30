@@ -45,12 +45,12 @@ class AnswerIdTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = {
-            'details': 'This survay does not exist for this user',
-            'status_code': 500
+            'detail': 'This survay does not exist for this user',
+            'status_code': 404
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.count_answer(), 0)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -64,12 +64,12 @@ class AnswerIdTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = {
-            'details': 'This survay does not exist for this user',
-            'status_code': 500
+            'detail': 'This survay does not exist for this user',
+            'status_code': 404
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_answer_dict(), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -116,27 +116,12 @@ class AnswerIdTestSuite(FeedbackTestCase):
         response = self.client.put(url, {})
         json = response.json()
         expected = {
-            'status_code': 500,
-            'details': 'This survay does not exist for this user'
+            'detail': 'This survay does not exist for this user',
+            'status_code': 404,
         }
 
         self.assertEqual(json, expected)
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_answer_id_put_without_comment(self):
-        """Test /answer/:id without auth"""
-        model = self.generate_models(authenticate=True, answer=True, user=True,
-            answer_status='SENT')
-        db = self.model_to_dict(model, 'answer')
-        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
-        response = self.client.put(url, {})
-        json = response.json()
-
-        self.assertEqual(json, {'non_field_errors': ['Missing comments']})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

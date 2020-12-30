@@ -35,7 +35,6 @@ class Organizer(models.Model):
     description = models.TextField(max_length=500, blank=True, null=True, default=None)
 
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
-    # academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -145,6 +144,26 @@ class EventCheckin(models.Model):
 
     attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return self.email
+
+
+PURCHASED = 'PURCHASED'
+ATTENDED = 'ATTENDED'
+TICKET_STATUS = (
+    (PURCHASED, 'Purchased'),
+    (ATTENDED, 'Attended'),
+)
+class EventTicket(models.Model):
+    email = models.EmailField(max_length=150)
+
+    attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    status = models.CharField(max_length=9, choices=TICKET_STATUS, default=PURCHASED)
     
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
