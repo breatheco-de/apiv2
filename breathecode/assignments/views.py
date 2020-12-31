@@ -9,7 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Task
-from .serializers import PostTaskSerializer, TaskGETSerializer, PUTTaskSerializer
+from .serializers import TaskGETSerializer, PUTTaskSerializer, PostTaskSerializer
 from .actions import sync_cohort_tasks
 
 logger = logging.getLogger(__name__)
@@ -95,6 +95,7 @@ class TaskView(APIView):
         return Response(serializer.errors, status=status.HTTP_404_NOT_FOUND)
 
     def put(self, request, task_id):
+        
         item = Task.objects.filter(id=task_id).first()
         if item is None:
             raise ValidationException("Task not found")
@@ -107,10 +108,15 @@ class TaskView(APIView):
 
     def post(self, request, user_id=None):
 
+        # only create tasks for yourself
         if user_id is None:
-            raise ValidationException("Invalid user_id")
+            user_id = request.user.id
 
-        serializer = PostTaskSerializer(data=request.data, context={ "request": request, "user_id": user_id })
+        payload = request.data
+        if isinstance(request.data, list) == False:
+            payload = [request.data]
+
+        serializer = PostTaskSerializer(data=payload, context={ "request": request, "user_id": user_id }, many=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

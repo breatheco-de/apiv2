@@ -1,4 +1,4 @@
-import serpy
+import serpy, logging
 from rest_framework import serializers
 from .models import Task
 from rest_framework.exceptions import ValidationError
@@ -6,6 +6,8 @@ from breathecode.utils import ValidationException
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy
 from django.contrib.auth.models import User
+
+logger = logging.getLogger(__name__)
 
 class UserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -25,24 +27,46 @@ class TaskGETSerializer(serpy.Serializer):
     task_type = serpy.Field()
     user = UserSmallSerializer()
 
-
 class PostTaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         exclude = ('task_status','revision_status', 'user')
 
-    def create(self, validated_data):
+    def validate(self, data):
 
         user = User.objects.filter(id=self.context["user_id"]).first()
         if user is None:
             raise ValidationException("User does not exists")
 
-        data = {
-            **validated_data,
-            "user": user
-        }
+        return super(PostTaskSerializer, self).validate({ **data, "user": user })
 
-        return Task.objects.create(**data)
+    def create(self, validated_data):
+        
+        return Task.objects.create(**validated_data)
+
+# class PostBulkTaskSerializer(serializers.ListSerializer):
+
+#     def validate(self, data):
+#         _data = data
+#         user = User.objects.filter(id=self.context["user_id"]).first()
+#         if user is None:
+#             raise ValidationException("User does not exists")
+#         logger.debug("User found")
+
+#         for task in _data:
+#             PostTaskSerializer.validate({ **task, "user": user })
+#         return _data
+
+#     def create(self, validated_data):
+        
+#         user = User.objects.filter(id=self.context["user_id"]).first()
+
+#         _tasks = []
+#         logger.debug("multiple", validated_data)
+#         for task in validated_data:
+#             p = { **task, "user_id": user.id }
+#             _tasks.append(Task.objects.create(**p))
+#         return _tasks
 
 class PUTTaskSerializer(serializers.ModelSerializer):
     class Meta:

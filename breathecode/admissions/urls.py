@@ -3,7 +3,7 @@ from django.urls import path, include
 from rest_framework import routers
 from .views import (
     AcademyView, CohortUserView, CertificateView, CohortView, get_cohorts, AcademyCohortView,
-    get_timezones, UserView
+    get_timezones, UserView, get_me
 )
 
 app_name = 'admissions'
@@ -13,6 +13,7 @@ urlpatterns = [
     path('cohort/', CohortView.as_view(), name="cohort"),
     path('cohort/all', get_cohorts, name="cohort_all"),
     path('cohort/user', CohortUserView.as_view(), name="cohort_user"),
+    path('user/me', get_me, name="user_me"),
     path('user', UserView.as_view(), name="user"),
 
     # update a cohort user information

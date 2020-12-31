@@ -11,7 +11,7 @@ from .serializers import (
     AcademySerializer, CohortSerializer, CertificateSerializer,
     GetCohortSerializer, UserSerializer, CohortUserSerializer,
     GETCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
-    CohortUserPOSTSerializer, UserDJangoRestSerializer
+    CohortUserPOSTSerializer, UserDJangoRestSerializer, UserMeSerializer
 )
 from .models import Academy, City, CohortUser, Certificate, Cohort, Country, STUDENT, DELETED
 from breathecode.authenticate.models import ProfileAcademy
@@ -58,6 +58,20 @@ def get_cohorts(request, id=None):
     items = items.order_by('kickoff_date')
     serializer = GetCohortSerializer(items, many=True)
     return Response(serializer.data)
+
+@api_view(['GET'])
+def get_me(request):
+
+    logger.error("Get me just called")
+    try:
+        if isinstance(request.user, AnonymousUser):
+            raise PermissionDenied("There is not user")    
+
+    except User.DoesNotExist:
+        raise PermissionDenied("You don't have a user")
+
+    users = UserMeSerializer(request.user)
+    return Response(users.data)
 
 # Create your views here.
 class AcademyView(APIView):

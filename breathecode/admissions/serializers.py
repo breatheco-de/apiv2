@@ -2,6 +2,7 @@ import serpy
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Academy, Cohort, Certificate, CohortUser
+from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
 
 class CountrySerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -25,6 +26,23 @@ class ProfileSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     avatar_url = serpy.Field()
+    show_tutorial = serpy.Field()
+
+class AcademySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    name = serpy.Field()
+    slug = serpy.Field()
+
+class ProfileAcademySmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    academy = AcademySerializer()
+    role = serpy.MethodField()
+
+    def get_role(self,obj):
+        return obj.role.slug
 
 class UserSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -41,6 +59,11 @@ class GetCertificateSerializer(serpy.Serializer):
     name = serpy.Field()
     description = serpy.Field()
     logo = serpy.Field()
+
+class GetSmallCertificateSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
 
 class GetAcademySerializer(serpy.Serializer):
     id = serpy.Field()
@@ -71,6 +94,7 @@ class GetSmallCohortSerializer(serpy.Serializer):
     name = serpy.Field()
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
+    certificate = GetSmallCertificateSerializer()
     stage = serpy.Field()
 
 class GETCohortUserSerializer(serpy.Serializer):
@@ -82,6 +106,43 @@ class GETCohortUserSerializer(serpy.Serializer):
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
     created_at = serpy.Field()
+
+class GETCohortUserSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    cohort = GetSmallCohortSerializer()
+    role = serpy.Field()
+    finantial_status = serpy.Field()
+    educational_status = serpy.Field()
+    created_at = serpy.Field()
+
+# Create your models here.
+class UserMeSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    email = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    github = serpy.MethodField()
+    profile = ProfileSerializer(required=False)
+    roles = serpy.MethodField()
+    cohorts = serpy.MethodField()
+    date_joined = serpy.Field()
+    
+    def get_github(self, obj):
+        github = CredentialsGithub.objects.filter(user=obj.id).first()
+        if github is None:
+            return None
+        return GithubSmallSerializer(github).data
+        
+    def get_roles(self, obj):
+        roles = ProfileAcademy.objects.filter(user=obj.id)
+        return ProfileAcademySmallSerializer(roles, many=True).data
+
+    def get_cohorts(self, obj):
+        cohorts = CohortUser.objects.filter(user__id=obj.id)
+        return GETCohortUserSmallSerializer(cohorts, many=True).data
 
 """
             ↓ EDIT SERLIZERS ↓
