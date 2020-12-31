@@ -1,3 +1,4 @@
+from breathecode.services.eventbrite import Eventbrite
 from celery import shared_task, Task
 from .models import Organization
 from .actions import sync_org_events
@@ -14,3 +15,16 @@ def persist_organization_events(self,args):
     result = sync_org_events(org)
 
     return True
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def async_eventbrite_webhook(self, context):
+    status = 'ok'
+
+    try:
+        client = Eventbrite()
+        client.execute_action(context)
+    except Exception:
+        status = 'error'
+
+    logger.debug(f'Eventbrite status: {status}')
+ 

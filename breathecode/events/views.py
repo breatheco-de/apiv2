@@ -7,6 +7,13 @@ from rest_framework.decorators import api_view, permission_classes
 from .serializers import EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
+# from django.http import HttpResponse
+from rest_framework.response import Response
+from rest_framework.decorators import renderer_classes
+from breathecode.renderers import PlainTextRenderer
+from breathecode.services.eventbrite import Eventbrite
+
+
 # Create your views here.
 
 @api_view(['GET'])
@@ -124,41 +131,7 @@ class EventCheckinView(APIView):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@renderer_classes([PlainTextRenderer])
 def eventbrite_webhook(request):
-    print('get')
-    print(request.GET)
-    print('body')
-    print(request.data)
-    # items = Event.objects.all()
-    # lookup = {}
-
-    # if 'city' in request.GET:
-    #     city = request.GET.get('city')
-    #     lookup['venue__city__iexact'] = city
-
-    # if 'country' in request.GET:
-    #     value = request.GET.get('country')
-    #     lookup['venue__country__iexact'] = value
-        
-    # if 'type' in request.GET:
-    #     value = request.GET.get('type')
-    #     lookup['event_type__slug'] = value
-
-    # if 'zip_code' in request.GET:
-    #     value = request.GET.get('zip_code')
-    #     lookup['venue__zip_code'] = value
-
-    # if 'academy' in request.GET:
-    #     value = request.GET.get('academy')
-    #     lookup['academy__slug__in']=value.split(",")
-
-    # lookup['starting_at__gte'] = timezone.now()
-    # if 'past' in request.GET:
-    #     if request.GET.get('past') == "true":
-    #         lookup.pop("starting_at__gte")
-    #         lookup['starting_at__lte'] = timezone.now()
-        
-    # items = items.filter(**lookup).order_by('starting_at')
-    
-    # serializer = EventSmallSerializer(items, many=True)
-    # return Response(serializer.data)
+    async_eventbrite_webhook.delay(request.data)
+    return Response('ok', content_type='text/plain')
