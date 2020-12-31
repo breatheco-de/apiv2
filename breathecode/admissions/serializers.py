@@ -94,6 +94,16 @@ class GetSmallCohortSerializer(serpy.Serializer):
     name = serpy.Field()
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
+    stage = serpy.Field()
+
+class GetMeCohortSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    kickoff_date = serpy.Field()
+    ending_date = serpy.Field()
     certificate = GetSmallCertificateSerializer()
     stage = serpy.Field()
 
@@ -110,7 +120,7 @@ class GETCohortUserSerializer(serpy.Serializer):
 class GETCohortUserSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
-    cohort = GetSmallCohortSerializer()
+    cohort = GetMeCohortSerializer()
     role = serpy.Field()
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
