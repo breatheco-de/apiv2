@@ -8,11 +8,13 @@ FROM gitpod/workspace-full:latest
 #    postgresql-contrib
 
 # Python
-#    python3
+#    python3.9
 #    python3-pip
 
 RUN sudo apt-get update \
- && sudo apt-get install -y redis-server postgresql postgresql-contrib python3 python3-pip \
+ && sudo add-apt-repository ppa:deadsnakes/ppa \
+ && sudo apt-get update \
+ && sudo apt-get install -y redis-server postgresql postgresql-contrib python3.9 python3-pip \
  && sudo apt-get clean \
  && sudo rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
 

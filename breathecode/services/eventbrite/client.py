@@ -1,8 +1,8 @@
 import breathecode.services.eventbrite.actions
 import requests, logging, re, os, json, inspect
 # from .decorator import commands, actions
-from breathecode.services.slack.commands import student, cohort
-from breathecode.services.slack.actions import monitoring
+# from breathecode.services.eventbrite.commands import student, cohort
+# from breathecode.services.eventbrite.actions import monitoring
 logger = logging.getLogger(__name__)
 
 class Eventbrite:
