@@ -1,13 +1,18 @@
+import logging
 from breathecode.services.eventbrite import Eventbrite
 from celery import shared_task, Task
 from .models import Organization
 from .actions import sync_org_events
+
+logger = logging.getLogger(__name__)
+
 
 class BaseTaskWithRetry(Task):
     autoretry_for = (Exception,)
     #                                           seconds
     retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5 } 
     retry_backoff = True
+
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def persist_organization_events(self,args):
@@ -16,6 +21,7 @@ def persist_organization_events(self,args):
 
     return True
 
+
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def async_eventbrite_webhook(self, context):
     status = 'ok'
@@ -23,7 +29,9 @@ def async_eventbrite_webhook(self, context):
     try:
         client = Eventbrite()
         client.execute_action(context)
-    except Exception:
+    except Exception as e:
+        logger.debug(f'Eventbrite exception')
+        logger.debug(str(e))
         status = 'error'
 
     logger.debug(f'Eventbrite status: {status}')

@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import renderer_classes
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
+from .tasks import async_eventbrite_webhook
 
 
 # Create your views here.
@@ -133,5 +134,6 @@ class EventCheckinView(APIView):
 @permission_classes([AllowAny])
 @renderer_classes([PlainTextRenderer])
 def eventbrite_webhook(request):
-    async_eventbrite_webhook.delay(request.data)
+    # async_eventbrite_webhook.delay(request.data)
+    async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')
