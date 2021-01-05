@@ -134,6 +134,6 @@ class EventCheckinView(APIView):
 @permission_classes([AllowAny])
 @renderer_classes([PlainTextRenderer])
 def eventbrite_webhook(request):
-    # async_eventbrite_webhook.delay(request.data)
-    async_eventbrite_webhook(request.data)
+    async_eventbrite_webhook.delay(request.data)
+    # async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')

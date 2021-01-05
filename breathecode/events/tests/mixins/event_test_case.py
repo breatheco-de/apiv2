@@ -16,6 +16,27 @@ from .development_environment import DevelopmentEnvironment
 class EventTestCase(APITestCase, DevelopmentEnvironment):
     """APITestCase with Event models"""
 
+    def headers(self, event='test'):
+        return {
+            'X-Eventbrite-Event': event,
+            'Accept': 'text/plain',
+            'User-Agent': 'Eventbrite Hookshot 12345c6',
+            'X-Eventbrite-Delivery': '1234567',
+            'Content-type': 'application/json',
+            'User-ID-Sender': '123456789012',
+        }
+
+    def data(self):
+        return {
+            'api_url': 'https://www.eventbriteapi.com/{api-endpoint-to-fetch-object-details}/',
+            'config': {
+                'user_id': '123456789012',
+                'action': 'test',
+                'webhook_id': '1234567',
+                'endpoint_url': 'https://something.io/eventbrite/webhook'
+            }
+        }
+
     def remove_model_state(self, dict):
         result = None
         if dict:
@@ -52,13 +73,17 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
 
     def generate_models(self, language='', user=False, organization=False, academy=False,
             organizer=False, venue=False, event_type=False, event=False, event_checkin=False,
-            event_ticket=False, models={}):
+            event_ticket=False, authenticate=False, models={}):
         """Generate models"""
         self.maxDiff = None
         models = models.copy()
 
-        if not 'user' in models and (user or event or event_checkin or event_ticket):
+        if not 'user' in models and (user or event or event_checkin or event_ticket or
+                authenticate):
             models['user'] = mixer.blend('auth.User')
+
+        if authenticate:
+            self.client.force_authenticate(user=models['user'])
 
         if not 'academy' in models and (academy or organization or venue or event_type or event or
                 event_checkin or event_ticket):
