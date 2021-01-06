@@ -26,32 +26,29 @@ class EventbriteWebhookTestSuite(EventTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_eventbrite_webhook_without_auth(self):
+    def test_eventbrite_webhook_without_data(self):
         """Test /eventbrite/webhook without auth"""
+        # self.generate_models(authenticate=True)
         url = reverse_lazy('events:eventbrite_webhook')
-        response = self.client.post(url, self.data(), headers=self.headers(), format='json')
-        print(response.__dict__)
-        print(response)
-        print(response.data)
-        # json = response.json()
+        response = self.client.post(url, {}, headers=self.headers(), format='json')
+        content = response.content
 
-        # self.assertEqual(json, [])
+        self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.count_answer(), 0)
+        self.assertEqual(self.all_event_checkin_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_eventbrite_webhook_without_data(self):
+    def test_eventbrite_webhook_without_data2(self):
         """Test /eventbrite/webhook without auth"""
-        self.generate_models(authenticate=True)
+        # self.generate_models(authenticate=True)
         url = reverse_lazy('events:eventbrite_webhook')
-        response = self.client.post(url, self.data(), headers=self.headers(), format='json')
-        print(response.__dict__)
-        print(response)
-        print(response.data)
-        # json = response.json()
+        response = self.client.post(url, self.data('placed'), headers=self.headers('placed'),
+            format='json')
+        content = response.content
 
-        # self.assertEqual(json, [])
+        self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.count_answer(), 0)
+        self.assertEqual(self.all_event_checkin_dict(), [])
+        assert False

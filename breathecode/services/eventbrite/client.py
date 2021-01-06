@@ -98,6 +98,6 @@ class Eventbrite:
 
             logger.debug(f"Action found")
             fn = getattr(actions, action)
-            fn(payload)
+            fn(payload, json)
         else:
             raise Exception(f"Action `{action}` is not implemented")

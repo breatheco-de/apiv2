@@ -1,7 +1,7 @@
 """
 Collections of mixins used to login in authorize microservice
 """
-from breathecode.events.models import Organization
+from breathecode.events.models import Organization, EventCheckin
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
 from .development_environment import DevelopmentEnvironment
@@ -26,12 +26,12 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
             'User-ID-Sender': '123456789012',
         }
 
-    def data(self):
+    def data(self, action='test'):
         return {
             'api_url': 'https://www.eventbriteapi.com/{api-endpoint-to-fetch-object-details}/',
             'config': {
                 'user_id': '123456789012',
-                'action': 'test',
+                'action': action,
                 'webhook_id': '1234567',
                 'endpoint_url': 'https://something.io/eventbrite/webhook'
             }
@@ -70,6 +70,10 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
     def all_organization_dict(self):
         return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
             Organization.objects.filter()]
+
+    def all_event_checkin_dict(self):
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
+            EventCheckin.objects.filter()]
 
     def generate_models(self, language='', user=False, organization=False, academy=False,
             organizer=False, venue=False, event_type=False, event=False, event_checkin=False,
