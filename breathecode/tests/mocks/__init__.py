@@ -33,3 +33,16 @@ from .slack import (
     SLACK_INSTANCES,
     apply_slack_requests_request_mock,
 )
+from .eventbrite import (
+    EVENTBRITE_PATH,
+    EVENTBRITE_INSTANCES,
+    apply_eventbrite_requests_post_mock,
+    EVENTBRITE_EVENT,
+    EVENTBRITE_ORDER,
+    EVENTBRITE_ATTENDEE,
+    EVENTBRITE_TICKET_CLASS,
+    EVENTBRITE_EVENT_URL,
+    EVENTBRITE_ORDER_URL,
+    EVENTBRITE_ATTENDEE_URL,
+    EVENTBRITE_TICKET_CLASS_URL,
+)

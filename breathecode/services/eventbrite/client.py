@@ -1,5 +1,5 @@
 import breathecode.services.eventbrite.actions as actions
-import requests, logging, re, os, json, inspect, urllib
+import logging, re, os, json, inspect, urllib
 # from .decorator import commands, actions
 # from breathecode.services.eventbrite.commands import student, cohort
 # from breathecode.services.eventbrite.actions import monitoring
@@ -28,6 +28,8 @@ class Eventbrite:
         pass   
 
     def request(self, _type, url, headers={}, query_string=None):
+        # wonderful way to fix one poor mocking system
+        import requests
 
         _headers = { **self.headers, **headers }
         _query_string = ""
@@ -67,6 +69,9 @@ class Eventbrite:
         return data
 
     def execute_action(self, context):
+        # wonderful way to fix one poor mocking system
+        import requests
+
         # example = {
         #     'api_url': 'https://www.eventbriteapi.com/{api-endpoint-to-fetch-object-details}/',
         #     'config': {
@@ -94,7 +99,6 @@ class Eventbrite:
             json = response.json()
             logger.debug("Eventbrite response")
             logger.debug(json)
-
 
             logger.debug(f"Action found")
             fn = getattr(actions, action)

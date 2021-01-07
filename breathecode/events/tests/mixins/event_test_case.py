@@ -26,9 +26,9 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
             'User-ID-Sender': '123456789012',
         }
 
-    def data(self, action='test'):
+    def data(self, action='test', url='https://www.eventbriteapi.com/v3/test'):
         return {
-            'api_url': 'https://www.eventbriteapi.com/{api-endpoint-to-fetch-object-details}/',
+            'api_url': url,
             'config': {
                 'user_id': '123456789012',
                 'action': action,
