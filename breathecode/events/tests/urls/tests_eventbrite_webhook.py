@@ -35,6 +35,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_event_checkin_dict(), [])
+        self.assertEqual(self.all_eventbrite_webhook_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -51,4 +52,13 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_event_checkin_dict(), [])
+        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+            'action': 'placed',
+            'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
+            'endpoint_url': 'https://something.io/eventbrite/webhook',
+            'id': 1,
+            'status': 'DONE',
+            'user_id': '123456789012',
+            'webhook_id': '1234567'
+        }])
         assert False

@@ -77,7 +77,53 @@ def get_lead_automations(ac_academy, form_entry):
     logger.debug(f"found {str(count)} automations")
     return automations.values_list('acp_id', flat=True)
 
-    
+
+def add_to_active_campaign(contact):
+    if 'location' not in form_entry or form_entry['location'] is None:
+        raise Exception('Missing location information')
+
+    ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry['location']).first()
+    if ac_academy is None:
+        raise Exception(f"No academy found with slug {form_entry['location']}")
+
+    # contact = {
+    #     "email": form_entry["email"],
+    #     "first_name": form_entry["first_name"],
+    #     "last_name": form_entry["last_name"],
+    #     "phone": form_entry["phone"]
+    # }
+    # contact = set_optional(contact, 'utm_url', form_entry)
+    # contact = set_optional(contact, 'utm_location', form_entry, "location")
+    # contact = set_optional(contact, 'course', form_entry)
+    # contact = set_optional(contact, 'utm_language', form_entry, "language")
+    # contact = set_optional(contact, 'utm_country', form_entry, "country")
+    # contact = set_optional(contact, 'client_comments', form_entry, "client_comments")
+    # contact = set_optional(contact, 'gclid', form_entry)
+    # contact = set_optional(contact, 'referral_key', form_entry)
+
+    logger.debug("ready to send contact with following details: ", contact)
+    old_client = AC_Old_Client(ac_academy.ac_url, ac_academy.ac_key)
+    response = old_client.contacts.create_contact(contact)
+
+    client = Client(ac_academy.ac_url, ac_academy.ac_key)
+    if automations:
+        for automation_id in automations:
+            data = {
+                "contactAutomation": {
+                    "contact": contact_id,
+                    "automation": automation_id
+                }
+            }
+            response = client.contacts.add_a_contact_to_an_automation(data)
+            if 'contacts' not in response:
+                logger.error(f"error triggering atomation with id {str(automation_id)}", response)
+                raise APIException('Could not add contact to Automation')
+            else:
+                logger.debug(f"Triggered atomation with id {str(automation_id)}", response)
+                auto = Automation.objects.filter(acp_id=automation_id, ac_academy=ac_academy).first()
+                entry.automation_objects.add(auto)
+
+
 def register_new_lead(form_entry=None):
     print("form entry", form_entry)
     if form_entry is None:

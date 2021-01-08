@@ -1,5 +1,4 @@
 
-def test(payload: dict, details: dict):
+def test(self, payload: dict):
     print('payload')
     print(payload)
-    print(details)

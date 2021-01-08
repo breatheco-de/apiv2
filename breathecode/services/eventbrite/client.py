@@ -68,7 +68,7 @@ class Eventbrite:
         data = self.request('GET', f"/organizations/{str(organization_id)}/venues/")
         return data
 
-    def execute_action(self, context):
+    def execute_action(self, context: dict):
         # wonderful way to fix one poor mocking system
         import requests
 
@@ -82,26 +82,68 @@ class Eventbrite:
         #     }
         # }
 
-        payload = context["config"] if "config" in context else None
-        api_url = context["api_url"] if "api_url" in context else None
+        webhook = self.add_webhook_to_log(context)
 
-        if "action" not in payload or not payload["action"]:
+        if not webhook:
+            raise Exception("Invalid webhook")
+
+        if not webhook.action:
             raise Exception("Imposible to determine action")
 
-        action = payload["action"]
+        if not webhook.api_url:
+            raise Exception("Imposible to determine api url")
 
-        del payload["action"]
-        del payload["endpoint_url"]
-        
+        action = webhook.action
+        api_url = webhook.api_url
+
         logger.debug(f"Executing => {action}")
         if hasattr(actions, action):
             response = requests.get(api_url, headers=self.headers)
             json = response.json()
+
             logger.debug("Eventbrite response")
             logger.debug(json)
 
-            logger.debug(f"Action found")
+            logger.debug("Action found")
             fn = getattr(actions, action)
-            fn(payload, json)
+            fn(self, json)
+
+            logger.debug("Mark action as done")
+            webhook.status = 'DONE'
+            webhook.save()
+
         else:
             raise Exception(f"Action `{action}` is not implemented")
+
+    def add_webhook_to_log(self, context: dict):
+        # prevent circular dependency import between thousand modules previuosly loaded and cached
+        from breathecode.events.models import EventbriteWebhook
+
+        if not context or not len(context):
+            return None
+
+        webhook = EventbriteWebhook()
+        context_has_config_key = 'config' in context
+
+        if 'api_url' in context:
+            webhook.api_url = context['api_url']
+
+        if context_has_config_key and 'user_id' in context['config']:
+            webhook.user_id = context['config']['user_id']
+
+        if context_has_config_key and 'action' in context['config']:
+            webhook.action = context['config']['action']
+
+        if context_has_config_key and 'webhook_id' in context['config']:
+            webhook.webhook_id = context['config']['webhook_id']
+
+        if context_has_config_key and 'endpoint_url' in context['config']:
+            webhook.endpoint_url = context['config']['endpoint_url']
+
+        webhook.status = 'PENDING'
+        webhook.save()
+        print(webhook)
+        print(webhook.status)
+        print(EventbriteWebhook.objects.filter())
+
+        return webhook

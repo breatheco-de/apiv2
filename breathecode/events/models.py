@@ -158,22 +158,23 @@ class EventCheckin(models.Model):
     def __str__(self):
         return self.email
 
+# PENDING = 'PENDING'
+# DONE = 'DONE'
+EVENTBRITE_WEBHOOK_STATUS = (
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+)
+class EventbriteWebhook(models.Model):
+    api_url = models.CharField(max_length=255, blank=True, null=True, default=None)
+    user_id = models.CharField(max_length=20, blank=True, null=True, default=None)
+    action = models.CharField(max_length=15, blank=True, null=True, default=None)
+    webhook_id = models.CharField(max_length=20, blank=True, null=True, default=None)
+    endpoint_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
-# PURCHASED = 'PURCHASED'
-# ATTENDED = 'ATTENDED'
-# TICKET_STATUS = (
-#     (PURCHASED, 'Purchased'),
-#     (ATTENDED, 'Attended'),
-# )
-# class EventTicket(models.Model):
-#     email = models.EmailField(max_length=150)
-
-#     attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True)
-#     event = models.ForeignKey(Event, on_delete=models.CASCADE)
-#     status = models.CharField(max_length=9, choices=TICKET_STATUS, default=PURCHASED)
+    status = models.CharField(max_length=9, choices=EVENTBRITE_WEBHOOK_STATUS, default=PENDING)
     
-#     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-#     updated_at = models.DateTimeField(auto_now=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
 
-#     def __str__(self):
-#         return self.email
+    def __str__(self):
+        return f'Action {self.action} {self.status} => {self.api_url}'
