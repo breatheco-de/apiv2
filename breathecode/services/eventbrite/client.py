@@ -101,8 +101,8 @@ class Eventbrite:
             response = requests.get(api_url, headers=self.headers)
             json = response.json()
 
-            logger.debug("Eventbrite response")
-            logger.debug(json)
+            # logger.debug("Eventbrite response")
+            # logger.debug(json)
 
             logger.debug("Action found")
             fn = getattr(actions, action)
@@ -142,8 +142,5 @@ class Eventbrite:
 
         webhook.status = 'PENDING'
         webhook.save()
-        print(webhook)
-        print(webhook.status)
-        print(EventbriteWebhook.objects.filter())
 
         return webhook

@@ -72,15 +72,10 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
             Organization.objects.filter()]
 
     def all_event_checkin_dict(self):
-        print('inner222')
-        print(EventCheckin.objects.count())
-        print(EventCheckin.objects.filter())
         return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
             EventCheckin.objects.filter()]
 
     def all_eventbrite_webhook_dict(self):
-        print('inner')
-        print(EventbriteWebhook.objects.filter())
         return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
             EventbriteWebhook.objects.filter()]
 
