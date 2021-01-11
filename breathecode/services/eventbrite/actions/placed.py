@@ -12,7 +12,7 @@ def placed(self, payload: dict):
         pass
 
     from pprint import pprint
-    print('adssadasdsadsad', payload)
+    # print('adssadasdsadsad', payload)
     pprint(payload.keys())
 
     # event_id = payload['event_id']
@@ -22,10 +22,17 @@ def placed(self, payload: dict):
 
     # print([key for key in event.keys() if hasattr(ee, key)])
     local_event = Event.objects.filter(eventbrite_id=event['id']).first()
+
+    if not local_event:
+        raise Exception('event not exist previously')
+
     local_attendee = User.objects.filter(
         email=attendee_profile['email'],
         first_name=attendee_profile['first_name'],
         last_name=attendee_profile['last_name']).first()
+
+    if not local_attendee:
+        raise Exception('attendee not exist previously')
 
     EventCheckin(
         email=payload['email'],

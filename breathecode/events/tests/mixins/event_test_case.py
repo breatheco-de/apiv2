@@ -81,7 +81,8 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
 
     def generate_models(self, language='', user=False, organization=False, academy=False,
             organizer=False, venue=False, event_type=False, event=False, event_checkin=False,
-            event_ticket=False, authenticate=False, models={}):
+            event_ticket=False, authenticate=False, active_campaign_academy=False, in_miami=False,
+            models={}):
         """Generate models"""
         self.maxDiff = None
         models = models.copy()
@@ -94,8 +95,17 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
             self.client.force_authenticate(user=models['user'])
 
         if not 'academy' in models and (academy or organization or venue or event_type or event or
-                event_checkin or event_ticket):
-            models['academy'] = mixer.blend('admissions.Academy')
+                event_checkin or event_ticket or active_campaign_academy or in_miami):
+            kargs = {}
+
+            if in_miami:
+                kargs['name'] = '4Geeks Academy Miami'
+                kargs['slug'] = 'downtown-miami'
+    
+            models['academy'] = mixer.blend('admissions.Academy', **kargs)
+
+        if not 'active_campaign_academy' in models and active_campaign_academy:
+            models['active_campaign_academy'] = mixer.blend('marketing.ActiveCampaignAcademy')
 
         if not 'organization' in models and (organization or organizer or venue or event or
                 event_checkin or event_ticket):

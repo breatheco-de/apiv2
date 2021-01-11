@@ -160,9 +160,11 @@ class EventCheckin(models.Model):
 
 # PENDING = 'PENDING'
 # DONE = 'DONE'
+# ERROR='ERROR'
 EVENTBRITE_WEBHOOK_STATUS = (
     (PENDING, 'Pending'),
     (DONE, 'Done'),
+    (ERROR, 'Error'),
 )
 class EventbriteWebhook(models.Model):
     api_url = models.CharField(max_length=255, blank=True, null=True, default=None)
@@ -172,6 +174,7 @@ class EventbriteWebhook(models.Model):
     endpoint_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     status = models.CharField(max_length=9, choices=EVENTBRITE_WEBHOOK_STATUS, default=PENDING)
+    status_text = models.CharField(max_length=255, default=None, null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

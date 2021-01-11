@@ -79,12 +79,11 @@ def get_lead_automations(ac_academy, form_entry):
 
 
 def add_to_active_campaign(contact):
-    if 'location' not in form_entry or form_entry['location'] is None:
-        raise Exception('Missing location information')
-
-    ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry['location']).first()
+    # send to an active campaign hardcoded
+    academy_slug = 'downtown-miami'
+    ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=academy_slug).first()
     if ac_academy is None:
-        raise Exception(f"No academy found with slug {form_entry['location']}")
+        raise Exception(f"No academy found with slug {academy_slug}")
 
     # contact = {
     #     "email": form_entry["email"],
@@ -104,6 +103,10 @@ def add_to_active_campaign(contact):
     logger.debug("ready to send contact with following details: ", contact)
     old_client = AC_Old_Client(ac_academy.ac_url, ac_academy.ac_key)
     response = old_client.contacts.create_contact(contact)
+    contact_id = response['subscriber_id']
+    if 'subscriber_id' not in response:
+        logger.error("error adding contact", response)
+        raise APIException('Could not save contact in CRM')
 
     client = Client(ac_academy.ac_url, ac_academy.ac_key)
     if automations:
