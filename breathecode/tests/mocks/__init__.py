@@ -46,3 +46,12 @@ from .eventbrite import (
     EVENTBRITE_ATTENDEE_URL,
     EVENTBRITE_TICKET_CLASS_URL,
 )
+from .old_breathecode import (
+    OLD_BREATHECODE_PATH,
+    OLD_BREATHECODE_INSTANCES,
+    apply_old_breathecode_requests_request_mock,
+    OLD_BREATHECODE_ADMIN,
+    OLD_BREATHECODE_ADMIN_URL,
+    CONTACT_AUTOMATIONS,
+    CONTACT_AUTOMATIONS_URL,
+)

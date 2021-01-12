@@ -26,19 +26,17 @@ def placed(self, payload: dict):
     if not local_event:
         raise Exception('event not exist previously')
 
-    local_attendee = User.objects.filter(
-        email=attendee_profile['email'],
-        first_name=attendee_profile['first_name'],
-        last_name=attendee_profile['last_name']).first()
+    local_attendee = User.objects.filter(email=attendee_profile['email']).first()
 
     if not local_attendee:
         raise Exception('attendee not exist previously')
 
-    EventCheckin(
+    event_checkin = EventCheckin(
         email=payload['email'],
-        status='PENDING',
+        status='DONE',
         event=local_event,
-        attendee=local_attendee).save()
+        attendee=local_attendee)
+    event_checkin.save()
 
     contact = {
         'email': payload['email'],
@@ -47,7 +45,7 @@ def placed(self, payload: dict):
         # 'name': payload['name'],
     }
 
-    print(payload.keys())
-    print(contact)
-
     add_to_active_campaign(contact)
+
+    event_checkin.status = 'DONE'
+    event_checkin.save()

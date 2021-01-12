@@ -106,14 +106,33 @@ class Eventbrite:
 
             logger.debug("Action found")
             fn = getattr(actions, action)
-            fn(self, json)
 
-            logger.debug("Mark action as done")
-            webhook.status = 'DONE'
-            webhook.save()
+            try:
+                fn(self, json)
+                logger.debug("Mark action as done")
+                webhook.status = 'DONE'
+                webhook.save()
+
+            except Exception as e:
+                logger.debug("Mark action with error")
+
+                # stack trace
+                import traceback
+                print(traceback.print_exc())
+
+                webhook.status = 'ERROR'
+                webhook.status_text = str(e)
+                webhook.save()
 
         else:
-            raise Exception(f"Action `{action}` is not implemented")
+            message = f"Action `{action}` is not implemented"
+            logger.debug(message)
+
+            webhook.status = 'ERROR'
+            webhook.status_text = message
+            webhook.save()
+
+            raise Exception(message)
 
     def add_webhook_to_log(self, context: dict):
         # prevent circular dependency import between thousand modules previuosly loaded and cached

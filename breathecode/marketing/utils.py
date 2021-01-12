@@ -122,18 +122,15 @@ class AC_Old_Client(object):
         if url is None:
             raise Exception("Invalid URL for active campaign API, have you setup your env variables?")
 
-        if not url.startswith("http"):
-            self._base_url = "https://" + url
-        else:
-            self._base_url = url
-            self._apikey = apikey
-            self.contacts = Contacts(self)
-            # self.account = Account(self)
-            # self.lists = Lists(self)
-            # self.webhooks = Webhooks(self)
-            # self.tasks = Tasks(self)
-            # self.deals = Deals(self)
-            # self.users = Users(self)
+        self._base_url = f"https://{url}" if not url.startswith("http") else url
+        self._apikey = apikey
+        self.contacts = Contacts(self)
+        # self.account = Account(self)
+        # self.lists = Lists(self)
+        # self.webhooks = Webhooks(self)
+        # self.tasks = Tasks(self)
+        # self.deals = Deals(self)
+        # self.users = Users(self)
 
     def _get(self, action, aditional_data=None):
         return self._request('GET', action, aditional_data=aditional_data)
@@ -159,10 +156,12 @@ class AC_Old_Client(object):
             return self._parse(data)
         else:
             print("Error when saving contact on AC", response.text)
+            # TODO: exception is not defined
             raise exception.ActiveCampaignError("Error when saving contact on AC")
 
     def _parse(self, response):
         if response['result_code'] == 1:
             return response
         else:
+            # TODO: exception is not defined
             raise exception.ActiveCampaignError(response["result_message"])

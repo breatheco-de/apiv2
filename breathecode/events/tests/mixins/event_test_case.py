@@ -82,7 +82,7 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
     def generate_models(self, language='', user=False, organization=False, academy=False,
             organizer=False, venue=False, event_type=False, event=False, event_checkin=False,
             event_ticket=False, authenticate=False, active_campaign_academy=False, in_miami=False,
-            models={}):
+            eventbrite_event_id=0, attendee=False, automation=False, models={}):
         """Generate models"""
         self.maxDiff = None
         models = models.copy()
@@ -90,6 +90,14 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
         if not 'user' in models and (user or event or event_checkin or event_ticket or
                 authenticate):
             models['user'] = mixer.blend('auth.User')
+
+        if not 'attendee' in models and attendee:
+            kargs = {
+                'email': 'jhon.smith@example.com',
+                'first_name': 'John',
+                'last_name': 'Smith',
+            }
+            models['attendee'] = mixer.blend('auth.User', **kargs)
 
         if authenticate:
             self.client.force_authenticate(user=models['user'])
@@ -104,8 +112,22 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
     
             models['academy'] = mixer.blend('admissions.Academy', **kargs)
 
-        if not 'active_campaign_academy' in models and active_campaign_academy:
-            models['active_campaign_academy'] = mixer.blend('marketing.ActiveCampaignAcademy')
+        if not 'active_campaign_academy' in models and (active_campaign_academy or automation):
+            kargs = {
+                'academy': models['academy'],
+                'ac_url': 'https://old.hardcoded.breathecode.url',
+            }
+
+            models['active_campaign_academy'] = mixer.blend('marketing.ActiveCampaignAcademy', **kargs)
+
+        if not 'automation' in models and automation:
+            kargs = {
+                'status': '1',
+                'name': 'Workshop Attendancy',
+                'ac_academy': models['active_campaign_academy'],
+            }
+
+            models['automation'] = mixer.blend('marketing.Automation', **kargs)
 
         if not 'organization' in models and (organization or organizer or venue or event or
                 event_checkin or event_ticket):
@@ -153,6 +175,9 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
 
             if language:
                 kargs['lang'] = language
+
+            if eventbrite_event_id:
+                kargs['eventbrite_id'] = eventbrite_event_id
 
             models['event'] = mixer.blend('events.Event', **kargs)
 
