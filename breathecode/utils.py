@@ -66,7 +66,7 @@ def capable_of(capability=None):
             if capable.count() > 0:
                 return function(*args, **kwargs)
             
-            raise PermissionDenied("You don't have this capability: "+capability)
+            raise PermissionDenied(f"You (user: {request.user.id}) don't have this capability: {capability} for academy {academy_id}")
         return wrapper
     return decorator
 

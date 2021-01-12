@@ -25,10 +25,10 @@ from .models import Profile, CredentialsGithub, Token, CredentialsSlack, Credent
 from .actions import reset_password
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackTeam
-from breathecode.utils import localize_query, capable_of
+from breathecode.utils import localize_query, capable_of, ValidationException
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
-    StaffSerializer, StaffPOSTSerializer
+    StaffSerializer, StaffPOSTSerializer, MemberPUTSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -82,6 +82,68 @@ class MemberView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_member')
+    def put(self, request, academy_id=None, user_id=None):
+
+        already = ProfileAcademy.objects.filter(user=user_id,academy__id=academy_id).first()
+        request_data = { **request.data, "user": user_id, "academy": academy_id }
+        if already:
+            serializer = MemberPUTSerializer(already, data=request_data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            serializer = StaffPOSTSerializer(data=request_data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class StudentView(APIView):
+
+    @capable_of('read_student')
+    def get(self, request, academy_id):
+        items = ProfileAcademy.objects.filter(role__slug='student')
+        items = localize_query(items, request) # only form this academy
+
+        serializer = GETProfileAcademy(items, many=True)
+        return Response(serializer.data)
+
+    @capable_of('crud_student')
+    def post(self, request, academy_id=None):
+        serializer = StaffPOSTSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_student')
+    def put(self, request, academy_id=None, user_id=None):
+
+        already = ProfileAcademy.objects.filter(user=user_id,academy__id=academy_id).first()
+
+        if already and already.role.slug != "student":
+            raise ValidationException(f"This endpoint can only update student profiles (not {already.role.slug})")
+
+        request_data = { **request.data, "user": user_id, "academy": academy_id, "role": "student" }
+        if "role" in request.data:
+            raise ValidationException("The student role cannot be updated with this endpoint, user /member instead.")
+        
+        if already:
+            serializer = MemberPUTSerializer(already, data=request_data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            serializer = StaffPOSTSerializer(data=request_data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
     @capable_of('crud_member')
     def delete(self, request, academy_id=None, user_id=None):

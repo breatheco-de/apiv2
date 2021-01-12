@@ -88,22 +88,31 @@ class GroupSerializer(serpy.Serializer):
 class StaffSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfileAcademy
-        fields = ('user', 'role', 'academy')
+        fields = ('user', 'role', 'academy','first_name', 'last_name', 'address', 'phone')
 
 class StaffPOSTSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfileAcademy
-        fields = ('user', 'role', 'academy')
+        fields = ('user', 'role', 'academy', 'first_name', 'last_name', 'address', 'phone')
 
     def validate(self, data):
 
-        in_academy = ProfileAcademy.objects.filter(user=data['user'],academy=data['academy']).first()
-        if not in_academy:
-            raise ValidationError("You don't have access to create staff under this academy")
-        # the user cannot vote to the same entity within 5 minutes
         already = ProfileAcademy.objects.filter(user=data['user'],academy=data['academy']).first()
         if already:
             raise ValidationError('This user is already a member of this academy staff')
+
+        return data
+
+class MemberPUTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProfileAcademy
+        fields = ('user', 'role', 'academy', 'first_name', 'last_name')
+
+    def validate(self, data):
+
+        already = ProfileAcademy.objects.filter(user=data['user'],academy=data['academy']).first()
+        if not already:
+            raise ValidationError('User not found on this particular academy')
 
         return data
 
