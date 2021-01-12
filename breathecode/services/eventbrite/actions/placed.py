@@ -23,17 +23,12 @@ def placed(self, payload: dict):
         email=payload['email'],
         status='PENDING',
         event=local_event,
-        attendee=local_attendee)
-    event_checkin.save()
+        attendee=local_attendee).save()
 
     contact = {
         'email': payload['email'],
         'first_name': payload['first_name'],
         'last_name': payload['last_name'],
-        # 'name': payload['name'],
     }
 
     add_to_active_campaign(contact)
-
-    event_checkin.status = 'DONE'
-    event_checkin.save()

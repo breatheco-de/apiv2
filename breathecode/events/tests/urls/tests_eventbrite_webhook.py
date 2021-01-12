@@ -205,7 +205,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
-            'status': 'DONE'
+            'status': 'PENDING'
         }])
 
         # sync_ac_tags
