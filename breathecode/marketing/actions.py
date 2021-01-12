@@ -121,8 +121,8 @@ def add_to_active_campaign(contact):
         raise APIException('Could not add contact to Automation')
     else:
         logger.debug(f"Triggered automation with id {str(acp_id)}", response)
-        auto = Automation.objects.filter(acp_id=acp_id, ac_academy=ac_academy).first()
-        # entry.automation_objects.add(auto)
+        # auto = Automation.objects.filter(acp_id=acp_id, ac_academy=ac_academy).first()
+        # # entry.automation_objects.add(auto)
 
 
 def register_new_lead(form_entry=None):
