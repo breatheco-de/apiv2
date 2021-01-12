@@ -86,21 +86,6 @@ def add_to_active_campaign(contact):
     if ac_academy is None:
         raise Exception(f"No academy found with slug {academy_slug}")
 
-    # contact = {
-    #     "email": form_entry["email"],
-    #     "first_name": form_entry["first_name"],
-    #     "last_name": form_entry["last_name"],
-    #     "phone": form_entry["phone"]
-    # }
-    # contact = set_optional(contact, 'utm_url', form_entry)
-    # contact = set_optional(contact, 'utm_location', form_entry, "location")
-    # contact = set_optional(contact, 'course', form_entry)
-    # contact = set_optional(contact, 'utm_language', form_entry, "language")
-    # contact = set_optional(contact, 'utm_country', form_entry, "country")
-    # contact = set_optional(contact, 'client_comments', form_entry, "client_comments")
-    # contact = set_optional(contact, 'gclid', form_entry)
-    # contact = set_optional(contact, 'referral_key', form_entry)
-
     logger.debug("ready to send contact with following details")
     logger.debug(contact)
 
