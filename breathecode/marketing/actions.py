@@ -130,7 +130,7 @@ def add_to_active_campaign(contact):
     }
 
     response = client.contacts.add_a_contact_to_an_automation(data)
-    print('ppppppppppppppppppppppp', response)
+
     if 'contacts' not in response:
         logger.error(f"error triggering automation with id {str(acp_id)}", response)
         raise APIException('Could not add contact to Automation')
@@ -141,7 +141,6 @@ def add_to_active_campaign(contact):
 
 
 def register_new_lead(form_entry=None):
-    print("form entry", form_entry)
     if form_entry is None:
         raise Exception('You need to specify the form entry data')
 
@@ -286,7 +285,7 @@ def sync_automations(ac_academy):
     if 'automations' not in response:
         print("Invalid automations incoming from AC")
         return False
-    # print(response)
+
     automations = response['automations']
     count = 0
     while len(response['automations']) == 100:

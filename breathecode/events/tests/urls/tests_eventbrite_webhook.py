@@ -111,13 +111,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_event_checkin_dict(), [{
-            'attendee_id': 2,
-            'email': 'john.smith@example.com',
-            'event_id': 1,
-            'id': 1,
-            'status': 'PENDING'
-        }])
 
         self.assertEqual(self.all_eventbrite_webhook_dict(), [{
             'action': 'placed',
@@ -128,6 +121,14 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'status_text': 'No academy found with slug downtown-miami',
             'user_id': '123456789012',
             'webhook_id': '1234567'
+        }])
+
+        self.assertEqual(self.all_event_checkin_dict(), [{
+            'attendee_id': 2,
+            'email': 'john.smith@example.com',
+            'event_id': 1,
+            'id': 1,
+            'status': 'PENDING'
         }])
 
         # sync_ac_tags
@@ -149,14 +150,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_event_checkin_dict(), [{
-            'attendee_id': 2,
-            'email': 'john.smith@example.com',
-            'event_id': 1,
-            'id': 1,
-            'status': 'PENDING'
-        }])
-
         self.assertEqual(self.all_eventbrite_webhook_dict(), [{
             'action': 'placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
@@ -166,6 +159,14 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'status_text': 'The specified automation Workshop Attendancy was not found for this AC Academy',
             'user_id': '123456789012',
             'webhook_id': '1234567'
+        }])
+
+        self.assertEqual(self.all_event_checkin_dict(), [{
+            'attendee_id': 2,
+            'email': 'john.smith@example.com',
+            'event_id': 1,
+            'id': 1,
+            'status': 'PENDING'
         }])
 
         # sync_ac_tags
@@ -187,13 +188,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_event_checkin_dict(), [{
-            'attendee_id': 2,
-            'email': 'john.smith@example.com',
-            'event_id': 1,
-            'id': 1,
-            'status': 'PENDING'
-        }])
 
         self.assertEqual(self.all_eventbrite_webhook_dict(), [{
             'action': 'placed',
@@ -204,6 +198,14 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'status_text': None,
             'user_id': '123456789012',
             'webhook_id': '1234567'
+        }])
+
+        self.assertEqual(self.all_event_checkin_dict(), [{
+            'attendee_id': 2,
+            'email': 'john.smith@example.com',
+            'event_id': 1,
+            'id': 1,
+            'status': 'DONE'
         }])
 
         # sync_ac_tags

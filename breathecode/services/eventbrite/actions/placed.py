@@ -5,22 +5,10 @@ def placed(self, payload: dict):
     from breathecode.marketing.actions import add_to_active_campaign
     from breathecode.events.models import EventCheckin, Event
 
-    # wonderful way to fix one poor mocking system
-    import requests
-
-    if not 'email' in payload:
-        pass
-
-    from pprint import pprint
-    # print('adssadasdsadsad', payload)
-    pprint(payload.keys())
-
-    # event_id = payload['event_id']
     event = payload['event']
     attendees = payload['attendees']
     attendee_profile = attendees[0]['profile']
 
-    # print([key for key in event.keys() if hasattr(ee, key)])
     local_event = Event.objects.filter(eventbrite_id=event['id']).first()
 
     if not local_event:
@@ -33,7 +21,7 @@ def placed(self, payload: dict):
 
     event_checkin = EventCheckin(
         email=payload['email'],
-        status='DONE',
+        status='PENDING',
         event=local_event,
         attendee=local_attendee)
     event_checkin.save()
