@@ -117,8 +117,8 @@ class Eventbrite:
                 logger.debug("Mark action with error")
 
                 # stack trace
-                import traceback
-                print(traceback.print_exc())
+                # import traceback
+                # print(traceback.print_exc())
 
                 webhook.status = 'ERROR'
                 webhook.status_text = str(e)
