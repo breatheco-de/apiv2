@@ -2,7 +2,7 @@ import serpy, logging, random, os, urllib.parse
 from django.contrib.auth.models import User, Group
 from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite
 from breathecode.utils import ValidationException
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Cohort
 from breathecode.notify.actions import send_email_message
 from django.db import models
 from rest_framework.exceptions import ValidationError
