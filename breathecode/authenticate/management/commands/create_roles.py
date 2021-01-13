@@ -30,6 +30,8 @@ class Command(BaseCommand):
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
             { "slug": "student", "name": "Student", "caps": ["crud_assignment"] },
+            { "slug": "teacher", "name": "Teacher", "caps": ["crud_assignment"] },
+            { "slug": "assistant", "name": "Teacher Assistant", "caps": ["crud_assignment"] },
         ]
 
         for r in roles:

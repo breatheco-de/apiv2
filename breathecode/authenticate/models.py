@@ -6,7 +6,7 @@ from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
 from django.core.validators import RegexValidator
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Cohort
 
 class UserProxy(User):
     class Meta:
@@ -47,10 +47,48 @@ class Role(models.Model):
     def __str__(self):
         return f"{self.name} ({self.slug})"
 
+PENDING = 'PENDING'
+ACCEPTED = 'ACCEPTED'
+INVITE_STATUS = (
+    (PENDING, 'Pending'),
+    (ACCEPTED, 'Accepted'),
+)
+class UserInvite(models.Model):
 
-# If the user belongs to an academy administrative staff
+    email = models.CharField(blank=False, max_length=150, null=True, default=None)
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, null=True, default=None, blank=True)
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True, default=None, blank=True)
+
+    first_name = models.CharField(max_length=100, default=None, null=True)
+    last_name = models.CharField(max_length=100, default=None, null=True)
+
+    token = models.CharField(max_length=255, unique=True)
+
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    status = models.CharField(max_length=15, choices=INVITE_STATUS, default=PENDING)
+
+    phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, default='') # validators should be a list
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f"Invite for {self.email}"
+
+INVITED = 'INVITED'
+ACTIVE = 'ACTIVE'
+PROFILE_ACADEMY_STATUS = (
+    (INVITED, 'Invited'),
+    (ACTIVE, 'Active'),
+)
 class ProfileAcademy(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True)
+
+    email = models.CharField(blank=False, max_length=150, null=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
 
@@ -61,11 +99,13 @@ class ProfileAcademy(models.Model):
     phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
     phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, default='') # validators should be a list
 
+    status = models.CharField(max_length=15, choices=PROFILE_ACADEMY_STATUS, default=INVITED)
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f"{self.user.email} for academy ({self.academy.name})"
+        return f"{self.email} for academy ({self.academy.name})"
 
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)

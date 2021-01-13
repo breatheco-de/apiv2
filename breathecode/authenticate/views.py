@@ -1,4 +1,4 @@
-import os, requests, base64, logging
+import os, requests, base64, logging, urllib.parse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import update_session_auth_hash
@@ -20,15 +20,15 @@ from django.utils import timezone
 from .models import Profile, ProfileAcademy
 from .authentication import ExpiringTokenAuthentication
 
-from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm
-from .models import Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook
+from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
+from .models import Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook, UserInvite
 from .actions import reset_password
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
 from breathecode.utils import localize_query, capable_of, ValidationException
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
-    StaffSerializer, StaffPOSTSerializer, MemberPUTSerializer
+    StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -77,7 +77,10 @@ class MemberView(APIView):
 
     @capable_of('crud_member')
     def post(self, request, academy_id=None):
-        serializer = StaffPOSTSerializer(data=request.data)
+        serializer = MemberPOSTSerializer(data=request.data, context={
+            'academy_id': academy_id,
+            "request": request
+        })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -95,7 +98,7 @@ class MemberView(APIView):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            serializer = StaffPOSTSerializer(data=request_data)
+            serializer = MemberPOSTSerializer(data=request_data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -113,7 +116,10 @@ class StudentView(APIView):
 
     @capable_of('crud_student')
     def post(self, request, academy_id=None):
-        serializer = StaffPOSTSerializer(data=request.data)
+        serializer = StudentPOSTSerializer(data=request.data, context={
+            'academy_id': academy_id,
+            "request": request
+        })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -145,19 +151,15 @@ class StudentView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-    @capable_of('crud_member')
+    @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id=None):
 
         if academy_id is None or user_id is None:
             raise serializers.ValidationError("Missing user_id or academy_id", code=400)
         
-        academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list('academy__id', flat=True)
-        if academy_id not in academy_ids:
-            raise serializers.ValidationError('You are not allowed to manipulate users for this academy')
-
-        profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id).first()
+        profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id, role__slug='student').first()
         if profile is None:
-            raise serializers.ValidationError('Specified academy and user its not a staff member')
+            raise serializers.ValidationError('User doest not exist or does not belong to this academy')
 
         profile.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -707,6 +709,84 @@ def pick_password(request, token):
     return render(request, 'form.html', {
         'form': form
     })
+
+def render_invite(request, token):
+    _dict = request.POST.copy()
+    _dict["token"] = token
+    _dict["callback"] = request.GET.get("callback", '')
+
+    if request.method == 'GET':
+        invite = UserInvite.objects.filter(token=token).first()
+        if invite is None:
+            return render(request, 'message.html', {
+                'message': 'Invitation not found with this token'
+            })
+        form = InviteForm({
+            **_dict,
+            'first_name': invite.first_name,
+            'last_name': invite.last_name,
+            'phone': invite.phone
+        })
+
+        return render(request, 'form_invite.html', {
+            'form': form,
+        })
+
+    if request.method == 'POST':
+        form = InviteForm(_dict)
+        password1 = request.POST.get("password1", None)
+        password2 = request.POST.get("password2", None)
+
+        if password1 != password2:
+            messages.error(request, 'Passwords don\'t match')
+            return render(request, 'form_invite.html', {
+                'form': form,
+            })
+
+        invite = UserInvite.objects.filter(token=str(token)).first()
+        if invite is None:
+            messages.error(request, 'Invalid or expired invitation: '+str(token))
+            return render(request, 'form_invite.html', {
+                'form': form
+            })
+
+        first_name = request.POST.get("first_name", None)
+        last_name = request.POST.get("last_name", None)
+        
+        user = User.objects.filter(email=invite.email).first()
+        if user is None:
+            user = User(email=invite.email, first_name=first_name, last_name=last_name)
+            user.save()
+            user.set_password(password1)
+            user.save()
+
+        invite.status = 'ACCEPTED'
+        invite.save()
+
+        if invite.academy is not None:
+            profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
+            if profile is None:
+                role = invite.role.slug
+                profile = ProfileAcademy(email=invite.email, academy=invite.academy, role=invite.role)
+
+            profile.user = user
+            profile.status = 'ACTIVE'
+            profile.save()
+
+        if invite.cohort is not None:
+            role = 'student'
+            if invite.role is not None and invite.role.slug != 'student':
+                role = invite.role.slug.upper()
+            cu = CohortUser(user=user, cohort=invite.cohort, role=role)
+            cu.save()
+
+        callback = str(request.POST.get("callback", None))
+        if callback is not None and callback != "" and callback != "['']":
+            return HttpResponseRedirect(request.POST.get("callback"))
+        else:
+            return render(request, 'message.html', {
+                'message': 'Welcome to BreatheCode, you can go ahead an log in'
+            })
 
 def login_html_view(request):
 

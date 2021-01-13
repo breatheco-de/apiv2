@@ -1,11 +1,16 @@
-import serpy
+import serpy, logging, random, os, urllib.parse
 from django.contrib.auth.models import User, Group
-from .models import CredentialsGithub, ProfileAcademy
+from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite
+from breathecode.utils import ValidationException
+from breathecode.admissions.models import Academy
+from breathecode.notify.actions import send_email_message
 from django.db import models
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from django.db.models import Q
+
+logger = logging.getLogger(__name__)
 
 class RoleSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -88,20 +93,177 @@ class GroupSerializer(serpy.Serializer):
 class StaffSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfileAcademy
-        fields = ('user', 'role', 'academy','first_name', 'last_name', 'address', 'phone')
+        fields = ('user', 'role', 'academy','first_name', 'last_name', 'address', 'phone', 'status')
 
-class StaffPOSTSerializer(serializers.ModelSerializer):
+class MemberPOSTSerializer(serializers.ModelSerializer):
+    invite = serializers.BooleanField(write_only=True, required=False)
+    user = serializers.IntegerField(write_only=True, required=False)
+    status = serializers.CharField(read_only=True)
+    
     class Meta:
         model = ProfileAcademy
-        fields = ('user', 'role', 'academy', 'first_name', 'last_name', 'address', 'phone')
+        fields = ('email', 'role', 'user', 'first_name', 'last_name', 'address', 'phone', 'invite', 'status')
 
     def validate(self, data):
 
-        already = ProfileAcademy.objects.filter(user=data['user'],academy=data['academy']).first()
-        if already:
-            raise ValidationError('This user is already a member of this academy staff')
+        if "user" not in data:
+            if "invite" not in data or data["invite"] != True:
+                raise ValidationException("User does not exists, do you want to invite it?")
+            elif "email" not in data:
+                raise ValidationException("Please specify user id or member email")
+
+            already = ProfileAcademy.objects.filter(email=data['email'],academy=self.context['academy_id']).first()
+            if already:
+                raise ValidationException('There is a member already in this academy with this email, or with invitation to this email pending')
+
+        elif "user" in data:
+            already = ProfileAcademy.objects.filter(user=data['user'],academy=self.context['academy_id']).first()
+            if already:
+                raise ValidationException('This user is already a member of this academy staff')
+
+        if "role" not in data:
+            raise ValidationException("Missing role")
 
         return data
+
+    def create(self, validated_data):
+
+
+        academy = Academy.objects.filter(id=self.context.get('academy_id')).first()
+        if academy is None:
+            raise ValidationException("Academy not found")
+
+        role = validated_data['role']
+
+        user = None
+        email = None
+        status = "INVITED"
+        if "user" in validated_data:
+            user = User.objects.filter(id=validated_data["user"]).first()
+            if user is None:
+                raise ValidationException("User not found")
+            email = user.email
+            status = "ACTIVE"
+
+        if "user" not in validated_data:
+            validated_data.pop('invite')
+            email = validated_data["email"]
+            invite = UserInvite.objects.filter(email=validated_data['email'], author=self.context.get('request').user).first()
+            if invite is not None:
+                raise ValidationException("You already invited this user, check for previous invites and resend")
+
+            invite = UserInvite(
+                email=validated_data['email'],
+                first_name=validated_data['first_name'],
+                last_name=validated_data['last_name'],
+                academy=academy,
+                role=role,
+                author=self.context.get('request').user,
+                token=random.getrandbits(128)
+            )
+            invite.save()
+
+            logger.debug("Sending invite email to "+email)
+
+            params = { "callback": "https://admin.breatheco.de" }
+            querystr = urllib.parse.urlencode(params)
+            url = os.getenv('API_URL') + "/v1/auth/user/invite/" + str(obj.token) + "?" + querystr
+
+            send_email_message("welcome_academy", email, {
+                "email": email,
+                "subject": "Welcome to Breathecode",
+                "LINK": url,
+                "FIST_NAME": validated_data['first_name']
+            })
+        
+        return super().create({ **validated_data, "email": email, "user": user, "academy": academy, "role": role, "status": status })
+
+class StudentPOSTSerializer(serializers.ModelSerializer):
+    invite = serializers.BooleanField(write_only=True, required=False)
+    cohort = serializers.IntegerField(write_only=True, required=False)
+    user = serializers.IntegerField(write_only=True, required=False)
+    status = serializers.CharField(read_only=True)
+    
+    class Meta:
+        model = ProfileAcademy
+        fields = ('email', 'user', 'first_name', 'last_name', 'address', 'phone', 'invite', 'cohort', 'status')
+
+    def validate(self, data):
+
+        if "user" not in data:
+            if "invite" not in data or data["invite"] != True:
+                raise ValidationException("User does not exists, do you want to invite it?")
+            elif "email" not in data:
+                raise ValidationException("Please specify user id or student email")
+
+            already = ProfileAcademy.objects.filter(email=data['email'],academy=self.context['academy_id']).first()
+            if already:
+                raise ValidationException('There is a student already in this academy, or with invitation pending')
+
+        elif "user" in data:
+            already = ProfileAcademy.objects.filter(user=data['user'],academy=self.context['academy_id']).first()
+            if already:
+                raise ValidationError('This user is already a member of this academy staff')
+
+        return data
+
+    def create(self, validated_data):
+
+        academy = Academy.objects.filter(id=self.context.get('academy_id')).first()
+        if academy is None:
+            raise ValidationException("Academy not found")
+
+        role = Role.objects.filter(slug='student').first()
+        if role is None:
+            raise ValidationException("Role student not found")
+
+        user = None
+        email = None
+        status = "INVITED"
+        if "user" in validated_data:
+            user = User.objects.filter(id=validated_data["user"]).first()
+            if user is None:
+                raise ValidationException("User not found")
+            email = user.email
+            status = "ACTIVE"
+
+        if "user" not in validated_data:
+            validated_data.pop('invite')
+            email = validated_data["email"]
+            cohort = None
+            if 'cohort' in validated_data:
+                cohort = Cohort.objects.filter(id=validated_data.pop('cohort')).first()
+
+            invite = UserInvite.objects.filter(email=validated_data['email'], author=self.context.get('request').user).first()
+            if invite is not None:
+                raise ValidationException("You already invited this user, check for previous invites and resend")
+
+            invite = UserInvite(
+                email=validated_data['email'],
+                first_name=validated_data['first_name'],
+                last_name=validated_data['last_name'],
+                academy=academy,
+                cohort=cohort,
+                role=role,
+                author=self.context.get('request').user,
+                token=random.getrandbits(128)
+            )
+            invite.save()
+
+            logger.debug("Sending invite email to "+email)
+
+            params = { "callback": "https://student.breatheco.de" }
+            querystr = urllib.parse.urlencode(params)
+            url = os.getenv('API_URL') + "/v1/auth/user/invite/" + str(obj.token) + "?" + querystr
+
+            send_email_message("welcome_academy", email, {
+                "email": email,
+                "subject": "Welcome to Breathecode",
+                "LINK": url,
+                "FIST_NAME": validated_data['first_name']
+            })
+        
+        return super().create({ **validated_data, "email": email, "user": user, "academy": academy, "role": role, "status": status })
 
 class MemberPUTSerializer(serializers.ModelSerializer):
     class Meta:

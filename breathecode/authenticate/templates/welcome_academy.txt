@@ -1,0 +1,7 @@
+{% extends "base.txt" %}
+{% block content %}
+Hi {{ FIRST_NAME }}, this is an exclusive invitation to the BreatheCode platform: A private community of software developers learning and improving their coding skills. 
+
+Please click on the following link to continue:
+{{ LINK }}
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "form_base.html" %}
+{% block content %}
+<h2 class="alert alert-light text-center">Welcome to BreatheCode!</h2>
+<p class="text-center">Please confirm the following form and you will be learning in no time!</p>
+<form method="post" class="container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert {{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %} 
+    {% csrf_token %}
+    {{ form }}
+    <button class="btn btn-primary" type="submit">Confirm Sign Up</button>
+</form>
+{% endblock %}

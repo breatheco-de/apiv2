@@ -1,4 +1,4 @@
-import base64
+import base64, os, urllib.parse
 from django.contrib import admin
 from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
@@ -6,7 +6,7 @@ from .actions import delete_tokens
 from django.utils.html import format_html
 from .models import (
     CredentialsGithub, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy, Role,
-    CredentialsFacebook, Capability
+    CredentialsFacebook, Capability, UserInvite
 )
 from .actions import reset_password
 # Register your models here.
@@ -44,6 +44,15 @@ class TokenAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         return ['key']
 
+@admin.register(UserInvite)
+class UserInviteAdmin(admin.ModelAdmin):
+    list_display = ('email', 'first_name', 'last_name', 'status', 'academy', 'token', 'created_at', 'invite_url')
+    def invite_url(self,obj):
+        params = { "callback": "https://student.breatheco.de" }
+        querystr = urllib.parse.urlencode(params)
+        url = os.getenv('API_URL') + "/v1/auth/user/invite/" + str(obj.token) + "?" + querystr
+        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>")
+
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'github_login')
@@ -69,7 +78,7 @@ class CapabilityAdmin(admin.ModelAdmin):
 
 @admin.register(ProfileAcademy)
 class ProfileAcademyAdmin(admin.ModelAdmin):
-    list_display = ('user', 'academy', 'created_at', 'slack', 'facebook')
+    list_display = ('user', 'email', 'academy', 'created_at', 'slack', 'facebook')
     raw_id_fields = ["user"]
     
     def get_queryset(self, request):
@@ -79,10 +88,16 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
         return super(ProfileAcademyAdmin, self).get_queryset(request)
     
     def slack(self,obj):
-        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/slack/?a={obj.academy.id}&user={obj.user.id}&url={self.slack_callback}'>slack login</a>")
+        if obj.user is not None:
+            return format_html(f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/slack/?a={obj.academy.id}&user={obj.user.id}&url={self.slack_callback}'>slack login</a>")
+        else:
+            return "Pending invite response"
 
     def facebook(self,obj):
-        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/facebook/?a={obj.academy.id}&user={obj.user.id}&url={self.slack_callback}'>facebook login</a>")
+        if obj.user is not None:
+            return format_html(f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/facebook/?a={obj.academy.id}&user={obj.user.id}&url={self.slack_callback}'>facebook login</a>")
+        else:
+            return "Pending invite response"
 
 
 @admin.register(Profile)
