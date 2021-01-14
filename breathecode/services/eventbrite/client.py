@@ -68,9 +68,12 @@ class Eventbrite:
         data = self.request('GET', f"/organizations/{str(organization_id)}/venues/")
         return data
 
-    def execute_action(self, context: dict):
+    def execute_action(self, eventbrite_webhook_id: int):
         # wonderful way to fix one poor mocking system
         import requests
+
+        # prevent circular dependency import between thousand modules previuosly loaded and cached
+        from breathecode.events.models import EventbriteWebhook
 
         # example = {
         #     'api_url': 'https://www.eventbriteapi.com/{api-endpoint-to-fetch-object-details}/',
@@ -82,7 +85,7 @@ class Eventbrite:
         #     }
         # }
 
-        webhook = self.add_webhook_to_log(context)
+        webhook = EventbriteWebhook.objects.filter(id=eventbrite_webhook_id).first()
 
         if not webhook:
             raise Exception("Invalid webhook")
@@ -134,7 +137,10 @@ class Eventbrite:
 
             raise Exception(message)
 
-    def add_webhook_to_log(self, context: dict):
+    @staticmethod
+    def add_webhook_to_log(context: dict, organization_id: str):
+        """Add one incoming webhook request to log"""
+
         # prevent circular dependency import between thousand modules previuosly loaded and cached
         from breathecode.events.models import EventbriteWebhook
 
@@ -143,8 +149,9 @@ class Eventbrite:
 
         webhook = EventbriteWebhook()
         context_has_config_key = 'config' in context
+        context_has_api_url = 'api_url' in context
 
-        if 'api_url' in context:
+        if context_has_api_url:
             webhook.api_url = context['api_url']
 
         if context_has_config_key and 'user_id' in context['config']:
@@ -159,6 +166,10 @@ class Eventbrite:
         if context_has_config_key and 'endpoint_url' in context['config']:
             webhook.endpoint_url = context['config']['endpoint_url']
 
+        # # prevent generate logs from invalid requests
+        # if context_has_config_key and context_has_api_url:
+        
+        webhook.organization_id = organization_id
         webhook.status = 'PENDING'
         webhook.save()
 

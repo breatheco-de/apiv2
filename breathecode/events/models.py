@@ -148,7 +148,7 @@ CHECKIN_STATUS = (
 class EventCheckin(models.Model):
     email = models.EmailField(max_length=150)
 
-    attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True)
+    attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     status = models.CharField(max_length=9, choices=CHECKIN_STATUS, default=PENDING)
     
@@ -171,6 +171,7 @@ class EventbriteWebhook(models.Model):
     user_id = models.CharField(max_length=20, blank=True, null=True, default=None)
     action = models.CharField(max_length=15, blank=True, null=True, default=None)
     webhook_id = models.CharField(max_length=20, blank=True, null=True, default=None)
+    organization_id = models.CharField(max_length=20, blank=True, null=True, default=None)
     endpoint_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     status = models.CharField(max_length=9, choices=EVENTBRITE_WEBHOOK_STATUS, default=PENDING)

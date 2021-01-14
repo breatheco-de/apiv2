@@ -44,7 +44,7 @@ python_version = "3.9"
 
 [scripts]
 dev="heroku local"
-coverage="pytest ./breathecode --disable-pytest-warnings --cov=breathecode --cov-report term-missing"
+coverage="python ./scripts/coverage.py"
 lint="pylint ./breathecode --load-plugins pylint_django"
 start="python manage.py runserver"
 migrate="python manage.py migrate"

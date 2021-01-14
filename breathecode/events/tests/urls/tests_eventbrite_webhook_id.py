@@ -30,7 +30,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
     def test_eventbrite_webhook_without_data(self):
         """Test /eventbrite/webhook without auth"""
         # self.generate_models(authenticate=True)
-        url = reverse_lazy('events:eventbrite_webhook')
+        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
         response = self.client.post(url, {}, headers=self.headers(), format='json')
         content = response.content
 
@@ -46,7 +46,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
     def test_eventbrite_webhook_without_event(self):
         """Test /eventbrite/webhook without auth"""
         # self.generate_models(authenticate=True)
-        url = reverse_lazy('events:eventbrite_webhook')
+        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
         response = self.client.post(url, self.data('placed', EVENTBRITE_ORDER_URL),
             headers=self.headers('placed'), format='json')
         content = response.content
@@ -59,43 +59,12 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
+            'organization_id': '1',
             'status': 'ERROR',
-            'status_text': 'event not exist previously',
+            'status_text': 'event doesn\'t exist',
             'user_id': '123456789012',
             'webhook_id': '1234567'
         }])
-
-        # sync_ac_tags
-        # sync_ac_automations
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
-    def test_eventbrite_webhook_without_attendee(self):
-        """Test /eventbrite/webhook without auth"""
-        self.generate_models(event=True, eventbrite_event_id=1)
-        url = reverse_lazy('events:eventbrite_webhook')
-        response = self.client.post(url, self.data('placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('placed'), format='json')
-        content = response.content
-
-        self.assertEqual(content, b'ok')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_event_checkin_dict(), [])
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
-            'action': 'placed',
-            'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
-            'endpoint_url': 'https://something.io/eventbrite/webhook',
-            'id': 1,
-            'status': 'ERROR',
-            'status_text': 'attendee not exist previously',
-            'user_id': '123456789012',
-            'webhook_id': '1234567'
-        }])
-
-        # sync_ac_tags
-        # sync_ac_automations
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -104,7 +73,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
     def test_eventbrite_webhook_without_active_campaign_academy(self):
         """Test /eventbrite/webhook without auth"""
         self.generate_models(event=True, eventbrite_event_id=1, attendee=True)
-        url = reverse_lazy('events:eventbrite_webhook')
+        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
         response = self.client.post(url, self.data('placed', EVENTBRITE_ORDER_URL),
             headers=self.headers('placed'), format='json')
         content = response.content
@@ -117,6 +86,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
+            'organization_id': '1',
             'status': 'ERROR',
             'status_text': 'No academy found with slug downtown-miami',
             'user_id': '123456789012',
@@ -131,9 +101,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'status': 'PENDING'
         }])
 
-        # sync_ac_tags
-        # sync_ac_automations
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -143,7 +110,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         """Test /eventbrite/webhook without auth"""
         self.generate_models(event=True, eventbrite_event_id=1, attendee=True,
             active_campaign_academy=True, in_miami=True)
-        url = reverse_lazy('events:eventbrite_webhook')
+        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
         response = self.client.post(url, self.data('placed', EVENTBRITE_ORDER_URL),
             headers=self.headers('placed'), format='json')
         content = response.content
@@ -155,6 +122,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
+            'organization_id': '1',
             'status': 'ERROR',
             'status_text': 'The specified automation Workshop Attendancy was not found for this AC Academy',
             'user_id': '123456789012',
@@ -169,9 +137,6 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'status': 'PENDING'
         }])
 
-        # sync_ac_tags
-        # sync_ac_automations
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -181,7 +146,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         """Test /eventbrite/webhook without auth"""
         self.generate_models(event=True, eventbrite_event_id=1, attendee=True,
             active_campaign_academy=True, in_miami=True, automation=True)
-        url = reverse_lazy('events:eventbrite_webhook')
+        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
         response = self.client.post(url, self.data('placed', EVENTBRITE_ORDER_URL),
             headers=self.headers('placed'), format='json')
         content = response.content
@@ -194,6 +159,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
+            'organization_id': '1',
             'status': 'DONE',
             'status_text': None,
             'user_id': '123456789012',
@@ -207,6 +173,3 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'id': 1,
             'status': 'PENDING'
         }])
-
-        # sync_ac_tags
-        # sync_ac_automations

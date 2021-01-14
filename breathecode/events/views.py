@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
@@ -15,7 +16,8 @@ from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
 
 
-# Create your views here.
+logger = logging.getLogger(__name__)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -53,6 +55,7 @@ def get_events(request):
     
     serializer = EventSmallSerializer(items, many=True)
     return Response(serializer.data)
+
 
 class EventView(APIView):
     """
@@ -93,6 +96,7 @@ class EventView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class EventTypeView(APIView):
     """
     List all snippets, or create a new snippet.
@@ -110,6 +114,7 @@ class EventTypeView(APIView):
         
         serializer = EventTypeSerializer(items, many=True)
         return Response(serializer.data)
+
 
 class EventCheckinView(APIView):
     """
@@ -133,7 +138,15 @@ class EventCheckinView(APIView):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @renderer_classes([PlainTextRenderer])
-def eventbrite_webhook(request):
-    async_eventbrite_webhook.delay(request.data)
+def eventbrite_webhook(request, organization_id):
+    webhook = Eventbrite.add_webhook_to_log(request.data, organization_id)
+
+    if webhook:
+        async_eventbrite_webhook.delay(webhook.id)
+    else:
+        logger.debug('One request cannot be parsed, maybe you should update `Eventbrite'
+            '.add_webhook_to_log`')
+        logger.debug(request.data)
+
     # async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')

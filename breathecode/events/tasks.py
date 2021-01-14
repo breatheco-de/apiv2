@@ -23,12 +23,12 @@ def persist_organization_events(self,args):
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def async_eventbrite_webhook(self, context):
+def async_eventbrite_webhook(self, eventbrite_webhook_id):
     status = 'ok'
 
     try:
         client = Eventbrite()
-        client.execute_action(context)
+        client.execute_action(eventbrite_webhook_id)
     except Exception as e:
         logger.debug(f'Eventbrite exception')
         logger.debug(str(e))

@@ -12,23 +12,25 @@ def placed(self, payload: dict):
     local_event = Event.objects.filter(eventbrite_id=event['id']).first()
 
     if not local_event:
-        raise Exception('event not exist previously')
+        raise Exception('event doesn\'t exist')
 
     local_attendee = User.objects.filter(email=attendee_profile['email']).first()
 
-    if not local_attendee:
-        raise Exception('attendee not exist previously')
-
+    # prevent one event_checkin with same event and email
     event_checkin = EventCheckin(
         email=payload['email'],
         status='PENDING',
         event=local_event,
         attendee=local_attendee).save()
 
+    # TODO: local_event.academy
     contact = {
         'email': payload['email'],
         'first_name': payload['first_name'],
         'last_name': payload['last_name'],
     }
 
+    # TODO: if active campaign academy . event attendee automation != null then 37
+    # if active_campaign_academy.event_attendancy_automation
+    # if ActiveCampaignAcademy.objects.filter(academy__slug=academy_slug)
     add_to_active_campaign(contact)

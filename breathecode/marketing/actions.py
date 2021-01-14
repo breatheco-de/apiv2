@@ -80,6 +80,8 @@ def get_lead_automations(ac_academy, form_entry):
 
 def add_to_active_campaign(contact):
     # send to an active campaign hardcoded
+    # TODO: academy_id
+    # TODO: automation_id
     academy_slug = 'downtown-miami'
     ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=academy_slug).first()
 
@@ -99,6 +101,7 @@ def add_to_active_campaign(contact):
 
     client = Client(ac_academy.ac_url, ac_academy.ac_key)
     automation_name = 'Workshop Attendancy'
+    # TODO: check that automation exist for this academy
     acp_id = (Automation.objects.filter(name=automation_name, ac_academy=ac_academy)
         .values_list('acp_id', flat=True).first())
 
