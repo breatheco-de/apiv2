@@ -115,6 +115,10 @@ class StudentView(APIView):
         items = ProfileAcademy.objects.filter(role__slug='student')
         items = localize_query(items, request) # only form this academy
 
+        status = request.GET.get('status', None)
+        if status is not None:
+            items = items.filter(status__iexact=status)
+
         serializer = GETProfileAcademy(items, many=True)
         return Response(serializer.data)
 
