@@ -60,7 +60,7 @@ class InviteForm(forms.Form):
     token= forms.CharField(widget=forms.HiddenInput())
     callback= forms.CharField(required=False,widget=forms.HiddenInput())
     first_name = forms.CharField(
-        min_length=8,
+        min_length=2,
         widget=forms.TextInput(attrs={
             "type":"text",
             "label": "first_name",
@@ -68,7 +68,7 @@ class InviteForm(forms.Form):
         }),
     )
     last_name = forms.CharField(
-        min_length=8,
+        min_length=2,
         widget=forms.TextInput(attrs={
             "type":"text",
             "label": "last_name",

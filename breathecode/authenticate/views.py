@@ -64,13 +64,17 @@ class LogoutView(APIView):
 class MemberView(APIView):
 
     @capable_of('read_member')
-    def get(self, request):
-        items = ProfileAcademy.objects.all()
+    def get(self, request, academy_id):
+        items = ProfileAcademy.objects.filter(academy__id=academy_id)
         items = localize_query(items, request) # only form this academy
 
         roles = request.GET.get('roles', None)
         if roles is not None:
             items = items.filter(role__in=roles.split(","))
+
+        status = request.GET.get('status', None)
+        if status is not None:
+            items = items.filter(status__iexact=status)
 
         serializer = GETProfileAcademy(items, many=True)
         return Response(serializer.data)
@@ -700,7 +704,7 @@ def pick_password(request, token):
             token.delete()
             callback = request.POST.get("callback", None)
             if callback is not None and callback != "":
-                return HttpResponseRedirect(request.POST.get("callback"))
+                return HttpResponseRedirect(redirect_to=request.POST.get("callback"))
             else:
                 return render(request, 'message.html', {
                     'message': 'You password has been reset successfully, you can close this window.'
@@ -782,7 +786,7 @@ def render_invite(request, token):
 
         callback = str(request.POST.get("callback", None))
         if callback is not None and callback != "" and callback != "['']":
-            return HttpResponseRedirect(request.POST.get("callback"))
+            return HttpResponseRedirect(redirect_to=callback[2:-2])
         else:
             return render(request, 'message.html', {
                 'message': 'Welcome to BreatheCode, you can go ahead an log in'
