@@ -1,22 +1,26 @@
-# Setup environment
+# Setup & Installation
 
-```bash
-cp .env.example .env
-```
+1. Install redis, postgress, python 3.8+ and node 14+
+2. Create enviroment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
+3. Make sure to get inside the environment: `pipenv shell`
+4. Run the migrations into your database `pipenv run migrate`
+5. Run the fixtures to add sample data: `pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json`
+6. Make sure you can login into the django admin, you can create a login user with `python manage.py createsuperuser`
 
-# BreatheCode API
+# Dumentation for BreatheCode API
 
 [Read the docs](https://documenter.getpostman.com/view/2432393/T1LPC6ef)
 
+# Additional Resources
 
-# Run the tests
+## Run the tests
 
 ```bash
 docker-compose up -d
 pytest
 ```
 
-# Run coverage
+## Run coverage
 
 Report in console
 
@@ -49,7 +53,7 @@ pytest ./breathecode --disable-pytest-warnings --cov=breathecode --cov-report an
 find . -name "*.py,cover" -type f -delete
 ```
 
-# Fixtures
+## Fixtures
 
 Fixtures are fake data ideal for development.
 

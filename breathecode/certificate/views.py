@@ -1,8 +1,12 @@
+import logging
 from django.shortcuts import render
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.contrib.auth.models import User
 from .models import Specialty, Badge, UserSpecialty
-from .serializers import SpecialtySerializer, UserSpecialtySerializer
+from breathecode.admissions.models import CohortUser
+from breathecode.utils import capable_of
+from .serializers import SpecialtySerializer, UserSpecialtySerializer, UserSmallSerializer
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -10,6 +14,9 @@ from rest_framework import status, serializers
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from .tasks import take_screenshot
+from .actions import generate_certificate
+
+logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -40,13 +47,63 @@ def post_save_course_dosomething(sender,instance, **kwargs):
     if instance.preview_url is None or instance.preview_url == "":
         take_screenshot.delay(instance.id)
 
-# @api_view(['GET'])
-# def get_single_course(request, course_slug):
-#     course = Course.objects.filter(slug=course_slug).first()
-#     if course is None:
-#         raise serializers.ValidationError("Course slug not found", code=404)
-#     serializer = GetCourseSerializer(course, many=False)
-#     return Response(serializer.data, status=status.HTTP_200_OK)
+class CertificateView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('read_certificate')
+    def get(self, request, cohort_id, student_id):
+
+        cert = UserSpecialty.objects.filter(cohort__id=cohort_id, user__id=student_id, cohort__academy__id=request.headers['Academy']).first()
+        if cert is None:
+            raise serializers.ValidationError("Certificate not found", code=404)
+
+        serializer = UserSpecialtySerializer(cert, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('crud_certificate')
+    def post(self, request, cohort_id, student_id):
+
+        cu = CohortUser.objects.filter(cohort__id=cohort_id, user__id=student_id, role="STUDENT", cohort__academy__id=request.headers['Academy']).first()
+        if cu is None:
+            raise serializers.ValidationError(f"Student not found for this cohort", code=404)
+
+        cert = generate_certificate(cu.user, cu.cohort)
+        serializer = UserSpecialtySerializer(cert, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class CertificateCohortView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('read_certificate')
+    def get(self, request, cohort_id):
+
+        cert = UserSpecialty.objects.filter(cohort__id=cohort_id, cohort__academy__id=request.headers['Academy'])
+        serializer = UserSpecialtySerializer(cert, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('crud_certificate')
+    def post(self, request, cohort_id):
+
+        cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role='STUDENT',
+            educational_status='GRADUATED', cohort__academy__id=request.headers['Academy'])
+        logger.debug(f"Generating gertificate for {str(cohort_users.count())} students that GRADUATED")
+        certificates = {
+            "success": [],
+            "error": [],
+        }
+        for cu in cohort_users:
+            try:
+                cert = generate_certificate(cu.user, cu.cohort)
+                serializer = UserSpecialtySerializer(cert, many=False)
+                certificates["success"].append(serializer.data)
+            except Exception as e:
+                err = UserSmallSerializer(cu.user, many=False).data
+                certificates["error"].append({ **err, "msg": str(e) })
+                logger.exception(f"Error generating certificate for {str(cu.user.id)} cohort {str(cu.cohort.id)}")
+
+        return Response(certificates, status=status.HTTP_201_CREATED)
 
 # class SyllabusView(APIView):
 #     """

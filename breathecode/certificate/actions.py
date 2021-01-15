@@ -5,6 +5,7 @@ import requests, os
 from urllib.parse import urlencode
 from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
 from breathecode.assignments.models import Task
+from breathecode.utils import ValidationException
 from .models import UserSpecialty, LayoutDesign
 from ..services.google_cloud import Storage
 
@@ -30,31 +31,31 @@ def generate_certificate(user, cohort=None):
         cohort = cohort_user.cohort
 
     if cohort is None:
-        raise Exception("Imposible to obtain the student cohort, maybe it has more than one or none assigned")
+        raise ValidationException("Imposible to obtain the student cohort, maybe it has more than one or none assigned")
 
     if tasks_count_pending:
-        raise Exception(f'The student have {tasks_count_pending} pending task')
+        raise ValidationException(f'The student have {tasks_count_pending} pending task')
 
     if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status ==
         UP_TO_DATE):
-        raise Exception(f'Payment error, finantial_status=`{cohort_user.finantial_status}`')
+        raise ValidationException(f'The student finantial status must be fully paid: `{cohort_user.finantial_status}`')
 
     if cohort.certificate is None:
-        raise Exception(f"The cohort has no certificate assigned, please set a certificate for cohort: {cohort.name}")
+        raise ValidationException(f"The cohort has no certificate assigned, please set a certificate for cohort: {cohort.name}")
 
     if cohort.certificate.specialty is None:
-        raise Exception(f"Specialty has no certificate assigned, please set a certificate on the Specialty model: {cohort.certificate.name}")
+        raise ValidationException(f"Specialty has no certificate assigned, please set a certificate on the Specialty model: {cohort.certificate.name}")
 
     if cohort.current_day != cohort.certificate.duration_in_days:
-        raise Exception("cohort.current_day is not equal to certificate.duration_in_days")
+        raise ValidationException(f"Cohort Current Day is not equal to certificate.duration_in_days ({cohort.certificate.duration_in_days})")
 
     layout = LayoutDesign.objects.filter(slug='default').first()
     if layout is None:
-        raise Exception("Missing a default layout")
+        raise ValidationException("Missing a default layout")
 
     main_teacher = CohortUser.objects.filter(cohort__id=cohort.id, role='TEACHER').first()
     if main_teacher is None or main_teacher.user is None:
-        raise Exception("This cohort does not have a main teacher, please assign it first")
+        raise ValidationException("This cohort does not have a main teacher, please assign it first")
     else:
         main_teacher = main_teacher.user
 

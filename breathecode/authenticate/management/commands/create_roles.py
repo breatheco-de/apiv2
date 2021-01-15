@@ -16,6 +16,8 @@ class Command(BaseCommand):
             { "slug": "crud_student", "description": "Create, update or delete students" },
             { "slug": "read_student", "description": "Read student information" },
             { "slug": "crud_assignment", "description": "Update assignments" },
+            { "slug": "read_certificate", "description": "List and read all academy certificates" },
+            { "slug": "crud_certificate", "description": "Create, update or delete student certificates" },
         ]
 
         for c in caps:
@@ -32,6 +34,7 @@ class Command(BaseCommand):
             { "slug": "student", "name": "Student", "caps": ["crud_assignment"] },
             { "slug": "teacher", "name": "Teacher", "caps": ["crud_assignment"] },
             { "slug": "assistant", "name": "Teacher Assistant", "caps": ["crud_assignment"] },
+            { "slug": "career_support", "name": "Career Support Specialist", "caps": ["read_certificate", "crud_certificate"] },
         ]
 
         for r in roles:
