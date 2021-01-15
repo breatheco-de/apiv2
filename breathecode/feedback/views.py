@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.http import HttpResponse
 from .models import Answer
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import AnswerPUTSerializer, AnswerSerializer
 from rest_framework.response import Response

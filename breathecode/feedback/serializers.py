@@ -55,7 +55,7 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
         if answer.status == 'ANSWERED':
             raise ValidationError('You have already voted')
 
-        if int(data['score']) > 10 or int(data['score']) < 1:
+        if not 'score' in data or int(data['score']) > 10 or int(data['score']) < 1:
             raise ValidationError('Score must be between 1 and 10')
 
         return data
@@ -70,5 +70,3 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
             instance.comment = validated_data['comment']
         instance.save()
         return instance
-
-        
