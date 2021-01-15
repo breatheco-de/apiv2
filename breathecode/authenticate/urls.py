@@ -20,12 +20,13 @@ from .views import (
     get_users, get_users_me, LoginView, LogoutView,TemporalTokenView , get_github_token,
     save_github_token, get_slack_token, save_slack_token, pick_password, change_password,
     get_token_info, get_facebook_token, save_facebook_token, MemberView, reset_password_view,
-    login_html_view, StudentView, render_invite
+    login_html_view, StudentView, render_invite, get_roles
 )
 
 app_name='authenticate'
 urlpatterns = [
     path('user/', get_users, name="user"),
+    path('role', get_roles, name="role"),
     path('user/me', get_users_me, name="user_me"),
     path('user/invite/<str:token>', render_invite, name="academy_invite"),
     

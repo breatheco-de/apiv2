@@ -28,7 +28,8 @@ from breathecode.notify.models import SlackTeam
 from breathecode.utils import localize_query, capable_of, ValidationException
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
-    StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer
+    StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
+    RoleSmallSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -229,16 +230,19 @@ def get_users(request):
     if name is not None:
         query = query.filter(Q(first_name__icontains=name) | Q(last_name__icontains=name))
 
+    like = request.GET.get('like', None)
+    if like is not None:
+        query = query.filter(Q(first_name__icontains=like) | Q(last_name__icontains=like) | Q(email__icontains=like))
+
     query = query.order_by('-date_joined')
     users = UserSmallSerializer(query, many=True)
     return Response(users.data)
 
-# # Create your views here.
-# @api_view(['GET'])
-# def get_groups(request):
-#     queryset = Group.objects.all()
-#     groups = GroupSerializer(queryset, many=True)
-#     return Response(groups.data)
+@api_view(['GET'])
+def get_roles(request):
+    queryset = Role.objects.all()
+    serializer = RoleSmallSerializer(queryset, many=True)
+    return Response(serializer.data)
 
 # Create your views here.
 @api_view(['GET'])
