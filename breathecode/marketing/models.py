@@ -13,9 +13,7 @@ SYNC_STATUS = (
 class ActiveCampaignAcademy(models.Model):
     ac_key = models.CharField(max_length=150)
     ac_url = models.CharField(max_length=150)
-    # TODO: see it
     event_attendancy_automation = models.ForeignKey('Automation', on_delete=models.CASCADE, null=True, default=None)
-
 
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
 

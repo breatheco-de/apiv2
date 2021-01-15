@@ -1,9 +1,24 @@
+import logging
 from django.contrib.auth.models import User
 
-def placed(self, payload: dict):
+
+logger = logging.getLogger(__name__)
+
+
+def placed(self, webhook, payload: dict):
     # prevent circular dependency import between thousand modules previuosly loaded and cached
     from breathecode.marketing.actions import add_to_active_campaign
     from breathecode.events.models import EventCheckin, Event
+    from breathecode.events.models import Organization
+    from breathecode.marketing.models import ActiveCampaignAcademy
+
+    academy_id = Organization.objects.filter(id=webhook.organization_id).values_list('academy__id',
+        flat=True).first()
+
+    if not academy_id:
+        message = 'Cannot get academy_id or organization doesn\'t exist'
+        logger.debug(message)
+        raise Exception(message)
 
     event = payload['event']
     attendees = payload['attendees']
@@ -12,25 +27,34 @@ def placed(self, payload: dict):
     local_event = Event.objects.filter(eventbrite_id=event['id']).first()
 
     if not local_event:
-        raise Exception('event doesn\'t exist')
+        message = 'event doesn\'t exist'
+        logger.debug(message)
+        raise Exception(message)
 
     local_attendee = User.objects.filter(email=attendee_profile['email']).first()
 
-    # prevent one event_checkin with same event and email
-    event_checkin = EventCheckin(
-        email=payload['email'],
-        status='PENDING',
-        event=local_event,
-        attendee=local_attendee).save()
+    if not EventCheckin.objects.filter(email=payload['email'], event=local_event).count():
+        EventCheckin(email=payload['email'], status='PENDING', event=local_event,
+            attendee=local_attendee).save()
 
-    # TODO: local_event.academy
     contact = {
         'email': payload['email'],
         'first_name': payload['first_name'],
         'last_name': payload['last_name'],
+        'academy': academy_id,
     }
 
-    # TODO: if active campaign academy . event attendee automation != null then 37
-    # if active_campaign_academy.event_attendancy_automation
-    # if ActiveCampaignAcademy.objects.filter(academy__slug=academy_slug)
-    add_to_active_campaign(contact)
+    if not ActiveCampaignAcademy.objects.filter(academy_id=academy_id).count():
+        message = 'ActiveCampaignAcademy doesn\'t exist'
+        logger.debug(message)
+        raise Exception(message)
+    
+    automation_id = ActiveCampaignAcademy.objects.filter(academy_id=academy_id).values_list(
+        'event_attendancy_automation__id', flat=True).first()
+
+    if automation_id:
+        add_to_active_campaign(contact, academy_id, automation_id)
+    else:
+        message = 'Automation doesn\'t exist'
+        logger.debug(message)
+        raise Exception(message)

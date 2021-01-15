@@ -82,7 +82,8 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
     def generate_models(self, language='', user=False, organization=False, academy=False,
             organizer=False, venue=False, event_type=False, event=False, event_checkin=False,
             event_ticket=False, authenticate=False, active_campaign_academy=False, in_miami=False,
-            eventbrite_event_id=0, attendee=False, automation=False, models={}):
+            eventbrite_event_id=0, attendee=False, automation=False,
+            with_event_attendancy_automation=False, models={}):
         """Generate models"""
         self.maxDiff = None
         models = models.copy()
@@ -128,6 +129,11 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
             }
 
             models['automation'] = mixer.blend('marketing.Automation', **kargs)
+
+        # cannot move it into active_campaign_academy scope because one circular reference
+        if with_event_attendancy_automation:
+            models['active_campaign_academy'].event_attendancy_automation = models['automation']
+            models['active_campaign_academy'].save()
 
         if not 'organization' in models and (organization or organizer or venue or event or
                 event_checkin or event_ticket):

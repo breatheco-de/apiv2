@@ -98,6 +98,7 @@ class Eventbrite:
 
         action = webhook.action
         api_url = webhook.api_url
+        organization_id = webhook.organization_id
 
         logger.debug(f"Executing => {action}")
         if hasattr(actions, action):
@@ -111,7 +112,7 @@ class Eventbrite:
             fn = getattr(actions, action)
 
             try:
-                fn(self, json)
+                fn(self, webhook, json)
                 logger.debug("Mark action as done")
                 webhook.status = 'DONE'
                 webhook.save()
@@ -165,9 +166,6 @@ class Eventbrite:
 
         if context_has_config_key and 'endpoint_url' in context['config']:
             webhook.endpoint_url = context['config']['endpoint_url']
-
-        # # prevent generate logs from invalid requests
-        # if context_has_config_key and context_has_api_url:
         
         webhook.organization_id = organization_id
         webhook.status = 'PENDING'

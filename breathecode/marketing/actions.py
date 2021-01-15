@@ -78,20 +78,18 @@ def get_lead_automations(ac_academy, form_entry):
     return automations.values_list('acp_id', flat=True)
 
 
-def add_to_active_campaign(contact):
-    # send to an active campaign hardcoded
-    # TODO: academy_id
-    # TODO: automation_id
-    academy_slug = 'downtown-miami'
-    ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=academy_slug).first()
+def add_to_active_campaign(contact, academy_id: int, automation_id: int):
+    if not ActiveCampaignAcademy.objects.filter(academy__id=academy_id).count():
+        raise Exception(f"No academy found with id {academy_id}")
 
-    if ac_academy is None:
-        raise Exception(f"No academy found with slug {academy_slug}")
+    active_campaign_academy_values = ['ac_url', 'ac_key', 'event_attendancy_automation__id']
+    ac_url, ac_key, event_attendancy_automation_id = ActiveCampaignAcademy.objects.filter(
+        academy__id=academy_id).values_list(*active_campaign_academy_values).first()
 
     logger.debug("ready to send contact with following details")
     logger.debug(contact)
 
-    old_client = AC_Old_Client(ac_academy.ac_url, ac_academy.ac_key)
+    old_client = AC_Old_Client(ac_url, ac_key)
     response = old_client.contacts.create_contact(contact)
     contact_id = response['subscriber_id']
 
@@ -99,15 +97,18 @@ def add_to_active_campaign(contact):
         logger.error("error adding contact", response)
         raise APIException('Could not save contact in CRM')
 
-    client = Client(ac_academy.ac_url, ac_academy.ac_key)
-    automation_name = 'Workshop Attendancy'
-    # TODO: check that automation exist for this academy
-    acp_id = (Automation.objects.filter(name=automation_name, ac_academy=ac_academy)
-        .values_list('acp_id', flat=True).first())
+    client = Client(ac_url, ac_key)
+
+    if event_attendancy_automation_id != automation_id:
+        message = 'Automation doesn\'t exist for this AC Academy'
+        logger.debug(message)
+        raise Exception(message)
+
+    acp_id = Automation.objects.filter(id=automation_id).values_list('acp_id', flat=True).first()
 
     if not acp_id:
-        message = f"The specified automation {automation_name} was not found for this AC Academy"
-        logger.error(message)
+        message = 'Automation acp_id doesn\'t exist'
+        logger.debug(message)
         raise Exception(message)
 
     data = {

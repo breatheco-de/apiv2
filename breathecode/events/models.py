@@ -24,9 +24,9 @@ class Organization(models.Model):
 
     def __str__(self):
         if self.name is not None:
-            return self.name + "("+ str(self.id) +")"
+            return self.name + "(" + str(self.id) + ")"
         else:
-            return "Organization "+str(self.id)
+            return "Organization " + str(self.id)
 
 class Organizer(models.Model):
     eventbrite_id = models.CharField(unique=True, max_length=30, blank=True)

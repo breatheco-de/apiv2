@@ -1,8 +1,8 @@
 import requests
 from requests.auth import HTTPBasicAuth
 
-class ActiveCampaignError(Exception):
-    pass
+# class ActiveCampaignError(Exception):
+#     pass
 
 class Contacts(object):
     def __init__(self, client):
@@ -156,12 +156,10 @@ class AC_Old_Client(object):
             return self._parse(data)
         else:
             print("Error when saving contact on AC", response.text)
-            # TODO: exception is not defined
-            raise exception.ActiveCampaignError("Error when saving contact on AC")
+            raise Exception("Error when saving contact on AC")
 
     def _parse(self, response):
         if response['result_code'] == 1:
             return response
         else:
-            # TODO: exception is not defined
-            raise exception.ActiveCampaignError(response["result_message"])
+            raise Exception(response["result_message"])
