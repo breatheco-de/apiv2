@@ -38,6 +38,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'github': {
                 'avatar_url': None,
                 'name': None,
+                'username': None,
             },
             'roles': [],
         })
