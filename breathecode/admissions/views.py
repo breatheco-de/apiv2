@@ -174,7 +174,7 @@ class CohortUserView(APIView):
             raise serializers.ValidationError('This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort as POSTPONED before cotinuing')
 
         role = request.data.get('role')
-        if role == 'TEACHER' and CohortUser.objects.filter(role=role, cohort_id=cohort_id).count():
+        if role == 'TEACHER' and CohortUser.objects.filter(role=role, cohort_id=cohort_id).exclude(user__id__in=[user_id]).count():
             raise serializers.ValidationError('There can only be one main instructor in a cohort')
 
         cohort_user = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id).first()
