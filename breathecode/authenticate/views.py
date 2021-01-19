@@ -29,7 +29,7 @@ from breathecode.utils import localize_query, capable_of, ValidationException
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
-    RoleSmallSerializer
+    RoleSmallSerializer, UserMeSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -206,19 +206,34 @@ def get_token_info(request, token):
         'user_id': token.user.pk
     })
 
-@api_view(['GET'])
-def get_users_me(request):
+class UserMeView(APIView):
+    def get(self, request, format=None):
 
-    logger.error("Get me just called")
-    try:
-        if isinstance(request.user, AnonymousUser):
-            raise PermissionDenied("There is not user")    
+        logger.error("Get me just called")
+        try:
+            if isinstance(request.user, AnonymousUser):
+                raise PermissionDenied("There is not user")    
 
-    except User.DoesNotExist:
-        raise PermissionDenied("You don't have a user")
+        except User.DoesNotExist:
+            raise PermissionDenied("You don't have a user")
 
-    users = UserSerializer(request.user)
-    return Response(users.data)
+        users = UserSerializer(request.user)
+        return Response(users.data)
+
+    def put(self, request):
+
+        try:
+            if isinstance(request.user, AnonymousUser):
+                raise PermissionDenied("There is not user")    
+
+        except User.DoesNotExist:
+            raise PermissionDenied("You don't have a user")
+
+        serializer = UserMeSerializer(request.user, data=request.data, context={ "request": request })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Create your views here.
 @api_view(['GET'])

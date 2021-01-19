@@ -15,6 +15,7 @@ from .serializers import (
 )
 from .models import Academy, City, CohortUser, Certificate, Cohort, Country, STUDENT, DELETED
 from breathecode.authenticate.models import ProfileAcademy
+from breathecode.authenticate.serializers import UserMeSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
@@ -59,19 +60,19 @@ def get_cohorts(request, id=None):
     serializer = GetCohortSerializer(items, many=True)
     return Response(serializer.data)
 
-@api_view(['GET'])
-def get_me(request):
+class UserMeView(APIView):
+    def get(self, request, format=None):
 
-    logger.error("Get me just called")
-    try:
-        if isinstance(request.user, AnonymousUser):
-            raise PermissionDenied("There is not user")    
+        logger.error("Get me just called")
+        try:
+            if isinstance(request.user, AnonymousUser):
+                raise PermissionDenied("There is not user")    
 
-    except User.DoesNotExist:
-        raise PermissionDenied("You don't have a user")
+        except User.DoesNotExist:
+            raise PermissionDenied("You don't have a user")
 
-    users = UserMeSerializer(request.user)
-    return Response(users.data)
+        users = UserMeSerializer(request.user)
+        return Response(users.data)
 
 # Create your views here.
 class AcademyView(APIView):

@@ -1,6 +1,6 @@
 import serpy, logging, random, os, urllib.parse
 from django.contrib.auth.models import User, Group
-from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite
+from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.notify.actions import send_email_message
@@ -92,10 +92,50 @@ class GroupSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
 
+
+
+
+#
+# CRUD SERIALIZERS BELOW
+#
+
+
 class StaffSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfileAcademy
         fields = ('user', 'role', 'academy','first_name', 'last_name', 'address', 'phone', 'status')
+
+class UserMeProfileSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Profile
+        exclude = ()
+        read_only_fields = ('user',)
+
+class UserMeSerializer(serializers.ModelSerializer):
+    profile = UserMeProfileSerializer()
+
+    class Meta:
+        model = User
+        exclude = ('is_active', 'is_staff', 'password', 'username')
+
+    # def create(self, validated_data):
+    def update(self, instance, validated_data):
+
+        profile_data = validated_data.pop('profile')
+
+        serializer = None
+        try:
+            serializer = UserMeProfileSerializer(self.instance.profile, data={ **profile_data, "user": self.instance.id })
+        except Profile.DoesNotExist:
+            serializer = UserMeProfileSerializer(data={ **profile_data, "user": self.instance.id })
+
+        if serializer and serializer.is_valid():
+            serializer.save()
+            return super().update(self.instance, validated_data)
+        else:
+            print(serializer.errors)
+            raise ValidationException("Error saving user profile")
 
 class MemberPOSTSerializer(serializers.ModelSerializer):
     invite = serializers.BooleanField(write_only=True, required=False)
