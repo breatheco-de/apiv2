@@ -80,9 +80,10 @@ class EventTypeAdmin(admin.ModelAdmin):
 # Register your models here.
 @admin.register(EventCheckin)
 class EventCheckinAdmin(admin.ModelAdmin):
-    list_display = ('event', 'attendee', 'created_at')
+    list_display = ('email', 'attendee', 'event', 'status', 'created_at')
 
 @admin.register(EventbriteWebhook)
 class EventbriteWebhookAdmin(admin.ModelAdmin):
     list_display = ('api_url', 'user_id', 'action', 'webhook_id',
-        'organization_id', 'endpoint_url', 'status', 'status_text')
+        'organization_id', 'endpoint_url', 'status', 'status_text',
+        'created_at')
