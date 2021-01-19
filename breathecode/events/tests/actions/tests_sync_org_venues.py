@@ -275,4 +275,3 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     #     self.assertEqual(self.count_token(), 1)
     #     self.check_email_contain_a_correct_token('es', academy, dicts, mock_mailgun, model)
     #     self.check_stack_contain_a_correct_token('es', academy, mock_slack, model)
-

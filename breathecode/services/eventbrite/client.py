@@ -25,7 +25,7 @@ class Eventbrite:
         #     "error_description": "You cannot both specify a venue and set online_event",
         #     "status_code": 400
         # }     
-        pass   
+        pass
 
     def request(self, _type, url, headers={}, query_string=None):
         # wonderful way to fix one poor mocking system
