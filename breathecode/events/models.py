@@ -24,9 +24,9 @@ class Organization(models.Model):
 
     def __str__(self):
         if self.name is not None:
-            return self.name + "("+ str(self.id) +")"
+            return self.name + "(" + str(self.id) + ")"
         else:
-            return "Organization "+str(self.id)
+            return "Organization " + str(self.id)
 
 class Organizer(models.Model):
     eventbrite_id = models.CharField(unique=True, max_length=30, blank=True)
@@ -35,7 +35,6 @@ class Organizer(models.Model):
     description = models.TextField(max_length=500, blank=True, null=True, default=None)
 
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE)
-    # academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -139,14 +138,46 @@ class Event(models.Model):
         else:
             return "Event "+str(self.id)
 
+PENDING = 'PENDING'
+DONE = 'DONE'
+CHECKIN_STATUS = (
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+)
 class EventCheckin(models.Model):
     email = models.EmailField(max_length=150)
 
-    attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True)
+    attendee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    status = models.CharField(max_length=9, choices=CHECKIN_STATUS, default=PENDING)
     
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
         return self.email
+
+# PENDING = 'PENDING'
+# DONE = 'DONE'
+# ERROR='ERROR'
+EVENTBRITE_WEBHOOK_STATUS = (
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+    (ERROR, 'Error'),
+)
+class EventbriteWebhook(models.Model):
+    api_url = models.CharField(max_length=255, blank=True, null=True, default=None)
+    user_id = models.CharField(max_length=20, blank=True, null=True, default=None)
+    action = models.CharField(max_length=15, blank=True, null=True, default=None)
+    webhook_id = models.CharField(max_length=20, blank=True, null=True, default=None)
+    organization_id = models.CharField(max_length=20, blank=True, null=True, default=None)
+    endpoint_url = models.CharField(max_length=255, blank=True, null=True, default=None)
+
+    status = models.CharField(max_length=9, choices=EVENTBRITE_WEBHOOK_STATUS, default=PENDING)
+    status_text = models.CharField(max_length=255, default=None, null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'Action {self.action} {self.status} => {self.api_url}'

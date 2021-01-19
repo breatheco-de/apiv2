@@ -5,3 +5,8 @@ services:
       image: "redis:alpine"
       ports:
       - "6379:6379"
+
+   breathecode:
+      image: "breathecode"
+      ports:
+      - "8000:8000"
