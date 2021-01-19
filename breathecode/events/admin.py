@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import HttpResponse
-from .models import Event, Venue, EventType, EventCheckin, Organization, Organizer
+from .models import Event, EventbriteWebhook, Venue, EventType, EventCheckin, Organization, Organizer
 from .actions import sync_org_venues, sync_org_events
 
 class ExportCsvMixin:
@@ -81,3 +81,8 @@ class EventTypeAdmin(admin.ModelAdmin):
 @admin.register(EventCheckin)
 class EventCheckinAdmin(admin.ModelAdmin):
     list_display = ('event', 'attendee', 'created_at')
+
+@admin.register(EventbriteWebhook)
+class EventbriteWebhookAdmin(admin.ModelAdmin):
+    list_display = ('api_url', 'user_id', 'action', 'webhook_id',
+        'organization_id', 'endpoint_url', 'status', 'status_text')
