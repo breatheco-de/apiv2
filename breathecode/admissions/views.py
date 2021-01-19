@@ -15,7 +15,6 @@ from .serializers import (
 )
 from .models import Academy, City, CohortUser, Certificate, Cohort, Country, STUDENT, DELETED
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.authenticate.serializers import UserMeSerializer
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
