@@ -70,6 +70,7 @@ class GithubSmallSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
     name = serpy.Field()
+    username = serpy.Field()
 
 class GetAcademySerializer(serpy.Serializer):
     id = serpy.Field()

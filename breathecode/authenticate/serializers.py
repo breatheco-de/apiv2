@@ -23,6 +23,7 @@ class GithubSmallSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
     name = serpy.Field()
+    username = serpy.Field()
 
 class AcademySerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -113,7 +114,7 @@ class UserMeProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ('user',)
 
 class UserMeSerializer(serializers.ModelSerializer):
-    profile = UserMeProfileSerializer()
+    profile = UserMeProfileSerializer(required=False)
 
     class Meta:
         model = User
@@ -122,20 +123,22 @@ class UserMeSerializer(serializers.ModelSerializer):
     # def create(self, validated_data):
     def update(self, instance, validated_data):
 
-        profile_data = validated_data.pop('profile')
+        profile_data = validated_data.pop('profile', None)
 
-        serializer = None
-        try:
-            serializer = UserMeProfileSerializer(self.instance.profile, data={ **profile_data, "user": self.instance.id })
-        except Profile.DoesNotExist:
-            serializer = UserMeProfileSerializer(data={ **profile_data, "user": self.instance.id })
+        if profile_data:
+            serializer = None
+            try:
+                serializer = UserMeProfileSerializer(self.instance.profile, data={ **profile_data, "user": self.instance.id })
+            except Profile.DoesNotExist:
+                serializer = UserMeProfileSerializer(data={ **profile_data, "user": self.instance.id })
 
-        if serializer and serializer.is_valid():
-            serializer.save()
-            return super().update(self.instance, validated_data)
-        else:
-            print(serializer.errors)
-            raise ValidationException("Error saving user profile")
+            if serializer and serializer.is_valid():
+                serializer.save()
+                print(serializer.errors)
+            else:
+                raise ValidationException("Error saving user profile")
+            
+        return super().update(self.instance, validated_data)
 
 class MemberPOSTSerializer(serializers.ModelSerializer):
     invite = serializers.BooleanField(write_only=True, required=False)
