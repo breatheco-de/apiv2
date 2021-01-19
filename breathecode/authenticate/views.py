@@ -17,7 +17,7 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
 from django.utils import timezone
-from .models import Profile, ProfileAcademy
+from .models import Profile, ProfileAcademy, Role
 from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
