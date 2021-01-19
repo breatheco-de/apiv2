@@ -254,6 +254,7 @@ CORS_ORIGIN_ALLOW_ALL = True
 
 CORS_ALLOW_HEADERS = [
     "accept",
+    "academy",
     "accept-encoding",
     "authorization",
     "content-type",
