@@ -3,9 +3,10 @@
 1. Install redis, postgress, python 3.8+ and node 14+
 2. Create enviroment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
 3. Make sure to get inside the environment: `pipenv shell`
-4. Run the migrations into your database `pipenv run migrate`
-5. Run the fixtures to add sample data: `pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json`
-6. Make sure you can login into the django admin, you can create a login user with `python manage.py createsuperuser`
+4. Install the dependencies including development packages: `pipenv install --dev`
+5. Run the migrations into your database `pipenv run migrate`
+6. Run the fixtures to add sample data: `pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json`
+7. Make sure you can login into the django admin, you can create a login user with `python manage.py createsuperuser`
 
 # Dumentation for BreatheCode API
 
@@ -20,7 +21,7 @@
 ## Run the tests
 
 ```bash
-pipenv run test ./breathecode/ --disable-pytest-warnings
+pipenv run test ./breathecode/
 ```
 
 ## Run coverage
