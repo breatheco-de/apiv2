@@ -344,6 +344,7 @@ def save_github_token(request):
                 github_id = github_user['id'],
                 user=user,
                 token = github_token,
+                username=github_user['login'],
                 email = github_user['email'],
                 avatar_url = github_user['avatar_url'],
                 name = github_user['name'],
