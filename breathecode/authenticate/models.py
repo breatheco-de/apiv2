@@ -115,6 +115,7 @@ class CredentialsGithub(models.Model):
     email = models.CharField(blank=False, unique=True, max_length=150)
     avatar_url = models.CharField(max_length=255, blank=True, null=True)
     name = models.CharField(max_length=150, blank=True, null=True)
+    username = models.CharField(max_length=35, blank=True, null=True)
     blog = models.CharField(max_length=150, blank=True, null=True)
     bio = models.CharField(max_length=255, blank=True, null=True)
     company = models.CharField(max_length=150, blank=True, null=True)

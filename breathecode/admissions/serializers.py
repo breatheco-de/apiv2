@@ -65,6 +65,13 @@ class GetSmallCertificateSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
 
+class GithubSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    avatar_url = serpy.Field()
+    name = serpy.Field()
+    username = serpy.Field()
+
 class GetAcademySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
