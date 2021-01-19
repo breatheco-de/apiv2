@@ -1,14 +1,15 @@
 """
 Certificate actions
 """
-import requests, os
+import requests, os, logging
 from urllib.parse import urlencode
 from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException
-from .models import UserSpecialty, LayoutDesign
+from .models import ERROR, PERSISTED, UserSpecialty, LayoutDesign
 from ..services.google_cloud import Storage
 
+logger = logging.getLogger(__name__)
 ENVIRONMENT = os.getenv('ENV', None)
 BUCKET_NAME = "certificates-breathecode"
 
@@ -21,6 +22,33 @@ strings = {
     }
 }
 
+def report_certificate_error(message: str, user, cohort, layout=None):
+    try:
+        uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
+        if uspe is None:
+            uspe = UserSpecialty(
+                user = user,
+                cohort = cohort,
+            )
+
+        uspe.specialty = cohort.certificate.specialty
+        uspe.academy = cohort.academy
+        uspe.status_text = message
+        uspe.status = ERROR
+        uspe.preview_url = None
+
+        if layout:
+            uspe.layout = layout
+        # uspe.is_cleaned = True
+
+        uspe.save()
+    except Exception as e:
+        logger.error('User Specialty should not be saved')
+        logger.error(str(e))
+
+    logger.error(message)
+    return Exception(message)
+
 def generate_certificate(user, cohort=None):
 
     cohort_user = CohortUser.objects.filter(user__id=user.id).first()
@@ -31,31 +59,39 @@ def generate_certificate(user, cohort=None):
         cohort = cohort_user.cohort
 
     if cohort is None:
-        raise ValidationException("Imposible to obtain the student cohort, maybe it has more than one or none assigned")
+        message = "Imposible to obtain the student cohort, maybe it has more than one or none assigned"
+        raise report_certificate_error(message, user, cohort)
 
     if tasks_count_pending:
-        raise ValidationException(f'The student have {tasks_count_pending} pending task')
+        message = f'The student have {tasks_count_pending} pending task'
+        raise report_certificate_error(message, user, cohort)
 
     if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status ==
         UP_TO_DATE):
-        raise ValidationException(f'The student finantial status must be fully paid: `{cohort_user.finantial_status}`')
+        message = f'Payment error, finantial_status=`{cohort_user.finantial_status}`'
+        raise report_certificate_error(message, user, cohort)
 
     if cohort.certificate is None:
-        raise ValidationException(f"The cohort has no certificate assigned, please set a certificate for cohort: {cohort.name}")
+        message = f"The cohort has no certificate assigned, please set a certificate for cohort: {cohort.name}"
+        raise report_certificate_error(message, user, cohort)
 
     if cohort.certificate.specialty is None:
-        raise ValidationException(f"Specialty has no certificate assigned, please set a certificate on the Specialty model: {cohort.certificate.name}")
+        message = f"Specialty has no certificate assigned, please set a certificate on the Specialty model: {cohort.certificate.name}"
+        raise report_certificate_error(message, user, cohort)
 
     if cohort.current_day != cohort.certificate.duration_in_days:
-        raise ValidationException(f"Cohort Current Day is not equal to certificate.duration_in_days ({cohort.certificate.duration_in_days})")
+        message = "cohort.current_day is not equal to certificate.duration_in_days"
+        raise report_certificate_error(message, user, cohort)
 
     layout = LayoutDesign.objects.filter(slug='default').first()
     if layout is None:
-        raise ValidationException("Missing a default layout")
+        message = "Missing a default layout"
+        raise report_certificate_error(message, user, cohort)
 
     main_teacher = CohortUser.objects.filter(cohort__id=cohort.id, role='TEACHER').first()
     if main_teacher is None or main_teacher.user is None:
-        raise ValidationException("This cohort does not have a main teacher, please assign it first")
+        message = "This cohort does not have a main teacher, please assign it first"
+        raise report_certificate_error(message, user, cohort, layout)
     else:
         main_teacher = main_teacher.user
 
@@ -71,6 +107,7 @@ def generate_certificate(user, cohort=None):
     uspe.layout = layout
     uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
     uspe.signed_by_role = strings[cohort.language]["Main Instructor"]
+    uspe.status = PERSISTED
     uspe.save()
 
     return uspe

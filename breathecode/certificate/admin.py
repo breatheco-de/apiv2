@@ -1,7 +1,6 @@
 import logging, requests, base64, re, json, csv
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from django.contrib import messages
 from django.utils.html import format_html
 from breathecode.admissions.admin import CohortAdmin
 from .models import Badge, Specialty, UserSpecialty, UserProxy, LayoutDesign, CohortProxy
@@ -42,6 +41,8 @@ class LayoutDesignAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name')
 
 def screenshot(modeladmin, request, queryset):
+    from django.contrib import messages
+
     certificate_ids = queryset.values_list('id', flat=True)
     for cert_id in certificate_ids:
         reset_screenshot.delay(cert_id)
@@ -49,6 +50,8 @@ def screenshot(modeladmin, request, queryset):
 screenshot.short_description = "🔄 RETAKE Screenshot"
 
 def delete_screenshot(modeladmin, request, queryset):
+    from django.contrib import messages
+    
     certificate_ids = queryset.values_list('id', flat=True)
     for cert_id in certificate_ids:
         remove_screenshot.delay(cert_id)
@@ -86,6 +89,7 @@ class UserSpecialtyAdmin(admin.ModelAdmin):
         return ['token', 'expires_at']
 
 def user_bulk_certificate(modeladmin, request, queryset):
+    from django.contrib import messages
 
     users = queryset.all()
     try:
@@ -106,6 +110,7 @@ class UserAdmin(UserAdmin):
     actions = [user_bulk_certificate]
 
 def cohort_bulk_certificate(modeladmin, request, queryset):
+    from django.contrib import messages
 
     cohort_ids = queryset.values_list('id', flat=True)
     for _id in cohort_ids:

@@ -1,3 +1,4 @@
+from breathecode.authenticate.models import Token
 from .models import Answer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -5,10 +6,12 @@ import serpy
 from django.utils import timezone
 
 class GetAcademySerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
 
 class GetCohortSerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
 
@@ -19,8 +22,10 @@ class UserSerializer(serpy.Serializer):
 
 class EventTypeSmallSerializer(serpy.Serializer):
     id = serpy.Field()
-    slug = serpy.Field()
-    name = serpy.Field()
+    description = serpy.Field()
+    exerpt = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
 
 class AnswerSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -42,7 +47,7 @@ class AnswerSerializer(serpy.Serializer):
 class AnswerPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
-        exclude = ()
+        exclude = ('token',)
 
     def validate(self, data):
         utc_now = timezone.now()
@@ -55,20 +60,20 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
         if answer.status == 'ANSWERED':
             raise ValidationError('You have already voted')
 
-        if int(data['score']) > 10 or int(data['score']) < 1:
+        if not 'score' in data or int(data['score']) > 10 or int(data['score']) < 1:
             raise ValidationError('Score must be between 1 and 10')
 
         return data
 
-    # def create(self, validated_data):
     def update(self, instance, validated_data):
-
         instance.score = validated_data['score']
         instance.status = 'ANSWERED'
-        print(validated_data)
+        # instance.token = None
+
         if 'comment' in validated_data:
             instance.comment = validated_data['comment']
-        instance.save()
-        return instance
 
-        
+        instance.save()
+        Token.objects.filter(key=self.context['request'].auth).delete()
+
+        return instance
