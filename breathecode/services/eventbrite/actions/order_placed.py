@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 logger = logging.getLogger(__name__)
 
 
-def placed(self, webhook, payload: dict):
+def order_placed(self, webhook, payload: dict):
     # prevent circular dependency import between thousand modules previuosly loaded and cached
     from breathecode.marketing.actions import add_to_active_campaign
     from breathecode.events.models import EventCheckin, Event
