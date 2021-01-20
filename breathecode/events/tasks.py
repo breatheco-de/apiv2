@@ -26,27 +26,27 @@ def persist_organization_events(self,args):
 def async_eventbrite_webhook(self, eventbrite_webhook_id):
     status = 'ok'
 
-    organization_id = (EventbriteWebhook.objects.filter(id=eventbrite_webhook_id)
-        .values_list('organization_id', flat=True).first())
-
-    print('============================================================================')
-    print(EventbriteWebhook.objects.filter())
-    print(organization_id)
-
-    if not organization_id:
-        raise Exception("Invalid organization_id")
-
+    webhook = EventbriteWebhook.objects.filter(id=eventbrite_webhook_id).first()
+    organization_id = webhook.organization_id 
     organization = Organization.objects.filter(id=organization_id).first()
+    
+    if organization:
+        try:
+            client = Eventbrite(organization.eventbrite_key)
+            client.execute_action(eventbrite_webhook_id)
+        except Exception as e:
+            logger.debug(f'Eventbrite exception')
+            logger.debug(str(e))
+            status = 'error'
 
-    if not organization:
-        raise Exception("Organization doesn't exist")
+    else:
+        message = "Organization doesn\'t exist"
 
-    try:
-        client = Eventbrite(organization.eventbrite_key)
-        client.execute_action(eventbrite_webhook_id)
-    except Exception as e:
-        logger.debug(f'Eventbrite exception')
-        logger.debug(str(e))
+        webhook.status = 'ERROR'
+        webhook.status_text = message
+        webhook.save()
+
+        logger.debug(message)
         status = 'error'
 
     logger.debug(f'Eventbrite status: {status}')
