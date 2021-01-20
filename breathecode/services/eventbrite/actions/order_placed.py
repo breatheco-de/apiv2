@@ -31,8 +31,13 @@ def order_placed(self, webhook, payload: dict):
         logger.debug(message)
         raise Exception(message)
 
-    # local_attendee = User.objects.filter(email=attendee_profile['email']).first()
-    local_attendee = None
+    try:
+        attendees = payload['attendees']
+        attendee_profile = attendees[0]['profile']
+        local_attendee = User.objects.filter(email=attendee_profile['email']).first()
+
+    except Exception:
+        local_attendee = None
 
     if not EventCheckin.objects.filter(email=payload['email'], event=local_event).count():
         EventCheckin(email=payload['email'], status='PENDING', event=local_event,
