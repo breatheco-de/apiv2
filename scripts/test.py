@@ -14,4 +14,5 @@ if __name__ == '__main__':
         args = ' '.join(sys.argv)
 
     test_environment()
-    os.system(f'pytest {args} --disable-pytest-warnings')
+    exit_code = os.system(f'pytest {args} --disable-pytest-warnings')
+    sys.exit(exit_code)
