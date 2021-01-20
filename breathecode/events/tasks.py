@@ -29,6 +29,10 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
     organization_id = (EventbriteWebhook.objects.filter(id=eventbrite_webhook_id)
         .values_list('organization_id', flat=True).first())
 
+    print('============================================================================')
+    print(EventbriteWebhook.objects.filter())
+    print(organization_id)
+
     if not organization_id:
         raise Exception("Invalid organization_id")
 

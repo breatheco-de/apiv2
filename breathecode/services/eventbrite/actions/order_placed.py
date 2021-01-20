@@ -20,11 +20,9 @@ def order_placed(self, webhook, payload: dict):
         logger.debug(message)
         raise Exception(message)
 
-    print(payload)
+    # print(payload)
 
     event_id = payload['event_id']
-    # attendees = payload['attendees']
-    # attendee_profile = attendees[0]['profile']
 
     local_event = Event.objects.filter(eventbrite_id=event_id).first()
 
