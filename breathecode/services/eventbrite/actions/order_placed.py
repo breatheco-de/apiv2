@@ -33,9 +33,17 @@ def order_placed(self, webhook, payload: dict):
 
     local_attendee = User.objects.filter(email=payload['email']).first()
 
-    if not EventCheckin.objects.filter(email=payload['email'], event=local_event).count():
+    if not EventCheckin.objects.filter(email=payload['email'],
+            event=local_event).count():
         EventCheckin(email=payload['email'], status='PENDING', event=local_event,
             attendee=local_attendee).save()
+
+    elif not EventCheckin.objects.filter(email=payload['email'],
+            event=local_event, attendee=local_attendee).count():
+        event_checkin = EventCheckin.objects.filter(email=payload['email'],
+            event=local_event)
+        event_checkin.attendee = local_attendee
+        event_checkin.save()
 
     contact = {
         'email': payload['email'],
