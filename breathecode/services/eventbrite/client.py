@@ -104,9 +104,6 @@ class Eventbrite:
         logger.debug(f"Executing => {action}")
         if hasattr(actions, action):
             response = requests.get(api_url, headers=self.headers)
-            print('self.headers')
-            print(self.headers)
-            print(response.status_code)
             json = response.json()
 
             # logger.debug("Eventbrite response")
@@ -125,8 +122,8 @@ class Eventbrite:
                 logger.debug("Mark action with error")
 
                 # stack trace
-                import traceback
-                print(traceback.print_exc())
+                # import traceback
+                # print(traceback.print_exc())
 
                 webhook.status = 'ERROR'
                 webhook.status_text = str(e)
