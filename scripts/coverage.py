@@ -1,7 +1,9 @@
 #!/bin/env python
 
-import os, sys
+import os
+import sys
 from pathlib import Path
+from utils.environment import test_environment
 
 
 def python_module_to_dir(module: str) -> str:
@@ -19,14 +21,17 @@ def help_command():
     exit()
 
 
-module = 'breathecode'
+if __name__ == '__main__':
+    module = 'breathecode'
 
-if len(sys.argv) > 1:
-    module = sys.argv[1]
+    if len(sys.argv) > 1:
+        module = sys.argv[1]
 
-    if module == '--help' or module == '-h':
-        help_command()
+        if module == '--help' or module == '-h':
+            help_command()
 
-dir = python_module_to_dir(module)
+    dir = python_module_to_dir(module)
 
-os.system(f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report html')
+    test_environment()
+
+    os.system(f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report html')

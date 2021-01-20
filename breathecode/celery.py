@@ -10,7 +10,7 @@ REDIS_URL = os.getenv('REDIS_URL',None)
 
 app = Celery('celery_breathecode')
 
-if os.getenv('CELERY_DISABLE_SCHEDULER'):
+if os.getenv('ENV') == 'test':
     app.conf.update(task_always_eager=True)
 
 # Using a string here means the worker doesn't have to serialize
