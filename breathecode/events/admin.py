@@ -45,12 +45,12 @@ def pull_eventbrite_events(modeladmin, request, queryset):
         # messages.error(request,f"There was an error retriving the venues {str(e)}")
 
 @admin.register(Organization)
-class OrgAdmin(admin.ModelAdmin):
+class OrganizationAdmin(admin.ModelAdmin):
     list_display = ('name', 'academy', 'eventbrite_id')
     actions = [pull_eventbrite_venues, pull_eventbrite_events]
 
 @admin.register(Organizer)
-class OrgAdmin(admin.ModelAdmin):
+class OrganizerAdmin(admin.ModelAdmin):
     list_display = ('name', 'academy', 'eventbrite_id', 'organization')
     actions = []
 

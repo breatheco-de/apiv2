@@ -20,18 +20,21 @@ def placed(self, webhook, payload: dict):
         logger.debug(message)
         raise Exception(message)
 
-    event = payload['event']
-    attendees = payload['attendees']
-    attendee_profile = attendees[0]['profile']
+    print(payload)
 
-    local_event = Event.objects.filter(eventbrite_id=event['id']).first()
+    event_id = payload['event_id']
+    # attendees = payload['attendees']
+    # attendee_profile = attendees[0]['profile']
+
+    local_event = Event.objects.filter(eventbrite_id=event_id).first()
 
     if not local_event:
         message = 'event doesn\'t exist'
         logger.debug(message)
         raise Exception(message)
 
-    local_attendee = User.objects.filter(email=attendee_profile['email']).first()
+    # local_attendee = User.objects.filter(email=attendee_profile['email']).first()
+    local_attendee = None
 
     if not EventCheckin.objects.filter(email=payload['email'], event=local_event).count():
         EventCheckin(email=payload['email'], status='PENDING', event=local_event,
