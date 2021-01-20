@@ -35,4 +35,7 @@ if __name__ == '__main__':
     test_environment()
 
     exit_code = os.system(f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report html')
-    sys.exit(exit_code)
+
+    # python don't return 256
+    if exit_code:
+        sys.exit(1)
