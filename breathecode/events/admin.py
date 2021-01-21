@@ -45,12 +45,12 @@ def pull_eventbrite_events(modeladmin, request, queryset):
         # messages.error(request,f"There was an error retriving the venues {str(e)}")
 
 @admin.register(Organization)
-class OrgAdmin(admin.ModelAdmin):
+class OrganizationAdmin(admin.ModelAdmin):
     list_display = ('name', 'academy', 'eventbrite_id')
     actions = [pull_eventbrite_venues, pull_eventbrite_events]
 
 @admin.register(Organizer)
-class OrgAdmin(admin.ModelAdmin):
+class OrganizerAdmin(admin.ModelAdmin):
     list_display = ('name', 'academy', 'eventbrite_id', 'organization')
     actions = []
 
@@ -80,10 +80,10 @@ class EventTypeAdmin(admin.ModelAdmin):
 # Register your models here.
 @admin.register(EventCheckin)
 class EventCheckinAdmin(admin.ModelAdmin):
-    list_display = ('event', 'attendee', 'created_at')
+    list_display = ('email', 'attendee', 'event', 'status', 'created_at')
 
-
-# Register your models here.
 @admin.register(EventbriteWebhook)
 class EventbriteWebhookAdmin(admin.ModelAdmin):
-    list_display = ('api_url', 'action', 'status')
+    list_display = ('api_url', 'user_id', 'action', 'webhook_id',
+        'organization_id', 'endpoint_url', 'status', 'status_text',
+        'created_at')

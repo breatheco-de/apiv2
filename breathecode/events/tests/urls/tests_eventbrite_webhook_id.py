@@ -11,7 +11,6 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
     EVENTBRITE_PATH,
-    EVENTBRITE_INSTANCES,
     apply_eventbrite_requests_post_mock,
     EVENTBRITE_ORDER_URL,
     OLD_BREATHECODE_PATH,
@@ -47,21 +46,21 @@ class EventbriteWebhookTestSuite(EventTestCase):
         """Test /eventbrite/webhook without auth"""
         # self.generate_models(authenticate=True)
         url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
-        response = self.client.post(url, self.data('placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('placed'), format='json')
+        response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
+            headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_event_checkin_dict(), [])
         self.assertEqual(self.all_eventbrite_webhook_dict(), [{
-            'action': 'placed',
+            'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
             'organization_id': '1',
             'status': 'ERROR',
-            'status_text': 'Cannot get academy_id or organization doesn\'t exist',
+            'status_text': 'Organization doesn\'t exist',
             'user_id': '123456789012',
             'webhook_id': '1234567'
         }])
@@ -75,15 +74,15 @@ class EventbriteWebhookTestSuite(EventTestCase):
         # self.generate_models(authenticate=True)
         self.generate_models(organization=True)
         url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
-        response = self.client.post(url, self.data('placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('placed'), format='json')
+        response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
+            headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_event_checkin_dict(), [])
         self.assertEqual(self.all_eventbrite_webhook_dict(), [{
-            'action': 'placed',
+            'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
@@ -102,15 +101,15 @@ class EventbriteWebhookTestSuite(EventTestCase):
         """Test /eventbrite/webhook without auth"""
         self.generate_models(organization=True, event=True, eventbrite_event_id=1, attendee=True)
         url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
-        response = self.client.post(url, self.data('placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('placed'), format='json')
+        response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
+            headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.all_eventbrite_webhook_dict(), [{
-            'action': 'placed',
+            'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
@@ -122,7 +121,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         }])
 
         self.assertEqual(self.all_event_checkin_dict(), [{
-            'attendee_id': 2,
+            'attendee_id': 1,
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
@@ -139,14 +138,14 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.generate_models(organization=True, event=True, eventbrite_event_id=1, attendee=True,
             active_campaign_academy=True, in_miami=True)
         url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
-        response = self.client.post(url, self.data('placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('placed'), format='json')
+        response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
+            headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_eventbrite_webhook_dict(), [{
-            'action': 'placed',
+            'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
@@ -158,7 +157,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         }])
 
         self.assertEqual(self.all_event_checkin_dict(), [{
-            'attendee_id': 2,
+            'attendee_id': 1,
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
@@ -175,15 +174,15 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.generate_models(organization=True, event=True, eventbrite_event_id=1, attendee=True,
             active_campaign_academy=True, in_miami=True, automation=True, with_event_attendancy_automation=True)
         url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
-        response = self.client.post(url, self.data('placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('placed'), format='json')
+        response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
+            headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.all_eventbrite_webhook_dict(), [{
-            'action': 'placed',
+            'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
@@ -195,7 +194,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         }])
 
         self.assertEqual(self.all_event_checkin_dict(), [{
-            'attendee_id': 2,
+            'attendee_id': 1,
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,

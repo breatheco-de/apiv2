@@ -96,7 +96,8 @@ class Eventbrite:
         if not webhook.api_url:
             raise Exception("Imposible to determine api url")
 
-        action = webhook.action
+
+        action = webhook.action.replace('.', '_')
         api_url = webhook.api_url
         organization_id = webhook.organization_id
 
