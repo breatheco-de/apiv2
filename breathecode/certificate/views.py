@@ -105,6 +105,18 @@ class CertificateCohortView(APIView):
 
         return Response(certificates, status=status.HTTP_201_CREATED)
 
+class CertificateAcademyView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('read_certificate')
+    def get(self, request):
+        # print(request.headers['Academy'])
+        cert = UserSpecialty.objects.filter(cohort__academy__id=request.headers['Academy'])
+        serializer = UserSpecialtySerializer(cert, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 # class SyllabusView(APIView):
 #     """
 #     List all snippets, or create a new snippet.

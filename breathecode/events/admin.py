@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.http import HttpResponse
-from .models import Event, EventbriteWebhook, Venue, EventType, EventCheckin, Organization, Organizer
+from .models import Event, Venue, EventType, EventCheckin, Organization, Organizer, EventbriteWebhook
 from .actions import sync_org_venues, sync_org_events
 
 class ExportCsvMixin:

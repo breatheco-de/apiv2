@@ -267,6 +267,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.post(url, data)
         json = response.json()
+        
+        # TODO: If you update the main teacher if should not give this error, only when you POST.
         expected = {
             'status_code': 500,
             'details': 'There can only be one main instructor in a cohort',
