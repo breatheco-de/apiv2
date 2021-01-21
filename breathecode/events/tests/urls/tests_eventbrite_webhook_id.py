@@ -11,7 +11,6 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
     EVENTBRITE_PATH,
-    EVENTBRITE_INSTANCES,
     apply_eventbrite_requests_post_mock,
     EVENTBRITE_ORDER_URL,
     OLD_BREATHECODE_PATH,
@@ -122,7 +121,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         }])
 
         self.assertEqual(self.all_event_checkin_dict(), [{
-            'attendee_id': 2,
+            'attendee_id': 1,
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
@@ -158,7 +157,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         }])
 
         self.assertEqual(self.all_event_checkin_dict(), [{
-            'attendee_id': 2,
+            'attendee_id': 1,
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
@@ -195,7 +194,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         }])
 
         self.assertEqual(self.all_event_checkin_dict(), [{
-            'attendee_id': 2,
+            'attendee_id': 1,
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
