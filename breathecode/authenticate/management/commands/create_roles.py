@@ -15,9 +15,12 @@ class Command(BaseCommand):
             { "slug": "read_member", "description": "Read academy staff member information" },
             { "slug": "crud_student", "description": "Create, update or delete students" },
             { "slug": "read_student", "description": "Read student information" },
+            { "slug": "read_assignment", "description": "Read assigment information" },
             { "slug": "crud_assignment", "description": "Update assignments" },
             { "slug": "read_certificate", "description": "List and read all academy certificates" },
             { "slug": "crud_certificate", "description": "Create, update or delete student certificates" },
+            { "slug": "read_syllabus", "description": "List and read syllabus information" },
+            { "slug": "crud_syllabus", "description": "Create, update or delete syllabus versions" },
         ]
 
         for c in caps:
@@ -31,11 +34,15 @@ class Command(BaseCommand):
 
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
-            { "slug": "student", "name": "Student", "caps": ["crud_assignment"] },
-            { "slug": "teacher", "name": "Teacher", "caps": ["crud_assignment"] },
-            { "slug": "assistant", "name": "Teacher Assistant", "caps": ["crud_assignment"] },
+            { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment"] },
+            { "slug": "teacher", "name": "Teacher", "caps": ["crud_assignment", "read_syllabus","read_assignment"] },
+            { "slug": "assistant", "name": "Teacher Assistant", "caps": ["read_assigment, crud_assignment"] },
             { "slug": "career_support", "name": "Career Support Specialist", "caps": ["read_certificate", "crud_certificate"] },
         ]
+
+        teacher = next(item for item in roles if item["slug"] == "teacher")
+        #                                                                               inherit all the caps from the teacher role
+        roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": teacher["caps"] + ["crud_syllabus"] })
 
         for r in roles:
             _r = Role.objects.filter(slug=r["slug"]).first()

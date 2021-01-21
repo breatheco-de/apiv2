@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status, serializers
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
+from breathecode.utils import capable_of
 
 @api_view(['GET'])
 def get_courses(request):
@@ -43,6 +44,8 @@ class SyllabusView(APIView):
 
         serializer = SyllabusGetSerializer(syl, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('crud_syllabus')
     def post(self, request, course_slug=None):
         version = 1
         course = Course.objects.filter(slug=course_slug).first()
@@ -60,6 +63,7 @@ class SyllabusView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @capable_of('crud_syllabus')
     def put(self, request, course_slug=None, version=None):
         if version is None:
             raise serializers.ValidationError("Missing syllabus version", code=400)

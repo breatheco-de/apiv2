@@ -30,6 +30,7 @@ ENV PATH="$PATH:$HOME/.pg_ctl/bin"
 ENV PGHOSTADDR="127.0.0.1"
 ENV PGDATABASE="postgres"
 
+RUN pyenv update && pyenv install 3.9.1 && pyenv global 3.9.1
 RUN pip install pipenv
 
 # This is a bit of a hack. At the moment we have no means of starting background

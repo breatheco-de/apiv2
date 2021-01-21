@@ -30,7 +30,7 @@ class Profile(models.Model):
     blog = models.CharField(max_length=150, blank=True, null=True)
 
 class Capability(models.Model):
-    slug = models.SlugField(max_length=25, primary_key=True)
+    slug = models.SlugField(max_length=40, primary_key=True)
     description = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     def __str__(self):

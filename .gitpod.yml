@@ -8,17 +8,17 @@ ports:
 
 # List the start up tasks. You can start them in parallel in multiple terminals. See https://www.gitpod.io/docs/config-start-tasks/
 tasks:
-    - command: >
-        pipenv install;
-        psql -U gitpod -c 'CREATE DATABASE breathecode;' &&
-        psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode &&
-        (cp -n .env.example .env || true) && 
-        pipenv run migrate && 
-        pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
-        pipenv run start
-    - command: >
-        npm i -g heroku;
-        redis-server;
+  - command: >
+      npm i -g heroku;
+      redis-server;
+  - command: >
+      pipenv install;
+      psql -U gitpod -c 'CREATE DATABASE breathecode;' &&
+      psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode &&
+      (cp -n .env.example .env || true) && 
+      pipenv run migrate && 
+      pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
+      pipenv run start
 
 
 # Other commands
