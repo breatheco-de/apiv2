@@ -90,15 +90,14 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
 
         if not 'user' in models and (user or event or event_checkin or event_ticket or
                 authenticate):
-            models['user'] = mixer.blend('auth.User')
+            kargs = {}
 
-        if not 'attendee' in models and attendee:
-            kargs = {
-                'email': 'jhon.smith@example.com',
-                'first_name': 'John',
-                'last_name': 'Smith',
-            }
-            models['attendee'] = mixer.blend('auth.User', **kargs)
+            if attendee:
+                kargs['email'] = 'john.smith@example.com'
+                kargs['first_name'] = 'John'
+                kargs['last_name'] = 'Smith'
+
+            models['user'] = mixer.blend('auth.User', **kargs)
 
         if authenticate:
             self.client.force_authenticate(user=models['user'])

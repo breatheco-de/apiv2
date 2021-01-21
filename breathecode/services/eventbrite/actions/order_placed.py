@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 logger = logging.getLogger(__name__)
 
 
-def placed(self, webhook, payload: dict):
+def order_placed(self, webhook, payload: dict):
     # prevent circular dependency import between thousand modules previuosly loaded and cached
     from breathecode.marketing.actions import add_to_active_campaign
     from breathecode.events.models import EventCheckin, Event
@@ -20,22 +20,30 @@ def placed(self, webhook, payload: dict):
         logger.debug(message)
         raise Exception(message)
 
-    event = payload['event']
-    attendees = payload['attendees']
-    attendee_profile = attendees[0]['profile']
+    # print(payload)
 
-    local_event = Event.objects.filter(eventbrite_id=event['id']).first()
+    event_id = payload['event_id']
+
+    local_event = Event.objects.filter(eventbrite_id=event_id).first()
 
     if not local_event:
         message = 'event doesn\'t exist'
         logger.debug(message)
         raise Exception(message)
 
-    local_attendee = User.objects.filter(email=attendee_profile['email']).first()
+    local_attendee = User.objects.filter(email=payload['email']).first()
 
-    if not EventCheckin.objects.filter(email=payload['email'], event=local_event).count():
+    if not EventCheckin.objects.filter(email=payload['email'],
+            event=local_event).count():
         EventCheckin(email=payload['email'], status='PENDING', event=local_event,
             attendee=local_attendee).save()
+
+    elif not EventCheckin.objects.filter(email=payload['email'],
+            event=local_event, attendee=local_attendee).count():
+        event_checkin = EventCheckin.objects.filter(email=payload['email'],
+            event=local_event).first()
+        event_checkin.attendee = local_attendee
+        event_checkin.save()
 
     contact = {
         'email': payload['email'],

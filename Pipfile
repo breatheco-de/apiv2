@@ -43,11 +43,12 @@ python_version = "3.9"
 
 [scripts]
 dev="heroku local"
+test="python ./scripts/test.py"
 coverage="python ./scripts/coverage.py"
+docker_build="bash ./scripts/docker-build.sh"
 lint="pylint ./breathecode --load-plugins pylint_django"
 start="python manage.py runserver"
 migrate="python manage.py migrate"
 makemigrations="python manage.py makemigrations"
-test="pytest --disable-pytest-warnings"
 sync_active_campaign="python manage.py sync_with_active_campaign"
 delete_duplicates="python manage.py delete_duplicates"
