@@ -37,6 +37,7 @@ redis = "*"
 eventbrite = "*"
 rollbar = "*"
 pillow = "*"
+django-redis-cache = "*"
 
 [requires]
 python_version = "3.9"

@@ -97,16 +97,24 @@ class AuthTestCase(APITestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def generate_models(self, authenticate=False, user=False, academy=False,
             profile_academy=False, role='', capability='',
-            profile_academy_status='', models={}):
+            profile_academy_status='', credentials_github=False, models={}):
         """Generate models"""
         # TODO: rewrite authenticate tests to use generate_models
         self.maxDiff = None
         models = models.copy()
 
-        if not 'user' in models and (user or authenticate or profile_academy):
+        if not 'user' in models and (user or authenticate or profile_academy or
+                credentials_github):
             models['user'] = mixer.blend('auth.User')
             models['user'].set_password(self.password)
             models['user'].save()
+
+        if not 'credentials_github' in models and credentials_github:
+            kargs = {
+                'user': models['user']
+            }
+
+            models['credentials_github'] = mixer.blend('authenticate.CredentialsGithub', **kargs)
 
         if authenticate:
             self.client.force_authenticate(user=models['user'])

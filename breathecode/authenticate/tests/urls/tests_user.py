@@ -29,16 +29,12 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.client.force_authenticate(user=self.user)
         response = self.client.get(url)
+        json = response.json()
 
-        users = response.data
-        id = users[0]['id']
-        email = users[0]['email']
-        first_name = users[0]['first_name']
-        last_name = users[0]['last_name']
-
-        self.assertEqual(1, len(users))
-        self.assertEqual(4, len(users[0]))
-        self.assertEqual(id, self.user.id)
-        self.assertEqual(email, self.user.email)
-        self.assertEqual(first_name, self.user.first_name)
-        self.assertEqual(last_name, self.user.last_name)
+        self.assertEqual(json, [{
+            'id': self.user.id,
+            'email': self.user.email,
+            'first_name': self.user.first_name,
+            'last_name': self.user.last_name,
+            'github': {'avatar_url': None, 'name': None, 'username': None},
+        }])
