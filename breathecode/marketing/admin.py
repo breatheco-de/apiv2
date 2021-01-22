@@ -63,8 +63,18 @@ def sync_ac_automations(modeladmin, request, queryset):
         messages.error(request, message=str(e))
 sync_ac_automations.short_description = "♼ Sync AC Automations"
 
+class CustomForm(forms.ModelForm):
+    class Meta:
+        model = ActiveCampaignAcademy
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super(CustomForm, self).__init__(*args, **kwargs)
+        self.fields['event_attendancy_automation'].queryset = Automation.objects.filter(ac_academy=self.instance.id)# or something else
+
 @admin.register(ActiveCampaignAcademy)
 class ACAcademyAdmin(admin.ModelAdmin, ExportCsvMixin):
+    form = CustomForm
     search_fields = ['academy__name', 'academy__slug']
     list_display = ('id', 'academy', 'ac_url', 'sync_status', 'last_interaction_at', 'sync_message')
     list_filter = ['academy__slug','sync_status']
