@@ -36,5 +36,5 @@ sync_with_github.short_description = "Sync from Github"
 
 @admin.register(Syllabus)
 class SyllabusAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'version')
+    list_display = ('slug', 'academy_owner', 'version')
     actions = [sync_with_github]
