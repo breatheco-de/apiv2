@@ -12,16 +12,14 @@ def order_placed(self, webhook, payload: dict):
     from breathecode.events.models import Organization
     from breathecode.marketing.models import ActiveCampaignAcademy
 
-    academy_id = Organization.objects.filter(id=webhook.organization_id).values_list('academy__id',
-        flat=True).first()
+    org = Organization.objects.filter(id=webhook.organization_id).first()
 
-    if not academy_id:
-        message = 'Cannot get academy_id or organization doesn\'t exist'
+    if org is None:
+        message = 'Organization doesn\'t exist'
         logger.debug(message)
         raise Exception(message)
 
-    # print(payload)
-
+    academy_id = org.academy.id
     event_id = payload['event_id']
 
     local_event = Event.objects.filter(eventbrite_id=event_id).first()
@@ -49,15 +47,15 @@ def order_placed(self, webhook, payload: dict):
         'email': payload['email'],
         'first_name': payload['first_name'],
         'last_name': payload['last_name'],
-        'academy': academy_id,
+        'academy': org.academy.slug,
     }
 
-    if not ActiveCampaignAcademy.objects.filter(academy_id=academy_id).count():
+    if not ActiveCampaignAcademy.objects.filter(academy__id=academy_id).count():
         message = 'ActiveCampaignAcademy doesn\'t exist'
         logger.debug(message)
         raise Exception(message)
     
-    automation_id = ActiveCampaignAcademy.objects.filter(academy_id=academy_id).values_list(
+    automation_id = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).values_list(
         'event_attendancy_automation__id', flat=True).first()
 
     if automation_id:
