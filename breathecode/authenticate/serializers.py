@@ -222,6 +222,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
             params = { "callback": "https://admin.breatheco.de" }
             querystr = urllib.parse.urlencode(params)
+            # TODO: obj is not defined
             url = os.getenv('API_URL') + "/v1/auth/user/invite/" + str(obj.token) + "?" + querystr
 
             send_email_message("welcome_academy", email, {
