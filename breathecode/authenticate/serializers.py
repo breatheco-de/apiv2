@@ -59,6 +59,9 @@ class UserSmallSerializer(serpy.Serializer):
 class GETProfileAcademy(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
     user = UserSmallSerializer(required=False)
     academy = AcademySmallSerializer()
     role = RoleSmallSerializer()

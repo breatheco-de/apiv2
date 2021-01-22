@@ -244,7 +244,6 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
             models['user'].save()
 
         if credentials_slack:
-            # models['owner_user'] = mixer.blend('auth.User')
             models['credentials_slack'] = mixer.blend('authenticate.CredentialsSlack',
                 user=models['user'])
 

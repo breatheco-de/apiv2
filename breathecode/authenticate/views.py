@@ -65,19 +65,30 @@ class LogoutView(APIView):
 class MemberView(APIView):
 
     @capable_of('read_member')
-    def get(self, request, academy_id):
-        items = ProfileAcademy.objects.filter(academy__id=academy_id)
+    def get(self, request, academy_id, user_id=None):
+        is_many = bool(not user_id)
+        kwargs = {
+            'academy__id': academy_id
+        }
+
+        if user_id:
+            kwargs['user__id'] = user_id
+
+        items = ProfileAcademy.objects.filter(**kwargs)
         items = localize_query(items, request) # only form this academy
 
         roles = request.GET.get('roles', None)
-        if roles is not None:
+        if is_many and roles is not None:
             items = items.filter(role__in=roles.split(","))
 
         status = request.GET.get('status', None)
-        if status is not None:
+        if is_many and status is not None:
             items = items.filter(status__iexact=status)
 
-        serializer = GETProfileAcademy(items, many=True)
+        if not is_many:
+            items = items.first()
+
+        serializer = GETProfileAcademy(items, many=is_many)
         return Response(serializer.data)
 
     @capable_of('crud_member')
