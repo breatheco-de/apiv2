@@ -1,5 +1,6 @@
 from .models import Course, Syllabus
 from rest_framework import serializers
+from breathecode.utils import ValidationException
 import serpy
 
 class GetCourseSerializer(serpy.Serializer):
@@ -42,13 +43,14 @@ class SyllabusSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        previous_syllabus = Syllabus.objects.filter(course__id=self.context['course'].id).order_by('-version').first()
+        previous_syllabus = Syllabus.objects.filter(course__id=self.context['course'].id, academy_owner=self.context['academy']).order_by('-version').first()
         version = 1
         if previous_syllabus is not None:
             version = previous_syllabus.version + 1
         return super(SyllabusSerializer, self).create({ 
             **validated_data,
             "course": self.context['course'],
+            "academy_owner": self.context['academy'],
             "version": version
         })
 

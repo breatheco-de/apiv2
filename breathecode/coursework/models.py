@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.postgres.fields import JSONField
+from breathecode.admissions.models import Academy
 
 # Create your models here.
 class Course(models.Model):
@@ -27,6 +28,12 @@ class Syllabus(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    # by default a syllabus can be re-used by any other academy
+    private = models.BooleanField(default=False)
+
+    # a syllabus can be shared with other academy, but only the academy owner can update or delete it
+    academy_owner = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
 
     @property
     def slug(self):

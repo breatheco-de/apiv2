@@ -40,7 +40,7 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
             status = 'error'
 
     else:
-        message = "Organization doesn\'t exist"
+        message = f"Organization {organization_id} doesn\'t exist"
 
         webhook.status = 'ERROR'
         webhook.status_text = message

@@ -60,7 +60,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'id': 1,
             'organization_id': '1',
             'status': 'ERROR',
-            'status_text': 'Organization doesn\'t exist',
+            'status_text': 'Organization 1 doesn\'t exist',
             'user_id': '123456789012',
             'webhook_id': '1234567'
         }])
@@ -151,7 +151,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'id': 1,
             'organization_id': '1',
             'status': 'ERROR',
-            'status_text': 'Automation doesn\'t exist',
+            'status_text': 'Automation for order_placed doesn\'t exist',
             'user_id': '123456789012',
             'webhook_id': '1234567'
         }])

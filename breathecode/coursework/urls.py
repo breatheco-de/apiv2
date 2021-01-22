@@ -9,5 +9,7 @@ urlpatterns = [
     path('course/<str:course_slug>/', get_single_course),
     path('course/<str:course_slug>/syllabus', SyllabusView.as_view()),
     path('course/<str:course_slug>/syllabus/<int:version>', SyllabusView.as_view()),
+    path('course/<str:course_slug>/academy/<int:academy_id>/syllabus/<int:version>', SyllabusView.as_view()),
+    path('course/<str:course_slug>/academy/<int:academy_id>/syllabus', SyllabusView.as_view()),
 ]
 
