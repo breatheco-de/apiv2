@@ -17,9 +17,7 @@ tasks:
         pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json;
         pipenv run start;
     - init: pipenv install --dev && cp -n .env.example .env
-      command: >
-        export CELERY_WORKER_RUNNING=True;
-        celery -A breathecode.celery worker --loglevel=INFO;
+      command: pipenv run celery
 
 
 # Other commands
