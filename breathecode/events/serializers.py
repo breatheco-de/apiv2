@@ -44,7 +44,7 @@ class EventTinySerializer(serpy.Serializer):
 
 class EventSmallSerializer(serpy.Serializer):
     id = serpy.Field()
-    exerpt = serpy.Field()
+    excerpt = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
     url = serpy.Field()
