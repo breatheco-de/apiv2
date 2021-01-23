@@ -65,7 +65,7 @@ def capable_of(capability=None):
             if isinstance(request.user, AnonymousUser):
                 raise PermissionDenied("Invalid user")
 
-            capable = ProfileAcademy.objects.filter(user=request.user.id, academy=academy_id, role__capabilities__slug=capability)
+            capable = ProfileAcademy.objects.filter(user=request.user.id, academy__id=academy_id, role__capabilities__slug=capability)
             if capable.count() > 0:
                 kwargs['academy_id'] = academy_id
                 return function(*args, **kwargs)
