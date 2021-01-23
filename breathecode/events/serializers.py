@@ -57,6 +57,21 @@ class EventSmallSerializer(serpy.Serializer):
     venue = VenueSerializer(required=False)
     academy = AcademySerializer(required=False)
 
+
+class EventSmallSerializerNoAcademy(serpy.Serializer):
+    id = serpy.Field()
+    excerpt = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    url = serpy.Field()
+    banner = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    status = serpy.Field()
+    event_type = EventTypeSmallSerializer(required=False)
+    online_event = serpy.Field()
+    venue = VenueSerializer(required=False)
+
 class EventCheckinSerializer(serpy.Serializer):
     id = serpy.Field()
     email = serpy.Field()
