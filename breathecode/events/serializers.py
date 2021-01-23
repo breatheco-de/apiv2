@@ -68,4 +68,24 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         exclude = ()
 
+    def create(self, validated_data):
+
+        # hard-code the organizer to the academy organizer
+        try:
+            validated_data['organizer'] = validated_data['academy'].organizer
+        except:
+            pass
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+
+        # hard-code the organizer to the academy organizer
+        try:
+            validated_data['organizer'] = validated_data['academy'].organizer
+        except:
+            pass
+
+        return super().update(instance, validated_data)
+
         
