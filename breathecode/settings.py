@@ -269,18 +269,18 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # TODO: configure cache
-# REDIS_URL = os.getenv('REDIS_URL', None)
+REDIS_URL = os.getenv('REDIS_URL', None)
 # SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'redis_cache.RedisCache',
-#         'LOCATION': REDIS_URL,
-#         'OPTIONS': {
-#             'DB': 0,
-#         },
-#     },
-# }
+CACHES = {
+    'default': {
+        'BACKEND': 'redis_cache.RedisCache',
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'DB': 0,
+        },
+    },
+}
 
 # Simplified static file serving.
 # https://warehouse.python.org/project/whitenoise/

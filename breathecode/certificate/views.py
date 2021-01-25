@@ -88,7 +88,7 @@ class CertificateCohortView(APIView):
 
         cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role='STUDENT',
             educational_status='GRADUATED', cohort__academy__id=request.headers['Academy'])
-        logger.debug(f"Generating gertificate for {str(cohort_users.count())} students that GRADUATED")
+        logger.debug(f"Generating certificate for {str(cohort_users.count())} students that GRADUATED")
         certificates = {
             "success": [],
             "error": [],
