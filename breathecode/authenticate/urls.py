@@ -31,15 +31,9 @@ urlpatterns = [
     path('user/invite/<str:token>', render_invite, name="academy_invite"),
     
     path('academy/member', MemberView.as_view()),
-    path('academy/<int:academy_id>/member', MemberView.as_view()),
     path('academy/member/<int:user_id>', MemberView.as_view()),
-    path('academy/<int:academy_id>/member/<int:user_id>', MemberView.as_view()),
-    
     path('academy/student', StudentView.as_view()),
-    path('academy/<int:academy_id>/student', StudentView.as_view()),
-    
     path('academy/student/<int:user_id>', StudentView.as_view()),
-    path('academy/<int:academy_id>/student/<int:user_id>', StudentView.as_view()),
     # path('group/', get_groups, name="group"),
 
     path('view/login', login_html_view, name="login_view"), # html login form

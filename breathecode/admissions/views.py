@@ -286,6 +286,10 @@ class AcademyCohortView(APIView):
         if request.data.get('academy') or request.data.get('academy_id'):
             raise ParseError(detail='academy and academy_id field is not allowed')
 
+        academy = Academy.objects.filter(slug=academy_id).first()
+        if academy is not None:
+            raise ValidationError(f'Academy {academy_id} not found')
+
         certificate_id = request.data.get('certificate')
         if certificate_id is None:
             raise ParseError(detail='certificate field is missing')
@@ -298,7 +302,7 @@ class AcademyCohortView(APIView):
             raise ParseError(detail='current_day field is not allowed')
 
         data = {
-            'academy': academy_id,
+            'academy': academy,
             'current_day': 0,
         }
 
