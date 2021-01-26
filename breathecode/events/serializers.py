@@ -44,7 +44,7 @@ class EventTinySerializer(serpy.Serializer):
 
 class EventSmallSerializer(serpy.Serializer):
     id = serpy.Field()
-    exerpt = serpy.Field()
+    excerpt = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
     url = serpy.Field()
@@ -57,6 +57,21 @@ class EventSmallSerializer(serpy.Serializer):
     venue = VenueSerializer(required=False)
     academy = AcademySerializer(required=False)
 
+
+class EventSmallSerializerNoAcademy(serpy.Serializer):
+    id = serpy.Field()
+    excerpt = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    url = serpy.Field()
+    banner = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    status = serpy.Field()
+    event_type = EventTypeSmallSerializer(required=False)
+    online_event = serpy.Field()
+    venue = VenueSerializer(required=False)
+
 class EventCheckinSerializer(serpy.Serializer):
     id = serpy.Field()
     email = serpy.Field()
@@ -67,5 +82,25 @@ class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         exclude = ()
+
+    def create(self, validated_data):
+
+        # hard-code the organizer to the academy organizer
+        try:
+            validated_data['organizer'] = validated_data['academy'].organizer
+        except:
+            pass
+
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+
+        # hard-code the organizer to the academy organizer
+        try:
+            validated_data['organizer'] = validated_data['academy'].organizer
+        except:
+            pass
+
+        return super().update(instance, validated_data)
 
         

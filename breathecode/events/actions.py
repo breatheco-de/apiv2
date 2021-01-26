@@ -128,7 +128,7 @@ def update_or_create_event(data, org):
             event = Event(
                 title=data['name']['text'],
                 description=data['description']['text'],
-                exerpt=data['description']['text'],
+                excerpt=data['description']['text'],
                 starting_at=data['start']['utc'],
                 ending_at=data['end']['utc'],
                 capacity=data['capacity'],
@@ -144,7 +144,7 @@ def update_or_create_event(data, org):
         else:
             event.title=data['name']['text']
             event.description=data['description']['text']
-            event.exerpt=data['description']['text']
+            event.excerpt=data['description']['text']
             event.starting_at=data['start']['utc']
             event.ending_at=data['end']['utc']
             event.capacity=data['capacity']

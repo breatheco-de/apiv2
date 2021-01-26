@@ -38,6 +38,11 @@ permissions = (
         ("activity_edit", "can edit data"),
     )
 
+class ValidationException(APIException):
+    status_code = 400
+    default_detail = 'There is an error in your request'
+    default_code = 'client_error'
+
 def capable_of(capability=None):        
     def decorator(function):
         def wrapper(*args, **kwargs):
@@ -62,10 +67,13 @@ def capable_of(capability=None):
                 if 'academy' in request.headers:
                     academy_id = request.headers['academy']
 
+            if not isinstance(academy_id, int):
+                raise ValidationException("Academy ID needs to be an integer")
+
             if isinstance(request.user, AnonymousUser):
                 raise PermissionDenied("Invalid user")
 
-            capable = ProfileAcademy.objects.filter(user=request.user.id, academy=academy_id, role__capabilities__slug=capability)
+            capable = ProfileAcademy.objects.filter(user=request.user.id, academy__id=academy_id, role__capabilities__slug=capability)
             if capable.count() > 0:
                 kwargs['academy_id'] = academy_id
                 return function(*args, **kwargs)
@@ -73,11 +81,6 @@ def capable_of(capability=None):
             raise PermissionDenied(f"You (user: {request.user.id}) don't have this capability: {capability} for academy {academy_id}")
         return wrapper
     return decorator
-
-class ValidationException(APIException):
-    status_code = 400
-    default_detail = 'There is an error in your request'
-    default_code = 'client_error'
 
 def breathecode_exception_handler(exc, context):
     # This is to be used with the Django REST Framework (DRF) as its

@@ -23,7 +23,7 @@ class UserSerializer(serpy.Serializer):
 class EventTypeSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     description = serpy.Field()
-    exerpt = serpy.Field()
+    excerpt = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
 

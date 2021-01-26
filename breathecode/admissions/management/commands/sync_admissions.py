@@ -86,14 +86,15 @@ class Command(BaseCommand):
                     self.add_cohort(_cohort)
                     self.stdout.write(self.style.SUCCESS(f"Cohort {_cohort['slug']} added"))
                 except Exception as e:
-                    raise e
-                    # self.stdout.write(self.style.SUCCESS(f"Error adding cohort {_cohort['slug']}: {str(e)}"))    
+                    self.stdout.write(self.style.NOTICE(f"Error adding cohort {_cohort['slug']}: {str(e)}"))    
+                    # raise e
             else:
                 try:
                     self.update_cohort(co, _cohort)
                     self.stdout.write(self.style.SUCCESS(f"Cohort found, updated info for {_cohort['slug']}"))
                 except Exception as e:
-                    raise e
+                    self.stdout.write(self.style.NOTICE(f"Error updating cohort {_cohort['slug']}: {str(e)}"))    
+                    # raise e
 
     def students(self, options):
 
@@ -120,24 +121,28 @@ class Command(BaseCommand):
             if user is None:
                 try:
                     user = self.add_user(_student)
-                    self.add_student_cohorts(_student,user)
                     self.stdout.write(self.style.SUCCESS(f"User {_student['email']} added"))
                 except Exception as e:
+                    self.stdout.write(self.style.SUCCESS(f"Error adding user {_student['email']}: {str(e)}"))    
+
+            if user is not None: 
+                try:
+                    self.add_student_cohorts(_student,user)
+                    self.stdout.write(self.style.SUCCESS(f"Synched cohorts for user {_student['email']}"))
+                except Exception as e:
                     raise e
-                    # self.stdout.write(self.style.SUCCESS(f"Error adding cohort {_cohort['slug']}: {str(e)}"))    
-            else:
-                self.stdout.write(self.style.NOTICE(f"User {_student['email']} skipped"))
 
             profile = None
-            try:
-                profile = user.profile
-            except Profile.DoesNotExist:
-                profile = Profile(user=user)
-                profile.avatar_url = API_URL + "/static/img/avatar.png"
-                profile.bio=_student["bio"]
-                profile.phone=_student["phone"] if _student["phone"] is not None else ""
-                profile.github_username=_student["github"]
-                profile.save()
+            if user is not None: 
+                try:
+                    profile = user.profile
+                except Profile.DoesNotExist:
+                    profile = Profile(user=user)
+                    profile.avatar_url = API_URL + "/static/img/avatar.png"
+                    profile.bio=_student["bio"]
+                    profile.phone=_student["phone"] if _student["phone"] is not None else ""
+                    profile.github_username=_student["github"]
+                    profile.save()
 
     def teachers(self, options):
 
@@ -167,7 +172,7 @@ class Command(BaseCommand):
 
             try:
                 self.add_teacher_cohorts(_teacher,user)
-                self.stdout.write(self.style.SUCCESS(f"User {_teacher['email']} added"))
+                self.stdout.write(self.style.SUCCESS(f"User {_teacher['email']} synched"))
             except Exception as e:
                 raise e
                     # self.stdout.write(self.style.SUCCESS(f"Error adding cohort {_cohort['slug']}: {str(e)}"))    

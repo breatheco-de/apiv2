@@ -98,7 +98,7 @@ EVENT_STATUS = (
 # Create your models here.
 class Event(models.Model):
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
-    exerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
+    excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
     title = models.CharField(max_length=255, blank=True, default=None, null=True)
     lang = models.CharField(max_length=2, blank=True, default=None, null=True)
     
@@ -123,7 +123,7 @@ class Event(models.Model):
     eventbrite_organizer_id = models.CharField(max_length=80, blank=True, default=None, null=True)
 
     status = models.CharField(max_length=9,choices=EVENT_STATUS,default=DRAFT,blank=True)
-    eventbrite_status = models.CharField(max_length=9, help_text="One of: draft, live, started, ended, completed and canceled")
+    eventbrite_status = models.CharField(max_length=9, help_text="One of: draft, live, started, ended, completed and canceled",blank=True, default=None, null=True)
     
     sync_status = models.CharField(max_length=9,choices=SYNC_STATUS,default=PENDING,help_text="One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status")
     sync_desc = models.TextField(max_length=255, null=True, default=None, blank=True)

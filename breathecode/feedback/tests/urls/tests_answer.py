@@ -382,7 +382,7 @@ class AnswerTestSuite(FeedbackTestCase):
             'event': {
                 'id': model['event'].id,
                 'description': model['event'].description,
-                'exerpt': model['event'].exerpt,
+                'excerpt': model['event'].excerpt,
                 'lang': model['event'].lang,
                 'title': model['event'].title,
             },
@@ -467,7 +467,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'event': {
                     'id': model['event'].id,
                     'description': model['event'].description,
-                    'exerpt': model['event'].exerpt,
+                    'excerpt': model['event'].excerpt,
                     'lang': model['event'].lang,
                     'title': model['event'].title,
                 },

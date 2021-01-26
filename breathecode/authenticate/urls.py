@@ -30,9 +30,15 @@ urlpatterns = [
     path('user/me', UserMeView.as_view(), name="user_me"),
     path('user/invite/<str:token>', render_invite, name="academy_invite"),
     
+    path('academy/member', MemberView.as_view()),
     path('academy/<int:academy_id>/member', MemberView.as_view(), name="academy_id_member"),
+    path('academy/member/<int:user_id>', MemberView.as_view()),
     path('academy/<int:academy_id>/member/<int:user_id>', MemberView.as_view(), name="academy_id_member_id"),
+    
+    path('academy/student', StudentView.as_view()),
     path('academy/<int:academy_id>/student', StudentView.as_view()),
+    
+    path('academy/student/<int:user_id>', StudentView.as_view()),
     path('academy/<int:academy_id>/student/<int:user_id>', StudentView.as_view()),
     # path('group/', get_groups, name="group"),
 
