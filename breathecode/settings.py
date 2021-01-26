@@ -273,41 +273,35 @@ CORS_ALLOW_HEADERS = [
     "http-access-control-request-method",
 ]
 
-# TODO: configure cache
 REDIS_URL = os.getenv('REDIS_URL', '')
-# SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 
-CACHES = {
-    'default': {
-        'BACKEND': 'redis_cache.RedisCache',
-        'LOCATION': [
-            REDIS_URL
-        ],
-        'OPTIONS': {
-            'DB': 1,
+def cache_opts(is_test_env):
+    BASE = {
+        'DB': 1,
+        'CONNECTION_POOL_CLASS_KWARGS': {
+            'max_connections': 50,
+            'timeout': 20,
+        },
+        'MAX_CONNECTIONS': 1000,
+        'PICKLE_VERSION': -1,
+    }
+
+    if not is_test_env:
+        REDIS_OPTS = {
             'PARSER_CLASS': 'redis.connection.HiredisParser',
             'CONNECTION_POOL_CLASS': 'redis.BlockingConnectionPool',
-            'CONNECTION_POOL_CLASS_KWARGS': {
-                'max_connections': 50,
-                'timeout': 20,
-            },
-            'MAX_CONNECTIONS': 1000,
-            'PICKLE_VERSION': -1,
-        },
-    },
-} if os.getenv('ENV') != 'test' else {
+        }
+        return {'OPTIONS': {**BASE, **REDIS_OPTS}}
+    else:
+        return {'OPTIONS': {**BASE}}
+
+is_test_env = os.getenv('ENV') == 'test'
+CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'breathecode',
-        'OPTIONS': {
-            'DB': 1,
-            'CONNECTION_POOL_CLASS_KWARGS': {
-                'max_connections': 50,
-                'timeout': 20,
-            },
-            'MAX_CONNECTIONS': 1000,
-            'PICKLE_VERSION': -1,
-        },
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if
+            is_test_env else 'redis_cache.RedisCache',
+        'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
+        **cache_opts(is_test_env),
     },
 }
 
