@@ -64,6 +64,8 @@ class GETProfileAcademy(serpy.Serializer):
     role = RoleSmallSerializer()
     created_at = serpy.Field()
     email = serpy.Field()
+    address = serpy.Field()
+    phone = serpy.Field()
     status = serpy.Field()
 
 # Create your models here.
