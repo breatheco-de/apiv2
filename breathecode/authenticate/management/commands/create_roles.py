@@ -21,10 +21,10 @@ class Command(BaseCommand):
             { "slug": "crud_certificate", "description": "Create, update or delete student certificates" },
             { "slug": "read_syllabus", "description": "List and read syllabus information" },
             { "slug": "crud_syllabus", "description": "Create, update or delete syllabus versions" },
-            { "slug": "read_events", "description": "List and retrieve event information" },
-            { "slug": "crud_events", "description": "Create, update or delete event information" },
-            { "slug": "read_cohorts", "description": "List all the cohorts or a single cohort information" },
-            { "slug": "crud_cohorts", "description": "Create, update or delete cohort info" },
+            { "slug": "read_event", "description": "List and retrieve event information" },
+            { "slug": "crud_event", "description": "Create, update or delete event information" },
+            { "slug": "read_cohort", "description": "List all the cohorts or a single cohort information" },
+            { "slug": "crud_cohort", "description": "Create, update or delete cohort info" },
         ]
 
         for c in caps:
@@ -42,7 +42,7 @@ class Command(BaseCommand):
             { "slug": "teacher", "name": "Teacher", "caps": ["crud_assignment", "read_syllabus","read_assignment"] },
             { "slug": "assistant", "name": "Teacher Assistant", "caps": ["read_assigment, crud_assignment"] },
             { "slug": "career_support", "name": "Career Support Specialist", "caps": ["read_certificate", "crud_certificate"] },
-            { "slug": "growth_manager", "name": "Growth Manager", "caps": ["read_events", "crud_events"] },
+            { "slug": "growth_manager", "name": "Growth Manager", "caps": ["read_event", "crud_event"] },
             
         ]
 
