@@ -43,6 +43,11 @@ class ValidationException(APIException):
     default_detail = 'There is an error in your request'
     default_code = 'client_error'
 
+    def __init__(self, details, code=400):
+        self.status_code = code
+        self.default_detail = details
+        super().__init__(details)
+
 def capable_of(capability=None):        
     def decorator(function):
         def wrapper(*args, **kwargs):
@@ -67,8 +72,8 @@ def capable_of(capability=None):
                 if 'academy' in request.headers:
                     academy_id = request.headers['academy']
 
-            if not isinstance(academy_id, int):
-                raise ValidationException("Academy ID needs to be an integer")
+            if not str(academy_id).isdigit():
+                raise ValidationException(f"Academy ID needs to be an integer: {str(academy_id)}")
 
             if isinstance(request.user, AnonymousUser):
                 raise PermissionDenied("Invalid user")
