@@ -85,13 +85,18 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+
+    # Cache
+    'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.cache.FetchFromCacheMiddleware',
+
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    # ⬇ Rollber is always last please!
+    # ⬇ Rollbar is always last please!
     'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',
 ]
 
@@ -272,15 +277,6 @@ CORS_ALLOW_HEADERS = [
 REDIS_URL = os.getenv('REDIS_URL', '')
 # SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'redis_cache.RedisCache',
-#         'LOCATION': REDIS_URL,
-#         'OPTIONS': {
-#             'DB': 0,
-#         },
-#     },
-# }
 CACHES = {
     'default': {
         'BACKEND': 'redis_cache.RedisCache',
@@ -299,7 +295,23 @@ CACHES = {
             'PICKLE_VERSION': -1,
         },
     },
+} if os.getenv('ENV') != 'test' else {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'breathecode',
+        'OPTIONS': {
+            'DB': 1,
+            'CONNECTION_POOL_CLASS_KWARGS': {
+                'max_connections': 50,
+                'timeout': 20,
+            },
+            'MAX_CONNECTIONS': 1000,
+            'PICKLE_VERSION': -1,
+        },
+    },
 }
+
+CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 15))
 
 # Simplified static file serving.
 # https://warehouse.python.org/project/whitenoise/

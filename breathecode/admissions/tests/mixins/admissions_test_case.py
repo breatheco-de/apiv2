@@ -6,6 +6,7 @@ from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
 from django.contrib.auth.models import User
 from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatter
+from django.core.cache import cache
 from ...models import CohortUser, Cohort, Academy, Certificate, Cohort
 # from .models import Academy, CohortUser, Certificate, Cohort
 
@@ -109,6 +110,9 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
     def count_cohort(self):
         return Cohort.objects.count()
+
+    def setUp(self):
+        cache.clear()
 
     def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,

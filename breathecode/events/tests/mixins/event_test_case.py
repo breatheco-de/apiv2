@@ -4,6 +4,7 @@ Collections of mixins used to login in authorize microservice
 from breathecode.events.models import EventbriteWebhook, Organization, EventCheckin
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
+from django.core.cache import cache
 from .development_environment import DevelopmentEnvironment
 # from ...models import Certificate, Cohort
 # from ..mocks import (
@@ -78,6 +79,9 @@ class EventTestCase(APITestCase, DevelopmentEnvironment):
     def all_eventbrite_webhook_dict(self):
         return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
             EventbriteWebhook.objects.filter()]
+
+    def setUp(self):
+        cache.clear()
 
     def generate_models(self, language='', user=False, organization=False, academy=False,
             organizer=False, venue=False, event_type=False, event=False, event_checkin=False,

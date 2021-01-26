@@ -13,6 +13,7 @@ from mixer.backend.django import mixer
 from django.contrib.auth.models import User
 from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatter
 from breathecode.notify.actions import get_template_content
+from django.core.cache import cache
 from ...models import Answer
 from ...actions import strings
 
@@ -192,6 +193,9 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
     def auth_with_token(self, user):
         token = Token.objects.create(user=user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+
+    def setUp(self):
+        cache.clear()
 
     def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,

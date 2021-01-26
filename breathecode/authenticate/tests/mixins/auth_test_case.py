@@ -7,6 +7,7 @@ from django.contrib.auth.models import User
 from django.urls.base import reverse_lazy
 from rest_framework.test import APITestCase, APIClient
 from mixer.backend.django import mixer
+from django.core.cache import cache
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,
@@ -25,6 +26,8 @@ class AuthTestCase(APITestCase):
 
     def setUp(self):
         """Before each test"""
+        cache.clear()
+
         user = mixer.blend('auth.User')
         user.set_password(self.password)
         user.save()
