@@ -23,6 +23,8 @@ class Command(BaseCommand):
             { "slug": "crud_syllabus", "description": "Create, update or delete syllabus versions" },
             { "slug": "read_events", "description": "List and retrieve event information" },
             { "slug": "crud_events", "description": "Create, update or delete event information" },
+            { "slug": "read_cohorts", "description": "List all the cohorts or a single cohort information" },
+            { "slug": "crud_cohorts", "description": "Create, update or delete cohort info" },
         ]
 
         for c in caps:
@@ -41,11 +43,16 @@ class Command(BaseCommand):
             { "slug": "assistant", "name": "Teacher Assistant", "caps": ["read_assigment, crud_assignment"] },
             { "slug": "career_support", "name": "Career Support Specialist", "caps": ["read_certificate", "crud_certificate"] },
             { "slug": "growth_manager", "name": "Growth Manager", "caps": ["read_events", "crud_events"] },
+            
         ]
 
         teacher = next(item for item in roles if item["slug"] == "teacher")
         #                                                                               inherit all the caps from the teacher role
         roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": teacher["caps"] + ["crud_syllabus"] })
+
+        # TODO: Create country_manager role, that inheritls from all othe roles minus admin
+        # inhered_caps = next(item for item in roles if item["slug"] in ["teacher", "assistant", "student", "career_support"])
+        # roles.append({ "slug": "country_manager", "name": "Country Manage", "caps": inhered_caps["caps"] + ["crud_cohort", "read_cohort"] })
 
         for r in roles:
             _r = Role.objects.filter(slug=r["slug"]).first()

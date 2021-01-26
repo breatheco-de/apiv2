@@ -18,7 +18,7 @@ from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
-from breathecode.utils import localize_query
+from breathecode.utils import localize_query, capable_of
 from django.http import QueryDict
 from django.db.utils import IntegrityError
 from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
@@ -240,19 +240,22 @@ class CohortUserView(APIView):
         cu.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-
-class CohortView(APIView):
+class AcademyCohortView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-    def get(self, request, cohort_id=None):
+    permission_classes = [IsAuthenticated]
+
+
+    @capable_of('read_cohort')
+    def get(self, request, cohort_id=None, academy_id=None):
 
         if cohort_id is not None:
             item = None
             if str.isnumeric(cohort_id):
-                item = Cohort.objects.filter(id=int(cohort_id)).first()
+                item = Cohort.objects.filter(id=int(cohort_id), academy__id=academy_id).first()
             else:
-                item = Cohort.objects.filter(slug=cohort_id).first()
+                item = Cohort.objects.filter(slug=cohort_id, academy__id=academy_id).first()
 
             if item is None:
                 return Response(status=status.HTTP_404_NOT_FOUND)
@@ -260,7 +263,7 @@ class CohortView(APIView):
             serializer = GetCohortSerializer(item, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        items = Cohort.objects.all()
+        items = Cohort.objects.filter(academy__id=academy_id)
         upcoming = request.GET.get('upcoming', None)
         if upcoming == 'true':
             now = timezone.now()
@@ -277,59 +280,8 @@ class CohortView(APIView):
         serializer = GetCohortSerializer(items, many=True)
         return Response(serializer.data)
 
-    def put(self, request, cohort_id=None):
-
-        if cohort_id is None:
-            raise serializers.ValidationError("Missing cohort_id", code=400)
-
-        cohort = Cohort.objects.filter(id=cohort_id)
-        cohort = localize_query(cohort, request).first() # only from this academy
-        if cohort is None:
-            logger.debug(f"Cohort not be found in related academies")
-            raise serializers.ValidationError('Specified cohort not be found')
-        
-        serializer = CohortPUTSerializer(cohort, data=request.data, context={ "request": request, "cohort_id": cohort_id })
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, cohort_id=None):
-        if cohort_id is None:
-            raise serializers.ValidationError("Missing cohort_id", code=400)
-
-        try:
-            cohort = Cohort.objects.get(id=cohort_id)
-        except Cohort.DoesNotExist:
-            raise serializers.ValidationError("Cohort doesn't exist", code=400)
-
-        cohort.stage = DELETED
-        cohort.save()
-
-        # STUDENT
-        cohort_users = CohortUser.objects.filter(
-            role=STUDENT,
-            cohort__id=cohort_id
-        )
-
-        for cohort_user in cohort_users:
-            cohort_user.delete()
-
-        return Response(None, status=status.HTTP_204_NO_CONTENT)
-
-class AcademyCohortView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-
-        user_id = request.user.id
-        profile_academy = ProfileAcademy.objects.filter(user_id=user_id).first()
-
-        if profile_academy is None:
-            raise PermissionDenied(detail="You don't belong to any academy")
+    @capable_of('crud_cohort')
+    def post(self, request, academy_id):
 
         if request.data.get('academy') or request.data.get('academy_id'):
             raise ParseError(detail='academy and academy_id field is not allowed')
@@ -346,7 +298,7 @@ class AcademyCohortView(APIView):
             raise ParseError(detail='current_day field is not allowed')
 
         data = {
-            'academy': profile_academy.academy,
+            'academy': academy_id,
             'current_day': 0,
         }
 
@@ -360,6 +312,48 @@ class AcademyCohortView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_cohort')
+    def put(self, request, cohort_id=None, academy_id=None):
+
+        if cohort_id is None:
+            raise serializers.ValidationError("Missing cohort_id", code=400)
+
+        cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id)
+        cohort = localize_query(cohort, request).first() # only from this academy
+        if cohort is None:
+            logger.debug(f"Cohort not be found in related academies")
+            raise serializers.ValidationError('Specified cohort not be found')
+        
+        serializer = CohortPUTSerializer(cohort, data=request.data, context={ "request": request, "cohort_id": cohort_id })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_cohort')
+    def delete(self, request, cohort_id=None, academy_id=None):
+        if cohort_id is None:
+            raise serializers.ValidationError("Missing cohort_id", code=400)
+
+        try:
+            cohort = Cohort.objects.get(id=cohort_id, academy__id=academy_id)
+        except Cohort.DoesNotExist:
+            raise serializers.ValidationError("Cohort doesn't exist", code=400)
+
+        cohort.stage = DELETED
+        cohort.save()
+
+        # STUDENT
+        cohort_users = CohortUser.objects.filter(
+            role=STUDENT,
+            cohort__id=cohort_id
+        )
+
+        for cohort_user in cohort_users:
+            cohort_user.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class CertificateView(APIView):
