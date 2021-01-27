@@ -10,7 +10,7 @@ def extend(roles, slugs):
     inhered_caps = []
     for roles in caps_groups:
         inhered_caps = inhered_caps + roles
-    return inhered_caps
+    return list(dict.fromkeys(inhered_caps))
     
 class Command(BaseCommand):
     help = 'Create default system capabilities'
