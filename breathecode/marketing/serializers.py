@@ -19,7 +19,7 @@ class FormEntrySerializer(serpy.Serializer):
     tags = serpy.Field()
     country = serpy.Field()
     lead_type = serpy.Field()
-    academy = AcademySmallSerializer()
+    academy = AcademySmallSerializer(required=False)
     created_at = serpy.Field()
 
 class PostFormEntrySerializer(serializers.ModelSerializer):

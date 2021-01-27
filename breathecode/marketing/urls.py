@@ -15,5 +15,6 @@ urlpatterns = [
     
     path('facebook/lead', receive_facebook_lead),
     path('report/lead', get_leads_report),
+    # path('report/summary', get_summary),
 ]
 

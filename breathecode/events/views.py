@@ -1,4 +1,4 @@
-import logging
+import logging, datetime
 from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
@@ -186,14 +186,29 @@ class EventCheckinView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-    def get(self, request, format=None):
+    @capable_of('read_eventcheckin')
+    def get(self, request, format=None, academy_id=None):
         
-        items = EventCheckin.objects.all()
+        items = EventCheckin.objects.filter(event__academy__id=academy_id)
         lookup = {}
 
-        if 'academy' in self.request.GET:
-            value = self.request.GET.get('academy')
-            lookup['academy__slug'] = value
+        if 'status' in self.request.GET:
+            value = self.request.GET.get('status')
+            lookup['status'] = value
+
+        if 'event' in self.request.GET:
+            value = self.request.GET.get('event')
+            lookup['event__id'] = value
+
+        start = request.GET.get('start', None)
+        if start is not None:
+            start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
+            items = items.filter(created_at__gte=start_date)
+
+        end = request.GET.get('end', None)
+        if end is not None:
+            end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
+            items = items.filter(created_at__lte=end_date)
             
         items = items.filter(**lookup).order_by('-created_at')
         

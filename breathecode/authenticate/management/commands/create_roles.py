@@ -25,6 +25,7 @@ class Command(BaseCommand):
             { "slug": "crud_event", "description": "Create, update or delete event information" },
             { "slug": "read_cohort", "description": "List all the cohorts or a single cohort information" },
             { "slug": "crud_cohort", "description": "Create, update or delete cohort info" },
+            { "slug": "read_eventcheckin", "description": "List and read all the event_checkins" },
         ]
 
         for c in caps:
@@ -42,7 +43,7 @@ class Command(BaseCommand):
             { "slug": "teacher", "name": "Teacher", "caps": ["crud_assignment", "read_syllabus","read_assignment"] },
             { "slug": "assistant", "name": "Teacher Assistant", "caps": ["read_assigment, crud_assignment"] },
             { "slug": "career_support", "name": "Career Support Specialist", "caps": ["read_certificate", "crud_certificate"] },
-            { "slug": "growth_manager", "name": "Growth Manager", "caps": ["read_event", "crud_event"] },
+            { "slug": "growth_manager", "name": "Growth Manager", "caps": ["read_event", "crud_event", "read_eventcheckin"] },
             
         ]
 
