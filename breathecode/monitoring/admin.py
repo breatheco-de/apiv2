@@ -104,7 +104,7 @@ class CustomForm(forms.ModelForm):
 @admin.register(MonitorScript)
 class MonitorScriptAdmin(admin.ModelAdmin):
     form = CustomForm
-    list_display = ('script_slug', 'current_status', 'frequency_delta', 'status_code', 'paused_until', 'last_run')
+    list_display = ('script_slug', 'application', 'current_status', 'frequency_delta', 'status_code', 'paused_until', 'last_run')
     actions=[run_single_script]
     list_filter = ['status','application__title']
     
