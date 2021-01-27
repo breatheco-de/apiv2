@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Get pending leads
+Alert when there are Form Entries with status = PENDING
 """
 from breathecode.marketing.models import FormEntry
 from django.db.models import Q
