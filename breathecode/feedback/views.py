@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import status
+from breathecode.utils import capable_of
 from PIL import Image
 
 @api_view(['GET'])
@@ -33,9 +34,10 @@ class GetAnswerView(APIView):
     List all snippets, or create a new snippet.
     """
     permission_classes = [AllowAny]
-    def get(self, request, format=None):
+    @capable_of('read_nps_answers')
+    def get(self, request, format=None, academy_id=None):
         
-        items = Answer.objects.all()
+        items = Answer.objects.filter(academy__id=academy_id)
         lookup = {}
 
         if 'user' in self.request.GET:
@@ -45,10 +47,6 @@ class GetAnswerView(APIView):
         if 'cohort' in self.request.GET:
             param = self.request.GET.get('cohort')
             lookup['cohort__slug'] = param
-
-        if 'academy' in self.request.GET:
-            param = self.request.GET.get('academy')
-            lookup['academy__id'] = param
 
         if 'mentor' in self.request.GET:
             param = self.request.GET.get('mentor')
