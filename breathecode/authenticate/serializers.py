@@ -67,6 +67,8 @@ class GETProfileAcademy(serpy.Serializer):
     address = serpy.Field()
     phone = serpy.Field()
     status = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
 
 # Create your models here.
 class UserSerializer(serpy.Serializer):
