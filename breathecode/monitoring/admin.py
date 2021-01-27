@@ -1,12 +1,13 @@
+import os, ast
 from django.contrib import admin
 from django import forms 
 from django.utils import timezone
 from django.contrib.auth.models import User
-from .models import Endpoint, Application
+from .models import Endpoint, Application, MonitorScript
 from breathecode.notify.models import SlackChannel
 from breathecode.notify.actions import send_slack_raw
 from django.utils.html import format_html
-from .actions import get_website_text, run_app_diagnostic
+from .actions import get_website_text, run_app_diagnostic, run_script
 from breathecode.notify.actions import send_email_message
 
 def test_app(modeladmin, request, queryset):
@@ -61,6 +62,50 @@ test_endpoint.short_description = "Test Endpoint"
 class EndpointAdmin(admin.ModelAdmin):
     list_display = ('url', 'current_status', 'test_pattern', 'status_code', 'paused_until', 'last_check')
     actions=[test_endpoint]
+    list_filter = ['status','application__title']
+    
+    def current_status(self,obj):
+        colors = {
+            "OPERATIONAL": "bg-success",
+            "CRITICAL": "bg-error",
+            "MINOR": "bg-warning",
+        }
+        now = timezone.now()
+        if obj.paused_until is not None and obj.paused_until > now:
+            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</a>")
+
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</a>")
+
+def run_single_script(modeladmin, request, queryset):
+    scripts = queryset.all()
+    for s in scripts:
+        run_script(s)
+run_single_script.short_description = "Run Script"
+
+class CustomForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(CustomForm, self).__init__(*args, **kwargs)
+
+        options = []
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        files = os.listdir( dir_path + "/scripts" )
+        for file_name in files:
+            if ".py" not in file_name:
+                continue
+            doc = file_name
+            with open(dir_path + "/scripts/" + file_name) as f:
+                doc = ast.get_docstring(ast.parse(f.read()))
+            options.append((file_name[0:-3],doc))
+        options.append(("other","other"))
+
+        # timezones = [(x, x) for x in pytz.common_timezones]
+        self.fields['script_slug'] = forms.ChoiceField(choices=options)
+
+@admin.register(MonitorScript)
+class MonitorScriptAdmin(admin.ModelAdmin):
+    form = CustomForm
+    list_display = ('script_slug', 'current_status', 'frequency_delta', 'status_code', 'paused_until', 'last_run')
+    actions=[run_single_script]
     list_filter = ['status','application__title']
     
     def current_status(self,obj):

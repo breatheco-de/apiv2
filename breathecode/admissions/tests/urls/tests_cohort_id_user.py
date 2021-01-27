@@ -294,7 +294,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             'status_code': 500,
-            'details': 'User has tasks with status pending',
+            'details': 'User has tasks with status pending the educational status cannot be GRADUATED',
         }
 
         self.assertEqual(json, expected)

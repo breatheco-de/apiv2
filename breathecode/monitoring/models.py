@@ -52,3 +52,30 @@ class Endpoint(models.Model):
 
     def __str__(self):
         return self.url
+
+
+
+class MonitorScript(models.Model):
+
+    script_slug = models.SlugField(default=None, null=True, blank=True)
+    script_body = models.TextField(default=None, null=True, blank=True)
+
+    frequency_delta = models.DurationField(default="00:30:00", help_text='How long to wait for the next execution, defaults to 30 minutes')
+    status_code = models.FloatField(default=200)
+    severity_level = models.IntegerField(default=0)
+    status_text = models.CharField(max_length=255, default=None, null=True, blank=True, editable=False)
+    special_status_text = models.CharField(max_length=255, default=None, null=True, blank=True, help_text='Add a message for people to see when is down')
+    response_text = models.TextField(default=None, null=True, blank=True)
+    last_run = models.DateTimeField(default=None, null=True, blank=True)
+
+    status = models.CharField(max_length=20, choices=STATUS, default=OPERATIONAL)
+
+    application = models.ForeignKey(Application, on_delete=models.CASCADE)
+
+    paused_until = models.DateTimeField(null=True, blank=True, default=None, help_text='if you want to stop checking for a period of time')
+    
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return self.script_slug + f"({str(self.id)})"

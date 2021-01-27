@@ -189,7 +189,7 @@ class CohortUserView(APIView):
         has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
             task_type='PROJECT').count()
         if is_graduated and has_tasks:
-            raise serializers.ValidationError('User has tasks with status pending')
+            raise serializers.ValidationError('User has tasks with status pending the educational status cannot be GRADUATED')
 
         data = {}
 

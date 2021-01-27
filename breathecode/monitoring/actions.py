@@ -1,5 +1,5 @@
+import logging, datetime, hashlib, requests, json, re, os, subprocess, sys
 from django.utils import timezone
-import logging, datetime, hashlib, requests, json, re
 from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint
 logger = logging.getLogger(__name__)
 USER_AGENT="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
@@ -114,3 +114,71 @@ def run_app_diagnostic(app, report=False):
     app.save()
 
     return results
+
+
+def run_script(script):
+
+    results = {
+        "severity_level": 0,
+        "details": ""
+    }
+
+    from io import StringIO
+    import contextlib
+
+    @contextlib.contextmanager
+    def stdoutIO(stdout=None):
+        old = sys.stdout
+        if stdout is None:
+            stdout = StringIO()
+        sys.stdout = stdout
+        yield stdout
+        sys.stdout = old
+
+    content = None
+    if script.script_slug is not None and script.script_slug != "other":
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        header = """
+# from django.conf import settings
+# import breathecode.settings as app_settings
+
+# settings.configure(INSTALLED_APPS=app_settings.INSTALLED_APPS,DATABASES=app_settings.DATABASES)
+
+# import django
+# django.setup()
+        """
+        content = header + open(f"{dir_path}/scripts/{script.script_slug}.py").read()
+    elif script.script_body is not None and script.script_body != "":
+        content = script.script_body
+
+    if content is not None and content != "":
+        local = { "result": { "details": "", "status": "OPERATIONAL" } }
+        with stdoutIO() as s:
+            try:
+                exec(content, { "academy": script.application.academy }, local)
+                script.status_code = 0
+                script.status = 'OPERATIONAL'
+
+                if "details" in local["result"]:
+                    print("Notification: ", local["result"]["details"])
+                    script.response_text = local["result"]["details"]
+                if "status" in local["result"]:
+                    script.status = local["result"]["status"]
+
+            except Exception as e:
+                script.status_code = 1
+                script.status = 'CRITICAL'
+                print(e)
+
+        script.last_run = timezone.now()
+        script.response_text = s.getvalue()
+        script.save()
+
+        result = {
+            "status": script.status,
+            "details": script.response_text
+        }
+
+        return result
+
+    return content is not None and script.status_code == 0
