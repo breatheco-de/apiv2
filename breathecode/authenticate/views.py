@@ -67,14 +67,16 @@ class MemberView(APIView):
     @capable_of('read_member')
     def get(self, request, academy_id, user_id=None):
         is_many = bool(not user_id)
-        kwargs = {
-            'academy__id': academy_id
-        }
 
-        if user_id:
-            kwargs['user__id'] = user_id
+        if user_id is not None:
+            item = ProfileAcademy.objects.filter(user__id=user_id, academy_id=academy_id).first()
+            if item is None:
+                raise ValidationException('Profile not found for this user and academy', 404)
 
-        items = ProfileAcademy.objects.filter(**kwargs)
+            serializer = GETProfileAcademy(item, many=False)
+            return Response(serializer.data)
+
+        items = ProfileAcademy.objects.filter(academy__id=academy_id)
         items = localize_query(items, request) # only form this academy
 
         roles = request.GET.get('roles', None)

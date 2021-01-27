@@ -106,7 +106,7 @@ class AcademyEventView(APIView):
     List all snippets, or create a new snippet.
     """
 
-    @capable_of('read_events')
+    @capable_of('read_event')
     def get(self, request, format=None, academy_id=None):
         
         items = Event.objects.filter(academy__id=academy_id)
@@ -136,7 +136,7 @@ class AcademyEventView(APIView):
         serializer = EventSmallSerializerNoAcademy(items, many=True)
         return Response(serializer.data)
 
-    @capable_of('crud_events')
+    @capable_of('crud_event')
     def post(self, request, format=None, academy_id=None):
 
         academy = Academy.objects.filter(id=academy_id).first()
@@ -149,7 +149,7 @@ class AcademyEventView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of('crud_events')
+    @capable_of('crud_event')
     def put(self, request, academy_id=None, event_id=None):
 
         already = Event.objects.filter(id=event_id,academy__id=academy_id).first()

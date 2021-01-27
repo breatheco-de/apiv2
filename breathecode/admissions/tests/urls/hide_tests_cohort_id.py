@@ -13,6 +13,7 @@ from breathecode.tests.mocks import (
 )
 from ..mixins import AdmissionsTestCase
 
+# TODO: We have to pass the Academy header with the academy_id
 class CohortTestSuite(AdmissionsTestCase):
     """Test /cohort"""
 
