@@ -46,6 +46,8 @@ class TokenAdmin(admin.ModelAdmin):
         return ['key']
 
 @admin.register(UserInvite)
+
+
 class UserInviteAdmin(admin.ModelAdmin):
     list_display = ('email', 'first_name', 'last_name', 'status', 'academy', 'token', 'created_at', 'invite_url')
     def invite_url(self,obj):
@@ -54,10 +56,16 @@ class UserInviteAdmin(admin.ModelAdmin):
         url = os.getenv('API_URL') + "/v1/auth/user/invite/" + str(obj.token) + "?" + querystr
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>")
 
+
+def clear_user_password(modeladmin, request, queryset):
+    for u in queryset:
+        u.set_unusable_password()
+        u.save()
+clear_user_password.short_description = "Clear user password"
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'github_login')
-    actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
+    actions = [clean_all_tokens, clean_expired_tokens, send_reset_password, clear_user_password]
 
     def get_queryset(self, request):
         

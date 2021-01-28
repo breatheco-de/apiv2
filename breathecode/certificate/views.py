@@ -52,9 +52,9 @@ class CertificateView(APIView):
     List all snippets, or create a new snippet.
     """
     @capable_of('read_certificate')
-    def get(self, request, cohort_id, student_id):
+    def get(self, request, cohort_id, student_id, academy_id=None):
 
-        cert = UserSpecialty.objects.filter(cohort__id=cohort_id, user__id=student_id, cohort__academy__id=request.headers['Academy']).first()
+        cert = UserSpecialty.objects.filter(cohort__id=cohort_id, user__id=student_id, cohort__academy__id=academy_id)
         if cert is None:
             raise serializers.ValidationError("Certificate not found", code=404)
 
@@ -62,9 +62,9 @@ class CertificateView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_certificate')
-    def post(self, request, cohort_id, student_id):
+    def post(self, request, cohort_id, student_id, academy_id=None):
 
-        cu = CohortUser.objects.filter(cohort__id=cohort_id, user__id=student_id, role="STUDENT", cohort__academy__id=request.headers['Academy']).first()
+        cu = CohortUser.objects.filter(cohort__id=cohort_id, user__id=student_id, role="STUDENT", cohort__academy__id=academy_id)
         if cu is None:
             raise serializers.ValidationError(f"Student not found for this cohort", code=404)
 
@@ -77,17 +77,17 @@ class CertificateCohortView(APIView):
     List all snippets, or create a new snippet.
     """
     @capable_of('read_certificate')
-    def get(self, request, cohort_id):
+    def get(self, request, cohort_id, academy_id=None):
 
-        cert = UserSpecialty.objects.filter(cohort__id=cohort_id, cohort__academy__id=request.headers['Academy'])
+        cert = UserSpecialty.objects.filter(cohort__id=cohort_id, cohort__academy__id=academy_id)
         serializer = UserSpecialtySerializer(cert, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_certificate')
-    def post(self, request, cohort_id):
+    def post(self, request, cohort_id, academy_id=None):
 
         cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role='STUDENT',
-            educational_status='GRADUATED', cohort__academy__id=request.headers['Academy'])
+            educational_status='GRADUATED', cohort__academy__id=academy_id)
         logger.debug(f"Generating gertificate for {str(cohort_users.count())} students that GRADUATED")
         certificates = {
             "success": [],
@@ -110,9 +110,9 @@ class CertificateAcademyView(APIView):
     List all snippets, or create a new snippet.
     """
     @capable_of('read_certificate')
-    def get(self, request):
+    def get(self, request, academy_id=None):
         # print(request.headers['Academy'])
-        cert = UserSpecialty.objects.filter(cohort__academy__id=request.headers['Academy'])
+        cert = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
         serializer = UserSpecialtySerializer(cert, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
