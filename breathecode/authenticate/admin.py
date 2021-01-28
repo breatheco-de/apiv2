@@ -88,9 +88,9 @@ mark_as_active.short_description = "Mark as ACTIVE"
 
 @admin.register(ProfileAcademy)
 class ProfileAcademyAdmin(admin.ModelAdmin):
-    list_display = ('user', 'email', 'academy', 'status', 'created_at', 'slack', 'facebook')
+    list_display = ('user', 'email', 'academy', 'role', 'status', 'created_at', 'slack', 'facebook')
     search_fields = ['user__first_name', 'user__last_name', 'user__email']
-    list_filter = ['academy__slug','status']
+    list_filter = ['academy__slug','status', 'role__slug']
     actions=[mark_as_active]
     raw_id_fields = ["user"]
     
