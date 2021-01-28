@@ -48,50 +48,52 @@ def get_survey_questions(request, survey_id=None):
     if cu is None:
         raise ValidationException("This student does not belong to this cohort", 400)
 
-    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort, role="TEACHER").first()
-    if cohort_teacher is None:
+    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort, role="TEACHER")
+    if cohort_teacher.count() == 0:
         raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
+
+    def new_answer(answer):
+        question = build_question(answer)
+        answer.title = question["title"]
+        answer.lowest = question["lowest"]
+        answer.highest = question["highest"]
+        answer.user = request.user
+        answer.status = 'OPENED'
+        answer.survey = survey
+        answer.opened_at = timezone.now()
+        answer.save()
+        return answer
 
     _answers = Answer.objects.filter(survey__id=survey_id, user=request.user)
     if _answers.count() == 0:
         _answers = []
 
+        # ask for the cohort in general
         answer = Answer(cohort=survey.cohort, lang=survey.lang)
-        question = build_question(answer)
-        answer.title = question["title"]
-        answer.user = request.user
-        answer.lowest = question["lowest"]
-        answer.highest = question["highest"]
-        answer.survey = survey
-        answer.status = 'OPENED'
-        answer.opened_at = timezone.now()
-        answer.save()
-        _answers.append(answer)
+        _answers.append(new_answer(answer))
 
-        answer = Answer(mentor=cohort_teacher.user, cohort=survey.cohort, lang=survey.lang)
-        question = build_question(answer)
-        answer.title = question["title"]
-        answer.lowest = question["lowest"]
-        answer.highest = question["highest"]
-        answer.user = request.user
-        answer.status = 'OPENED'
-        answer.survey = survey
-        answer.opened_at = timezone.now()
-        answer.save()
-        _answers.append(answer)
+        # ask for each teacher, with a max of 2 teachers
+        cont = 0
+        for ct in cohort_teacher:
+            if cont >= survey.max_teachers_to_ask:
+                break
+            answer = Answer(mentor=ct.user, cohort=survey.cohort, lang=survey.lang)
+            _answers.append(new_answer(answer))
+            cont = cont + 1
 
+        # ask for the first TA
+        cohort_assistant = CohortUser.objects.filter(cohort=survey.cohort, role="ASSISTANT")
+        cont = 0
+        for ca in cohort_assistant:
+            if cont >= survey.max_assistants_to_ask:
+                break
+            answer = Answer(mentor=ca.user, cohort=survey.cohort, lang=survey.lang)
+            _answers.append(new_answer(answer))
+            cont = cont + 1
+
+        # ask for the whole academy
         answer = Answer(academy=survey.cohort.academy, lang=survey.lang)
-        question = build_question(answer)
-        answer.title = question["title"]
-        answer.lowest = question["lowest"]
-        answer.highest = question["highest"]
-        answer.user = request.user
-        answer.status = 'OPENED'
-        answer.survey = survey
-        answer.opened_at = timezone.now()
-        answer.save()
-        _answers.append(answer)
-        
+        _answers.append(new_answer(answer))
     
     serializer = AnswerSerializer(_answers, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)

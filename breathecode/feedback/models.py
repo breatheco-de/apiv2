@@ -44,6 +44,9 @@ class Survey(models.Model):
 
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
 
+    max_assistants_to_ask = models.IntegerField(default=2)
+    max_teachers_to_ask = models.IntegerField(default=1)
+
     avg_score = models.CharField(max_length=250, default=None, blank=True, null=True, help_text="The avg from all the answers taken under this survay", editable=False)
     status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=PENDING)
 
