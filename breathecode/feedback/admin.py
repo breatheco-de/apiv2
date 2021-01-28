@@ -6,6 +6,7 @@ from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
 from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey
 from .actions import send_question, send_survey_group
 from .tasks import send_cohort_survey
+from django.utils.html import format_html
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +96,12 @@ class CohortAdmin(CohortAdmin):
 # Register your models here.
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin):
+    list_display = ('status', 'user', 'score', 'comment', 'opened_at', 'cohort', 'mentor', 'created_at', 'answer_url')
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'cohort__slug']
-    list_display = ('status', 'user', 'score', 'comment', 'opened_at', 'cohort', 'mentor', 'created_at')
     list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
+    def answer_url(self,obj):
+        url = "https://nps.breatheco.de/" + str(obj.id)
+        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open answer</a>")
     # def entity(self, object):
     #     return f"{object.entity_slug} (id:{str(object.entity_id)})"
 
@@ -116,6 +120,10 @@ def send_big_cohort_bulk_survey(modeladmin, request, queryset):
 send_big_cohort_bulk_survey.short_description = "Send GENERAL BIG Survey to all cohort students"
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
+    list_display = ('cohort', 'status', 'duration', 'created_at', 'survey_url')
     search_fields = ['cohort__slug', 'cohort__academy__slug', 'cohort__name', 'cohort__academy__name']
-    list_display = ('cohort', 'status', 'duration', 'created_at')
+    list_filter = ['status', 'cohort__academy__slug']
     actions = [send_big_cohort_bulk_survey]
+    def survey_url(self,obj):
+        url = "https://nps.breatheco.de/survey/" + str(obj.id)
+        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open survey</a>")

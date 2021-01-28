@@ -1,4 +1,4 @@
-import base64, os, urllib.parse
+import base64, os, urllib.parse, logging
 from django.contrib import admin
 from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
@@ -9,7 +9,8 @@ from .models import (
     CredentialsFacebook, Capability, UserInvite
 )
 from .actions import reset_password
-# Register your models here.
+
+logger = logging.getLogger(__name__)
 
 def clean_all_tokens(modeladmin, request, queryset):
     user_ids = queryset.values_list('id', flat=True)
@@ -76,9 +77,21 @@ class RoleAdmin(admin.ModelAdmin):
 class CapabilityAdmin(admin.ModelAdmin):
     list_display = ('slug', 'description')
 
+def mark_as_active(modeladmin, request, queryset):
+    aca_profs = queryset.all()
+    for ap in aca_profs:
+        ap.status = 'ACTIVE'
+        ap.save()
+
+    logger.info(f"All AcademyProfiles marked as ACTIVE")
+mark_as_active.short_description = "Mark as ACTIVE"
+
 @admin.register(ProfileAcademy)
 class ProfileAcademyAdmin(admin.ModelAdmin):
-    list_display = ('user', 'email', 'academy', 'created_at', 'slack', 'facebook')
+    list_display = ('user', 'email', 'academy', 'status', 'created_at', 'slack', 'facebook')
+    search_fields = ['user__first_name', 'user__last_name', 'user__email']
+    list_filter = ['academy__slug','status']
+    actions=[mark_as_active]
     raw_id_fields = ["user"]
     
     def get_queryset(self, request):
