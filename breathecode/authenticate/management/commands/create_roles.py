@@ -50,10 +50,10 @@ class Command(BaseCommand):
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment"] },
             { "slug": "assistant", "name": "Teacher Assistant", "caps": ["read_assigment, crud_assignment"] },
-            { "slug": "career_support", "name": "Career Support Specialist", "caps": ["read_certificate", "crud_certificate"] },
-            { "slug": "admissions_developer", "name": "Admissions Developer", "caps": ["read_lead", "read_event", "read_eventcheckin"] },
+            { "slug": "career_support", "name": "Career Support Specialist", "caps": ["read_student","read_certificate", "crud_certificate"] },
+            { "slug": "admissions_developer", "name": "Admissions Developer", "caps": ["read_student","crud_student","read_lead", "read_event", "read_eventcheckin"] },
             { "slug": "syllabus_coordinator", "name": "Manage Syllabus, Exercises and all academy content", "caps": ["read_syllabus"] },
-            { "slug": "growth_manager", "name": "Growth Manager", "caps": ["read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead"] },
+            { "slug": "growth_manager", "name": "Growth Manager", "caps": ["read_student","read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead"] },
         ]
 
         roles.append({ "slug": "teacher", "name": "Teacher", "caps": extend(roles, ["assistant"]) })
