@@ -126,6 +126,10 @@ class GetAnswerView(APIView):
         if 'score' in self.request.GET:
             param = self.request.GET.get('score')
             lookup['score'] = param
+        
+        if 'status' in self.request.GET:
+            param = self.request.GET.get('status')
+            lookup['status'] = param
 
         items = items.filter(**lookup).order_by('-created_at')
         

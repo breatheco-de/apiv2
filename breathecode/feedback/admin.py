@@ -96,7 +96,7 @@ class CohortAdmin(CohortAdmin):
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin):
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'cohort__slug']
-    list_display = ('status', 'user', 'score', 'comment', 'opened_at', 'cohort', 'created_at')
+    list_display = ('status', 'user', 'score', 'comment', 'opened_at', 'cohort', 'mentor', 'created_at')
     list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
     # def entity(self, object):
     #     return f"{object.entity_slug} (id:{str(object.entity_id)})"
