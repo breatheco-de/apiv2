@@ -24,7 +24,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_send_survey_without_cohort(self):
+    def test_send_question_without_cohort(self):
         """Test /answer without auth"""
         model = self.generate_models(organization=True)
         
@@ -38,12 +38,12 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     # @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
-    # def test_send_survey_wit_one_user_with_two_cohort(self):
+    # def test_send_question_wit_one_user_with_two_cohort(self):
     #     """Test /answer without auth"""
     #     model = self.generate_models(cohort_user=True, cohort_user_two=True)
         
     #     try:
-    #         send_survey(model['user'])
+    #         send_question(model['user'])
     #     except Exception as e:
     #         self.assertEquals(str(e), ('Impossible to determine the student cohort, maybe it has '
     #             'more than one, or cero.'))
@@ -52,7 +52,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     # @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
-    # def test_send_survey_with_cohort_with_slack_user_with_slack_team(self):
+    # def test_send_question_with_cohort_with_slack_user_with_slack_team(self):
     #     """Test /answer without auth"""
     #     mock_mailgun = MAILGUN_INSTANCES['post']
     #     mock_mailgun.call_args_list = []
@@ -64,7 +64,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     #         slack_team=True)
     #     academy = model['cohort'].academy.name
         
-    #     send_survey(model['user'])
+    #     send_question(model['user'])
 
     #     expected = [{
     #         'academy_id': 1,
@@ -95,7 +95,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     # @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
     # @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
-    # def test_send_survey_with_cohort_with_slack_user_with_slack_team_with_credentials_slack(self):
+    # def test_send_question_with_cohort_with_slack_user_with_slack_team_with_credentials_slack(self):
     #     """Test /answer without auth"""
     #     mock_mailgun = MAILGUN_INSTANCES['post']
     #     mock_mailgun.call_args_list = []
@@ -108,7 +108,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     #     academy = model['cohort'].academy.name
         
     #     try:
-    #         send_survey(model['user'])
+    #         send_question(model['user'])
     #     except Exception as e:
     #         self.assertEqual(str(e), f"Team owner not has slack credentials")
 
@@ -141,7 +141,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     # @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
     # @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
-    # def test_send_survey_with_cohort_lang_en(self):
+    # def test_send_question_with_cohort_lang_en(self):
     #     """Test /answer without auth"""
     #     mock_mailgun = MAILGUN_INSTANCES['post']
     #     mock_mailgun.call_args_list = []
@@ -154,7 +154,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     #     academy = model['cohort'].academy.name
         
     #     try:
-    #         send_survey(model['user'])
+    #         send_question(model['user'])
     #     except Exception as e:
     #         self.assertEqual(str(e), f"Team owner not has slack credentials")
 
@@ -188,7 +188,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     # @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
     # @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
-    # def test_send_survey_with_cohort_lang_es(self):
+    # def test_send_question_with_cohort_lang_es(self):
     #     """Test /answer without auth"""
     #     mock_mailgun = MAILGUN_INSTANCES['post']
     #     mock_mailgun.call_args_list = []
@@ -200,7 +200,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     #         slack_team=True, credentials_slack=True, academy=True, slack_team_owner=True)
     #     academy = model['cohort'].academy.name
 
-    #     send_survey(model['user'])
+    #     send_question(model['user'])
     #     expected = [{
     #         'academy_id': 1,
     #         'cohort_id': 1,
@@ -231,7 +231,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     # @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
     # @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
-    # def test_send_survey_with_cohort_resent(self):
+    # def test_send_question_with_cohort_resent(self):
     #     """Test /answer without auth"""
     #     mock_mailgun = MAILGUN_INSTANCES['post']
     #     mock_mailgun.call_args_list = []
@@ -243,13 +243,13 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     #         slack_team=True, credentials_slack=True, academy=True, slack_team_owner=True)
     #     academy = model['cohort'].academy.name
 
-    #     send_survey(model['user'])
+    #     send_question(model['user'])
 
     #     mock_mailgun.call_args_list = []
     #     mock_slack.call_args_list = []
 
     #     print(len(mock_mailgun.call_args_list))
-    #     send_survey(model['user'])
+    #     send_question(model['user'])
     #     print(len(mock_mailgun.call_args_list))
     #     expected = [{
     #         'academy_id': 1,

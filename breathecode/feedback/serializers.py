@@ -57,11 +57,12 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
         if answer is None:
             raise ValidationError('This survay does not exist for this user')
 
-        if answer.status == 'ANSWERED':
-            raise ValidationError('You have already voted')
-
         if not 'score' in data or int(data['score']) > 10 or int(data['score']) < 1:
             raise ValidationError('Score must be between 1 and 10')
+        
+        if answer.status == 'ANSWERED' and data['score'] != answer.score:
+            raise ValidationError(f'You have already answered {answer.score}, you must keep the same score')
+
 
         return data
 
@@ -74,6 +75,5 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
             instance.comment = validated_data['comment']
 
         instance.save()
-        Token.objects.filter(key=self.context['request'].auth).delete()
 
         return instance

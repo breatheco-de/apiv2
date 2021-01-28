@@ -58,28 +58,30 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
         models = [self.generate_models(user=True, cohort_user=True, lang='en') for _ in range(0, 3)]
         academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
+        cohorts = [(models[key]['cohort'].certificate.name, key + 1) for key in range(0, 3)]
         
         self.assertEqual(send_bulk_survey(None, request, User.objects.all()), None)
         self.assertEqual(mock.success.call_args_list, [call(request, message='Survey was '
             'successfully sent')])
         self.assertEqual(mock.error.call_args_list, [])
         expected = [{
-            'academy_id': key,
+            'academy_id': None,
             'cohort_id': key,
             'comment': None,
             'event_id': None,
-            'highest': 'very likely',
+            'highest': 'very good',
             'id': key,
             'lang': 'en',
-            'lowest': 'not likely',
+            'lowest': 'not good',
             'mentor_id': None,
             'opened_at': None,
             'score': None,
+            'survey_id': None,
             'status': 'SENT',
-            'title': f'How likely are you to recommend {academy} to your friends and family?',
+            'title': f'How has been your experience studying {c} so far?',
             'token_id': key,
             'user_id': key,
-        } for academy, key in academies]
+        } for c, key in cohorts]
 
         dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
             datetime) and answer.pop('created_at')]
@@ -99,28 +101,29 @@ class SendSurveyTestSuite(FeedbackTestCase):
         self.generate_models(user=True)
         models = [self.generate_models(user=True, cohort_user=True, lang='en') for _ in range(0, 3)]
         academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
-        
+        _cohorts = [(models[key]['cohort'].certificate.name, key + 1) for key in range(0, 3)]
         self.assertEqual(send_bulk_survey(None, request, User.objects.all()), None)
         self.assertEqual(mock.success.call_args_list, [])
         self.assertEqual(mock.error.call_args_list, [call(request, message='Impossible to determine'
             ' the student cohort, maybe it has more than one, or cero. (1)')])
         expected = [{
-            'academy_id': key,
+            'academy_id': None,
             'cohort_id': key,
             'comment': None,
             'event_id': None,
-            'highest': 'very likely',
+            'highest': 'very good',
             'id': key,
             'lang': 'en',
-            'lowest': 'not likely',
+            'lowest': 'not good',
             'mentor_id': None,
             'opened_at': None,
             'score': None,
             'status': 'SENT',
-            'title': f'How likely are you to recommend {academy} to your friends and family?',
+            'survey_id': None,
+            'title': f'How has been your experience studying {c} so far?',
             'token_id': key,
             'user_id': key + 1,
-        } for academy, key in academies]
+        } for c, key in _cohorts]
 
         dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
             datetime) and answer.pop('created_at')]

@@ -36,25 +36,26 @@ class SendSurveyTestSuite(FeedbackTestCase):
         models = [self.generate_models(user=True, cohort_user=True, profile_academy=True,
             cohort_user_role='STUDENT', educational_status='ACTIVE', lang='en') for _ in range(0, 3)]
         academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
-        
+        _cohorts = [(models[key]['cohort'].certificate.name, key + 1) for key in range(0, 3)]
         self.assertEqual(send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
         expected = [{
-            'academy_id': key,
+            'academy_id': None,
             'cohort_id': key,
             'comment': None,
             'event_id': None,
-            'highest': 'very likely',
+            'highest': 'very good',
             'id': key,
             'lang': 'en',
-            'lowest': 'not likely',
+            'lowest': 'not good',
             'mentor_id': None,
             'opened_at': None,
             'score': None,
             'status': 'SENT',
-            'title': f'How likely are you to recommend {academy} to your friends and family?',
+            'survey_id': None,
+            'title': f'How has been your experience studying {c} so far?',
             'token_id': key,
             'user_id': key,
-        } for academy, key in academies]
+        } for c, key in _cohorts]
 
         dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
             datetime) and answer.pop('created_at')]
@@ -70,25 +71,27 @@ class SendSurveyTestSuite(FeedbackTestCase):
         models = [self.generate_models(user=True, cohort_user=True, profile_academy=True,
             cohort_user_role='STUDENT', educational_status='GRADUATED', lang='en') for _ in range(0, 3)]
         academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
-        
-        self.assertEqual(send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
+        cohorts = Cohort.objects.all()
+        self.assertEqual(send_cohort_bulk_survey(None, request, cohorts), None)
+        _cohorts = [(models[key]['cohort'].certificate.name, key + 1) for key in range(0, 3)]
         expected = [{
-            'academy_id': key,
+            'academy_id': None,
             'cohort_id': key,
             'comment': None,
             'event_id': None,
-            'highest': 'very likely',
+            'highest': 'very good',
             'id': key,
             'lang': 'en',
-            'lowest': 'not likely',
+            'lowest': 'not good',
             'mentor_id': None,
             'opened_at': None,
             'score': None,
+            'survey_id': None,
             'status': 'SENT',
-            'title': f'How likely are you to recommend {academy} to your friends and family?',
+            'title': f'How has been your experience studying {cohort} so far?',
             'token_id': key,
             'user_id': key,
-        } for academy, key in academies]
+        } for cohort, key in _cohorts]
 
         dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
             datetime) and answer.pop('created_at')]

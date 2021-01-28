@@ -1,3 +1,4 @@
+import datetime
 from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort, CohortUser
@@ -31,20 +32,53 @@ SURVEY_STATUS = (
     (OPENED, 'Opened'),
     (EXPIRED, 'Expired'),
 )
+"""
+Multiple questions/answers for one single person, survays can only be send to entire cohorts and they will ask all the possible questions involved in a cohort
+1. How is your teacher?
+2. How is the academy?
+3. How is the blabla..
+"""
+class Survey(models.Model):
+
+    lang = models.CharField(max_length=3, blank=True, default='en')
+
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
+
+    avg_score = models.CharField(max_length=250, default=None, blank=True, null=True, help_text="The avg from all the answers taken under this survay", editable=False)
+    status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=PENDING)
+
+    duration = models.DurationField(default=datetime.timedelta(hours=24), help_text="No one will be able to answer after this period of time")
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+PENDING = 'PENDING'
+SENT = 'SENT'
+ANSWERED = 'ANSWERED'
+OPENED = 'OPENED'
+EXPIRED = 'EXPIRED'
+SURVEY_STATUS = (
+    (PENDING, 'Pending'),
+    (SENT, 'Sent'),
+    (ANSWERED, 'Answered'),
+    (OPENED, 'Opened'),
+    (EXPIRED, 'Expired'),
+)
 class Answer(models.Model):
     title = models.CharField(max_length=200, blank=True)
     lowest = models.CharField(max_length=50, default='not likely')
     highest = models.CharField(max_length=50, default='very likely')
     lang = models.CharField(max_length=3, blank=True, default='en')
 
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    mentor = models.ForeignKey(User, related_name='mentor_set', on_delete=models.SET_NULL, default=None, blank=True, null=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, default=None, blank=True, null=True)
-    mentor = models.ForeignKey(User, related_name='mentor_set', on_delete=models.SET_NULL, default=None, blank=True, null=True)
-    event = models.ForeignKey(Event, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     token = models.OneToOneField(Token, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     
     score = models.CharField(max_length=250, default=None, blank=True, null=True)
     comment = models.CharField(max_length=255, default=None, blank=True, null=True)
+
+    survey = models.ForeignKey(Survey, on_delete=models.SET_NULL, default=None, blank=True, null=True, help_text='You can group one or more answers in one survey, the survey does not belong to any student in particular but answers belong to the student that answered')
 
     status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=PENDING)
 

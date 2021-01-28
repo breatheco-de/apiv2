@@ -3,8 +3,8 @@ from django.contrib import admin, messages
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
-from .models import Answer, UserProxy, CohortProxy, CohortUserProxy
-from .actions import send_survey
+from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey
+from .actions import send_question, send_survey_group
 from .tasks import send_cohort_survey
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ def send_bulk_survey(modeladmin, request, queryset):
 
     for u in user:
         try:
-            send_survey(u)
+            send_question(u)
         except Exception as e:
             error = str(e)
 
@@ -52,7 +52,7 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
 
     for cu in cus:
         try:
-            send_survey(cu.user, cu.cohort)
+            send_question(cu.user, cu.cohort)
         except Exception as e:
             error = str(e)
 
@@ -70,10 +70,9 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
         messages.success(request, message="Survey was successfully sent")
 send_bulk_cohort_user_survey.short_description = "Send General NPS Survey"
 
-
 @admin.register(CohortUserProxy)
 class CohortUserAdmin(CohortUserAdmin):
-    actions = [send_bulk_cohort_user_survey]
+    actions = [send_bulk_cohort_user_survey, ]
 
 
 def send_cohort_bulk_survey(modeladmin, request, queryset):
@@ -85,7 +84,7 @@ def send_cohort_bulk_survey(modeladmin, request, queryset):
         send_cohort_survey.delay(_id)
 
     logger.info(f"All surveys scheduled to send")
-send_cohort_bulk_survey.short_description = "Send NPS Survey to all cohort students"
+send_cohort_bulk_survey.short_description = "Send INDIVIDUAL small survey to all cohort students"
 
 
 @admin.register(CohortProxy)
@@ -101,3 +100,22 @@ class AnswerAdmin(admin.ModelAdmin):
     list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
     # def entity(self, object):
     #     return f"{object.entity_slug} (id:{str(object.entity_id)})"
+
+def send_big_cohort_bulk_survey(modeladmin, request, queryset):
+    logger.debug(f"send_big_cohort_bulk_survey called")
+
+    # cohort_ids = queryset.values_list('id', flat=True)
+    surveys = queryset.all()
+    for s in surveys:
+        logger.debug(f"Sending survey {s.id}")
+        # send_cohort_survey.delay(_id)
+        send_survey_group(survey=s)
+
+    logger.info(f"All surveys scheduled to send for cohorts")
+
+send_big_cohort_bulk_survey.short_description = "Send GENERAL BIG Survey to all cohort students"
+@admin.register(Survey)
+class SurveyAdmin(admin.ModelAdmin):
+    search_fields = ['cohort__slug', 'cohort__academy__slug', 'cohort__name', 'cohort__academy__name']
+    list_display = ('cohort', 'status', 'duration', 'created_at')
+    actions = [send_big_cohort_bulk_survey]

@@ -1,9 +1,9 @@
 {% extends "base.txt" %}
 {% block content %}
 
-Please take 2 min to answer the following question:
+{{ SUBJECT }}
 
-{{ QUESTION }}
+{{ MESSAGE }}
 
 Click here to vote: {{ LINK }}
 

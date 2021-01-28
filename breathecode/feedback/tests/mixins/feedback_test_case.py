@@ -94,7 +94,7 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
     def check_email_contain_a_correct_token(self, lang, academy, dicts, mock, model):
         token = self.get_token()
-        question = strings[lang]["first"] + " " + academy + " " + strings[lang]["second"]
+        question = 'asdasd'
         link = f"https://nps.breatheco.de/{dicts[0]['id']}?token={token}"
 
         args_list = mock.call_args_list
@@ -130,7 +130,7 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
                     '\n'
                     'Please take 2 min to answer the following question:\n'
                     '\n'
-                    '{{ QUESTION }\n' 
+                    '{{ QUESTION }}\n' 
                     '\n'
                     'Click here to vote: '
                     f'{link}'
@@ -149,7 +149,7 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
         slack_token = model['slack_team'].credentials.token
         slack_id = model['slack_user'].slack_id
         args_list = mock.call_args_list
-        question = strings[lang]["first"] + " " + academy + " " + strings[lang]["second"]
+        question = "question title"
         answer = strings[lang]["button_label"]
 
         expected = [call(
@@ -370,6 +370,9 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
             if answer_score:
                 kargs['score'] = answer_score
+
+            if lang:
+                kargs['lang'] = lang
 
             models['answer'] = mixer.blend('feedback.Answer', **kargs)
         

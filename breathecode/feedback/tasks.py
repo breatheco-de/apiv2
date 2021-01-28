@@ -1,6 +1,6 @@
 from celery import shared_task, Task
 from breathecode.admissions.models import CohortUser
-from .actions import send_survey
+from .actions import send_question
 import logging
 
 # Get an instance of a logger
@@ -18,6 +18,6 @@ def send_cohort_survey(self,cohort_id):
     logger.debug(f"Sending survey for {str(cohort_users.count())} students that are ACTIVE or GRADUATED")
     for cu in cohort_users:
         try:
-            result = send_survey(cu.user, cu.cohort)
+            result = send_question(cu.user, cu.cohort)
         except Exception:
             logger.exception(f"Error sending survey to {str(cu.user.id)} cohort {str(cu.cohort.id)}")
