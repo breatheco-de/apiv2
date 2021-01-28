@@ -51,14 +51,14 @@ class Command(BaseCommand):
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment"] },
             { "slug": "assistant", "name": "Teacher Assistant", "caps": ["read_assigment, crud_assignment"] },
             { "slug": "career_support", "name": "Career Support Specialist", "caps": ["read_student","read_certificate", "crud_certificate"] },
-            { "slug": "admissions_developer", "name": "Admissions Developer", "caps": ["read_student","crud_student","read_lead", "read_event", "read_eventcheckin"] },
+            { "slug": "admissions_developer", "name": "Admissions Developer", "caps": ["read_student","crud_student","crud_cohort", "read_cohort","read_lead", "read_event", "read_eventcheckin"] },
             { "slug": "syllabus_coordinator", "name": "Manage Syllabus, Exercises and all academy content", "caps": ["read_syllabus"] },
             { "slug": "growth_manager", "name": "Growth Manager", "caps": ["read_student","read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead"] },
         ]
 
         roles.append({ "slug": "teacher", "name": "Teacher", "caps": extend(roles, ["assistant"]) })
         roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": extend(roles, ["teacher"]) + ["crud_syllabus"] })
-        roles.append({ "slug": "country_manager", "name": "Country Manager", "caps": extend(roles,["academy_coordinator", "student", "career_support", "growth_manager", "admissions_developer", "syllabus_coordinator"]) + ["crud_cohort", "read_cohort"] })
+        roles.append({ "slug": "country_manager", "name": "Country Manager", "caps": extend(roles,["academy_coordinator", "student", "career_support", "growth_manager", "admissions_developer", "syllabus_coordinator"]) + ["read_member", "crud_member"] })
 
         for r in roles:
             _r = Role.objects.filter(slug=r["slug"]).first()
