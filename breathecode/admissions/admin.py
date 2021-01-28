@@ -40,12 +40,35 @@ class CertificateAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'duration_in_hours')
 
 
+def make_assistant(modeladmin, request, queryset):
+    cohort_users = queryset.all()
+    for cu in cohort_users:
+        cu.role = "ASSISTANT"
+        cu.save()
+
+make_assistant.short_description = "Make it an ASSISTANT"
+def make_teacher(modeladmin, request, queryset):
+    cohort_users = queryset.all()
+    for cu in cohort_users:
+        cu.role = "TEACHER"
+        cu.save()
+
+make_teacher.short_description = "Make it a TEACHER"
+
+def make_student(modeladmin, request, queryset):
+    cohort_users = queryset.all()
+    for cu in cohort_users:
+        cu.role = "STUDENT"
+        cu.save()
+
+make_student.short_description = "Make it a STUDENT"
 @admin.register(CohortUser)
 class CohortUserAdmin(admin.ModelAdmin):
     search_fields = ['user__email', 'user__first_name', 'user__last_name', 'cohort__slug', 'cohort__name', 'cohort__slug']
     list_display = ('get_student', 'cohort', 'role', 'educational_status', 'finantial_status', 'created_at')
     list_filter = ['role', 'educational_status','finantial_status']
     raw_id_fields = ["user", "cohort"]
+    actions=[make_assistant, make_teacher, make_student]
 
     def get_student(self, obj):
         return obj.user.first_name + " " + obj.user.last_name + "(" + obj.user.email + ")"
