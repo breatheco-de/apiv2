@@ -283,6 +283,9 @@ def get_github_token(request):
         "scope": 'user repo read:org',
     }
 
+    logger.debug("Redirecting to github")
+    logger.debug(params)
+
     redirect = f'https://github.com/login/oauth/authorize?{urlencode(params)}'
 
     if settings.DEBUG:
@@ -296,6 +299,7 @@ def get_github_token(request):
 def save_github_token(request):
 
     logger.debug("Github callback just landed")
+    logger.debug(request.query_params)
 
     error = request.query_params.get('error', False)
     error_description = request.query_params.get('error_description', '')
