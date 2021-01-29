@@ -70,3 +70,9 @@ def slack_command(request):
         return Response(response, status=status.HTTP_200_OK)
     except Exception as e:
         return Response(str(e), status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_academy_status(request):
+    # TODO: notification staths for the academy, is slack active? is eventbrite active? is email active?
+    pass

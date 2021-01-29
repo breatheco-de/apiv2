@@ -110,10 +110,17 @@ def send_big_cohort_bulk_survey(modeladmin, request, queryset):
 
     # cohort_ids = queryset.values_list('id', flat=True)
     surveys = queryset.all()
+    success = True
     for s in surveys:
         logger.debug(f"Sending survey {s.id}")
         # send_cohort_survey.delay(_id)
-        send_survey_group(survey=s)
+        try:
+            send_survey_group(survey=s)
+        except Exception as e:
+            success = False
+            logger.fatal(str(e))
+    if not success:
+        messages.error(request, message="Some surveys have not been sent")
 
     logger.info(f"All surveys scheduled to send for cohorts")
 
