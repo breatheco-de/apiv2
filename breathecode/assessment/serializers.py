@@ -50,7 +50,7 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
         # the user cannot vote to the same entity within 5 minutes
         answer = Answer.objects.filter(user=self.context['request'].user,id=self.context['answer']).first()
         if answer is None:
-            raise ValidationError('This survay does not exist for this user')
+            raise ValidationError('This survey does not exist for this user')
 
         if answer.status == 'ANSWERED':
             raise ValidationError('You have already voted')

@@ -1,11 +1,10 @@
-import logging
+import logging, json
 from django.contrib import admin, messages
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
 from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey
 from .actions import send_question, send_survey_group
-from .tasks import send_cohort_survey
 from django.utils.html import format_html
 
 logger = logging.getLogger(__name__)
@@ -76,27 +75,17 @@ class CohortUserAdmin(CohortUserAdmin):
     actions = [send_bulk_cohort_user_survey, ]
 
 
-def send_cohort_bulk_survey(modeladmin, request, queryset):
-    logger.debug(f"Send bulk survey called")
-
-    cohort_ids = queryset.values_list('id', flat=True)
-    for _id in cohort_ids:
-        logger.debug(f"Sending survey to cohort {_id}")
-        send_cohort_survey.delay(_id)
-
-    logger.info(f"All surveys scheduled to send")
-send_cohort_bulk_survey.short_description = "Send INDIVIDUAL small survey to all cohort students"
 
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
-    actions = [send_cohort_bulk_survey]
+    pass
 
 
 # Register your models here.
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin):
-    list_display = ('status', 'user', 'score', 'comment', 'opened_at', 'cohort', 'mentor', 'created_at', 'answer_url')
+    list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score', 'comment', 'opened_at', 'created_at', 'answer_url')
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'cohort__slug']
     list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
     def answer_url(self,obj):
@@ -110,17 +99,24 @@ def send_big_cohort_bulk_survey(modeladmin, request, queryset):
 
     # cohort_ids = queryset.values_list('id', flat=True)
     surveys = queryset.all()
-    success = True
     for s in surveys:
         logger.debug(f"Sending survey {s.id}")
-        # send_cohort_survey.delay(_id)
+
         try:
-            send_survey_group(survey=s)
+            result = send_survey_group(survey=s)
+            s.status_json = json.dumps(result)
+            if len(result["success"]) == 0:
+                s.status = 'FATAL'
+            elif len(result["error"]) > 0:
+                s.status = 'PARTIAL'
+            else:
+                s.status = 'SENT'
         except Exception as e:
-            success = False
+            s.status = 'FATAL'
             logger.fatal(str(e))
-    if not success:
+    if s.status != 'SENT':
         messages.error(request, message="Some surveys have not been sent")
+    s.save()
 
     logger.info(f"All surveys scheduled to send for cohorts")
 

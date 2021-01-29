@@ -28,6 +28,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='survey',
             name='avg_score',
-            field=models.CharField(blank=True, default=None, editable=False, help_text='The avg from all the answers taken under this survay', max_length=250, null=True),
+            field=models.CharField(blank=True, default=None, editable=False, help_text='The avg from all the answers taken under this survey', max_length=250, null=True),
         ),
     ]

@@ -77,7 +77,7 @@ class AnswerView(APIView):
         
         answer = Answer.objects.filter(user=request.user,id=answer_id).first()
         if answer is None:
-            raise ValidationError('This survay does not exist for this user')
+            raise ValidationError('This survey does not exist for this user')
         
         serializer = AnswerPUTSerializer(answer, data=request.data, context={ "request": request, "answer": answer_id })
         if serializer.is_valid():
@@ -91,7 +91,7 @@ class AnswerView(APIView):
         
         answer = Answer.objects.filter(user=request.user,id=answer_id).first()
         if answer is None:
-            raise ValidationError('This survay does not exist for this user')
+            raise ValidationError('This survey does not exist for this user')
         
         serializer = AnswerPUTSerializer(answer)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

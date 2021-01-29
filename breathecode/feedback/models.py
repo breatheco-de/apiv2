@@ -21,23 +21,22 @@ class CohortProxy(Cohort):
         proxy = True
 
 
-PENDING = 'PENDING'
-SENT = 'SENT'
-ANSWERED = 'ANSWERED'
-OPENED = 'OPENED'
-EXPIRED = 'EXPIRED'
-SURVEY_STATUS = (
-    (PENDING, 'Pending'),
-    (SENT, 'Sent'),
-    (OPENED, 'Opened'),
-    (EXPIRED, 'Expired'),
-)
 """
 Multiple questions/answers for one single person, survays can only be send to entire cohorts and they will ask all the possible questions involved in a cohort
 1. How is your teacher?
 2. How is the academy?
 3. How is the blabla..
 """
+PENDING='PENDING'
+SENT='SENT'
+PARTIAL='PARTIAL'
+FATAL='FATAL'
+SURVEY_STATUS = (
+    (SENT, 'Sent'),
+    (PENDING, 'Pending'),
+    (PARTIAL, 'Partial'),
+    (FATAL, 'Fatal'),
+)
 class Survey(models.Model):
 
     lang = models.CharField(max_length=3, blank=True, default='en')
@@ -47,12 +46,17 @@ class Survey(models.Model):
     max_assistants_to_ask = models.IntegerField(default=2)
     max_teachers_to_ask = models.IntegerField(default=1)
 
-    avg_score = models.CharField(max_length=250, default=None, blank=True, null=True, help_text="The avg from all the answers taken under this survay", editable=False)
+    avg_score = models.CharField(max_length=250, default=None, blank=True, null=True, help_text="The avg from all the answers taken under this survey", editable=False)
+    
     status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=PENDING)
+    status_json = models.JSONField(default=None, null=True, blank=True)
 
     duration = models.DurationField(default=datetime.timedelta(hours=24), help_text="No one will be able to answer after this period of time")
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return "Survey for "+self.cohort.name
 
 PENDING = 'PENDING'
 SENT = 'SENT'

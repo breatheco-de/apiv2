@@ -45,7 +45,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = {
-            'detail': 'This survay does not exist for this user',
+            'detail': 'This survey does not exist for this user',
             'status_code': 404
         }
 
@@ -64,7 +64,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = {
-            'detail': 'This survay does not exist for this user',
+            'detail': 'This survey does not exist for this user',
             'status_code': 404
         }
 
@@ -117,7 +117,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
         response = self.client.put(url, {})
         json = response.json()
         expected = {
-            'detail': 'This survay does not exist for this user',
+            'detail': 'This survey does not exist for this user',
             'status_code': 404,
         }
 

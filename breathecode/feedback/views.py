@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.http import HttpResponse
 from breathecode.admissions.models import CohortUser
 from .models import Answer, Survey
-from .actions import build_question
+from .tasks import generate_user_cohort_survey_answers
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -52,50 +52,9 @@ def get_survey_questions(request, survey_id=None):
     if cohort_teacher.count() == 0:
         raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
 
-    def new_answer(answer):
-        question = build_question(answer)
-        answer.title = question["title"]
-        answer.lowest = question["lowest"]
-        answer.highest = question["highest"]
-        answer.user = request.user
-        answer.status = 'OPENED'
-        answer.survey = survey
-        answer.opened_at = timezone.now()
-        answer.save()
-        return answer
-
-    _answers = Answer.objects.filter(survey__id=survey_id, user=request.user)
-    if _answers.count() == 0:
-        _answers = []
-
-        # ask for the cohort in general
-        answer = Answer(cohort=survey.cohort, lang=survey.lang)
-        _answers.append(new_answer(answer))
-
-        # ask for each teacher, with a max of 2 teachers
-        cont = 0
-        for ct in cohort_teacher:
-            if cont >= survey.max_teachers_to_ask:
-                break
-            answer = Answer(mentor=ct.user, cohort=survey.cohort, lang=survey.lang)
-            _answers.append(new_answer(answer))
-            cont = cont + 1
-
-        # ask for the first TA
-        cohort_assistant = CohortUser.objects.filter(cohort=survey.cohort, role="ASSISTANT")
-        cont = 0
-        for ca in cohort_assistant:
-            if cont >= survey.max_assistants_to_ask:
-                break
-            answer = Answer(mentor=ca.user, cohort=survey.cohort, lang=survey.lang)
-            _answers.append(new_answer(answer))
-            cont = cont + 1
-
-        # ask for the whole academy
-        answer = Answer(academy=survey.cohort.academy, lang=survey.lang)
-        _answers.append(new_answer(answer))
+    answers = generate_user_cohort_survey_answers(request.user, survey, status='OPENED')
     
-    serializer = AnswerSerializer(_answers, many=True)
+    serializer = AnswerSerializer(answers, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 # Create your views here.
@@ -148,7 +107,7 @@ class AnswerView(APIView):
         
         answer = Answer.objects.filter(user=request.user,id=answer_id).first()
         if answer is None:
-            raise NotFound('This survay does not exist for this user')
+            raise NotFound('This survey does not exist for this user')
         
         serializer = AnswerPUTSerializer(answer, data=request.data, context={ "request": request, "answer": answer_id })
         if serializer.is_valid():
@@ -162,7 +121,7 @@ class AnswerView(APIView):
         
         answer = Answer.objects.filter(user=request.user,id=answer_id).first()
         if answer is None:
-            raise NotFound('This survay does not exist for this user')
+            raise NotFound('This survey does not exist for this user')
         
         serializer = AnswerPUTSerializer(answer)
         return Response(serializer.data, status=status.HTTP_200_OK)

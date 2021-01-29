@@ -4,84 +4,11 @@ from breathecode.utils import ValidationException
 from breathecode.authenticate.actions import create_token
 from breathecode.authenticate.models import Token
 from .models import Answer, Survey
+from .utils import strings
 from breathecode.admissions.models import CohortUser
+from .tasks import send_cohort_survey, build_question
 
 logger = logging.getLogger(__name__)
-
-strings = {
-    "es": {
-        "event": {
-            "title": "¿Que tan probable es que recomiendes eventos como estos a tus familiares y amigos?",
-            "highest": "muy probable",
-            "lowest": "poco probable",
-        },
-        "mentor": {
-            "title": "¿Como ha sido tu experiencia con tu mentor {}?",
-            "highest": "muy buena",
-            "lowest": "mala",
-        },
-        "cohort": {
-            "title": "¿Cómo ha sido tu experiencia estudiando {}?",
-            "highest": "muy buena",
-            "lowest": "mala",
-        },
-        "academy": {
-            "title": "¿Qué tan probable es que recomiendes {} a tus amigos y familiares?",
-            "highest": "muy probable",
-            "lowest": "poco probable",
-        },
-        "button_label": "Responder",
-        "survey_subject": "Necesitamos tu feedback",
-        "survey_message": "Por favor toma 5 minutos para enviarnos un feedback sobre tu experiencia en la academia hasta ahora",
-    },
-    "en": {
-        "event": {
-            "title": "How likely are you to recommend upcomint events to your friends and family?",
-            "highest": "very likely",
-            "lowest": "not likely",
-        },
-        "mentor": {
-            "title": "How has been your experience with your mentor {} so far?",
-            "highest": "very good",
-            "lowest": "not good",
-        },
-        "cohort": {
-            "title": "How has been your experience studying {} so far?",
-            "highest": "very good",
-            "lowest": "not good",
-        },
-        "academy": {
-            "title": "How likely are you to recommend {} to your friends and family?",
-            "highest": "very likely",
-            "lowest": "not likely",
-        },
-        "button_label": "Answer the question",
-        "survey_subject": "We need your feedback",
-        "survey_message": "Please take 5 minutes to give us feedback about your experience at the academy so far.",
-    }
-}
-
-def build_question(answer):
-
-    question = { "title": "", "lowest": "", "highest": "" }
-    if answer.event is not None:
-        question["title"] = strings[answer.lang]["event"]["title"]
-        question["lowest"] = strings[answer.lang]["event"]["lowest"]
-        question["highest"] = strings[answer.lang]["event"]["highest"]
-    elif answer.mentor is not None:
-        question["title"] = strings[answer.lang]["mentor"]["title"].format(answer.mentor.first_name + " " + answer.mentor.last_name)
-        question["lowest"] = strings[answer.lang]["mentor"]["lowest"]
-        question["highest"] = strings[answer.lang]["mentor"]["highest"]
-    elif answer.cohort is not None:
-        question["title"] = strings[answer.lang]["cohort"]["title"].format(answer.cohort.certificate.name)
-        question["lowest"] = strings[answer.lang]["cohort"]["lowest"]
-        question["highest"] = strings[answer.lang]["cohort"]["highest"]
-    elif answer.academy is not None:
-        question["title"] = strings[answer.lang]["academy"]["title"].format(answer.academy.name)
-        question["lowest"] = strings[answer.lang]["academy"]["lowest"]
-        question["highest"] = strings[answer.lang]["academy"]["highest"]
-
-    return question
 
 def send_survey_group(survey=None,cohort=None):
     if survey is None and cohort is None:
@@ -96,29 +23,20 @@ def send_survey_group(survey=None,cohort=None):
     if cohort is None:
         cohort = survey.cohort
 
-    ucs = CohortUser.objects.filter(cohort=cohort).filter()
+    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort, role="TEACHER")
+    if cohort_teacher.count() == 0:
+        raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
+
+    ucs = CohortUser.objects.filter(cohort=cohort, role='STUDENT').filter()
+    result = { "success": [], "error": [] }
     for uc in ucs:
-        user = uc.user
-        has_slackuser = hasattr(user, 'slackuser')
-        if not user.email and not has_slackuser:
-            message = f'Author not have email and slack, this survey cannot be send by {str(user.id)}'
-            logger.info(message)
-            raise Exception(message)
-        
-        token = create_token(user, hours_length=48)
-        data = {
-            "SUBJECT": strings[cohort.language]["survey_subject"],
-            "MESSAGE": strings[cohort.language]["survey_message"],
-            "SURVEY_ID": survey.id,
-            "BUTTON": strings[cohort.language]["button_label"],
-            "LINK": f"https://nps.breatheco.de/survey/{survey.id}?token={token.key}",
-        }
+        if uc.educational_status in ['ACTIVE', 'GRADUATED']:
+            send_cohort_survey.delay(uc.user.id, survey.id)
+            result["success"].append(f"Survey scheduled to send for {uc.user.email}")
+        else:
+            result["error"].append(f"Survey NOT sent to {uc.user.email} because it's not an active student")
 
-        if user.email:
-            send_email_message("nps_survey", user.email, data)
-
-        if hasattr(user, 'slackuser') and hasattr(cohort.academy, 'slackteam'):
-            send_slack("nps_survey", user.slackuser, cohort.academy.slackteam, data=data)
+    return result
 
 def send_question(user, cohort=None):
     answer = Answer(user = user)
@@ -194,7 +112,6 @@ def send_question(user, cohort=None):
     else:
         logger.info(f"Survey was resent for user: {str(user.id)}")
         return True
-
 
 def answer_survey(user, data):
     answer = Answer.objects.create(**{ **data, "user": user })
