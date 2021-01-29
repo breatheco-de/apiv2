@@ -89,7 +89,14 @@ class TaskView(APIView):
             if item is None:
                 raise ValidationException("Task not found")
 
-            serializer = SmallTaskSerializer(item, many=False)
+            serializer = TaskGETSerializer(item, many=False)
+            return Response(serializer.data)
+
+        else:
+            if user_id is None:
+                user_id = request.user.id
+            tasks = Task.objects.filter(user__id=user_id)
+            serializer = TaskGETSerializer(tasks, many=True)
             return Response(serializer.data)
 
         return Response(serializer.errors, status=status.HTTP_404_NOT_FOUND)
