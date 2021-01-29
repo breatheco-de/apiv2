@@ -54,7 +54,7 @@ class CertificateView(APIView):
     @capable_of('read_certificate')
     def get(self, request, cohort_id, student_id, academy_id=None):
 
-        cert = UserSpecialty.objects.filter(cohort__id=cohort_id, user__id=student_id, cohort__academy__id=academy_id)
+        cert = UserSpecialty.objects.filter(cohort__id=cohort_id, user__id=student_id, cohort__academy__id=academy_id).first()
         if cert is None:
             raise serializers.ValidationError("Certificate not found", code=404)
 
@@ -64,7 +64,7 @@ class CertificateView(APIView):
     @capable_of('crud_certificate')
     def post(self, request, cohort_id, student_id, academy_id=None):
 
-        cu = CohortUser.objects.filter(cohort__id=cohort_id, user__id=student_id, role="STUDENT", cohort__academy__id=academy_id)
+        cu = CohortUser.objects.filter(cohort__id=cohort_id, user__id=student_id, role="STUDENT", cohort__academy__id=academy_id).first()
         if cu is None:
             raise serializers.ValidationError(f"Student not found for this cohort", code=404)
 
