@@ -63,12 +63,12 @@ def generate_certificate(user, cohort=None):
         raise report_certificate_error(message, user, cohort)
 
     if tasks_count_pending:
-        message = f'The student have {tasks_count_pending} pending task'
+        message = f'The student have {tasks_count_pending} pending tasks'
         raise report_certificate_error(message, user, cohort)
 
     if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status ==
         UP_TO_DATE):
-        message = f'Payment error, finantial_status=`{cohort_user.finantial_status}`'
+        message = f'The student must have finantial status FULLY_PAID or UP_TO_DATE'
         raise report_certificate_error(message, user, cohort)
 
     if cohort.certificate is None:
