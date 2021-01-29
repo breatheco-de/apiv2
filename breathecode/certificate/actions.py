@@ -47,7 +47,7 @@ def report_certificate_error(message: str, user, cohort, layout=None):
         logger.error(str(e))
 
     logger.error(message)
-    return Exception(message)
+    return ValidationException(message)
 
 def generate_certificate(user, cohort=None):
 
