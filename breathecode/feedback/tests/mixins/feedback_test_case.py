@@ -11,14 +11,14 @@ from datetime import datetime
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
 from django.contrib.auth.models import User
-from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatter
+from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatterMixin
 from breathecode.notify.actions import get_template_content
 from django.core.cache import cache
 from ...models import Answer
 from ...actions import strings
 
 
-class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
+class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
     """FeedbackTestCase with auth methods"""
      # token = None
     user = None

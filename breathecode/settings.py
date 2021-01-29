@@ -305,7 +305,7 @@ CACHES = {
     },
 }
 
-CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 15))
+CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 
 # Simplified static file serving.
 # https://warehouse.python.org/project/whitenoise/

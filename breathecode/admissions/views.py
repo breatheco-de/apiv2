@@ -21,7 +21,7 @@ from rest_framework import status
 from breathecode.utils import localize_query, capable_of
 from django.http import QueryDict
 from django.db.utils import IntegrityError
-from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
+from rest_framework.exceptions import NotFound, ParseError, PermissionDenied, ValidationError
 from breathecode.assignments.models import Task
 
 logger = logging.getLogger(__name__)
@@ -246,10 +246,8 @@ class AcademyCohortView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
-
     @capable_of('read_cohort')
     def get(self, request, cohort_id=None, academy_id=None):
-
         if cohort_id is not None:
             item = None
             if str.isnumeric(cohort_id):
@@ -281,8 +279,7 @@ class AcademyCohortView(APIView):
         return Response(serializer.data)
 
     @capable_of('crud_cohort')
-    def post(self, request, academy_id):
-
+    def post(self, request, academy_id=None):
         if request.data.get('academy') or request.data.get('academy_id'):
             raise ParseError(detail='academy and academy_id field is not allowed')
 
@@ -319,7 +316,6 @@ class AcademyCohortView(APIView):
 
     @capable_of('crud_cohort')
     def put(self, request, cohort_id=None, academy_id=None):
-
         if cohort_id is None:
             raise serializers.ValidationError("Missing cohort_id", code=400)
 
