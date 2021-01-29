@@ -5,19 +5,28 @@ logger = logging.getLogger(__name__)
 USER_AGENT="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
 
 def get_website_text(endp):
-    url = endp.url
     """Make a request to get the content of the given URL."""
 
     headers = {
         'User-Agent': USER_AGENT
     }
 
+    url = endp.url
     status_code = 404
     status_text = ""
+    payload = None
     try:
-        r = requests.get(url, headers=headers)
+        r = requests.get(url, headers=headers, timeout=2)
+        content_type = r.headers['content-type']
+        length = r.headers['content-length']
         status_code = r.status_code
-        status_text = r.text
+
+        if endp.test_pattern is not None and endp.test_pattern != "" and status_code == 200:
+            if int(length) > 3000:
+                status_code = 400
+                status_text = "Timeout: The payload of this request is too long (more than 3 MB), remove the test_pattern to avoid timeout"
+            else:
+                payload = r.text
     except requests.Timeout:
         status_code = 500
         status_text = "Connection Timeout"
@@ -44,14 +53,15 @@ def get_website_text(endp):
         endp.severity_level = 0
         endp.status_text = "Uknown status code, lower than 200"
 
-    if endp.test_pattern is not None and endp.test_pattern != "" and status_code == 200:
-        if not re.search(endp.test_pattern, r.text):
+    if endp.test_pattern is not None and endp.test_pattern != "" and status_code == 200 and payload:
+        if not re.search(endp.test_pattern, payload):
             endp.status = 'MINOR'
             endp.severity_level = 5
             endp.status_text = f"Status is 200 but regex {endp.test_pattern} was rejected"
 
+    print("status", endp.status_text)
     endp.status_code = status_code
-    endp.response_text = status_text
+    endp.response_text = payload
     endp.save()
         
     return endp
