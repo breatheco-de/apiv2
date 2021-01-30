@@ -18,7 +18,9 @@ def get_website_text(endp):
     try:
         r = requests.get(url, headers=headers, timeout=2)
         content_type = r.headers['content-type']
-        length = r.headers['content-length']
+        length = 0
+        if 'content-length' in r.headers:
+            length = r.headers['content-length']
         status_code = r.status_code
 
         if endp.test_pattern is not None and endp.test_pattern != "" and status_code == 200:
