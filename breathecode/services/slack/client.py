@@ -77,6 +77,7 @@ class Slack:
             raise Exception("Imposible to determine action")
 
         try:
+            logger.debug(f"Slack action: {str(payload['actions'])}")
             _data = json.loads(payload["actions"][0]["action_id"])
             action_class = _data.pop("class", None)
             method = _data.pop("method", None)

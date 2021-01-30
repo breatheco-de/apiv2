@@ -144,7 +144,7 @@ def register_new_lead(form_entry=None):
     logger.debug("found automations", automations)
 
     tags = get_lead_tags(ac_academy, form_entry)
-    logger.debug("found tags", tags)
+    logger.debug("found tags", set(t.slug for t in tags))
     LEAD_TYPE = tags[0].tag_type
     if (automations is None or len(automations) == 0) and len(tags) > 0:
         if tags[0].automation is None:
