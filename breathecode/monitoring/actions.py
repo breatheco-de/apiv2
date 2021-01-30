@@ -109,7 +109,7 @@ def run_app_diagnostic(app, report=False):
         results["status"] = 'MINOR'
 
     # results["url"] = endpoint.url
-    # results["text"] = json.dumps(results, indent=4)
+    results["text"] = json.dumps(results, indent=4)
 
     app.status = results["status"]
 

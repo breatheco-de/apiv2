@@ -62,13 +62,27 @@ def make_student(modeladmin, request, queryset):
         cu.save()
 
 make_student.short_description = "Make it a STUDENT"
+
+def make_edu_stat_active(modeladmin, request, queryset):
+    cohort_users = queryset.all()
+    for cu in cohort_users:
+        cu.educational_status = "ACTIVE"
+        cu.save()
+make_edu_stat_active.short_description = "Educational_status = ACTIVE"
+
+def make_edu_stat_graduate(modeladmin, request, queryset):
+    cohort_users = queryset.all()
+    for cu in cohort_users:
+        cu.educational_status = "GRADUATED"
+        cu.save()
+make_edu_stat_graduate.short_description = "Educational_status = GRADUATED"
 @admin.register(CohortUser)
 class CohortUserAdmin(admin.ModelAdmin):
     search_fields = ['user__email', 'user__first_name', 'user__last_name', 'cohort__slug', 'cohort__name', 'cohort__slug']
     list_display = ('get_student', 'cohort', 'role', 'educational_status', 'finantial_status', 'created_at')
     list_filter = ['role', 'educational_status','finantial_status']
     raw_id_fields = ["user", "cohort"]
-    actions=[make_assistant, make_teacher, make_student]
+    actions=[make_assistant, make_teacher, make_student, make_edu_stat_active]
 
     def get_student(self, obj):
         return obj.user.first_name + " " + obj.user.last_name + "(" + obj.user.email + ")"
