@@ -7,3 +7,4 @@ from .date_formatter_mixin import DateFormatterMixin
 from .authenticate_mixin import AuthenticateMixin
 from .headers_mixin import HeadersMixin
 from .generate_models_mixin import GenerateModelsMixin
+from .cache_mixin import CacheMixin
