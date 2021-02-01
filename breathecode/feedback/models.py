@@ -83,7 +83,7 @@ class Answer(models.Model):
     token = models.OneToOneField(Token, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     
     score = models.CharField(max_length=250, default=None, blank=True, null=True)
-    comment = models.CharField(max_length=255, default=None, blank=True, null=True)
+    comment = models.TextField(max_length=1000, default=None, blank=True, null=True)
 
     survey = models.ForeignKey(Survey, on_delete=models.SET_NULL, default=None, blank=True, null=True, help_text='You can group one or more answers in one survey, the survey does not belong to any student in particular but answers belong to the student that answered')
 
