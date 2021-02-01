@@ -378,6 +378,22 @@ def save_github_token(request):
                 )
                 profile.save()
 
+            student_role = Role.objects.get(slug="student")
+            cus = CohortUser.objects.filter(user=user,role="STUDENT")
+            for cu in cus:
+                profile_academy = ProfileAcademy.objects.filter(user=cu.user, academy=cu.cohort.academy).first()
+                if profile_academy is None:
+                    profile_academy = ProfileAcademy(
+                        user=cu.user,
+                        academy=cu.cohort.academy,
+                        role=student_role,
+                        email=cu.user.email,
+                        first_name=cu.user.first_name,
+                        last_name=cu.user.last_name,
+                        status='ACTIVE'
+                    )
+                    profile_academy.save()
+
             token, created = Token.objects.get_or_create(user=user, token_type='login')
 
             return HttpResponseRedirect(redirect_to=url+'?token='+token.key)

@@ -1,4 +1,4 @@
-import csv, logging
+import logging
 from django.contrib import admin, messages
 from django import forms 
 from .models import FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy
@@ -6,29 +6,11 @@ from .actions import (
     register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
     sync_tags, sync_automations,
 )
-from django.http import HttpResponse
 from django.contrib.admin import SimpleListFilter
+from breathecode.utils import AdminExportCsvMixin
 # Register your models here.
 
 logger = logging.getLogger(__name__)
-
-class ExportCsvMixin:
-    def export_as_csv(self, request, queryset):
-
-        meta = self.model._meta
-        field_names = [field.name for field in meta.fields]
-
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename={}.csv'.format(meta)
-        writer = csv.writer(response)
-
-        writer.writerow(field_names)
-        for obj in queryset:
-            row = writer.writerow([getattr(obj, field) for field in field_names])
-
-        return response
-
-    export_as_csv.short_description = "Export Selected"
 
 def test_ac(modeladmin, request, queryset):
     entries = queryset.all()
@@ -73,7 +55,7 @@ class CustomForm(forms.ModelForm):
         self.fields['event_attendancy_automation'].queryset = Automation.objects.filter(ac_academy=self.instance.id)# or something else
 
 @admin.register(ActiveCampaignAcademy)
-class ACAcademyAdmin(admin.ModelAdmin, ExportCsvMixin):
+class ACAcademyAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     form = CustomForm
     search_fields = ['academy__name', 'academy__slug']
     list_display = ('id', 'academy', 'ac_url', 'sync_status', 'last_interaction_at', 'sync_message')
@@ -118,7 +100,7 @@ class PPCFilter(SimpleListFilter):
             return queryset.filter(utm_medium='coursereportschoolpage')
 
 @admin.register(FormEntry)
-class FormEntryAdmin(admin.ModelAdmin, ExportCsvMixin):
+class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['email', 'first_name', 'last_name', 'phone']
     list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
     list_filter = ['storage_status', 'location', 'course', PPCFilter, 'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium']
@@ -148,7 +130,7 @@ class CustomTagModelForm(forms.ModelForm):
         self.fields['automation'].queryset = Automation.objects.filter(ac_academy=self.instance.ac_academy.id)# or something else
 
 @admin.register(Tag)
-class TagAdmin(admin.ModelAdmin, ExportCsvMixin):
+class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     form = CustomTagModelForm
     search_fields = ['slug']
     list_display = ('id', 'slug', 'tag_type', 'acp_id', 'subscribers')
@@ -156,14 +138,14 @@ class TagAdmin(admin.ModelAdmin, ExportCsvMixin):
     actions = [mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery, mark_tag_as_other, "export_as_csv"]
 
 @admin.register(Automation)
-class AutomationAdmin(admin.ModelAdmin, ExportCsvMixin):
+class AutomationAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['slug', 'name']
     list_display = ('id', 'acp_id', 'slug', 'name', 'status', 'entered', 'exited')
     list_filter = ['status', 'ac_academy__academy__slug']
     actions = ["export_as_csv"]
 
 @admin.register(ShortLink)
-class ShortLinkAdmin(admin.ModelAdmin, ExportCsvMixin):
+class ShortLinkAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['slug', 'destination']
     list_display = ('id', 'slug', 'hits', 'active', 'destination_status', 'destination')
     list_filter = ['destination_status', 'active']

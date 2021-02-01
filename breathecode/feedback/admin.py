@@ -6,6 +6,7 @@ from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
 from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey
 from .actions import send_question, send_survey_group
 from django.utils.html import format_html
+from breathecode.utils import AdminExportCsvMixin
 
 logger = logging.getLogger(__name__)
 
@@ -84,10 +85,11 @@ class CohortAdmin(CohortAdmin):
 
 # Register your models here.
 @admin.register(Answer)
-class AnswerAdmin(admin.ModelAdmin):
+class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score', 'comment', 'opened_at', 'created_at', 'answer_url')
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'cohort__slug']
     list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
+    actions=["export_as_csv"]
     def answer_url(self,obj):
         url = "https://nps.breatheco.de/" + str(obj.id)
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open answer</a>")

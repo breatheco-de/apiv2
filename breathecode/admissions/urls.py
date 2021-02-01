@@ -16,8 +16,8 @@ urlpatterns = [
     path('cohort/<int:cohort_id>/user', CohortUserView.as_view(), name="cohort_id_user"),
 
     # new endpoints (replacing above)
-    path('academy/cohort/<str:cohort_id>', AcademyCohortView.as_view()),
     path('academy/cohort/user', AcademyCohortUserView.as_view()),
+    path('academy/cohort/<str:cohort_id>', AcademyCohortView.as_view()),
     path('academy/cohort/<int:cohort_id>/user/<int:user_id>', AcademyCohortUserView.as_view()),
     path('academy/cohort/<int:cohort_id>/user', AcademyCohortUserView.as_view()),
 

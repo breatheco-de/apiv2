@@ -1,4 +1,4 @@
-import logging, csv
+import logging
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
@@ -9,27 +9,9 @@ from breathecode.admissions.admin import CohortAdmin
 from django.utils.html import format_html
 from django.template.defaultfilters import escape
 from django.urls import reverse
-from django.http import HttpResponse
+from breathecode.utils import AdminExportCsvMixin
 
 logger = logging.getLogger(__name__)
-
-class ExportCsvMixin:
-    def export_as_csv(self, request, queryset):
-
-        meta = self.model._meta
-        field_names = [field.name for field in meta.fields]
-
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename={}.csv'.format(meta)
-        writer = csv.writer(response)
-
-        writer.writerow(field_names)
-        for obj in queryset:
-            row = writer.writerow([getattr(obj, field) for field in field_names])
-
-        return response
-
-    export_as_csv.short_description = "Export Selected"
 
 # Register your models here.
 @admin.register(Device)
@@ -55,7 +37,7 @@ class SlackTeamAdmin(admin.ModelAdmin):
     actions = [sync_channels, sync_users]
 
 @admin.register(SlackUser)
-class SlackUserAdmin(admin.ModelAdmin, ExportCsvMixin):
+class SlackUserAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['slack_id','display_name', 'real_name', 'email', 'user__email', 'user__first_name', 'user__last_name']
     raw_id_fields = ["user"]
     list_display = ('slack_id', 'user_link', 'display_name', 'real_name', 'email', 'updated_at')
@@ -67,7 +49,7 @@ class SlackUserAdmin(admin.ModelAdmin, ExportCsvMixin):
             return "Missing BC user"
 
 @admin.register(SlackUserTeam)
-class SlackUserTeamAdmin(admin.ModelAdmin, ExportCsvMixin):
+class SlackUserTeamAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['slack_user__email', 'slack_user__user__first_name', 'slack_user__user__last_name', 'slack_team__id', 'slack_team__name']
     raw_id_fields = ["slack_user"]
     list_display = ('slack_user', 'sync_status', 'breathecode_user', 'slack_team', 'created_at')
@@ -80,7 +62,7 @@ class SlackUserTeamAdmin(admin.ModelAdmin, ExportCsvMixin):
             return "Missing BC user"
 
 @admin.register(SlackChannel)
-class SlackChannelAdmin(admin.ModelAdmin, ExportCsvMixin):
+class SlackChannelAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['name', 'cohort__name']
     list_display = ('slack_id', 'sync_status', 'cohort_link', 'name', 'synqued_at')
     list_filter = ['sync_status', 'team__slack_id', 'team__academy__slug']

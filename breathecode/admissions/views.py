@@ -246,6 +246,7 @@ class AcademyCohortUserView(APIView):
     """
     @capable_of('read_cohort')
     def get(self, request, format=None, academy_id=None):
+
         items = CohortUser.objects.filter(cohort__academy__id=academy_id)
 
         roles = request.GET.get('roles', None)
