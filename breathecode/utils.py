@@ -3,12 +3,9 @@ from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.views import exception_handler
 from breathecode.authenticate.models import ProfileAcademy
 from django.contrib.auth.models import AnonymousUser
-<<<<<<< HEAD
 from django.core.cache import cache
 
-=======
 from django.http import HttpResponse
->>>>>>> b5adec4cb2399f05ff87018600a07b6c57eb518b
 logger = logging.getLogger(__name__)
 
 def localize_query(query, request, matcher=None):

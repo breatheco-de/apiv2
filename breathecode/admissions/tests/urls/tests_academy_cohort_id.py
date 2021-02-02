@@ -81,7 +81,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
 
-        self.assertEqual(json, {'status_code': 500, 'details': 'Specified cohort not be found'})
+        self.assertEqual(json, {'status_code': 400, 'detail': 'Specified cohort not be found'})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), self.remove_dinamics_fields(model['cohort'].__dict__))
