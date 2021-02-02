@@ -112,7 +112,9 @@ class GetMeCohortSerializer(serpy.Serializer):
     name = serpy.Field()
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
+    current_day = serpy.Field()
     certificate = GetSmallCertificateSerializer()
+    academy = AcademySerializer()
     stage = serpy.Field()
 
 class GETCohortUserSerializer(serpy.Serializer):

@@ -34,5 +34,5 @@ def async_slack_action(post_data):
 
     except Exception as e:
         logger.exception("Error processing slack action")
-        return Response(str(e), status=status.HTTP_200_OK)
+        return False
  

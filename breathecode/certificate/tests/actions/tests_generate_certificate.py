@@ -33,7 +33,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             self.assertEqual(generate_certificate(model['cohort_user'].user), None)
 
         except Exception as error:
-            self.assertEqual(str(error), 'Payment error, finantial_status=`None`')
+            self.assertEqual(str(error), 'The student must have finantial status FULLY_PAID or UP_TO_DATE')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -46,7 +46,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             self.assertEqual(generate_certificate(model['cohort_user'].user), None)
 
         except Exception as error:
-            self.assertEqual(str(error), f'Payment error, finantial_status=`{LATE}`')
+            self.assertEqual(str(error), f'The student must have finantial status FULLY_PAID or UP_TO_DATE')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -133,7 +133,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             self.assertEqual(generate_certificate(model['cohort_user'].user), None)
 
         except Exception as error:
-            self.assertEqual(str(error), 'The student have 1 pending task')
+            self.assertEqual(str(error), 'The student have 1 pending tasks')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

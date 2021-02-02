@@ -41,7 +41,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.put(url, data)
         json = response.json()
-        expected = {'status_code': 400, 'details': 'invalid cohort_id'}
+        expected = {'status_code': 400, 'detail': 'invalid cohort_id'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -57,7 +57,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.put(url, data)
         json = response.json()
-        expected = {'status_code': 400, 'details': 'invalid user_id'}
+        expected = {'status_code': 400, 'detail': 'invalid user_id'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -73,7 +73,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.put(url, data)
         json = response.json()
-        expected = {'status_code': 500, 'details': 'Specified cohort not be found'}
+        expected = {'status_code': 400, 'detail': 'Specified cohort not be found'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -89,7 +89,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.put(url, data)
         json = response.json()
-        expected = {'status_code': 500, 'details': 'Specified cohort not be found'}
+        expected = {'status_code': 400, 'detail': 'Specified cohort not be found'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -105,7 +105,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.put(url, data)
         json = response.json()
-        expected = {'status_code': 500, 'details': 'Specified cohort not be found'}
+        expected = {'status_code': 400, 'detail': 'Specified cohort not be found'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -198,8 +198,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'status_code': 500,
-            'details': 'User has tasks with status pending the educational status cannot be GRADUATED',
+            'status_code': 400,
+            'detail': 'User has tasks with status pending the educational status cannot be GRADUATED',
         }
 
         self.assertEqual(json, expected)
@@ -221,8 +221,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'status_code': 500,
-            'details': 'Cannot be marked as `GRADUATED` if its financial status is `LATE`',
+            'status_code': 400,
+            'detail': 'Cannot be marked as `GRADUATED` if its financial status is `LATE`',
         }
 
         self.assertEqual(json, expected)

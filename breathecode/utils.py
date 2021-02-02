@@ -1,10 +1,14 @@
-import logging
+import logging, csv
 from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.views import exception_handler
 from breathecode.authenticate.models import ProfileAcademy
 from django.contrib.auth.models import AnonymousUser
+<<<<<<< HEAD
 from django.core.cache import cache
 
+=======
+from django.http import HttpResponse
+>>>>>>> b5adec4cb2399f05ff87018600a07b6c57eb518b
 logger = logging.getLogger(__name__)
 
 def localize_query(query, request, matcher=None):
@@ -129,3 +133,21 @@ class Cache():
             query = f'{self.name}_*' if not all else '*'
             return cache.keys(query)
         return []
+
+class AdminExportCsvMixin:
+    def export_as_csv(self, request, queryset):
+
+        meta = self.model._meta
+        field_names = [field.name for field in meta.fields]
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename={}.csv'.format(meta)
+        writer = csv.writer(response)
+
+        writer.writerow(field_names)
+        for obj in queryset:
+            row = writer.writerow([getattr(obj, field) for field in field_names])
+
+        return response
+
+    export_as_csv.short_description = "Export Selected as CSV"

@@ -121,7 +121,7 @@ class FormEntry(models.Model):
     fb_ad_id = models.BigIntegerField(null=True, default=None, blank=True)
 
     first_name = models.CharField(max_length=150, default='')
-    last_name = models.CharField(max_length=150, default='')
+    last_name = models.CharField(max_length=150, default='', blank=True)
     email = models.CharField(max_length=150, null=True, default=None, blank=True)
 
     phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
@@ -159,7 +159,7 @@ class FormEntry(models.Model):
     lead_type = models.CharField(max_length=15, choices=LEAD_TYPE, null=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
-    ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None)
+    ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

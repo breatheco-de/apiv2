@@ -7,6 +7,7 @@ from unittest import mock
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins import AuthTestCase
+from ...models import Role
 from ..mocks import GithubRequestsMock
 
 
@@ -31,6 +32,9 @@ class AuthenticateTestSuite(AuthTestCase):
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
     def test_github_callback(self):
         """Test /github/callback"""
+        role = Role(slug='student', name="Student")
+        role.save()
+
         original_url_callback = 'https://google.co.ve'
         token_pattern = re.compile("^" + original_url_callback.replace('.', r'\.') +
             r"\?token=[0-9a-zA-Z]{,40}$")

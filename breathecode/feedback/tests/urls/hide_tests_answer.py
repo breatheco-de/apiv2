@@ -25,18 +25,27 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, [])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.count_answer(), 0)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_answer_wrong_academy(self):
+        """Test /answer without auth"""
+        url = reverse_lazy('feedback:answer')
+        response = self.client.get(url, **{'HTTP_Academy': 1 })
+        json = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_without_data(self):
         """Test /answer without auth"""
-        self.generate_models(authenticate=True)
+        models = self.generate_models(authenticate=True, profile_academy=True)
         url = reverse_lazy('feedback:answer')
-        response = self.client.get(url)
+        response = self.client.get(url, **{'HTTP_Academy': models['profile_academy'].academy.id })
         json = response.json()
 
         self.assertEqual(json, [])
@@ -51,7 +60,7 @@ class AnswerTestSuite(FeedbackTestCase):
         model = self.generate_models(authenticate=True, answer=True)
         db = self.model_to_dict(model, 'answer')
         url = reverse_lazy('feedback:answer')
-        response = self.client.get(url)
+        response = self.client.get(url, academy=model['answer'].academy.id)
         json = response.json()
 
         self.assertEqual(json, [{
@@ -86,7 +95,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url)
+        response = self.client.get(url, headers={"Academy": model['answer'].academy.id})
         json = response.json()
 
         self.assertEqual(json, [])
@@ -106,11 +115,10 @@ class AnswerTestSuite(FeedbackTestCase):
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url)
+        response = self.client.get(url, headers={"Academy": model['answer'].academy.id })
         json = response.json()
 
         self.assertEqual(json, [{
-            'academy': model['answer'].academy,
             'cohort': model['answer'].cohort,
             'comment': model['answer'].comment,
             'event': model['answer'].event,
@@ -144,7 +152,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url)
+        response = self.client.get(url, headers={"Academy": model['answer'].academy.id})
         json = response.json()
 
         self.assertEqual(json, [])
@@ -163,7 +171,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url)
+        response = self.client.get(url, headers={"Academy": model['answer'].academy.id})
         json = response.json()
 
         self.assertEqual(json, [{
@@ -196,26 +204,6 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_answer_with_bad_param_academy_with_data(self):
-        """Test /answer without auth"""
-        model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            answer=True)
-        db = self.model_to_dict(model, 'answer')
-        params = {
-            'academy': 9999,
-        }
-        base_url = reverse_lazy('feedback:answer')
-        url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(json, [])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_param_academy_with_data(self):
         """Test /answer without auth"""
         model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
@@ -226,7 +214,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url)
+        response = self.client.get(url, headers={"Academy": model['academy'].id})
         json = response.json()
 
         self.assertEqual(json, [{
@@ -293,7 +281,7 @@ class AnswerTestSuite(FeedbackTestCase):
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url)
+        response = self.client.get(url, headers={"Academy": model['academy'].id})
         json = response.json()
 
         self.assertEqual(json, [{
@@ -449,7 +437,7 @@ class AnswerTestSuite(FeedbackTestCase):
             }
             base_url = reverse_lazy('feedback:answer')
             url = f'{base_url}?{urllib.parse.urlencode(params)}'
-            response = self.client.get(url)
+            response = self.client.get(url, headers={"Academy", model['academy'].id })
             json = response.json()
 
             self.assertEqual(json, [{

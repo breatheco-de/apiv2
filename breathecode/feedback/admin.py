@@ -1,11 +1,12 @@
-import logging
+import logging, json
 from django.contrib import admin, messages
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
-from .models import Answer, UserProxy, CohortProxy, CohortUserProxy
-from .actions import send_survey
-from .tasks import send_cohort_survey
+from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey
+from .actions import send_question, send_survey_group
+from django.utils.html import format_html
+from breathecode.utils import AdminExportCsvMixin
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ def send_bulk_survey(modeladmin, request, queryset):
 
     for u in user:
         try:
-            send_survey(u)
+            send_question(u)
         except Exception as e:
             error = str(e)
 
@@ -52,7 +53,7 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
 
     for cu in cus:
         try:
-            send_survey(cu.user, cu.cohort)
+            send_question(cu.user, cu.cohort)
         except Exception as e:
             error = str(e)
 
@@ -70,34 +71,76 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
         messages.success(request, message="Survey was successfully sent")
 send_bulk_cohort_user_survey.short_description = "Send General NPS Survey"
 
-
 @admin.register(CohortUserProxy)
 class CohortUserAdmin(CohortUserAdmin):
-    actions = [send_bulk_cohort_user_survey]
+    actions = [send_bulk_cohort_user_survey, ]
 
 
-def send_cohort_bulk_survey(modeladmin, request, queryset):
-    logger.debug(f"Send bulk survey called")
-
-    cohort_ids = queryset.values_list('id', flat=True)
-    for _id in cohort_ids:
-        logger.debug(f"Sending survey to cohort {_id}")
-        send_cohort_survey.delay(_id)
-
-    logger.info(f"All surveys scheduled to send")
-send_cohort_bulk_survey.short_description = "Send NPS Survey to all cohort students"
 
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
-    actions = [send_cohort_bulk_survey]
+    pass
 
 
+
+def add_academy_to_answer(modeladmin, request, queryset):
+
+    for answer in queryset:
+        try:
+            answer.academy = answer.cohort.academy
+        except:
+            answer.academy = answer.academy
+        else:
+            pass
+        answer.save()
+add_academy_to_answer.short_description = "Add academy to answer"
 # Register your models here.
 @admin.register(Answer)
-class AnswerAdmin(admin.ModelAdmin):
+class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
+    list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score', 'comment', 'opened_at', 'created_at', 'answer_url')
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'cohort__slug']
-    list_display = ('status', 'user', 'score', 'comment', 'opened_at', 'cohort', 'created_at')
     list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
+    actions=["export_as_csv", add_academy_to_answer]
+    def answer_url(self,obj):
+        url = "https://nps.breatheco.de/" + str(obj.id)
+        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open answer</a>")
     # def entity(self, object):
     #     return f"{object.entity_slug} (id:{str(object.entity_id)})"
+
+def send_big_cohort_bulk_survey(modeladmin, request, queryset):
+    logger.debug(f"send_big_cohort_bulk_survey called")
+
+    # cohort_ids = queryset.values_list('id', flat=True)
+    surveys = queryset.all()
+    for s in surveys:
+        logger.debug(f"Sending survey {s.id}")
+
+        try:
+            result = send_survey_group(survey=s)
+            s.status_json = json.dumps(result)
+            if len(result["success"]) == 0:
+                s.status = 'FATAL'
+            elif len(result["error"]) > 0:
+                s.status = 'PARTIAL'
+            else:
+                s.status = 'SENT'
+        except Exception as e:
+            s.status = 'FATAL'
+            logger.fatal(str(e))
+    if s.status != 'SENT':
+        messages.error(request, message="Some surveys have not been sent")
+    s.save()
+
+    logger.info(f"All surveys scheduled to send for cohorts")
+
+send_big_cohort_bulk_survey.short_description = "Send GENERAL BIG Survey to all cohort students"
+@admin.register(Survey)
+class SurveyAdmin(admin.ModelAdmin):
+    list_display = ('cohort', 'status', 'duration', 'created_at', 'survey_url')
+    search_fields = ['cohort__slug', 'cohort__academy__slug', 'cohort__name', 'cohort__academy__name']
+    list_filter = ['status', 'cohort__academy__slug']
+    actions = [send_big_cohort_bulk_survey]
+    def survey_url(self,obj):
+        url = "https://nps.breatheco.de/survey/" + str(obj.id)
+        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open survey</a>")

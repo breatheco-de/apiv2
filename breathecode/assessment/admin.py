@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
 from .models import Answer, UserProxy, CohortProxy
-from .actions import send_survey
+from .actions import send_question
 from .tasks import send_cohort_survey
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ def send_bulk_survey(modeladmin, request, queryset):
     user = queryset.all()
     try:
         for u in user:
-            send_survey(u)
+            send_question(u)
         messages.success(request, message="Survey was successfully sent")
     except Exception as e:
         logger.fatal(str(e))

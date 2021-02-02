@@ -1,0 +1,26 @@
+{
+	"blocks": [
+		{
+			"type": "header",
+			"text": {
+				"type": "plain_text",
+				"text": "{{ SUBJECT }}",
+				"emoji": true
+			}
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"text": "{{ BUTTON }}",
+						"emoji": true
+					},
+                    "url": "{{ LINK }}"
+				}
+			]
+		}
+	]
+}

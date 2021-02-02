@@ -79,7 +79,7 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
-    'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareOnly404',
+    # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareOnly404',
     # ⬆ This Rollbar should always be first please!
 
     'django.middleware.security.SecurityMiddleware',
@@ -96,8 +96,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    # ⬇ Rollbar is always last please!
-    'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',
+    # ⬇ Rollber is always last please!
+    # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',
 ]
 
 AUTHENTICATION_BACKENDS = (
@@ -173,24 +173,26 @@ logging.config.dictConfig({
             'formatter': 'default',
         },
         # Add Handler for Rollbar
-        'rollbar': {
-            'filters': ['require_debug_false'],
-            'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ""),
-            'environment': ENVIRONMENT,
-            'class': 'rollbar.logger.RollbarHandler',
-        },
+        # 'rollbar': {
+        #     'filters': ['require_debug_false'],
+        #     'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ""),
+        #     'environment': ENVIRONMENT,
+        #     'class': 'rollbar.logger.RollbarHandler',
+        # },
         'django.server': DEFAULT_LOGGING['handlers']['django.server'],
     },
     'loggers': {
         # default for all undefined Python modules
         '': {
             'level': 'WARNING',
-            'handlers': ['console', 'rollbar'],
+            # 'handlers': ['console', 'rollbar'],
+            'handlers': ['console'],
         },
         # Our application code
         'breathecode': {
             'level': LOG_LEVEL,
-            'handlers': ['console', 'rollbar'],
+            # 'handlers': ['console', 'rollbar'],
+            'handlers': ['console'],
             # Avoid double logging because of root logger
             'propagate': False,
         },

@@ -63,7 +63,8 @@ class EndpointAdmin(admin.ModelAdmin):
     list_display = ('url', 'current_status', 'test_pattern', 'status_code', 'paused_until', 'last_check')
     actions=[test_endpoint]
     list_filter = ['status','application__title']
-    
+    def get_readonly_fields(self, request, obj=None):
+        return ['status_text']
     def current_status(self,obj):
         colors = {
             "OPERATIONAL": "bg-success",
@@ -104,7 +105,7 @@ class CustomForm(forms.ModelForm):
 @admin.register(MonitorScript)
 class MonitorScriptAdmin(admin.ModelAdmin):
     form = CustomForm
-    list_display = ('script_slug', 'current_status', 'frequency_delta', 'status_code', 'paused_until', 'last_run')
+    list_display = ('script_slug', 'application', 'current_status', 'frequency_delta', 'status_code', 'paused_until', 'last_run')
     actions=[run_single_script]
     list_filter = ['status','application__title']
     

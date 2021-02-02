@@ -1,30 +1,44 @@
 from breathecode.notify.actions import send_email_message, send_slack
-import logging
+import logging, random
+from breathecode.utils import ValidationException
 from breathecode.authenticate.actions import create_token
 from breathecode.authenticate.models import Token
-from .models import Answer
+from .models import Answer, Survey
+from .utils import strings
 from breathecode.admissions.models import CohortUser
+from .tasks import send_cohort_survey, build_question
 
 logger = logging.getLogger(__name__)
 
-strings = {
-    "es": {
-        "first": "¿Qué tan probable es que recomiendes",
-        "second": "a tus amigos y familiares?",
-        "highest": "muy probable",
-        "lowest": "no es probable",
-        "button_label": "Responder",
-    },
-    "en": {
-        "first": "How likely are you to recommend",
-        "second": "to your friends and family?",
-        "highest": "very likely",
-        "lowest": "not likely",
-        "button_label": "Answer the question",
-    }
-}
+def send_survey_group(survey=None,cohort=None):
+    if survey is None and cohort is None:
+        raise ValidationException('Missing survey or cohort')
 
-def send_survey(user, cohort=None):
+    if survey is None:
+        survey = Survey(cohort = cohort, lang=cohort.language)
+    elif cohort is not None:
+        if survey.cohort.id != cohort.id:
+            raise ValidationException("The survey does not match the cohort id")
+
+    if cohort is None:
+        cohort = survey.cohort
+
+    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort, role="TEACHER")
+    if cohort_teacher.count() == 0:
+        raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
+
+    ucs = CohortUser.objects.filter(cohort=cohort, role='STUDENT').filter()
+    result = { "success": [], "error": [] }
+    for uc in ucs:
+        if uc.educational_status in ['ACTIVE', 'GRADUATED']:
+            send_cohort_survey.delay(uc.user.id, survey.id)
+            result["success"].append(f"Survey scheduled to send for {uc.user.email}")
+        else:
+            result["error"].append(f"Survey NOT sent to {uc.user.email} because it's not an active student")
+
+    return result
+
+def send_question(user, cohort=None):
     answer = Answer(user = user)
     if cohort is not None: 
         answer.cohort = cohort
@@ -39,6 +53,9 @@ def send_survey(user, cohort=None):
         message = 'Impossible to determine the student cohort, maybe it has more than one, or cero.'
         logger.info(message)
         raise Exception(message)
+    else:
+        answer.lang = answer.cohort.language
+        answer.save()
 
     has_slackuser = hasattr(user, 'slackuser')
 
@@ -50,18 +67,16 @@ def send_survey(user, cohort=None):
     question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user,
         status='SENT').count()
 
-    question = (f'{strings[answer.cohort.language]["first"]} {answer.cohort.academy.name} '
-        f'{strings[answer.cohort.language]["second"]}')
+    question = build_question(answer)
 
     if question_was_sent_previously:
         answer = Answer.objects.filter(cohort=answer.cohort, user=user, status='SENT').first()
         Token.objects.filter(id=answer.token_id).delete()
 
     else:
-        answer.academy = answer.cohort.academy
-        answer.title = question
-        answer.lowest = strings[answer.cohort.language]["lowest"]
-        answer.highest = strings[answer.cohort.language]["highest"]
+        answer.title = question["title"]
+        answer.lowest = question["lowest"]
+        answer.highest = question["highest"]
         answer.lang = answer.cohort.language
         answer.save()
 
@@ -97,7 +112,6 @@ def send_survey(user, cohort=None):
     else:
         logger.info(f"Survey was resent for user: {str(user.id)}")
         return True
-
 
 def answer_survey(user, data):
     answer = Answer.objects.create(**{ **data, "user": user })

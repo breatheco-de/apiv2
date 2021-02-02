@@ -1,4 +1,4 @@
-import base64, os, urllib.parse
+import base64, os, urllib.parse, logging
 from django.contrib import admin
 from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
@@ -9,7 +9,8 @@ from .models import (
     CredentialsFacebook, Capability, UserInvite
 )
 from .actions import reset_password
-# Register your models here.
+
+logger = logging.getLogger(__name__)
 
 def clean_all_tokens(modeladmin, request, queryset):
     user_ids = queryset.values_list('id', flat=True)
@@ -45,6 +46,8 @@ class TokenAdmin(admin.ModelAdmin):
         return ['key']
 
 @admin.register(UserInvite)
+
+
 class UserInviteAdmin(admin.ModelAdmin):
     list_display = ('email', 'first_name', 'last_name', 'status', 'academy', 'token', 'created_at', 'invite_url')
     def invite_url(self,obj):
@@ -53,10 +56,16 @@ class UserInviteAdmin(admin.ModelAdmin):
         url = os.getenv('API_URL') + "/v1/auth/user/invite/" + str(obj.token) + "?" + querystr
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>")
 
+
+def clear_user_password(modeladmin, request, queryset):
+    for u in queryset:
+        u.set_unusable_password()
+        u.save()
+clear_user_password.short_description = "Clear user password"
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'github_login')
-    actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
+    actions = [clean_all_tokens, clean_expired_tokens, send_reset_password, clear_user_password]
 
     def get_queryset(self, request):
         
@@ -76,9 +85,21 @@ class RoleAdmin(admin.ModelAdmin):
 class CapabilityAdmin(admin.ModelAdmin):
     list_display = ('slug', 'description')
 
+def mark_as_active(modeladmin, request, queryset):
+    aca_profs = queryset.all()
+    for ap in aca_profs:
+        ap.status = 'ACTIVE'
+        ap.save()
+
+    logger.info(f"All AcademyProfiles marked as ACTIVE")
+mark_as_active.short_description = "Mark as ACTIVE"
+
 @admin.register(ProfileAcademy)
 class ProfileAcademyAdmin(admin.ModelAdmin):
-    list_display = ('user', 'email', 'academy', 'created_at', 'slack', 'facebook')
+    list_display = ('user', 'email', 'academy', 'role', 'status', 'created_at', 'slack', 'facebook')
+    search_fields = ['user__first_name', 'user__last_name', 'user__email']
+    list_filter = ['academy__slug','status', 'role__slug']
+    actions=[mark_as_active]
     raw_id_fields = ["user"]
     
     def get_queryset(self, request):

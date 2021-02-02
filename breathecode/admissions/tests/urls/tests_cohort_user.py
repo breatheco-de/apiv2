@@ -545,5 +545,5 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
 
-        self.assertEqual(json, {'status_code': 400, 'details': 'Missing cohort_id or user_id'})
+        self.assertEqual(json, {'status_code': 400, 'detail': 'Missing cohort_id or user_id'})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

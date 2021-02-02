@@ -5,6 +5,13 @@ from django.core.management.base import BaseCommand, CommandError
 from ...actions import delete_tokens
 from ...models import Capability, Role
 
+def extend(roles, slugs):
+    caps_groups = [item["caps"] for item in roles if item["slug"] in slugs]
+    inhered_caps = []
+    for roles in caps_groups:
+        inhered_caps = inhered_caps + roles
+    return list(dict.fromkeys(inhered_caps))
+    
 class Command(BaseCommand):
     help = 'Create default system capabilities'
 
@@ -25,6 +32,9 @@ class Command(BaseCommand):
             { "slug": "crud_event", "description": "Create, update or delete event information" },
             { "slug": "read_cohort", "description": "List all the cohorts or a single cohort information" },
             { "slug": "crud_cohort", "description": "Create, update or delete cohort info" },
+            { "slug": "read_eventcheckin", "description": "List and read all the event_checkins" },
+            { "slug": "read_nps_answers", "description": "List all the nps answers" },
+            { "slug": "read_lead", "description": "List all the leads" },
         ]
 
         for c in caps:
@@ -39,20 +49,16 @@ class Command(BaseCommand):
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment"] },
-            { "slug": "teacher", "name": "Teacher", "caps": ["crud_assignment", "read_syllabus","read_assignment"] },
             { "slug": "assistant", "name": "Teacher Assistant", "caps": ["read_assigment, crud_assignment"] },
-            { "slug": "career_support", "name": "Career Support Specialist", "caps": ["read_certificate", "crud_certificate"] },
-            { "slug": "growth_manager", "name": "Growth Manager", "caps": ["read_event", "crud_event"] },
-            
+            { "slug": "career_support", "name": "Career Support Specialist", "caps": ["read_student","read_certificate", "crud_certificate"] },
+            { "slug": "admissions_developer", "name": "Admissions Developer", "caps": ["read_student","crud_student","crud_cohort", "read_cohort","read_lead", "read_event", "read_eventcheckin"] },
+            { "slug": "syllabus_coordinator", "name": "Manage Syllabus, Exercises and all academy content", "caps": ["read_syllabus"] },
+            { "slug": "growth_manager", "name": "Growth Manager", "caps": ["read_student","read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead"] },
         ]
 
-        teacher = next(item for item in roles if item["slug"] == "teacher")
-        #                                                                               inherit all the caps from the teacher role
-        roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": teacher["caps"] + ["crud_syllabus"] })
-
-        # TODO: Create country_manager role, that inheritls from all othe roles minus admin
-        # inhered_caps = next(item for item in roles if item["slug"] in ["teacher", "assistant", "student", "career_support"])
-        # roles.append({ "slug": "country_manager", "name": "Country Manage", "caps": inhered_caps["caps"] + ["crud_cohort", "read_cohort"] })
+        roles.append({ "slug": "teacher", "name": "Teacher", "caps": extend(roles, ["assistant"]) })
+        roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": extend(roles, ["teacher"]) + ["crud_syllabus"] })
+        roles.append({ "slug": "country_manager", "name": "Country Manager", "caps": extend(roles,["academy_coordinator", "student", "career_support", "growth_manager", "admissions_developer", "syllabus_coordinator"]) + ["read_member", "crud_member"] })
 
         for r in roles:
             _r = Role.objects.filter(slug=r["slug"]).first()

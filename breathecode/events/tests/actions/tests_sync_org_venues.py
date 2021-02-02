@@ -24,7 +24,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_send_survey_without_cohort(self):
+    def test_sync_org_venues_without_cohort(self):
         """Test /answer without auth"""
         model = self.generate_models(organization=True)
         

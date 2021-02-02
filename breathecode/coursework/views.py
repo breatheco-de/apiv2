@@ -5,6 +5,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status, serializers
 from rest_framework.views import APIView
+from django.db.models import Q
 from rest_framework.permissions import AllowAny
 from breathecode.utils import capable_of, ValidationException
 from breathecode.admissions.models import Academy
@@ -40,14 +41,16 @@ class SyllabusView(APIView):
 
         syl = None
         if version is None:
-            syl = course.syllabus_set.filter(academy_owner__id=academy_id)
+            # only public syllabus or for the academy owner
+            syl = course.syllabus_set.filter(Q(academy_owner__id=academy_id) | Q(private=False))
             serializer = SyllabusSmallSerializer(syl, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
-            syl = course.syllabus_set.filter(version=version, academy_owner__id=academy_id).first()
+            # only public syllabus or for the academy owner
+            syl = course.syllabus_set.filter(version=version).filter(Q(academy_owner__id=academy_id) | Q(private=False)).first()
         
         if syl is None:
-            raise serializers.ValidationError("Syllabus not found", code=404)
+            raise ValidationException("Syllabus not found", code=404)
 
         # TODO: if a syllabus is private, no other academy should be able to see it
 

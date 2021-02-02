@@ -125,9 +125,21 @@ class MemberView(APIView):
 class StudentView(APIView):
 
     @capable_of('read_student')
-    def get(self, request, academy_id):
-        items = ProfileAcademy.objects.filter(role__slug='student')
-        items = localize_query(items, request) # only form this academy
+    def get(self, request, academy_id=None, user_id=None):
+
+        if user_id is not None:
+            profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id).first()
+            if profile is None:
+                raise ValidationException("Profile not found", 404)
+            
+            serializer = GETProfileAcademy(profile, many=False)
+            return Response(serializer.data)
+
+        items = ProfileAcademy.objects.filter(role__slug='student', academy__id=academy_id)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(Q(first_name__icontains=like) | Q(last_name__icontains=like) | Q(email__icontains=like))
 
         status = request.GET.get('status', None)
         if status is not None:
@@ -288,6 +300,9 @@ def get_github_token(request):
         "scope": 'user repo read:org',
     }
 
+    logger.debug("Redirecting to github")
+    logger.debug(params)
+
     redirect = f'https://github.com/login/oauth/authorize?{urlencode(params)}'
 
     if settings.DEBUG:
@@ -301,6 +316,7 @@ def get_github_token(request):
 def save_github_token(request):
 
     logger.debug("Github callback just landed")
+    logger.debug(request.query_params)
 
     error = request.query_params.get('error', False)
     error_description = request.query_params.get('error_description', '')
@@ -378,6 +394,22 @@ def save_github_token(request):
                     twitter_username=github_user['twitter_username']
                 )
                 profile.save()
+
+            student_role = Role.objects.get(slug="student")
+            cus = CohortUser.objects.filter(user=user,role="STUDENT")
+            for cu in cus:
+                profile_academy = ProfileAcademy.objects.filter(user=cu.user, academy=cu.cohort.academy).first()
+                if profile_academy is None:
+                    profile_academy = ProfileAcademy(
+                        user=cu.user,
+                        academy=cu.cohort.academy,
+                        role=student_role,
+                        email=cu.user.email,
+                        first_name=cu.user.first_name,
+                        last_name=cu.user.last_name,
+                        status='ACTIVE'
+                    )
+                    profile_academy.save()
 
             token, created = Token.objects.get_or_create(user=user, token_type='login')
 

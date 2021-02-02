@@ -75,6 +75,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
 class EventCheckinSerializer(serpy.Serializer):
     id = serpy.Field()
     email = serpy.Field()
+    status = serpy.Field()
     attendee = UserSerializer()
     event = EventTinySerializer()
 

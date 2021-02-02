@@ -119,7 +119,7 @@ class AdminCohortBulkCertificateTestCase(CertificateTestCase):
             'signed_by_role': 'Director',
             'specialty_id': 1,
             'status': 'ERROR',
-            'status_text': 'Payment error, finantial_status=`None`',
+            'status_text': 'The student must have finantial status FULLY_PAID or UP_TO_DATE',
             'user_id': 1 if id == 1 else id + 1,
         } for id in range(1, 4)]
 

@@ -1,6 +1,9 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import test_email, preview_template, process_interaction, slack_command, preview_slack_template
+from .views import (
+    test_email, preview_template, process_interaction, slack_command, 
+    preview_slack_template,
+)
 
 app_name='notify'
 urlpatterns = [

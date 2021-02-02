@@ -26,7 +26,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'details': 'Missing cohort_id or user_id', 'status_code': 400}
+        expected = {'detail': 'Missing cohort_id or user_id', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -43,7 +43,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'details': 'invalid user_id', 'status_code': 400}
+        expected = {'detail': 'invalid user_id', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -59,7 +59,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'details': 'Missing cohort_id or user_id', 'status_code': 400}
+        expected = {'detail': 'Missing cohort_id or user_id', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -76,7 +76,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'details': 'Specified cohort not be found', 'status_code': 500}
+        expected = {'detail': 'Specified cohort not be found', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -159,7 +159,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'status_code': 500, 'details': 'This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort as POSTPONED before cotinuing'}
+        expected = {'status_code': 400, 'detail': 'This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort as POSTPONED before cotinuing'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -177,7 +177,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         self.client.post(url, data)
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'details': 'That user exist in this cohort', 'status_code': 500}
+        expected = {'detail': 'That user already exists in this cohort', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -270,8 +270,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         
         # TODO: If you update the main teacher if should not give this error, only when you POST.
         expected = {
-            'status_code': 500,
-            'details': 'There can only be one main instructor in a cohort',
+            'status_code': 400,
+            'detail': 'There can only be one main instructor in a cohort',
         }
         print(json)
 
@@ -293,8 +293,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {
-            'status_code': 500,
-            'details': 'User has tasks with status pending the educational status cannot be GRADUATED',
+            'status_code': 400,
+            'detail': 'User has tasks with status pending the educational status cannot be GRADUATED',
         }
 
         self.assertEqual(json, expected)
@@ -315,8 +315,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {
-            'status_code': 500,
-            'details': 'Cannot be marked as `GRADUATED` if its financial status is `LATE`',
+            'status_code': 400,
+            'detail': 'Cannot be marked as `GRADUATED` if its financial status is `LATE`',
         }
 
         self.assertEqual(json, expected)

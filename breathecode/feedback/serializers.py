@@ -36,6 +36,7 @@ class AnswerSerializer(serpy.Serializer):
     comment = serpy.Field()
     score = serpy.Field()
     status = serpy.Field()
+    created_at = serpy.Field()
     user = UserSerializer(required=False)
 
     score = serpy.Field()
@@ -55,13 +56,14 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
         # the user cannot vote to the same entity within 5 minutes
         answer = Answer.objects.filter(user=self.context['request'].user,id=self.context['answer']).first()
         if answer is None:
-            raise ValidationError('This survay does not exist for this user')
-
-        if answer.status == 'ANSWERED':
-            raise ValidationError('You have already voted')
+            raise ValidationError('This survey does not exist for this user')
 
         if not 'score' in data or int(data['score']) > 10 or int(data['score']) < 1:
             raise ValidationError('Score must be between 1 and 10')
+        
+        if answer.status == 'ANSWERED' and data['score'] != answer.score:
+            raise ValidationError(f'You have already answered {answer.score}, you must keep the same score')
+
 
         return data
 
@@ -74,6 +76,5 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
             instance.comment = validated_data['comment']
 
         instance.save()
-        Token.objects.filter(key=self.context['request'].auth).delete()
 
         return instance

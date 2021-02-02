@@ -9,8 +9,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
+from breathecode.utils import capable_of
 from breathecode.admissions.models import Cohort, CohortUser
-from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, Profile
+from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, Profile, CredentialsSlack
 from .actions import get_template, get_template_content
 from .models import Device
 from .tasks import async_slack_action
@@ -62,7 +63,6 @@ def process_interaction(request):
 def slack_command(request):
 
     try:
-
         client = Slack()
         response = client.execute_command(context=request.POST)
         logger.debug("Slack reponse")
