@@ -87,9 +87,9 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
 
     # Cache
-    'django.middleware.cache.UpdateCacheMiddleware',
+    # 'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.cache.FetchFromCacheMiddleware',
+    # 'django.middleware.cache.FetchFromCacheMiddleware',
 
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -275,20 +275,20 @@ CORS_ALLOW_HEADERS = [
 
 REDIS_URL = os.getenv('REDIS_URL', '')
 
-def cache_opts(is_test_env):
-    if is_test_env:
-        return {
-            'OPTIONS': {}
-        }
-    else:
-        return {
-            'OPTIONS': {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-                "PARSER_CLASS": "redis.connection.HiredisParser",
-            }
-        }
+# def cache_opts(is_test_env):
+#     if is_test_env:
+#         return {
+#             'OPTIONS': {}
+#         }
+#     else:
+#         return {
+#             'OPTIONS': {
+#                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#                 "PARSER_CLASS": "redis.connection.HiredisParser",
+#             }
+#         }
 
-is_test_env = os.getenv('ENV') == 'test'
+# is_test_env = os.getenv('ENV') == 'test'
 # CACHES = {
 #     'default': {
 #         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if
@@ -309,7 +309,7 @@ is_test_env = os.getenv('ENV') == 'test'
 #     }
 # }
 
-CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
+# CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 
 # Simplified static file serving.
 # https://warehouse.python.org/project/whitenoise/
