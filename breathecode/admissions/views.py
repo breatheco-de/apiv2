@@ -18,7 +18,7 @@ from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
-from breathecode.utils import localize_query, capable_of
+from breathecode.utils import Cache, localize_query, capable_of
 from django.http import QueryDict
 from django.db.utils import IntegrityError
 from rest_framework.exceptions import NotFound, ParseError, PermissionDenied, ValidationError
@@ -246,6 +246,9 @@ class AcademyCohortView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    def cache(self):
+        return Cache('academy_cohort')
+
     @capable_of('read_cohort')
     def get(self, request, cohort_id=None, academy_id=None):
         if cohort_id is not None:
@@ -283,8 +286,14 @@ class AcademyCohortView(APIView):
         if request.data.get('academy') or request.data.get('academy_id'):
             raise ParseError(detail='academy and academy_id field is not allowed')
 
-        academy = Academy.objects.filter(slug=academy_id).first()
-        if academy is not None:
+        print('======================================================')
+        print('======================================================')
+        print('======================================================')
+        print(self.cache().keys(all=True))
+        print('======================================================', 'POST')
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
             raise ValidationError(f'Academy {academy_id} not found')
 
         certificate_id = request.data.get('certificate')

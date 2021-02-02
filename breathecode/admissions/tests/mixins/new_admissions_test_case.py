@@ -6,4 +6,5 @@ from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin
 
 class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin):
     """AdmissionsTestCase with auth methods"""
-    pass
+    def tearDown(self):
+        self.clear_cache()

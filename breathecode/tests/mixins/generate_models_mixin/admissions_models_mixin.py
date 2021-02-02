@@ -84,8 +84,10 @@ class AdmissionsModelsMixin(ModelsMixin):
         if not 'cohort' in models and not skip_cohort and (cohort or profile_academy or cohort_user):
             kargs = {}
 
-            if profile_academy:
+            if profile_academy or 'certificate' in models:
                 kargs['certificate'] = models['certificate']
+
+            if profile_academy or 'academy' in models:
                 kargs['academy'] = models['academy']
 
             if impossible_kickoff_date:
@@ -96,8 +98,10 @@ class AdmissionsModelsMixin(ModelsMixin):
         if not 'cohort_two' in models and cohort_two:
             kargs = {}
 
-            if profile_academy:
+            if profile_academy or 'certificate' in models:
                 kargs['certificate'] = models['certificate']
+
+            if profile_academy or 'academy' in models:
                 kargs['academy'] = models['academy']
 
             models['cohort_two'] = mixer.blend('admissions.Cohort', **kargs)

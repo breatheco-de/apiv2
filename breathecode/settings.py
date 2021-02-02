@@ -276,34 +276,38 @@ CORS_ALLOW_HEADERS = [
 REDIS_URL = os.getenv('REDIS_URL', '')
 
 def cache_opts(is_test_env):
-    BASE = {
-        'DB': 1,
-        'CONNECTION_POOL_CLASS_KWARGS': {
-            'max_connections': 50,
-            'timeout': 20,
-        },
-        'MAX_CONNECTIONS': 1000,
-        'PICKLE_VERSION': -1,
-    }
-
-    if not is_test_env:
-        REDIS_OPTS = {
-            'PARSER_CLASS': 'redis.connection.HiredisParser',
-            'CONNECTION_POOL_CLASS': 'redis.BlockingConnectionPool',
+    if is_test_env:
+        return {
+            'OPTIONS': {}
         }
-        return {'OPTIONS': {**BASE, **REDIS_OPTS}}
     else:
-        return {'OPTIONS': {**BASE}}
+        return {
+            'OPTIONS': {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "PARSER_CLASS": "redis.connection.HiredisParser",
+            }
+        }
 
 is_test_env = os.getenv('ENV') == 'test'
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if
-            is_test_env else 'redis_cache.RedisCache',
-        'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
-        **cache_opts(is_test_env),
-    },
-}
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if
+#             is_test_env else 'django_redis.cache.RedisCache',
+#         'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
+#         **cache_opts(is_test_env),
+#     },
+# }
+
+# # if not is_test_env:
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": REDIS_URL,
+#         "OPTIONS": {
+#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#         }
+#     }
+# }
 
 CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 
