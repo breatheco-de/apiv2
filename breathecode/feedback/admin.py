@@ -83,13 +83,25 @@ class CohortAdmin(CohortAdmin):
     pass
 
 
+
+def add_academy_to_answer(modeladmin, request, queryset):
+
+    for answer in queryset:
+        try:
+            answer.academy = answer.cohort.academy
+        except:
+            answer.academy = answer.academy
+        else:
+            pass
+        answer.save()
+add_academy_to_answer.short_description = "Add academy to answer"
 # Register your models here.
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score', 'comment', 'opened_at', 'created_at', 'answer_url')
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'cohort__slug']
     list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
-    actions=["export_as_csv"]
+    actions=["export_as_csv", add_academy_to_answer]
     def answer_url(self,obj):
         url = "https://nps.breatheco.de/" + str(obj.id)
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open answer</a>")
