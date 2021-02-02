@@ -36,6 +36,7 @@ class AnswerSerializer(serpy.Serializer):
     comment = serpy.Field()
     score = serpy.Field()
     status = serpy.Field()
+    created_at = serpy.Field()
     user = UserSerializer(required=False)
 
     score = serpy.Field()

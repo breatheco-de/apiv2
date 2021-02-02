@@ -245,29 +245,40 @@ class AcademyCohortUserView(APIView):
     List all snippets, or create a new snippet.
     """
     @capable_of('read_cohort')
-    def get(self, request, format=None, academy_id=None):
+    def get(self, request, format=None, cohort_id=None, user_id=None, academy_id=None):
+
+        if user_id is not None:
+            item = CohortUser.objects.filter(cohort__academy__id=academy_id, user__id=user_id, cohort__id=cohort_id).first()
+            if item is None:
+                raise ValidationException("Cohort user not found", 404)
+            serializer = GETCohortUserSerializer(item, many=False)
+            return Response(serializer.data)
 
         items = CohortUser.objects.filter(cohort__academy__id=academy_id)
 
-        roles = request.GET.get('roles', None)
-        if roles is not None:
-            items = items.filter(role__in=roles.split(","))
+        try:
 
-        finantial_status = request.GET.get('finantial_status', None)
-        if finantial_status is not None:
-            items = items.filter(finantial_status__in=finantial_status.split(","))
+            roles = request.GET.get('roles', None)
+            if roles is not None:
+                items = items.filter(role__in=roles.split(","))
 
-        educational_status = request.GET.get('educational_status', None)
-        if educational_status is not None:
-            items = items.filter(educational_status__in=educational_status.split(","))
+            finantial_status = request.GET.get('finantial_status', None)
+            if finantial_status is not None:
+                items = items.filter(finantial_status__in=finantial_status.split(","))
 
-        cohorts = request.GET.get('cohorts', None)
-        if cohorts is not None:
-            items = items.filter(cohort__slug__in=cohorts.split(","))
+            educational_status = request.GET.get('educational_status', None)
+            if educational_status is not None:
+                items = items.filter(educational_status__in=educational_status.split(","))
 
-        users = request.GET.get('users', None)
-        if users is not None:
-            items = items.filter(user__id__in=users.split(","))
+            cohorts = request.GET.get('cohorts', None)
+            if cohorts is not None:
+                items = items.filter(cohort__slug__in=cohorts.split(","))
+
+            users = request.GET.get('users', None)
+            if users is not None:
+                items = items.filter(user__id__in=users.split(","))
+        except Exception as e:
+            raise ValidationException(str(e), 400)
 
         serializer = GETCohortUserSerializer(items, many=True)
         return Response(serializer.data)

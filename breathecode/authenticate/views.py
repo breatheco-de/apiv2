@@ -121,9 +121,21 @@ class MemberView(APIView):
 class StudentView(APIView):
 
     @capable_of('read_student')
-    def get(self, request, academy_id):
-        items = ProfileAcademy.objects.filter(role__slug='student')
-        items = localize_query(items, request) # only form this academy
+    def get(self, request, academy_id=None, user_id=None):
+
+        if user_id is not None:
+            profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id).first()
+            if profile is None:
+                raise ValidationException("Profile not found", 404)
+            
+            serializer = GETProfileAcademy(profile, many=False)
+            return Response(serializer.data)
+
+        items = ProfileAcademy.objects.filter(role__slug='student', academy__id=academy_id)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(Q(first_name__icontains=like) | Q(last_name__icontains=like) | Q(email__icontains=like))
 
         status = request.GET.get('status', None)
         if status is not None:
