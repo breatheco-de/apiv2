@@ -14,6 +14,8 @@ from ..mixins import FeedbackTestCase
 from ...admin import send_cohort_bulk_survey
 from ...models import Cohort
 
+
+# TODO: reimplement this test based in Survey model
 class SendSurveyTestSuite(FeedbackTestCase):
     """Test /answer"""
 

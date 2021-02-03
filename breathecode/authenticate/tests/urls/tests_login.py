@@ -3,8 +3,8 @@ Test cases for /user
 """
 import re
 from rest_framework import status
-from .mixin import AuthTestCase
 from django.urls.base import reverse_lazy
+from ..mixins import AuthTestCase
 
 
 class AuthenticateTestSuite(AuthTestCase):

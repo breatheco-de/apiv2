@@ -55,10 +55,20 @@ class UserSmallSerializer(serpy.Serializer):
     email = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    github = serpy.MethodField()
+
+    def get_github(self, obj):
+        github = CredentialsGithub.objects.filter(user=obj.id).first()
+        if github is None:
+            return None
+        return GithubSmallSerializer(github).data
 
 class GETProfileAcademy(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
     user = UserSmallSerializer(required=False)
     academy = AcademySmallSerializer()
     role = RoleSmallSerializer()
@@ -216,6 +226,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
             params = { "callback": "https://admin.breatheco.de" }
             querystr = urllib.parse.urlencode(params)
+            # TODO: obj is not defined
             url = os.getenv('API_URL') + "/v1/auth/user/invite/" + str(obj.token) + "?" + querystr
 
             send_email_message("welcome_academy", email, {

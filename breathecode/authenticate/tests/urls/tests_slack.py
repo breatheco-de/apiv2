@@ -6,8 +6,8 @@ import urllib
 import os
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from .mixin import AuthTestCase
-from .mocks import SlackRequestsMock
+from ..mixins import AuthTestCase
+from ..mocks import SlackRequestsMock
 
 
 class AuthenticateTestSuite(AuthTestCase):

@@ -18,10 +18,10 @@ from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
-from breathecode.utils import localize_query, capable_of, ValidationException
+from breathecode.utils import Cache, localize_query, capable_of, ValidationException
 from django.http import QueryDict
 from django.db.utils import IntegrityError
-from rest_framework.exceptions import NotFound, ParseError, PermissionDenied
+from rest_framework.exceptions import NotFound, ParseError, PermissionDenied, ValidationError
 from breathecode.assignments.models import Task
 
 logger = logging.getLogger(__name__)
@@ -389,10 +389,11 @@ class AcademyCohortView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    def cache(self):
+        return Cache('academy_cohort')
 
     @capable_of('read_cohort')
     def get(self, request, cohort_id=None, academy_id=None):
-
         if cohort_id is not None:
             item = None
             if str.isnumeric(cohort_id):
@@ -424,13 +425,18 @@ class AcademyCohortView(APIView):
         return Response(serializer.data)
 
     @capable_of('crud_cohort')
-    def post(self, request, academy_id):
-
+    def post(self, request, academy_id=None):
         if request.data.get('academy') or request.data.get('academy_id'):
             raise ParseError(detail='academy and academy_id field is not allowed')
 
-        academy = Academy.objects.filter(slug=academy_id).first()
-        if academy is not None:
+        print('======================================================')
+        print('======================================================')
+        print('======================================================')
+        print(self.cache().keys(all=True))
+        print('======================================================', 'POST')
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
             raise ValidationError(f'Academy {academy_id} not found')
 
         certificate_id = request.data.get('certificate')
@@ -462,7 +468,6 @@ class AcademyCohortView(APIView):
 
     @capable_of('crud_cohort')
     def put(self, request, cohort_id=None, academy_id=None):
-
         if cohort_id is None:
             raise ValidationException("Missing cohort_id", code=400)
 

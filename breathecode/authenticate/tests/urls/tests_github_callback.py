@@ -6,9 +6,9 @@ import urllib
 from unittest import mock
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from .mixin import AuthTestCase
-from ..models import Role
-from .mocks import GithubRequestsMock
+from ..mixins import AuthTestCase
+from ...models import Role
+from ..mocks import GithubRequestsMock
 
 
 class AuthenticateTestSuite(AuthTestCase):

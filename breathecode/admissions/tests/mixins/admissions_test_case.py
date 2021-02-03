@@ -1,15 +1,16 @@
 """
 Collections of mixins used to login in authorize microservice
 """
-from datetime import datetime
 from rest_framework.test import APITestCase
+from breathecode.tests.mixins.authenticate_mixin import AuthenticateMixin
+from datetime import datetime
 from mixer.backend.django import mixer
 from django.contrib.auth.models import User
-from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatter
+from breathecode.tests.mixins import DateFormatterMixin
+from django.core.cache import cache
 from ...models import CohortUser, Cohort, Academy, Certificate, Cohort
-# from .models import Academy, CohortUser, Certificate, Cohort
 
-class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
+class AdmissionsTestCase(APITestCase, AuthenticateMixin, DateFormatterMixin):
     """AdmissionsTestCase with auth methods"""
      # token = None
     user = None
@@ -109,6 +110,20 @@ class AdmissionsTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
 
     def count_cohort(self):
         return Cohort.objects.count()
+
+    def setUp(self):
+        cache.clear()
+
+    def headers(self, **kargs):
+        headers = {}
+
+        items = [index for index in kargs if kargs[index] and (
+            isinstance(kargs[index], str) or isinstance(kargs[index], int))]
+
+        for index in items:
+            headers[f'HTTP_{index.upper()}'] = str(kargs[index])
+
+        self.client.credentials(**headers)
 
     def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
