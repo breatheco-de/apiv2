@@ -69,6 +69,8 @@ class UserSpecialtySerializer(serpy.Serializer):
     id = serpy.Field()
     signed_by = serpy.Field()
     signed_by_role = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
     user = UserSmallSerializer(many=False)
     specialty = SpecialtySerializer(many=False)
     academy = AcademySmallSerializer(many=False)

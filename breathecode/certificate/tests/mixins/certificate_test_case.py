@@ -30,8 +30,14 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
             model.pop('token')]
 
     def check_all_preview_url(self, models: dict):
-        return [model for model in models if self.preview_url_pattern.match(model['preview_url']) and
-            model.pop('preview_url')]
+        # return [model for model in models if "preview_url" in models and self.preview_url_pattern.match(model['preview_url'])]
+        _models = []
+        for model in models:
+            if "preview_url" in model:
+                model.pop("preview_url")# and self.preview_url_pattern.match(model['preview_url'])]
+            _models.append(model)
+
+        return _models
 
     def remove_model_state(self, dict):
         result = None
@@ -131,7 +137,7 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
             models['specialty'] = mixer.blend('certificate.Specialty', **kargs)
 
         if not 'user_specialty' in models and user_specialty:
-            models['user_specialty'] = mixer.blend('certificate.UserSpecialty', token=self.token)
+            models['user_specialty'] = mixer.blend('certificate.UserSpecialty', token=self.token, preview_url="https://asdasd.com")
 
         if not 'user' in models and (user or cohort_user or task):
             models['user'] = mixer.blend('auth.User')

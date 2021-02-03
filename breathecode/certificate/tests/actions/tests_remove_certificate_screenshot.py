@@ -39,4 +39,5 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         """remove_certificate_screenshot don't call open in development environment"""
         model = self.generate_models(specialty=True, layout_design=True, teacher=True, stage=True,
             user_specialty=True)
+        print("ewwowowowowoowowow", model['user_specialty'].preview_url)
         self.assertEqual(remove_certificate_screenshot(model['user_specialty'].id), True)

@@ -93,7 +93,8 @@ class UserSpecialty(models.Model):
             raise ValidationError("Cohort academy does not match the specified academy for this certificate")
 
         if self.cohort and self.cohort.stage != 'ENDED':
-            raise ValidationError("The student cohort stage has to be 'finished' before you can issue any certificates")
+            self.status = "ERROR"
+            self.status_text = "The student cohort stage has to be 'finished' before you can issue any certificates"
 
         utc_now = timezone.now()
         if self.token is None or self.token == "":
