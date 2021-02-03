@@ -3,6 +3,8 @@ from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.views import exception_handler
 from breathecode.authenticate.models import ProfileAcademy
 from django.contrib.auth.models import AnonymousUser
+from django.core.cache import cache
+
 from django.http import HttpResponse
 logger = logging.getLogger(__name__)
 
@@ -114,6 +116,20 @@ def breathecode_exception_handler(exc, context):
 
     return response
 
+class Cache():
+    name: str
+    
+    def __init__(self, name: str):
+        self.name = name
+
+    def clear(self):
+        cache.delete_pattern(f'{self.name}_*')
+
+    def keys(self, all=False):
+        if hasattr(cache, 'keys'):
+            query = f'{self.name}_*' if not all else '*'
+            return cache.keys(query)
+        return []
 
 class AdminExportCsvMixin:
     def export_as_csv(self, request, queryset):

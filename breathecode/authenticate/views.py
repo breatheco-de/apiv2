@@ -66,6 +66,7 @@ class MemberView(APIView):
 
     @capable_of('read_member')
     def get(self, request, academy_id, user_id=None):
+        is_many = bool(not user_id)
 
         if user_id is not None:
             item = ProfileAcademy.objects.filter(user__id=user_id, academy_id=academy_id).first()
@@ -79,14 +80,17 @@ class MemberView(APIView):
         items = localize_query(items, request) # only form this academy
 
         roles = request.GET.get('roles', None)
-        if roles is not None:
+        if is_many and roles is not None:
             items = items.filter(role__in=roles.split(","))
 
         status = request.GET.get('status', None)
-        if status is not None:
+        if is_many and status is not None:
             items = items.filter(status__iexact=status)
 
-        serializer = GETProfileAcademy(items, many=True)
+        if not is_many:
+            items = items.first()
+
+        serializer = GETProfileAcademy(items, many=is_many)
         return Response(serializer.data)
 
     @capable_of('crud_member')
@@ -174,6 +178,7 @@ class StudentView(APIView):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
+            # TODO: StaffPOSTSerializer is not defined
             serializer = StaffPOSTSerializer(data=request_data)
             if serializer.is_valid():
                 serializer.save()

@@ -37,6 +37,8 @@ redis = "*"
 eventbrite = "*"
 rollbar = "*"
 pillow = "*"
+django-redis-cache = "*"
+django-redis = "*"
 
 [requires]
 python_version = "3.9"
@@ -44,6 +46,7 @@ python_version = "3.9"
 [scripts]
 dev="heroku local"
 test="python ./scripts/test.py"
+celery="python ./scripts/celery.py"
 coverage="python ./scripts/coverage.py"
 docker_build="bash ./scripts/docker-build.sh"
 lint="pylint ./breathecode --load-plugins pylint_django"
