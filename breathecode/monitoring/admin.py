@@ -57,11 +57,18 @@ def test_endpoint(modeladmin, request, queryset):
         get_website_text(end)
 test_endpoint.short_description = "Test Endpoint"
 
+def pause_for_one_day(modeladmin, request, queryset):
+    endpoints = queryset.all()
+    for end in endpoints:
+        end.paused_until = timezone.now() + timezone.timedelta(days=1)
+        end.save()
+pause_for_one_day.short_description = "PAUSE for 1 day"
+
 # Register your models here.
 @admin.register(Endpoint)
 class EndpointAdmin(admin.ModelAdmin):
     list_display = ('url', 'current_status', 'test_pattern', 'status_code', 'paused_until', 'last_check')
-    actions=[test_endpoint]
+    actions=[test_endpoint, pause_for_one_day]
     list_filter = ['status','application__title']
     def get_readonly_fields(self, request, obj=None):
         return ['status_text']

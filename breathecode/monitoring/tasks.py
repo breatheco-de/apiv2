@@ -20,9 +20,10 @@ def monitor_app(self,app_id):
 
     now = timezone.now()
     if app.paused_until is not None and app.paused_until > now:
-        logger.debug("Ignoring application monitor because its paused")
+        logger.debug(f"Ignoring App: {app.title} monitor because its paused")
         return True
 
+    logger.debug(f"Running diagnostic for: {app.title} ")
     result = run_app_diagnostic(app)
     if result["status"] != "OPERATIONAL":
 

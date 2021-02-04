@@ -3,10 +3,12 @@ from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackChannel
 
+LOADING='LOADING'
 OPERATIONAL='OPERATIONAL'
 MINOR='MINOR'
 CRITICAL='CRITICAL'
 STATUS = (
+    (LOADING, 'Loading'),
     (OPERATIONAL, 'Operational'),
     (MINOR, 'Minor'),
     (CRITICAL, 'Critical'),
