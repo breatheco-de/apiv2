@@ -50,7 +50,7 @@ class Command(BaseCommand):
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment"] },
-            { "slug": "assistant", "name": "Teacher Assistant", "caps": ["read_assigment, crud_assignment, read_cohort_activity"] },
+            { "slug": "assistant", "name": "Teacher Assistant", "caps": ["read_assigment", "crud_assignment", "read_cohort_activity"] },
             { "slug": "career_support", "name": "Career Support Specialist", "caps": ["read_student","read_certificate", "crud_certificate"] },
             { "slug": "admissions_developer", "name": "Admissions Developer", "caps": ["read_student","crud_student","crud_cohort", "read_cohort","read_lead", "read_event", "read_eventcheckin"] },
             { "slug": "syllabus_coordinator", "name": "Manage Syllabus, Exercises and all academy content", "caps": ["read_syllabus"] },

@@ -92,7 +92,7 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def send_cohort_survey(self,user_id, survey_id):
-
+    logger.debug("Starting send_cohort_survey")
     survey = Survey.objects.filter(id=survey_id).first()
     if survey is None:
         logger.error("Survey not found")

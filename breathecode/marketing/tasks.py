@@ -1,7 +1,10 @@
+import logging
 from celery import shared_task, Task
 from django.db.models import F
 from .models import FormEntry, ShortLink
 from .actions import register_new_lead, save_get_geolocal
+
+logger = logging.getLogger(__name__)
 
 class BaseTaskWithRetry(Task):
     autoretry_for = (Exception,)
@@ -11,6 +14,7 @@ class BaseTaskWithRetry(Task):
 
 @shared_task
 def persist_leads():
+    logger.debug("Starting persist_leads")
     entries = FormEntry.objects.filter(storage_status='PENDING')
     for entry in entries:
         form_data = entry.toFormData()
@@ -22,6 +26,7 @@ def persist_leads():
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def persist_single_lead(self, form_data):
+    logger.debug("Starting persist_single_lead")
     entry = register_new_lead(form_data)
     if entry is not None and entry != False:
         save_get_geolocal(entry, form_data)
@@ -30,4 +35,5 @@ def persist_single_lead(self, form_data):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def update_link_viewcount(self, slug):
+    logger.debug("Starting update_link_viewcount")
     ShortLink.objects.filter(slug=slug).update(hits=F('hits') + 1)

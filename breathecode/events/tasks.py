@@ -16,14 +16,15 @@ class BaseTaskWithRetry(Task):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def persist_organization_events(self,args):
+    logger.debug("Starting persist_organization_events")
     org = Organization.objects.get(id=args['org_id'])
     result = sync_org_events(org)
-
     return True
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def async_eventbrite_webhook(self, eventbrite_webhook_id):
+    logger.debug("Starting async_eventbrite_webhook")
     status = 'ok'
 
     webhook = EventbriteWebhook.objects.filter(id=eventbrite_webhook_id).first()

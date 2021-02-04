@@ -16,6 +16,7 @@ class BaseTaskWithRetry(Task):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def monitor_app(self,app_id):
+    logger.debug("Starting monitor_app")
     app = Application.objects.get(id=app_id)
 
     now = timezone.now()
@@ -44,6 +45,7 @@ def monitor_app(self,app_id):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def execute_scripts(self,script_id):
+    logger.debug("Starting execute_scripts")
     script = MonitorScript.objects.get(id=script_id)
     app = script.application
 

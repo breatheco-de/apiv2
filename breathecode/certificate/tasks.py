@@ -13,6 +13,7 @@ class BaseTaskWithRetry(Task):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def take_screenshot(self, certificate_id):
+    logger.debug("Starting take_screenshot")
     # unittest.mock.patch is poor applying mocks
     from .actions import certificate_screenshot
 
@@ -21,6 +22,7 @@ def take_screenshot(self, certificate_id):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def remove_screenshot(self, certificate_id):
+    logger.debug("Starting remove_screenshot")
     # unittest.mock.patch is poor applying mocks
     from .actions import remove_certificate_screenshot
 
@@ -29,6 +31,7 @@ def remove_screenshot(self, certificate_id):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def reset_screenshot(self, certificate_id):
+    logger.debug("Starting reset_screenshot")
     # unittest.mock.patch is poor applying mocks
     from .actions import certificate_screenshot, remove_certificate_screenshot
 
@@ -40,6 +43,7 @@ def reset_screenshot(self, certificate_id):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def generate_cohort_certificates(self, cohort_id):
+    logger.debug("Starting generate_cohort_certificates")
     from .actions import generate_certificate
 
     cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role='STUDENT',
