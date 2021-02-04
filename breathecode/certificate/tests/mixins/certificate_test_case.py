@@ -9,6 +9,7 @@ from mixer.backend.django import mixer
 from breathecode.assignments.models import PENDING, PROJECT
 from breathecode.certificate.models import UserSpecialty
 from .development_environment import DevelopmentEnvironment
+from django.core.cache import cache
 from ...models import Certificate, Cohort
 from ..mocks import (
     GOOGLE_CLOUD_PATH,
@@ -109,6 +110,9 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
             'dimension': '1024x707',
         })
         return f'https://api.screenshotmachine.com?{query_string}'
+
+    def setUp(self):
+        cache.clear()
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

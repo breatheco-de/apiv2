@@ -11,13 +11,14 @@ from datetime import datetime
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
 from django.contrib.auth.models import User
-from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatter
+from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatterMixin
 from breathecode.notify.actions import get_template_content
+from django.core.cache import cache
 from ...models import Answer
 from ...actions import strings
 
 
-class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
+class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
     """FeedbackTestCase with auth methods"""
      # token = None
     user = None
@@ -193,6 +194,9 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
         token = Token.objects.create(user=user)
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
 
+    def setUp(self):
+        cache.clear()
+
     def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
             finantial_status='', educational_status='', mentor=False, cohort_two=False, task=False,
@@ -244,7 +248,6 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatter):
             models['user'].save()
 
         if credentials_slack:
-            # models['owner_user'] = mixer.blend('auth.User')
             models['credentials_slack'] = mixer.blend('authenticate.CredentialsSlack',
                 user=models['user'])
 

@@ -1,8 +1,9 @@
 import serpy
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Academy, Cohort, Certificate, CohortUser
+from rest_framework.exceptions import ValidationError
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from .models import Academy, Cohort, Certificate, CohortUser
 
 class CountrySerializer(serpy.Serializer):
     """The serializer schema definition."""

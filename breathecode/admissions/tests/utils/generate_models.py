@@ -4,9 +4,9 @@ Collections of mixins used to login in authorize microservice
 from datetime import datetime
 from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
-from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatter
+from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatterMixin
 
-class GenerateModels(APITestCase, DevelopmentEnvironment, DateFormatter):
+class GenerateModels(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
     """AdmissionsTestCase wrapper to allow multiple instances"""
     # token = None
     user = None
