@@ -6,7 +6,12 @@ from breathecode.admissions.models import CohortUser
 logger = logging.getLogger(__name__)
 
 HOST = os.environ.get("OLD_BREATHECODE_API")
-def sync_student_tasks(user):
+def sync_student_tasks(user, cohort=None):
+
+    if cohort is None:
+        cu = CohortUser.objects.filter(user=user).exclude(cohort__slug__contains="prework").first()
+        if cu is not None:
+            cohort = cu.cohort
     
     response = requests.get(f"{HOST}/student/{user.email}/task/")
     if response.status_code != 200:
@@ -57,6 +62,7 @@ def sync_student_tasks(user):
         task.github_url=_task['github_url']
         task.live_url=_task['live_url']
         task.description=_task['description']
+        task.cohort=cohort
         task.save()
 
         syncronized.append(task)
@@ -66,10 +72,10 @@ def sync_student_tasks(user):
 def sync_cohort_tasks(cohort):
     
     synchronized = []
-    cohort_users = CohortUser.objects.filter(cohort__id=cohort.id, role="STUDENT", educational_status__in=["ACTIVE", "GRADUATED"])
+    cohort_users = CohortUser.objects.filter(cohort__id=cohort.id, role="STUDENT", educational_status__in=["ACTIVE"])
     for cu in cohort_users:
         try:
-            tasks = sync_student_tasks(cu.user)
+            tasks = sync_student_tasks(cu.user, cohort=cohort)
             synchronized = synchronized + tasks
         except:
             continue
