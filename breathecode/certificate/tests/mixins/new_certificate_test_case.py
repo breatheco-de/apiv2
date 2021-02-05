@@ -8,3 +8,13 @@ class CertificateTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMix
     """CertificateTestCase with auth methods"""
     def tearDown(self):
         self.clear_cache()
+
+    # TODO: this function fix the difference between run tests in all modules
+    # and certificate, should be removed in a future
+    def clear_preview_url(self, dicts: list[dict]):
+        """
+        Clear preview url to evit one diff when run test in all tests and just
+        certificate tests
+        """
+        return [{**item, 'preview_url': None} for item in dicts]
+

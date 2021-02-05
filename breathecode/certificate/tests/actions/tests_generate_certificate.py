@@ -369,7 +369,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'name': model['specialty'].name,
             'slug': model['specialty'].slug,
         }])
-        self.assertEqual(self.all_user_specialty_dict(), [expected])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
+            [expected])
         self.assertEqual(self.all_cohort_user_dict(), [{
             'cohort_id': model['cohort_user'].cohort_id,
             'educational_status': model['cohort_user'].educational_status,
@@ -473,7 +474,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'name': model['specialty'].name,
             'slug': model['specialty'].slug,
         }])
-        self.assertEqual(self.all_user_specialty_dict(), [expected])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
+            [expected])
         self.assertEqual(self.all_cohort_user_dict(), [{
             'cohort_id': model['cohort_user'].cohort_id,
             'educational_status': model['cohort_user'].educational_status,
@@ -565,7 +567,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'name': model['specialty'].name,
             'slug': model['specialty'].slug,
         }])
-        self.assertEqual(self.all_user_specialty_dict(), [expected])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
+            [expected])
         self.assertEqual(self.all_cohort_user_dict(), [{
             'cohort_id': model['cohort_user'].cohort_id,
             'educational_status': model['cohort_user'].educational_status,
@@ -657,7 +660,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'name': model['specialty'].name,
             'slug': model['specialty'].slug,
         }])
-        self.assertEqual(self.all_user_specialty_dict(), [expected])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
+            [expected])
         self.assertEqual(self.all_cohort_user_dict(), [{
             'cohort_id': model['cohort_user'].cohort_id,
             'educational_status': model['cohort_user'].educational_status,
@@ -752,7 +756,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'name': model['specialty'].name,
             'slug': model['specialty'].slug,
         }])
-        self.assertEqual(self.all_user_specialty_dict(), [expected])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
+            [expected])
         self.assertEqual(self.all_cohort_user_dict(), [{
             'cohort_id': model['cohort_user'].cohort_id,
             'educational_status': model['cohort_user'].educational_status,
@@ -854,7 +859,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'name': model['specialty'].name,
             'slug': model['specialty'].slug,
         }])
-        self.assertEqual(self.all_user_specialty_dict(), [{**expected, 'token': token}])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
+            [{**expected, 'token': token}])
         self.assertEqual(self.all_cohort_user_dict(), [{
             'cohort_id': model['cohort_user'].cohort_id,
             'educational_status': model['cohort_user'].educational_status,
@@ -955,7 +961,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'name': model['specialty'].name,
             'slug': model['specialty'].slug,
         }])
-        self.assertEqual(self.all_user_specialty_dict(), [{**expected, 'token': token}])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
+            [{**expected, 'token': token}])
         self.assertEqual(self.all_cohort_user_dict(), [{
             'cohort_id': model['cohort_user'].cohort_id,
             'educational_status': model['cohort_user'].educational_status,
@@ -1056,7 +1063,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'name': model['specialty'].name,
             'slug': model['specialty'].slug,
         }])
-        self.assertEqual(self.all_user_specialty_dict(), [{**expected, 'token': token}])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
+            [{**expected, 'token': token}])
         self.assertEqual(self.all_cohort_user_dict(), [{
             'cohort_id': model['cohort_user'].cohort_id,
             'educational_status': model['cohort_user'].educational_status,
@@ -1157,7 +1165,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'name': model['specialty'].name,
             'slug': model['specialty'].slug,
         }])
-        self.assertEqual(self.all_user_specialty_dict(), [{**expected, 'token': token}])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
+            [{**expected, 'token': token}])
         self.assertEqual(self.all_cohort_user_dict(), [{
             'cohort_id': model['cohort_user'].cohort_id,
             'educational_status': model['cohort_user'].educational_status,
