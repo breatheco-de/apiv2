@@ -125,8 +125,8 @@ class AdmissionsTestCase(APITestCase, AuthenticateMixin, DateFormatterMixin):
 
         self.client.credentials(**headers)
 
-    def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
-            cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
+    def generate_models(self, user=False, authenticate=False, syllabus=False, academy=False,
+            cohort=False, profile_academy=False, certificate=False, cohort_user=False, impossible_kickoff_date=False,
             finantial_status='', educational_status='', city=False, country=False, user_two=False,
             cohort_two=False, task=False, task_status='', task_type=''):
         # isinstance(True, bool)
@@ -143,12 +143,13 @@ class AdmissionsTestCase(APITestCase, AuthenticateMixin, DateFormatterMixin):
 
         if certificate or profile_academy:
             self.certificate = mixer.blend('admissions.Certificate')
+            self.syllabus = mixer.blend('admissions.Syllabus', certificate=self.certificate)
 
         if cohort or profile_academy or cohort_user:
             kargs = {}
 
             if profile_academy:
-                kargs['certificate'] = self.certificate
+                kargs['syllabus'] = self.syllabus
                 kargs['academy'] = self.academy
 
             if impossible_kickoff_date:
@@ -160,7 +161,7 @@ class AdmissionsTestCase(APITestCase, AuthenticateMixin, DateFormatterMixin):
             kargs = {}
 
             if profile_academy:
-                kargs['certificate'] = self.certificate
+                kargs['syllabus'] = mixer.blend('admissions.Syllabus', certificate=self.certificate)
                 kargs['academy'] = self.academy
 
             self.cohort_two = mixer.blend('admissions.Cohort', **kargs)

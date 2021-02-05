@@ -95,12 +95,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'language': self.cohort.language,
-            'certificate': {
-                'id': self.cohort.certificate.id,
-                'slug': self.cohort.certificate.slug,
-                'name': self.cohort.certificate.name,
-                'description': self.cohort.certificate.description,
-                'logo': self.cohort.certificate.logo,
+            'syllabus': {
+                'version': self.cohort.syllabus.version,
+                'certificate': {
+                    'id': self.cohort.syllabus.certificate.id,
+                    'slug': self.cohort.syllabus.certificate.slug,
+                    'name': self.cohort.syllabus.certificate.name,
+                }
             },
             'academy': {
                 'id': self.cohort.academy.id,
@@ -158,12 +159,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'language': self.cohort.language,
-            'certificate': {
-                'id': self.cohort.certificate.id,
-                'slug': self.cohort.certificate.slug,
-                'name': self.cohort.certificate.name,
-                'description': self.cohort.certificate.description,
-                'logo': self.cohort.certificate.logo,
+            'syllabus': {
+                'version': self.cohort.syllabus.version,
+                'certificate': {
+                    'id': self.cohort.syllabus.certificate.id,
+                    'slug': self.cohort.syllabus.certificate.slug,
+                    'name': self.cohort.syllabus.certificate.name,
+                }
             },
             'academy': {
                 'id': self.cohort.academy.id,
@@ -204,12 +206,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'language': self.cohort.language,
-            'certificate': {
-                'id': self.cohort.certificate.id,
-                'slug': self.cohort.certificate.slug,
-                'name': self.cohort.certificate.name,
-                'description': self.cohort.certificate.description,
-                'logo': self.cohort.certificate.logo,
+            'syllabus': {
+                'version': self.cohort.syllabus.version,
+                'certificate': {
+                    'id': self.cohort.syllabus.certificate.id,
+                    'slug': self.cohort.syllabus.certificate.slug,
+                    'name': self.cohort.syllabus.certificate.name,
+                }
             },
             'academy': {
                 'id': self.cohort.academy.id,
@@ -250,12 +253,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'language': self.cohort.language,
-            'certificate': {
-                'id': self.cohort.certificate.id,
-                'slug': self.cohort.certificate.slug,
-                'name': self.cohort.certificate.name,
-                'description': self.cohort.certificate.description,
-                'logo': self.cohort.certificate.logo,
+            'syllabus': {
+                'version': self.cohort.syllabus.version,
+                'certificate': {
+                    'id': self.cohort.syllabus.certificate.id,
+                    'slug': self.cohort.syllabus.certificate.slug,
+                    'name': self.cohort.syllabus.certificate.name,
+                }
             },
             'academy': {
                 'id': self.cohort.academy.id,
@@ -315,12 +319,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'language': self.cohort.language,
-            'certificate': {
-                'id': self.cohort.certificate.id,
-                'slug': self.cohort.certificate.slug,
-                'name': self.cohort.certificate.name,
-                'description': self.cohort.certificate.description,
-                'logo': self.cohort.certificate.logo,
+            'syllabus': {
+                'version': self.cohort.syllabus.version,
+                'certificate': {
+                    'id': self.cohort.syllabus.certificate.id,
+                    'slug': self.cohort.syllabus.certificate.slug,
+                    'name': self.cohort.syllabus.certificate.name,
+                }
             },
             'academy': {
                 'id': self.cohort.academy.id,
@@ -360,12 +365,13 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': self.cohort.ending_date,
             'stage': self.cohort.stage,
             'language': self.cohort.language,
-            'certificate': {
-                'id': self.cohort.certificate.id,
-                'slug': self.cohort.certificate.slug,
-                'name': self.cohort.certificate.name,
-                'description': self.cohort.certificate.description,
-                'logo': self.cohort.certificate.logo,
+            'syllabus': {
+                'version': self.cohort.syllabus.version,
+                'certificate': {
+                    'id': self.cohort.syllabus.certificate.id,
+                    'slug': self.cohort.syllabus.certificate.slug,
+                    'name': self.cohort.syllabus.certificate.name,
+                }
             },
             'academy': {
                 'id': self.cohort.academy.id,

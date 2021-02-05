@@ -120,10 +120,9 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'city': self.cohort.academy.city.id,
                     'street_address': self.cohort.academy.street_address,
                 },
-                'certificate': {
-                    'id': self.cohort.certificate.id,
-                    'name': self.cohort.certificate.name,
-                    'slug': self.cohort.certificate.slug,
+                'syllabus': {
+                    'id': self.cohort.syllabus.id,
+                    'slug': self.cohort.syllabus.slug,
                 },
                 'ending_date': self.cohort.ending_date,
                 'stage': self.cohort.stage,
@@ -222,10 +221,9 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'city': self.cohort.academy.city.id,
                     'street_address': self.cohort.academy.street_address,
                 },
-                'certificate': {
-                    'id': self.cohort.certificate.id,
-                    'name': self.cohort.certificate.name,
-                    'slug': self.cohort.certificate.slug,
+                'syllabus': {
+                    'id': self.cohort.syllabus.id,
+                    'slug': self.cohort.syllabus.slug,
                 },
                 'ending_date': self.cohort.ending_date,
                 'stage': self.cohort.stage,

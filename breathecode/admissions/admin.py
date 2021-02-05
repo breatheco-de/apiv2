@@ -1,10 +1,14 @@
-import pytz
+import pytz, logging
 from django.contrib import admin
 from django import forms 
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
-from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions
+from django.contrib import messages
+from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions, Syllabus
 from breathecode.assignments.actions import sync_student_tasks
+
+logger = logging.getLogger(__name__)
+
 # Register your models here.
 admin.site.site_header = "BreatheCode"
 admin.site.index_title = "Administration Portal"
@@ -104,18 +108,51 @@ class CohortForm(forms.ModelForm):
 @admin.register(Cohort)
 class CohortAdmin(admin.ModelAdmin):
     form = CohortForm
-    search_fields = ['slug', 'name', 'academy__city__name', 'certificate__slug']
+    search_fields = ['slug', 'name', 'academy__city__name', 'syllabus__slug']
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'certificate_name')
-    list_filter = ['stage', 'academy__slug','certificate__slug']
+    list_filter = ['stage', 'academy__slug','syllabus__certificate__slug']
     actions = [sync_tasks]
 
     def academy_name(self, obj):
         return obj.academy.name
 
     def certificate_name(self, obj):
-        return obj.certificate.name
+        return obj.syllabus.slug
 
+def sync_with_github(modeladmin, request, queryset):
+    all_syllabus = queryset.all()
 
+    credentials = None
+    try:
+        credentials = request.user.credentialsgithub
+    except Exception:
+        logger.error("No github credentials found")
+        messages.error(request,'No github credentials found')
 
+    else:
+        for syl in all_syllabus:
+            #/repos/:owner/:repo/contents/:path
+            regex = r"github\.com\/([0-9a-zA-Z-]+)\/([0-9a-zA-Z-]+)\/blob\/([0-9a-zA-Z-]+)\/([0-9a-zA-Z-\/\.]+)"
+            matches = re.findall(regex, syl.github_url)
+            print(matches, syl.github_url)
+            if matches is None:
+                logger.error(f'Invalid github url, make sure it follows this format: https://github.com/:user/:repo/blob/:branch/:path')
+                messages.error(request,'Invalid github url, make sure it follows this format: https://github.com/:user/:repo/blob/:branch/:path')
+                continue
 
+            headers = { "Authorization": f"token {credentials.token}"}
+            response = requests.get(f"https://api.github.com/repos/{matches[0][0]}/{matches[0][1]}/contents/{matches[0][3]}?ref="+matches[0][2],headers=headers)
+            if response.status_code == 200:
+                _file = response.json()
+                syl.json = json.loads(base64.b64decode(_file["content"]).decode())
+                syl.save()
+            else:
+                logger.error(f'Error {response.status_code} updating syllabus from github, make sure you have the correct access rights to the repository')
+                messages.error(request,f'Error {response.status_code} updating syllabus from github, make sure you have the correct access rights to the repository')
 
+sync_with_github.short_description = "Sync from Github"
+
+@admin.register(Syllabus)
+class SyllabusAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'certificate', 'academy_owner', 'version')
+    actions = [sync_with_github]

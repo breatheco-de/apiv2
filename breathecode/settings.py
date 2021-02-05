@@ -53,7 +53,6 @@ INSTALLED_APPS = [
     'breathecode.admissions',
     'breathecode.events',
     'breathecode.feedback',
-    'breathecode.coursework',
     'breathecode.notify',
     'breathecode.assignments',
     'breathecode.marketing',
