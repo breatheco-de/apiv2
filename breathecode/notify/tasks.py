@@ -14,14 +14,17 @@ class BaseTaskWithRetry(Task):
 
 @shared_task
 def async_slack_team_channel(team_id):
+    logger.debug("Starting async_slack_team_channel")
     return sync_slack_team_channel(team_id)
 
 @shared_task
 def async_slack_team_users(team_id):
+    logger.debug("Starting async_slack_team_users")
     return sync_slack_team_users(team_id)
 
 @shared_task
 def async_slack_action(post_data):
+    logger.debug("Starting async_slack_action")
     try:
         client = Slack()
         success = client.execute_action(context=post_data)

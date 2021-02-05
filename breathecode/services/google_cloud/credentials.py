@@ -10,7 +10,7 @@ def resolve_credentials():
     path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
 
     if os.path.exists( path ):
-        return
+        return True
 
     credentials = os.getenv('GOOGLE_SERVICE_KEY', None)
     # skip open in development environment

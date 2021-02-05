@@ -1,5 +1,6 @@
 import logging, datetime, hashlib, requests, json, re, os, subprocess, sys
 from django.utils import timezone
+from breathecode.utils import ScriptNotification
 from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint
 logger = logging.getLogger(__name__)
 USER_AGENT="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
@@ -92,6 +93,11 @@ def run_app_diagnostic(app, report=False):
             endpoint.save()
             continue
 
+        # Starting the test
+        logger.debug(f"Testing endpoint: {endpoint.url} ")
+        e.status = 'LOADING'
+        e.save()
+
         e = get_website_text(endpoint)
         if e.status != 'OPERATIONAL':
             if e.severity_level > results["severity_level"]:
@@ -148,7 +154,7 @@ def run_script(script):
         sys.stdout = old
 
     content = None
-    if script.script_slug is not None and script.script_slug != "other":
+    if script.script_slug != "" and script.script_slug is not None and script.script_slug != "other":
         dir_path = os.path.dirname(os.path.realpath(__file__))
         header = """
 # from django.conf import settings
@@ -162,6 +168,8 @@ def run_script(script):
         content = header + open(f"{dir_path}/scripts/{script.script_slug}.py").read()
     elif script.script_body is not None and script.script_body != "":
         content = script.script_body
+    else:
+        raise Exception("Script not found or its body is empty: "+script.script_slug)
 
     if content is not None and content != "":
         local = { "result": { "details": "", "status": "OPERATIONAL" } }
@@ -171,12 +179,13 @@ def run_script(script):
                 script.status_code = 0
                 script.status = 'OPERATIONAL'
 
-                if "details" in local["result"]:
-                    print("Notification: ", local["result"]["details"])
-                    script.response_text = local["result"]["details"]
-                if "status" in local["result"]:
-                    script.status = local["result"]["status"]
-
+            except ScriptNotification as e:
+                script.status_code = 1
+                if e.status is not None:
+                    script.status = e.status
+                else:
+                    script.status = 'MINOR'
+                print(e)
             except Exception as e:
                 script.status_code = 1
                 script.status = 'CRITICAL'

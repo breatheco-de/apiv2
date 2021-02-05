@@ -16,13 +16,15 @@ class BaseTaskWithRetry(Task):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def monitor_app(self,app_id):
+    logger.debug("Starting monitor_app")
     app = Application.objects.get(id=app_id)
 
     now = timezone.now()
     if app.paused_until is not None and app.paused_until > now:
-        logger.debug("Ignoring application monitor because its paused")
+        logger.debug(f"Ignoring App: {app.title} monitor because its paused")
         return True
 
+    logger.debug(f"Running diagnostic for: {app.title} ")
     result = run_app_diagnostic(app)
     if result["status"] != "OPERATIONAL":
 
@@ -43,6 +45,7 @@ def monitor_app(self,app_id):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def execute_scripts(self,script_id):
+    logger.debug("Starting execute_scripts")
     script = MonitorScript.objects.get(id=script_id)
     app = script.application
 

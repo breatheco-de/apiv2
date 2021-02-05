@@ -51,6 +51,13 @@ class ValidationException(APIException):
         self.default_detail = details
         super().__init__(details)
 
+class ScriptNotification(Exception):
+    def __init__(self, details, status=None):
+        self.status_code = 1
+        self.status = status
+        super().__init__(details)
+
+
 def capable_of(capability=None):        
     def decorator(function):
         def wrapper(*args, **kwargs):

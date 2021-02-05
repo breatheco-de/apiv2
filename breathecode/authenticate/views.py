@@ -122,6 +122,15 @@ class MemberView(APIView):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @capable_of('crud_member')
+    def put(self, request, academy_id=None, user_id=None):
+
+        member = ProfileAcademy.objects.filter(user=user_id,academy__id=academy_id).exclude(role__slug="student").first()
+        if member is None:
+            raise ValidationException("Member not found", 404)
+        member.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
 class StudentView(APIView):
 
     @capable_of('read_student')
