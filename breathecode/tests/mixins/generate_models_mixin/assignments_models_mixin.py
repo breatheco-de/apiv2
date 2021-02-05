@@ -22,14 +22,15 @@ class AssignmentsModelsMixin(ModelsMixin):
         return Task.objects.count()
 
     def generate_assignments_models(self, task=False, task_status='',
-            task_type='', models={}, **kwargs):
+            task_type='', task_revision_status='', models={}, **kwargs):
         self.maxDiff = None
         models = models.copy()
 
         if not 'task' in models and task:
-            kargs = {
-                'user': self.user
-            }
+            kargs = {}
+
+            if 'user' in models:
+                kargs['user'] = models['user']
 
             if task_status:
                 kargs['task_status'] = task_status
@@ -37,6 +38,9 @@ class AssignmentsModelsMixin(ModelsMixin):
             if task_type:
                 kargs['task_type'] = task_type
 
-            kargs['task'] = mixer.blend('assignments.Task', **kargs)
+            if task_revision_status:
+                kargs['revision_status'] = task_revision_status
+
+            models['task'] = mixer.blend('assignments.Task', **kargs)
 
         return models

@@ -429,12 +429,6 @@ class AcademyCohortView(APIView):
         if request.data.get('academy') or request.data.get('academy_id'):
             raise ParseError(detail='academy and academy_id field is not allowed')
 
-        print('======================================================')
-        print('======================================================')
-        print('======================================================')
-        print(self.cache().keys(all=True))
-        print('======================================================', 'POST')
-
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
             raise ValidationError(f'Academy {academy_id} not found')
