@@ -102,7 +102,7 @@ class AuthTestCase(APITestCase):
             profile_academy=False, role='', capability='',
             profile_academy_status='', credentials_github=False, models={}):
         """Generate models"""
-        # TODO: rewrite authenticate tests to use generate_models
+        # TODO: rewrite authenticate tests to use the global generate_models
         self.maxDiff = None
         models = models.copy()
 

@@ -28,9 +28,8 @@ from breathecode.utils import ScriptNotification
 raise ScriptNotification("There are 2 pending taks", status='MINOR')
 ```
 5. If you dont raise any ScriptNotification and there are no other Exceptions in the script, it will be considered successfull and **no notifications** will trigger.
-6. When a ScriptNotification has been raise the Application owner will recive a notification to the application.email and slack channel configured for notifications.
-7. Check for other scripts as examples.
-8. Test your script.
+6. Check for other scripts as examples.
+7. Test your script.
 
 ## Testing your script
 

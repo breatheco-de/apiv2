@@ -132,6 +132,7 @@ class AcademyCertificate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+
 class Syllabus(models.Model):
 
     version = models.PositiveSmallIntegerField()
@@ -184,7 +185,7 @@ class Cohort(models.Model):
     timezone = models.CharField(max_length=50, null=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-
+    
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, default=None, null=True)
 
     language = models.CharField(max_length=2, default='en')

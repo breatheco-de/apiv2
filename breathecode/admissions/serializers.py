@@ -3,7 +3,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from rest_framework.exceptions import ValidationError
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
-from .models import Academy, Cohort, Certificate, CohortUser, Syllabus
+from .models import Academy, Cohort, Certificate, CohortUser
 
 class CountrySerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -81,12 +81,6 @@ class GetAcademySerializer(serpy.Serializer):
     city = CitySerializer(required=False)
     logo_url = serpy.Field()
 
-class SyllabusSmallSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
-    version = serpy.Field()
-    certificate = GetSmallCertificateSerializer(required=False)
-
 class GetCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -97,7 +91,7 @@ class GetCohortSerializer(serpy.Serializer):
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     stage = serpy.Field()
-    syllabus = SyllabusSmallSerializer()
+    certificate = GetCertificateSerializer()
     academy = GetAcademySerializer()
 
 class GetSmallCohortSerializer(serpy.Serializer):
@@ -119,7 +113,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     current_day = serpy.Field()
-    syllabus = SyllabusSmallSerializer()
+    certificate = GetSmallCertificateSerializer()
     academy = AcademySerializer()
     stage = serpy.Field()
 
@@ -170,18 +164,6 @@ class UserMeSerializer(serpy.Serializer):
         cohorts = CohortUser.objects.filter(user__id=obj.id)
         return GETCohortUserSmallSerializer(cohorts, many=True).data
 
-class SyllabusGetSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
-    version = serpy.Field()
-    certificate = serpy.MethodField()
-    updated_at = serpy.Field()
-    json = serpy.Field()
-
-    def get_certificate(self, obj):
-        return obj.certificate.slug
-
-
 """
             ↓ EDIT SERLIZERS ↓
 """
@@ -196,19 +178,19 @@ class AcademySerializer(serializers.ModelSerializer):
         fields = ['id', 'slug', 'name', 'street_address', 'country', 'city']
 
 
-class SyllabusPOSTSerializer(serializers.ModelSerializer):
+class CertificateSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Syllabus
-        fields = ['id', 'slug']
+        model = Certificate
+        fields = ['id', 'slug', 'name']
 
 
 class CohortSerializer(serializers.ModelSerializer):
     academy = AcademySerializer(many=False, required=False, read_only=True)
-    syllabus = SyllabusPOSTSerializer(many=False, required=False, read_only=True)
+    certificate = CertificateSerializer(many=False, required=False, read_only=True)
 
     class Meta:
         model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus',
+        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'certificate',
             'ending_date', 'stage', 'language', 'created_at', 'updated_at')
 
     def create(self, validated_data):
@@ -235,7 +217,7 @@ class CohortPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
-            'syllabus')
+            'certificate')
 
     def validate(self, data):
 
@@ -296,38 +278,3 @@ class CohortUserPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = CohortUser
         fields = ['id', 'role', 'educational_status', 'finantial_status']
-
-class CertificateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Certificate
-        exclude = ()
-
-class SyllabusSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Syllabus
-        exclude = ()
-        extra_kwargs = {
-            'course': {'read_only': True},
-            'version': {'read_only': True},
-        }
-
-    def create(self, validated_data):
-        previous_syllabus = Syllabus.objects.filter(course__id=self.context['course'].id, academy_owner=self.context['academy']).order_by('-version').first()
-        version = 1
-        if previous_syllabus is not None:
-            version = previous_syllabus.version + 1
-        return super(SyllabusSerializer, self).create({ 
-            **validated_data,
-            "course": self.context['course'],
-            "academy_owner": self.context['academy'],
-            "version": version
-        })
-
-class SyllabusUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Syllabus
-        exclude = ()
-        extra_kwargs = {
-            'course': {'read_only': True},
-            'version': {'read_only': True},
-        }
