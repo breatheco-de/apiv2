@@ -69,7 +69,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'detail': "certificate field is missing",
             'status_code': status.HTTP_400_BAD_REQUEST,
         }
-        print(json)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -95,7 +94,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'detail': "specified certificate not be found",
             'status_code': status.HTTP_400_BAD_REQUEST,
         }
-        print(json)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -243,8 +241,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:academy_cohort')
         response = self.client.get(url)
         json = response.json()
-
-        print(self.all_cohort_dict())
 
         self.assertEqual(json, {
             'detail': 'Authentication credentials were not provided.',
@@ -639,8 +635,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             },
         } for model in models]
         json.sort(key=lambda x: x['id'])
-        print(json[9])
-        print(expected[9])
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -844,14 +838,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     #     # response = self.client.post(url, data)
     #     json = response.json()
     #     cohort = self.get_cohort(2)
-    #     print('----------------------------------------', 'capability')
-    #     print(self.all_capability_dict())
-    #     print('----------------------------------------', 'role')
-    #     print(self.all_role_dict())
-    #     print('----------------------------------------', 'academy')
-    #     print(self.all_academy_dict())
-    #     print('----------------------------------------')
-    #     print(json)
     #     assert cohort is not None
     #     expected = {
     #         'id': cohort.id,

@@ -14,7 +14,7 @@ from .serializers import (
     CohortUserPOSTSerializer, UserDJangoRestSerializer, UserMeSerializer,
     GetCertificateSerializer
 )
-from .models import Academy, City, CohortUser, Certificate, Cohort, Country, STUDENT, DELETED
+from .models import Academy, City, CohortUser, Certificate, Cohort, Country, STUDENT, DELETED, Syllabus
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -432,12 +432,6 @@ class AcademyCohortView(APIView):
     def post(self, request, academy_id=None):
         if request.data.get('academy') or request.data.get('academy_id'):
             raise ParseError(detail='academy and academy_id field is not allowed')
-
-        print('======================================================')
-        print('======================================================')
-        print('======================================================')
-        print(self.cache().keys(all=True))
-        print('======================================================', 'POST')
 
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:

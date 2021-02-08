@@ -148,7 +148,6 @@ class UserMeSerializer(serializers.ModelSerializer):
 
             if serializer and serializer.is_valid():
                 serializer.save()
-                print(serializer.errors)
             else:
                 raise ValidationException("Error saving user profile")
             

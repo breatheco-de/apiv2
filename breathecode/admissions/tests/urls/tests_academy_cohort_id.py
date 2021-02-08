@@ -115,6 +115,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_cohort_dict(), [self.remove_dinamics_fields(model['cohort'].__dict__)])
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), self.remove_dinamics_fields(model['cohort'].__dict__))
 

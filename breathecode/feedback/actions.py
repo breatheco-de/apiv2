@@ -64,6 +64,18 @@ def send_question(user, cohort=None):
         logger.info(message)
         raise Exception(message)
 
+    # if not answer.cohort.syllabus.certificate.name:
+    if not answer.cohort.syllabus:
+        message = f'Cohort not have one Syllabus'
+        logger.info(message)
+        raise Exception(message)
+
+        # if not answer.cohort.syllabus.certificate.name:
+    if not answer.cohort.syllabus.certificate:
+        message = f'Syllabus not have one Certificate'
+        logger.info(message)
+        raise Exception(message)
+
     question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user,
         status='SENT').count()
 

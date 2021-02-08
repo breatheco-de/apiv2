@@ -271,7 +271,6 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'status_code': 400,
             'detail': 'There can only be one main instructor in a cohort',
         }
-        print(json)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
