@@ -76,8 +76,7 @@ class MemberView(APIView):
             serializer = GETProfileAcademy(item, many=False)
             return Response(serializer.data)
 
-        items = ProfileAcademy.objects.filter(academy__id=academy_id)
-        items = localize_query(items, request) # only form this academy
+        items = ProfileAcademy.objects.filter(academy__id=academy_id).exclude(role__slug="student")
 
         roles = request.GET.get('roles', None)
         if is_many and roles is not None:
