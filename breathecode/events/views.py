@@ -107,8 +107,16 @@ class AcademyEventView(APIView):
     """
 
     @capable_of('read_event')
-    def get(self, request, format=None, academy_id=None):
-        
+    def get(self, request, format=None, academy_id=None, event_id=None):
+    
+        if event_id is not None:
+            single_event = Event.objects.filter(id=event_id,academy__id=academy_id).first()
+            if single_event is None:
+                raise ValidationException("Event not found", 404)
+
+            serializer = EventSmallSerializer(single_event, many=False)
+            return Response(serializer.data)
+
         items = Event.objects.filter(academy__id=academy_id)
         lookup = {}
 
