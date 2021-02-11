@@ -132,6 +132,31 @@ class AcademyCertificate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+class Syllabus(models.Model):
+
+    version = models.PositiveSmallIntegerField()
+
+    json = models.JSONField()
+    github_url = models.URLField(max_length=255, blank=True, null=True, default=None)
+    certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    # by default a syllabus can be re-used by any other academy
+    private = models.BooleanField(default=False)
+
+    # a syllabus can be shared with other academy, but only the academy owner can update or delete it
+    academy_owner = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
+
+    @property
+    def slug(self):
+        return self.certificate.slug+".v"+str(self.version)
+        
+
+    def __str__(self):
+        return self.certificate.name
+
 
 INACTIVE = 'INACTIVE'
 PREWORK = 'PREWORK'
@@ -159,7 +184,8 @@ class Cohort(models.Model):
     timezone = models.CharField(max_length=50, null=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)
+
+    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, default=None, null=True)
 
     language = models.CharField(max_length=2, default='en')
 
