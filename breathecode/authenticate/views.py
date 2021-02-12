@@ -798,21 +798,22 @@ def render_invite(request, token):
     _dict["callback"] = request.GET.get("callback", '')
 
     if request.method == 'GET':
-        invite = UserInvite.objects.filter(token=token).first()
-        if invite is None:
-            return render(request, 'message.html', {
-                'message': 'Invitation not found with this token'
-            })
-        form = InviteForm({
-            **_dict,
-            'first_name': invite.first_name,
-            'last_name': invite.last_name,
-            'phone': invite.phone
-        })
+        print("it works")
+    #     invite = UserInvite.objects.filter(token=token).first()
+    #     if invite is None:
+    #         return render(request, 'message.html', {
+    #             'message': 'Invitation not found with this token'
+    #         })
+    #     form = InviteForm({
+    #         **_dict,
+    #         'first_name': invite.first_name,
+    #         'last_name': invite.last_name,
+    #         'phone': invite.phone
+    #     })
 
-        return render(request, 'form_invite.html', {
-            'form': form,
-        })
+    #     return render(request, 'form_invite.html', {
+    #         'form': form,
+    #     })
 
     if request.method == 'POST':
         form = InviteForm(_dict)

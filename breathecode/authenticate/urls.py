@@ -29,6 +29,7 @@ urlpatterns = [
     path('role', get_roles, name="role"),
     path('user/me', UserMeView.as_view(), name="user_me"),
     path('user/invite/<str:token>', render_invite, name="academy_invite"),
+    path('user/invite/test', render_invite, name="academy_invite"),
     
     path('academy/member', MemberView.as_view()),
     path('academy/<int:academy_id>/member', MemberView.as_view(), name="academy_id_member"),
