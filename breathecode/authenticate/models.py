@@ -75,6 +75,7 @@ class UserInvite(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+    sent_at = models.DateTimeField(default=None, null=True, blank=True)
 
     def __str__(self):
         return f"Invite for {self.email}"

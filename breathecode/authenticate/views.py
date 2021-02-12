@@ -17,7 +17,7 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
 from django.utils import timezone
-from .models import Profile, ProfileAcademy, Role
+from .models import Profile, ProfileAcademy, Role, UserInvite
 from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
@@ -29,7 +29,7 @@ from breathecode.utils import localize_query, capable_of, ValidationException
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
-    RoleSmallSerializer, UserMeSerializer
+    RoleSmallSerializer, UserMeSerializer, UserInviteSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -792,28 +792,43 @@ def pick_password(request, token):
         'form': form
     })
 
-def render_invite(request, token):
+class AcademyInviteView(APIView):
+    @capable_of('admissions_developer')
+    def get(self, request,member_id=None, academy_id=None):
+        if member_id is not None:
+            member = ProfileAcademy.objects.filter(id=member_id,academy__id=academy_id).first() 
+            print("///////////////////",member)
+            if member is None:
+                raise ValidationException("Member not found", 400)
+            invite = UserInvite.objects.filter(academy__id=academy_id, email=member.email).first()
+            print("///////////////////",invite)
+            if invite is None:
+                raise ValidationException("Invite not found", 400)
+            serializer = UserInviteSerializer(invite, many=False)
+            return Response("Great")
+
+def render_invite(request, token, member_id=None):
     _dict = request.POST.copy()
     _dict["token"] = token
     _dict["callback"] = request.GET.get("callback", '')
 
     if request.method == 'GET':
-        print("it works")
-    #     invite = UserInvite.objects.filter(token=token).first()
-    #     if invite is None:
-    #         return render(request, 'message.html', {
-    #             'message': 'Invitation not found with this token'
-    #         })
-    #     form = InviteForm({
-    #         **_dict,
-    #         'first_name': invite.first_name,
-    #         'last_name': invite.last_name,
-    #         'phone': invite.phone
-    #     })
+        
+        invite = UserInvite.objects.filter(token=token).first()
+        if invite is None:
+            return render(request, 'message.html', {
+                'message': 'Invitation not found with this token'
+            })
+        form = InviteForm({
+            **_dict,
+            'first_name': invite.first_name,
+            'last_name': invite.last_name,
+            'phone': invite.phone
+        })
 
-    #     return render(request, 'form_invite.html', {
-    #         'form': form,
-    #     })
+        return render(request, 'form_invite.html', {
+            'form': form,
+        })
 
     if request.method == 'POST':
         form = InviteForm(_dict)
