@@ -12,7 +12,7 @@ class NotifyModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        if not 'device' in models or device:
+        if not 'device' in models and device:
             kargs = {}
 
             if 'user' in models or user:
@@ -20,7 +20,7 @@ class NotifyModelsMixin(ModelsMixin):
 
             models['device'] = mixer.blend('notify.Device', **kargs)
 
-        if not 'slack_team' in models or slack_team:
+        if not 'slack_team' in models and slack_team:
             kargs = {}
 
             if 'user' in models or user:
@@ -31,7 +31,7 @@ class NotifyModelsMixin(ModelsMixin):
 
             models['slack_team'] = mixer.blend('notify.SlackTeam', **kargs)
 
-        if not 'slack_user' in models or slack_user:
+        if not 'slack_user' in models and slack_user:
             kargs = {}
 
             if 'user' in models or user:
@@ -39,7 +39,7 @@ class NotifyModelsMixin(ModelsMixin):
 
             models['slack_user'] = mixer.blend('notify.SlackUser', **kargs)
 
-        if not 'slack_user_team' in models or slack_user_team:
+        if not 'slack_user_team' in models and slack_user_team:
             kargs = {}
 
             if 'slack_user' in models or slack_user:
@@ -50,7 +50,7 @@ class NotifyModelsMixin(ModelsMixin):
 
             models['slack_user_team'] = mixer.blend('notify.SlackUserTeam', **kargs)
 
-        if not 'slack_channel' in models or slack_channel:
+        if not 'slack_channel' in models and slack_channel:
             kargs = {}
 
             if 'cohort' in models or cohort:

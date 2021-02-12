@@ -13,7 +13,7 @@ class EventsModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        if not 'organization' in models or organization:
+        if not 'organization' in models and organization:
             kargs = {}
 
             if 'academy' in models or academy:
@@ -32,7 +32,7 @@ class EventsModelsMixin(ModelsMixin):
 
             models['organizer'] = mixer.blend('events.Organizer', **kargs)
 
-        if not 'venue' in models or venue:
+        if not 'venue' in models and venue:
             kargs = {}
 
             if 'academy' in models or academy:
@@ -43,7 +43,7 @@ class EventsModelsMixin(ModelsMixin):
 
             models['venue'] = mixer.blend('events.Venue', **kargs)
 
-        if not 'event_type' in models or event_type:
+        if not 'event_type' in models and event_type:
             kargs = {}
 
             if 'academy' in models or academy:
@@ -51,7 +51,7 @@ class EventsModelsMixin(ModelsMixin):
 
             models['event_type'] = mixer.blend('events.EventType', **kargs)
 
-        if not 'event' in models or event:
+        if not 'event' in models and event:
             kargs = {}
 
             if 'user' in models or user:
@@ -74,7 +74,7 @@ class EventsModelsMixin(ModelsMixin):
 
             models['event'] = mixer.blend('events.Event', **kargs)
 
-        if not 'event_checkin' in models or event_checkin:
+        if not 'event_checkin' in models and event_checkin:
             kargs = {}
 
             if 'user' in models or user:
@@ -85,7 +85,7 @@ class EventsModelsMixin(ModelsMixin):
 
             models['event_checkin'] = mixer.blend('events.EventCheckin', **kargs)
 
-        if not 'eventbrite_webhook' in models or eventbrite_webhook:
+        if not 'eventbrite_webhook' in models and eventbrite_webhook:
             models['eventbrite_webhook'] = mixer.blend('events.EventbriteWebhook')
 
         return models

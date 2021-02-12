@@ -66,7 +66,7 @@ def send_question(user, cohort=None):
 
     # if not answer.cohort.syllabus.certificate.name:
     if not answer.cohort.syllabus:
-        message = f'Cohort not have one Syllabus'
+        message = 'Cohort not have one Syllabus'
         logger.info(message)
         raise Exception(message)
 
@@ -99,10 +99,10 @@ def send_question(user, cohort=None):
     answer.save()
 
     data = {
-        "QUESTION": question,
+        "QUESTION": question['title'],
         "HIGHEST": answer.highest,
         "LOWEST": answer.lowest,
-        "SUBJECT": question,
+        "SUBJECT": question['title'],
         "ANSWER_ID": answer.id,
         "BUTTON": strings[answer.cohort.language]["button_label"],
         "LINK": f"https://nps.breatheco.de/{answer.id}?token={token.key}",
