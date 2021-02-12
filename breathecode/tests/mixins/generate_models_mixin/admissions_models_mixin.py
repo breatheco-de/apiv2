@@ -7,77 +7,9 @@ from datetime import datetime
 from mixer.backend.django import mixer
 
 class AdmissionsModelsMixin(ModelsMixin):
-
-    def get_academy(self, id):
-        return Academy.objects.filter(id=id).first()
-
-    def get_academy_dict(self, id):
-        data = Academy.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
-
-    def get_certificate_dict(self, id):
-        data = Certificate.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
-
-    def get_cohort_user_dict(self, id):
-        data = CohortUser.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
-
-    def get_syllabus_dict(self, id):
-        data = Syllabus.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
-
-    def get_cohort_dict(self, id):
-        data = Cohort.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
-
-    def all_cohort_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Cohort.objects.filter()]
-
-    def all_academy_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Academy.objects.filter()]
-
-    def all_certificate_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Certificate.objects.filter()]
-
-    def all_syllabus_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Syllabus.objects.filter()]
-
-    def all_cohort_user_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            CohortUser.objects.filter()]
-
-    def get_cohort(self, id):
-        return Cohort.objects.filter(id=id).first()
-
-    def get_syllabus(self, id):
-        return Syllabus.objects.filter(id=id).first()
-        
-    def get_cohort_user(self, id):
-        return CohortUser.objects.filter(id=id).first()
-
-    def count_syllabus(self):
-        return Syllabus.objects.count()
-
-    def count_cohort_user(self):
-        return CohortUser.objects.count()
-
     def count_cohort_stage(self, cohort_id):
         cohort = Cohort.objects.get(id=cohort_id)
         return cohort.stage
-
-    def count_academy(self):
-        return Academy.objects.count()
-
-    def count_certificate(self):
-        return Certificate.objects.count()
-
-    def count_cohort(self):
-        return Cohort.objects.count()
 
     def generate_admissions_models(self, certificate=False, academy=False,
             cohort=False, profile_academy=False, cohort_user=False, 
