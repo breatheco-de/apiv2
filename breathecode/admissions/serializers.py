@@ -81,11 +81,11 @@ class GetAcademySerializer(serpy.Serializer):
     city = CitySerializer(required=False)
     logo_url = serpy.Field()
 
-class SyllabusSmallSerializer(serpy.Serializer):	
-    """The serializer schema definition."""	
-    # Use a Field subclass like IntField if you need more validation.	
-    version = serpy.Field()	
-    certificate = GetSmallCertificateSerializer(required=False)	
+class SyllabusSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    version = serpy.Field()
+    certificate = GetSmallCertificateSerializer(required=False)
 
 class GetCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -155,13 +155,13 @@ class UserMeSerializer(serpy.Serializer):
     roles = serpy.MethodField()
     cohorts = serpy.MethodField()
     date_joined = serpy.Field()
-    
+
     def get_github(self, obj):
         github = CredentialsGithub.objects.filter(user=obj.id).first()
         if github is None:
             return None
         return GithubSmallSerializer(github).data
-        
+
     def get_roles(self, obj):
         roles = ProfileAcademy.objects.filter(user=obj.id)
         return ProfileAcademySmallSerializer(roles, many=True).data
@@ -170,16 +170,16 @@ class UserMeSerializer(serpy.Serializer):
         cohorts = CohortUser.objects.filter(user__id=obj.id)
         return GETCohortUserSmallSerializer(cohorts, many=True).data
 
-class SyllabusGetSerializer(serpy.Serializer):	
-    """The serializer schema definition."""	
-    # Use a Field subclass like IntField if you need more validation.	
-    version = serpy.Field()	
-    certificate = serpy.MethodField()	
-    updated_at = serpy.Field()	
-    json = serpy.Field()	
+class SyllabusGetSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    version = serpy.Field()
+    certificate = serpy.MethodField()
+    updated_at = serpy.Field()
+    json = serpy.Field()
 
-    def get_certificate(self, obj):	
-        return obj.certificate.slug	
+    def get_certificate(self, obj):
+        return obj.certificate.slug
 
 
 """
@@ -244,7 +244,7 @@ class CohortPUTSerializer(serializers.ModelSerializer):
             cohort = Cohort.objects.filter(slug=data["slug"]).first()
             if cohort is not None and self.instance.slug != data["slug"]:
                 raise ValidationError('Slug already exists for another cohort')
-        
+
         return data
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
@@ -297,37 +297,37 @@ class CohortUserPUTSerializer(serializers.ModelSerializer):
         model = CohortUser
         fields = ['id', 'role', 'educational_status', 'finantial_status']
 
-class CertificateSerializer(serializers.ModelSerializer):	
-    class Meta:	
-        model = Certificate	
-        exclude = ()	
+class CertificateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Certificate
+        exclude = ()
 
-class SyllabusSerializer(serializers.ModelSerializer):	
-    class Meta:	
-        model = Syllabus	
-        exclude = ()	
-        extra_kwargs = {	
-            'course': {'read_only': True},	
-            'version': {'read_only': True},	
-        }	
+class SyllabusSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Syllabus
+        exclude = ()
+        extra_kwargs = {
+            'course': {'read_only': True},
+            'version': {'read_only': True},
+        }
 
-    def create(self, validated_data):	
-        previous_syllabus = Syllabus.objects.filter(course__id=self.context['course'].id, academy_owner=self.context['academy']).order_by('-version').first()	
-        version = 1	
-        if previous_syllabus is not None:	
-            version = previous_syllabus.version + 1	
-        return super(SyllabusSerializer, self).create({ 	
-            **validated_data,	
-            "course": self.context['course'],	
-            "academy_owner": self.context['academy'],	
-            "version": version	
-        })	
+    def create(self, validated_data):
+        previous_syllabus = Syllabus.objects.filter(course__id=self.context['course'].id, academy_owner=self.context['academy']).order_by('-version').first()
+        version = 1
+        if previous_syllabus is not None:
+            version = previous_syllabus.version + 1
+        return super(SyllabusSerializer, self).create({
+            **validated_data,
+            "course": self.context['course'],
+            "academy_owner": self.context['academy'],
+            "version": version
+        })
 
-class SyllabusUpdateSerializer(serializers.ModelSerializer):	
-    class Meta:	
-        model = Syllabus	
-        exclude = ()	
-        extra_kwargs = {	
-            'course': {'read_only': True},	
-            'version': {'read_only': True},	
+class SyllabusUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Syllabus
+        exclude = ()
+        extra_kwargs = {
+            'course': {'read_only': True},
+            'version': {'read_only': True},
         }

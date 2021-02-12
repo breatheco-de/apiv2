@@ -53,7 +53,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'id': self.certificate.id,
             'name': self.certificate.name,
             'slug': self.certificate.slug,
-            'logo': self.certificate.logo,	
+            'logo': self.certificate.logo,
             'description': self.certificate.description,
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)

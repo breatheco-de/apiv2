@@ -29,10 +29,10 @@ urlpatterns = [
 
     # update a cohort user information
     path('certificate', get_courses, name="certificate"),
-    path('certificate/<str:certificate_slug>/', get_single_course),	
-    path('certificate/<str:certificate_slug>/syllabus', SyllabusView.as_view()),	
-    path('certificate/<str:certificate_slug>/syllabus/<int:version>', SyllabusView.as_view()),	
-    path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus/<int:version>', SyllabusView.as_view()),	
+    path('certificate/<str:certificate_slug>/', get_single_course),
+    path('certificate/<str:certificate_slug>/syllabus', SyllabusView.as_view()),
+    path('certificate/<str:certificate_slug>/syllabus/<int:version>', SyllabusView.as_view()),
+    path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus/<int:version>', SyllabusView.as_view()),
     path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus', SyllabusView.as_view()),
 
     path('catalog/timezones', get_timezones, name="timezones_all"),
