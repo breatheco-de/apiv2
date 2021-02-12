@@ -76,8 +76,7 @@ class MemberView(APIView):
             serializer = GETProfileAcademy(item, many=False)
             return Response(serializer.data)
 
-        items = ProfileAcademy.objects.filter(academy__id=academy_id)
-        items = localize_query(items, request) # only form this academy
+        items = ProfileAcademy.objects.filter(academy__id=academy_id).exclude(role__slug="student")
 
         roles = request.GET.get('roles', None)
         if is_many and roles is not None:
@@ -123,7 +122,7 @@ class MemberView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_member')
-    def put(self, request, academy_id=None, user_id=None):
+    def delete(self, request, academy_id=None, user_id=None):
 
         member = ProfileAcademy.objects.filter(user=user_id,academy__id=academy_id).exclude(role__slug="student").first()
         if member is None:
