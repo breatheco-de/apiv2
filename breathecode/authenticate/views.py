@@ -17,6 +17,7 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
 from django.utils import timezone
+from datetime import datetime
 from .models import Profile, ProfileAcademy, Role, UserInvite
 from .authentication import ExpiringTokenAuthentication
 
@@ -794,18 +795,28 @@ def pick_password(request, token):
 
 class AcademyInviteView(APIView):
     @capable_of('admissions_developer')
-    def get(self, request,member_id=None, academy_id=None):
+    def get(self, request, member_id=None, academy_id=None):
         if member_id is not None:
             member = ProfileAcademy.objects.filter(id=member_id,academy__id=academy_id).first() 
             print("///////////////////",member)
+
             if member is None:
                 raise ValidationException("Member not found", 400)
             invite = UserInvite.objects.filter(academy__id=academy_id, email=member.email).first()
             print("///////////////////",invite)
             if invite is None:
                 raise ValidationException("Invite not found", 400)
+
+            now = datetime.now(timezone.utc)
+            minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
+            
+            if minutes_diff < 2:
+                raise ValidationException("Imposible to resend invitation", 400)
+
+            invite.sent_at = datetime.now()
+            invite.save()
             serializer = UserInviteSerializer(invite, many=False)
-            return Response("Great")
+            return Response(serializer.data)
 
 def render_invite(request, token, member_id=None):
     _dict = request.POST.copy()
