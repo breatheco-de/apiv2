@@ -23,7 +23,7 @@ from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
 from .models import Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook, UserInvite
-from .actions import reset_password
+from .actions import reset_password, resend_invite
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
 from breathecode.utils import localize_query, capable_of, ValidationException
@@ -819,6 +819,9 @@ class AcademyInviteView(APIView):
 
             invite.sent_at = datetime.now()
             invite.save()
+
+            resend_invite(invite.token, invite.email, invite.first_name)
+
             serializer = UserInviteSerializer(invite, many=False)
             return Response(serializer.data)
 

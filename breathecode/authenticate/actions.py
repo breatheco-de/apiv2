@@ -1,7 +1,7 @@
-import os, requests, logging
+import os, requests, logging, urllib.parse
 from django.contrib.auth.models import User, Group
 from django.utils import timezone
-from .models import Token, CredentialsSlack
+from .models import Token, CredentialsSlack, UserInvite
 from breathecode.notify.actions import send_email_message
 
 logger = logging.getLogger(__name__)
@@ -52,3 +52,14 @@ def reset_password(users=None):
         })
     
     return True
+
+def resend_invite(token=None,email=None, first_name=None ):
+    params = { "callback": "https://admin.breatheco.de" }
+    querystr = urllib.parse.urlencode(params)
+    url = os.getenv('API_URL') + "/v1/auth/user/invite/" + str(token) + "?" + querystr
+    send_email_message("form_invite",email, {
+                "email": email,
+                "subject": "Invitation",
+                "LINK": url,
+                "FIST_NAME": first_name
+            })

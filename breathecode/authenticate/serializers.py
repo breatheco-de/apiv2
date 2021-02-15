@@ -28,7 +28,6 @@ class GithubSmallSerializer(serpy.Serializer):
 class UserInviteSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
-    # author = serpy.Field()
     status = serpy.Field()
     email = serpy.Field()
     sent_at = serpy.Field()
@@ -36,16 +35,7 @@ class UserInviteSerializer(serpy.Serializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     token = serpy.Field()
-    params = { "callback": "https://admin.breatheco.de" }
-    querystr = urllib.parse.urlencode(params)
-    url = os.getenv('API_URL') + "/v1/auth/user/invite/" + str(token) + "?" + querystr
-    print("////////////theurl////////:", email)
-    send_email_message("form_invite",email, {
-                "email": email,
-                "subject": "Invitation",
-                "LINK": url,
-                "FIST_NAME": first_name
-            })
+
 
 class AcademySerializer(serpy.Serializer):
     """The serializer schema definition."""
