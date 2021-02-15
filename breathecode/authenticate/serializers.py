@@ -35,7 +35,17 @@ class UserInviteSerializer(serpy.Serializer):
     created_at = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
-    send_email_message("form_invite",email)
+    token = serpy.Field()
+    params = { "callback": "https://admin.breatheco.de" }
+    querystr = urllib.parse.urlencode(params)
+    url = os.getenv('API_URL') + "/v1/auth/user/invite/" + str(token) + "?" + querystr
+    print("////////////theurl////////:", email)
+    send_email_message("form_invite",email, {
+                "email": email,
+                "subject": "Invitation",
+                "LINK": url,
+                "FIST_NAME": first_name
+            })
 
 class AcademySerializer(serpy.Serializer):
     """The serializer schema definition."""

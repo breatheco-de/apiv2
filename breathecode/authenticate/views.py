@@ -808,6 +808,10 @@ class AcademyInviteView(APIView):
                 raise ValidationException("Invite not found", 400)
 
             now = datetime.now(timezone.utc)
+            print("///////////////////",now)
+            print("///////////////////",invite.sent_at)
+            if invite.sent_at == None:
+                invite.sent_at = now
             minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
             
             if minutes_diff < 2:
