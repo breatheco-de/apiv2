@@ -795,33 +795,34 @@ def pick_password(request, token):
 
 class AcademyInviteView(APIView):
     @capable_of('admissions_developer')
-    def get(self, request, member_id=None, academy_id=None):
-        if member_id is not None:
-            member = ProfileAcademy.objects.filter(id=member_id,academy__id=academy_id).first() 
-            print("///////////////////",member)
+    def put(self, request, user_id=None, academy_id=None):
+        if user_id is not None:
+            user = ProfileAcademy.objects.filter(user__id=user_id,academy__id=academy_id).first() 
+            print("///////////////////",user)
 
-            if member is None:
+            if user is None:
                 raise ValidationException("Member not found", 400)
-            invite = UserInvite.objects.filter(academy__id=academy_id, email=member.email).first()
+            invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email, author=request.user).first() #check author
             print("///////////////////",invite)
             if invite is None:
                 raise ValidationException("Invite not found", 400)
+            if invite.sent_at is not None:
 
-            now = datetime.now(timezone.utc)
+                now = timezone.now()
+                minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
+                
+                if minutes_diff < 2:
+                    raise ValidationException("Imposible to resend invitation", 400)
             print("///////////////////",now)
             print("///////////////////",invite.sent_at)
-            if invite.sent_at == None:
-                invite.sent_at = now
-            minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
             
-            if minutes_diff < 2:
-                raise ValidationException("Imposible to resend invitation", 400)
+        
 
-            invite.sent_at = datetime.now()
-            invite.save()
 
             resend_invite(invite.token, invite.email, invite.first_name)
 
+            invite.sent_at = timezone.now()
+            invite.save()
             serializer = UserInviteSerializer(invite, many=False)
             return Response(serializer.data)
 
