@@ -97,7 +97,7 @@ class GetCohortSerializer(serpy.Serializer):
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     stage = serpy.Field()
-    syllabus = SyllabusSmallSerializer()
+    syllabus = SyllabusSmallSerializer(required=False)
     academy = GetAcademySerializer()
 
 class GetSmallCohortSerializer(serpy.Serializer):
