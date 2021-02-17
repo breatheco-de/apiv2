@@ -7,7 +7,8 @@ from mixer.backend.django import mixer
 
 class AssignmentsModelsMixin(ModelsMixin):
     def generate_assignments_models(self, task=False, task_status='',
-            task_type='', task_revision_status='', models={}, **kwargs):
+            task_type='', task_revision_status='', models={}, task_kwargs={},
+            **kwargs):
         models = models.copy()
 
         if not 'task' in models and task:
@@ -25,6 +26,7 @@ class AssignmentsModelsMixin(ModelsMixin):
             if task_revision_status:
                 kargs['revision_status'] = task_revision_status
 
+            kargs = {**kargs, **task_kwargs}
             models['task'] = mixer.blend('assignments.Task', **kargs)
 
         return models

@@ -14,12 +14,15 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
 
     def generate_credentials(self, user=False, task=False, authenticate=False,
             manual_authenticate=False, cohort_user=False, profile_academy='',
-            models={}, **kwargs):
+            user_kwargs={}, models={}, **kwargs):
         models = models.copy()
 
         if not 'user' in models and (user or authenticate or profile_academy or
                 manual_authenticate or cohort_user or task):
-            models['user'] = mixer.blend('auth.User')
+            kargs = {}
+
+            kargs = {**kargs, **user_kwargs}
+            models['user'] = mixer.blend('auth.User', **kargs)
             models['user'].set_password(self.password)
             models['user'].save()
 

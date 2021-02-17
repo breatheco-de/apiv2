@@ -15,8 +15,12 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
     def generate_authenticate_models(self, profile_academy=False, capability='',
             role='', profile=False, user_invite=False, credentials_github=False,
             credentials_slack=False, credentials_facebook=False,
-            credentials_quick_books=False, token=False,
-            models={}, **kwargs):
+            credentials_quick_books=False, token=False, profile_kwargs={},
+            capability_kwargs={}, role_kwargs={}, user_invite_kwargs={},
+            profile_academy_kwargs={}, credentials_github_kwargs={},
+            credentials_slack_kwargs={}, credentials_facebook_kwargs={},
+            credentials_quick_books_kwargs={}, token_kwargs={}, models={},
+            **kwargs):
         models = models.copy()
 
         if not 'profile' in models and profile:
@@ -25,6 +29,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'user' in models:
                 kargs['user'] = models['user']
 
+            kargs = {**kargs, **profile_kwargs}
             models['profile'] = mixer.blend('authenticate.Profile', **kargs)
 
         if not 'capability' in models and capability:
@@ -33,6 +38,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 'description': capability,
             }
 
+            kargs = {**kargs, **capability_kwargs}
             models['capability'] = mixer.blend('authenticate.Capability', **kargs)
 
         if not 'role' in models and role:
@@ -44,6 +50,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if capability:
                 kargs['capabilities'] = [models['capability']]
 
+            kargs = {**kargs, **role_kwargs}
             models['role'] = mixer.blend('authenticate.Role', **kargs)
 
         if not 'user_invite' in models and user_invite:
@@ -61,6 +68,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'author' in models:
                 kargs['author'] = models['user']
 
+            kargs = {**kargs, **user_invite_kwargs}
             models['user_invite'] = mixer.blend('authenticate.UserInvite', **kargs)
 
         if not 'profile_academy' in models and profile_academy:
@@ -75,6 +83,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'academy' in models:
                 kargs['academy'] = models['academy']
 
+            kargs = {**kargs, **profile_academy_kwargs}
             models['profile_academy'] = mixer.blend('authenticate.ProfileAcademy', **kargs)
 
         if not 'credentials_github' in models and credentials_github:
@@ -83,6 +92,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'user' in models:
                 kargs['user'] = models['user']
 
+            kargs = {**kargs, **credentials_github_kwargs}
             models['credentials_github'] = mixer.blend('authenticate.CredentialsGithub', **kargs)
 
         if not 'credentials_slack' in models and credentials_slack:
@@ -91,6 +101,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'user' in models:
                 kargs['user'] = models['user']
 
+            kargs = {**kargs, **credentials_slack_kwargs}
             models['credentials_slack'] = mixer.blend('authenticate.CredentialsSlack', **kargs)
 
         if not 'credentials_facebook' in models and credentials_facebook:
@@ -102,6 +113,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'academy' in models:
                 kargs['academy'] = models['academy']
 
+            kargs = {**kargs, **credentials_facebook_kwargs}
             models['credentials_facebook'] = mixer.blend('authenticate.CredentialsFacebook', **kargs)
 
         if not 'credentials_quick_books' in models and credentials_quick_books:
@@ -110,6 +122,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'user' in models:
                 kargs['user'] = models['user']
 
+            kargs = {**kargs, **credentials_quick_books_kwargs}
             models['credentials_quick_books'] = mixer.blend('authenticate.CredentialsQuickBooks', **kargs)
 
         if not 'token' in models and token:
@@ -118,6 +131,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'user' in models:
                 kargs['user'] = models['user']
 
+            kargs = {**kargs, **token_kwargs}
             models['token'] = mixer.blend('authenticate.Token', **kargs)
 
         return models
