@@ -29,7 +29,7 @@ def build_question(answer):
         question["lowest"] = strings[answer.lang]["mentor"]["lowest"]
         question["highest"] = strings[answer.lang]["mentor"]["highest"]
     elif answer.cohort is not None:
-        question["title"] = strings[answer.lang]["cohort"]["title"].format(answer.cohort.certificate.name)
+        question["title"] = strings[answer.lang]["cohort"]["title"].format(answer.cohort.syllabus.certificate.name)
         question["lowest"] = strings[answer.lang]["cohort"]["lowest"]
         question["highest"] = strings[answer.lang]["cohort"]["highest"]
     elif answer.academy is not None:

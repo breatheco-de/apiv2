@@ -14,7 +14,7 @@ from .serializers import (
     CohortUserPOSTSerializer, UserDJangoRestSerializer, UserMeSerializer,
     GetCertificateSerializer
 )
-from .models import Academy, City, CohortUser, Certificate, Cohort, Country, STUDENT, DELETED
+from .models import Academy, City, CohortUser, Certificate, Cohort, Country, STUDENT, DELETED, Syllabus
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -66,7 +66,7 @@ class UserMeView(APIView):
         logger.error("Get me just called")
         try:
             if isinstance(request.user, AnonymousUser):
-                raise PermissionDenied("There is not user")    
+                raise PermissionDenied("There is not user")
 
         except User.DoesNotExist:
             raise PermissionDenied("You don't have a user")
@@ -433,12 +433,6 @@ class AcademyCohortView(APIView):
         if request.data.get('academy') or request.data.get('academy_id'):
             raise ParseError(detail='academy and academy_id field is not allowed')
 
-        print('======================================================')
-        print('======================================================')
-        print('======================================================')
-        print(self.cache().keys(all=True))
-        print('======================================================', 'POST')
-
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
             raise ValidationError(f'Academy {academy_id} not found')
@@ -480,7 +474,7 @@ class AcademyCohortView(APIView):
         if cohort is None:
             logger.debug(f"Cohort not be found in related academies")
             raise ValidationException('Specified cohort not be found')
-        
+
         serializer = CohortPUTSerializer(cohort, data=request.data, context={ "request": request, "cohort_id": cohort_id })
         if serializer.is_valid():
             serializer.save()
@@ -546,7 +540,7 @@ class SyllabusView(APIView):
     def get(self, request, certificate_slug=None, version=None, academy_id=None):
         if academy_id is None:
             raise ValidationException("Missing academy id")
-        
+
         certificates = Certificate.objects.filter(slug=certificate_slug).first()
         if certificates is None:
             raise serializers.ValidationError("Certificate slug not found", code=404)
@@ -560,7 +554,7 @@ class SyllabusView(APIView):
         else:
             # only public syllabus or for the academy owner
             syl = certificates.syllabus_set.filter(version=version).filter(Q(academy_owner__id=academy_id) | Q(private=False)).first()
-        
+
         if syl is None:
             raise ValidationException("Syllabus not found", code=404)
 
@@ -594,11 +588,11 @@ class SyllabusView(APIView):
     def put(self, request, certificate_slug=None, version=None, academy_id=None):
         if version is None:
             raise serializers.ValidationError("Missing syllabus version", code=400)
-        
+
         item = Syllabus.objects.filter(course__slug=certificate_slug, version=version, academy_owner__id=academy_id).first()
         if item is None:
             raise serializers.ValidationError("Syllabus version not found for this academy", code=404)
-        
+
         serializer = SyllabusSerializer(item, data=request.data, many=False)
         if serializer.is_valid():
             serializer.save()

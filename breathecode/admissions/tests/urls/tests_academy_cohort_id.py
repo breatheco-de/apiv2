@@ -53,31 +53,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_put_with_id_without_certificate(self):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort=True, profile_academy=True,
-            capability='crud_cohort', role='potato')
-        url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
-        data = {}
-        response = self.client.put(url, data)
-        json = response.json()
-
-        self.assertEqual(json, {'certificate': ['This field is required.']})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_put_without_cohort(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 99999})
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_cohort', role='potato', certificate=True)
-        data = {
-            'certificate': model['certificate'].id
-        }
+            capability='crud_cohort', role='potato', syllabus=True)
+        data = {}
         response = self.client.put(url, data)
         json = response.json()
 
@@ -94,10 +76,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 1})
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_cohort', role='potato', certificate=True)
-        data = {
-            'certificate': model['certificate'].id
-        }
+            capability='crud_cohort', role='potato')
+        data = {}
         response = self.client.put(url, data)
         json = response.json()
 
@@ -110,11 +90,12 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
-            'certificate': model['cohort'].certificate.id,
+            'syllabus': None,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_cohort_dict(), [self.remove_dinamics_fields(model['cohort'].__dict__)])
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), self.remove_dinamics_fields(model['cohort'].__dict__))
 
@@ -125,19 +106,19 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True, profile_academy=True,
-            capability='crud_cohort', role='potato', certificate=True)
+            capability='crud_cohort', role='potato', syllabus=True)
         model_dict = self.get_cohort_dict(1)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
-            'certificate': model['certificate'].id,
+            'syllabus': model['syllabus'].id,
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'current_day': model['cohort'].current_day + 1,
             'language': 'es',
         }
         model_dict.update(data)
-        model_dict['certificate_id'] = model_dict['certificate']
-        del model_dict['certificate']
+        model_dict['syllabus_id'] = model_dict['syllabus']
+        del model_dict['syllabus']
         response = self.client.put(url, data)
         json = response.json()
         expected = {
@@ -149,7 +130,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': data['current_day'],
             'stage': model['cohort'].stage,
             'language': data['language'],
-            'certificate': model['cohort'].certificate.id,
+            'syllabus': model['cohort'].syllabus.id,
         }
 
         self.assertEqual(json, expected)
@@ -164,7 +145,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True, profile_academy=True,
-            capability='read_cohort', role='potato', certificate=True)
+            capability='read_cohort', role='potato', syllabus=True)
         model_dict = self.remove_dinamics_fields(model['cohort'].__dict__)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         response = self.client.get(url)
@@ -177,12 +158,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
-            'certificate': {
-                'id': model['cohort'].certificate.id,
-                'slug': model['cohort'].certificate.slug,
-                'name': model['cohort'].certificate.name,
-                'description': model['cohort'].certificate.description,
-                'logo': model['cohort'].certificate.logo,
+            'syllabus': {
+                'certificate': {
+                    'id': model['cohort'].syllabus.certificate.id,
+                    'slug': model['cohort'].syllabus.certificate.slug,
+                    'name': model['cohort'].syllabus.certificate.name,
+                },
+                'version': model['cohort'].syllabus.version,
             },
             'academy': {
                 'id': model['cohort'].academy.id,
@@ -211,7 +193,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, profile_academy=True,
-            capability='read_cohort', role='potato', certificate=True)
+            capability='read_cohort', role='potato', syllabus=True)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 'they-killed-kenny'})
         response = self.client.get(url)
 
@@ -225,7 +207,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True, profile_academy=True,
-            capability='read_cohort', role='potato', certificate=True)
+            capability='read_cohort', role='potato', syllabus=True)
         model_dict = self.remove_dinamics_fields(model['cohort'].__dict__)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].slug})
         response = self.client.get(url)
@@ -238,12 +220,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'language': model['cohort'].language,
             'stage': model['cohort'].stage,
-            'certificate': {
-                'id': model['cohort'].certificate.id,
-                'slug': model['cohort'].certificate.slug,
-                'name': model['cohort'].certificate.name,
-                'description': model['cohort'].certificate.description,
-                'logo': model['cohort'].certificate.logo,
+            'syllabus': {
+                'certificate': {
+                    'id': model['cohort'].syllabus.certificate.id,
+                    'slug': model['cohort'].syllabus.certificate.slug,
+                    'name': model['cohort'].syllabus.certificate.name,
+                },
+                'version': model['cohort'].syllabus.version,
             },
             'academy': {
                 'id': model['cohort'].academy.id,
@@ -274,7 +257,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
-            capability='read_cohort', role='potato', certificate=True, cohort_user=True)
+            capability='read_cohort', role='potato', syllabus=True, cohort_user=True)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 0})
         self.assertEqual(self.count_cohort_user(), 1)
         response = self.client.delete(url)
@@ -290,7 +273,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
-            capability='crud_cohort', role='potato', certificate=True, cohort_user=True)
+            capability='crud_cohort', role='potato', syllabus=True, cohort_user=True)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.count_cohort_stage(model['cohort'].id), 'INACTIVE')

@@ -34,6 +34,6 @@ urlpatterns = [
     path('certificate/<str:certificate_slug>/syllabus/<int:version>', SyllabusView.as_view()),
     path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus/<int:version>', SyllabusView.as_view()),
     path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus', SyllabusView.as_view()),
-    
+
     path('catalog/timezones', get_timezones, name="timezones_all"),
 ]

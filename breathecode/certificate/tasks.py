@@ -46,8 +46,8 @@ def generate_cohort_certificates(self, cohort_id):
     logger.debug("Starting generate_cohort_certificates")
     from .actions import generate_certificate
 
-    cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role='STUDENT',
-        educational_status='GRADUATED')
+    cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role='STUDENT')
+
     logger.debug(f"Generating gertificate for {str(cohort_users.count())} students that GRADUATED")
     for cu in cohort_users:
         try:

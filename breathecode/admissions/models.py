@@ -132,6 +132,7 @@ class AcademyCertificate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+
 class Syllabus(models.Model):
 
     version = models.PositiveSmallIntegerField()
