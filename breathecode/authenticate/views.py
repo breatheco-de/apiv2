@@ -17,19 +17,20 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
 from django.utils import timezone
-from .models import Profile, ProfileAcademy, Role
+from datetime import datetime
+from .models import Profile, ProfileAcademy, Role, UserInvite
 from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
 from .models import Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook, UserInvite
-from .actions import reset_password
+from .actions import reset_password, resend_invite
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
 from breathecode.utils import localize_query, capable_of, ValidationException
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
-    RoleSmallSerializer, UserMeSerializer
+    RoleSmallSerializer, UserMeSerializer, UserInviteSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -792,12 +793,46 @@ def pick_password(request, token):
         'form': form
     })
 
-def render_invite(request, token):
+class AcademyInviteView(APIView):
+    @capable_of('admissions_developer')
+    def put(self, request, user_id=None, academy_id=None):
+        if user_id is not None:
+            user = ProfileAcademy.objects.filter(user__id=user_id,academy__id=academy_id).first() 
+            print("///////////////////",user)
+
+            if user is None:
+                raise ValidationException("Member not found", 400)
+            invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email, author=request.user).first() #check author
+            print("///////////////////",invite)
+            if invite is None:
+                raise ValidationException("Invite not found", 400)
+            if invite.sent_at is not None:
+
+                now = timezone.now()
+                minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
+                
+                if minutes_diff < 2:
+                    raise ValidationException("Imposible to resend invitation", 400)
+            print("///////////////////",now)
+            print("///////////////////",invite.sent_at)
+            
+        
+
+
+            resend_invite(invite.token, invite.email, invite.first_name)
+
+            invite.sent_at = timezone.now()
+            invite.save()
+            serializer = UserInviteSerializer(invite, many=False)
+            return Response(serializer.data)
+
+def render_invite(request, token, member_id=None):
     _dict = request.POST.copy()
     _dict["token"] = token
     _dict["callback"] = request.GET.get("callback", '')
 
     if request.method == 'GET':
+        
         invite = UserInvite.objects.filter(token=token).first()
         if invite is None:
             return render(request, 'message.html', {

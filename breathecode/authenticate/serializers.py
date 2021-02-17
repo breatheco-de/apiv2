@@ -25,6 +25,18 @@ class GithubSmallSerializer(serpy.Serializer):
     name = serpy.Field()
     username = serpy.Field()
 
+class UserInviteSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    status = serpy.Field()
+    email = serpy.Field()
+    sent_at = serpy.Field()
+    created_at = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    token = serpy.Field()
+
+
 class AcademySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
