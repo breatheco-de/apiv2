@@ -19,6 +19,7 @@ from rest_framework.decorators import renderer_classes
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
+from breathecode.utils import ValidationException
 
 
 logger = logging.getLogger(__name__)

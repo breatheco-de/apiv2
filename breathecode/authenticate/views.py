@@ -804,6 +804,7 @@ class AcademyInviteView(APIView):
                 raise ValidationException("Member not found", 400)
             invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email, author=request.user).first() #check author
             print("///////////////////",invite)
+            print("///////////////////",request.user.id)
             if invite is None:
                 raise ValidationException("Invite not found", 400)
             if invite.sent_at is not None:
