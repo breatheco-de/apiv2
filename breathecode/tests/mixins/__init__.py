@@ -10,3 +10,4 @@ from .generate_models_mixin import GenerateModelsMixin
 from .cache_mixin import CacheMixin
 from .token_mixin import TokenMixin
 from .generate_queries_mixin import GenerateQueriesMixin
+from .old_breathecode_mixin import OldBreathecodeMixin
