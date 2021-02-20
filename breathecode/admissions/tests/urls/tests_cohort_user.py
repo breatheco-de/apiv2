@@ -171,8 +171,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'educational_status': self.cohort_user.educational_status,
             'created_at': re.sub(r'\+00:00$', 'Z', self.cohort_user.created_at.isoformat()),
         }]
-        # print(json)
-        # print(expected)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

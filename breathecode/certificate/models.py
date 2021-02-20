@@ -34,6 +34,7 @@ class Specialty(models.Model):
     def __str__(self):
         return self.name
 
+
 # For example: HTML
 class Badge(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
@@ -51,6 +52,7 @@ class Badge(models.Model):
 
     def __str__(self):
         return self.name
+
 
 class LayoutDesign(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
@@ -89,6 +91,9 @@ class UserSpecialty(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def clean(self):
+        if self.status == ERROR:
+            return
+
         if self.cohort is not None and self.cohort.academy.id != self.academy.id:
             raise ValidationError("Cohort academy does not match the specified academy for this certificate")
 
@@ -112,7 +117,3 @@ class UserSpecialty(models.Model):
             self.clean()
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
-
-
-
-        

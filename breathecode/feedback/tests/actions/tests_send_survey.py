@@ -15,7 +15,7 @@ from breathecode.tests.mocks import (
     SLACK_INSTANCES,
     apply_slack_requests_request_mock,
 )
-from ..mixins import FeedbackTestCase
+from ..mixins.new_feedback_test_case import FeedbackTestCase
 from ...actions import send_question, strings
 
 class SendSurveyTestSuite(FeedbackTestCase):
@@ -25,7 +25,11 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_send_question_without_cohort(self):
-        """Test /answer without auth"""
+        """
+        Step 1
+        Tests send_question with User
+        Status: BAD_REQUEST
+        """
         model = self.generate_models(user=True)
         
         try:
@@ -39,11 +43,24 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
     def test_send_question_with_one_user_with_two_cohort(self):
-        """Test /answer without auth"""
-        model = self.generate_models(cohort_user=True, cohort_user_two=True)
+        """
+        Step 2
+        Tests send_question with two User and CohortUser
+        Status: BAD_REQUEST
+        """
+        model1 = self.generate_models(cohort_user=True)
+
+        base = model1.copy()
+        del base['cohort_user']
+
+        self.generate_models(cohort_user=True, models=base)
+
+        print(self.count_user())
+        print(self.count_cohort())
+        print(self.count_cohort_user())
         
         try:
-            send_question(model['user'])
+            send_question(model1['user'])
         except Exception as e:
             self.assertEquals(str(e), ('Impossible to determine the student cohort, maybe it has '
                 'more than one, or cero.'))
@@ -52,18 +69,68 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
-    def test_send_question_with_cohort_with_slack_user_with_slack_team(self):
-        """Test /answer without auth"""
+    def test_send_question_with_cohort_with_cohort_user(self):
+        """
+        Step 3
+        Tests send_question with User and CohortUser
+        Status: BAD_REQUEST
+        """
         mock_mailgun = MAILGUN_INSTANCES['post']
         mock_mailgun.call_args_list = []
 
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        model = self.generate_models(user=True, cohort_user=True, lang='en', slack_user=True,
-            slack_team=True)
-        academy = model['cohort'].academy.name
-        certificate = model['cohort'].certificate.name
+        model = self.generate_models(user=True, cohort_user=True)
+        
+        try:
+            send_question(model['user'])
+        except Exception as e:
+            message = str(e)
+            self.assertEqual(message, 'Cohort not have one Syllabus')
+
+        expected = [{
+            'id': 1,
+            'title': '',
+            'lowest': strings[model['cohort'].language]['event']['lowest'],
+            'highest': strings[model['cohort'].language]['event']['highest'],
+            'lang': 'en',
+            'event_id': None,
+            'mentor_id': None,
+            'cohort_id': 1,
+            'academy_id': None,
+            'token_id': None,
+            'score': None,
+            'comment': None,
+            'survey_id': None,
+            'status': 'PENDING',
+            'user_id': 1,
+            'opened_at': None,
+        }]
+
+        dicts = self.all_answer_dict()
+        self.assertEqual(dicts, expected)        
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        self.assertEqual(mock_slack.call_args_list, [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
+    def test_send_question_with_cohort_with_syllabus(self):
+        """
+        Step 4
+        Tests send_question with User, CohortUser and Syllabus
+        Status: BAD_REQUEST
+        """
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_slack = SLACK_INSTANCES['request']
+        mock_slack.call_args_list = []
+
+        model = self.generate_models(user=True, cohort_user=True, syllabus=True)
+        certificate = model['cohort'].syllabus.certificate.name
         
         send_question(model['user'])
 
@@ -86,13 +153,10 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'user_id': 1,
         }]
 
-        dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
-            datetime) and answer.pop('created_at')]
+        dicts = self.all_answer_dict()
         self.assertEqual(dicts, expected)
-        
-        # TODO: this function is broken, we have to fix it
-        # self.check_email_contain_a_correct_token('en', academy, dicts, mock_mailgun, model)
-        
+        self.assertEqual(self.count_token(), 1)
+        self.check_email_contain_a_correct_token('en', dicts, mock_mailgun, model)
         self.assertEqual(mock_slack.call_args_list, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -109,14 +173,10 @@ class SendSurveyTestSuite(FeedbackTestCase):
         mock_slack.call_args_list = []
 
         model = self.generate_models(user=True, cohort_user=True, lang='en', slack_user=True,
-            slack_team=True, credentials_slack=True, academy=True)
-        academy = model['cohort'].academy.name
-        certificate = model['cohort'].certificate.name
+            slack_team=True, credentials_slack=True, academy=True, syllabus=True)
+        certificate = model['cohort'].syllabus.certificate.name
         
-        try:
-            send_question(model['user'])
-        except Exception as e:
-            self.assertEqual(str(e), f"Team owner not has slack credentials")
+        send_question(model['user'])
 
         expected = [{
             'id': 1,
@@ -124,6 +184,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'lowest': 'not good',
             'highest': 'very good',
             'lang': 'en',
+
             'cohort_id': 1,
             'academy_id': None,
             'mentor_id': None,
@@ -132,19 +193,16 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'score': None,
             'comment': None,
             'survey_id': None,
-            'status': 'PENDING',
+            'status': 'SENT',
             'user_id': 1,
             'opened_at': None,
         }]
 
-        dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
-            datetime) and answer.pop('created_at')]
+        dicts = [answer for answer in self.all_answer_dict()]
         self.assertEqual(dicts, expected)
 
-        # TODO: this function is broken, we have to fix it
-        # self.check_email_contain_a_correct_token('en', academy, dicts, mock_mailgun, model)
-        
-        self.assertEqual(mock_slack.call_args_list, [])
+        self.check_email_contain_a_correct_token('en', dicts, mock_mailgun, model)
+        self.check_slack_contain_a_correct_token('en', dicts, mock_slack, model)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -160,9 +218,9 @@ class SendSurveyTestSuite(FeedbackTestCase):
         mock_slack.call_args_list = []
 
         model = self.generate_models(user=True, cohort_user=True, lang='en', slack_user=True,
-            slack_team=True, credentials_slack=True, academy=True, slack_team_owner=True)
-        academy = model['cohort'].academy.name
-        certificate = model['cohort'].certificate.name
+            slack_team=True, credentials_slack=True, academy=True, slack_team_owner=True,
+            syllabus=True)
+        certificate = model['cohort'].syllabus.certificate.name
         
         try:
             send_question(model['user'])
@@ -189,15 +247,11 @@ class SendSurveyTestSuite(FeedbackTestCase):
         }]
 
         print('asdasd', model['slack_team'].__dict__)
-        dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
-            datetime) and answer.pop('created_at')]
+        dicts = self.all_answer_dict()
         self.assertEqual(dicts, expected)
 
-        # TODO: this function is broken, we have to fix it
-        # self.check_email_contain_a_correct_token('en', academy, dicts, mock_mailgun, model)
-
-        # TODO: this function is broken, we have to fix it
-        # self.check_stack_contain_a_correct_token('en', academy, mock_slack, model)
+        self.check_email_contain_a_correct_token('en', dicts, mock_mailgun, model)
+        self.check_slack_contain_a_correct_token('en', dicts, mock_slack, model)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -212,10 +266,10 @@ class SendSurveyTestSuite(FeedbackTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        model = self.generate_models(user=True, cohort_user=True, lang='es', slack_user=True,
-            slack_team=True, credentials_slack=True, academy=True, slack_team_owner=True)
-        academy = model['cohort'].academy.name
-        certificate = model['cohort'].certificate.name
+        model = self.generate_models(user=True, cohort_user=True, language='es', slack_user=True,
+            slack_team=True, credentials_slack=True, academy=True, slack_team_owner=True,
+            syllabus=True)
+        certificate = model['cohort'].syllabus.certificate.name
 
         send_question(model['user'])
         expected = [{
@@ -237,16 +291,12 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'user_id': 1,
         }]
 
-        dicts = [answer for answer in self.all_answer_dict() if isinstance(answer['created_at'],
-            datetime) and answer.pop('created_at')]
+        dicts = self.all_answer_dict()
         self.assertEqual(dicts, expected)
         self.assertEqual(self.count_token(), 1)
 
-        # TODO: this function is broken, we have to fix it
-        #self.check_email_contain_a_correct_token('es', academy, dicts, mock_mailgun, model)
-
-        # TODO: this function is broken, we have to fix it
-        # self.check_stack_contain_a_correct_token('es', academy, mock_slack, model)
+        self.check_email_contain_a_correct_token('es', dicts, mock_mailgun, model)
+        self.check_slack_contain_a_correct_token('es', dicts, mock_slack, model)
 
     # TODO: why this test? can we have duplicate survays? This tests says no... but maybe we can, lets discuss it!
 
@@ -303,4 +353,4 @@ class SendSurveyTestSuite(FeedbackTestCase):
     #     # TODO: this function is broken, we have to fix it
     #     # self.check_email_contain_a_correct_token('es', academy, dicts, mock_mailgun, model)
         
-    #     self.check_stack_contain_a_correct_token('es', academy, mock_slack, model)
+    #     self.check_slack_contain_a_correct_token('es', academy, mock_slack, model)

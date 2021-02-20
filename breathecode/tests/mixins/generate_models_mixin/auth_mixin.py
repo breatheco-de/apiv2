@@ -12,35 +12,16 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
     """CapacitiesTestCase with auth methods"""
     password = 'pass1234'
 
-    def get_user(self, id):
-        return User.objects.filter(id=id).first()
-
-    def get_user_dict(self, id):
-        data = User.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
-
-    def all_user_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            User.objects.filter()]
-
-    def count_user(self):
-        return User.objects.count()
-
-    def generate_credentials(self, user=False, user_two=False, task=False,
-            authenticate=False, manual_authenticate=False, cohort_user=False,
-            profile_academy='', models={}, **kwargs):
-        self.maxDiff = None
+    def generate_credentials(self, user=False, task=False, authenticate=False,
+            manual_authenticate=False, cohort_user=False, profile_academy='',
+            models={}, **kwargs):
         models = models.copy()
 
-        if (user or authenticate or profile_academy or manual_authenticate or cohort_user or task):
+        if not 'user' in models and (user or authenticate or profile_academy or
+                manual_authenticate or cohort_user or task):
             models['user'] = mixer.blend('auth.User')
             models['user'].set_password(self.password)
             models['user'].save()
-
-        if user_two:
-            models['user_two'] = mixer.blend('auth.User')
-            models['user_two'].set_password(self.password)
-            models['user_two'].save()
 
         if authenticate:
             self.client.force_authenticate(user=models['user'])

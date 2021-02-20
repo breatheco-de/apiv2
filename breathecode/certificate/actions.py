@@ -22,112 +22,100 @@ strings = {
     }
 }
 
-def report_certificate_error(message: str, user, cohort, layout=None):
-    try:
-        uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
-        if uspe is None:
-            uspe = UserSpecialty(
-                user = user,
-                cohort = cohort,
-            )
-
-        uspe.specialty = cohort.certificate.specialty
-        uspe.academy = cohort.academy
-        uspe.status_text = message
-        uspe.status = ERROR
-        uspe.preview_url = None
-
-        if layout:
-            uspe.layout = layout
-        # uspe.is_cleaned = True
-
-        uspe.save()
-    except Exception as e:
-        logger.error('User Specialty should not be saved')
-        logger.error(str(e))
-
-    logger.error(message)
-    return ValidationException(message)
-
 def generate_certificate(user, cohort=None):
+    query = {
+        'user__id': user.id
+    }
 
-    cohort_user = CohortUser.objects.filter(user__id=user.id).first()
-    tasks = Task.objects.filter(user__id=user.id, task_type='PROJECT')
-    tasks_count_pending = sum(task.task_status == 'PENDING' for task in tasks)
+    if cohort:
+        query['cohort__id'] = cohort.id
 
-    if not cohort and cohort_user:
+    cohort_user = CohortUser.objects.filter(**query).first()
+
+    if not cohort_user:
+        message = ("Impossible to obtain the student cohort, maybe it's none assigned")
+        logger.error(message)
+        raise ValidationException(message)
+
+    if not cohort:
         cohort = cohort_user.cohort
-        
-    if cohort is None:
-        message = "Imposible to obtain the student cohort, maybe it has more than one or none assigned"
-        raise report_certificate_error(message, user, cohort)
 
-    if cohort.certificate is None:
-        message = f"The cohort has no certificate assigned, please set a certificate for cohort: {cohort.name}"
-        raise report_certificate_error(message, user, cohort)
-    
-    try:
-        if cohort.certificate.specialty is None:
-            message = f"Specialty has no certificate assigned, please set a certificate on the Specialty model: {cohort.certificate.name}"
-            raise report_certificate_error(message, user, cohort)
-    except UserSpecialty.DoesNotExist:
-        message = f"Specialty has no certificate assigned, please set a certificate on the Specialty model: {cohort.certificate.name}"
-        raise report_certificate_error(message, user, cohort)
+    if cohort.syllabus is None:
+        message = f"The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}"
+        logger.error(message)
+        raise ValidationException(message)
 
+    if cohort.syllabus.certificate is None:
+        message = ('The cohort has no certificate assigned, please set a '
+            f'certificate for cohort: {cohort.name}')
+        logger.error(message)
+        raise ValidationException(message)
 
+    if (not hasattr(cohort.syllabus.certificate, 'specialty') or not
+            cohort.syllabus.certificate.specialty):
+        message = ('Specialty has no certificate assigned, please set a '
+            f'certificate on the Specialty model: {cohort.syllabus.certificate.name}')
+        logger.error(message)
+        raise ValidationException(message)
 
     uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
     if uspe is None:
         uspe = UserSpecialty(
             user = user,
             cohort = cohort,
-            specialty = cohort.certificate.specialty,
+            specialty = cohort.syllabus.certificate.specialty,
             signed_by_role = strings[cohort.language]["Main Instructor"],
         )
 
     layout = LayoutDesign.objects.filter(slug='default').first()
     if layout is None:
         message = "Missing a default layout"
-        raise report_certificate_error(message, user, cohort)
-    else:
-        uspe.layout = layout
+        logger.error(message)
+        raise ValidationException(message)
+
+    uspe.layout = layout
 
     # validate for teacher
     main_teacher = CohortUser.objects.filter(cohort__id=cohort.id, role='TEACHER').first()
     if main_teacher is None or main_teacher.user is None:
         message = "This cohort does not have a main teacher, please assign it first"
-        raise report_certificate_error(message, user, cohort, layout)
-    else:
-        main_teacher = main_teacher.user
+        logger.error(message)
+        raise ValidationException(message)
+
+    main_teacher = main_teacher.user
     uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
 
     try:
-
         uspe.academy = cohort.academy
+        tasks = Task.objects.filter(user__id=user.id, task_type='PROJECT')
+        tasks_count_pending = sum(task.task_status == 'PENDING' for task in tasks)
+
         if tasks_count_pending:
-            message = f'The student has {tasks_count_pending} pending tasks'
-            raise report_certificate_error(message, user, cohort)
+            raise ValidationException(f'The student has {tasks_count_pending} '
+                'pending tasks')
 
         if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status ==
-            UP_TO_DATE):
-            message = f'The student must have finantial status FULLY_PAID or UP_TO_DATE'
-            raise report_certificate_error(message, user, cohort)
+                UP_TO_DATE):
+            raise ValidationException('The student must have finantial status '
+                'FULLY_PAID or UP_TO_DATE')
 
-        if not (cohort_user.educational_status == 'GRADUATED'):
-            message = f'The student must have educational status GRADUATED'
-            raise report_certificate_error(message, user, cohort)
+        if cohort_user.educational_status != 'GRADUATED':
+            raise ValidationException('The student must have educational '
+                'status GRADUATED')
 
-        if cohort.current_day != cohort.certificate.duration_in_days:
-            message = f"Cohort current day should be {cohort.certificate.duration_in_days}"
-            raise report_certificate_error(message, user, cohort)
+        if cohort.current_day != cohort.syllabus.certificate.duration_in_days:
+            raise ValidationException('Cohort current day should be '
+                f'{cohort.syllabus.certificate.duration_in_days}')
 
         uspe.status = PERSISTED
         uspe.status_text = "Certificate successfully queued for PDF generation"
         uspe.save()
 
     except Exception as e:
+        message = str(e)
         uspe.status = ERROR
-        uspe.status_text = str(e)
+        uspe.status_text = message
+        logger.error(message)
         uspe.save()
 
     return uspe
