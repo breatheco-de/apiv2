@@ -77,7 +77,6 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin)
             }
 
             models['capability'] = mixer.blend('authenticate.Capability', **kargs)
-            print('bla0')
 
         if role:
             kargs = {
@@ -90,14 +89,12 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin)
                     kargs['capabilities'] = [models['capability']]
 
                 models['role'] = mixer.blend('authenticate.Role', **kargs)
-                print('bla1')
             else:
                 role = Role.objects.filter(**kargs).first()
                 role.capabilities.add(models['capability '])
                 role.save()
                 # models['role'].capabilities.add(models['capability '])
                 # models['role'].save()
-                print('bla2')
 
         if not 'profile_academy' in models and profile_academy:
             kargs = {}

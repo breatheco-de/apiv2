@@ -148,7 +148,6 @@ class UserMeSerializer(serializers.ModelSerializer):
 
             if serializer and serializer.is_valid():
                 serializer.save()
-                print(serializer.errors)
             else:
                 raise ValidationException("Error saving user profile")
             
@@ -328,7 +327,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 class MemberPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfileAcademy
-        fields = ('user', 'role', 'academy', 'first_name', 'last_name')
+        fields = ('user', 'role', 'academy', 'first_name', 'last_name', 'phone', 'address')
 
     def validate(self, data):
 

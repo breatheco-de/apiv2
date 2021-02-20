@@ -53,6 +53,7 @@ INVITE_STATUS = (
     (PENDING, 'Pending'),
     (ACCEPTED, 'Accepted'),
 )
+# TODO: list this invite
 class UserInvite(models.Model):
 
     email = models.CharField(blank=False, max_length=150, null=True, default=None)

@@ -97,7 +97,7 @@ class GetCohortSerializer(serpy.Serializer):
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     stage = serpy.Field()
-    syllabus = SyllabusSmallSerializer()
+    syllabus = SyllabusSmallSerializer(required=False)
     academy = GetAcademySerializer()
 
 class GetSmallCohortSerializer(serpy.Serializer):
@@ -155,13 +155,13 @@ class UserMeSerializer(serpy.Serializer):
     roles = serpy.MethodField()
     cohorts = serpy.MethodField()
     date_joined = serpy.Field()
-    
+
     def get_github(self, obj):
         github = CredentialsGithub.objects.filter(user=obj.id).first()
         if github is None:
             return None
         return GithubSmallSerializer(github).data
-        
+
     def get_roles(self, obj):
         roles = ProfileAcademy.objects.filter(user=obj.id)
         return ProfileAcademySmallSerializer(roles, many=True).data
@@ -244,7 +244,7 @@ class CohortPUTSerializer(serializers.ModelSerializer):
             cohort = Cohort.objects.filter(slug=data["slug"]).first()
             if cohort is not None and self.instance.slug != data["slug"]:
                 raise ValidationError('Slug already exists for another cohort')
-        
+
         return data
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
@@ -316,7 +316,7 @@ class SyllabusSerializer(serializers.ModelSerializer):
         version = 1
         if previous_syllabus is not None:
             version = previous_syllabus.version + 1
-        return super(SyllabusSerializer, self).create({ 
+        return super(SyllabusSerializer, self).create({
             **validated_data,
             "course": self.context['course'],
             "academy_owner": self.context['academy'],

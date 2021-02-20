@@ -65,7 +65,7 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
 
         instance.score = validated_data['score']
         instance.status = 'ANSWERED'
-        print(validated_data)
+
         if 'comment' in validated_data:
             instance.comment = validated_data['comment']
         instance.save()
