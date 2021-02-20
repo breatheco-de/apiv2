@@ -47,6 +47,6 @@ class AuthenticateTestSuite(AuthTestCase, GenerateModelsMixin):
         
         response = self.client.put(url)
         json = response.json()
-        expected = {}
+        expected = {} 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 403)
