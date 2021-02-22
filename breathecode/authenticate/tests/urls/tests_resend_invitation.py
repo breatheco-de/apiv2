@@ -37,16 +37,16 @@ class AuthenticateTestSuite(AuthTestCase, GenerateModelsMixin):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 403)
         
-    def test_resend_invite_with_capability(self):
-        """Test """
-        self.headers(academy=4)
-        self.generate_models(authenticate=True, profile_academy=True,
-            capability='admissions_developer', role='banana')
+    # def test_resend_invite_with_capability(self):
+    #     """Test """
+    #     self.headers(academy=4)
+    #     self.generate_models(authenticate=True, profile_academy=True,
+    #         capability='admissions_developer', role='banana')
 
-        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={"user_id":1359})
+    #     url = reverse_lazy('authenticate:academy_resent_invite', kwargs={"user_id":1359})
         
-        response = self.client.put(url)
-        json = response.json()
-        expected = {} 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 403)
+    #     response = self.client.put(url)
+    #     json = response.json()
+    #     expected = {} 
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, 403)
