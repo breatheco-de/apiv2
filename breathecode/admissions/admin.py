@@ -118,7 +118,7 @@ class CohortAdmin(admin.ModelAdmin):
         return obj.academy.name
 
     def certificate_name(self, obj):
-        return obj.syllabus.slug
+        return obj.certificate.slug+".v"+str(obj.version)
 
 def sync_with_github(modeladmin, request, queryset):
     all_syllabus = queryset.all()
