@@ -56,7 +56,7 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin,
             self.generate_authenticate_models,
             self.generate_feedback_models,
             self.generate_notify_models,
-            self.generate_certificate_models
+            self.generate_certificate_models,
         )
 
         return fn(models=models, **kwargs)

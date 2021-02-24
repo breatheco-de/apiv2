@@ -58,7 +58,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'role' in models:
                 kargs['role'] = models['role']
 
-            if 'author' in models:
+            if 'user' in models:
                 kargs['author'] = models['user']
 
             models['user_invite'] = mixer.blend('authenticate.UserInvite', **kargs)
