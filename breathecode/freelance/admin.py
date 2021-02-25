@@ -28,6 +28,10 @@ def mask_as_done(modeladmin, request, queryset):
     issues = queryset.update(status='DONE')
 mask_as_done.short_description = "Mark as DONE"
 
+def mask_as_todo(modeladmin, request, queryset):
+    issues = queryset.update(status='TODO')
+mask_as_todo.short_description = "Mark as TODO"
+
 def mask_as_ignored(modeladmin, request, queryset):
     issues = queryset.update(status='IGNORED')
 mask_as_ignored.short_description = "Mark as IGNORED"
@@ -52,7 +56,8 @@ class IssueAdmin(admin.ModelAdmin):
     search_fields = ['title']
     list_display = ('id', 'github_number', 'freelancer', 'title', 'status', 'duration_in_hours', 'bill_id', 'github_url')
     list_filter = ['status', 'bill__status']
-    actions = [mask_as_done, mask_as_ignored]
+    list_filter = ['status', 'bill__status']
+    actions = [mask_as_todo, mask_as_done, mask_as_ignored]
     def github_url(self,obj):
         return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>open in github</a>", url=obj.url)
 
