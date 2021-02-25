@@ -33,7 +33,7 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
- 
+
 class TemporalTokenView(ObtainAuthToken):
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -52,7 +52,7 @@ class TemporalTokenView(ObtainAuthToken):
 
 
 class LogoutView(APIView):
-    authentication_classes: [ExpiringTokenAuthentication]
+    authentication_classes = [ExpiringTokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -139,7 +139,7 @@ class StudentView(APIView):
             profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id).first()
             if profile is None:
                 raise ValidationException("Profile not found", 404)
-            
+
             serializer = GETProfileAcademy(profile, many=False)
             return Response(serializer.data)
 
@@ -178,7 +178,7 @@ class StudentView(APIView):
         request_data = { **request.data, "user": user_id, "academy": academy_id, "role": "student" }
         if "role" in request.data:
             raise ValidationException("The student role cannot be updated with this endpoint, user /member instead.")
-        
+
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
@@ -199,7 +199,7 @@ class StudentView(APIView):
 
         if academy_id is None or user_id is None:
             raise serializers.ValidationError("Missing user_id or academy_id", code=400)
-        
+
         profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id, role__slug='student').first()
         if profile is None:
             raise serializers.ValidationError('User doest not exist or does not belong to this academy')
@@ -208,7 +208,7 @@ class StudentView(APIView):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 class LoginView(ObtainAuthToken):
-    
+
     def post(self, request, *args, **kwargs):
         # delete expired tokens
         utc_now = timezone.now()
@@ -229,10 +229,10 @@ class LoginView(ObtainAuthToken):
 def get_token_info(request, token):
 
     token = Token.objects.filter(key=token).first()
-    
+
     if token is None or token.expires_at < timezone.now():
         raise PermissionDenied("Expired or invalid token")
-    
+
     return Response({
         'token': token.key,
         'token_type': token.token_type,
@@ -246,7 +246,7 @@ class UserMeView(APIView):
         logger.error("Get me just called")
         try:
             if isinstance(request.user, AnonymousUser):
-                raise PermissionDenied("There is not user")    
+                raise PermissionDenied("There is not user")
 
         except User.DoesNotExist:
             raise PermissionDenied("You don't have a user")
@@ -258,7 +258,7 @@ class UserMeView(APIView):
 
         try:
             if isinstance(request.user, AnonymousUser):
-                raise PermissionDenied("There is not user")    
+                raise PermissionDenied("There is not user")
 
         except User.DoesNotExist:
             raise PermissionDenied("You don't have a user")
@@ -371,7 +371,7 @@ def save_github_token(request):
 
             if github_user['email'] is None:
                 raise ValidationError("Imposible to retrieve user email")
-                
+
             user = User.objects.filter(email=github_user['email']).first()
             if user is None:
                 user = User(username=github_user['login'], email=github_user['email'])
@@ -395,7 +395,7 @@ def save_github_token(request):
 
             profile = Profile.objects.filter(user__email=github_user['email']).first()
             if profile is None:
-                profile = Profile(user=user, 
+                profile = Profile(user=user,
                     avatar_url=github_user['avatar_url'],
                     blog=github_user['blog'],
                     bio=github_user['bio'],
@@ -556,7 +556,7 @@ def save_slack_token(request):
             team = SlackTeam(
                 slack_id = slack_data['team']['id'],
                 owner=user,
-                academy = academy    
+                academy = academy
             )
 
         team.name = slack_data['team']['name']
@@ -682,7 +682,7 @@ def save_facebook_token(request):
 
         utc_now = timezone.now()
         expires_at = utc_now + timezone.timedelta(milliseconds=facebook_data['expires_in'])
-        
+
         credentials = CredentialsFacebook(
             user=user,
             academy=academy,
@@ -725,7 +725,7 @@ def change_password(request, token):
     })
 
 def reset_password_view(request):
-    
+
     if request.method == 'POST':
         _dict = request.POST.copy()
         form = PickPasswordForm(_dict)
@@ -735,7 +735,7 @@ def reset_password_view(request):
             return render(request, 'form.html', {
                 'form': form
             })
-            
+
         users = User.objects.filter(email=_dict["email"])
         if(users.count() > 0):
             reset_password(users)
@@ -834,7 +834,7 @@ def render_invite(request, token):
 
         first_name = request.POST.get("first_name", None)
         last_name = request.POST.get("last_name", None)
-        
+
         user = User.objects.filter(email=invite.email).first()
         if user is None:
             user = User(email=invite.email, first_name=first_name, last_name=last_name)
@@ -882,7 +882,7 @@ def login_html_view(request):
             url = request.POST.get("url", None)
             if url is None or url == "":
                 raise Exception("Invalid redirect url, you must specify a url to redirect to")
-                
+
             email = request.POST.get("email", None)
             password = request.POST.get("password", None)
 
