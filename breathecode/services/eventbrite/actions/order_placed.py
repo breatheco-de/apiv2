@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def order_placed(self, webhook, payload: dict):
     # prevent circular dependency import between thousand modules previuosly loaded and cached
-    from breathecode.marketing.actions import add_to_active_campaign
+    from breathecode.marketing.actions import set_optional, add_to_active_campaign
     from breathecode.events.models import EventCheckin, Event
     from breathecode.events.models import Organization
     from breathecode.marketing.models import ActiveCampaignAcademy
@@ -18,6 +18,9 @@ def order_placed(self, webhook, payload: dict):
         message = 'Organization doesn\'t exist'
         logger.debug(message)
         raise Exception(message)
+
+    if not org.academy:
+        raise Exception('Organization not have one Academy')
 
     academy_id = org.academy.id
     event_id = payload['event_id']
@@ -47,14 +50,15 @@ def order_placed(self, webhook, payload: dict):
         'email': payload['email'],
         'first_name': payload['first_name'],
         'last_name': payload['last_name'],
-        'academy': org.academy.slug,
     }
+
+    contact = set_optional(contact, 'utm_location', {'academy': org.academy.slug}, 'academy')
 
     if not ActiveCampaignAcademy.objects.filter(academy__id=academy_id).count():
         message = 'ActiveCampaignAcademy doesn\'t exist'
         logger.debug(message)
         raise Exception(message)
-    
+
     automation_id = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).values_list(
         'event_attendancy_automation__id', flat=True).first()
 
