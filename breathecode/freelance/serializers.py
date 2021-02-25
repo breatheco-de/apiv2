@@ -23,6 +23,7 @@ class UserSerializer(serpy.Serializer):
 class SmallFreelancerSerializer(serpy.Serializer):
     id = serpy.Field()
     user = UserSerializer()
+    price_per_hour = serpy.Field()
     
 
 class SmallIssueSerializer(serpy.Serializer):

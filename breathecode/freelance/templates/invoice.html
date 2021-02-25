@@ -128,7 +128,8 @@
                         <tr>
                             <td>
                                 {{ freelancer.user.first_name }} {{ freelancer.user.last_name }}<br>
-                                {{ freelancer.user.email }}
+                                {{ freelancer.user.email }}<br>
+                                Rate: ${{ freelancer.price_per_hour }}
                             </td>
                             
                             <!-- <td>
@@ -167,7 +168,13 @@
                 <td></td>
                 
                 <td>
-                   Hrs: {{ total_duration_in_hours }}  <br />
+                   Total Hours: {{ total_duration_in_hours }}  <br />
+                </td>
+            </tr>
+            <tr class="total">
+                <td></td>
+                
+                <td>
                    Total: ${{ total_price }} 
                 </td>
             </tr>

@@ -27,7 +27,7 @@ class Bill(models.Model):
     
     reviewer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
-    paid_at = models.DateTimeField(null=True, default=None)
+    paid_at = models.DateTimeField(null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
