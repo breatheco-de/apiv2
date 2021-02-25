@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 from breathecode.authenticate.models import CredentialsGithub
-
+from breathecode.admissions.models import Academy
 class Freelancer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     github_user = models.ForeignKey(CredentialsGithub, on_delete=models.SET_DEFAULT, null=True, default=None)
@@ -18,9 +18,12 @@ BILL_STATUS = (
 )
 class Bill(models.Model):
     status = models.CharField(max_length=20, choices=BILL_STATUS, default=DUE)
+    
     total_duration_in_minutes = models.FloatField(default=0)
     total_duration_in_hours = models.FloatField(default=0)
     total_price = models.FloatField(default=0)
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
     
     reviewer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
@@ -57,7 +60,7 @@ class Issue(models.Model):
     
     author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
-    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, null=True, default=None)
+    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

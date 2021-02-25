@@ -63,6 +63,8 @@ class IssueAdmin(admin.ModelAdmin):
 
 @admin.register(Bill)
 class BillAdmin(admin.ModelAdmin):
-    list_display = ('id', 'freelancer','status', 'total_duration_in_hours', 'total_price','paid_at')
+    list_display = ('id', 'freelancer','status', 'total_duration_in_hours', 'total_price','paid_at', 'invoice_url')
     list_filter = ['status']
     actions = [mask_as_paid]
+    def invoice_url(self,obj):
+        return format_html("<a rel='noopener noreferrer' target='_blank' href='/v1/freelance/bills/{id}/html'>open invoice</a>", id=obj.id)
