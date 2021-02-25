@@ -39,6 +39,7 @@ mask_as_paid.short_description = "Mark as PAID"
 @admin.register(Freelancer)
 class FreelancerAdmin(admin.ModelAdmin):
     list_display = ['user_id', 'full_name', "email"]
+    raw_id_fields = ["user", "github_user"]
     actions = [sync_issues, generate_bill]
     def full_name(self, obj):
         return obj.user.first_name + " " + obj.user.last_name
