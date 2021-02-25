@@ -3,6 +3,7 @@ Cache mixin
 """
 from breathecode.tests.mocks import OLD_BREATHECODE_INSTANCES
 from unittest.mock import call
+from breathecode.services import SOURCE, CAMPAIGN
 
 class OldBreathecodeMixin():
     """Cache mixin"""
@@ -13,6 +14,19 @@ class OldBreathecodeMixin():
     ]
 
     def __create_contact_call__(self, model):
+        event = model['event']
+        data = {
+            'email': model['user'].email,
+            'first_name': model['user'].first_name,
+            'last_name': model['user'].last_name,
+            'field[18,0]': model['academy'].slug,
+            'field[34,0]': SOURCE,
+            'field[33,0]': CAMPAIGN,
+        }
+
+        if event and event.lang:
+            data['field[16,0]'] = event.lang
+
         return call(
             'POST',
             f'{self.old_breathecode_host}/admin/api.php',
@@ -21,12 +35,7 @@ class OldBreathecodeMixin():
                 ('api_key', model['active_campaign_academy'].ac_key),
                 ('api_output', 'json')
             ],
-            data={
-                'email': model['user'].email,
-                'first_name': model['user'].first_name,
-                'last_name': model['user'].last_name,
-                'field[18,0]': model['academy'].slug,
-            }
+            data=data
         )
 
     def __contact_automations_call__(self, model):

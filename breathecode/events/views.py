@@ -9,12 +9,12 @@ from rest_framework.decorators import api_view, permission_classes
 from .serializers import (
     EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
     EventSmallSerializerNoAcademy
-) 
+)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
 from rest_framework.response import Response
-from breathecode.utils import capable_of
+from breathecode.utils import ValidationException, capable_of
 from rest_framework.decorators import renderer_classes
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
@@ -37,7 +37,7 @@ def get_events(request):
     if 'country' in request.GET:
         value = request.GET.get('country')
         lookup['venue__country__iexact'] = value
-        
+
     if 'type' in request.GET:
         value = request.GET.get('type')
         lookup['event_type__slug'] = value
@@ -55,9 +55,9 @@ def get_events(request):
         if request.GET.get('past') == "true":
             lookup.pop("starting_at__gte")
             lookup['starting_at__lte'] = timezone.now()
-        
+
     items = items.filter(**lookup).order_by('starting_at')
-    
+
     serializer = EventSmallSerializer(items, many=True)
     return Response(serializer.data)
 
@@ -67,7 +67,7 @@ class EventView(APIView):
     List all snippets, or create a new snippet.
     """
     def get(self, request, format=None):
-        
+
         items = Event.objects.all()
         lookup = {}
 
@@ -88,9 +88,9 @@ class EventView(APIView):
             if self.request.GET.get('past') == "true":
                 lookup.pop("starting_at__gte")
                 lookup['starting_at__lte'] = timezone.now()
-            
+
         items = items.filter(**lookup).order_by('-created_at')
-        
+
         serializer = EventSmallSerializer(items, many=True)
         return Response(serializer.data)
 
@@ -108,7 +108,7 @@ class AcademyEventView(APIView):
 
     @capable_of('read_event')
     def get(self, request, format=None, academy_id=None):
-        
+
         items = Event.objects.filter(academy__id=academy_id)
         lookup = {}
 
@@ -130,9 +130,9 @@ class AcademyEventView(APIView):
             if self.request.GET.get('past') == "true":
                 lookup.pop("starting_at__gte")
                 lookup['starting_at__lte'] = timezone.now()
-            
+
         items = items.filter(**lookup).order_by('-starting_at')
-        
+
         serializer = EventSmallSerializerNoAcademy(items, many=True)
         return Response(serializer.data)
 
@@ -168,16 +168,16 @@ class EventTypeView(APIView):
     List all snippets, or create a new snippet.
     """
     def get(self, request, format=None):
-        
+
         items = EventType.objects.all()
         lookup = {}
 
         if 'academy' in self.request.GET:
             value = self.request.GET.get('academy')
             lookup['academy__slug'] = value
-            
+
         items = items.filter(**lookup).order_by('-created_at')
-        
+
         serializer = EventTypeSerializer(items, many=True)
         return Response(serializer.data)
 
@@ -188,7 +188,7 @@ class EventCheckinView(APIView):
     """
     @capable_of('read_eventcheckin')
     def get(self, request, format=None, academy_id=None):
-        
+
         items = EventCheckin.objects.filter(event__academy__id=academy_id)
         lookup = {}
 
@@ -209,9 +209,9 @@ class EventCheckinView(APIView):
         if end is not None:
             end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
             items = items.filter(created_at__lte=end_date)
-            
+
         items = items.filter(**lookup).order_by('-created_at')
-        
+
         serializer = EventCheckinSerializer(items, many=True)
         return Response(serializer.data)
 
