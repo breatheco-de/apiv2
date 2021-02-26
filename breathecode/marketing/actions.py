@@ -48,7 +48,7 @@ def get_lead_tags(ac_academy, form_entry):
         _tags = form_entry['tags'].split(",")
         if len(_tags) == 0 or _tags[0] == '':
             raise Exception('The contact tags are empty', 400)
-    
+
     strong_tags = Tag.objects.filter(slug__in=_tags, tag_type='STRONG', ac_academy=ac_academy)
     soft_tags = Tag.objects.filter(slug__in=_tags, tag_type='SOFT', ac_academy=ac_academy)
     dicovery_tags = Tag.objects.filter(slug__in=_tags, tag_type='DISCOVERY', ac_academy=ac_academy)
@@ -56,7 +56,8 @@ def get_lead_tags(ac_academy, form_entry):
 
     tags = list(chain(strong_tags, soft_tags, dicovery_tags, other_tags))
     if len(tags) == 0:
-        logger.error("Tag applied to the contact not found or has tag_type assigned",str(_tags))
+        logger.error("Tag applied to the contact not found or has tag_type assigned")
+        logger.error(_tags)
         raise Exception('Tag applied to the contact not found or has not tag_type assigned')
 
     return tags
@@ -67,13 +68,13 @@ def get_lead_automations(ac_academy, form_entry):
         return []
     else:
         _automations = form_entry['automations'].split(",")
-    
+
     automations = Automation.objects.filter(slug__in=_automations, ac_academy=ac_academy)
     count = automations.count()
     if count == 0:
         _name = form_entry['automations']
         raise Exception(f"The specified automation {_name} was not found for this AC Academy")
-    
+
     logger.debug(f"found {str(count)} automations")
     return automations.values_list('acp_id', flat=True)
 
@@ -141,16 +142,37 @@ def register_new_lead(form_entry=None):
         raise Exception(f"No academy found with slug {form_entry['location']}")
 
     automations = get_lead_automations(ac_academy, form_entry)
-    logger.debug("found automations", automations)
+
+    if automations:
+        logger.debug("found automations")
+        logger.debug(automations)
+    else:
+        logger.debug("automations not found")
 
     tags = get_lead_tags(ac_academy, form_entry)
-    logger.debug("found tags", set(t.slug for t in tags))
+    logger.debug("found tags")
+    logger.debug(set(t.slug for t in tags))
     LEAD_TYPE = tags[0].tag_type
     if (automations is None or len(automations) == 0) and len(tags) > 0:
         if tags[0].automation is None:
             raise Exception('No automation was specified and the the specified tag has no automation either')
 
         automations = [tags[0].automation.acp_id]
+
+    if not 'email' in form_entry:
+        raise Exception('The email doesn\'t exist')
+
+    if not 'first_name' in form_entry:
+        raise Exception('The first name doesn\'t exist')
+
+    if not 'last_name' in form_entry:
+        raise Exception('The last name doesn\'t exist')
+
+    if not 'phone' in form_entry:
+        raise Exception('The phone doesn\'t exist')
+
+    if not 'id' in form_entry:
+        raise Exception('The id doesn\'t exist')
 
     contact = {
         "email": form_entry["email"],
@@ -167,16 +189,19 @@ def register_new_lead(form_entry=None):
     contact = set_optional(contact, 'gclid', form_entry)
     contact = set_optional(contact, 'referral_key', form_entry)
 
-    entry = FormEntry.objects.get(id=form_entry['id'])
-    
+    entry = FormEntry.objects.filter(id=form_entry['id']).first()
+
+    if not entry:
+        raise Exception('FormEntry not found (id: ' + str(form_entry['id']) + ')')
+
     # save geolocalization info
     # save_get_geolocal(entry, form_enty)
 
     if 'contact-us' == tags[0].slug:
-        send_email_message('new_contact', ac_academy.academy.marketing_email, { 
-            "subject": f"New contact from the website {form_entry['first_name']} {form_entry['last_name']}", 
+        send_email_message('new_contact', ac_academy.academy.marketing_email, {
+            "subject": f"New contact from the website {form_entry['first_name']} {form_entry['last_name']}",
             "full_name": form_entry['first_name'] + " " + form_entry['last_name'],
-            "client_comments": form_entry['client_comments'], 
+            "client_comments": form_entry['client_comments'],
             "data": { **form_entry },
             # "data": { **form_entry, **address },
         })
@@ -328,18 +353,18 @@ def save_get_geolocal(contact, form_entry=None):
 
     if 'country' in result:
         contact.country = result['country']
-    
+
     if 'locality' in result:
         contact.city = result['locality']
-    
+
     if 'route' in result:
         contact.street_address = result['route']
-    
+
     if 'postal_code' in result:
         contact.zip_code = result['postal_code']
-        
+
     contact.save()
-    
+
     return True
 
 def get_facebook_lead_info(lead_id, academy_id=None):

@@ -36,7 +36,7 @@ def send_email_message(template_slug, to, data={}):
                 "subject": template['subject'],
                 "text": template['text'],
                 "html": template['html']})
-        
+
         if result.status_code != 200:
             logger.error(f"Error sending email, mailgun status code: {str(result.status_code)}")
             logger.error(result.text)
@@ -102,7 +102,7 @@ def send_slack(slug, slackuser=None, team=None, slackchannel=None, data={}):
         logger.error(message)
         raise Exception(message)
 
-# if would like to specify slack channel or user id and team 
+# if would like to specify slack channel or user id and team
 def send_slack_raw(slug, token, channel_id, data={}):
     logger.debug(f"Sending slack message to {str(channel_id)}")
 
@@ -171,7 +171,7 @@ def send_fcm_notification(slug, user_id, data={}):
     send_fcm(slug, registration_ids, data)
 
 def notify_all(slug, user, data):
-    
+
     send_email_message("nps", user.email, data)
     send_slack("nps", user.slackuser, data)
 
@@ -202,7 +202,7 @@ def get_template_content(slug, data={}, formats=None):
         else:
             templates["SUBJECT"] = 'No subject specified',
             templates["subject"] = 'No subject specified'
-            
+
         plaintext = get_template( slug + '.txt')
         html = get_template(slug + '.html')
         templates["text"] = plaintext.render(z)
@@ -238,7 +238,7 @@ def sync_slack_team_channel(team_id):
     team.sync_status = 'INCOMPLETED'
     team.synqued_at = timezone.now()
     team.save()
-    
+
     api = client.Slack(credentials.token)
     data = api.get("conversations.list", {
         "types": "public_channel,private_channel",
@@ -248,27 +248,27 @@ def sync_slack_team_channel(team_id):
     channels = data['channels']
     while 'response_metadata' in data and 'next_cursor' in data['response_metadata'] and data['response_metadata']['next_cursor'] != "":
         print("Next cursor: ", data['response_metadata']['next_cursor'])
-        data = api.get("conversations.list", { 
-            "limit": 300, 
+        data = api.get("conversations.list", {
+            "limit": 300,
             "cursor": data['response_metadata']['next_cursor'],
             "types": "public_channel,private_channel",
         })
         channels = channels + data['channels']
-    
+
     logger.debug(f"Found {str(len(channels))} channels, starting to sync")
     for channel in channels:
 
         # only sync channels
         if channel["is_channel"] == False and channel['is_group'] == False and channel['is_general'] == False:
             continue
-        
+
         # will raise exception if it fails
         sync_slack_channel(channel, team)
-    
+
     # finished sync, status back to normal
     team.sync_status = 'COMPLETED'
     team.save()
-    
+
     return True
 
 def sync_slack_team_users(team_id):
@@ -287,7 +287,7 @@ def sync_slack_team_users(team_id):
     team.sync_status = 'INCOMPLETED'
     team.synqued_at = timezone.now()
     team.save()
-    
+
     api = client.Slack(credentials.token)
     data = api.get("users.list", { "limit": 300 })
 
@@ -296,21 +296,21 @@ def sync_slack_team_users(team_id):
         print("Next cursor: ", data['response_metadata']['next_cursor'])
         data = api.get("users.list", { "limit": 300, "cursor": data['response_metadata']['next_cursor'] })
         members = members + data['members']
-    
+
     logger.debug(f"Found {str(len(members))} members, starting to sync")
     for member in members:
 
         # ignore bots
         if member["is_bot"] or member["name"] == "slackbot":
             continue
-        
+
         # will raise exception if it fails
         sync_slack_user(member, team)
-    
+
     # finished sync, status back to normal
     team.sync_status = 'COMPLETED'
     team.save()
-    
+
     return True
 
 def sync_slack_user(payload, team=None):
@@ -324,12 +324,12 @@ def sync_slack_user(payload, team=None):
     slack_user = SlackUser.objects.filter(slack_id=payload["id"]).first()
     user = None
     if slack_user is None:
-        
+
         slack_user = SlackUser(
             slack_id = payload["id"],
         )
         slack_user.save()
-        
+
         if "email" not in payload["profile"]:
             logger.fatal("User without email")
             logger.fatal(payload)
@@ -348,7 +348,7 @@ def sync_slack_user(payload, team=None):
             slack_team=team,
             slack_user=slack_user,
         )
-        
+
     if user is None:
         user_team.sync_status = 'INCOMPLETED'
         user_team.sync_message = "No user found on breathecode with this email"
@@ -358,7 +358,7 @@ def sync_slack_user(payload, team=None):
 
     slack_user.status_text = payload["profile"]["status_text"]
     slack_user.status_emoji = payload["profile"]["status_emoji"]
-    
+
     if "real_name" in payload:
         slack_user.real_name = payload["real_name"]
 
@@ -383,7 +383,7 @@ def sync_slack_channel(payload, team=None):
     slack_channel = SlackChannel.objects.filter(slack_id=payload["id"]).first()
     channel = None
     if slack_channel is None:
-        
+
         cohort = Cohort.objects.filter(slug=payload["name_normalized"]).first()
         if cohort is None:
             logger.warning(f"Slack channel {payload['name_normalized']} has no corresponding cohort in breathecode")

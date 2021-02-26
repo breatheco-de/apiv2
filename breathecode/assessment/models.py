@@ -17,7 +17,7 @@ class Assessment(models.Model):
     score_threshold = models.IntegerField(default=None, blank=True, null=True, help_text="You can set a threshold to determine if the user score is successfull")
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, default=None, blank=True, null=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, blank=True, null=True)
-    
+
     comment = models.CharField(max_length=255, default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -41,7 +41,7 @@ class Question(models.Model):
     assessment = models.ForeignKey(Assessment, on_delete=models.CASCADE, default=None, blank=True, null=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     question_type = models.CharField(max_length=15, choices=QUESTION_TYPE, default=SELECT)
-    
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -53,7 +53,7 @@ class Option(models.Model):
 
     question = models.ForeignKey(Question, on_delete=models.CASCADE, default=None, blank=True, null=True)
     value = models.CharField(max_length=200)
-    
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -76,7 +76,7 @@ class StudentAssessment(models.Model):
 
     opened = models.BooleanField(default=False)
     status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=DRAFT)
-    
+
     comment = models.CharField(max_length=255, default=None, blank=True, null=True)
 
     started_at = models.DateTimeField(default=None, blank=True, null=True)
@@ -86,9 +86,9 @@ class StudentAssessment(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 class Answer(models.Model):
-
+    # TODO: missing one S? maybe we should update this name and GenerateModelsMixin
     student_assesment = models.ForeignKey(StudentAssessment, on_delete=models.CASCADE, default=None, blank=True, null=True)
     value = models.CharField(max_length=200)
-    
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

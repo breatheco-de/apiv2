@@ -12,7 +12,8 @@ class CertificateModelsMixin(ModelsMixin):
     def generate_certificate_models(self, layout_design=False, specialty=False,
             certificate=False, user_specialty=False, layout_design_slug='',
             user_specialty_preview_url='', user_specialty_token='', badge=False,
-            models={}, **kwargs):
+            specialty_kwargs={}, badge_kwargs={}, layout_design_kwargs={},
+            user_specialty_kwargs={}, models={}, **kwargs):
         """Generate models"""
         models = models.copy()
 
@@ -22,6 +23,7 @@ class CertificateModelsMixin(ModelsMixin):
             if 'certificate' in models or certificate:
                 kargs['certificate'] = models['certificate']
 
+            kargs = {**kargs, **specialty_kwargs}
             models['specialty'] = mixer.blend('certificate.Specialty', **kargs)
 
         if not 'badge' in models and badge:
@@ -30,6 +32,7 @@ class CertificateModelsMixin(ModelsMixin):
             if 'specialty' in models or specialty:
                 kargs['specialties'] = [models['specialty']]
 
+            kargs = {**kargs, **badge_kwargs}
             models['badge'] = mixer.blend('certificate.Badge', **kargs)
 
         if not 'layout_design' in models and layout_design:
@@ -40,6 +43,7 @@ class CertificateModelsMixin(ModelsMixin):
             if layout_design_slug:
                 kargs['slug'] = layout_design_slug
 
+            kargs = {**kargs, **layout_design_kwargs}
             models['layout_design'] = mixer.blend('certificate.LayoutDesign', **kargs)
 
         if not 'user_specialty' in models and user_specialty:
@@ -69,6 +73,7 @@ class CertificateModelsMixin(ModelsMixin):
             if 'cohort' in models:
                 kargs['cohort'] = models['cohort']
 
+            kargs = {**kargs, **user_specialty_kwargs}
             models['user_specialty'] = mixer.blend('certificate.UserSpecialty', **kargs)
 
         return models

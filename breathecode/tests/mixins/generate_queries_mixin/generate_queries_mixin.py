@@ -12,10 +12,15 @@ from .feedback_queries_mixin import FeedbackQueriesMixin
 from .notify_queries_mixin import NotifyQueriesMixin
 from .certificate_queries_mixin import CertificateQueriesMixin
 from .events_queries_mixin import EventsQueriesMixin
+from .assessment_queries_mixin import AssessmentQueriesMixin
+from .freelance_queries_mixin import FreelanceQueriesMixin
+from .marketing_queries_mixin import MarketingQueriesMixin
 
-class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssignmentsQueriesMixin,
+class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin,
+        AssessmentQueriesMixin, AssignmentsQueriesMixin,
         AuthenticateQueriesMixin, CertificateQueriesMixin, EventsQueriesMixin,
-        FeedbackQueriesMixin, NotifyQueriesMixin):
+        FeedbackQueriesMixin, FreelanceQueriesMixin, MarketingQueriesMixin,
+        NotifyQueriesMixin):
     __project__ = 'breathecode'
 
     def __get_model__(self, Model, key='id'):
@@ -57,15 +62,18 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssignmentsQueri
         setattr(self, f'all_{snake_case_name}', self.__all_model__(Model))
         setattr(self, f'all_{snake_case_name}_dict', self.__all_model_dict__(Model))
         setattr(self, f'count_{snake_case_name}', self.__count_model__(Model))
-        
+
     def generate_queries(self):
         descriptors = [
             self.generate_admissions_queries,
+            # self.generate_assessment_queries,
             self.generate_assignments_queries,
             self.generate_authenticate_queries,
             self.generate_certificate_queries,
             self.generate_events_queries,
             self.generate_feedback_queries,
+            self.generate_freelance_queries,
+            self.generate_marketing_queries,
             self.generate_notify_queries,
         ]
 
@@ -85,7 +93,6 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssignmentsQueri
                 else:
                     print(f'{model} not exist in current path `{path}`')
 
-        print(self.count_slack_channel())
         self.__set_queries__(User)
 
     def setUp(self):
