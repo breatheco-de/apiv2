@@ -94,10 +94,51 @@ class AuthenticateTestSuite(AuthTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
                 capability='admissions_developer', role='potato', syllabus=True,
-                user_invite=True)
+                user_invite=True, token=True)
         url = reverse_lazy('authenticate:academy_resent_invite', kwargs={"user_id":1})
         response = self.client.put(url)
         json = response.json()
-        expected = json.copy()
+        token = json['token']
+        created = json['created_at']
+        sent = json['sent_at']
+        del json['sent_at']
+        del json['created_at']
+        self.assertToken(json['token'])
+        del json['token']
+        expected = {'status': 'PENDING', 'email': None, 'first_name': None, 'last_name': None}
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
+        print("//////////////1:", self.all_user_invite_dict())
+        print("//////////////2:", [
+                {'id': model['user_invite'].id, 
+                'email': model['user_invite'].email, 
+                'academy_id': model['user_invite'].academy_id, 
+                'cohort_id': model['user_invite'].cohort_id, 
+                'role_id': model['user_invite'].role_id,
+                'first_name': model['user_invite'].first_name, 
+                'last_name': model['user_invite'].last_name,
+                'token': token,
+                'author_id': model['user_invite'].author_id,
+                'status': model['user_invite'].status,
+                'phone': model['user_invite'].phone,
+                'sent_at': sent
+                }])
+
+
+        
+        # self.assertEqual(self.all_user_invite_dict(),[
+        #         {'id': model['user_invite'].id, 
+        #         'email': model['user_invite'].email, 
+        #         'academy_id': model['user_invite'].academy_id, 
+        #         'cohort_id': model['user_invite'].cohort_id, 
+        #         'role_id': model['user_invite'].role_id,
+        #         'first_name': model['user_invite'].first_name, 
+        #         'last_name': model['user_invite'].last_name,
+        #         'token': token,
+        #         'author_id': model['user_invite'].author_id,
+        #         'status': model['user_invite'].status,
+        #         'phone': model['user_invite'].phone,
+        #         'sent_at': sent
+        #         }
+        #         ])
+        
