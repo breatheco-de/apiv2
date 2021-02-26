@@ -204,7 +204,7 @@ class Command(BaseCommand):
             language=_cohort['language'],
 
             academy=academy,
-            certificate=certificate,
+            # certificate=certificate,
         )
         if _cohort['ending_date'] is not None:
             co.ending_date = datetime.strptime(_cohort['ending_date'],DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
