@@ -236,6 +236,7 @@ class CohortPUTSerializer(serializers.ModelSerializer):
     current_day = serializers.IntegerField(required=False)
     stage = serializers.CharField(required=False)
     language = serializers.CharField(required=False)
+    syllabus = serializers.CharField(required=False)
 
     class Meta:
         model = Cohort
@@ -243,7 +244,21 @@ class CohortPUTSerializer(serializers.ModelSerializer):
             'syllabus')
 
     def validate(self, data):
+        if 'syllabus' in data:
+            strings = data['syllabus'].split('.v')
 
+            if len(strings) != 2:
+                raise ValidationError('Syllabus field marformed('
+                    '`${certificate.slug}.v{syllabus.version}`)')
+
+            [certificate_slug, syllabus_version] = strings
+            syllabus = Syllabus.objects.filter(version=syllabus_version, certificate__slug=
+                certificate_slug).first()
+
+            if not syllabus:
+                raise ValidationError('Syllabus doesn\'t exist')
+
+            data['syllabus'] = syllabus
 
         if "slug" in data:
             cohort = Cohort.objects.filter(slug=data["slug"]).first()
@@ -251,6 +266,7 @@ class CohortPUTSerializer(serializers.ModelSerializer):
                 raise ValidationError('Slug already exists for another cohort')
 
         return data
+
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
     """The serializer schema definition."""
