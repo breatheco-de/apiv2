@@ -58,7 +58,7 @@ class ScriptNotification(Exception):
         super().__init__(details)
 
 
-def capable_of(capability=None):        
+def capable_of(capability=None):
     def decorator(function):
         def wrapper(*args, **kwargs):
 
@@ -92,7 +92,7 @@ def capable_of(capability=None):
             if capable.count() > 0:
                 kwargs['academy_id'] = academy_id
                 return function(*args, **kwargs)
-            
+
             raise PermissionDenied(f"You (user: {request.user.id}) don't have this capability: {capability} for academy {academy_id}")
         return wrapper
     return decorator
@@ -125,7 +125,7 @@ def breathecode_exception_handler(exc, context):
 
 class Cache():
     name: str
-    
+
     def __init__(self, name: str):
         self.name = name
 

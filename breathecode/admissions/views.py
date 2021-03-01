@@ -576,7 +576,7 @@ def get_courses(request):
 def get_single_course(request, certificate_slug):
     certificates = Certificate.objects.filter(slug=certificate_slug).first()
     if certificates is None:
-        raise serializers.ValidationError("Certificate slug not found", code=404)
+        raise ValidationException("Certificate slug not found", code=404)
     serializer = GetCertificateSerializer(certificates, many=False)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -587,14 +587,14 @@ class SyllabusView(APIView):
     """
 
     # TODO: uncomment decorator when finally all students have a ProfileAcademy object.
-    # @capable_of('crud_syllabus')
+    # @capable_of('read_syllabus')
     def get(self, request, certificate_slug=None, version=None, academy_id=None):
         if academy_id is None:
             raise ValidationException("Missing academy id")
 
         certificates = Certificate.objects.filter(slug=certificate_slug).first()
         if certificates is None:
-            raise serializers.ValidationError("Certificate slug not found", code=404)
+            raise ValidationException("Certificate slug not found", code=404)
 
         syl = None
         if version is None:
@@ -617,11 +617,11 @@ class SyllabusView(APIView):
     @capable_of('crud_syllabus')
     def post(self, request, certificate_slug=None, academy_id=None):
         version = 1
-        certificates = Certificate.objects.filter(slug=certificate_slug).first()
-        if certificates is None:
-            raise serializers.ValidationError(f"Invalid certificates slug {certificate_slug}", code=404)
+        certificate = Certificate.objects.filter(slug=certificate_slug).first()
+        if certificate is None:
+            raise ValidationException(f"Invalid certificates slug {certificate_slug}", code=404)
 
-        item = Syllabus.objects.filter(course__slug=certificate_slug, academy_owner__id=academy_id).order_by('version').first()
+        item = Syllabus.objects.filter(certificate__slug=certificate_slug, academy_owner__id=academy_id).order_by('version').first()
         if item is not None:
             version = item.version + 1
 
@@ -629,7 +629,7 @@ class SyllabusView(APIView):
         if academy is None:
             raise ValidationException(f"Invalid academy {str(academy_id)}")
 
-        serializer = SyllabusSerializer(data=request.data, context={"certificates": certificates, "academy": academy })
+        serializer = SyllabusSerializer(data=request.data, context={"certificate": certificate, "academy": academy })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -638,14 +638,14 @@ class SyllabusView(APIView):
     @capable_of('crud_syllabus')
     def put(self, request, certificate_slug=None, version=None, academy_id=None):
         if version is None:
-            raise serializers.ValidationError("Missing syllabus version", code=400)
+            raise ValidationException("Missing syllabus version", code=400)
 
-        item = Syllabus.objects.filter(course__slug=certificate_slug, version=version, academy_owner__id=academy_id).first()
+        item = Syllabus.objects.filter(certificate__slug=certificate_slug, version=version, academy_owner__id=academy_id).first()
         if item is None:
-            raise serializers.ValidationError("Syllabus version not found for this academy", code=404)
+            raise ValidationException("Syllabus version not found for this academy", code=404)
 
         serializer = SyllabusSerializer(item, data=request.data, many=False)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
