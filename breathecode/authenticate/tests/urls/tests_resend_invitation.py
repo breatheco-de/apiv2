@@ -12,6 +12,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
+from datetime import datetime
 
 
 class AuthenticateTestSuite(AuthTestCase):
@@ -125,20 +126,19 @@ class AuthenticateTestSuite(AuthTestCase):
                 }])
 
 
-        
-        # self.assertEqual(self.all_user_invite_dict(),[
-        #         {'id': model['user_invite'].id, 
-        #         'email': model['user_invite'].email, 
-        #         'academy_id': model['user_invite'].academy_id, 
-        #         'cohort_id': model['user_invite'].cohort_id, 
-        #         'role_id': model['user_invite'].role_id,
-        #         'first_name': model['user_invite'].first_name, 
-        #         'last_name': model['user_invite'].last_name,
-        #         'token': token,
-        #         'author_id': model['user_invite'].author_id,
-        #         'status': model['user_invite'].status,
-        #         'phone': model['user_invite'].phone,
-        #         'sent_at': sent
-        #         }
-        #         ])
+        all_user_invite = [x for x in self.all_user_invite_dict() if isinstance(x.sent_at, datetime) and x.pop('sent_at')]
+        self.assertEqual(all_user_invite,[
+                {'id': model['user_invite'].id, 
+                'email': model['user_invite'].email, 
+                'academy_id': model['user_invite'].academy_id, 
+                'cohort_id': model['user_invite'].cohort_id, 
+                'role_id': model['user_invite'].role_id,
+                'first_name': model['user_invite'].first_name, 
+                'last_name': model['user_invite'].last_name,
+                'token': token,
+                'author_id': model['user_invite'].author_id,
+                'status': model['user_invite'].status,
+                'phone': model['user_invite'].phone,
+                }
+                ])
         
