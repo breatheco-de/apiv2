@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.shortcuts import render
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.views import APIView
+from django.db.models import Q
 from rest_framework import serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.parsers import JSONParser
@@ -13,7 +14,7 @@ from .serializers import (
     GetCohortSerializer, SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer, UserSerializer, CohortUserSerializer,
     GETCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
     CohortUserPOSTSerializer, UserDJangoRestSerializer, UserMeSerializer,
-    GetCertificateSerializer
+    GetCertificateSerializer, SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer
 )
 from .models import Academy, City, CohortUser, Certificate, Cohort, Country, STUDENT, DELETED, Syllabus
 from breathecode.authenticate.models import ProfileAcademy
@@ -628,7 +629,6 @@ class SyllabusView(APIView):
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
             raise ValidationException(f"Invalid academy {str(academy_id)}")
-
         serializer = SyllabusSerializer(data=request.data, context={"certificate": certificate, "academy": academy })
         if serializer.is_valid():
             serializer.save()

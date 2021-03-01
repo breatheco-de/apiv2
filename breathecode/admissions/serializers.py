@@ -439,7 +439,8 @@ class SyllabusSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        previous_syllabus = Syllabus.objects.filter(certificate__id=self.context['certificate'].id, academy_owner=self.context['academy']).order_by('-version').first()
+
+        previous_syllabus = Syllabus.objects.filter(academy_owner=self.context['academy'], certificate=self.context['certificate']).order_by('-version').first()
         version = 1
         if previous_syllabus is not None:
             version = previous_syllabus.version + 1

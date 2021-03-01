@@ -45,7 +45,7 @@ Fixtures are fake data ideal for development.
 
 Saving new fixtures
 ```bash
-python manage.py dumpdata auth > ./breathecode/admissions/fixtures/users.json
+python manage.py dumpdata auth > ./breathecode/auth/fixtures/users.json
 ```
 
 Loading all fixtures

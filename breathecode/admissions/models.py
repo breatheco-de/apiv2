@@ -4,6 +4,8 @@ from django.core.validators import RegexValidator
 from django.db import models
 from .actions import get_bucket_object
 
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", None)
+
 def get_user_label(self):
     return f"{self.first_name} {self.last_name} ({self.email})"
 User.add_to_class("__str__", get_user_label)
@@ -118,9 +120,10 @@ class Certificate(models.Model):
 
     def save(self, *args, **kwargs):
 
-        obj = get_bucket_object("certificate-logo-"+self.slug)
-        if obj is not None:
-            self.logo = obj.public_url
+        if GOOGLE_APPLICATION_CREDENTIALS is not None and GOOGLE_APPLICATION_CREDENTIALS!="":
+            obj = get_bucket_object("certificate-logo-"+self.slug)
+            if obj is not None:
+                self.logo = obj.public_url
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
