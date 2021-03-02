@@ -17,7 +17,7 @@ urlpatterns = [
     path('cohort/<int:cohort_id>/user', CohortUserView.as_view(), name="cohort_id_user"),
 
     # new endpoints (replacing above)
-    path('academy/cohort/user', AcademyCohortUserView.as_view()),
+    path('academy/cohort/user', AcademyCohortUserView.as_view(), name="academy_cohort_user"),
     path('academy/cohort/<str:cohort_id>', AcademyCohortView.as_view(), name="academy_cohort_id"),
     path('academy/cohort/<int:cohort_id>/user/<int:user_id>', AcademyCohortUserView.as_view()),
     path('academy/cohort/<int:cohort_id>/user', AcademyCohortUserView.as_view()),
@@ -29,11 +29,17 @@ urlpatterns = [
 
     # update a cohort user information
     path('certificate', get_courses, name="certificate"),
-    path('certificate/<str:certificate_slug>/', get_single_course),
-    path('certificate/<str:certificate_slug>/syllabus', SyllabusView.as_view()),
-    path('certificate/<str:certificate_slug>/syllabus/<int:version>', SyllabusView.as_view()),
-    path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus/<int:version>', SyllabusView.as_view()),
-    path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus', SyllabusView.as_view()),
+    path('certificate/<str:certificate_slug>/', get_single_course,
+        name="certificate_slug"),
+    path('certificate/<str:certificate_slug>/syllabus', SyllabusView.as_view(),
+        name="certificate_slug_syllabus"),
+    path('certificate/<str:certificate_slug>/syllabus/<int:version>',
+        SyllabusView.as_view(), name="certificate_slug_syllabus_version"),
+    path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus/'
+        '<int:version>', SyllabusView.as_view(),
+        name="certificate_slug_academy_id_syllabus_version"),
+    path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus',
+        SyllabusView.as_view(), name="certificate_slug_academy_id_syllabus"),
 
     path('catalog/timezones', get_timezones, name="timezones_all"),
 ]

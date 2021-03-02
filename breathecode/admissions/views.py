@@ -1,4 +1,5 @@
 import logging, re, pytz
+from django.db.models import Q
 from django.utils import timezone
 from django.shortcuts import render
 from django.contrib.auth.models import AnonymousUser
@@ -10,7 +11,7 @@ from rest_framework.parsers import JSONParser
 from django.contrib.auth.models import User
 from .serializers import (
     AcademySerializer, CohortSerializer, CertificateSerializer,
-    GetCohortSerializer, UserSerializer, CohortUserSerializer,
+    GetCohortSerializer, SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer, UserSerializer, CohortUserSerializer,
     GETCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
     CohortUserPOSTSerializer, UserDJangoRestSerializer, UserMeSerializer,
     GetCertificateSerializer, SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer
@@ -219,11 +220,36 @@ class CohortUserView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def put(self, request, cohort_id=None, user_id=None):
-        validations = self.validations(request, cohort_id, user_id, "cohort__academy__in",
-            disable_cohort_user_just_once=True, disable_certificate_validations=True)
+        many = isinstance(request.data, list)
+        context = {
+            'request': request,
+            'cohort_id': cohort_id,
+            'user_id': user_id,
+            'many': many,
+        }
 
-        serializer = CohortUserPUTSerializer(validations['cohort_user'], data=validations['data'],
-            context={"request": request})
+        if not many:
+            current = CohortUser.objects.filter(user__id=user_id, cohort__id=
+                cohort_id).first()
+        else:
+            current = []
+            index = -1
+            for x in request.data:
+                index = index + 1
+
+                if 'id' in x:
+                    current.append(CohortUser.objects.filter(id=x['id']).first())
+
+                elif 'user' in x and 'cohort' in x:
+                    current.append(CohortUser.objects.filter(user__id=x['user'],
+                    cohort__id=x['cohort']).first())
+
+                else:
+                    raise ValidationException('Cannot determine CohortUser in '
+                        f'index {index}')
+
+        serializer = CohortUserPUTSerializer(current, data=request.data,
+            context=context, many=many)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -365,11 +391,36 @@ class AcademyCohortUserView(APIView):
 
     @capable_of('crud_cohort')
     def put(self, request, cohort_id=None, user_id=None, academy_id=None):
-        validations = self.validations(request, cohort_id, user_id, "cohort__academy__in",
-            disable_cohort_user_just_once=True, disable_certificate_validations=True)
+        many = isinstance(request.data, list)
+        context = {
+            'request': request,
+            'cohort_id': cohort_id,
+            'user_id': user_id,
+            'many': many,
+        }
 
-        serializer = CohortUserPUTSerializer(validations['cohort_user'], data=validations['data'],
-            context={"request": request})
+        if not many:
+            current = CohortUser.objects.filter(user__id=user_id, cohort__id=
+                cohort_id).first()
+        else:
+            current = []
+            index = -1
+            for x in request.data:
+                index = index + 1
+
+                if 'id' in x:
+                    current.append(CohortUser.objects.filter(id=x['id']).first())
+
+                elif 'user' in x and 'cohort' in x:
+                    current.append(CohortUser.objects.filter(user__id=x['user'],
+                    cohort__id=x['cohort']).first())
+
+                else:
+                    raise ValidationException('Cannot determine CohortUser in '
+                        f'index {index}')
+
+        serializer = CohortUserPUTSerializer(current, data=request.data,
+            context=context, many=many)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -526,7 +577,7 @@ def get_courses(request):
 def get_single_course(request, certificate_slug):
     certificates = Certificate.objects.filter(slug=certificate_slug).first()
     if certificates is None:
-        raise serializers.ValidationError("Certificate slug not found", code=404)
+        raise ValidationException("Certificate slug not found", code=404)
     serializer = GetCertificateSerializer(certificates, many=False)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -537,14 +588,14 @@ class SyllabusView(APIView):
     """
 
     # TODO: uncomment decorator when finally all students have a ProfileAcademy object.
-    # @capable_of('crud_syllabus')
+    # @capable_of('read_syllabus')
     def get(self, request, certificate_slug=None, version=None, academy_id=None):
         if academy_id is None:
             raise ValidationException("Missing academy id")
 
         certificates = Certificate.objects.filter(slug=certificate_slug).first()
         if certificates is None:
-            raise serializers.ValidationError("Certificate slug not found", code=404)
+            raise ValidationException("Certificate slug not found", code=404)
 
         syl = None
         if version is None:
@@ -569,7 +620,7 @@ class SyllabusView(APIView):
         version = 1
         certificate = Certificate.objects.filter(slug=certificate_slug).first()
         if certificate is None:
-            raise serializers.ValidationError(f"Invalid certificates slug {certificate_slug}", code=404)
+            raise ValidationException(f"Invalid certificates slug {certificate_slug}", code=404)
 
         item = Syllabus.objects.filter(certificate__slug=certificate_slug, academy_owner__id=academy_id).order_by('version').first()
         if item is not None:
@@ -578,7 +629,6 @@ class SyllabusView(APIView):
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
             raise ValidationException(f"Invalid academy {str(academy_id)}")
-        
         serializer = SyllabusSerializer(data=request.data, context={"certificate": certificate, "academy": academy })
         if serializer.is_valid():
             serializer.save()
@@ -588,14 +638,14 @@ class SyllabusView(APIView):
     @capable_of('crud_syllabus')
     def put(self, request, certificate_slug=None, version=None, academy_id=None):
         if version is None:
-            raise serializers.ValidationError("Missing syllabus version", code=400)
+            raise ValidationException("Missing syllabus version", code=400)
 
         item = Syllabus.objects.filter(certificate__slug=certificate_slug, version=version, academy_owner__id=academy_id).first()
         if item is None:
-            raise serializers.ValidationError("Syllabus version not found for this academy", code=404)
+            raise ValidationException("Syllabus version not found for this academy", code=404)
 
         serializer = SyllabusSerializer(item, data=request.data, many=False)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

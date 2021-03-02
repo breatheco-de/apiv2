@@ -30,6 +30,7 @@ acp_ids = {
     "utm_country": "19",
     "gclid": "26",
     "referral_key": "27",
+    "utm_campaign": "33",
 }
 
 def set_optional(contact, key, data, custom_key=None):
