@@ -134,7 +134,7 @@ class Command(BaseCommand):
                     certificate=cert,
                     private=False,
                 )
-
+                _syl.save()
                 self.stdout.write(self.style.SUCCESS(f"Syllabus {certificate_slug}{version} added"))
             else:
                 self.stdout.write(self.style.NOTICE(f"Certificate {certificate_slug}{version} skipped"))
