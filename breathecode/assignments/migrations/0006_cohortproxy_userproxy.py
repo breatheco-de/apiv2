@@ -8,7 +8,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('auth', '0012_alter_user_first_name_max_length'),
-        ('admissions', '0015_auto_20210220_1651'),
         ('admissions', '0014_auto_20201218_0534'),
         ('assignments', '0005_task_cohort'),
     ]
