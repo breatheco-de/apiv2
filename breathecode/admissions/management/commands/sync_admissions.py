@@ -248,7 +248,7 @@ class Command(BaseCommand):
         academy = Academy.objects.filter(slug=_cohort['location_slug']).first()
         if academy is None:
             raise CommandError(f"Academy {_cohort['location_slug']} does not exist")
-        syllabus = Syllabus.objects.filter(certificate__slug=_cohort['profile_slug']).order_by("version").first()
+        syllabus = Syllabus.objects.filter(certificate__slug=_cohort['profile_slug']).order_by("-version").first()
         if syllabus is None:
             raise CommandError(f"syllabus for certificate {_cohort['profile_slug']} does not exist")
 
@@ -299,7 +299,7 @@ class Command(BaseCommand):
         if 'kickoff_date' in data and data['ending_date'] is not None:
             cohort.ending_date = datetime.strptime(data['ending_date'],DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
 
-        syllabus = Syllabus.objects.filter(certificate__slug=data['profile_slug']).order_by("version").first()
+        syllabus = Syllabus.objects.filter(certificate__slug=data['profile_slug']).order_by("-version").first()
         if syllabus is None:
             raise CommandError(f"syllabus for certificate {data['profile_slug']} does not exist")
         cohort.syllabus = syllabus

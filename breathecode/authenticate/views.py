@@ -244,7 +244,6 @@ def get_token_info(request, token):
 class UserMeView(APIView):
     def get(self, request, format=None):
 
-        logger.error("Get me just called")
         try:
             if isinstance(request.user, AnonymousUser):
                 raise PermissionDenied("There is not user")

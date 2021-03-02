@@ -64,7 +64,6 @@ def get_cohorts(request, id=None):
 class UserMeView(APIView):
     def get(self, request, format=None):
 
-        logger.error("Get me just called")
         try:
             if isinstance(request.user, AnonymousUser):
                 raise PermissionDenied("There is not user")
