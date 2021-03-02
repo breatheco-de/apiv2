@@ -28,6 +28,10 @@ def mask_as_done(modeladmin, request, queryset):
     issues = queryset.update(status='DONE')
 mask_as_done.short_description = "Mark as DONE"
 
+def mask_as_todo(modeladmin, request, queryset):
+    issues = queryset.update(status='TODO')
+mask_as_todo.short_description = "Mark as TODO"
+
 def mask_as_ignored(modeladmin, request, queryset):
     issues = queryset.update(status='IGNORED')
 mask_as_ignored.short_description = "Mark as IGNORED"
@@ -39,6 +43,7 @@ mask_as_paid.short_description = "Mark as PAID"
 @admin.register(Freelancer)
 class FreelancerAdmin(admin.ModelAdmin):
     list_display = ['user_id', 'full_name', "email"]
+    raw_id_fields = ["user", "github_user"]
     actions = [sync_issues, generate_bill]
     def full_name(self, obj):
         return obj.user.first_name + " " + obj.user.last_name
@@ -49,14 +54,17 @@ class FreelancerAdmin(admin.ModelAdmin):
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
     search_fields = ['title']
-    list_display = ('id', 'github_number', 'title', 'status', 'duration_in_hours', 'bill_id', 'github_url')
+    list_display = ('id', 'github_number', 'freelancer', 'title', 'status', 'duration_in_hours', 'bill_id', 'github_url')
     list_filter = ['status', 'bill__status']
-    actions = [mask_as_done, mask_as_ignored]
+    list_filter = ['status', 'bill__status']
+    actions = [mask_as_todo, mask_as_done, mask_as_ignored]
     def github_url(self,obj):
         return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>open in github</a>", url=obj.url)
 
 @admin.register(Bill)
 class BillAdmin(admin.ModelAdmin):
-    list_display = ('id', 'freelancer','status', 'total_duration_in_hours', 'total_price','paid_at')
+    list_display = ('id', 'freelancer','status', 'total_duration_in_hours', 'total_price','paid_at', 'invoice_url')
     list_filter = ['status']
     actions = [mask_as_paid]
+    def invoice_url(self,obj):
+        return format_html("<a rel='noopener noreferrer' target='_blank' href='/v1/freelance/bills/{id}/html'>open invoice</a>", id=obj.id)
