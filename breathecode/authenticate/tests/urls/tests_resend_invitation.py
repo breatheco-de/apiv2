@@ -101,7 +101,7 @@ class AuthenticateTestSuite(AuthTestCase):
         expected = {'status': 'PENDING', 'email': None, 'first_name': None, 'last_name': None}
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
-        all_user_invite = [x for x in self.all_user_invite_dict() if isinstance(x.sent_at, datetime) and x.pop('sent_at')]
+        all_user_invite = [x for x in self.all_user_invite_dict() if x.pop('sent_at')]
         self.assertEqual(all_user_invite,[
                 {'id': model['user_invite'].id, 
                 'email': model['user_invite'].email, 
@@ -116,4 +116,5 @@ class AuthenticateTestSuite(AuthTestCase):
                 'phone': model['user_invite'].phone,
                 }
                 ])
+       
         
