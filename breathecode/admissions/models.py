@@ -158,7 +158,7 @@ class Syllabus(models.Model):
         return f'{self.certificate.slug}.v{self.version}'
 
     def __str__(self):
-        return self.certificate.name + ' v' + str(self.version)
+        return f'{self.certificate.slug}.v{self.version}'
 
 
 INACTIVE = 'INACTIVE'
