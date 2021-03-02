@@ -279,7 +279,6 @@ class Command(BaseCommand):
         return co
 
     def update_cohort(self, cohort, data):
-        print("data", datetime.strptime(data['kickoff_date'],DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC')))
         # return
         stages = {
             'finished': 'ENDED',
@@ -299,6 +298,12 @@ class Command(BaseCommand):
         cohort.language = data['language']
         if 'kickoff_date' in data and data['ending_date'] is not None:
             cohort.ending_date = datetime.strptime(data['ending_date'],DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
+
+        syllabus = Syllabus.objects.filter(certificate__slug=data['profile_slug']).order_by("version").first()
+        if syllabus is None:
+            raise CommandError(f"syllabus for certificate {data['profile_slug']} does not exist")
+        cohort.syllabus = syllabus
+
         cohort.save()
 
     def add_user(self, _user):
