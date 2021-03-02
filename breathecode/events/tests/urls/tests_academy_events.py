@@ -38,15 +38,14 @@ class AcademyEventsTestSuite(EventTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_all_academy_events_ok(self):
+    def test_all_academy_events_no_cap(self):
         self.headers(academy=4)
         url = reverse_lazy('events:academy_all_events')
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_cohort', role='potato', syllabus=True)
+            capability='crud_student', role='potato', syllabus=True)
         
         response = self.client.get(url)
         json = response.json()
         expected = {}
 
-        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 403)

@@ -42,7 +42,7 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         }, ["email"])
 
         self.assertEqual(args_list, [call(
-            'https://api.mailgun.net/v3/None/messages',
+            f'https://api.mailgun.net/v3/{os.environ.get("MAILGUN_DOMAIN")}/messages',
             auth=('api', os.environ.get('MAILGUN_API_KEY', "")),
             data={
                 "from": f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
