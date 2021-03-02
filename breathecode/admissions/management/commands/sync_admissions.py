@@ -123,7 +123,7 @@ class Command(BaseCommand):
                 continue
             #remove letter "v" at the beginning of version number
             version = version[1:] 
-            if not isinstance(version, int):
+            if not version.isnumeric():
                 self.stdout.write(self.style.NOTICE(f"Syllabus version {version} must be number: skipping"))    
                 continue
 
@@ -131,13 +131,13 @@ class Command(BaseCommand):
             if _syl is None:
                 _syl = Syllabus(
                     version=version,
-                    certificate=certificate,
+                    certificate=cert,
                     private=False,
                 )
 
-                self.stdout.write(self.style.SUCCESS(f"Syllabus {slug}{version} added"))
+                self.stdout.write(self.style.SUCCESS(f"Syllabus {certificate_slug}{version} added"))
             else:
-                self.stdout.write(self.style.NOTICE(f"Certificate {slug}{version} skipped"))
+                self.stdout.write(self.style.NOTICE(f"Certificate {certificate_slug}{version} skipped"))
 
     def cohorts(self, options):
 
