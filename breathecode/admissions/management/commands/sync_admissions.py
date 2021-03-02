@@ -123,6 +123,10 @@ class Command(BaseCommand):
                 continue
             #remove letter "v" at the beginning of version number
             version = version[1:] 
+            if not isintance(version, int):
+                self.stdout.write(self.style.NOTICE(f"Syllabus version {version} must be number: skipping"))    
+                continue
+            
             _syl = Syllabus.objects.filter(version=version, certificate=cert).first()
             if _syl is None:
                 _syl = Syllabus(
