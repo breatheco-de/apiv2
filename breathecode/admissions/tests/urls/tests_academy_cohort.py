@@ -2,7 +2,6 @@
 Test /academy/cohort
 """
 from breathecode.services import datetime_to_iso_format
-from breathecode.admissions.tests.utils.generate_models import GenerateModels
 import re
 from datetime import datetime
 from unittest.mock import patch
