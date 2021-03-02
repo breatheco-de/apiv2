@@ -129,9 +129,11 @@ class Command(BaseCommand):
 
             _syl = Syllabus.objects.filter(version=version, certificate=cert).first()
             if _syl is None:
+                response = requests.get(f"{HOST_ASSETS}/syllabus/{certificate_slug}?v={version}")
                 _syl = Syllabus(
                     version=version,
                     certificate=cert,
+                    json=response.text,
                     private=False,
                 )
                 _syl.save()
