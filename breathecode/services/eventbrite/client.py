@@ -24,7 +24,7 @@ class Eventbrite:
         #     "error": "VENUE_AND_ONLINE",
         #     "error_description": "You cannot both specify a venue and set online_event",
         #     "status_code": 400
-        # }     
+        # }
         pass
 
     def request(self, _type, url, headers={}, query_string=None):
@@ -35,7 +35,7 @@ class Eventbrite:
         _query_string = ""
         if query_string is not None:
             _query_string = "?" + urllib.parse.urlencode(query_string)
-        
+
         response = requests.request(_type, self.host + url + _query_string, headers=_headers)
         result = response.json()
 
@@ -54,7 +54,7 @@ class Eventbrite:
                     result.update(new_result)
 
         return result
-        
+
     def get_my_organizations(self):
         data = self.request('GET', f"/users/me/organizations/")
         return data
@@ -63,7 +63,7 @@ class Eventbrite:
         query_string = { "expand": "organizer", "status": "live" }
         data = self.request('GET', f"/organizations/{str(organization_id)}/events/", query_string=query_string)
         return data
-        
+
     def get_organization_venues(self, organization_id):
         data = self.request('GET', f"/organizations/{str(organization_id)}/venues/")
         return data
@@ -99,7 +99,7 @@ class Eventbrite:
 
         action = webhook.action.replace('.', '_')
         api_url = webhook.api_url
-        organization_id = webhook.organization_id
+        # organization_id = webhook.organization_id
 
         logger.debug(f"Executing => {action}")
         if hasattr(actions, action):
@@ -124,6 +124,7 @@ class Eventbrite:
                 # stack trace
                 # import traceback
                 # print(traceback.print_exc())
+                # print(e)
 
                 webhook.status = 'ERROR'
                 webhook.status_text = str(e)
@@ -167,7 +168,7 @@ class Eventbrite:
 
         if context_has_config_key and 'endpoint_url' in context['config']:
             webhook.endpoint_url = context['config']['endpoint_url']
-        
+
         webhook.organization_id = organization_id
         webhook.status = 'PENDING'
         webhook.save()

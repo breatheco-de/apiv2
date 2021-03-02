@@ -77,7 +77,7 @@ class Tag(models.Model):
 
     def __str__(self):
         return f'{self.slug} ({str(self.id)})'
-    
+
 class Contact(models.Model):
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150, null=True, default=None)
@@ -151,9 +151,9 @@ class FormEntry(models.Model):
     utm_campaign = models.CharField(max_length=50, blank=True, null=True, default=None)
     utm_source = models.CharField(max_length=50, blank=True, null=True, default=None)
     referral_key = models.CharField(max_length=50, blank=True, null=True, default=None)
-    
+
     gclid = models.CharField(max_length=255, blank=True, null=True, default=None)
-    
+
     tags = models.CharField(max_length=100, blank=True, default='')
     automations = models.CharField(max_length=100, blank=True, default='')
 

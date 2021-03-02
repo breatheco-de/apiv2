@@ -17,23 +17,24 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
 from django.utils import timezone
-from .models import Profile, ProfileAcademy, Role
+from datetime import datetime
+from .models import Profile, ProfileAcademy, Role, UserInvite
 from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
 from .models import Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook, UserInvite
-from .actions import reset_password
+from .actions import reset_password, resend_invite
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
 from breathecode.utils import localize_query, capable_of, ValidationException
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
-    RoleSmallSerializer, UserMeSerializer
+    RoleSmallSerializer, UserMeSerializer, UserInviteSerializer
 )
 
 logger = logging.getLogger(__name__)
- 
+
 class TemporalTokenView(ObtainAuthToken):
     permission_classes = [IsAuthenticated]
     def post(self, request):
@@ -52,7 +53,7 @@ class TemporalTokenView(ObtainAuthToken):
 
 
 class LogoutView(APIView):
-    authentication_classes: [ExpiringTokenAuthentication]
+    authentication_classes = [ExpiringTokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -139,7 +140,7 @@ class StudentView(APIView):
             profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id).first()
             if profile is None:
                 raise ValidationException("Profile not found", 404)
-            
+
             serializer = GETProfileAcademy(profile, many=False)
             return Response(serializer.data)
 
@@ -178,7 +179,7 @@ class StudentView(APIView):
         request_data = { **request.data, "user": user_id, "academy": academy_id, "role": "student" }
         if "role" in request.data:
             raise ValidationException("The student role cannot be updated with this endpoint, user /member instead.")
-        
+
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
@@ -199,7 +200,7 @@ class StudentView(APIView):
 
         if academy_id is None or user_id is None:
             raise serializers.ValidationError("Missing user_id or academy_id", code=400)
-        
+
         profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id, role__slug='student').first()
         if profile is None:
             raise serializers.ValidationError('User doest not exist or does not belong to this academy')
@@ -208,7 +209,7 @@ class StudentView(APIView):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 class LoginView(ObtainAuthToken):
-    
+
     def post(self, request, *args, **kwargs):
         # delete expired tokens
         utc_now = timezone.now()
@@ -229,10 +230,10 @@ class LoginView(ObtainAuthToken):
 def get_token_info(request, token):
 
     token = Token.objects.filter(key=token).first()
-    
+
     if token is None or token.expires_at < timezone.now():
         raise PermissionDenied("Expired or invalid token")
-    
+
     return Response({
         'token': token.key,
         'token_type': token.token_type,
@@ -246,7 +247,7 @@ class UserMeView(APIView):
         logger.error("Get me just called")
         try:
             if isinstance(request.user, AnonymousUser):
-                raise PermissionDenied("There is not user")    
+                raise PermissionDenied("There is not user")
 
         except User.DoesNotExist:
             raise PermissionDenied("You don't have a user")
@@ -258,7 +259,7 @@ class UserMeView(APIView):
 
         try:
             if isinstance(request.user, AnonymousUser):
-                raise PermissionDenied("There is not user")    
+                raise PermissionDenied("There is not user")
 
         except User.DoesNotExist:
             raise PermissionDenied("You don't have a user")
@@ -371,7 +372,7 @@ def save_github_token(request):
 
             if github_user['email'] is None:
                 raise ValidationError("Imposible to retrieve user email")
-                
+
             user = User.objects.filter(email=github_user['email']).first()
             if user is None:
                 user = User(username=github_user['login'], email=github_user['email'])
@@ -395,7 +396,7 @@ def save_github_token(request):
 
             profile = Profile.objects.filter(user__email=github_user['email']).first()
             if profile is None:
-                profile = Profile(user=user, 
+                profile = Profile(user=user,
                     avatar_url=github_user['avatar_url'],
                     blog=github_user['blog'],
                     bio=github_user['bio'],
@@ -556,7 +557,7 @@ def save_slack_token(request):
             team = SlackTeam(
                 slack_id = slack_data['team']['id'],
                 owner=user,
-                academy = academy    
+                academy = academy
             )
 
         team.name = slack_data['team']['name']
@@ -682,7 +683,7 @@ def save_facebook_token(request):
 
         utc_now = timezone.now()
         expires_at = utc_now + timezone.timedelta(milliseconds=facebook_data['expires_in'])
-        
+
         credentials = CredentialsFacebook(
             user=user,
             academy=academy,
@@ -725,7 +726,7 @@ def change_password(request, token):
     })
 
 def reset_password_view(request):
-    
+
     if request.method == 'POST':
         _dict = request.POST.copy()
         form = PickPasswordForm(_dict)
@@ -735,7 +736,7 @@ def reset_password_view(request):
             return render(request, 'form.html', {
                 'form': form
             })
-            
+
         users = User.objects.filter(email=_dict["email"])
         if(users.count() > 0):
             reset_password(users)
@@ -792,12 +793,40 @@ def pick_password(request, token):
         'form': form
     })
 
-def render_invite(request, token):
+class AcademyInviteView(APIView):
+    @capable_of('admissions_developer')
+    def put(self, request, user_id=None, academy_id=None):
+        if user_id is not None:
+            user = ProfileAcademy.objects.filter(user__id=user_id,academy__id=academy_id).first() 
+
+            if user is None:
+                raise ValidationException("Member not found", 400)
+            invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email, author=request.user).first() 
+
+            if invite is None:
+                raise ValidationException("Invite not found", 400)
+                
+            if invite.sent_at is not None:
+                now = timezone.now()
+                minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
+                
+                if minutes_diff < 2:
+                    raise ValidationException("Imposible to resend invitation", 400)
+
+            resend_invite(invite.token, invite.email, invite.first_name)
+
+            invite.sent_at = timezone.now()
+            invite.save()
+            serializer = UserInviteSerializer(invite, many=False)
+            return Response(serializer.data)
+
+def render_invite(request, token, member_id=None):
     _dict = request.POST.copy()
     _dict["token"] = token
     _dict["callback"] = request.GET.get("callback", '')
 
     if request.method == 'GET':
+        
         invite = UserInvite.objects.filter(token=token).first()
         if invite is None:
             return render(request, 'message.html', {
@@ -834,7 +863,7 @@ def render_invite(request, token):
 
         first_name = request.POST.get("first_name", None)
         last_name = request.POST.get("last_name", None)
-        
+
         user = User.objects.filter(email=invite.email).first()
         if user is None:
             user = User(email=invite.email, first_name=first_name, last_name=last_name)
@@ -882,7 +911,7 @@ def login_html_view(request):
             url = request.POST.get("url", None)
             if url is None or url == "":
                 raise Exception("Invalid redirect url, you must specify a url to redirect to")
-                
+
             email = request.POST.get("email", None)
             password = request.POST.get("password", None)
 

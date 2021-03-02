@@ -4,6 +4,7 @@ from django.core.management.base import BaseCommand, CommandError
 from ...models import Academy, Certificate, Cohort, User, CohortUser, Syllabus
 from breathecode.authenticate.models import Profile
 
+HOST_ASSETS = "https://assets.breatheco.de/apis"
 API_URL = os.getenv("API_URL","")
 HOST_ASSETS = "https://assets.breatheco.de/apis"
 HOST = os.environ.get("OLD_BREATHECODE_API")
@@ -52,6 +53,40 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f"Academy {a.slug} added"))
             else:
                 self.stdout.write(self.style.NOTICE(f"Academy {aca.slug} skipped"))
+
+    def syllabus(self, options):
+
+        response = requests.get(f"{HOST_ASSETS}/syllabus/all")
+        syllabus = response.json()
+
+        for syl in syllabus:
+            certificate_slug, version = syl['slug'].split(".")
+            cert = Certificate.objects.filter(slug=certificate_slug).first()
+            if cert is None:
+                self.stdout.write(self.style.NOTICE(f"Certificate slug {certificate_slug} not found: skipping syllabus {certificate_slug}.{version}"))    
+                continue
+
+            if version[1:].isnumeric() == False:
+                self.stdout.write(self.style.NOTICE(f"Ignoring syllabus invalid version {version}"))    
+                continue
+            #remove letter "v" at the beginning of version number
+            version = version[1:] 
+            _syl = Syllabus.objects.filter(version=version, certificate=cert).first()
+            if _syl is None:
+
+                response = requests.get(f"{HOST_ASSETS}/syllabus/{certificate_slug}?v={version}")
+
+                _syl = Syllabus(
+                    version=version,
+                    certificate=cert,
+                    json=response.text,
+                    private=False,
+                )
+
+                _syl.save()
+                self.stdout.write(self.style.SUCCESS(f"Syllabus {certificate_slug}{version} added"))
+            else:
+                self.stdout.write(self.style.NOTICE(f"Syllabus {certificate_slug}{version} skipped"))
 
     def certificates(self, options):
 
@@ -110,7 +145,7 @@ class Command(BaseCommand):
             if co is None:
                 try:
                     self.add_cohort(_cohort)
-                    self.stdout.write(self.style.SUCCESS(f"Cohort {_cohort['slug']} added"))
+                    self.stdout.write(self.style.SUCCESS(f"Cohort {_cohort['slug']} with syllabus {_cohort['slug']} added"))
                 except Exception as e:
                     self.stdout.write(self.style.NOTICE(f"Error adding cohort {_cohort['slug']}: {str(e)}"))    
                     # raise e
@@ -207,9 +242,9 @@ class Command(BaseCommand):
         academy = Academy.objects.filter(slug=_cohort['location_slug']).first()
         if academy is None:
             raise CommandError(f"Academy {_cohort['location_slug']} does not exist")
-        certificate = Certificate.objects.filter(slug=_cohort['profile_slug']).first()
-        if certificate is None:
-            raise CommandError(f"Certificate {_cohort['profile_slug']} does not exist")
+        syllabus = Syllabus.objects.filter(certificate__slug=_cohort['profile_slug']).order_by("version").first()
+        if syllabus is None:
+            raise CommandError(f"syllabus for certificate {_cohort['profile_slug']} does not exist")
 
         stages = {
             'finished': 'ENDED',
@@ -230,11 +265,12 @@ class Command(BaseCommand):
             language=_cohort['language'],
 
             academy=academy,
-            certificate=certificate,
+            syllabus=syllabus,
         )
         if _cohort['ending_date'] is not None:
             co.ending_date = datetime.strptime(_cohort['ending_date'],DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
         co.save()
+        return co
 
     def update_cohort(self, cohort, data):
         print("data", datetime.strptime(data['kickoff_date'],DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC')))

@@ -10,10 +10,14 @@ from .authenticate_models_mixin import AuthenticateMixin
 from .admissions_models_mixin import AdmissionsModelsMixin
 from .feedback_models_mixin import FeedbackModelsMixin
 from .auth_mixin import AuthMixin
+from .assessment_models_mixin import AssessmentModelsMixin
+from .freelance_models_mixin import FreelanceModelsMixin
+from .marketing_models_mixin import MarketingModelsMixin
 
 class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin,
         AdmissionsModelsMixin, AuthenticateMixin, CertificateModelsMixin,
-        FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin):
+        FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,
+        AssessmentModelsMixin, FreelanceModelsMixin, MarketingModelsMixin):
 
     def __flow_wrapper__(self, *args, **kwargs):
         models = {}
@@ -52,11 +56,14 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin,
             self.generate_credentials,
             self.generate_assignments_models,
             self.generate_admissions_models,
+            self.generate_marketing_models,
             self.generate_events_models,
+            # self.generate_assessment_models,
             self.generate_authenticate_models,
+            self.generate_freelance_models,
             self.generate_feedback_models,
             self.generate_notify_models,
-            self.generate_certificate_models
+            self.generate_certificate_models,
         )
 
         return fn(models=models, **kwargs)
