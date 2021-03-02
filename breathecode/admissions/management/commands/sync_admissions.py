@@ -1,10 +1,11 @@
 import os, requests, sys, pytz
 from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
-from ...models import Academy, Certificate, Cohort, User, CohortUser
+from ...models import Academy, Certificate, Cohort, User, CohortUser, Syllabus
 from breathecode.authenticate.models import Profile
 
 API_URL = os.getenv("API_URL","")
+HOST_ASSETS = "https://assets.breatheco.de/apis"
 HOST = os.environ.get("OLD_BREATHECODE_API")
 DATETIME_FORMAT="%Y-%m-%d"
 class Command(BaseCommand):
@@ -73,6 +74,31 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f"Certificate {pro['slug']} added"))
             else:
                 self.stdout.write(self.style.NOTICE(f"Certificate {pro['slug']} skipped"))
+
+    def syllabus(self, options):
+
+        response = requests.get(f"{HOST_ASSETS}/syllabus/all")
+        syllabus = response.json()
+
+        for syl in syllabus:
+            certificate_slug, version = syl['slug'].split(".")
+            cert = Certificate.objects.filter(slug=certificate_slug).first()
+            if cert is None:
+                self.stdout.write(self.style.NOTICE(f"Certificate slug {certificate_slug} not found: skipping syllabus {certificate_slug}.{version}"))    
+                continue
+            #remove letter "v" at the beginning of version number
+            version = version[1:] 
+            _syl = Syllabus.objects.filter(version=version, certificate=cert).first()
+            if _syl is None:
+                _syl = Syllabus(
+                    version=version,
+                    certificate=certificate,
+                    private=False,
+                )
+
+                self.stdout.write(self.style.SUCCESS(f"Syllabus {slug}{version} added"))
+            else:
+                self.stdout.write(self.style.NOTICE(f"Certificate {slug}{version} skipped"))
 
     def cohorts(self, options):
 
