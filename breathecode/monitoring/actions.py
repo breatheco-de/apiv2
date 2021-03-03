@@ -95,8 +95,8 @@ def run_app_diagnostic(app, report=False):
 
         # Starting the test
         logger.debug(f"Testing endpoint: {endpoint.url} ")
-        e.status = 'LOADING'
-        e.save()
+        endpoint.status = 'LOADING'
+        endpoint.save()
 
         e = get_website_text(endpoint)
         if e.status != 'OPERATIONAL':
