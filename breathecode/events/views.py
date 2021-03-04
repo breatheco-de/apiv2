@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
 from rest_framework.response import Response
-from breathecode.utils import ValidationException, capable_of
+from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
 from rest_framework.decorators import renderer_classes
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
@@ -102,7 +102,7 @@ class EventView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class AcademyEventView(APIView):
+class AcademyEventView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
@@ -142,8 +142,13 @@ class AcademyEventView(APIView):
 
         items = items.filter(**lookup).order_by('-starting_at')
 
-        serializer = EventSmallSerializerNoAcademy(items, many=True)
-        return Response(serializer.data)
+        page = self.paginate_queryset(items, request)
+        serializer = EventSmallSerializerNoAcademy(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
     @capable_of('crud_event')
     def post(self, request, format=None, academy_id=None):

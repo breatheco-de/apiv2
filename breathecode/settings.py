@@ -48,7 +48,7 @@ INSTALLED_APPS = [
 
     'drf_yasg',
     'corsheaders',
-    
+
     'breathecode.authenticate',
     'breathecode.admissions',
     'breathecode.events',
@@ -63,9 +63,9 @@ INSTALLED_APPS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'breathecode.utils.HeaderLimitOffsetPagination',
     'EXCEPTION_HANDLER': 'breathecode.utils.breathecode_exception_handler',
-    'PAGE_SIZE': 10,
+    'PAGE_SIZE': 100,
     'DEFAULT_VERSION': 'v1',
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'breathecode.authenticate.authentication.ExpiringTokenAuthentication',
