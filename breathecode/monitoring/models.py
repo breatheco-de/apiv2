@@ -36,7 +36,7 @@ class Endpoint(models.Model):
     url = models.CharField(max_length=255)
     test_pattern = models.CharField(max_length=100, default=None, null=True, blank=True, help_text='If left blank sys will only ping')
     frequency_in_minutes = models.FloatField(default=30)
-    status_code = models.FloatField(default=200)
+    status_code = models.IntegerField(default=200)
     severity_level = models.IntegerField(default=0)
     status_text = models.CharField(max_length=255, default=None, null=True, blank=True, editable=False)
     special_status_text = models.CharField(max_length=255, default=None, null=True, blank=True, help_text='Add a message for people to see when is down')
@@ -48,7 +48,7 @@ class Endpoint(models.Model):
     application = models.ForeignKey(Application, on_delete=models.CASCADE)
 
     paused_until = models.DateTimeField(null=True, blank=True, default=None, help_text='if you want to stop checking for a period of time')
-    
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -75,7 +75,7 @@ class MonitorScript(models.Model):
     application = models.ForeignKey(Application, on_delete=models.CASCADE)
 
     paused_until = models.DateTimeField(null=True, blank=True, default=None, help_text='if you want to stop checking for a period of time')
-    
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

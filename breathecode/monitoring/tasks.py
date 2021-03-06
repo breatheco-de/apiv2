@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class BaseTaskWithRetry(Task):
     autoretry_for = (Exception,)
     #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5 } 
+    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5 }
     retry_backoff = True
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
@@ -40,7 +40,7 @@ def monitor_app(self,app_id):
             })
 
         return False
-    
+
     return True
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
@@ -70,5 +70,5 @@ def execute_scripts(self,script_id):
             except Exception:
                 return False
         return False
-    
+
     return True

@@ -66,7 +66,7 @@ def get_website_text(endp):
     endp.status_code = status_code
     endp.response_text = payload
     endp.save()
-        
+
     return endp
 
 
@@ -121,7 +121,7 @@ def run_app_diagnostic(app, report=False):
 
     app.status = results["status"]
 
-    results["slack_payload"] =  render_snooze_text_endpoint(failed_endpoints) #converting to json to send to slack
+    results["slack_payload"] = render_snooze_text_endpoint(failed_endpoints) #converting to json to send to slack
 
     if results["details"] != "":
         app.response_text = results["details"]

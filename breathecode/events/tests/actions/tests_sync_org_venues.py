@@ -10,7 +10,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
     MAILGUN_PATH,
     MAILGUN_INSTANCES,
-    apply_requests_post_mock,
+    apply_mailgun_requests_post_mock,
     SLACK_PATH,
     SLACK_INSTANCES,
     apply_slack_requests_request_mock,

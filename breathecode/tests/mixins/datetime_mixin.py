@@ -22,11 +22,13 @@ class DatetimeMixin():
 
     def assertDatetime(self, date):
         if not isinstance(date, str):
-            return isinstance(date, datetime.datetime)
+            self.assertTrue(isinstance(date, datetime))
+            return True
 
         try:
             string = re.sub(r'Z$', '', date)
             datetime.fromisoformat(string)
+            self.assertTrue(True)
             return True
         except Exception:
-            return False
+            self.assertTrue(False)

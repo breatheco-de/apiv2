@@ -12,7 +12,7 @@ from ..mocks import (
     apply_google_cloud_blob_mock,
     SCREENSHOTMACHINE_INSTANCES,
     SCREENSHOTMACHINE_PATH,
-    apply_requests_get_mock,
+    apply_screenshotmachine_requests_get_mock,
 )
 
 class ActionCertificateScreenshotTestCase(CertificateTestCase):
@@ -20,7 +20,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(SCREENSHOTMACHINE_PATH['get'], apply_requests_get_mock())
+    @patch(SCREENSHOTMACHINE_PATH['get'], apply_screenshotmachine_requests_get_mock())
     def test_certificate_screenshot_with_invalid_id(self):
         """certificate_screenshot don't call open in development environment"""
         SCREENSHOTMACHINE_INSTANCES['get'].call_args_list = []
@@ -35,7 +35,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(SCREENSHOTMACHINE_PATH['get'], apply_requests_get_mock())
+    @patch(SCREENSHOTMACHINE_PATH['get'], apply_screenshotmachine_requests_get_mock())
     # TODO: fix this test, I'm hiding it
     def hide_test_certificate_screenshot_with_valid_id(self):
         """certificate_screenshot don't call open in development environment"""

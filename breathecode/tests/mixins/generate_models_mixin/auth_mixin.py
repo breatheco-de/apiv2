@@ -4,7 +4,6 @@ Collections of mixins used to login in authorize microservice
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from breathecode.tests.mixins.headers_mixin import HeadersMixin
 from breathecode.authenticate.models import Token
-from django.contrib.auth.models import User
 from mixer.backend.django import mixer
 from breathecode.tests.mixins import DateFormatterMixin
 

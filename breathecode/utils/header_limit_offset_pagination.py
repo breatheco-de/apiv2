@@ -4,17 +4,7 @@ from rest_framework.response import Response
 from rest_framework.utils.urls import replace_query_param, remove_query_param
 
 
-# class EnvelopingMixin:
-#     def paginate_queryset(self, queryset, request, view=None):
-#         # self.use_envelope = True
-#         # if str(request.GET.get('envelope')).lower() in ['false', '0']:
-#         #     self.use_envelope = False
-#         return super().paginate_queryset(queryset, request, view)
-
-
-# class HeaderLimitOffsetPagination(EnvelopingMixin, LimitOffsetPagination):
 class HeaderLimitOffsetPagination(LimitOffsetPagination):
-# class HeaderLimitOffsetPagination(PageNumberPagination):
 
     def paginate_queryset(self, queryset, request, view=None):
         self.use_envelope = True
@@ -22,17 +12,17 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
             self.use_envelope = False
         return super().paginate_queryset(queryset, request, view)
 
-    def parse_comma(self, string: str):
+    def __parse_comma__(self, string: str):
         if not string:
             return None
 
         return string.replace('%2C', ',')
 
     def get_paginated_response(self, data):
-        next_url = self.parse_comma(self.get_next_link())
-        previous_url = self.parse_comma(self.get_previous_link())
-        first_url = self.parse_comma(self.get_first_link())
-        last_url = self.parse_comma(self.get_last_link())
+        next_url = self.__parse_comma__(self.get_next_link())
+        previous_url = self.__parse_comma__(self.get_previous_link())
+        first_url = self.__parse_comma__(self.get_first_link())
+        last_url = self.__parse_comma__(self.get_last_link())
 
         links = []
         for label, url in (

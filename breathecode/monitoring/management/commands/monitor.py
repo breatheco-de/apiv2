@@ -31,19 +31,23 @@ class Command(BaseCommand):
             help='Delete and add again',
         )
         parser.add_argument(
-              '--limit',
-               action='store',
-               dest='limit',
-               type=int,
-               default=0,
-               help='How many to import'
+            '--limit',
+            action='store',
+            dest='limit',
+            type=int,
+            default=0,
+            help='How many to import'
         )
 
     def handle(self, *args, **options):
         try:
-            func = getattr(self,options['entity'],'entity_not_found') 
+            func = getattr(self,options['entity'], 'entity_not_found')
         except TypeError:
             print(f'Sync method for {options["entity"]} no Found!')
+        except KeyError:
+            print('Entity arguments is not set')
+            return
+            # raise Exception('Entity arguments is not set')
         func(options)
 
     def apps(self, options):
@@ -53,7 +57,7 @@ class Command(BaseCommand):
         for a in apps:
             count += 1
             monitor_app.delay(a.id)
-        
+
         self.stdout.write(self.style.SUCCESS(f"Enqueued {count} apps for diagnostic"))
 
     def scripts(self, options):
@@ -67,5 +71,5 @@ class Command(BaseCommand):
         for s in scripts:
             count += 1
             execute_scripts.delay(s.id)
-        
+
         self.stdout.write(self.style.SUCCESS(f"Enqueued {count} scripts for execution"))

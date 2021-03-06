@@ -11,7 +11,7 @@ from .google_cloud_storage import (
 from .screenshotmachine import (
     SCREENSHOTMACHINE_PATH,
     SCREENSHOTMACHINE_INSTANCES,
-    apply_requests_get_mock,
+    apply_screenshotmachine_requests_get_mock,
 )
 from .celery import (
     CELERY_PATH,
@@ -26,7 +26,7 @@ from .django_contrib import (
 from .mailgun import (
     MAILGUN_PATH,
     MAILGUN_INSTANCES,
-    apply_requests_post_mock,
+    apply_mailgun_requests_post_mock,
 )
 from .slack import (
     SLACK_PATH,
@@ -54,4 +54,15 @@ from .old_breathecode import (
     OLD_BREATHECODE_ADMIN_URL,
     CONTACT_AUTOMATIONS,
     CONTACT_AUTOMATIONS_URL,
+)
+from .requests import (
+    REQUESTS_PATH,
+    REQUESTS_INSTANCES,
+    apply_requests_mock,
+    apply_requests_get_mock,
+    apply_requests_post_mock,
+    apply_requests_put_mock,
+    apply_requests_patch_mock,
+    apply_requests_delete_mock,
+    apply_requests_head_mock,
 )
