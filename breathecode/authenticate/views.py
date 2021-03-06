@@ -26,7 +26,7 @@ from .models import Profile, CredentialsGithub, Token, CredentialsSlack, Credent
 from .actions import reset_password, resend_invite
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
-from breathecode.utils import localize_query, capable_of, ValidationException
+from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
@@ -63,7 +63,7 @@ class LogoutView(APIView):
             'message': "User tokens successfully deleted",
         })
 
-class MemberView(APIView):
+class MemberView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('read_member')
     def get(self, request, academy_id, user_id=None):
@@ -90,8 +90,13 @@ class MemberView(APIView):
         if not is_many:
             items = items.first()
 
-        serializer = GETProfileAcademy(items, many=is_many)
-        return Response(serializer.data)
+        page = self.paginate_queryset(items, request)
+        serializer = GETProfileAcademy(page, many=is_many)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
     @capable_of('crud_member')
     def post(self, request, academy_id=None):
@@ -131,7 +136,7 @@ class MemberView(APIView):
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-class StudentView(APIView):
+class StudentView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('read_student')
     def get(self, request, academy_id=None, user_id=None):
@@ -154,8 +159,13 @@ class StudentView(APIView):
         if status is not None:
             items = items.filter(status__iexact=status)
 
-        serializer = GETProfileAcademy(items, many=True)
-        return Response(serializer.data)
+        page = self.paginate_queryset(items, request)
+        serializer = GETProfileAcademy(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
     @capable_of('crud_student')
     def post(self, request, academy_id=None):
@@ -796,19 +806,19 @@ class AcademyInviteView(APIView):
     @capable_of('admissions_developer')
     def put(self, request, user_id=None, academy_id=None):
         if user_id is not None:
-            user = ProfileAcademy.objects.filter(user__id=user_id,academy__id=academy_id).first() 
+            user = ProfileAcademy.objects.filter(user__id=user_id,academy__id=academy_id).first()
 
             if user is None:
                 raise ValidationException("Member not found", 400)
-            invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email, author=request.user).first() 
+            invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email, author=request.user).first()
 
             if invite is None:
                 raise ValidationException("Invite not found", 400)
-                
+
             if invite.sent_at is not None:
                 now = timezone.now()
                 minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
-                
+
                 if minutes_diff < 2:
                     raise ValidationException("Imposible to resend invitation", 400)
 
@@ -825,7 +835,7 @@ def render_invite(request, token, member_id=None):
     _dict["callback"] = request.GET.get("callback", '')
 
     if request.method == 'GET':
-        
+
         invite = UserInvite.objects.filter(token=token).first()
         if invite is None:
             return render(request, 'message.html', {

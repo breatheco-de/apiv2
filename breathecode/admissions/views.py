@@ -3,6 +3,7 @@ from django.db.models import Q
 from django.utils import timezone
 from django.shortcuts import render
 from django.contrib.auth.models import AnonymousUser
+from breathecode.utils import HeaderLimitOffsetPagination
 from rest_framework.views import APIView
 from django.db.models import Q
 from rest_framework import serializers
@@ -26,6 +27,7 @@ from django.http import QueryDict
 from django.db.utils import IntegrityError
 from rest_framework.exceptions import NotFound, ParseError, PermissionDenied, ValidationError
 from breathecode.assignments.models import Task
+from rest_framework.pagination import PageNumberPagination
 
 logger = logging.getLogger(__name__)
 
@@ -438,7 +440,8 @@ class AcademyCohortUserView(APIView):
         cu.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-class AcademyCohortView(APIView):
+
+class AcademyCohortView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
@@ -476,8 +479,13 @@ class AcademyCohortView(APIView):
         if location is not None:
             items = items.filter(academy__slug__in=location.split(","))
 
-        serializer = GetCohortSerializer(items, many=True)
-        return Response(serializer.data)
+        page = self.paginate_queryset(items, request)
+        serializer = GetCohortSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_cohort')
     def post(self, request, academy_id=None):

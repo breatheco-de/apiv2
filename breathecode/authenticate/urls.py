@@ -28,16 +28,16 @@ urlpatterns = [
     path('user/', get_users, name="user"),
     path('role', get_roles, name="role"),
     path('user/me', UserMeView.as_view(), name="user_me"),
-  
+
     path('user/invite/resend/<int:user_id>', AcademyInviteView.as_view(), name="academy_resent_invite"),
     path('user/invite/<str:token>', render_invite, name="academy_invite"),
 
-    path('academy/member', MemberView.as_view()),
+    path('academy/member', MemberView.as_view(), name="academy_member"),
     path('academy/<int:academy_id>/member', MemberView.as_view(), name="academy_id_member"),
     path('academy/member/<int:user_id>', MemberView.as_view(), name="academy_id_member_id"),
     path('academy/<int:academy_id>/member/<int:user_id>', MemberView.as_view(), name="academy_id_member_id"),
 
-    path('academy/student', StudentView.as_view()),
+    path('academy/student', StudentView.as_view(), name="academy_student"),
     path('academy/student/<int:user_id>', StudentView.as_view()),
     # path('group/', get_groups, name="group"),
 
