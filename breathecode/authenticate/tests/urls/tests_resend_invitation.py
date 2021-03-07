@@ -12,7 +12,9 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from datetime import datetime
+from datetime import timedelta, datetime
+from django.utils import timezone
+# import datetime
 
 
 class AuthenticateTestSuite(AuthTestCase):
@@ -116,5 +118,30 @@ class AuthenticateTestSuite(AuthTestCase):
                 'phone': model['user_invite'].phone,
                 }
                 ])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_resend_invite_recenntly(self):
+        """Test """
+        self.headers(academy=1)
+        past_time = timezone.now() - timedelta(seconds=100)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+                capability='admissions_developer', role='potato', syllabus=True,
+                user_invite=True, token=True, 
+                user_invite_kwargs={'sent_at': past_time})
+        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={"user_id":1})
+        response = self.client.put(url)
+        json = response.json()
+        expected = {'detail': 'Imposible to resend invitation', 'status_code': 400}
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+
+        # use for testing db
+        self.assertEqual(self.all_user_invite_dict(), [{
+            **self.model_to_dict(model, 'user_invite'),
+            'sent_at': past_time,
+        }])
+        
        
         

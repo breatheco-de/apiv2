@@ -126,11 +126,11 @@ class AcademyEventView(APIView):
             lookup['venue__city__iexact'] = city
 
         if 'country' in self.request.GET:
-            value = self.request.GET.get('city')
+            value = self.request.GET.get('country')
             lookup['venue__country__iexact'] = value
 
         if 'zip_code' in self.request.GET:
-            value = self.request.GET.get('city')
+            value = self.request.GET.get('zip_code')
             lookup['venue__zip_code'] = value
 
         if 'upcoming' in self.request.GET:
