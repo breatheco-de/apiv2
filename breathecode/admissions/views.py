@@ -616,8 +616,6 @@ class SyllabusView(APIView):
         if syl is None:
             raise ValidationException("Syllabus not found", code=404)
 
-        # TODO: if a syllabus is private, no other academy should be able to see it
-
         serializer = SyllabusGetSerializer(syl, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
