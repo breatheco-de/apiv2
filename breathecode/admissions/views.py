@@ -594,8 +594,7 @@ class SyllabusView(APIView):
     List all snippets, or create a new snippet.
     """
 
-    # TODO: uncomment decorator when finally all students have a ProfileAcademy object.
-    # @capable_of('read_syllabus')
+    @capable_of('read_syllabus')
     def get(self, request, certificate_slug=None, version=None, academy_id=None):
         if academy_id is None:
             raise ValidationException("Missing academy id")
