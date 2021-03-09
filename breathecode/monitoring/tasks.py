@@ -9,13 +9,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception,)
+    # TODO: remember uncomment it
+    # autoretry_for = (Exception,)
     #                                           seconds
     retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5 }
     retry_backoff = True
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def monitor_app(self,app_id):
+    print('here')
     logger.debug("Starting monitor_app")
     app = Application.objects.get(id=app_id)
 
@@ -34,6 +36,7 @@ def monitor_app(self,app_id):
                 "details": result["details"]
             })
         if app.notify_slack_channel is not None:
+            # TODO: here is the problem
             send_slack_raw("diagnostic", app.academy.slackteam.owner.credentialsslack.token, app.notify_slack_channel.slack_id, {
                 "subject": f"Errors have been found on {app.title} diagnostic",
                 **result,

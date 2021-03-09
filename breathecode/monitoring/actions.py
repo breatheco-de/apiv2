@@ -2,11 +2,15 @@ import logging, datetime, hashlib, requests, json, re, os, subprocess, sys
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
 from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint
+
+
 logger = logging.getLogger(__name__)
-USER_AGENT="Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
+USER_AGENT="BreathecodeMonitoring/1.0"
+
 
 def get_website_text(endp):
     """Make a request to get the content of the given URL."""
+    import requests
 
     headers = {
         'User-Agent': USER_AGENT
@@ -24,12 +28,15 @@ def get_website_text(endp):
             length = r.headers['content-length']
         status_code = r.status_code
 
-        if endp.test_pattern is not None and endp.test_pattern != "" and status_code == 200:
-            if int(length) > 3000:
-                status_code = 400
-                status_text = "Timeout: The payload of this request is too long (more than 3 MB), remove the test_pattern to avoid timeout"
-            else:
-                payload = r.text
+        # if status is one error, we should need see the status text
+        payload = r.text
+
+        if (endp.test_pattern and not (status_code >= 200 and status_code <= 299)
+                and int(length) > 3000):
+            status_code = 400
+            status_text = ("Timeout: The payload of this request is too long "
+                "(more than 3 MB), remove the test_pattern to avoid timeout")
+
     except requests.Timeout:
         status_code = 500
         status_text = "Connection Timeout"
@@ -39,32 +46,51 @@ def get_website_text(endp):
 
     logger.debug(f"Tested {url} {status_code}")
     endp.last_check = timezone.now()
+
     if status_code > 399:
         endp.status = 'CRITICAL'
         endp.severity_level = 100
         endp.status_text = "Status above 399"
+
     elif status_code > 299:
         endp.status = 'MINOR'
         endp.severity_level = 5
         endp.status_text = "Status in the 3xx range, maybe a cached reponse?"
+
     elif status_code > 199:
         endp.severity_level = 5
         endp.status = 'OPERATIONAL'
         endp.status_text = "Status withing the 2xx range"
+
     else:
         endp.status = 'MINOR'
         endp.severity_level = 0
         endp.status_text = "Uknown status code, lower than 200"
 
-    if endp.test_pattern is not None and endp.test_pattern != "" and status_code == 200 and payload:
+    if endp.test_pattern and status_code == 200 and payload:
         if not re.search(endp.test_pattern, payload):
+            endp.response_text = payload
             endp.status = 'MINOR'
             endp.severity_level = 5
             endp.status_text = f"Status is 200 but regex {endp.test_pattern} was rejected"
+        else:
+            endp.response_text = None
+
+    elif not (status_code >= 200 and status_code <= 299):
+        endp.response_text = payload
+    else:
+        endp.response_text = None
+
+    if status_text:
+        print('status', status_text)
+        endp.status_text = status_text
 
     print("status", endp.status_text)
     endp.status_code = status_code
-    endp.response_text = payload
+
+    # if status is one error, we should need see the status text
+
+
     endp.save()
 
     return endp
@@ -80,7 +106,11 @@ def run_app_diagnostic(app, report=False):
     logger.debug(f"Testing application {app.title}")
     now = timezone.now()
     _endpoints = app.endpoint_set.all()
+    print('====================', app.endpoint_set.all())
+    print('====================', 'endpoint.__dict__')
+    print('====================', 'endpoint.__dict__')
     for endpoint in _endpoints:
+        print('====================', endpoint.__dict__)
         if endpoint.last_check is not None and endpoint.last_check > now - timezone.timedelta(minutes = endpoint.frequency_in_minutes):
             logger.debug(f"Ignoring {endpoint.url} because frequency hast not been met")
             endpoint.status_text = "Ignored because its paused"
@@ -94,7 +124,7 @@ def run_app_diagnostic(app, report=False):
             continue
 
         # Starting the test
-        logger.debug(f"Testing endpoint: {endpoint.url} ")
+        logger.debug(f"Testing endpoint: {endpoint.url}")
         endpoint.status = 'LOADING'
         endpoint.save()
 

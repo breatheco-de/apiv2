@@ -41,22 +41,30 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            func = getattr(self,options['entity'], 'entity_not_found')
+            func = getattr(self,options['entity'], None)
         except TypeError:
-            print(f'Sync method for {options["entity"]} no Found!')
-        except KeyError:
-            print('Entity arguments is not set')
+            self.stderr.write(self.style.ERROR(f'Sync method for {options["entity"]} no Found!'))
             return
-            # raise Exception('Entity arguments is not set')
+        except KeyError:
+            self.stderr.write(self.style.ERROR('Entity arguments is not set'))
+            return
+
+        if not callable(func):
+            self.stderr.write(self.style.ERROR('Entity not found'))
+            return
+
         func(options)
 
     def apps(self, options):
 
         apps = Application.objects.all()
         count = 0
+        print('apps', apps)
         for a in apps:
             count += 1
+            print('yyyyyyyyy', 1)
             monitor_app.delay(a.id)
+            print('yyyyyyyyy', 2)
 
         self.stdout.write(self.style.SUCCESS(f"Enqueued {count} apps for diagnostic"))
 

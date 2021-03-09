@@ -1,3 +1,5 @@
+import json
+
 class ResponseMock():
     """Simutate Response to be used by mocks"""
     status_code = None
@@ -13,8 +15,13 @@ class ResponseMock():
 
         if isinstance(data, str):
             self.content = data
+            self.text = data
         else:
+            content = json.dumps(data)
+
             self.data = data
+            self.content = content
+            self.text = content
 
     def json(self) -> dict:
         """Convert Response to JSON"""
