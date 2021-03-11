@@ -59,12 +59,9 @@ class Command(BaseCommand):
 
         apps = Application.objects.all()
         count = 0
-        print('apps', apps)
         for a in apps:
             count += 1
-            print('yyyyyyyyy', 1)
             monitor_app.delay(a.id)
-            print('yyyyyyyyy', 2)
 
         self.stdout.write(self.style.SUCCESS(f"Enqueued {count} apps for diagnostic"))
 

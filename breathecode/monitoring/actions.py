@@ -82,15 +82,9 @@ def get_website_text(endp):
         endp.response_text = None
 
     if status_text:
-        print('status', status_text)
         endp.status_text = status_text
 
-    print("status", endp.status_text)
     endp.status_code = status_code
-
-    # if status is one error, we should need see the status text
-
-
     endp.save()
 
     return endp
@@ -106,11 +100,7 @@ def run_app_diagnostic(app, report=False):
     logger.debug(f"Testing application {app.title}")
     now = timezone.now()
     _endpoints = app.endpoint_set.all()
-    print('====================', app.endpoint_set.all())
-    print('====================', 'endpoint.__dict__')
-    print('====================', 'endpoint.__dict__')
     for endpoint in _endpoints:
-        print('====================', endpoint.__dict__)
         if endpoint.last_check is not None and endpoint.last_check > now - timezone.timedelta(minutes = endpoint.frequency_in_minutes):
             logger.debug(f"Ignoring {endpoint.url} because frequency hast not been met")
             endpoint.status_text = "Ignored because its paused"

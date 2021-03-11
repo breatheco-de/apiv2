@@ -724,16 +724,12 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     @patch(REQUESTS_PATH['get'], apply_requests_get_mock([(500, 'https://potato.io', {})]))
-    def tests_monitor_with_entity_apps_status_500_with_notify_slack_channel(self):
+    def tests_monitor_with_entity_apps_status_500_with_notify_slack_channel_without_slack_team(self):
         mock_mailgun = MAILGUN_INSTANCES['post']
         mock_mailgun.call_args_list = []
 
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
-
-        # application_kwargs = {
-        #     'notify_slack_channel': 'konan'
-        # }
 
         endpoint_kwargs = {
             'url': 'https://potato.io'
@@ -743,14 +739,12 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             slack_channel=True, credentials_slack=True,
             # academy=True, slack_team=True,
             endpoint_kwargs=endpoint_kwargs)
-        print(model.endpoint.__dict__)
+
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
-        print('===================================================================================================')
         self.assertEqual(command.handle(entity='apps'), None)
-        print('===================================================================================================')
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
 
@@ -769,8 +763,117 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         import requests
         mock_breathecode = requests.get
 
-        self.assertEqual(len(mock_mailgun.call_args_list), 1)
+        self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
+        self.assertEqual(mock_breathecode.call_args_list, [call(
+            'https://potato.io',
+            headers={
+                'User-Agent': 'BreathecodeMonitoring/1.0'
+            },
+            timeout=2
+        )])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch(REQUESTS_PATH['get'], apply_requests_get_mock([(500, 'https://potato.io', {})]))
+    def tests_monitor_with_entity_apps_status_500_with_notify_slack_channel_without_slack_models(self):
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_slack = SLACK_INSTANCES['request']
+        mock_slack.call_args_list = []
+
+        endpoint_kwargs = {
+            'url': 'https://potato.io'
+        }
+
+        model = self.generate_models(application=True, endpoint=True,
+            slack_channel=True, credentials_slack=True,
+            endpoint_kwargs=endpoint_kwargs)
+
+        command = Command()
+        command.stdout.write = MagicMock()
+        command.stderr.write = MagicMock()
+
+        self.assertEqual(command.handle(entity='apps'), None)
+        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stderr.write.call_args_list, [])
+
+        endpoints = [{**endpoint, 'last_check': None} for endpoint in
+            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+        self.assertEqual(endpoints, [{
+            **self.model_to_dict(model, 'endpoint'),
+            'frequency_in_minutes': 30.0,
+            'response_text': '{}',
+            'severity_level': 100,
+            'status': 'CRITICAL',
+            'status_code': 500,
+            'status_text': 'Status above 399',
+        }])
+
+        import requests
+        mock_breathecode = requests.get
+
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        self.assertEqual(mock_slack.call_args_list, [])
+        self.assertEqual(mock_breathecode.call_args_list, [call(
+            'https://potato.io',
+            headers={
+                'User-Agent': 'BreathecodeMonitoring/1.0'
+            },
+            timeout=2
+        )])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch(REQUESTS_PATH['get'], apply_requests_get_mock([(500, 'https://potato.io', {})]))
+    def tests_monitor_with_entity_apps_status_500_with_notify_slack_channel_with_slack_models(self):
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_slack = SLACK_INSTANCES['request']
+        mock_slack.call_args_list = []
+
+        endpoint_kwargs = {
+            'url': 'https://potato.io'
+        }
+
+        model = self.generate_models(application=True, endpoint=True,
+            slack_channel=True, credentials_slack=True,
+            slack_team=True, academy=True,
+            endpoint_kwargs=endpoint_kwargs)
+
+        command = Command()
+        command.stdout.write = MagicMock()
+        command.stderr.write = MagicMock()
+
+        self.assertEqual(command.handle(entity='apps'), None)
+        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stderr.write.call_args_list, [])
+
+        endpoints = [{**endpoint, 'last_check': None} for endpoint in
+            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+        self.assertEqual(endpoints, [{
+            **self.model_to_dict(model, 'endpoint'),
+            'frequency_in_minutes': 30.0,
+            'response_text': '{}',
+            'severity_level': 100,
+            'status': 'CRITICAL',
+            'status_code': 500,
+            'status_text': 'Status above 399',
+        }])
+
+        import requests
+        mock_breathecode = requests.get
+
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        self.assertEqual(len(mock_slack.call_args_list), 1)
         self.assertEqual(mock_breathecode.call_args_list, [call(
             'https://potato.io',
             headers={
