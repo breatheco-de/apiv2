@@ -10,6 +10,7 @@ from breathecode.utils import ValidationException
 from ...actions import generate_certificate, strings
 from ..mixins.new_certificate_test_case import CertificateTestCase
 from ....admissions.models import FULLY_PAID, UP_TO_DATE, LATE
+from breathecode.utils import ValidationException
 # from .mocks import CertificateBreathecodeMock
 from ..mocks import (
     GOOGLE_CLOUD_PATH,
@@ -575,11 +576,17 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         teacher_model = self.generate_models(user=True, cohort_user=True,
         cohort_user_role='TEACHER', models=base)
-        result = self.remove_dinamics_fields(generate_certificate(
-            model['user'], model['cohort']).__dict__)
-        result2 = self.remove_dinamics_fields(generate_certificate(
-            model['user'], model['cohort']).__dict__)
-        print('result:', result)
+        result = generate_certificate(model['user'], model['cohort'])
+        
+        result.preview_url = 'http://potato.io'
+        result.save()
+        result = self.remove_dinamics_fields(result.__dict__)
+        
+        try:
+            generate_certificate(model['user'], model['cohort'])
+            assert False        
+        except ValidationException as e:
+            self.assertEqual(str(e), "This user already has a certificate created")
         
         expected = {
             'academy_id': 1,
@@ -596,25 +603,14 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'Certificate successfully queued for PDF generation',
             'user_id': 1,
             'is_cleaned': True,
+            'preview_url': 'http://potato.io',
         }
 
-        self.assertEqual(result, result2)
         self.assertToken(result['token'])
         token = result['token']
         del result['token']
 
         self.assertEqual(result, expected)
-        
         del expected['is_cleaned']
-
-        all_specialties = self.all_user_specialty_dict()
-        num_specialty = len(all_specialties)
-        self.assertEqual(num_specialty,1)
-
-        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
-            [{**expected, 'token': token}])
+        self.assertEqual(self.all_user_specialty_dict(), [{**expected, 'token': token}])
         
-        assert False
-        
-        
-    

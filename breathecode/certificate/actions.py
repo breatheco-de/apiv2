@@ -59,9 +59,12 @@ def generate_certificate(user, cohort=None):
         raise ValidationException(message)
 
     uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
-
-    if uspe is not None:
-        print(vars(uspe))
+    
+    if (uspe is not None and uspe.status_text == 'Certificate successfully queued for PDF generation' and 
+            uspe.status == 'PERSISTED' and uspe.preview_url):
+        message = "This user already has a certificate created"
+        logger.error(message)
+        raise ValidationException(message)
     
     if uspe is None:
         uspe = UserSpecialty(
