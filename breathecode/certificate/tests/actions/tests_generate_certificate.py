@@ -552,3 +552,69 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
             [{**expected, 'token': token}])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_generate_certificate_repeated_certificate(self):
+        """
+        Step 16
+        Tests dennyy generate_certificate that is already created for same student
+        in same cohort
+        Status: BAD_REQUEST
+        """
+        model = self.generate_models(user=True, cohort=True, cohort_user=True,
+            specialty=True, layout_design=True, cohort_finished=True,
+            cohort_user_finantial_status='UP_TO_DATE', syllabus=True,
+            cohort_user_educational_status='GRADUATED',
+            cohort_stage='ENDED')
+
+        base = model.copy()
+        del base['user']
+        del base['cohort_user']
+
+        teacher_model = self.generate_models(user=True, cohort_user=True,
+        cohort_user_role='TEACHER', models=base)
+        result = self.remove_dinamics_fields(generate_certificate(
+            model['user'], model['cohort']).__dict__)
+        result2 = self.remove_dinamics_fields(generate_certificate(
+            model['user'], model['cohort']).__dict__)
+        print('result:', result)
+        
+        expected = {
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + " " +
+                teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'specialty_id': 1,
+            'status': 'PERSISTED',
+            'status_text': 'Certificate successfully queued for PDF generation',
+            'user_id': 1,
+            'is_cleaned': True,
+        }
+
+        self.assertEqual(result, result2)
+        self.assertToken(result['token'])
+        token = result['token']
+        del result['token']
+
+        self.assertEqual(result, expected)
+        
+        del expected['is_cleaned']
+
+        all_specialties = self.all_user_specialty_dict()
+        num_specialty = len(all_specialties)
+        self.assertEqual(num_specialty,1)
+
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
+            [{**expected, 'token': token}])
+        
+        assert False
+        
+        
+    

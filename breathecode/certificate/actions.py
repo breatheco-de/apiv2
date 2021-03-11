@@ -59,6 +59,10 @@ def generate_certificate(user, cohort=None):
         raise ValidationException(message)
 
     uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
+
+    if uspe is not None:
+        print(vars(uspe))
+    
     if uspe is None:
         uspe = UserSpecialty(
             user = user,

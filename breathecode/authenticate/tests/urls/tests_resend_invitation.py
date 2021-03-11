@@ -122,7 +122,7 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_resend_invite_recenntly(self):
+    def test_resend_invite_recently(self):
         """Test """
         self.headers(academy=1)
         past_time = timezone.now() - timedelta(seconds=100)

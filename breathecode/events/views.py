@@ -136,8 +136,9 @@ class AcademyEventView(APIView):
         if 'upcoming' in self.request.GET:
             lookup['starting_at__gte'] = timezone.now()
         elif 'past' in self.request.GET:
-            if self.request.GET.get('past') == "true":
+            if 'starting_at__gte' in lookup:
                 lookup.pop("starting_at__gte")
+            if self.request.GET.get('past') == "true":
                 lookup['starting_at__lte'] = timezone.now()
             
         items = items.filter(**lookup).order_by('-starting_at')
