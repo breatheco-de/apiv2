@@ -1,6 +1,6 @@
 from datetime import timedelta
 from django.utils import timezone
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock, call, mock_open
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,
@@ -15,12 +15,17 @@ from breathecode.tests.mocks import (
     REQUESTS_PATH,
     REQUESTS_INSTANCES,
     apply_requests_get_mock,
+    LOGGING_PATH,
+    LOGGING_INSTANCES,
+    apply_logging_logger_mock
 )
 from ...mixins import MonitoringTestCase
 from ....management.commands.monitor import Command
 
 class AcademyCohortTestSuite(MonitoringTestCase):
-
+    """
+    🔽🔽🔽 With bad entity 🔽🔽🔽
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -79,6 +84,10 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
         self.assertEqual(mock_breathecode.call_args_list, [])
+
+    """
+    🔽🔽🔽 App entity 🔽🔽🔽
+    """
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -881,3 +890,350 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             },
             timeout=2
         )])
+
+    """
+    🔽🔽🔽 Scripts entity 🔽🔽🔽
+    """
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    def tests_monitor_with_entity_scripts_without_data(self):
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_slack = SLACK_INSTANCES['request']
+        mock_slack.call_args_list = []
+
+        command = Command()
+        command.stdout.write = MagicMock()
+        command.stderr.write = MagicMock()
+
+        self.assertEqual(command.handle(entity='scripts'), None)
+        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 0 scripts for execution')])
+        self.assertEqual(command.stderr.write.call_args_list, [])
+
+        self.assertEqual(self.all_monitor_script_dict(), [])
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        self.assertEqual(mock_slack.call_args_list, [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    def tests_monitor_with_entity_scripts_doesnt_exist_or_not_have_body(self):
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_slack = SLACK_INSTANCES['request']
+        mock_slack.call_args_list = []
+
+        model = self.generate_models(monitor_script=True)
+
+        command = Command()
+        command.stdout.write = MagicMock()
+        command.stderr.write = MagicMock()
+
+        self.assertEqual(command.handle(entity='scripts'), None)
+        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_monitor_script_dict(), [{
+            **self.model_to_dict(model, 'monitor_script'),
+        }])
+
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        self.assertEqual(mock_slack.call_args_list, [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    def tests_monitor_with_entity_scripts_in_body_with_successful_execution(self):
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_slack = SLACK_INSTANCES['request']
+        mock_slack.call_args_list = []
+
+        monitor_script_kwargs = {
+            'script_body': 'print(\'aaaa\')'
+        }
+
+        model = self.generate_models(monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
+
+        command = Command()
+        command.stdout.write = MagicMock()
+        command.stderr.write = MagicMock()
+
+        self.assertEqual(command.handle(entity='scripts'), None)
+        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stderr.write.call_args_list, [])
+
+        monitor_scripts = [{**x, 'last_run': None} for x in
+            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+        self.assertEqual(monitor_scripts, [{
+            **self.model_to_dict(model, 'monitor_script'),
+            'response_text': 'aaaa\n',
+            'status_code': 0,
+        }])
+
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        self.assertEqual(mock_slack.call_args_list, [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    def tests_monitor_with_entity_scripts_in_body_with_minor_error(self):
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_slack = SLACK_INSTANCES['request']
+        mock_slack.call_args_list = []
+
+        monitor_script_kwargs = {
+            'script_body': '\n'.join([
+                "from breathecode.utils import ScriptNotification",
+                "raise ScriptNotification('thus spoke kishibe rohan', status='MINOR')"
+            ])
+        }
+
+        model = self.generate_models(monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
+
+        command = Command()
+        command.stdout.write = MagicMock()
+        command.stderr.write = MagicMock()
+
+        self.assertEqual(command.handle(entity='scripts'), None)
+        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stderr.write.call_args_list, [])
+
+        monitor_scripts = [{**x, 'last_run': None} for x in
+            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+        self.assertEqual(monitor_scripts, [{
+            **self.model_to_dict(model, 'monitor_script'),
+            'response_text': 'thus spoke kishibe rohan\n',
+            'status': 'MINOR',
+            'status_code': 1,
+        }])
+
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        self.assertEqual(mock_slack.call_args_list, [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    def tests_monitor_with_entity_scripts_in_body_with_critical_error(self):
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_slack = SLACK_INSTANCES['request']
+        mock_slack.call_args_list = []
+
+        monitor_script_kwargs = {
+            'script_body': '\n'.join([
+                "from breathecode.utils import ScriptNotification",
+                "raise ScriptNotification('thus spoke kishibe rohan', status='CRITICAL')"
+            ])
+        }
+
+        model = self.generate_models(monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
+
+        command = Command()
+        command.stdout.write = MagicMock()
+        command.stderr.write = MagicMock()
+
+        self.assertEqual(command.handle(entity='scripts'), None)
+        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stderr.write.call_args_list, [])
+
+        monitor_scripts = [{**x, 'last_run': None} for x in
+            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+        self.assertEqual(monitor_scripts, [{
+            **self.model_to_dict(model, 'monitor_script'),
+            'response_text': 'thus spoke kishibe rohan\n',
+            'status': 'CRITICAL',
+            'status_code': 1,
+        }])
+
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        self.assertEqual(mock_slack.call_args_list, [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch("builtins.open", mock_open(read_data="print(\'aaaa\')"))
+    def tests_monitor_with_entity_scripts_in_file_with_successful_execution(self):
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_slack = SLACK_INSTANCES['request']
+        mock_slack.call_args_list = []
+
+        monitor_script_kwargs = {
+            'script_slug': 'they-killed-kenny'
+        }
+
+        model = self.generate_models(monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
+
+        command = Command()
+        command.stdout.write = MagicMock()
+        command.stderr.write = MagicMock()
+
+        self.assertEqual(command.handle(entity='scripts'), None)
+        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stderr.write.call_args_list, [])
+
+        monitor_scripts = [{**x, 'last_run': None} for x in
+            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+        self.assertEqual(monitor_scripts, [{
+            **self.model_to_dict(model, 'monitor_script'),
+            'response_text': 'aaaa\n',
+            'status_code': 0,
+        }])
+
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        self.assertEqual(mock_slack.call_args_list, [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch("builtins.open", mock_open(read_data='\n'.join([
+        "from breathecode.utils import ScriptNotification",
+        "raise ScriptNotification('thus spoke kishibe rohan', status='MINOR')"
+    ])))
+    def tests_monitor_with_entity_scripts_in_file_with_minor_error(self):
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_slack = SLACK_INSTANCES['request']
+        mock_slack.call_args_list = []
+
+        monitor_script_kwargs = {
+            'script_slug': 'they-killed-kenny'
+        }
+
+        model = self.generate_models(monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
+
+        command = Command()
+        command.stdout.write = MagicMock()
+        command.stderr.write = MagicMock()
+
+        self.assertEqual(command.handle(entity='scripts'), None)
+        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stderr.write.call_args_list, [])
+
+        monitor_scripts = [{**x, 'last_run': None} for x in
+            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+        self.assertEqual(monitor_scripts, [{
+            **self.model_to_dict(model, 'monitor_script'),
+            'response_text': 'thus spoke kishibe rohan\n',
+            'status': 'MINOR',
+            'status_code': 1,
+        }])
+
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        self.assertEqual(mock_slack.call_args_list, [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch("builtins.open", mock_open(read_data='\n'.join([
+        "from breathecode.utils import ScriptNotification",
+        "raise ScriptNotification('thus spoke kishibe rohan', status='CRITICAL')"
+    ])))
+    def tests_monitor_with_entity_scripts_in_file_with_critical_error(self):
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_slack = SLACK_INSTANCES['request']
+        mock_slack.call_args_list = []
+
+        monitor_script_kwargs = {
+            'script_slug': 'they-killed-kenny'
+        }
+
+        model = self.generate_models(monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
+
+        command = Command()
+        command.stdout.write = MagicMock()
+        command.stderr.write = MagicMock()
+
+        self.assertEqual(command.handle(entity='scripts'), None)
+        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stderr.write.call_args_list, [])
+
+        monitor_scripts = [{**x, 'last_run': None} for x in
+            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+        self.assertEqual(monitor_scripts, [{
+            **self.model_to_dict(model, 'monitor_script'),
+            'response_text': 'thus spoke kishibe rohan\n',
+            'status': 'CRITICAL',
+            'status_code': 1,
+        }])
+
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        self.assertEqual(mock_slack.call_args_list, [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
+    @patch("builtins.open", mock_open(read_data='\n'.join([
+        "from breathecode.utils import ScriptNotification",
+        "raise ScriptNotification('thus spoke kishibe rohan', status='CRITICAL')"
+    ])))
+    def tests_monitor_with_entity_scripts_in_file_with_critical_error_with_notify(self):
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_slack = SLACK_INSTANCES['request']
+        mock_slack.call_args_list = []
+
+        application_kwargs = {
+            'notify_email': 'pokemon@potato.io'
+        }
+
+        monitor_script_kwargs = {
+            'script_slug': 'they-killed-kenny'
+        }
+
+        model = self.generate_models(monitor_script=True,
+            slack_channel=True, credentials_slack=True,
+            slack_team=True, academy=True, application=True,
+            application_kwargs=application_kwargs,
+            monitor_script_kwargs=monitor_script_kwargs)
+
+        command = Command()
+        command.stdout.write = MagicMock()
+        command.stderr.write = MagicMock()
+
+        self.assertEqual(command.handle(entity='scripts'), None)
+        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stderr.write.call_args_list, [])
+
+        monitor_scripts = [{**x, 'last_run': None} for x in
+            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+        self.assertEqual(monitor_scripts, [{
+            **self.model_to_dict(model, 'monitor_script'),
+            'response_text': 'thus spoke kishibe rohan\n',
+            'status': 'CRITICAL',
+            'status_code': 1,
+        }])
+
+        self.assertEqual(len(mock_mailgun.call_args_list), 1)
+        self.assertEqual(len(mock_slack.call_args_list), 1)

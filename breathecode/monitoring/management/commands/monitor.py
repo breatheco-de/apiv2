@@ -66,15 +66,13 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"Enqueued {count} apps for diagnostic"))
 
     def scripts(self, options):
-
         now = timezone.now()
         scripts = MonitorScript.objects\
                     .filter(Q(last_run__isnull=True) | Q(last_run__lte= now - F('frequency_delta')))\
                     .exclude(application__paused_until__isnull=False, application__paused_until__gte=now)\
                     .exclude(paused_until__isnull=False, paused_until__gte=now)
-        count = 0
+
         for s in scripts:
-            count += 1
             execute_scripts.delay(s.id)
 
-        self.stdout.write(self.style.SUCCESS(f"Enqueued {count} scripts for execution"))
+        self.stdout.write(self.style.SUCCESS(f"Enqueued {len(scripts)} scripts for execution"))

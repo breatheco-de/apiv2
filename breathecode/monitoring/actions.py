@@ -1,12 +1,20 @@
 import logging, datetime, hashlib, requests, json, re, os, subprocess, sys
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
-from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint
+from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint, render_snooze_script
 
 
 logger = logging.getLogger(__name__)
 USER_AGENT="BreathecodeMonitoring/1.0"
+SCRIPT_HEADER = """
+# from django.conf import settings
+# import breathecode.settings as app_settings
 
+# settings.configure(INSTALLED_APPS=app_settings.INSTALLED_APPS,DATABASES=app_settings.DATABASES)
+
+# import django
+# django.setup()
+"""
 
 def get_website_text(endp):
     """Make a request to get the content of the given URL."""
@@ -155,7 +163,6 @@ def run_app_diagnostic(app, report=False):
 
 
 def run_script(script):
-
     results = {
         "severity_level": 0,
         "details": ""
@@ -174,52 +181,49 @@ def run_script(script):
         sys.stdout = old
 
     content = None
-    if script.script_slug != "" and script.script_slug is not None and script.script_slug != "other":
+    if script.script_slug and script.script_slug != "other":
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        header = """
-# from django.conf import settings
-# import breathecode.settings as app_settings
-
-# settings.configure(INSTALLED_APPS=app_settings.INSTALLED_APPS,DATABASES=app_settings.DATABASES)
-
-# import django
-# django.setup()
-        """
+        header = SCRIPT_HEADER
         content = header + open(f"{dir_path}/scripts/{script.script_slug}.py").read()
-    elif script.script_body is not None and script.script_body != "":
+    elif script.script_body:
         content = script.script_body
     else:
-        raise Exception("Script not found or its body is empty: "+script.script_slug)
+        raise Exception(f"Script not found or its body is empty: {script.script_slug}")
 
-    if content is not None and content != "":
+    if content:
         local = { "result": { "details": "", "status": "OPERATIONAL" } }
         with stdoutIO() as s:
             try:
                 exec(content, { "academy": script.application.academy }, local)
                 script.status_code = 0
                 script.status = 'OPERATIONAL'
+                results['severity_level'] = 5
 
             except ScriptNotification as e:
                 script.status_code = 1
                 if e.status is not None:
                     script.status = e.status
+                    results['severity_level'] = 5 if e.status != 'CRITICAL' else 100
                 else:
                     script.status = 'MINOR'
+                    results['severity_level'] = 5
                 print(e)
             except Exception as e:
                 script.status_code = 1
                 script.status = 'CRITICAL'
+                results['severity_level'] = 100
                 print(e)
 
         script.last_run = timezone.now()
         script.response_text = s.getvalue()
         script.save()
 
-        result = {
-            "status": script.status,
-            "details": script.response_text
-        }
+        results['status'] = script.status
+        results['details'] = script.response_text
+        results["text"] = json.dumps(results, indent=4)
+        results["details"] = results["text"]
+        results["slack_payload"] = render_snooze_script([script]) #converting to json to send to slack
 
-        return result
+        return results
 
     return content is not None and script.status_code == 0

@@ -2,11 +2,18 @@
 Collections of mixins used to login in authorize microservice
 """
 from rest_framework.test import APITestCase
-from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin, DatetimeMixin
+from breathecode.tests.mixins import (
+    GenerateModelsMixin,
+    CacheMixin,
+    GenerateQueriesMixin,
+    HeadersMixin,
+    DatetimeMixin,
+    ExceptionMixin
+)
 from breathecode.authenticate.models import Token
 
 class MonitoringTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
-        GenerateQueriesMixin, HeadersMixin, DatetimeMixin):
+        GenerateQueriesMixin, HeadersMixin, DatetimeMixin, ExceptionMixin):
     """AdmissionsTestCase with auth methods"""
     def setUp(self):
         self.generate_queries()

@@ -1,17 +1,16 @@
 """
 Google Cloud Storage Mocks
 """
-from unittest.mock import Mock
-from .logger_mock import post_mock
+from unittest.mock import MagicMock
 
 LOGGING_PATH = {
     'logger': 'logging.Logger',
 }
 
 LOGGING_INSTANCES = {
-    'logger': Mock(side_effect=post_mock)
+    'logger': MagicMock()
 }
 
-def apply_mailgun_requests_post_mock():
+def apply_logging_logger_mock():
     """Apply Storage Blob Mock"""
     return LOGGING_INSTANCES['logger']
