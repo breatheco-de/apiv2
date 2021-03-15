@@ -5,10 +5,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from .models import Endpoint, Application, MonitorScript
 from breathecode.notify.models import SlackChannel
-from breathecode.notify.actions import send_slack_raw
 from django.utils.html import format_html
-from .actions import get_website_text, run_app_diagnostic
-from breathecode.notify.actions import send_email_message
 
 def test_app(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
