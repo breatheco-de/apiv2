@@ -1,6 +1,7 @@
 import logging, datetime, hashlib, requests, json, re, os, subprocess, sys
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
+from .models import Endpoint
 from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint, render_snooze_script
 
 
@@ -89,9 +90,6 @@ def get_website_text(endp):
     else:
         endp.response_text = None
 
-    if status_text:
-        endp.status_text = status_text
-
     endp.status_code = status_code
     endp.save()
 
@@ -159,6 +157,65 @@ def run_app_diagnostic(app, report=False):
 
     app.save()
 
+    return results
+
+
+def run_endpoint_diagnostic(endpoint_id):
+    endpoint = Endpoint.objects.get(id=endpoint_id)
+    results = {
+        "severity_level": 0,
+        "details": ""
+    }
+
+    logger.debug(f"Testing endpoint {endpoint.url}")
+    now = timezone.now()
+
+    if (endpoint.last_check and endpoint.last_check > now -
+            timezone.timedelta(minutes = endpoint.frequency_in_minutes)):
+        logger.debug(f"Ignoring {endpoint.url} because frequency hast not been met")
+        endpoint.status_text = "Ignored because its paused"
+        endpoint.save()
+        return
+
+    if endpoint.paused_until and endpoint.paused_until > now:
+        logger.debug(f"Ignoring endpoint:{endpoint.url} monitor because its paused")
+        endpoint.status_text = "Ignored because its paused"
+        endpoint.save()
+        return
+
+    # Starting the test
+    logger.debug(f"Testing endpoint: {endpoint.url}")
+    endpoint.status = 'LOADING'
+    endpoint.save()
+
+    e = get_website_text(endpoint)
+    results['details'] = e.response_text
+    if e.status != 'OPERATIONAL':
+        if e.severity_level > results["severity_level"]:
+            results["severity_level"] = e.severity_level
+        if e.special_status_text:
+            results["details"] += e.special_status_text
+        if e.status not in results:
+            results[e.status] = []
+        results[e.status].append(e.url)
+
+    if results["severity_level"] == 0:
+        results["status"] = 'OPERATIONAL'
+    elif results["severity_level"] > 10:
+        results["status"] = 'CRITICAL'
+    else:
+        results["status"] = 'MINOR'
+
+    results["text"] = json.dumps(results, indent=4)
+    results["slack_payload"] = render_snooze_text_endpoint([endpoint]) #converting to json to send to slack
+
+    if results["details"] != "":
+        endpoint.response_text = results["details"]
+    else:
+        results["details"] = results["text"]
+        endpoint.response_text = results["text"]
+
+    endpoint.save()
     return results
 
 

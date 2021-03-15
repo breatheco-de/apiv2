@@ -1,24 +1,21 @@
 import os, ast
 from django.contrib import admin
-from django import forms 
+from django import forms
 from django.utils import timezone
 from django.contrib.auth.models import User
 from .models import Endpoint, Application, MonitorScript
 from breathecode.notify.models import SlackChannel
 from breathecode.notify.actions import send_slack_raw
 from django.utils.html import format_html
-from .actions import get_website_text, run_app_diagnostic, run_script
+from .actions import get_website_text, run_app_diagnostic
 from breathecode.notify.actions import send_email_message
 
 def test_app(modeladmin, request, queryset):
-    appications = queryset.all()
-    for app in appications:
-        result = run_app_diagnostic(app)
-        if result["status"] != "OPERATIONAL" and app.notify_slack_channel is not None:
-            send_slack_raw("diagnostic", app.academy.slackteam.owner.credentialsslack.token, app.notify_slack_channel.slack_id, {
-                "subject": f"Errors have been found on {app.title} diagnostic",
-                **result,
-            })
+    # stay this here for use the poor mocking system
+    from .tasks import monitor_app
+
+    for app in queryset.all():
+        monitor_app.delay(app.id)
 test_app.short_description = "Run Applications Diagnostic"
 
 class CustomAppModelForm(forms.ModelForm):
@@ -52,14 +49,15 @@ class ApplicationAdmin(admin.ModelAdmin):
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</a>")
 
 def test_endpoint(modeladmin, request, queryset):
-    endpoints = queryset.all()
-    for end in endpoints:
-        get_website_text(end)
+    # stay this here for use the poor mocking system
+    from .tasks import test_endpoint
+
+    for end in queryset.all():
+        test_endpoint.delay(end.id)
 test_endpoint.short_description = "Test Endpoint"
 
 def pause_for_one_day(modeladmin, request, queryset):
-    endpoints = queryset.all()
-    for end in endpoints:
+    for end in queryset.all():
         end.paused_until = timezone.now() + timezone.timedelta(days=1)
         end.save()
 pause_for_one_day.short_description = "PAUSE for 1 day"
@@ -85,9 +83,11 @@ class EndpointAdmin(admin.ModelAdmin):
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</a>")
 
 def run_single_script(modeladmin, request, queryset):
-    scripts = queryset.all()
-    for s in scripts:
-        run_script(s)
+    # stay this here for use the poor mocking system
+    from .tasks import execute_scripts
+
+    for s in queryset.all():
+        execute_scripts.delay(s.id)
 run_single_script.short_description = "Run Script"
 
 class CustomForm(forms.ModelForm):
@@ -115,7 +115,7 @@ class MonitorScriptAdmin(admin.ModelAdmin):
     list_display = ('script_slug', 'application', 'current_status', 'frequency_delta', 'status_code', 'paused_until', 'last_run')
     actions=[run_single_script]
     list_filter = ['status','application__title']
-    
+
     def current_status(self,obj):
         colors = {
             "OPERATIONAL": "bg-success",

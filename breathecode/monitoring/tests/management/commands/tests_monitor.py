@@ -85,9 +85,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(mock_slack.call_args_list, [])
         self.assertEqual(mock_breathecode.call_args_list, [])
 
-    """
-    🔽🔽🔽 App entity 🔽🔽🔽
-    """
+    # """
+    # 🔽🔽🔽 App entity 🔽🔽🔽
+    # """
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -102,9 +102,6 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        mock_breathecode = REQUESTS_INSTANCES['get']
-        mock_breathecode.call_args_list = []
-
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
@@ -112,7 +109,12 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 0 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [])
         self.assertEqual(self.all_endpoint_dict(), [])
+
+        import requests
+        mock_breathecode = requests.get
+        mock_breathecode.call_args_list = []
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
@@ -131,9 +133,6 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        mock_breathecode = REQUESTS_INSTANCES['get']
-        mock_breathecode.call_args_list = []
-
         model = self.generate_models(application=True)
         command = Command()
         command.stdout.write = MagicMock()
@@ -142,7 +141,14 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
         self.assertEqual(self.all_endpoint_dict(), [])
+
+        import requests
+        mock_breathecode = requests.get
+        mock_breathecode.call_args_list = []
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
@@ -161,9 +167,6 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        mock_breathecode = REQUESTS_INSTANCES['get']
-        mock_breathecode.call_args_list = []
-
         endpoint_kwargs = {
             'url': 'https://potato.io',
             'paused_until': timezone.now() + timedelta(minutes=2),
@@ -178,13 +181,20 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         self.assertEqual(self.all_endpoint_dict(), [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
             'severity_level': 0,
-            'status_text': 'Ignored because its paused',
+            'status_text': None,
         }])
+
+        import requests
+        mock_breathecode = requests.get
+        mock_breathecode.call_args_list = []
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
@@ -203,9 +213,6 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        mock_breathecode = REQUESTS_INSTANCES['get']
-        mock_breathecode.call_args_list = []
-
         endpoint_kwargs = {
             'url': 'https://potato.io',
             'paused_until': timezone.now(),
@@ -220,15 +227,23 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
+            'response_text': None,
             'severity_level': 5,
             'status_text': 'Status withing the 2xx range',
         }])
+
+        import requests
+        mock_breathecode = requests.get
+        mock_breathecode.call_args_list = []
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
@@ -247,16 +262,13 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        application_kwargs = {
-            'paused_until': timezone.now() + timedelta(minutes=2)
-        }
-
         endpoint_kwargs = {
             'url': 'https://potato.io',
+            'paused_until': timezone.now() + timedelta(minutes=2),
         }
 
         model = self.generate_models(application=True, endpoint=True,
-            application_kwargs=application_kwargs, endpoint_kwargs=endpoint_kwargs)
+            endpoint_kwargs=endpoint_kwargs)
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
@@ -264,6 +276,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         self.assertEqual(self.all_endpoint_dict(), [{
             **self.model_to_dict(model, 'endpoint'),
@@ -300,6 +315,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
@@ -349,12 +367,16 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
+            'response_text': None,
             'severity_level': 5,
             'status_text': 'Status withing the 2xx range',
         }])
@@ -399,6 +421,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
@@ -451,6 +476,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
@@ -496,6 +524,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
@@ -544,6 +575,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
@@ -597,6 +631,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
@@ -645,6 +682,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
@@ -701,6 +741,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
@@ -756,6 +799,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
@@ -810,6 +856,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
@@ -865,6 +914,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(command.handle(entity='apps'), None)
         self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
+        self.assertEqual(self.all_application_dict(), [{
+            **self.model_to_dict(model, 'application'),
+        }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
             self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
