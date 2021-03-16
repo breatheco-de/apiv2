@@ -246,4 +246,7 @@ class AcademyEventsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
-        
+
+        self.assertEqual(self.all_event_dict(), [{
+            **self.model_to_dict(model, 'event'),
+        }])
