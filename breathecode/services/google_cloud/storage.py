@@ -1,5 +1,4 @@
 import logging
-from google.cloud import storage
 from .credentials import resolve_credentials
 from .file import File
 
@@ -11,6 +10,7 @@ class Storage:
     client = None
 
     def __init__(self):
+        from google.cloud import storage
         resolve_credentials()
         self.client = storage.Client()
 

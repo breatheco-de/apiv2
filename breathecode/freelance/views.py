@@ -1,12 +1,27 @@
 from django.shortcuts import render
 from rest_framework.response import Response
-from .serializers import BillSerializer, SmallIssueSerializer
+from .serializers import BillSerializer, SmallIssueSerializer, BigBillSerializer
+from rest_framework.permissions import AllowAny
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from .actions import sync_user_issues, generate_freelancer_bill
 from .models import Bill, Freelancer, Issue
 from rest_framework.views import APIView
+from breathecode.notify.actions import get_template_content
+from django.http import HttpResponse
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def render_html_bill(request, id=None):
+    item = Bill.objects.filter(id=id).first()
+    if item is None:
+        template = get_template_content("message", { "message": "Bill not found" })
+        return HttpResponse(template['html'])
+    else:
+        serializer = BigBillSerializer(item, many=False)
+        data = { **serializer.data, "issues": SmallIssueSerializer(item.issue_set.all(), many=True).data }
+        template = get_template_content("invoice", data)
+        return HttpResponse(template['html'])
 # Create your views here.
 class BillView(APIView):
     """
