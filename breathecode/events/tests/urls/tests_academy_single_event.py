@@ -40,7 +40,7 @@ class AcademyEventsTestSuite(EventTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_single_event_without_data(self):
+    def test_academy_single_event_invalid_id(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_single_event', kwargs={"event_id":1})
         model = self.generate_models(authenticate=True, profile_academy=True,
@@ -56,7 +56,7 @@ class AcademyEventsTestSuite(EventTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_single_event_with_data(self):
+    def test_academy_single_event_valid_id(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_single_event', kwargs={"event_id":1})
         model = self.generate_models(authenticate=True, profile_academy=True,

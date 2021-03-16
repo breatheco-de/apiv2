@@ -14,7 +14,6 @@ from breathecode.tests.mocks import (
 )
 from datetime import timedelta, datetime
 from django.utils import timezone
-# import datetime
 
 
 class AuthenticateTestSuite(AuthTestCase):
@@ -137,7 +136,6 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
 
-        # use for testing db
         self.assertEqual(self.all_user_invite_dict(), [{
             **self.model_to_dict(model, 'user_invite'),
             'sent_at': past_time,

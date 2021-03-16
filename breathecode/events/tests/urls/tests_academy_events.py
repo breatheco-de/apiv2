@@ -206,7 +206,7 @@ class AcademyEventsTestSuite(EventTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_all_academy_events_without_data(self):
+    def test_all_academy_events_not_found(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_all_events')
         model = self.generate_models(authenticate=True, profile_academy=True,
@@ -223,7 +223,7 @@ class AcademyEventsTestSuite(EventTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_all_academy_events_with_data(self):
+    def test_all_academy_events_found(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_all_events')
         model = self.generate_models(authenticate=True, profile_academy=True,
@@ -246,5 +246,4 @@ class AcademyEventsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
-       
-    
+        
