@@ -218,12 +218,16 @@ class AcademyEventsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
-        
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_all_academy_events_found(self):
+        self.headers(academy=1)
+        url = reverse_lazy('events:academy_all_events')
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_event', role='potato', syllabus=True, event=True)
+        
         response = self.client.get(url)
         json = response.json()
         expected = [{'banner': model['event'].banner,
