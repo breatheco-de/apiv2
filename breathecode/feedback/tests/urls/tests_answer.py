@@ -11,7 +11,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins import FeedbackTestCase
+from ..mixins.new_feedback_test_case import FeedbackTestCase
 
 class AnswerTestSuite(FeedbackTestCase):
     """Test /answer"""
@@ -25,7 +25,7 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -36,6 +36,23 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url, **{'HTTP_Academy': 1 })
         json = response.json()
 
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_answer_without_capability(self):
+        """Test /cohort/:id without auth"""
+        self.headers(academy=1)
+        url = reverse_lazy('feedback:answer')
+        self.generate_models(authenticate=True)
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_nps_answers for academy 1",
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -43,9 +60,11 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_without_data(self):
         """Test /answer without auth"""
-        models = self.generate_models(authenticate=True, profile_academy=True)
+        self.headers(academy=1)
+        models = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_nps_answers', role='potato')
         url = reverse_lazy('feedback:answer')
-        response = self.client.get(url, **{'HTTP_Academy': models['profile_academy'].academy.id })
+        response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(json, [])
@@ -57,26 +76,47 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_data(self):
         """Test /answer without auth"""
-        model = self.generate_models(authenticate=True, answer=True)
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, answer=True, profile_academy=True,
+            capability='read_nps_answers', role='potato')
         db = self.model_to_dict(model, 'answer')
         url = reverse_lazy('feedback:answer')
-        response = self.client.get(url, academy=model['answer'].academy.id)
+        response = self.client.get(url)
         json = response.json()
 
+        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+
         self.assertEqual(json, [{
-            'academy': model['answer'].academy,
-            'cohort': model['answer'].cohort,
+            'created_at': None,
+            'academy': {
+                'id': model['answer'].academy.id,
+                'name': model['answer'].academy.name,
+                'slug': model['answer'].academy.slug,
+            },
+            'cohort': {
+                'id': model['answer'].cohort.id,
+                'name': model['answer'].cohort.name,
+                'slug': model['answer'].cohort.slug,
+            },
             'comment': model['answer'].comment,
             'event': model['answer'].event,
             'highest': model['answer'].highest,
             'id': model['answer'].id,
             'lang': model['answer'].lang,
             'lowest': model['answer'].lowest,
-            'mentor': model['answer'].mentor,
+            'mentor': {
+                'first_name':  model['answer'].mentor.first_name,
+                'id':  model['answer'].mentor.id,
+                'last_name':  model['answer'].mentor.last_name,
+            },
             'score': model['answer'].score,
             'status': model['answer'].status,
             'title': model['answer'].title,
-            'user': model['answer'].user,
+            'user': {
+                'first_name': model['user'].first_name,
+                'id': model['user'].id,
+                'last_name': model['user'].last_name,
+            },
         }])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -87,15 +127,16 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_bad_param_user_with_data(self):
         """Test /answer without auth"""
-        model = self.generate_models(authenticate=True, user=True, answer=True)
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, user=True, answer=True, profile_academy=True,
+            capability='read_nps_answers', role='potato')
         db = self.model_to_dict(model, 'answer')
-        print(model['user'].id)
         params = {
-            'user': 9999,
+            'user': 9999
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url, headers={"Academy": model['answer'].academy.id})
+        response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(json, [])
@@ -107,26 +148,43 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_param_user_with_data(self):
         """Test /answer without auth"""
-        model = self.generate_models(authenticate=True, user=True, answer=True)
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, user=True, answer=True, profile_academy=True,
+            capability='read_nps_answers', role='potato')
         db = self.model_to_dict(model, 'answer')
-        print(model['user'].id)
         params = {
             'user': model['user'].id,
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url, headers={"Academy": model['answer'].academy.id })
+        response = self.client.get(url)
         json = response.json()
 
+        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+
         self.assertEqual(json, [{
-            'cohort': model['answer'].cohort,
+            'created_at': None,
+            'academy': {
+                'id': model['answer'].academy.id,
+                'name': model['answer'].academy.name,
+                'slug': model['answer'].academy.slug,
+            },
+            'cohort': {
+                'id': model['answer'].cohort.id,
+                'name': model['answer'].cohort.name,
+                'slug': model['answer'].cohort.slug,
+            },
             'comment': model['answer'].comment,
             'event': model['answer'].event,
             'highest': model['answer'].highest,
             'id': model['answer'].id,
             'lang': model['answer'].lang,
             'lowest': model['answer'].lowest,
-            'mentor': model['answer'].mentor,
+            'mentor': {
+                'first_name':  model['answer'].mentor.first_name,
+                'id':  model['answer'].mentor.id,
+                'last_name':  model['answer'].mentor.last_name,
+            },
             'score': model['answer'].score,
             'status': model['answer'].status,
             'title': model['answer'].title,
@@ -145,14 +203,16 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_bad_param_cohort_with_data(self):
         """Test /answer without auth"""
-        model = self.generate_models(authenticate=True, user=True, cohort=True, answer=True)
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, user=True, cohort=True, answer=True, profile_academy=True,
+            capability='read_nps_answers', role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'cohort': 'they-killed-kenny',
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url, headers={"Academy": model['answer'].academy.id})
+        response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(json, [])
@@ -164,18 +224,27 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_param_cohort_with_data(self):
         """Test /answer without auth"""
-        model = self.generate_models(authenticate=True, user=True, cohort=True, answer=True)
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, user=True, cohort=True, answer=True, profile_academy=True,
+            capability='read_nps_answers', role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'cohort': model['cohort'].slug,
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url, headers={"Academy": model['answer'].academy.id})
+        response = self.client.get(url)
         json = response.json()
 
+        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+
         self.assertEqual(json, [{
-            'academy': model['answer'].academy,
+            'created_at': None,
+            'academy': {
+                'id': model['answer'].academy.id,
+                'name': model['answer'].academy.name,
+                'slug': model['answer'].academy.slug,
+            },
             'cohort': {
                 'id': model['cohort'].id,
                 'name': model['cohort'].name,
@@ -187,7 +256,11 @@ class AnswerTestSuite(FeedbackTestCase):
             'id': model['answer'].id,
             'lang': model['answer'].lang,
             'lowest': model['answer'].lowest,
-            'mentor': model['answer'].mentor,
+            'mentor': {
+                'first_name':  model['answer'].mentor.first_name,
+                'id':  model['answer'].mentor.id,
+                'last_name':  model['answer'].mentor.last_name,
+            },
             'score': model['answer'].score,
             'status': model['answer'].status,
             'title': model['answer'].title,
@@ -206,22 +279,26 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_param_academy_with_data(self):
         """Test /answer without auth"""
+        self.headers(academy=1)
         model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            answer=True)
+            answer=True, profile_academy=True, capability='read_nps_answers', role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'academy': model['academy'].id,
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url, headers={"Academy": model['academy'].id})
+        response = self.client.get(url)
         json = response.json()
 
+        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+
         self.assertEqual(json, [{
+            'created_at': None,
             'academy': {
-                'id': model['academy'].id,
-                'name': model['academy'].name,
-                'slug': model['academy'].slug,
+                'id': model['answer'].academy.id,
+                'name': model['answer'].academy.name,
+                'slug': model['answer'].academy.slug,
             },
             'cohort': {
                 'id': model['cohort'].id,
@@ -234,7 +311,11 @@ class AnswerTestSuite(FeedbackTestCase):
             'id': model['answer'].id,
             'lang': model['answer'].lang,
             'lowest': model['answer'].lowest,
-            'mentor': model['answer'].mentor,
+            'mentor': {
+                'first_name':  model['answer'].mentor.first_name,
+                'id':  model['answer'].mentor.id,
+                'last_name':  model['answer'].mentor.last_name,
+            },
             'score': model['answer'].score,
             'status': model['answer'].status,
             'title': model['answer'].title,
@@ -253,8 +334,10 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_bad_param_mentor_with_data(self):
         """Test /answer without auth"""
+        self.headers(academy=1)
         model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            answer=True, mentor=True)
+            answer=True, profile_academy=True, capability='read_nps_answers',
+            role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'mentor': 9999,
@@ -273,22 +356,27 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_param_mentor_with_data(self):
         """Test /answer without auth"""
+        self.headers(academy=1)
         model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            answer=True, mentor=True)
+            answer=True, profile_academy=True, capability='read_nps_answers',
+            role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
-            'mentor': model['mentor'].id,
+            'mentor': model['user'].id,
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
         response = self.client.get(url, headers={"Academy": model['academy'].id})
         json = response.json()
 
+        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+
         self.assertEqual(json, [{
+            'created_at': None,
             'academy': {
-                'id': model['academy'].id,
-                'name': model['academy'].name,
-                'slug': model['academy'].slug,
+                'id': model['answer'].academy.id,
+                'name': model['answer'].academy.name,
+                'slug': model['answer'].academy.slug,
             },
             'cohort': {
                 'id': model['cohort'].id,
@@ -302,9 +390,9 @@ class AnswerTestSuite(FeedbackTestCase):
             'lang': model['answer'].lang,
             'lowest': model['answer'].lowest,
             'mentor': {
-                'first_name': model['mentor'].first_name,
-                'id': model['mentor'].id,
-                'last_name': model['mentor'].last_name,
+                'first_name': model['user'].first_name,
+                'id': model['user'].id,
+                'last_name': model['user'].last_name,
             },
             'score': model['answer'].score,
             'status': model['answer'].status,
@@ -324,8 +412,10 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_bad_param_event_with_data(self):
         """Test /answer without auth"""
+        self.headers(academy=1)
         model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            answer=True, mentor=True, event=True)
+            answer=True, event=True, profile_academy=True,
+            capability='read_nps_answers', role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'event': 9999,
@@ -344,8 +434,10 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_param_event_with_data(self):
         """Test /answer without auth"""
+        self.headers(academy=1)
         model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            answer=True, mentor=True, event=True)
+            answer=True, event=True, profile_academy=True,
+            capability='read_nps_answers', role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'event': model['event'].id,
@@ -355,11 +447,14 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
+        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+
         self.assertEqual(json, [{
+            'created_at': None,
             'academy': {
-                'id': model['academy'].id,
-                'name': model['academy'].name,
-                'slug': model['academy'].slug,
+                'id': model['answer'].academy.id,
+                'name': model['answer'].academy.name,
+                'slug': model['answer'].academy.slug,
             },
             'cohort': {
                 'id': model['cohort'].id,
@@ -379,9 +474,9 @@ class AnswerTestSuite(FeedbackTestCase):
             'lang': model['answer'].lang,
             'lowest': model['answer'].lowest,
             'mentor': {
-                'first_name': model['mentor'].first_name,
-                'id': model['mentor'].id,
-                'last_name': model['mentor'].last_name,
+                'first_name': model['user'].first_name,
+                'id': model['user'].id,
+                'last_name': model['user'].last_name,
             },
             'score': model['answer'].score,
             'status': model['answer'].status,
@@ -401,11 +496,18 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_bad_param_score_with_data(self):
         """Test /answer without auth"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
+            event=True, profile_academy=True, capability='read_nps_answers', role='potato')
+
         for number in range(1, 10):
             self.remove_all_answer()
             score = str(number)
-            model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-                answer=True, mentor=True, event=True, answer_score=score)
+
+            answer_kwargs = {
+                'score': score
+            }
+            model = self.generate_models(answer=True, answer_kwargs=answer_kwargs, models=base)
             db = self.model_to_dict(model, 'answer')
             params = {
                 'score': 1 if number == 10 else number + 1,
@@ -426,11 +528,18 @@ class AnswerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_with_param_score_with_data(self):
         """Test /answer without auth"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
+            event=True, profile_academy=True, capability='read_nps_answers', role='potato')
+
         for number in range(1, 10):
             self.remove_all_answer()
             score = str(number)
-            model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-                answer=True, mentor=True, event=True, answer_score=score)
+
+            answer_kwargs = {
+                'score': score
+            }
+            model = self.generate_models(answer=True, answer_kwargs=answer_kwargs, models=base)
             db = self.model_to_dict(model, 'answer')
             params = {
                 'score': score,
@@ -440,11 +549,14 @@ class AnswerTestSuite(FeedbackTestCase):
             response = self.client.get(url, headers={"Academy", model['academy'].id })
             json = response.json()
 
+            json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+
             self.assertEqual(json, [{
+                'created_at': None,
                 'academy': {
-                    'id': model['academy'].id,
-                    'name': model['academy'].name,
-                    'slug': model['academy'].slug,
+                    'id': model['answer'].academy.id,
+                    'name': model['answer'].academy.name,
+                    'slug': model['answer'].academy.slug,
                 },
                 'cohort': {
                     'id': model['cohort'].id,
@@ -464,9 +576,9 @@ class AnswerTestSuite(FeedbackTestCase):
                 'lang': model['answer'].lang,
                 'lowest': model['answer'].lowest,
                 'mentor': {
-                    'first_name': model['mentor'].first_name,
-                    'id': model['mentor'].id,
-                    'last_name': model['mentor'].last_name,
+                    'first_name': model['user'].first_name,
+                    'id': model['user'].id,
+                    'last_name': model['user'].last_name,
                 },
                 'score': score,
                 'status': model['answer'].status,
