@@ -506,4 +506,3 @@ class AcademyEventsTestSuite(EventTestCase):
             'url': model['event'].url,
             'venue_id': None
         } for model in models])
->>>>>>> 0868750a7ae531ac464772be48e7a47c2874fc58
