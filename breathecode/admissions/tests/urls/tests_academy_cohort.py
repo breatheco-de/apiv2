@@ -770,7 +770,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_with_ten_datas_with_location_with_comma_just_get_30(self):
+    def test_academy_cohort_with_ten_datas_with_location_with_comma_just_get_100(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
         models = [self.generate_models(authenticate=True, cohort=True, profile_academy=True,

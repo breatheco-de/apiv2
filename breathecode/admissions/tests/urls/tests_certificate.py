@@ -58,13 +58,116 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.all_certificate_dict(), [{
-            'description': model['certificate'].description,
-            'duration_in_days': model['certificate'].duration_in_days,
-            'duration_in_hours': model['certificate'].duration_in_hours,
-            'id': model['certificate'].id,
-            'logo': model['certificate'].logo,
-            'name': model['certificate'].name,
-            'schedule_type': model['certificate'].schedule_type,
-            'slug': model['certificate'].slug,
-            'week_hours': model['certificate'].week_hours
+            **self.model_to_dict(model, 'certificate'),
         }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_certificate_with_data_without_pagination_get_just_100(self):
+        """Test /certificate without auth"""
+        base = self.generate_models(authenticate=True)
+        models = [self.generate_models(certificate=True, models=base) for _ in range(0, 105)]
+        url = reverse_lazy('admissions:certificate')
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [{
+            'id': model['certificate'].id,
+            'name': model['certificate'].name,
+            'slug': model['certificate'].slug,
+            'logo': model['certificate'].logo,
+            'description': model['certificate'].description,
+        } for model in models if model['certificate'].id <= 100])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(self.all_certificate_dict(), [{
+            **self.model_to_dict(model, 'certificate'),
+        } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_certificate_with_data_with_pagination_first_five(self):
+        """Test /certificate without auth"""
+        base = self.generate_models(authenticate=True)
+        models = [self.generate_models(certificate=True, models=base) for _ in range(0, 10)]
+        url = reverse_lazy('admissions:certificate') + '?limit=5&offset=0'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, {
+            'count': 10,
+            'first': None,
+            'last': 'http://testserver/v1/admissions/certificate?limit=5&offset=5',
+            'next': 'http://testserver/v1/admissions/certificate?limit=5&offset=5',
+            'previous': None,
+            'results': [{
+                'id': model['certificate'].id,
+                'name': model['certificate'].name,
+                'slug': model['certificate'].slug,
+                'logo': model['certificate'].logo,
+                'description': model['certificate'].description,
+            } for model in models if model['certificate'].id <= 5]
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_certificate_dict(), [{
+            **self.model_to_dict(model, 'certificate'),
+        } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_certificate_with_data_with_pagination_last_five(self):
+        """Test /certificate without auth"""
+        base = self.generate_models(authenticate=True)
+        models = [self.generate_models(certificate=True, models=base) for _ in range(0, 10)]
+        url = reverse_lazy('admissions:certificate') + '?limit=5&offset=5'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, {
+            'count': 10,
+            'first': 'http://testserver/v1/admissions/certificate?limit=5',
+            'last': None,
+            'next': None,
+            'previous': 'http://testserver/v1/admissions/certificate?limit=5',
+            'results': [{
+                'id': model['certificate'].id,
+                'name': model['certificate'].name,
+                'slug': model['certificate'].slug,
+                'logo': model['certificate'].logo,
+                'description': model['certificate'].description,
+            } for model in models if model['certificate'].id > 5]
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_certificate_dict(), [{
+            **self.model_to_dict(model, 'certificate'),
+        } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_certificate_with_data_with_pagination_after_last_five(self):
+        """Test /certificate without auth"""
+        base = self.generate_models(authenticate=True)
+        models = [self.generate_models(certificate=True, models=base) for _ in range(0, 10)]
+        url = reverse_lazy('admissions:certificate') + '?limit=5&offset=10'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, {
+            'count': 10,
+            'first': 'http://testserver/v1/admissions/certificate?limit=5',
+            'last': None,
+            'next': None,
+            'previous': 'http://testserver/v1/admissions/certificate?limit=5&offset=5',
+            'results': [],
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_certificate_dict(), [{
+            **self.model_to_dict(model, 'certificate'),
+        } for model in models])

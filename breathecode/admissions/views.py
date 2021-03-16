@@ -22,7 +22,7 @@ from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
-from breathecode.utils import Cache, localize_query, capable_of, ValidationException
+from breathecode.utils import Cache, localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination
 from django.http import QueryDict
 from django.db.utils import IntegrityError
 from rest_framework.exceptions import NotFound, ParseError, PermissionDenied, ValidationError
@@ -568,11 +568,17 @@ class CertificateView(APIView):
         serializer = CertificateSerializer(items, many=True)
         return Response(serializer.data)
 
-@api_view(['GET'])
-def get_courses(request):
-    certificates = Certificate.objects.all()
-    serializer = GetCertificateSerializer(certificates, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+class CertificateView(APIView, HeaderLimitOffsetPagination):
+    def get(self, request):
+        items = Certificate.objects.all()
+
+        page = self.paginate_queryset(items, request)
+        serializer = GetCertificateSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 def get_single_course(request, certificate_slug):
