@@ -207,41 +207,8 @@ class SyllabusPOSTSerializer(serializers.ModelSerializer):
         fields = ['id', 'slug']
 
 
-class CohortSerializer(serializers.ModelSerializer):
-    academy = AcademySerializer(many=False, required=False, read_only=True)
-    syllabus = SyllabusPOSTSerializer(many=False, required=False, read_only=True)
-
-    class Meta:
-        model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus',
-            'ending_date', 'stage', 'language', 'created_at', 'updated_at')
-
-    def create(self, validated_data):
-        return Cohort.objects.create(**self.context)
-
-    def validate(self, data):
-
-        # cohort slug cannot be used by another cohort
-        cohort = Cohort.objects.filter(slug=data['slug']).first()
-        if cohort is not None:
-            raise ValidationError('This cohort slug is already taken')
-
-        return data
-
-class CohortPUTSerializer(serializers.ModelSerializer):
-    slug = serializers.SlugField(required=False)
-    name = serializers.CharField(required=False)
-    kickoff_date = serializers.DateTimeField(required=False)
-    ending_date = serializers.DateTimeField(required=False)
-    current_day = serializers.IntegerField(required=False)
-    stage = serializers.CharField(required=False)
-    language = serializers.CharField(required=False)
+class CohortSerializerMixin(serializers.ModelSerializer):
     syllabus = serializers.CharField(required=False)
-
-    class Meta:
-        model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
-            'syllabus')
 
     def validate(self, data):
         if 'syllabus' in data:
@@ -266,6 +233,33 @@ class CohortPUTSerializer(serializers.ModelSerializer):
                 raise ValidationError('Slug already exists for another cohort')
 
         return data
+
+
+class CohortSerializer(CohortSerializerMixin):
+    academy = AcademySerializer(many=False, required=False, read_only=True)
+
+    class Meta:
+        model = Cohort
+        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus',
+            'ending_date', 'stage', 'language', 'created_at', 'updated_at')
+
+    def create(self, validated_data):
+        del self.context['request']
+        return Cohort.objects.create(**validated_data, **self.context)
+
+class CohortPUTSerializer(CohortSerializerMixin):
+    slug = serializers.SlugField(required=False)
+    name = serializers.CharField(required=False)
+    kickoff_date = serializers.DateTimeField(required=False)
+    ending_date = serializers.DateTimeField(required=False)
+    current_day = serializers.IntegerField(required=False)
+    stage = serializers.CharField(required=False)
+    language = serializers.CharField(required=False)
+
+    class Meta:
+        model = Cohort
+        fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
+            'syllabus')
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):

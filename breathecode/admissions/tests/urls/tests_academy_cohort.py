@@ -88,7 +88,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         expected = {
             'slug': ['This field is required.'],
             'name': ['This field is required.'],
-            'kickoff_date': ['This field is required.']
+            'kickoff_date': ['This field is required.'],
         }
 
         self.assertEqual(json, expected)
@@ -123,14 +123,12 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_academy_cohort_post(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
-        self.assertEqual(self.count_cohort(), 0)
         model = self.generate_models(authenticate=True, user=True, profile_academy=True,
             capability='crud_cohort', role='potato', syllabus=True)
-        self.assertEqual(self.count_cohort(), 1)
         models_dict = self.all_cohort_dict()
         url = reverse_lazy('admissions:academy_cohort')
         data = {
-            'syllabus':  model['syllabus'].id,
+            'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
             'slug':  'they-killed-kenny',
             'name':  'They killed kenny',
             'kickoff_date':  datetime.today().isoformat(),
@@ -143,7 +141,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': cohort.id,
             'slug': cohort.slug,
             'name': cohort.name,
-            'kickoff_date': re.sub(r'\+00:00$', '', cohort.kickoff_date.isoformat()),
+            'kickoff_date': self.datetime_to_iso(cohort.kickoff_date),
             'current_day': cohort.current_day,
             'academy': {
                 'id': cohort.academy.id,
@@ -153,10 +151,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'country': cohort.academy.country.code,
                 'city': cohort.academy.city.id,
             },
-            'syllabus': {
-                'id': cohort.syllabus.id,
-                'slug': cohort.syllabus.slug,
-            },
+            'syllabus': model['certificate'].slug + '.v' + str(model['syllabus'].version),
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
             'language': cohort.language,
@@ -167,9 +162,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         del data['kickoff_date']
         cohort_two = cohort.__dict__.copy()
         cohort_two.update(data)
-        cohort_two['syllabus_id'] = cohort_two['syllabus']
         del cohort_two['syllabus']
-        models_dict.append(self.remove_dinamics_fields(cohort_two))
+
+        models_dict.append(self.remove_dinamics_fields({**cohort_two, 'syllabus_id': 1}))
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

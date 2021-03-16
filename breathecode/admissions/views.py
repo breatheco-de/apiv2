@@ -496,13 +496,9 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination):
         if academy is None:
             raise ValidationError(f'Academy {academy_id} not found')
 
-        syllabus_id = request.data.get('syllabus')
-        if syllabus_id is None:
-            raise ParseError(detail='syllabus field is missing')
-
-        syllabus = Syllabus.objects.filter(id=syllabus_id).first()
+        syllabus = request.data.get('syllabus')
         if syllabus is None:
-            raise ParseError(detail='specified syllabus not be found')
+            raise ParseError(detail='syllabus field is missing')
 
         if request.data.get('current_day'):
             raise ParseError(detail='current_day field is not allowed')
@@ -515,9 +511,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination):
         for key in request.data:
             data[key] = request.data.get(key)
 
-        data['syllabus'] = syllabus
-
-        serializer = CohortSerializer(data=data, context=data)
+        serializer = CohortSerializer(data=data, context={ "request": request, "academy": academy })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
