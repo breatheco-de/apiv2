@@ -211,10 +211,17 @@ class CohortUserView(APIView):
             'cohort_user': cohort_user,
         }
 
-    def post(self, request, cohort_id=None):
-        validations = self.validations(request, cohort_id, matcher="cohort__academy__in")
+    def post(self, request, cohort_id=None, user_id=None):
+        many = isinstance(request.data, list)
+        context = {
+            'request': request,
+            'cohort_id': cohort_id,
+            'user_id': user_id,
+            'many': many,
+        }
 
-        serializer = CohortUserSerializer(data=validations['data'], context=validations['data'])
+        serializer = CohortUserSerializer(data=request.data,
+            context=context, many=many)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -382,9 +389,16 @@ class AcademyCohortUserView(APIView):
 
     @capable_of('crud_cohort')
     def post(self, request, cohort_id=None, academy_id=None):
-        validations = self.validations(request, cohort_id, matcher="cohort__academy__in")
+        many = isinstance(request.data, list)
+        context = {
+            'request': request,
+            'cohort_id': cohort_id,
+            'user_id': user_id,
+            'many': many,
+        }
 
-        serializer = CohortUserSerializer(data=validations['data'], context=validations['data'])
+        serializer = CohortUserSerializer(data=request.data,
+            context=context, many=many)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)

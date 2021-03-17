@@ -276,65 +276,8 @@ class UserDJangoRestSerializer(serializers.ModelSerializer):
         fields = ['id', 'first_name', 'last_name', 'email']
         # fields = ['id', 'user']
 
-class CohortUserSerializer(serializers.ModelSerializer):
-    cohort = CohortSerializer(many=False, read_only=True)
-    user = UserDJangoRestSerializer(many=False, read_only=True)
-
-    class Meta:
-        model = CohortUser
-        fields = ['id', 'user', 'cohort', 'role']
-
-    def create(self, validated_data):
-        # relationships, thank you amazing and incredible serializer!
-        cohort = self.context.get('cohort')
-        user = self.context.get('user')
-
-        return CohortUser.objects.create(**validated_data, cohort_id=cohort, user_id=user)
-
-class CohortUserPOSTSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
-    id = serpy.Field()
-    cohort = serpy.Field()
-    user = serpy.Field()
-
-# class CohortUserSerializer(serializers.ModelSerializer):
-#     cohort = CohortSerializer(many=False)
-#     user = UserSerializer(many=False)
-
-#     class Meta:
-#         model = CohortUser
-#         fields = ['id', 'user', 'cohort']
-
-class CohortUserPUTListSerializer(serializers.ListSerializer):
-    def update(self, instance, validated_data):
-        # Maps for id->instance and id->data item.
-        model_mapping = {model.id: model for model in instance}
-        data_mapping = {item['id']: item for item in validated_data}
-
-        # Perform creations and updates.
-        ret = []
-        for model_id, data in data_mapping.items():
-            book = model_mapping.get(model_id, None)
-            if book is None:
-                ret.append(self.child.create(data))
-            else:
-                ret.append(self.child.update(book, data))
-
-        # Perform deletions.
-        for model_id, model in model_mapping.items():
-            if model_id not in data_mapping:
-                model.delete()
-
-        return ret
-
-class CohortUserPUTSerializer(serializers.ModelSerializer):
+class CohortUserSerializerMixin(serializers.ModelSerializer):
     index = -1
-
-    class Meta:
-        model = CohortUser
-        fields = ['id', 'role', 'educational_status', 'finantial_status']
-        list_serializer_class = CohortUserPUTListSerializer
 
     def count_certificates_by_cohort(self, cohort, user_id):
         return (CohortUser.objects.filter(user_id=user_id, cohort__syllabus__certificate=cohort.syllabus.certificate)
@@ -354,6 +297,7 @@ class CohortUserPUTSerializer(serializers.ModelSerializer):
         disable_certificate_validations = True
         body = request.data if is_many else [request.data]
         request_item = body[self.index]
+        is_post_method = request.method == 'POST'
 
         id = None
         if is_many and 'id' in request_item:
@@ -396,7 +340,9 @@ class CohortUserPUTSerializer(serializers.ModelSerializer):
                 cohort_id=cohort_id).count():
             raise ValidationException('That user already exists in this cohort')
 
-        if not disable_certificate_validations and self.count_certificates_by_cohort(
+        # print(not disable_certificate_validations, self.count_certificates_by_cohort(
+        #         cohort, user_id), 'qqqqqqqqqqqqqqqqqqqqq')
+        if not disable_certificate_validations and cohort.syllabus and self.count_certificates_by_cohort(
                 cohort, user_id) > 0:
             raise ValidationException('This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort as POSTPONED before cotinuing')
 
@@ -406,10 +352,12 @@ class CohortUserPUTSerializer(serializers.ModelSerializer):
 
         cohort_user = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id).first()
 
-        if not cohort_user:
+        if not is_post_method and not cohort_user:
             raise ValidationException('Cannot find CohortUser')
+        # elif is_post_method and cohort_user:
+        #     raise ValidationException('Exist one CohortUser with the same user and cohort')
 
-        if not id:
+        if not id and cohort_user:
             id = cohort_user.id
 
         is_graduated = request_item.get('educational_status') == 'GRADUATED'
@@ -433,6 +381,56 @@ class CohortUserPUTSerializer(serializers.ModelSerializer):
 
         user = User.objects.filter(id=user_id).first()
         return {**data, 'id': id, 'cohort': cohort, 'user': user}
+
+class CohortUserSerializer(CohortUserSerializerMixin):
+    cohort = CohortSerializer(many=False, read_only=True)
+    user = UserDJangoRestSerializer(many=False, read_only=True)
+
+    class Meta:
+        model = CohortUser
+        fields = ['id', 'user', 'cohort', 'role']
+
+    # def create(self, validated_data):
+    #     # relationships, thank you amazing and incredible serializer!
+    #     cohort = self.context.get('cohort')
+    #     user = self.context.get('user')
+
+    #     return CohortUser.objects.create(**validated_data, cohort_id=cohort, user_id=user)
+
+class CohortUserPOSTSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    cohort = serpy.Field()
+    user = serpy.Field()
+
+class CohortUserPUTListSerializer(serializers.ListSerializer):
+    def update(self, instance, validated_data):
+        # Maps for id->instance and id->data item.
+        model_mapping = {model.id: model for model in instance}
+        data_mapping = {item['id']: item for item in validated_data}
+
+        # Perform creations and updates.
+        ret = []
+        for model_id, data in data_mapping.items():
+            book = model_mapping.get(model_id, None)
+            if book is None:
+                ret.append(self.child.create(data))
+            else:
+                ret.append(self.child.update(book, data))
+
+        # Perform deletions.
+        for model_id, model in model_mapping.items():
+            if model_id not in data_mapping:
+                model.delete()
+
+        return ret
+
+class CohortUserPUTSerializer(CohortUserSerializerMixin):
+    class Meta:
+        model = CohortUser
+        fields = ['id', 'role', 'educational_status', 'finantial_status']
+        list_serializer_class = CohortUserPUTListSerializer
 
 class CertificateSerializer(serializers.ModelSerializer):
     class Meta:
