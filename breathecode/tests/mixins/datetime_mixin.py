@@ -13,13 +13,11 @@ class simple_utc(tzinfo):
 
 class DatetimeMixin():
     """Headers mixin"""
-
     def datetime_to_iso(self, date=datetime.utcnow()) -> str:
         return re.sub(
             r'\+00:00$', 'Z',
             date.replace(tzinfo=simple_utc()).isoformat()
         )
-
     def assertDatetime(self, date):
         if not isinstance(date, str):
             self.assertTrue(isinstance(date, datetime))

@@ -126,18 +126,19 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
             lookup['venue__city__iexact'] = city
 
         if 'country' in self.request.GET:
-            value = self.request.GET.get('city')
+            value = self.request.GET.get('country')
             lookup['venue__country__iexact'] = value
 
         if 'zip_code' in self.request.GET:
-            value = self.request.GET.get('city')
+            value = self.request.GET.get('zip_code')
             lookup['venue__zip_code'] = value
 
         if 'upcoming' in self.request.GET:
             lookup['starting_at__gte'] = timezone.now()
         elif 'past' in self.request.GET:
-            if self.request.GET.get('past') == "true":
+            if 'starting_at__gte' in lookup:
                 lookup.pop("starting_at__gte")
+            if self.request.GET.get('past') == "true":
                 lookup['starting_at__lte'] = timezone.now()
 
         items = items.filter(**lookup).order_by('-starting_at')

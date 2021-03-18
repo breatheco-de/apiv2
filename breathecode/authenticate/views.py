@@ -810,7 +810,7 @@ class AcademyInviteView(APIView):
 
             if user is None:
                 raise ValidationException("Member not found", 400)
-            invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email, author=request.user).first()
+            invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email).first() 
 
             if invite is None:
                 raise ValidationException("Invite not found", 400)
@@ -821,7 +821,6 @@ class AcademyInviteView(APIView):
 
                 if minutes_diff < 2:
                     raise ValidationException("Imposible to resend invitation", 400)
-
             resend_invite(invite.token, invite.email, invite.first_name)
 
             invite.sent_at = timezone.now()

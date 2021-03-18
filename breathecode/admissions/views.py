@@ -608,8 +608,7 @@ class SyllabusView(APIView):
     List all snippets, or create a new snippet.
     """
 
-    # TODO: uncomment decorator when finally all students have a ProfileAcademy object.
-    # @capable_of('read_syllabus')
+    @capable_of('read_syllabus')
     def get(self, request, certificate_slug=None, version=None, academy_id=None):
         if academy_id is None:
             raise ValidationException("Missing academy id")
@@ -630,8 +629,6 @@ class SyllabusView(APIView):
 
         if syl is None:
             raise ValidationException("Syllabus not found", code=404)
-
-        # TODO: if a syllabus is private, no other academy should be able to see it
 
         serializer = SyllabusGetSerializer(syl, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
