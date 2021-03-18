@@ -30,11 +30,28 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_certificate_dict(), [])
 
-    def test_certificate_slug_academy_id_syllabus_without_data(self):
+    def test_certificate_slug_academy_id_syllabus_without_capability(self):
         """Test /certificate without auth"""
         url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus', kwargs={
             'certificate_slug': 'they-killed-kenny', 'academy_id': 1})
         self.generate_models(authenticate=True)
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'status_code': 403,
+            'detail': "You (user: 1) don't have this capability: read_syllabus for academy 1"
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.all_certificate_dict(), [])
+
+    def test_certificate_slug_academy_id_syllabus_without_data(self):
+        """Test /certificate without auth"""
+        url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus', kwargs={
+            'certificate_slug': 'they-killed-kenny', 'academy_id': 1})
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_syllabus', role='potato')
         response = self.client.get(url)
         json = response.json()
         expected = {
@@ -44,14 +61,18 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.all_certificate_dict(), [])
+        self.assertEqual(self.all_certificate_dict(), [{
+            **self.model_to_dict(model, 'certificate'),
+        }])
+
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_slug_academy_id_syllabus_without_syllabus(self):
         """Test /certificate without auth"""
-        model = self.generate_models(authenticate=True, certificate=True)
+        model = self.generate_models(authenticate=True, certificate=True, profile_academy=True,
+            capability='read_syllabus', role='potato')
         url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus', kwargs={
             'certificate_slug': model['certificate'].slug, 'academy_id': 1})
         response = self.client.get(url)
@@ -67,8 +88,8 @@ class CertificateTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_slug_academy_id_syllabus(self):
         """Test /certificate without auth"""
-        model = self.generate_models(authenticate=True, certificate=True,
-            syllabus=True)
+        model = self.generate_models(authenticate=True, certificate=True, profile_academy=True,
+            capability='read_syllabus', role='potato', syllabus=True)
         url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus', kwargs={
             'certificate_slug': model['certificate'].slug, 'academy_id': 1})
         response = self.client.get(url)
