@@ -145,17 +145,32 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_post_in_bulk(self):
+    def test_cohort_id_user_post_in_bulk_0_items(self):
+        """Test /cohort/:id/user without auth"""
+        model = self.generate_models(authenticate=True, cohort=True)
+        url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
+        data = []
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_cohort_user_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_id_user_post_in_bulk_1_items(self):
         """Test /cohort/:id/user without auth"""
         model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
-        models_dict = self.all_cohort_user_dict()
         url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
         data = [{
             'user':  model['user'].id,
         }]
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {
+        expected = [{
             'id': 1,
             'role': 'STUDENT',
             'user': {
@@ -188,20 +203,88 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
                 'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
             },
-        }
+        }]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        cohort_user = self.get_cohort_user(1)
-        cohort_user_two = cohort_user.__dict__.copy()
-        cohort_user_two.update(data)
-        cohort_user_two['user_id'] = cohort_user_two['user']
-        cohort_user_two['cohort_id'] = model['cohort'].id
-        del cohort_user_two['user']
-        models_dict.append(self.remove_dinamics_fields(cohort_user_two))
+        self.assertEqual(self.all_cohort_user_dict(), [{
+            'cohort_id': 1,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 1,
+            'role': 'STUDENT',
+            'user_id': 1,
+        }])
 
-        self.assertEqual(self.all_cohort_user_dict(), models_dict)
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_id_user_post_in_bulk_2_items(self):
+        """Test /cohort/:id/user without auth"""
+        base = self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        del base['user']
+
+        models = [self.generate_models(user=True, models=base) for _ in range(0, 2)]
+        url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': models[0]['cohort'].id})
+        data = [{
+            'user':  model['user'].id,
+        } for model in models]
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = [{
+            'id': model['user'].id - 1,
+            'role': 'STUDENT',
+            'user': {
+                'id': model['user'].id,
+                'first_name': model['user'].first_name,
+                'last_name': model['user'].last_name,
+                'email': model['user'].email,
+            },
+            'cohort': {
+                'id': model['cohort'].id,
+                'slug': model['cohort'].slug,
+                'name': model['cohort'].name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    model['cohort'].kickoff_date.isoformat()
+                ),
+                'current_day': model['cohort'].current_day,
+                'academy': {
+                    'id': model['cohort'].academy.id,
+                    'name': model['cohort'].academy.name,
+                    'slug': model['cohort'].academy.slug,
+                    'country': model['cohort'].academy.country.code,
+                    'city': model['cohort'].academy.city.id,
+                    'street_address': model['cohort'].academy.street_address,
+                },
+                'syllabus': None,
+                'ending_date': model['cohort'].ending_date,
+                'stage': model['cohort'].stage,
+                'language': model['cohort'].language,
+                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
+                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
+            },
+        } for model in models]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(self.all_cohort_user_dict(), [{
+            'cohort_id': 1,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 1,
+            'role': 'STUDENT',
+            'user_id': 2,
+        }, {
+            'cohort_id': 1,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 2,
+            'role': 'STUDENT',
+            'user_id': 3,
+        }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -209,7 +292,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     def test_cohort_id_user_post_with_two_cohort_with_the_same_certificate(self):
         """Test /cohort/:id/user without auth"""
         models = [self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, cohort_user=True, syllabus=True)]
+            profile_academy=True, cohort_user=True, syllabus=True, certificate=True)]
 
         base = models[0].copy()
         del base['user']
@@ -233,23 +316,23 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_post_twice(self):
-        """Test /cohort/:id/user without auth"""
-        model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
-        url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
-        data = {
-            'user':  model['user'].id,
-        }
-        self.client.post(url, data)
-        response = self.client.post(url, data)
-        json = response.json()
-        expected = {'detail': 'That user already exists in this cohort', 'status_code': 400}
+    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    # def test_cohort_id_user_post_twice(self):
+    #     """Test /cohort/:id/user without auth"""
+    #     model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
+    #     url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
+    #     data = {
+    #         'user':  model['user'].id,
+    #     }
+    #     self.client.post(url, data)
+    #     response = self.client.post(url, data)
+    #     json = response.json()
+    #     expected = {'detail': 'That user already exists in this cohort', 'status_code': 400}
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

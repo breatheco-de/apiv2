@@ -280,6 +280,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
     index = -1
 
     def count_certificates_by_cohort(self, cohort, user_id):
+        print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
         return (CohortUser.objects.filter(user_id=user_id, cohort__syllabus__certificate=cohort.syllabus.certificate)
             .exclude(educational_status='POSTPONED').count())
 
@@ -340,10 +341,8 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
                 cohort_id=cohort_id).count():
             raise ValidationException('That user already exists in this cohort')
 
-        # print(not disable_certificate_validations, self.count_certificates_by_cohort(
-        #         cohort, user_id), 'qqqqqqqqqqqqqqqqqqqqq')
-        if not disable_certificate_validations and cohort.syllabus and self.count_certificates_by_cohort(
-                cohort, user_id) > 0:
+        if (is_post_method and cohort.syllabus and
+                self.count_certificates_by_cohort(cohort, user_id) > 0):
             raise ValidationException('This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort as POSTPONED before cotinuing')
 
         role = request_item.get('role')
@@ -354,8 +353,6 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 
         if not is_post_method and not cohort_user:
             raise ValidationException('Cannot find CohortUser')
-        # elif is_post_method and cohort_user:
-        #     raise ValidationException('Exist one CohortUser with the same user and cohort')
 
         if not id and cohort_user:
             id = cohort_user.id
@@ -382,6 +379,17 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         user = User.objects.filter(id=user_id).first()
         return {**data, 'id': id, 'cohort': cohort, 'user': user}
 
+class CohortUserListSerializer(serializers.ListSerializer):
+    def create(self, validated_data):
+        books = [CohortUser(**item) for item in validated_data]
+        items = CohortUser.objects.bulk_create(books)
+
+        for key in range(0, len(items)):
+            item = items[key]
+            items[key].id = CohortUser.objects.filter(cohort__id=item.cohort_id, user__id=item.user_id).values_list('id', flat=True).first()
+
+        return items
+
 class CohortUserSerializer(CohortUserSerializerMixin):
     cohort = CohortSerializer(many=False, read_only=True)
     user = UserDJangoRestSerializer(many=False, read_only=True)
@@ -389,6 +397,8 @@ class CohortUserSerializer(CohortUserSerializerMixin):
     class Meta:
         model = CohortUser
         fields = ['id', 'user', 'cohort', 'role']
+        list_serializer_class = CohortUserListSerializer
+
 
     # def create(self, validated_data):
     #     # relationships, thank you amazing and incredible serializer!

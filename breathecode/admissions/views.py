@@ -388,7 +388,7 @@ class AcademyCohortUserView(APIView):
         }
 
     @capable_of('crud_cohort')
-    def post(self, request, cohort_id=None, academy_id=None):
+    def post(self, request, cohort_id=None, academy_id=None, user_id=None):
         many = isinstance(request.data, list)
         context = {
             'request': request,
