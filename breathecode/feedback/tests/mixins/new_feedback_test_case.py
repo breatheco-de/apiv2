@@ -4,13 +4,14 @@ Collections of mixins used to login in authorize microservice
 import os
 from unittest.mock import call
 from rest_framework.test import APITestCase
-from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin
+from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin, HeadersMixin, DatetimeMixin
 from breathecode.authenticate.models import Token
 from breathecode.notify.actions import get_template_content
 from ...actions import strings
+from ...models import Answer
 
 class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
-        TokenMixin, GenerateQueriesMixin):
+        TokenMixin, GenerateQueriesMixin, HeadersMixin, DatetimeMixin):
     """FeedbackTestCase with auth methods"""
     def tearDown(self):
         self.clear_cache()
@@ -23,6 +24,9 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         if id:
             kwargs['id'] = id
         return Token.objects.filter(**kwargs).values_list('key', flat=True).first()
+
+    def remove_all_answer(self):
+        Answer.objects.all().delete()
 
     def check_email_contain_a_correct_token(self, lang, dicts, mock, model):
         token = self.get_token_key()
@@ -52,7 +56,7 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
                 "html": template['html']
             }
         )])
-        
+
         html = template['html']
         del template['html']
         self.assertEqual(template, {
@@ -62,7 +66,7 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
                     '\n'
                     'Please take 2 min to answer the following question:\n'
                     '\n'
-                    f'{question}\n' 
+                    f'{question}\n'
                     '\n'
                     'Click here to vote: '
                     f'{link}'

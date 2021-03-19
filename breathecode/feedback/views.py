@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import status
-from breathecode.utils import capable_of, ValidationException
+from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination
 from PIL import Image
 
 @api_view(['GET'])
@@ -22,12 +22,12 @@ def track_survey_open(request, answer_id=None):
     item = None
     if answer_id is not None:
         item = Answer.objects.filter(id=answer_id, status='SENT').first()
-    
+
     if item is not None:
         item.status = 'OPENED'
         item.opened_at = timezone.now()
         item.save()
-    
+
     image = Image.new('RGB', (1, 1))
     response = HttpResponse(content_type="image/png")
     image.save(response, "PNG")
@@ -53,18 +53,17 @@ def get_survey_questions(request, survey_id=None):
         raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
 
     answers = generate_user_cohort_survey_answers(request.user, survey, status='OPENED')
-    
     serializer = AnswerSerializer(answers, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 # Create your views here.
-class GetAnswerView(APIView):
+class GetAnswerView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
     @capable_of('read_nps_answers')
     def get(self, request, format=None, academy_id=None):
-        
+
         items = Answer.objects.filter(academy__id=academy_id)
         lookup = {}
 
@@ -87,15 +86,20 @@ class GetAnswerView(APIView):
         if 'score' in self.request.GET:
             param = self.request.GET.get('score')
             lookup['score'] = param
-        
+
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
             lookup['status'] = param
 
         items = items.filter(**lookup).order_by('-created_at')
-        
-        serializer = AnswerSerializer(items, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        page = self.paginate_queryset(items, request)
+        serializer = AnswerSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
 class AnswerView(APIView):
     """
@@ -104,24 +108,24 @@ class AnswerView(APIView):
     def put(self, request, answer_id=None):
         if answer_id is None:
             raise serializers.ValidationError("Missing answer_id", code=400)
-        
+
         answer = Answer.objects.filter(user=request.user,id=answer_id).first()
         if answer is None:
             raise NotFound('This survey does not exist for this user')
-        
+
         serializer = AnswerPUTSerializer(answer, data=request.data, context={ "request": request, "answer": answer_id })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
     def get(self, request, answer_id=None):
         if answer_id is None:
             raise serializers.ValidationError("Missing answer_id", code=404)
-        
+
         answer = Answer.objects.filter(user=request.user,id=answer_id).first()
         if answer is None:
             raise NotFound('This survey does not exist for this user')
-        
+
         serializer = AnswerPUTSerializer(answer)
         return Response(serializer.data, status=status.HTTP_200_OK)

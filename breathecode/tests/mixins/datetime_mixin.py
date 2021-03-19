@@ -22,6 +22,7 @@ class DatetimeMixin():
         if not isinstance(date, str):
             self.assertTrue(isinstance(date, datetime))
             return True
+
         try:
             string = re.sub(r'Z$', '', date)
             datetime.fromisoformat(string)

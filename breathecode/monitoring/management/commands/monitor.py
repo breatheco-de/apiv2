@@ -31,41 +31,46 @@ class Command(BaseCommand):
             help='Delete and add again',
         )
         parser.add_argument(
-              '--limit',
-               action='store',
-               dest='limit',
-               type=int,
-               default=0,
-               help='How many to import'
+            '--limit',
+            action='store',
+            dest='limit',
+            type=int,
+            default=0,
+            help='How many to import'
         )
 
     def handle(self, *args, **options):
         try:
-            func = getattr(self,options['entity'],'entity_not_found') 
+            func = getattr(self,options['entity'], None)
         except TypeError:
-            print(f'Sync method for {options["entity"]} no Found!')
+            self.stderr.write(self.style.ERROR(f'Sync method for {options["entity"]} no Found!'))
+            return
+        except KeyError:
+            self.stderr.write(self.style.ERROR('Entity arguments is not set'))
+            return
+
+        if not callable(func):
+            self.stderr.write(self.style.ERROR('Entity not found'))
+            return
+
         func(options)
 
     def apps(self, options):
+        apps = Application.objects.all().values_list('id', flat=True)
 
-        apps = Application.objects.all()
-        count = 0
-        for a in apps:
-            count += 1
-            monitor_app.delay(a.id)
-        
-        self.stdout.write(self.style.SUCCESS(f"Enqueued {count} apps for diagnostic"))
+        for app_id in apps:
+            monitor_app.delay(app_id)
+
+        self.stdout.write(self.style.SUCCESS(f"Enqueued {len(apps)} apps for diagnostic"))
 
     def scripts(self, options):
-
         now = timezone.now()
         scripts = MonitorScript.objects\
                     .filter(Q(last_run__isnull=True) | Q(last_run__lte= now - F('frequency_delta')))\
                     .exclude(application__paused_until__isnull=False, application__paused_until__gte=now)\
-                    .exclude(paused_until__isnull=False, paused_until__gte=now)
-        count = 0
-        for s in scripts:
-            count += 1
-            execute_scripts.delay(s.id)
-        
-        self.stdout.write(self.style.SUCCESS(f"Enqueued {count} scripts for execution"))
+                    .exclude(paused_until__isnull=False, paused_until__gte=now).values_list('id', flat=True)
+
+        for script_id in scripts:
+            execute_scripts.delay(script_id)
+
+        self.stdout.write(self.style.SUCCESS(f"Enqueued {len(scripts)} scripts for execution"))

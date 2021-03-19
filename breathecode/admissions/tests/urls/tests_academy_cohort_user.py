@@ -706,3 +706,153 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'finantial_status': None,
             'educational_status': 'GRADUATED'
         }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_id_user_post_in_bulk_0_items(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, cohort=True,
+            profile_academy=True, capability='crud_cohort', role='potato')
+        url = reverse_lazy('admissions:academy_cohort_user')
+        data = []
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_cohort_user_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_id_user_post_in_bulk_1_items(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, cohort=True, user=True,
+            profile_academy=True, capability='crud_cohort', role='potato')
+        url = reverse_lazy('admissions:academy_cohort_user')
+        data = [{
+            'user':  model['user'].id,
+            'cohort':  model['cohort'].id,
+        }]
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = [{
+            'id': 1,
+            'role': 'STUDENT',
+            'user': {
+                'id': model['user'].id,
+                'first_name': model['user'].first_name,
+                'last_name': model['user'].last_name,
+                'email': model['user'].email,
+            },
+            'cohort': {
+                'id': model['cohort'].id,
+                'slug': model['cohort'].slug,
+                'name': model['cohort'].name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    model['cohort'].kickoff_date.isoformat()
+                ),
+                'current_day': model['cohort'].current_day,
+                'academy': {
+                    'id': model['cohort'].academy.id,
+                    'name': model['cohort'].academy.name,
+                    'slug': model['cohort'].academy.slug,
+                    'country': model['cohort'].academy.country.code,
+                    'city': model['cohort'].academy.city.id,
+                    'street_address': model['cohort'].academy.street_address,
+                },
+                'syllabus': None,
+                'ending_date': model['cohort'].ending_date,
+                'stage': model['cohort'].stage,
+                'language': model['cohort'].language,
+                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
+                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
+            },
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_cohort_user_dict(), [{
+            'cohort_id': 1,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 1,
+            'role': 'STUDENT',
+            'user_id': 1,
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_id_user_post_in_bulk_2_items(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, cohort=True,
+            profile_academy=True, capability='crud_cohort', role='potato')
+        del base['user']
+
+        models = [self.generate_models(user=True, models=base) for _ in range(0, 2)]
+        url = reverse_lazy('admissions:academy_cohort_user')
+        data = [{
+            'user':  model['user'].id,
+            'cohort':  models[0]['cohort'].id,
+        } for model in models]
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = [{
+            'id': model['user'].id - 1,
+            'role': 'STUDENT',
+            'user': {
+                'id': model['user'].id,
+                'first_name': model['user'].first_name,
+                'last_name': model['user'].last_name,
+                'email': model['user'].email,
+            },
+            'cohort': {
+                'id': model['cohort'].id,
+                'slug': model['cohort'].slug,
+                'name': model['cohort'].name,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    model['cohort'].kickoff_date.isoformat()
+                ),
+                'current_day': model['cohort'].current_day,
+                'academy': {
+                    'id': model['cohort'].academy.id,
+                    'name': model['cohort'].academy.name,
+                    'slug': model['cohort'].academy.slug,
+                    'country': model['cohort'].academy.country.code,
+                    'city': model['cohort'].academy.city.id,
+                    'street_address': model['cohort'].academy.street_address,
+                },
+                'syllabus': None,
+                'ending_date': model['cohort'].ending_date,
+                'stage': model['cohort'].stage,
+                'language': model['cohort'].language,
+                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
+                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
+            },
+        } for model in models]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_cohort_user_dict(), [{
+            'cohort_id': 1,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 1,
+            'role': 'STUDENT',
+            'user_id': 2,
+        }, {
+            'cohort_id': 1,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 2,
+            'role': 'STUDENT',
+            'user_id': 3,
+        }])

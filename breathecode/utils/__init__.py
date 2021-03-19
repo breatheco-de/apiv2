@@ -3,6 +3,7 @@ this is one wrapper to import utils like one package
 """
 
 from .admin_export_csv_mixin import AdminExportCsvMixin
+from .attr_dict import AttrDict
 from .breathecode_exception_handler import breathecode_exception_handler
 from .cache import Cache
 from .capable_of import capable_of

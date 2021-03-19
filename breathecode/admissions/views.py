@@ -22,7 +22,7 @@ from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
-from breathecode.utils import Cache, localize_query, capable_of, ValidationException
+from breathecode.utils import Cache, localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination
 from django.http import QueryDict
 from django.db.utils import IntegrityError
 from rest_framework.exceptions import NotFound, ParseError, PermissionDenied, ValidationError
@@ -211,10 +211,17 @@ class CohortUserView(APIView):
             'cohort_user': cohort_user,
         }
 
-    def post(self, request, cohort_id=None):
-        validations = self.validations(request, cohort_id, matcher="cohort__academy__in")
+    def post(self, request, cohort_id=None, user_id=None):
+        many = isinstance(request.data, list)
+        context = {
+            'request': request,
+            'cohort_id': cohort_id,
+            'user_id': user_id,
+            'many': many,
+        }
 
-        serializer = CohortUserSerializer(data=validations['data'], context=validations['data'])
+        serializer = CohortUserSerializer(data=request.data,
+            context=context, many=many)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -381,10 +388,17 @@ class AcademyCohortUserView(APIView):
         }
 
     @capable_of('crud_cohort')
-    def post(self, request, cohort_id=None, academy_id=None):
-        validations = self.validations(request, cohort_id, matcher="cohort__academy__in")
+    def post(self, request, cohort_id=None, academy_id=None, user_id=None):
+        many = isinstance(request.data, list)
+        context = {
+            'request': request,
+            'cohort_id': cohort_id,
+            'user_id': user_id,
+            'many': many,
+        }
 
-        serializer = CohortUserSerializer(data=validations['data'], context=validations['data'])
+        serializer = CohortUserSerializer(data=request.data,
+            context=context, many=many)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -496,13 +510,9 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination):
         if academy is None:
             raise ValidationError(f'Academy {academy_id} not found')
 
-        syllabus_id = request.data.get('syllabus')
-        if syllabus_id is None:
-            raise ParseError(detail='syllabus field is missing')
-
-        syllabus = Syllabus.objects.filter(id=syllabus_id).first()
+        syllabus = request.data.get('syllabus')
         if syllabus is None:
-            raise ParseError(detail='specified syllabus not be found')
+            raise ParseError(detail='syllabus field is missing')
 
         if request.data.get('current_day'):
             raise ParseError(detail='current_day field is not allowed')
@@ -515,9 +525,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination):
         for key in request.data:
             data[key] = request.data.get(key)
 
-        data['syllabus'] = syllabus
-
-        serializer = CohortSerializer(data=data, context=data)
+        serializer = CohortSerializer(data=data, context={ "request": request, "academy": academy })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -574,11 +582,17 @@ class CertificateView(APIView):
         serializer = CertificateSerializer(items, many=True)
         return Response(serializer.data)
 
-@api_view(['GET'])
-def get_courses(request):
-    certificates = Certificate.objects.all()
-    serializer = GetCertificateSerializer(certificates, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+class CertificateView(APIView, HeaderLimitOffsetPagination):
+    def get(self, request):
+        items = Certificate.objects.all()
+
+        page = self.paginate_queryset(items, request)
+        serializer = GetCertificateSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 def get_single_course(request, certificate_slug):

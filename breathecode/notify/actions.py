@@ -109,7 +109,6 @@ def send_slack_raw(slug, token, channel_id, data={}):
     try:
         if "slack_payload" in data:
             payload = data["slack_payload"]
-            print(payload)
         else:
             template = get_template_content(slug, data, ["slack"])
             payload = json.loads(template['slack'])
@@ -130,7 +129,9 @@ def send_slack_raw(slug, token, channel_id, data={}):
         })
         logger.debug(f"Notification to {str(channel_id)} sent")
         return True
-    except Exception:
+    except Exception as e:
+        # import traceback
+        # traceback.print_exc() 
         logger.exception(f"Error sending notification to {str(channel_id)}")
         return False
 
