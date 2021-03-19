@@ -64,7 +64,6 @@ class AcademyEventsTestSuite(EventTestCase):
         
         response = self.client.get(url)
         json = response.json()
-        print('json:', json)
         expected = {
                     'id': model['event'].id,
                     'excerpt': model['event'].excerpt,

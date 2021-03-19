@@ -1,4 +1,5 @@
-import logging, datetime
+import logging
+import datetime
 from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
@@ -49,7 +50,7 @@ def get_events(request):
 
     if 'academy' in request.GET:
         value = request.GET.get('academy')
-        lookup['academy__slug__in']=value.split(",")
+        lookup['academy__slug__in'] = value.split(",")
 
     lookup['starting_at__gte'] = timezone.now()
     if 'past' in request.GET:
@@ -67,6 +68,7 @@ class EventView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, format=None):
 
         items = Event.objects.all()
@@ -102,6 +104,7 @@ class EventView(APIView):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class AcademyEventView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
@@ -111,7 +114,8 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
     def get(self, request, format=None, academy_id=None, event_id=None):
 
         if event_id is not None:
-            single_event = Event.objects.filter(id=event_id,academy__id=academy_id).first()
+            single_event = Event.objects.filter(
+                id=event_id, academy__id=academy_id).first()
             if single_event is None:
                 raise ValidationException("Event not found", 404)
 
@@ -158,7 +162,8 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         if academy is None:
             raise ValidationException(f"Academy {academy_id} not found")
 
-        serializer = EventSerializer(data={ **request.data, "academy": academy.id })
+        serializer = EventSerializer(
+            data={**request.data, "academy": academy.id})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -167,9 +172,11 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
     @capable_of('crud_event')
     def put(self, request, academy_id=None, event_id=None):
 
-        already = Event.objects.filter(id=event_id,academy__id=academy_id).first()
+        already = Event.objects.filter(
+            id=event_id, academy__id=academy_id).first()
         if already is None:
-            raise ValidationException(f"Event not found for this academy {academy_id}")
+            raise ValidationException(
+                f"Event not found for this academy {academy_id}")
 
         serializer = EventSerializer(already, data=request.data)
         if serializer.is_valid():
@@ -182,6 +189,7 @@ class EventTypeView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, format=None):
 
         items = EventType.objects.all()
@@ -190,7 +198,6 @@ class EventTypeView(APIView):
         if 'academy' in self.request.GET:
             value = self.request.GET.get('academy')
             lookup['academy__slug'] = value
-
         items = items.filter(**lookup).order_by('-created_at')
 
         serializer = EventTypeSerializer(items, many=True)
@@ -241,7 +248,7 @@ def eventbrite_webhook(request, organization_id):
         async_eventbrite_webhook.delay(webhook.id)
     else:
         logger.debug('One request cannot be parsed, maybe you should update `Eventbrite'
-            '.add_webhook_to_log`')
+                     '.add_webhook_to_log`')
         logger.debug(request.data)
 
     # async_eventbrite_webhook(request.data)
