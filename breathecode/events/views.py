@@ -4,12 +4,12 @@ from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from .models import Event, EventType, EventCheckin
+from .models import Event, EventType, EventCheckin, Venue
 from breathecode.admissions.models import Academy
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (
     EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
-    EventSmallSerializerNoAcademy
+    EventSmallSerializerNoAcademy, VenueSerializer
 )
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -253,3 +253,26 @@ def eventbrite_webhook(request, organization_id):
 
     # async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')
+
+
+# list venues
+class AcademyVenueView(APIView):
+    """
+    List all snippets
+    """
+    @capable_of('read_event')
+    def get(self, request, format=None, academy_id=None):
+
+        # venues = Venue.objects.all()
+        # lookup = {}
+
+        venues = Venue.objects.filter(
+            academy__id=academy_id).order_by('-created_at')
+
+        # if 'academy' in self.request.GET:
+        #     value = self.request.GET.get('academy')
+        #     lookup['academy__slug'] = value
+        # venues = venues.filter(**lookup).order_by('-created_at')
+
+        serializer = VenueSerializer(venues, many=True)
+        return Response(serializer.data)
