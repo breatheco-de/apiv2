@@ -6,11 +6,11 @@ from breathecode.authenticate.models import Token
 from unittest.mock import call
 from breathecode.notify.actions import get_template_content
 from rest_framework.test import APITestCase
-from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin
+from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin, DatetimeMixin
 from breathecode.feedback.actions import strings
 
 class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
-        TokenMixin, GenerateQueriesMixin):
+        TokenMixin, GenerateQueriesMixin, DatetimeMixin):
     """MarketingTestCase with auth methods"""
     def tearDown(self):
         self.clear_cache()

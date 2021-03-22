@@ -280,7 +280,6 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
     index = -1
 
     def count_certificates_by_cohort(self, cohort, user_id):
-        print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
         return (CohortUser.objects.filter(user_id=user_id, cohort__syllabus__certificate=cohort.syllabus.certificate)
             .exclude(educational_status='POSTPONED').count())
 
@@ -390,6 +389,27 @@ class CohortUserListSerializer(serializers.ListSerializer):
 
         return items
 
+    def update(self, instance, validated_data):
+        # Maps for id->instance and id->data item.
+        model_mapping = {model.id: model for model in instance}
+        data_mapping = {item['id']: item for item in validated_data}
+
+        # Perform creations and updates.
+        ret = []
+        for model_id, data in data_mapping.items():
+            book = model_mapping.get(model_id, None)
+            if book is None:
+                ret.append(self.child.create(data))
+            else:
+                ret.append(self.child.update(book, data))
+
+        # Perform deletions.
+        for model_id, model in model_mapping.items():
+            if model_id not in data_mapping:
+                model.delete()
+
+        return ret
+
 class CohortUserSerializer(CohortUserSerializerMixin):
     cohort = CohortSerializer(many=False, read_only=True)
     user = UserDJangoRestSerializer(many=False, read_only=True)
@@ -414,33 +434,11 @@ class CohortUserPOSTSerializer(serpy.Serializer):
     cohort = serpy.Field()
     user = serpy.Field()
 
-class CohortUserPUTListSerializer(serializers.ListSerializer):
-    def update(self, instance, validated_data):
-        # Maps for id->instance and id->data item.
-        model_mapping = {model.id: model for model in instance}
-        data_mapping = {item['id']: item for item in validated_data}
-
-        # Perform creations and updates.
-        ret = []
-        for model_id, data in data_mapping.items():
-            book = model_mapping.get(model_id, None)
-            if book is None:
-                ret.append(self.child.create(data))
-            else:
-                ret.append(self.child.update(book, data))
-
-        # Perform deletions.
-        for model_id, model in model_mapping.items():
-            if model_id not in data_mapping:
-                model.delete()
-
-        return ret
-
 class CohortUserPUTSerializer(CohortUserSerializerMixin):
     class Meta:
         model = CohortUser
         fields = ['id', 'role', 'educational_status', 'finantial_status']
-        list_serializer_class = CohortUserPUTListSerializer
+        list_serializer_class = CohortUserListSerializer
 
 class CertificateSerializer(serializers.ModelSerializer):
     class Meta:
