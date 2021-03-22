@@ -261,18 +261,10 @@ class AcademyVenueView(APIView):
     List all snippets
     """
     @capable_of('read_event')
-    def get(self, request, format=None, academy_id=None):
-
-        # venues = Venue.objects.all()
-        # lookup = {}
+    def get(self, request, format=None, academy_id=None, user_id=None):
 
         venues = Venue.objects.filter(
             academy__id=academy_id).order_by('-created_at')
-
-        # if 'academy' in self.request.GET:
-        #     value = self.request.GET.get('academy')
-        #     lookup['academy__slug'] = value
-        # venues = venues.filter(**lookup).order_by('-created_at')
 
         serializer = VenueSerializer(venues, many=True)
         return Response(serializer.data)
