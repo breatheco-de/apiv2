@@ -66,6 +66,104 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_academy_lead_without_auth(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:academy_lead')
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': 401
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.all_form_entry_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_lead_without_academy_header(self):
+        """Test /cohort/:id/user without auth"""
+        url = reverse_lazy('marketing:academy_lead')
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_lead', role='potato')
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'detail': 'Missing academy_id parameter expected for the endpoint url or '
+                "'Academy' header",
+            'status_code': 403
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.all_form_entry_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_lead_without_data(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        url = reverse_lazy('marketing:academy_lead')
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_lead', role='potato')
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_lead(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        url = reverse_lazy('marketing:academy_lead')
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_lead', role='potato', form_entry=True)
+
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertDatetime(json[0]['created_at'])
+        del json[0]['created_at']
+
+        expected = [{
+            'country': None,
+            'course': None,
+            'email': None,
+            'first_name': '',
+            'id': 1,
+            'language': 'en',
+            'last_name': '',
+            'lead_type': None,
+            'location': None,
+            'storage_status': 'PENDING',
+            'tags': '',
+            'utm_campaign': None,
+            'utm_medium': None,
+            'utm_source': None,
+            'utm_url': None,
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        }])
+
+    # TODO: we need test get method with the querystring
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_lead_delete_without_auth(self):
+        """Test /cohort/:id/user without auth"""
+        url = reverse_lazy('marketing:academy_lead')
         response = self.client.delete(url)
         json = response.json()
         expected = {

@@ -226,9 +226,9 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
             param = self.request.GET.get('course')
             lookup['course'] = param
 
-        if 'loca' in self.request.GET:
+        if 'location' in self.request.GET:
             param = self.request.GET.get('location')
-            lookup['course'] = param
+            lookup['location'] = param
 
         items = items.filter(**lookup).order_by('-created_at')
 
