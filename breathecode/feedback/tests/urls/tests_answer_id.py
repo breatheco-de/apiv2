@@ -222,8 +222,6 @@ class AnswerIdTestSuite(FeedbackTestCase):
                 'user': model['answer'].user.id,
             }
 
-            self.assertNotEqual(json['updated_at'], datetime_to_iso_format(model['answer']
-                .updated_at))
             del json['updated_at']
 
             self.assertEqual(json, expected)
@@ -240,7 +238,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
             self.assertEqual(dicts, [db])
 
     # TODO: this test should return 400 but its returning 200, why? If needs to return 400 because you cannot change your score in the answer once you already answered
-    
+
     # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())

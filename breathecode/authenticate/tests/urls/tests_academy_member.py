@@ -1,9 +1,11 @@
 """
 Test cases for /academy/member
 """
+from breathecode.authenticate.models import ProfileAcademy
 from breathecode.services import datetime_to_iso_format
 from django.urls.base import reverse_lazy
 from rest_framework import status
+from random import choice
 from ..mixins.new_auth_test_case import AuthTestCase
 
 
@@ -328,3 +330,266 @@ class AuthenticateTestSuite(AuthTestCase):
             'user_id': model['user'].id
         } for model in models])
 
+    def test_academy_member_delete_without_auth(self):
+        """Test /cohort/:id/user without auth"""
+        url = reverse_lazy('authenticate:academy_member')
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': 401
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.all_profile_academy_dict(), [])
+
+    def test_academy_member_delete_without_header(self):
+        """Test /cohort/:id/user without auth"""
+        model = self.generate_models(authenticate=True)
+        url = reverse_lazy('authenticate:academy_member')
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {
+            'detail': 'Missing academy_id parameter expected for the endpoint url or \'Academy\' header',
+            'status_code': 403
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.all_profile_academy_dict(), [])
+
+    def test_academy_member_delete_without_capability(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True)
+        url = reverse_lazy('authenticate:academy_member')
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {
+            'detail': "You (user: 1) don't have this capability: crud_member for academy 1",
+            'status_code': 403
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.all_profile_academy_dict(), [])
+
+    def test_academy_member_delete_without_args_in_url_or_bulk(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='crud_member', role='potato')
+        url = reverse_lazy('authenticate:academy_member')
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {
+            'detail': "Member not found",
+            'status_code': 404
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            **self.model_to_dict(model, 'profile_academy'),
+        }])
+
+    def test_academy_member_delete_in_bulk_with_one(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        many_fields = ['id', 'email', 'first_name', 'last_name', 'address',
+            'phone', 'status']
+
+        base = self.generate_models(academy=True, capability='crud_member', role='potato')
+
+        for field in many_fields:
+            profile_academy_kwargs = {
+                'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
+                'first_name': choice(['Rene', 'Albert', 'Immanuel']),
+                'last_name': choice(['Descartes', 'Camus', 'Kant']),
+                'address': choice(['asd', 'qwe', 'zxc']),
+                'phone': choice(['123', '456', '789']),
+                'status': choice(['INVITED', 'ACTIVE']),
+            }
+            model = self.generate_models(authenticate=True, profile_academy=True,
+                profile_academy_kwargs=profile_academy_kwargs, models=base)
+
+            url = (reverse_lazy('authenticate:academy_member') + f'?{field}=' +
+                str(getattr(model['profile_academy'], field)))
+            response = self.client.delete(url)
+
+            if response.status_code != 204:
+                print(response.json())
+
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            self.assertEqual(self.all_profile_academy_dict(), [])
+
+    def test_academy_member_delete_in_bulk_with_two(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        many_fields = ['id', 'email', 'first_name', 'last_name', 'address',
+            'phone', 'status']
+
+        base = self.generate_models(academy=True, capability='crud_member', role='potato')
+
+        for field in many_fields:
+            profile_academy_kwargs = {
+                'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
+                'first_name': choice(['Rene', 'Albert', 'Immanuel']),
+                'last_name': choice(['Descartes', 'Camus', 'Kant']),
+                'address': choice(['asd', 'qwe', 'zxc']),
+                'phone': choice(['123', '456', '789']),
+                'status': choice(['INVITED', 'ACTIVE']),
+            }
+            model1 = self.generate_models(authenticate=True, profile_academy=True,
+                profile_academy_kwargs=profile_academy_kwargs, models=base)
+
+            profile_academy_kwargs = {
+                'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
+                'first_name': choice(['Rene', 'Albert', 'Immanuel']),
+                'last_name': choice(['Descartes', 'Camus', 'Kant']),
+                'address': choice(['asd', 'qwe', 'zxc']),
+                'phone': choice(['123', '456', '789']),
+                'status': choice(['INVITED', 'ACTIVE']),
+            }
+            model2 = self.generate_models(profile_academy=True,
+                profile_academy_kwargs=profile_academy_kwargs, models=base)
+
+            url = (reverse_lazy('authenticate:academy_member') + f'?{field}=' +
+                str(getattr(model1['profile_academy'], field)) + ',' +
+                str(getattr(model2['profile_academy'], field)))
+            response = self.client.delete(url)
+
+            if response.status_code != 204:
+                print(response.json())
+
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            self.assertEqual(self.all_profile_academy_dict(), [])
+
+    def test_academy_member_delete_in_bulk_with_two_but_is_student(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        many_fields = ['id', 'email', 'first_name', 'last_name', 'address',
+            'phone', 'status']
+
+        base = self.generate_models(academy=True, capability='crud_member', role='student')
+
+        for field in many_fields:
+            profile_academy_kwargs = {
+                'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
+                'first_name': choice(['Rene', 'Albert', 'Immanuel']),
+                'last_name': choice(['Descartes', 'Camus', 'Kant']),
+                'address': choice(['asd', 'qwe', 'zxc']),
+                'phone': choice(['123', '456', '789']),
+                'status': choice(['INVITED', 'ACTIVE']),
+            }
+            model1 = self.generate_models(authenticate=True, profile_academy=True,
+                profile_academy_kwargs=profile_academy_kwargs, models=base)
+
+            profile_academy_kwargs = {
+                'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
+                'first_name': choice(['Rene', 'Albert', 'Immanuel']),
+                'last_name': choice(['Descartes', 'Camus', 'Kant']),
+                'address': choice(['asd', 'qwe', 'zxc']),
+                'phone': choice(['123', '456', '789']),
+                'status': choice(['INVITED', 'ACTIVE']),
+            }
+            model2 = self.generate_models(profile_academy=True,
+                profile_academy_kwargs=profile_academy_kwargs, models=base)
+
+            url = (reverse_lazy('authenticate:academy_member') + f'?{field}=' +
+                str(getattr(model1['profile_academy'], field)) + ',' +
+                str(getattr(model2['profile_academy'], field)))
+            response = self.client.delete(url)
+
+            if response.status_code != 204:
+                print(response.json())
+
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            self.assertEqual(self.all_profile_academy_dict(), [{
+                **self.model_to_dict(model1, 'profile_academy'),
+            }, {
+                **self.model_to_dict(model2, 'profile_academy'),
+            }])
+
+            for model in ProfileAcademy.objects.all():
+                model.delete()
+
+    def test_academy_member_delete_in_bulk_with_one_relationships(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        many_fields = ['user', 'academy', 'role']
+
+        base = self.generate_models(academy=True, capability='crud_member', role='potato')
+
+        for field in many_fields:
+            model = self.generate_models(authenticate=True, profile_academy=True,
+                models=base)
+
+            value = model[field].id if field != 'role' else model[field].slug
+
+            url = reverse_lazy('authenticate:academy_member') + f'?{field}=' + str(value)
+            response = self.client.delete(url)
+
+            if response.status_code != 204:
+                print(response.json())
+
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            self.assertEqual(self.all_profile_academy_dict(), [])
+
+    def test_academy_member_delete_in_bulk_with_two_relationships(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        many_fields = ['user', 'academy', 'role']
+
+        base = self.generate_models(academy=True, capability='crud_member', role='potato')
+
+        for field in many_fields:
+            model1 = self.generate_models(authenticate=True, profile_academy=True,
+                models=base)
+            model2 = self.generate_models(profile_academy=True, models=base)
+
+            value1 = model1[field].id if field != 'role' else model1[field].slug
+            value2 = model2[field].id if field != 'role' else model2[field].slug
+
+            url = (reverse_lazy('authenticate:academy_member') + f'?{field}=' +
+                str(value1) + ',' + str(value2))
+            response = self.client.delete(url)
+
+            if response.status_code != 204:
+                print(response.json())
+
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            self.assertEqual(self.all_profile_academy_dict(), [])
+
+    def test_academy_member_delete_in_bulk_with_two_relationships_but_is_student(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        many_fields = ['user', 'academy', 'role']
+
+        base = self.generate_models(academy=True, capability='crud_member', role='student')
+
+        for field in many_fields:
+            model1 = self.generate_models(authenticate=True, profile_academy=True,
+                models=base)
+            model2 = self.generate_models(profile_academy=True, models=base)
+
+            value1 = model1[field].id if field != 'role' else model1[field].slug
+            value2 = model2[field].id if field != 'role' else model2[field].slug
+
+            url = (reverse_lazy('authenticate:academy_member') + f'?{field}=' +
+                str(value1) + ',' + str(value2))
+            response = self.client.delete(url)
+
+            if response.status_code != 204:
+                print(response.json())
+
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            self.assertEqual(self.all_profile_academy_dict(), [{
+                **self.model_to_dict(model1, 'profile_academy'),
+            }, {
+                **self.model_to_dict(model2, 'profile_academy'),
+            }])
+
+            for model in ProfileAcademy.objects.all():
+                model.delete()

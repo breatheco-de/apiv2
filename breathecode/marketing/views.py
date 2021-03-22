@@ -10,7 +10,7 @@ from django.db.models import Q
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, Sum, F, Func, Value, CharField
-from breathecode.utils import APIException, localize_query, capable_of
+from breathecode.utils import APIException, localize_query, capable_of, ValidationException, GenerateLookupsMixin
 from .serializers import PostFormEntrySerializer, FormEntrySerializer, FormEntrySmallSerializer
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
 from .tasks import persist_single_lead, update_link_viewcount
@@ -41,7 +41,7 @@ def receive_facebook_lead(request):
         challenge = 'no challenge'
         if 'hub.challenge' in request.GET:
             challenge = request.GET['hub.challenge']
-        
+
         verify_token = ''
         if 'hub.verify_token' in request.GET:
             verify_token = request.GET['hub.verify_token']
@@ -81,7 +81,7 @@ def receive_facebook_lead(request):
 # Create your views here.
 @api_view(['GET'])
 def sync_tags_with_active_campaign(request, academy_id):
-    
+
     academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
     if academy is None:
         raise APIException('Academy not found')
@@ -92,7 +92,7 @@ def sync_tags_with_active_campaign(request, academy_id):
 # Create your views here.
 @api_view(['GET'])
 def sync_automations_with_active_campaign(request, academy_id):
-    
+
     academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
     if academy is None:
         raise APIException('Academy not found')
@@ -121,7 +121,7 @@ def redirect_link(request, link_slug):
     url_parts = short_link.destination.split('?')
     if len(url_parts) > 1:
         destination_params = dict(parse.parse_qsl(url_parts[1]))
-    
+
     params = { **destination_params, **params }
     return HttpResponseRedirect(redirect_to=url_parts[0]+"?"+parse.urlencode(params))
 
@@ -181,7 +181,7 @@ def get_leads_report(request, id=None):
     if end is not None:
         end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
         items = items.filter(created_at__lte=end_date)
-    
+
     items = items.values(*group_by).annotate(total_leads=Count('location'))
 
     if "created_at__date" in group_by:
@@ -197,13 +197,13 @@ def get_leads_report(request, id=None):
     return Response(items)
 
 
-class AcademyLeadView(APIView):
+class AcademyLeadView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
     @capable_of('read_lead')
     def get(self, request, format=None, academy_id=None):
-        
+
         academy = Academy.objects.get(id=academy_id)
         items = FormEntry.objects.filter(Q(location=academy.slug) | Q(academy__id=academy.id))
         lookup = {}
@@ -217,20 +217,47 @@ class AcademyLeadView(APIView):
         if end is not None:
             end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
             lookup['created_at__lte'] = end_date
-        
+
         if 'storage_status' in self.request.GET:
             param = self.request.GET.get('storage_status')
             lookup['storage_status'] = param
-        
+
         if 'course' in self.request.GET:
             param = self.request.GET.get('course')
             lookup['course'] = param
-        
+
         if 'loca' in self.request.GET:
             param = self.request.GET.get('location')
             lookup['course'] = param
 
         items = items.filter(**lookup).order_by('-created_at')
-        
+
         serializer = FormEntrySmallSerializer(items, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('crud_lead')
+    def delete(self, request, academy_id=None):
+        # TODO: here i don't add one single delete, because i don't know if it is required
+        lookups = self.generate_lookups(
+            request,
+            many_fields=['id', 'fb_leadgen_id', 'fb_page_id', 'fb_form_id',
+                'fb_adgroup_id', 'fb_ad_id', 'first_name', 'last_name', 'email',
+                'phone', 'course', 'client_comments', 'location', 'language',
+                'utm_url', 'utm_medium', 'utm_campaign', 'utm_source',
+                'referral_key', 'gclid', 'tags', 'automations', 'street_address',
+                'country', 'city', 'latitude', 'longitude', 'state', 'zip_code',
+                'browser_lang', 'storage_status', 'lead_type', 'deal_status',
+                'sentiment'],
+            many_relationships=['contact', 'academy', 'ac_academy', 'automation_objects']
+        )
+        # automation_objects
+
+        if not lookups:
+            raise ValidationException('Missing parameters in the querystring', code=400)
+
+        items = FormEntry.objects.filter(**lookups, academy__id=academy_id)
+
+        for item in items:
+            item.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
