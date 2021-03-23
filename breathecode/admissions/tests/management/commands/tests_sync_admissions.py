@@ -16,7 +16,7 @@ from ....management.commands.sync_admissions import Command
 from ....models import Academy, Certificate, Cohort, User, CohortUser
 from ...mocks import (
     LEGACY_API_PATH,
-    apply_requests_get_mock
+    apply_screenshotmachine_requests_get_mock
 )
 # from ...utils import GenerateModels
 
@@ -50,7 +50,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(LEGACY_API_PATH['get'], apply_requests_get_mock())
+    @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
     def test_students(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -66,7 +66,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         command = Command()
         self.assertEqual(self.count_cohort_user(), 0)
-        
+
         self.assertEqual(command.students({'override': False}), None)
         self.assertEqual(self.count_cohort(), len(cohorts))
         self.assertEqual(self.count_user(), 10)
@@ -113,7 +113,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(LEGACY_API_PATH['get'], apply_requests_get_mock())
+    @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
     def test_students_twice(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -129,7 +129,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         command = Command()
         self.assertEqual(self.count_cohort_user(), 0)
-        
+
         self.assertEqual(command.students({'override': False}), None)
         self.assertEqual(command.students({'override': False}), None) # call twice
         self.assertEqual(self.count_cohort(), len(cohorts))
@@ -177,7 +177,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(LEGACY_API_PATH['get'], apply_requests_get_mock())
+    @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
     def test_teachers(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -193,7 +193,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         command = Command()
         self.assertEqual(self.count_cohort_user(), 0)
-        
+
         self.assertEqual(command.teachers({'override': False}), None)
         self.assertEqual(self.count_cohort(), len(cohorts))
         self.assertEqual(self.count_user(), 10)
@@ -240,7 +240,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(LEGACY_API_PATH['get'], apply_requests_get_mock())
+    @patch(LEGACY_API_PATH['get'], apply_screenshotmachine_requests_get_mock())
     def test_teachers_twice(self):
         """Test /academy/cohort without auth"""
         cohorts = set()
@@ -256,7 +256,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         command = Command()
         self.assertEqual(self.count_cohort_user(), 0)
-        
+
         self.assertEqual(command.teachers({'override': False}), None)
         self.assertEqual(command.teachers({'override': False}), None) # call twice
         self.assertEqual(self.count_cohort(), len(cohorts))

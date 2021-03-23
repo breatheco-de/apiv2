@@ -93,4 +93,5 @@ class SlackChannel(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.name + "( "+self.slack_id+" )"
+        name = self.name if self.name else 'Unknown'
+        return f'{name}({self.slack_id})'

@@ -4,7 +4,7 @@ from rest_framework import routers
 from .views import (
     AcademyView, CohortUserView, get_cohorts, AcademyCohortView,
     get_timezones, UserView, UserMeView, AcademyCohortUserView,
-    get_courses, get_single_course, SyllabusView
+    get_single_course, SyllabusView, CertificateView
 )
 
 app_name = 'admissions'
@@ -28,7 +28,7 @@ urlpatterns = [
     path('user', UserView.as_view(), name="user"),
 
     # update a cohort user information
-    path('certificate', get_courses, name="certificate"),
+    path('certificate', CertificateView.as_view(), name="certificate"),
     path('certificate/<str:certificate_slug>/', get_single_course,
         name="certificate_slug"),
     path('certificate/<str:certificate_slug>/syllabus', SyllabusView.as_view(),

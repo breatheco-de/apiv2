@@ -12,6 +12,6 @@ SCREENSHOTMACHINE_INSTANCES = {
     'get': Mock(side_effect=get_mock)
 }
 
-def apply_requests_get_mock():
+def apply_screenshotmachine_requests_get_mock():
     """Apply Storage Blob Mock"""
     return SCREENSHOTMACHINE_INSTANCES['get']

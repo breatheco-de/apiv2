@@ -7,4 +7,3 @@ urlpatterns = [
     path('application/', get_apps),
     path('enbpoint/', get_endpoints),
 ]
-

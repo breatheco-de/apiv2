@@ -15,12 +15,13 @@ from .events_queries_mixin import EventsQueriesMixin
 from .assessment_queries_mixin import AssessmentQueriesMixin
 from .freelance_queries_mixin import FreelanceQueriesMixin
 from .marketing_queries_mixin import MarketingQueriesMixin
+from .monitoring_queries_mixin import MonitoringQueriesMixin
 
 class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin,
         AssessmentQueriesMixin, AssignmentsQueriesMixin,
         AuthenticateQueriesMixin, CertificateQueriesMixin, EventsQueriesMixin,
         FeedbackQueriesMixin, FreelanceQueriesMixin, MarketingQueriesMixin,
-        NotifyQueriesMixin):
+        NotifyQueriesMixin, MonitoringQueriesMixin):
     __project__ = 'breathecode'
 
     def __get_model__(self, Model, key='id'):
@@ -74,6 +75,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin,
             self.generate_feedback_queries,
             self.generate_freelance_queries,
             self.generate_marketing_queries,
+            self.generate_monitoring_queries,
             self.generate_notify_queries,
         ]
 

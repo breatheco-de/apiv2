@@ -2,7 +2,7 @@
 Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
-from breathecode.admissions.models import CohortUser, Cohort, Academy, Certificate, Syllabus
+from breathecode.admissions.models import Cohort
 from datetime import datetime
 from mixer.backend.django import mixer
 

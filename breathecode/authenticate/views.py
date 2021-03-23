@@ -26,7 +26,7 @@ from .models import Profile, CredentialsGithub, Token, CredentialsSlack, Credent
 from .actions import reset_password, resend_invite
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
-from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination
+from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
@@ -63,7 +63,7 @@ class LogoutView(APIView):
             'message': "User tokens successfully deleted",
         })
 
-class MemberView(APIView, HeaderLimitOffsetPagination):
+class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('read_member')
     def get(self, request, academy_id, user_id=None):
@@ -129,6 +129,25 @@ class MemberView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('crud_member')
     def delete(self, request, academy_id=None, user_id=None):
+        lookups = self.generate_lookups(
+            request,
+            many_fields=['id', 'email', 'first_name', 'last_name', 'address',
+                'phone', 'status'],
+            many_relationships=['user', 'academy', 'role']
+        )
+
+        if lookups and user_id:
+            raise ValidationException('user_id or cohort_id was provided in url '
+                'in bulk mode request, use querystring style instead', code=400)
+
+        if lookups:
+            items = ProfileAcademy.objects.filter(**lookups,
+                academy__id=academy_id).exclude(role__slug="student")
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         member = ProfileAcademy.objects.filter(user=user_id,academy__id=academy_id).exclude(role__slug="student").first()
         if member is None:
@@ -136,7 +155,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination):
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-class StudentView(APIView, HeaderLimitOffsetPagination):
+class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('read_student')
     def get(self, request, academy_id=None, user_id=None):
@@ -207,6 +226,24 @@ class StudentView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id=None):
+        lookups = self.generate_lookups(
+            request,
+            many_fields=['id', 'email', 'first_name', 'last_name', 'address',
+                'phone', 'status'],
+            many_relationships=['user', 'academy', 'role']
+        )
+
+        if lookups and user_id:
+            raise ValidationException('user_id was provided in url '
+                'in bulk mode request, use querystring style instead', code=400)
+
+        if lookups:
+            items = ProfileAcademy.objects.filter(**lookups, academy__id=academy_id, role__slug='student')
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if academy_id is None or user_id is None:
             raise serializers.ValidationError("Missing user_id or academy_id", code=400)
@@ -810,7 +847,7 @@ class AcademyInviteView(APIView):
 
             if user is None:
                 raise ValidationException("Member not found", 400)
-            invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email).first() 
+            invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email).first()
 
             if invite is None:
                 raise ValidationException("Invite not found", 400)

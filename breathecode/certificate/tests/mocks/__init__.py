@@ -11,7 +11,7 @@ from .google_cloud_storage import (
 from .screenshotmachine import (
     SCREENSHOTMACHINE_PATH,
     SCREENSHOTMACHINE_INSTANCES,
-    apply_requests_get_mock,
+    apply_screenshotmachine_requests_get_mock,
 )
 from .credentials import (
     CREDENTIALS_PATH,

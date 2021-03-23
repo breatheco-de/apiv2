@@ -10,7 +10,7 @@ app_name='marketing'
 urlpatterns = [
     path('lead', create_lead, name="lead"),
     path('lead/all', get_leads, name="lead_all"),
-    path('academy/lead', AcademyLeadView.as_view(), name="academy_all"),
+    path('academy/lead', AcademyLeadView.as_view(), name="academy_lead"),
     path('academy/<int:academy_id>/tag/sync', sync_tags_with_active_campaign, name="academy_id_tag_sync"),
     path('academy/<int:academt_id>/automation/sync', sync_automations_with_active_campaign, name="academy_id_automation_sync"),
 

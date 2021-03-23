@@ -10,7 +10,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
     MAILGUN_PATH,
     MAILGUN_INSTANCES,
-    apply_requests_post_mock,
+    apply_mailgun_requests_post_mock,
     SLACK_PATH,
     SLACK_INSTANCES,
     apply_slack_requests_request_mock,
@@ -31,7 +31,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True)
-        
+
         try:
             send_question(model['user'])
         except Exception as e:
@@ -41,7 +41,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     def test_send_question_with_one_user_with_two_cohort(self):
         """
         Step 2
@@ -58,7 +58,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         print(self.count_user())
         print(self.count_cohort())
         print(self.count_cohort_user())
-        
+
         try:
             send_question(model1['user'])
         except Exception as e:
@@ -68,7 +68,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     def test_send_question_with_cohort_with_cohort_user(self):
         """
         Step 3
@@ -82,7 +82,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         mock_slack.call_args_list = []
 
         model = self.generate_models(user=True, cohort_user=True)
-        
+
         try:
             send_question(model['user'])
         except Exception as e:
@@ -109,14 +109,14 @@ class SendSurveyTestSuite(FeedbackTestCase):
         }]
 
         dicts = self.all_answer_dict()
-        self.assertEqual(dicts, expected)        
+        self.assertEqual(dicts, expected)
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     def test_send_question_with_cohort_with_syllabus(self):
         """
         Step 4
@@ -131,7 +131,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
         model = self.generate_models(user=True, cohort_user=True, syllabus=True)
         certificate = model['cohort'].syllabus.certificate.name
-        
+
         send_question(model['user'])
 
         expected = [{
@@ -162,7 +162,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     def test_send_question_with_cohort_with_slack_user_with_slack_team_with_credentials_slack(self):
         """Test /answer without auth"""
@@ -175,7 +175,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         model = self.generate_models(user=True, cohort_user=True, lang='en', slack_user=True,
             slack_team=True, credentials_slack=True, academy=True, syllabus=True)
         certificate = model['cohort'].syllabus.certificate.name
-        
+
         send_question(model['user'])
 
         expected = [{
@@ -207,7 +207,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     def test_send_question_with_cohort_lang_en(self):
         """Test /answer without auth"""
@@ -221,7 +221,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
             slack_team=True, credentials_slack=True, academy=True, slack_team_owner=True,
             syllabus=True)
         certificate = model['cohort'].syllabus.certificate.name
-        
+
         try:
             send_question(model['user'])
         except Exception as e:
@@ -256,7 +256,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     def test_send_question_with_cohort_lang_es(self):
         """Test /answer without auth"""
@@ -303,7 +303,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
+    # @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     # @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     # def test_send_question_with_cohort_resent(self):
     #     """Test /answer without auth"""
@@ -352,5 +352,5 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
     #     # TODO: this function is broken, we have to fix it
     #     # self.check_email_contain_a_correct_token('es', academy, dicts, mock_mailgun, model)
-        
+
     #     self.check_slack_contain_a_correct_token('es', academy, mock_slack, model)
