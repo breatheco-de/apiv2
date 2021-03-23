@@ -67,3 +67,9 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
     def is_paginate(self, request):
         return (request.GET.get(self.limit_query_param) or
             request.GET.get(self.offset_query_param))
+
+    def pagination_params(self, request):
+        return {
+            self.limit_query_param: request.GET.get(self.limit_query_param),
+            self.offset_query_param: request.GET.get(self.offset_query_param),
+        }

@@ -1,6 +1,7 @@
 """
 Test /academy/cohort
 """
+from breathecode.utils.cache import Cache
 from breathecode.services import datetime_to_iso_format
 import re
 from random import choice
@@ -18,6 +19,8 @@ from ..mixins.new_admissions_test_case import AdmissionsTestCase
 
 class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
+
+    cache = Cache('admissions', 'academy_cohort')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1198,62 +1201,73 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_cohort_dict(), [])
 
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # def test_academy_cohort_with_data_testing_cache(self):
-    #     """Test /cohort without auth"""
-    #     self.clear_cache()
-    #     old_model = self.test_academy_cohort_with_data()
-    #     # model['cohort'] = self.get_cohort(1)
-    #     self.headers(academy=1)
-    #     model = self.generate_models(capability='crud_cohort', models=old_model)
-    #     self.assertEqual(self.count_cohort(), 1)
-    #     models_dict = self.all_cohort_dict()
-    #     url = reverse_lazy('admissions:academy_cohort')
-    #     data = {
-    #         'certificate':  model['certificate'].id,
-    #         'slug':  'they-killed-kenny',
-    #         'name':  'They killed kenny',
-    #         'kickoff_date':  datetime.today().isoformat(),
-    #     }
-    #     response = self.client.post(url, data)
-    #     # response = self.client.post(url, data)
-    #     json = response.json()
-    #     cohort = self.get_cohort(2)
-    #     assert cohort is not None
-    #     expected = {
-    #         'id': cohort.id,
-    #         'slug': cohort.slug,
-    #         'name': cohort.name,
-    #         'kickoff_date': re.sub(r'\+00:00$', '', cohort.kickoff_date.isoformat()),
-    #         'current_day': cohort.current_day,
-    #         'academy': {
-    #             'id': cohort.academy.id,
-    #             'slug': cohort.academy.slug,
-    #             'name': cohort.academy.name,
-    #             'street_address': cohort.academy.street_address,
-    #             'country': cohort.academy.country.code,
-    #             'city': cohort.academy.city.id,
-    #         },
-    #         'certificate': {
-    #             'id': cohort.certificate.id,
-    #             'name': cohort.certificate.name,
-    #             'slug': cohort.certificate.slug,
-    #         },
-    #         'ending_date': cohort.ending_date,
-    #         'stage': cohort.stage,
-    #         'language': cohort.language,
-    #         'created_at': re.sub(r'\+00:00$', 'Z', cohort.created_at.isoformat()),
-    #         'updated_at': re.sub(r'\+00:00$', 'Z', cohort.updated_at.isoformat()),
-    #     }
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_with_data_testing_cache(self):
+        """Test /cohort without auth"""
+        self.clear_cache()
 
-    #     self.assertEqual(json, expected)
-    #     del data['kickoff_date']
-    #     cohort_two = cohort.__dict__.copy()
-    #     cohort_two.update(data)
-    #     cohort_two['certificate_id'] = cohort_two['certificate']
-    #     del cohort_two['certificate']
-    #     models_dict.append(self.remove_dinamics_fields(cohort_two))
-    #     # TODO: implement POST, DELETE, CACHE
-    #     self.test_academy_cohort_with_data(model)
+        import time
+        start = time.time()
+        old_model = self.test_academy_cohort_with_data()
+        end = time.time()
+        print(end - start)
+        start = time.time()
+        old_model = self.test_academy_cohort_with_data(old_model)
+        end = time.time()
+        print(end - start)
+        # print(self.cache.clear())
+        assert False
+        # model['cohort'] = self.get_cohort(1)
+        self.headers(academy=1)
+        model = self.generate_models(capability='crud_cohort', models=old_model)
+        self.assertEqual(self.count_cohort(), 1)
+        models_dict = self.all_cohort_dict()
+        url = reverse_lazy('admissions:academy_cohort')
+        data = {
+            'certificate':  model['certificate'].id,
+            'slug':  'they-killed-kenny',
+            'name':  'They killed kenny',
+            'kickoff_date':  datetime.today().isoformat(),
+        }
+        response = self.client.post(url, data)
+        # response = self.client.post(url, data)
+        json = response.json()
+        cohort = self.get_cohort(2)
+        assert cohort is not None
+        expected = {
+            'id': cohort.id,
+            'slug': cohort.slug,
+            'name': cohort.name,
+            'kickoff_date': re.sub(r'\+00:00$', '', cohort.kickoff_date.isoformat()),
+            'current_day': cohort.current_day,
+            'academy': {
+                'id': cohort.academy.id,
+                'slug': cohort.academy.slug,
+                'name': cohort.academy.name,
+                'street_address': cohort.academy.street_address,
+                'country': cohort.academy.country.code,
+                'city': cohort.academy.city.id,
+            },
+            'certificate': {
+                'id': cohort.certificate.id,
+                'name': cohort.certificate.name,
+                'slug': cohort.certificate.slug,
+            },
+            'ending_date': cohort.ending_date,
+            'stage': cohort.stage,
+            'language': cohort.language,
+            'created_at': re.sub(r'\+00:00$', 'Z', cohort.created_at.isoformat()),
+            'updated_at': re.sub(r'\+00:00$', 'Z', cohort.updated_at.isoformat()),
+        }
+
+        self.assertEqual(json, expected)
+        del data['kickoff_date']
+        cohort_two = cohort.__dict__.copy()
+        cohort_two.update(data)
+        cohort_two['certificate_id'] = cohort_two['certificate']
+        del cohort_two['certificate']
+        models_dict.append(self.remove_dinamics_fields(cohort_two))
+        # TODO: implement POST, DELETE, CACHE
+        self.test_academy_cohort_with_data(model)
