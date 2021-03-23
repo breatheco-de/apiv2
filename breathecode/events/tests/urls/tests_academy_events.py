@@ -554,3 +554,27 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(self.all_event_type_dict(), [{
             **self.model_to_dict(model, 'event_type'),
         }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_event_type_no_match_slug(self):
+        self.headers(academy=1)
+        url = reverse_lazy('events:type') + '?academy=banana'
+        event_type_kwargs = {"slug": "potato",
+                             "name": "Potato",
+                             "created_at": timezone.now(),
+                             "updated_at": timezone.now()}
+        model = self.generate_models(
+            authenticate=True, event=True, event_type=True, event_type_kwargs=event_type_kwargs)
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(self.all_event_type_dict(), [{
+            **self.model_to_dict(model, 'event_type'),
+        }])

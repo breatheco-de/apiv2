@@ -14,7 +14,7 @@ urlpatterns = [
          AcademyVenueView.as_view(), name="academy_venues"),
     path('academy/event/<int:event_id>',
          AcademyEventView.as_view(), name="academy_single_event"),
-    path('type/', EventTypeView.as_view(), name='type'),
+    path('academy/eventype', EventTypeView.as_view(), name='type'),
     path('academy/checkin', EventCheckinView.as_view(), name='checkin'),
     path('eventbrite/webhook/<int:organization_id>', eventbrite_webhook,
          name='eventbrite_webhook_id'),
