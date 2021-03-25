@@ -40,7 +40,7 @@ class AuthenticateTestSuite(AuthTestCase):
         
         response = self.client.put(url)
         json = response.json()
-        expected = {'detail': "You (user: 1) don't have this capability: admissions_developer for "
+        expected = {'detail': "You (user: 1) don't have this capability: crud_member for "
                     'academy 1','status_code': 403} 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 403)
@@ -52,7 +52,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test """
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-                capability='admissions_developer', role='potato', syllabus=True)
+                capability='crud_member', role='potato', syllabus=True)
         # print(model['academy'].__dict__)
         # print(self.all_capability_dict())
         # print('academy' in model)
@@ -77,7 +77,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test """
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-                capability='admissions_developer', role='potato', syllabus=True)
+                capability='crud_member', role='potato', syllabus=True)
         url = reverse_lazy('authenticate:academy_resent_invite', kwargs={"user_id":1})
         
         response = self.client.put(url)
@@ -93,7 +93,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test """
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-                capability='admissions_developer', role='potato', syllabus=True,
+                capability='crud_member', role='potato', syllabus=True,
                 user_invite=True)
         url = reverse_lazy('authenticate:academy_resent_invite', kwargs={"user_id":1})
         response = self.client.put(url)
