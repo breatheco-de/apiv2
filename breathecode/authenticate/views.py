@@ -794,7 +794,7 @@ def pick_password(request, token):
     })
 
 class AcademyInviteView(APIView):
-    @capable_of('admissions_developer')
+    @capable_of('crud_member')
     def put(self, request, user_id=None, academy_id=None):
         if user_id is not None:
             user = ProfileAcademy.objects.filter(user__id=user_id,academy__id=academy_id).first() 
