@@ -410,9 +410,11 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         serializer = GetCohortSerializer(page, many=True)
 
         if self.is_paginate(request):
-            paginate_response = self.get_paginated_response(serializer.data)
-            self.cache.set(paginate_response, **cache_kwargs)
-            return paginate_response
+            return self.get_paginated_response(
+                serializer.data,
+                cache=self.cache,
+                cache_kwargs=cache_kwargs
+            )
         else:
             self.cache.set(serializer.data, **cache_kwargs)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -499,12 +501,13 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         cohort.stage = DELETED
         cohort.save()
 
-        # STUDENT
+        # Student
         cohort_users = CohortUser.objects.filter(
             role=STUDENT,
             cohort__id=cohort_id
         )
 
+        # TODO: this in one future maybe will be removed
         for cohort_user in cohort_users:
             cohort_user.delete()
 

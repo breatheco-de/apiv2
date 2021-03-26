@@ -295,7 +295,7 @@ CACHES = {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if
             is_test_env else 'django_redis.cache.RedisCache',
         'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
-        **cache_opts(is_test_env),
+        # **cache_opts(is_test_env),
     },
 }
 

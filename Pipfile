@@ -36,6 +36,7 @@ eventbrite = "*"
 rollbar = "*"
 pillow = "*"
 django-redis = "*"
+pytz = "*"
 
 [requires]
 python_version = "3.9"

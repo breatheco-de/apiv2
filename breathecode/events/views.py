@@ -1,3 +1,4 @@
+from breathecode.utils.cache import Cache
 import logging, datetime
 from django.shortcuts import render
 from django.utils import timezone
@@ -106,9 +107,30 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
+    cache = Cache('events', 'academy_events')
 
     @capable_of('read_event')
     def get(self, request, format=None, academy_id=None, event_id=None):
+        city = self.request.GET.get('city')
+        country = self.request.GET.get('country')
+        zip_code = self.request.GET.get('zip_code')
+        upcoming = self.request.GET.get('upcoming')
+        past = self.request.GET.get('past')
+
+        cache_kwargs = {
+            'academy_id': academy_id,
+            'event_id': event_id,
+            'city': city,
+            'country': country,
+            'zip_code': zip_code,
+            'upcoming': upcoming,
+            'past': past,
+            **self.pagination_params(request),
+        }
+
+        cache = self.cache.get(**cache_kwargs)
+        if cache:
+            return Response(cache, status=status.HTTP_200_OK)
 
         if event_id is not None:
             single_event = Event.objects.filter(id=event_id,academy__id=academy_id).first()
@@ -116,29 +138,27 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
                 raise ValidationException("Event not found", 404)
 
             serializer = EventSmallSerializer(single_event, many=False)
+            self.cache.set(serializer.data, **cache_kwargs)
             return Response(serializer.data)
 
         items = Event.objects.filter(academy__id=academy_id)
         lookup = {}
 
-        if 'city' in self.request.GET:
-            city = self.request.GET.get('city')
+        if city:
             lookup['venue__city__iexact'] = city
 
-        if 'country' in self.request.GET:
-            value = self.request.GET.get('country')
-            lookup['venue__country__iexact'] = value
+        if country:
+            lookup['venue__country__iexact'] = country
 
-        if 'zip_code' in self.request.GET:
-            value = self.request.GET.get('zip_code')
-            lookup['venue__zip_code'] = value
+        if zip_code:
+            lookup['venue__zip_code'] = zip_code
 
-        if 'upcoming' in self.request.GET:
+        if upcoming:
             lookup['starting_at__gte'] = timezone.now()
-        elif 'past' in self.request.GET:
+        elif past:
             if 'starting_at__gte' in lookup:
                 lookup.pop("starting_at__gte")
-            if self.request.GET.get('past') == "true":
+            if past == "true":
                 lookup['starting_at__lte'] = timezone.now()
 
         items = items.filter(**lookup).order_by('-starting_at')
@@ -147,32 +167,41 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         serializer = EventSmallSerializerNoAcademy(page, many=True)
 
         if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
+            return self.get_paginated_response(
+                serializer.data,
+                cache=self.cache,
+                cache_kwargs=cache_kwargs
+            )
         else:
+            self.cache.set(serializer.data, **cache_kwargs)
             return Response(serializer.data, status=200)
 
     @capable_of('crud_event')
     def post(self, request, format=None, academy_id=None):
-
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
             raise ValidationException(f"Academy {academy_id} not found")
 
-        serializer = EventSerializer(data={ **request.data, "academy": academy.id })
+        data = {}
+        for key in request.data.keys():
+            data[key] = request.data.get(key)
+
+        serializer = EventSerializer(data={**data, "academy": academy.id})
         if serializer.is_valid():
+            self.cache.clear()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_event')
     def put(self, request, academy_id=None, event_id=None):
-
         already = Event.objects.filter(id=event_id,academy__id=academy_id).first()
         if already is None:
             raise ValidationException(f"Event not found for this academy {academy_id}")
 
         serializer = EventSerializer(already, data=request.data)
         if serializer.is_valid():
+            self.cache.clear()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

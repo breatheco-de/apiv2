@@ -18,7 +18,7 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
 
         return string.replace('%2C', ',')
 
-    def get_paginated_response(self, data):
+    def get_paginated_response(self, data, cache=None, cache_kwargs={}):
         next_url = self.__parse_comma__(self.get_next_link())
         previous_url = self.__parse_comma__(self.get_previous_link())
         first_url = self.__parse_comma__(self.get_first_link())
@@ -38,14 +38,18 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
         headers['x-total-count'] = self.count
 
         if self.use_envelope:
-            return Response(OrderedDict([
+            data = OrderedDict([
                 ('count', self.count),
                 ('first', first_url),
                 ('next', next_url),
                 ('previous', previous_url),
                 ('last', last_url),
                 ('results', data)
-            ]), headers=headers)
+            ])
+
+        if cache:
+            cache.set(data, **cache_kwargs)
+
         return Response(data, headers=headers)
 
     def get_first_link(self):
