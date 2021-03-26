@@ -49,6 +49,8 @@ class EventSmallSerializer(serpy.Serializer):
     lang = serpy.Field()
     url = serpy.Field()
     banner = serpy.Field()
+    description = serpy.Field()
+    capacity = serpy.Field()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
     status = serpy.Field()

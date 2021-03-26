@@ -36,10 +36,6 @@ def mask_as_ignored(modeladmin, request, queryset):
     issues = queryset.update(status='IGNORED')
 mask_as_ignored.short_description = "Mark as IGNORED"
 
-def mask_as_paid(modeladmin, request, queryset):
-    issues = queryset.update(status='PAID')
-mask_as_paid.short_description = "Mark as PAID"
-
 @admin.register(Freelancer)
 class FreelancerAdmin(admin.ModelAdmin):
     list_display = ['user_id', 'full_name', "email"]
@@ -61,10 +57,19 @@ class IssueAdmin(admin.ModelAdmin):
     def github_url(self,obj):
         return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>open in github</a>", url=obj.url)
 
+
+def mask_as_paid(modeladmin, request, queryset):
+    issues = queryset.update(status='PAID')
+mask_as_paid.short_description = "Mark as PAID"
+
+def mask_as_approved(modeladmin, request, queryset):
+    issues = queryset.update(status='APPROVED')
+mask_as_approved.short_description = "Mark as APPROVED"
+
 @admin.register(Bill)
 class BillAdmin(admin.ModelAdmin):
     list_display = ('id', 'freelancer','status', 'total_duration_in_hours', 'total_price','paid_at', 'invoice_url')
     list_filter = ['status']
-    actions = [mask_as_paid]
+    actions = [mask_as_paid, mask_as_approved]
     def invoice_url(self,obj):
         return format_html("<a rel='noopener noreferrer' target='_blank' href='/v1/freelance/bills/{id}/html'>open invoice</a>", id=obj.id)
