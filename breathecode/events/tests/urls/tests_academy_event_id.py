@@ -66,22 +66,25 @@ class AcademyEventsTestSuite(EventTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = {
-                    'id': model['event'].id,
-                    'excerpt': model['event'].excerpt,
-                    'title': model['event'].title,
-                    'lang': model['event'].lang,
-                    'url': model['event'].url,
-                    'banner': model['event'].banner,
-                    'starting_at': datetime_to_iso_format(model['event'].starting_at),
-                    'ending_at': datetime_to_iso_format(model['event'].ending_at),
-                    'status': model['event'].status,
-                    'event_type': model['event'].event_type,
-                    'online_event': model['event'].online_event,
-                    'venue': model['event'].venue,
-                    'academy':{'id': 1,
-                    'slug': model['academy'].slug,
-                    'name': model['academy'].name,
-                    'city': {'name': model['event'].academy.city.name}}}
+            'id': model['event'].id,
+            'capacity': model['event'].capacity,
+            'description': model['event'].description,
+            'excerpt': model['event'].excerpt,
+            'title': model['event'].title,
+            'lang': model['event'].lang,
+            'url': model['event'].url,
+            'banner': model['event'].banner,
+            'starting_at': datetime_to_iso_format(model['event'].starting_at),
+            'ending_at': datetime_to_iso_format(model['event'].ending_at),
+            'status': model['event'].status,
+            'event_type': model['event'].event_type,
+            'online_event': model['event'].online_event,
+            'venue': model['event'].venue,
+            'academy':{'id': 1,
+            'slug': model['academy'].slug,
+            'name': model['academy'].name,
+            'city': {'name': model['event'].academy.city.name}}
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
