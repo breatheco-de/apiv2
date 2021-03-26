@@ -88,7 +88,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
                 capability='crud_member', role='potato', syllabus=True,
-                user_invite=True, token=True)
+                user_invite=True)
         url = reverse_lazy('authenticate:academy_resent_invite', kwargs={"user_id":1})
         response = self.client.put(url)
         json = response.json()
