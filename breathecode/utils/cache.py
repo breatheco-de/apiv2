@@ -4,9 +4,6 @@ from datetime import datetime
 from breathecode.tests.mixins import DatetimeMixin
 
 
-IS_TEST_ENV = os.getenv('ENV') == 'test'
-
-
 class Cache(DatetimeMixin):
     app: str
     name: str

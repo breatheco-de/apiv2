@@ -37,6 +37,7 @@ rollbar = "*"
 pillow = "*"
 django-redis = "*"
 pytz = "*"
+hiredis = "*"
 
 [requires]
 python_version = "3.9"
