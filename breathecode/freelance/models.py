@@ -11,9 +11,11 @@ class Freelancer(models.Model):
         return self.user.email
 
 DUE = 'DUE'
+APPROVED = 'APPROVED'
 PAID = 'PAID'
 BILL_STATUS = (
     (DUE, 'Due'),
+    (APPROVED, 'Approved'),
     (PAID, 'Paid'),
 )
 class Bill(models.Model):
@@ -48,7 +50,7 @@ class Issue(models.Model):
     title = models.CharField(max_length=255)
 
     status = models.CharField(max_length=20, choices=ISSUE_STATUS, default=DRAFT)
-    github_state = models.CharField(max_length=30)
+    github_state = models.CharField(max_length=30, blank=True, null=True, default=None)
     github_number = models.PositiveIntegerField()
     body = models.TextField(max_length=500)
 
@@ -56,9 +58,9 @@ class Issue(models.Model):
     duration_in_hours = models.FloatField(default=0)
 
     url = models.URLField(max_length=255)
-    repository_url = models.URLField(max_length=255)
+    repository_url = models.URLField(max_length=255, blank=True, default=None, null=True)
 
-    author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None, blank=True)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
     bill = models.ForeignKey(Bill, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
