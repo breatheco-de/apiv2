@@ -361,12 +361,26 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
     List all snippets, or create a new snippet.
     """
     permission_classes = [IsAuthenticated]
-
-    def cache(self):
-        return Cache('academy_cohort')
+    cache = Cache('admissions', 'academy_cohort')
 
     @capable_of('read_cohort')
     def get(self, request, cohort_id=None, academy_id=None):
+        upcoming = request.GET.get('upcoming', None)
+        academy = request.GET.get('academy', None)
+        location = request.GET.get('location', None)
+        cache_kwargs = {
+            'resource': cohort_id,
+            'academy_id': academy_id,
+            'upcoming': upcoming,
+            'academy': academy,
+            'location': location,
+            **self.pagination_params(request),
+        }
+
+        cache = self.cache.get(**cache_kwargs)
+        if cache:
+            return Response(cache, status=status.HTTP_200_OK)
+
         if cohort_id is not None:
             item = None
             if str.isnumeric(cohort_id):
@@ -381,16 +395,14 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         items = Cohort.objects.filter(academy__id=academy_id)
-        upcoming = request.GET.get('upcoming', None)
+
         if upcoming == 'true':
             now = timezone.now()
             items = items.filter(kickoff_date__gte=now)
 
-        academy = request.GET.get('academy', None)
         if academy is not None:
             items = items.filter(academy__slug__in=academy.split(","))
 
-        location = request.GET.get('location', None)
         if location is not None:
             items = items.filter(academy__slug__in=location.split(","))
 
@@ -398,8 +410,13 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         serializer = GetCohortSerializer(page, many=True)
 
         if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
+            return self.get_paginated_response(
+                serializer.data,
+                cache=self.cache,
+                cache_kwargs=cache_kwargs
+            )
         else:
+            self.cache.set(serializer.data, **cache_kwargs)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_cohort')
@@ -428,6 +445,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         serializer = CohortSerializer(data=data, context={ "request": request, "academy": academy })
         if serializer.is_valid():
+            self.cache.clear()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -445,6 +463,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         serializer = CohortPUTSerializer(cohort, data=request.data, context={ "request": request, "cohort_id": cohort_id })
         if serializer.is_valid():
+            self.cache.clear()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -468,6 +487,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             for item in items:
                 item.delete()
 
+            self.cache.clear()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if cohort_id is None:
@@ -481,15 +501,17 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         cohort.stage = DELETED
         cohort.save()
 
-        # STUDENT
+        # Student
         cohort_users = CohortUser.objects.filter(
             role=STUDENT,
             cohort__id=cohort_id
         )
 
+        # TODO: this in one future maybe will be removed
         for cohort_user in cohort_users:
             cohort_user.delete()
 
+        self.cache.clear()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 

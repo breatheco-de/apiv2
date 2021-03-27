@@ -4,6 +4,7 @@ Test /cohort
 import re
 from unittest.mock import patch
 from django.urls.base import reverse_lazy
+from breathecode.utils import Cache
 from rest_framework import status
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
@@ -12,9 +13,12 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins.new_admissions_test_case import AdmissionsTestCase
+from .tests_academy_cohort import AcademyCohortTestSuite
 
-class AcademyCohortTestSuite(AdmissionsTestCase):
+class AcademyCohortIdTestSuite(AdmissionsTestCase):
     """Test /cohort"""
+
+    cache = Cache('admissions', 'academy_cohort')
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -443,3 +447,100 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.count_cohort_user(), 0)
         self.assertEqual(self.count_cohort_stage(model['cohort'].id), 'DELETED')
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_id_with_data_testing_cache_and_remove_in_delete(self):
+        """Test /cohort without auth"""
+        cache_keys = [
+            'admissions__academy_cohort__academy_id=1&upcoming=None&academy='
+                'None&location=None&limit=None&offset=None__None'
+        ]
+
+        self.assertEqual(self.cache.keys(), [])
+
+        old_models = AcademyCohortTestSuite.test_academy_cohort_with_data(self)
+        self.assertEqual(self.cache.keys(), cache_keys)
+
+        self.headers(academy=1)
+
+        base = old_models[0].copy()
+
+        del base['profile_academy']
+        del base['capability']
+        del base['role']
+        del base['user']
+
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato2', models=base)
+
+        url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 1})
+        data = {}
+        response = self.client.put(url, data)
+
+        if response.status_code != 204:
+            print(response.json())
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.cache.keys(), [])
+        self.assertEqual(self.all_cohort_dict(), [{
+            **self.model_to_dict(model, 'cohort'),
+            'stage': 'DELETED',
+        }])
+
+        old_models[0]['cohort'].stage = 'DELETED'
+
+        base = [
+            self.generate_models(authenticate=True, models=old_models[0]),
+        ]
+
+        AcademyCohortTestSuite.test_academy_cohort_with_data(self, base)
+        self.assertEqual(self.cache.keys(), cache_keys)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_id_with_data_testing_cache_and_remove_in_delete(self):
+        """Test /cohort without auth"""
+        cache_keys = [
+            'admissions__academy_cohort__academy_id=1&upcoming=None&academy='
+                'None&location=None&limit=None&offset=None__None'
+        ]
+
+        self.assertEqual(self.cache.keys(), [])
+
+        old_models = AcademyCohortTestSuite.test_academy_cohort_with_data(self)
+        self.assertEqual(self.cache.keys(), cache_keys)
+
+        self.headers(academy=1)
+
+        base = old_models[0].copy()
+
+        del base['profile_academy']
+        del base['capability']
+        del base['role']
+        del base['user']
+
+        model = self.generate_models(authenticate=True, profile_academy=True, capability='crud_cohort', role='potato2', models=base)
+
+        url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 1})
+        response = self.client.delete(url)
+
+        if response.status_code != 204:
+            print(response.json())
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.cache.keys(), [])
+        self.assertEqual(self.all_cohort_dict(), [{
+            **self.model_to_dict(model, 'cohort'),
+            'stage': 'DELETED'
+        }])
+
+        old_models[0]['cohort'].stage = 'DELETED'
+
+        base = [
+            self.generate_models(authenticate=True, models=old_models[0]),
+        ]
+
+        AcademyCohortTestSuite.test_academy_cohort_with_data(self, base)
+        self.assertEqual(self.cache.keys(), cache_keys)

@@ -35,11 +35,9 @@ redis = "*"
 eventbrite = "*"
 rollbar = "*"
 pillow = "*"
-django-redis-cache = "*"
 django-redis = "*"
-google-api-python-client = "*"
-google-auth-httplib2 = "*"
-google-auth-oauthlib = "*"
+pytz = "*"
+hiredis = "*"
 
 [requires]
 python_version = "3.9"
