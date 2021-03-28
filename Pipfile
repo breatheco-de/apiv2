@@ -38,6 +38,7 @@ pillow = "*"
 django-redis = "*"
 pytz = "*"
 hiredis = "*"
+icalendar = "*"
 
 [requires]
 python_version = "3.9"

@@ -1,11 +1,14 @@
 import logging, datetime
+import re
+
+from django.http.response import HttpResponse
 from breathecode.utils.cache import Cache
 from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from .models import Event, EventType, EventCheckin, Venue
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Cohort, CohortUser
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (
     EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
@@ -21,6 +24,7 @@ from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
 from breathecode.utils import ValidationException
+from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 
 
 logger = logging.getLogger(__name__)
@@ -294,3 +298,57 @@ class AcademyVenueView(APIView):
 
         serializer = VenueSerializer(venues, many=True)
         return Response(serializer.data)
+
+
+class AcademyICalCohortsView(APIView):
+    # permission_classes = [AllowAny]
+
+    @capable_of('read_cohort')
+    def get(self, request, academy_id=None):
+        items = Cohort.objects.filter(academy__id=academy_id).exclude(stage='DELETED')
+
+        calendar = iCalendar()
+        calendar.add('prodid', '-//4Geeks Academy//4Geeks events//') # //EN')
+        calendar.add('version', '2.0')
+
+        for item in items:
+            event = iEvent()
+
+            event.add('summary', item.name)
+            event.add('uid', item.id)
+            event.add('dtstart', item.kickoff_date)
+
+            if item.ending_date:
+                event.add('dtend', item.ending_date)
+
+            event.add('dtstamp', item.created_at)
+
+            teacher = CohortUser.objects.filter(role='TEACHER').first()
+
+            if teacher:
+                organizer = vCalAddress(f'MAILTO:{teacher.user.email}')
+
+                if teacher.user.first_name and teacher.user.last_name:
+                    organizer.params['cn'] = vText(f'{teacher.user.first_name} '
+                        f'{teacher.user.last_name}')
+                elif teacher.user.first_name:
+                    organizer.params['cn'] = vText(teacher.user.first_name)
+                elif teacher.user.last_name:
+                    organizer.params['cn'] = vText(teacher.user.last_name)
+
+                organizer.params['role'] = vText('OWNER')
+                event['organizer'] = organizer
+
+            location = item.academy.name
+
+            if item.academy.website_url:
+                location = f'{location} ({item.academy.website_url})'
+            event['location'] = vText(item.academy.name)
+
+            calendar.add_component(event)
+
+        calendar_text = calendar.to_ical()
+
+        response = HttpResponse(calendar_text, content_type='text/calendar')
+        response['Content-Disposition'] = 'attachment; filename="calendar.ics"'
+        return response

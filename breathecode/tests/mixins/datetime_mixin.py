@@ -24,6 +24,11 @@ class DatetimeMixin():
             date.replace(tzinfo=UTC).isoformat()
         )
 
+    def datetime_to_ical(self, date=datetime.utcnow()) -> str:
+        return '{:4d}{:02d}{:02d}T{:02d}{:02d}{:02d}Z'.format(
+            date.year, date.month, date.day, date.hour, date.minute,
+            date.second)
+
     def assertDatetime(self, date):
         if not isinstance(date, str):
             self.assertTrue(isinstance(date, datetime))
