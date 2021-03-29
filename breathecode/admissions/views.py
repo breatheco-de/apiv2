@@ -202,8 +202,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
     def delete(self, request, cohort_id=None, user_id=None):
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'role', 'educational_status', 'finantial_status'],
-            many_relationships=['user', 'cohort']
+            many_fields=['id']
         )
 
         if lookups and (user_id or cohort_id):
@@ -397,8 +396,7 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
     def delete(self, request, cohort_id=None, user_id=None, academy_id=None):
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'role', 'educational_status', 'finantial_status'],
-            many_relationships=['user', 'cohort']
+            many_fields=['id']
         )
 
         if lookups and (user_id or cohort_id):
@@ -541,9 +539,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
     def delete(self, request, cohort_id=None, academy_id=None):
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'slug', 'name', 'kickoff_date', 'ending_date',
-                'current_day', 'stage', 'timezone', 'language'],
-            many_relationships=['academy', 'syllabus']
+            many_fields=['id']
         )
 
         if lookups and cohort_id:
@@ -610,8 +606,7 @@ class CertificateView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         # TODO: here i don't add one single delete, because i don't know if it is required
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'slug', 'name', 'logo', 'duration_in_hours',
-                'duration_in_days', 'week_hours', 'schedule_type', 'description']
+            many_fields=['id']
         )
 
         if not lookups:

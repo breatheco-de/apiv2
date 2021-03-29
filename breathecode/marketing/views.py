@@ -240,15 +240,7 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
         # TODO: here i don't add one single delete, because i don't know if it is required
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'fb_leadgen_id', 'fb_page_id', 'fb_form_id',
-                'fb_adgroup_id', 'fb_ad_id', 'first_name', 'last_name', 'email',
-                'phone', 'course', 'client_comments', 'location', 'language',
-                'utm_url', 'utm_medium', 'utm_campaign', 'utm_source',
-                'referral_key', 'gclid', 'tags', 'automations', 'street_address',
-                'country', 'city', 'latitude', 'longitude', 'state', 'zip_code',
-                'browser_lang', 'storage_status', 'lead_type', 'deal_status',
-                'sentiment'],
-            many_relationships=['contact', 'academy', 'ac_academy', 'automation_objects']
+            many_fields=['id']
         )
         # automation_objects
 

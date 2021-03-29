@@ -218,8 +218,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_certificate_delete_in_bulk_with_one(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        many_fields = ['id', 'slug', 'name', 'logo', 'duration_in_hours',
-            'duration_in_days', 'week_hours', 'schedule_type', 'description']
+        many_fields = ['id']
 
         base = self.generate_models(academy=True)
 
@@ -249,8 +248,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_certificate_delete_in_bulk_with_two(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        many_fields = ['id', 'slug', 'name', 'logo', 'duration_in_hours',
-            'duration_in_days', 'week_hours', 'schedule_type', 'description']
+        many_fields = ['id']
 
         base = self.generate_models(academy=True)
 

@@ -397,8 +397,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_academy_member_delete_in_bulk_with_one(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        many_fields = ['id', 'email', 'first_name', 'last_name', 'address',
-            'phone', 'status']
+        many_fields = ['id']
 
         base = self.generate_models(academy=True, capability='crud_member', role='potato')
 
@@ -427,8 +426,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_academy_member_delete_in_bulk_with_two(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        many_fields = ['id', 'email', 'first_name', 'last_name', 'address',
-            'phone', 'status']
+        many_fields = ['id']
 
         base = self.generate_models(academy=True, capability='crud_member', role='potato')
 
@@ -469,8 +467,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_academy_member_delete_in_bulk_with_two_but_is_student(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        many_fields = ['id', 'email', 'first_name', 'last_name', 'address',
-            'phone', 'status']
+        many_fields = ['id']
 
         base = self.generate_models(academy=True, capability='crud_member', role='student')
 
@@ -500,85 +497,6 @@ class AuthenticateTestSuite(AuthTestCase):
             url = (reverse_lazy('authenticate:academy_member') + f'?{field}=' +
                 str(getattr(model1['profile_academy'], field)) + ',' +
                 str(getattr(model2['profile_academy'], field)))
-            response = self.client.delete(url)
-
-            if response.status_code != 204:
-                print(response.json())
-
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_profile_academy_dict(), [{
-                **self.model_to_dict(model1, 'profile_academy'),
-            }, {
-                **self.model_to_dict(model2, 'profile_academy'),
-            }])
-
-            for model in ProfileAcademy.objects.all():
-                model.delete()
-
-    def test_academy_member_delete_in_bulk_with_one_relationships(self):
-        """Test /cohort/:id/user without auth"""
-        self.headers(academy=1)
-        many_fields = ['user', 'academy', 'role']
-
-        base = self.generate_models(academy=True, capability='crud_member', role='potato')
-
-        for field in many_fields:
-            model = self.generate_models(authenticate=True, profile_academy=True,
-                models=base)
-
-            value = model[field].id if field != 'role' else model[field].slug
-
-            url = reverse_lazy('authenticate:academy_member') + f'?{field}=' + str(value)
-            response = self.client.delete(url)
-
-            if response.status_code != 204:
-                print(response.json())
-
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_profile_academy_dict(), [])
-
-    def test_academy_member_delete_in_bulk_with_two_relationships(self):
-        """Test /cohort/:id/user without auth"""
-        self.headers(academy=1)
-        many_fields = ['user', 'academy', 'role']
-
-        base = self.generate_models(academy=True, capability='crud_member', role='potato')
-
-        for field in many_fields:
-            model1 = self.generate_models(authenticate=True, profile_academy=True,
-                models=base)
-            model2 = self.generate_models(profile_academy=True, models=base)
-
-            value1 = model1[field].id if field != 'role' else model1[field].slug
-            value2 = model2[field].id if field != 'role' else model2[field].slug
-
-            url = (reverse_lazy('authenticate:academy_member') + f'?{field}=' +
-                str(value1) + ',' + str(value2))
-            response = self.client.delete(url)
-
-            if response.status_code != 204:
-                print(response.json())
-
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_profile_academy_dict(), [])
-
-    def test_academy_member_delete_in_bulk_with_two_relationships_but_is_student(self):
-        """Test /cohort/:id/user without auth"""
-        self.headers(academy=1)
-        many_fields = ['user', 'academy', 'role']
-
-        base = self.generate_models(academy=True, capability='crud_member', role='student')
-
-        for field in many_fields:
-            model1 = self.generate_models(authenticate=True, profile_academy=True,
-                models=base)
-            model2 = self.generate_models(profile_academy=True, models=base)
-
-            value1 = model1[field].id if field != 'role' else model1[field].slug
-            value2 = model2[field].id if field != 'role' else model2[field].slug
-
-            url = (reverse_lazy('authenticate:academy_member') + f'?{field}=' +
-                str(value1) + ',' + str(value2))
             response = self.client.delete(url)
 
             if response.status_code != 204:
