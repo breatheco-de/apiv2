@@ -12,7 +12,7 @@ from ..mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
     SCREENSHOTMACHINE_PATH,
-    apply_requests_get_mock,
+    apply_screenshotmachine_requests_get_mock,
     CREDENTIALS_PATH,
     apply_resolve_credentials_mock,
 )
@@ -33,7 +33,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(SCREENSHOTMACHINE_PATH['get'], apply_requests_get_mock())
+    @patch(SCREENSHOTMACHINE_PATH['get'], apply_screenshotmachine_requests_get_mock())
     @patch(CREDENTIALS_PATH['resolve_credentials'], apply_resolve_credentials_mock())
     def test_remove_certificate_screenshot_with_valid_id_cover_else_path(self):
         """remove_certificate_screenshot don't call open in development environment"""

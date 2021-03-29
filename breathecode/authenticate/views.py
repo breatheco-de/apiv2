@@ -26,7 +26,7 @@ from .models import Profile, CredentialsGithub, Token, CredentialsSlack, Credent
 from .actions import reset_password, resend_invite
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
-from breathecode.utils import localize_query, capable_of, ValidationException
+from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
@@ -63,7 +63,7 @@ class LogoutView(APIView):
             'message': "User tokens successfully deleted",
         })
 
-class MemberView(APIView):
+class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('read_member')
     def get(self, request, academy_id, user_id=None):
@@ -90,8 +90,13 @@ class MemberView(APIView):
         if not is_many:
             items = items.first()
 
-        serializer = GETProfileAcademy(items, many=is_many)
-        return Response(serializer.data)
+        page = self.paginate_queryset(items, request)
+        serializer = GETProfileAcademy(page, many=is_many)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
     @capable_of('crud_member')
     def post(self, request, academy_id=None):
@@ -124,6 +129,25 @@ class MemberView(APIView):
 
     @capable_of('crud_member')
     def delete(self, request, academy_id=None, user_id=None):
+        lookups = self.generate_lookups(
+            request,
+            many_fields=['id', 'email', 'first_name', 'last_name', 'address',
+                'phone', 'status'],
+            many_relationships=['user', 'academy', 'role']
+        )
+
+        if lookups and user_id:
+            raise ValidationException('user_id or cohort_id was provided in url '
+                'in bulk mode request, use querystring style instead', code=400)
+
+        if lookups:
+            items = ProfileAcademy.objects.filter(**lookups,
+                academy__id=academy_id).exclude(role__slug="student")
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         member = ProfileAcademy.objects.filter(user=user_id,academy__id=academy_id).exclude(role__slug="student").first()
         if member is None:
@@ -131,7 +155,7 @@ class MemberView(APIView):
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-class StudentView(APIView):
+class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('read_student')
     def get(self, request, academy_id=None, user_id=None):
@@ -154,8 +178,13 @@ class StudentView(APIView):
         if status is not None:
             items = items.filter(status__iexact=status)
 
-        serializer = GETProfileAcademy(items, many=True)
-        return Response(serializer.data)
+        page = self.paginate_queryset(items, request)
+        serializer = GETProfileAcademy(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
     @capable_of('crud_student')
     def post(self, request, academy_id=None):
@@ -197,6 +226,24 @@ class StudentView(APIView):
 
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id=None):
+        lookups = self.generate_lookups(
+            request,
+            many_fields=['id', 'email', 'first_name', 'last_name', 'address',
+                'phone', 'status'],
+            many_relationships=['user', 'academy', 'role']
+        )
+
+        if lookups and user_id:
+            raise ValidationException('user_id was provided in url '
+                'in bulk mode request, use querystring style instead', code=400)
+
+        if lookups:
+            items = ProfileAcademy.objects.filter(**lookups, academy__id=academy_id, role__slug='student')
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if academy_id is None or user_id is None:
             raise serializers.ValidationError("Missing user_id or academy_id", code=400)
@@ -244,7 +291,6 @@ def get_token_info(request, token):
 class UserMeView(APIView):
     def get(self, request, format=None):
 
-        logger.error("Get me just called")
         try:
             if isinstance(request.user, AnonymousUser):
                 raise PermissionDenied("There is not user")
@@ -797,22 +843,21 @@ class AcademyInviteView(APIView):
     @capable_of('crud_member')
     def put(self, request, user_id=None, academy_id=None):
         if user_id is not None:
-            user = ProfileAcademy.objects.filter(user__id=user_id,academy__id=academy_id).first() 
+            user = ProfileAcademy.objects.filter(user__id=user_id,academy__id=academy_id).first()
 
             if user is None:
                 raise ValidationException("Member not found", 400)
-            invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email, author=request.user).first() 
+            invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email).first()
 
             if invite is None:
                 raise ValidationException("Invite not found", 400)
-                
+
             if invite.sent_at is not None:
                 now = timezone.now()
                 minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
-                
+
                 if minutes_diff < 2:
                     raise ValidationException("Imposible to resend invitation", 400)
-
             resend_invite(invite.token, invite.email, invite.first_name)
 
             invite.sent_at = timezone.now()
@@ -826,7 +871,7 @@ def render_invite(request, token, member_id=None):
     _dict["callback"] = request.GET.get("callback", '')
 
     if request.method == 'GET':
-        
+
         invite = UserInvite.objects.filter(token=token).first()
         if invite is None:
             return render(request, 'message.html', {

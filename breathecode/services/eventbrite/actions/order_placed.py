@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 
 
 logger = logging.getLogger(__name__)
+SOURCE = 'eventbrite'
+CAMPAIGN = 'eventbrite order placed'
 
 
 def order_placed(self, webhook, payload: dict):
@@ -26,6 +28,9 @@ def order_placed(self, webhook, payload: dict):
     event_id = payload['event_id']
 
     local_event = Event.objects.filter(eventbrite_id=event_id).first()
+
+    if local_event:
+        print(local_event.__dict__)
 
     if not local_event:
         message = 'event doesn\'t exist'
@@ -52,7 +57,21 @@ def order_placed(self, webhook, payload: dict):
         'last_name': payload['last_name'],
     }
 
-    contact = set_optional(contact, 'utm_location', {'academy': org.academy.slug}, 'academy')
+    custom = {
+        'academy': org.academy.slug,
+        'source': SOURCE,
+        'campaign': CAMPAIGN,
+        'language': local_event.lang,
+    }
+
+    # utm_language ?
+
+    contact = set_optional(contact, 'utm_location', custom, 'academy')
+    contact = set_optional(contact, 'utm_source', custom, 'source')
+    contact = set_optional(contact, 'utm_campaign', custom, 'campaign')
+
+    if local_event.lang:
+        contact = set_optional(contact, 'utm_language', custom, 'language')
 
     if not ActiveCampaignAcademy.objects.filter(academy__id=academy_id).count():
         message = 'ActiveCampaignAcademy doesn\'t exist'

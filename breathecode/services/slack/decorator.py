@@ -34,7 +34,6 @@ def command(only=None):
 def action(only=None):        
     def decorator(function):
         def wrapper(*args, **kwargs):
-            #print(kwargs)
             if "payload" not in kwargs or kwargs["payload"] is None:
                 raise Exception("Missing payload information on slack action")
             context = kwargs["payload"]

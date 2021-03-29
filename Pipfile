@@ -4,12 +4,10 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pytest-mock = "*"
 pytest-cov = "*"
 coverage = "*"
-mock = "*"
 pylint-django = "*"
-celery = {extras = ["pytest"], version = "*"}
+atomicwrites = "*"
 
 [packages]
 django = "*"

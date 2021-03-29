@@ -17,35 +17,42 @@ Including another URLconf
 # from rest_framework.authtoken import views
 from django.urls import path
 from .views import (
-    get_users, UserMeView, LoginView, LogoutView,TemporalTokenView , get_github_token,
+    get_users, UserMeView, LoginView, LogoutView, TemporalTokenView, get_github_token,
     save_github_token, get_slack_token, save_slack_token, pick_password, change_password,
     get_token_info, get_facebook_token, save_facebook_token, MemberView, reset_password_view,
     login_html_view, StudentView, get_roles, render_invite, AcademyInviteView
 )
 
-app_name='authenticate'
+app_name = 'authenticate'
 urlpatterns = [
     path('user/', get_users, name="user"),
     path('role', get_roles, name="role"),
     path('user/me', UserMeView.as_view(), name="user_me"),
-  
-    path('user/invite/resend/<int:user_id>', AcademyInviteView.as_view(), name="academy_resent_invite"),
+
+    path('user/invite/resend/<int:user_id>',
+         AcademyInviteView.as_view(), name="academy_resent_invite"),
     path('user/invite/<str:token>', render_invite, name="academy_invite"),
 
-    path('academy/member', MemberView.as_view()),
-    path('academy/<int:academy_id>/member', MemberView.as_view(), name="academy_id_member"),
-    path('academy/member/<int:user_id>', MemberView.as_view(), name="academy_id_member_id"),
-    path('academy/<int:academy_id>/member/<int:user_id>', MemberView.as_view(), name="academy_id_member_id"),
+    path('academy/member', MemberView.as_view(), name="academy_member"),
+    path('academy/<int:academy_id>/member',
+         MemberView.as_view(), name="academy_id_member"),
+    path('academy/member/<int:user_id>',
+         MemberView.as_view(), name="academy_id_member_id"),
+    path('academy/<int:academy_id>/member/<int:user_id>',
+         MemberView.as_view(), name="academy_id_member_id"),
 
-    path('academy/student', StudentView.as_view()),
+    path('academy/student', StudentView.as_view(), name="academy_student"),
     path('academy/student/<int:user_id>', StudentView.as_view()),
     # path('group/', get_groups, name="group"),
 
-    path('view/login', login_html_view, name="login_view"), # html login form
-    path('login/', LoginView.as_view(), name="login"), # get token from email and password
+    path('view/login', login_html_view, name="login_view"),  # html login form
+    # get token from email and password
+    path('login/', LoginView.as_view(), name="login"),
     path('logout/', LogoutView.as_view(), name="logout"),
-    path('token/', TemporalTokenView.as_view(), name="token"), # get a another token (temporal), from a logged in user
-    path('token/<str:token>', get_token_info, name="token"), # get token information
+    # get a another token (temporal), from a logged in user
+    path('token/', TemporalTokenView.as_view(), name="token"),
+    path('token/<str:token>', get_token_info,
+         name="token"),  # get token information
 
     path('password/reset', reset_password_view, name="password_reset"),
     path('password/<str:token>', pick_password, name="password_token"),
