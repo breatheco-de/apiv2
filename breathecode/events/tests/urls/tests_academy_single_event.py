@@ -53,36 +53,36 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 404)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_single_event_valid_id(self):
-        self.headers(academy=1)
-        url = reverse_lazy('events:academy_single_event', kwargs={"event_id":1})
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_event', role='potato', syllabus=True, event= True)
+#     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+#     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+#     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+#     def test_academy_single_event_valid_id(self):
+#         self.headers(academy=1)
+#         url = reverse_lazy('events:academy_single_event', kwargs={"event_id":1})
+#         model = self.generate_models(authenticate=True, profile_academy=True,
+#             capability='read_event', role='potato', syllabus=True, event= True)
         
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-                    'id': model['event'].id,
-                    'excerpt': model['event'].excerpt,
-                    'title': model['event'].title,
-                    'lang': model['event'].lang,
-                    'url': model['event'].url,
-                    'banner': model['event'].banner,
-                    'starting_at': datetime_to_iso_format(model['event'].starting_at),
-                    'ending_at': datetime_to_iso_format(model['event'].ending_at),
-                    'status': model['event'].status,
-                    'event_type': model['event'].event_type,
-                    'online_event': model['event'].online_event,
-                    'venue': model['event'].venue, 
-                    'academy':{'id': 1, 
-                    'slug': model['academy'].slug, 
-                    'name': model['academy'].name, 
-                    'city': {'name': model['event'].academy.city.name}}}
+#         response = self.client.get(url)
+#         json = response.json()
+#         expected = {
+#                     'id': model['event'].id,
+#                     'excerpt': model['event'].excerpt,
+#                     'title': model['event'].title,
+#                     'lang': model['event'].lang,
+#                     'url': model['event'].url,
+#                     'banner': model['event'].banner,
+#                     'starting_at': datetime_to_iso_format(model['event'].starting_at),
+#                     'ending_at': datetime_to_iso_format(model['event'].ending_at),
+#                     'status': model['event'].status,
+#                     'event_type': model['event'].event_type,
+#                     'online_event': model['event'].online_event,
+#                     'venue': model['event'].venue, 
+#                     'academy':{'id': 1, 
+#                     'slug': model['academy'].slug, 
+#                     'name': model['academy'].name, 
+#                     'city': {'name': model['event'].academy.city.name}}}
                     
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 200)
+#         self.assertEqual(json, expected)
+#         self.assertEqual(response.status_code, 200)
 
     
