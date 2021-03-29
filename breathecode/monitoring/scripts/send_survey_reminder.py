@@ -7,12 +7,12 @@ from breathecode.feedback.models import Survey
 from breathecode.admissions.models import Cohort
 from datetime import datetime, date
 
-cohorts = Cohort.objects.all()
+cohorts = Cohort.objects.filter(academy__id=academy.id)
 
 for cohort in cohorts:
 
     survey_reminders = Survey.objects.filter(
-        cohort__name__contains=cohort.name)
+        cohort__name=cohort.name)
 
     def calculate_weeks(date_created, current_date):
         days = abs(date_created-current_date).days
