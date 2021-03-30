@@ -73,6 +73,8 @@ class AcademyEventsTestSuite(EventTestCase):
         json = response.json()
         expected = {
             'id': model['event'].id,
+            'capacity': model['event'].capacity,
+            'description': model['event'].description,
             'excerpt': model['event'].excerpt,
             'title': model['event'].title,
             'lang': model['event'].lang,
