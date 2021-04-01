@@ -63,6 +63,7 @@ class GetCertificateSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    duration_in_days = serpy.Field()
     description = serpy.Field()
     logo = serpy.Field()
 
@@ -70,6 +71,7 @@ class GetSmallCertificateSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    duration_in_days = serpy.Field()
 
 class GithubSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
