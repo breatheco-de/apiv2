@@ -114,6 +114,7 @@ class GetSmallCohortSerializer(serpy.Serializer):
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     stage = serpy.Field()
+    duration_in_days = serpy.Field()
 
 class GetMeCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
