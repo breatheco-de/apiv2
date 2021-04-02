@@ -305,6 +305,7 @@ class AcademyICalCohortsView(APIView):
 
     @capable_of('read_cohort')
     def get(self, request, academy_id=None):
+        # academy_id = 1
         items = Cohort.objects.filter(academy__id=academy_id).exclude(stage='DELETED')
 
         calendar = iCalendar()

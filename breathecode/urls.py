@@ -48,7 +48,8 @@ urlpatterns = [
     path('v1/feedback/', include('breathecode.feedback.urls', namespace='feedback')),
     path('v1/messaging/', include('breathecode.notify.urls', namespace='notify')),
     path('v1/certificate/', include('breathecode.certificate.urls', namespace='certificate')),
-    
+    path('v1/media/', include('breathecode.media.urls', namespace='media')),
+
     path('v1/marketing/', include('breathecode.marketing.urls', namespace='marketing')),
     path('s/', include('breathecode.marketing.urls_shortner', namespace='shortner')),
 ]

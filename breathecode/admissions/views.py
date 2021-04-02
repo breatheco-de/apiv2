@@ -237,6 +237,7 @@ class AcademyICalEventView(APIView):
 
     @capable_of('read_event')
     def get(self, request, academy_id=None):
+        # academy_id = 1
         items = Event.objects.filter(academy__id=academy_id, status='ACTIVE')
 
         calendar = iCalendar()
