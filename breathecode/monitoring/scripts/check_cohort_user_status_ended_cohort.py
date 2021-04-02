@@ -7,8 +7,11 @@ from breathecode.admissions.models import CohortUser
 from django.utils import timezone
 
 active_user_on_ended_cohort = CohortUser.objects.filter(
-    user__is_active=True, cohort__stage="ENDED")
-
+    cohort__stage="ENDED"
+).exclude(
+    educational_status="ACTIVE"
+)
+# TODO: use educational_status != ACTIVE, check monitoring to see tests
 active_user_on_ended_cohort_list = [
     item.user.email for item in active_user_on_ended_cohort]
 

@@ -53,7 +53,7 @@ class UserInviteAdmin(admin.ModelAdmin):
     def invite_url(self,obj):
         params = { "callback": "https://student.breatheco.de" }
         querystr = urllib.parse.urlencode(params)
-        url = os.getenv('API_URL') + "/v1/auth/user/invite/" + str(obj.token) + "?" + querystr
+        url = os.getenv('API_URL') + "/v1/auth/member/invite/" + str(obj.token) + "?" + querystr
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>")
 
 

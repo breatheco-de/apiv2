@@ -898,15 +898,15 @@ def pick_password(request, token):
 
 class AcademyInviteView(APIView):
     @capable_of('crud_member')
-    def put(self, request, user_id=None, academy_id=None):
-        if user_id is not None:
-            user = ProfileAcademy.objects.filter(
-                user__id=user_id, academy__id=academy_id).first()
+    def put(self, request, pa_id=None, academy_id=None):
+        if pa_id is not None:
+            profile_academy = ProfileAcademy.objects.filter(
+                 id=pa_id).first()
 
-            if user is None:
+            if profile_academy is None:
                 raise ValidationException("Member not found", 400)
             invite = UserInvite.objects.filter(
-                academy__id=academy_id, email=user.email).first()
+                academy__id=academy_id, email=profile_academy.email).first()
 
             if invite is None:
                 raise ValidationException("Invite not found", 400)

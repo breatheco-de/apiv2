@@ -10,12 +10,13 @@ cohorts = Cohort.objects.filter(ending_date__lt=timezone.now())
 to_fix_cohort_stage = []
 
 for cohort in cohorts:
-    if (cohort.stage is not "ENDED"):
+    if (cohort.stage != "ENDED"):
         to_fix_cohort_stage.append(cohort.name)
 
-to_fix_cohort_name = (", ").join(to_fix_cohort_stage)
+if len(cohorts) > 0:
+    to_fix_cohort_name = (", ").join(to_fix_cohort_stage)
 
-raise ScriptNotification(
-    f"Theese cohorts {to_fix_cohort_name} ended but have stage different that ENDED", status='MINOR')
-
-print("Everything up to date")
+    raise ScriptNotification(
+        f"These cohorts {to_fix_cohort_name} ended but their stage is different that ENDED", status='MINOR')
+else:
+    print("Everything up to date")
