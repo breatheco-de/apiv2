@@ -127,7 +127,8 @@ class CustomTagModelForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(CustomTagModelForm, self).__init__(*args, **kwargs)
-        self.fields['automation'].queryset = Automation.objects.filter(ac_academy=self.instance.ac_academy.id)# or something else
+        if self.instance.ac_academy is not None:
+            self.fields['automation'].queryset = Automation.objects.filter(ac_academy=self.instance.ac_academy.id)# or something else
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):

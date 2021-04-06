@@ -35,6 +35,7 @@ class Command(BaseCommand):
             { "slug": "read_eventcheckin", "description": "List and read all the event_checkins" },
             { "slug": "read_nps_answers", "description": "List all the nps answers" },
             { "slug": "read_lead", "description": "List all the leads" },
+            { "slug": "crud_lead", "description": "Create, update or delete academy leads" },
             { "slug": "read_cohort_activity", "description": "Read low level activity in a cohort (attendancy, etc.)" },
         ]
 
@@ -52,11 +53,12 @@ class Command(BaseCommand):
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment"] },
             { "slug": "assistant", "name": "Teacher Assistant", "caps": ["read_assigment", "crud_assignment", "read_cohort_activity", "read_syllabus", "read_cohort"] },
             { "slug": "career_support", "name": "Career Support Specialist", "caps": ["read_student","read_certificate", "crud_certificate", "read_cohort"] },
-            { "slug": "admissions_developer", "name": "Admissions Developer", "caps": ["read_student","crud_student","crud_cohort", "read_cohort","read_lead", "read_event", "read_eventcheckin"] },
+            { "slug": "admissions_developer", "name": "Admissions Developer", "caps": ["crud_lead","read_student","crud_student","crud_cohort", "read_cohort","read_lead", "read_event", "read_eventcheckin"] },
             { "slug": "syllabus_coordinator", "name": "Manage Syllabus, Exercises and all academy content", "caps": ["read_syllabus"] },
-            { "slug": "growth_manager", "name": "Growth Manager", "caps": ["read_student","read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead", "read_cohort"] },
+            { "slug": "community_manager", "name": "Community Manager", "caps": ["crud_lead","read_student","read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead", "read_cohort"] },
         ]
 
+        roles.append({ "slug": "growth_manager", "name": "Growth Manager", "caps": extend(roles, ["community_manager"]) })
         roles.append({ "slug": "teacher", "name": "Teacher", "caps": extend(roles, ["assistant"]) })
         roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": extend(roles, ["teacher"]) + ["crud_syllabus"] })
         roles.append({ "slug": "country_manager", "name": "Country Manager", "caps": extend(roles,["academy_coordinator", "student", "career_support", "growth_manager", "admissions_developer", "syllabus_coordinator"]) + ["read_member", "crud_member"] })

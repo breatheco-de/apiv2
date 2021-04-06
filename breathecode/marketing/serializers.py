@@ -7,6 +7,18 @@ class AcademySmallSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
 
+class AutomationSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    status = serpy.Field()
+
+class TagSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    tag_type = serpy.Field()
+    automation = AutomationSmallSerializer(required=False)
+
 class FormEntrySerializer(serpy.Serializer):
     id = serpy.Field()
     course = serpy.Field()
