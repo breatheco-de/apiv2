@@ -30,7 +30,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def tests_monitor_without_entity(self):
+    def tests_send_survey_no_reminder(self):
 
         monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
 
