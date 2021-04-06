@@ -11,10 +11,13 @@ from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, Sum, F, Func, Value, CharField
 from breathecode.utils import APIException, localize_query, capable_of, ValidationException, GenerateLookupsMixin
-from .serializers import PostFormEntrySerializer, FormEntrySerializer, FormEntrySmallSerializer
+from .serializers import (
+    PostFormEntrySerializer, FormEntrySerializer, FormEntrySmallSerializer, TagSmallSerializer,
+    AutomationSmallSerializer
+)
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
 from .tasks import persist_single_lead, update_link_viewcount
-from .models import ShortLink, ActiveCampaignAcademy, FormEntry
+from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation
 from breathecode.admissions.models import Academy
 from rest_framework.views import APIView
 
@@ -195,6 +198,33 @@ def get_leads_report(request, id=None):
         )
     # items = items.order_by('created_at')
     return Response(items)
+
+
+class AcademyTagView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('crud_lead')
+    def get(self, request, format=None, academy_id=None):
+
+        print("academy_id", academy_id)
+        tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
+
+        serializer = TagSmallSerializer(tags, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class AcademyAutomationView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('crud_lead')
+    def get(self, request, format=None, academy_id=None):
+
+        print("academy_id", academy_id)
+        tags = Automation.objects.filter(ac_academy__academy__id=academy_id)
+
+        serializer = AutomationSmallSerializer(tags, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class AcademyLeadView(APIView, GenerateLookupsMixin):
