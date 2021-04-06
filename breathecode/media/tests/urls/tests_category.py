@@ -227,3 +227,32 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(self.all_category_dict(), [{
             **self.model_to_dict(model, 'category')
         } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_category_post(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='crud_media', role='potato')
+        url = reverse_lazy('media:category')
+        data = {
+            'name': 'They killed kenny',
+            'slug': 'they-killed-kenny',
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {
+            'id': 1,
+            **data,
+        }
+
+        self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
+        del json['created_at']
+        del json['updated_at']
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_category_dict(), [expected])

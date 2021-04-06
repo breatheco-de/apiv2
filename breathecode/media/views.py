@@ -1,8 +1,10 @@
+from breathecode.admissions.models import Academy
 import hashlib, requests
 from django.shortcuts import redirect
 from breathecode.media.serializers import (
     GetMediaSerializer,
     MediaSerializer,
+    MediaPUTSerializer,
     GetCategorySerializer,
     CategorySerializer
 )
@@ -11,11 +13,10 @@ from breathecode.utils import GenerateLookupsMixin
 from rest_framework.views import APIView
 from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
 from rest_framework.response import Response
-from rest_framework.parsers import FileUploadParser
+from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.http import StreamingHttpResponse
-from ..services.google_cloud import Storage
 
 
 BUCKET_NAME = "media-breathecode"
@@ -83,7 +84,9 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('crud_media')
     def delete(self, request, media_id=None, academy_id=None):
-        data = Media.objects.filter(id=media_id).first()
+        from ..services.google_cloud import Storage
+
+        data = Media.objects.filter(id=media_id, academy__id=academy_id).first()
         if not data:
             raise ValidationException('Media not found', code=404)
 
@@ -95,6 +98,7 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             storage = Storage()
             file = storage.file(BUCKET_NAME, url)
             file.delete()
+
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
@@ -167,20 +171,23 @@ class CategoryView(APIView, HeaderLimitOffsetPagination):
 
 
 class UploadView(APIView):
-    parser_classes = [FileUploadParser]
+    parser_classes = [MultiPartParser, FileUploadParser]
     # permission_classes = [AllowAny]
 
     @capable_of('crud_media')
     def put(self, request, academy_id=None):
+        from ..services.google_cloud import Storage
+
         file = request.data.get('file')
         if not file:
             raise ValidationException('Missing file in request', code=400)
 
-        slug = file.name.split('.')[0]
 
-        # we save one file just once
-        hash = hashlib.sha256(file.read()).hexdigest()
+        file_bytes = file.read()
+        hash = hashlib.sha256(file_bytes).hexdigest()
         file = request.data.get('file')
+        name = request.data.get('name', file.name)
+        slug = name.split('.')[0]
 
         if Media.objects.filter(slug=slug).exclude(hash=hash).count():
             raise ValidationException('slug already exists', code=400)
@@ -189,11 +196,16 @@ class UploadView(APIView):
             'hash': hash,
             'slug': slug,
             'mime': file.content_type,
-            'name': file.name,
-            # 'url': 'https://www.youtube.com/watch?v=hCXNwpq2qVQ&list=PLRHmAOq1DquFWreKY5n9mWcrX6SvLvI6v&index=3',
+            'name': name,
             'categories': [],
-            'academy_id': academy_id,
+            'academy': academy_id,
         }
+
+        # it is receive in url encoded
+        if 'categories' in request.data:
+            data['categories'] = request.data['categories'].split(',')
+        elif 'Categories' in request.headers:
+            data['categories'] = request.headers['Categories'].split(',')
 
         media = Media.objects.filter(hash=hash, academy__id=academy_id).first()
         if not media:
@@ -205,18 +217,18 @@ class UploadView(APIView):
                 # upload file section
                 storage = Storage()
                 cloud_file = storage.file(BUCKET_NAME, hash)
-                cloud_file.upload(file.read(), public=True)
+                cloud_file.upload(file_bytes, public=True)
                 data['url'] = cloud_file.url()
 
         if media:
-            serializer = MediaSerializer(media, data=data, many=False)
+            serializer = MediaPUTSerializer(media, data=data, many=False)
         else:
-            serializer = MediaSerializer(data=data, many=False)
+            serializer = MediaPUTSerializer(data=data, many=False)
 
         if serializer.is_valid():
             serializer.save()
-            # add code
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            status_code = status.HTTP_200_OK if media else status.HTTP_201_CREATED
+            return Response(serializer.data, status=status_code)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -231,12 +243,16 @@ class MaskingUrlView(APIView):
         elif media_slug:
             lookups['slug'] = media_slug
 
-        (url, hits) = Media.objects.filter(**lookups).values_list('url', 'hits').first()
-        if not url:
+        media = Media.objects.filter(**lookups).first()
+        if not media:
             raise ValidationException('Resource not found', code=404)
 
+        url = media.url
+
         # register click
-        Media.objects.filter(slug=media_slug).update(hits=hits + 1)
+        media.hits = media.hits + 1
+        media.save()
+
         if request.GET.get('mask') != 'true':
             return redirect(url, permanent=True)
 

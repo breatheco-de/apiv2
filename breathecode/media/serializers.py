@@ -36,6 +36,20 @@ class GetMediaSerializer(serpy.Serializer):
 
 
 class MediaSerializer(serializers.ModelSerializer):
+    url = serializers.CharField(read_only=True, required=False)
+    name = serializers.CharField(read_only=True, required=False)
+    mime = serializers.CharField(read_only=True, required=False)
+    hits = serializers.IntegerField(read_only=True, required=False)
+    hash = serializers.CharField(read_only=True, required=False)
+
+    class Meta:
+        model = Media
+        exclude = ()
+
+
+class MediaPUTSerializer(serializers.ModelSerializer):
+    url = serializers.CharField(required=False)
+
     class Meta:
         model = Media
         exclude = ()
