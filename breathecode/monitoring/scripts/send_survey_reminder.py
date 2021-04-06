@@ -20,6 +20,7 @@ cohorts = Cohort.objects.filter(academy__id=academy.id).exclude(
 
 cohorts_with_pending_surveys = []
 
+
 for cohort in cohorts:
 
     lastest_survey = Survey.objects.filter(

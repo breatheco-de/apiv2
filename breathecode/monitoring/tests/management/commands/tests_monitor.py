@@ -22,6 +22,7 @@ from breathecode.tests.mocks import (
 from ...mixins import MonitoringTestCase
 from ....management.commands.monitor import Command
 
+
 class AcademyCohortTestSuite(MonitoringTestCase):
     """
     🔽🔽🔽 With bad entity 🔽🔽🔽
@@ -78,7 +79,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         self.assertEqual(command.handle(entity='they-killed-kenny'), None)
         self.assertEqual(command.stdout.write.call_args_list, [])
-        self.assertEqual(command.stderr.write.call_args_list, [call('Entity not found')])
+        self.assertEqual(command.stderr.write.call_args_list,
+                         [call('Entity not found')])
         self.assertEqual(self.all_endpoint_dict(), [])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
@@ -107,7 +109,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 0 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 0 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [])
         self.assertEqual(self.all_endpoint_dict(), [])
@@ -139,7 +142,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
@@ -173,13 +177,14 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         }
 
         model = self.generate_models(application=True, endpoint=True,
-            endpoint_kwargs=endpoint_kwargs)
+                                     endpoint_kwargs=endpoint_kwargs)
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
@@ -219,20 +224,21 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         }
 
         model = self.generate_models(application=True, endpoint=True,
-            endpoint_kwargs=endpoint_kwargs)
+                                     endpoint_kwargs=endpoint_kwargs)
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -268,13 +274,14 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         }
 
         model = self.generate_models(application=True, endpoint=True,
-            endpoint_kwargs=endpoint_kwargs)
+                                     endpoint_kwargs=endpoint_kwargs)
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
@@ -307,20 +314,21 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack.call_args_list = []
 
         model = self.generate_models(application=True, endpoint=True,
-            endpoint_kwargs={'url': 'https://potato.io'})
+                                     endpoint_kwargs={'url': 'https://potato.io'})
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -359,20 +367,21 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack.call_args_list = []
 
         model = self.generate_models(application=True, endpoint=True,
-            endpoint_kwargs={'url': 'https://potato.io'})
+                                     endpoint_kwargs={'url': 'https://potato.io'})
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -413,20 +422,21 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         }
 
         model = self.generate_models(application=True, endpoint=True,
-            endpoint_kwargs=endpoint_kwargs)
+                                     endpoint_kwargs=endpoint_kwargs)
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -468,20 +478,21 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         }
 
         model = self.generate_models(application=True, endpoint=True,
-            endpoint_kwargs=endpoint_kwargs)
+                                     endpoint_kwargs=endpoint_kwargs)
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -516,20 +527,21 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack.call_args_list = []
 
         model = self.generate_models(application=True, endpoint=True,
-            endpoint_kwargs={'url': 'https://potato.io'})
+                                     endpoint_kwargs={'url': 'https://potato.io'})
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -567,20 +579,21 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack.call_args_list = []
 
         model = self.generate_models(application=True, endpoint=True,
-            endpoint_kwargs={'url': 'https://potato.io'})
+                                     endpoint_kwargs={'url': 'https://potato.io'})
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -623,20 +636,21 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         }
 
         model = self.generate_models(application=True, endpoint=True,
-            endpoint_kwargs=endpoint_kwargs)
+                                     endpoint_kwargs=endpoint_kwargs)
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -674,20 +688,21 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         mock_slack.call_args_list = []
 
         model = self.generate_models(application=True, endpoint=True,
-            endpoint_kwargs={'url': 'https://potato.io'})
+                                     endpoint_kwargs={'url': 'https://potato.io'})
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -733,20 +748,21 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         }
 
         model = self.generate_models(application=True, endpoint=True,
-            application_kwargs=application_kwargs, endpoint_kwargs=endpoint_kwargs)
+                                     application_kwargs=application_kwargs, endpoint_kwargs=endpoint_kwargs)
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -788,23 +804,24 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         }
 
         model = self.generate_models(application=True, endpoint=True,
-            slack_channel=True, credentials_slack=True,
-            # academy=True, slack_team=True,
-            endpoint_kwargs=endpoint_kwargs)
+                                     slack_channel=True, credentials_slack=True,
+                                     # academy=True, slack_team=True,
+                                     endpoint_kwargs=endpoint_kwargs)
 
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -846,22 +863,23 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         }
 
         model = self.generate_models(application=True, endpoint=True,
-            slack_channel=True, credentials_slack=True,
-            endpoint_kwargs=endpoint_kwargs)
+                                     slack_channel=True, credentials_slack=True,
+                                     endpoint_kwargs=endpoint_kwargs)
 
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -903,23 +921,24 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         }
 
         model = self.generate_models(application=True, endpoint=True,
-            slack_channel=True, credentials_slack=True,
-            slack_team=True, academy=True,
-            endpoint_kwargs=endpoint_kwargs)
+                                     slack_channel=True, credentials_slack=True,
+                                     slack_team=True, academy=True,
+                                     endpoint_kwargs=endpoint_kwargs)
 
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='apps'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 apps for diagnostic')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 apps for diagnostic')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_application_dict(), [{
             **self.model_to_dict(model, 'application'),
         }])
 
         endpoints = [{**endpoint, 'last_check': None} for endpoint in
-            self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
+                     self.all_endpoint_dict() if self.assertDatetime(endpoint['last_check'])]
         self.assertEqual(endpoints, [{
             **self.model_to_dict(model, 'endpoint'),
             'frequency_in_minutes': 30.0,
@@ -964,7 +983,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='scripts'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 0 scripts for execution')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 0 scripts for execution')])
         self.assertEqual(command.stderr.write.call_args_list, [])
 
         self.assertEqual(self.all_monitor_script_dict(), [])
@@ -990,7 +1010,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='scripts'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 scripts for execution')])
         self.assertEqual(command.stderr.write.call_args_list, [])
         self.assertEqual(self.all_monitor_script_dict(), [{
             **self.model_to_dict(model, 'monitor_script'),
@@ -1015,18 +1036,20 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             'script_body': 'print(\'aaaa\')'
         }
 
-        model = self.generate_models(monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
+        model = self.generate_models(
+            monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
 
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='scripts'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 scripts for execution')])
         self.assertEqual(command.stderr.write.call_args_list, [])
 
         monitor_scripts = [{**x, 'last_run': None} for x in
-            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+                           self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
         self.assertEqual(monitor_scripts, [{
             **self.model_to_dict(model, 'monitor_script'),
             'response_text': 'aaaa\n',
@@ -1055,18 +1078,20 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             ])
         }
 
-        model = self.generate_models(monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
+        model = self.generate_models(
+            monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
 
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='scripts'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 scripts for execution')])
         self.assertEqual(command.stderr.write.call_args_list, [])
 
         monitor_scripts = [{**x, 'last_run': None} for x in
-            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+                           self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
         self.assertEqual(monitor_scripts, [{
             **self.model_to_dict(model, 'monitor_script'),
             'response_text': 'thus spoke kishibe rohan\n',
@@ -1096,18 +1121,20 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             ])
         }
 
-        model = self.generate_models(monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
+        model = self.generate_models(
+            monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
 
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='scripts'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 scripts for execution')])
         self.assertEqual(command.stderr.write.call_args_list, [])
 
         monitor_scripts = [{**x, 'last_run': None} for x in
-            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+                           self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
         self.assertEqual(monitor_scripts, [{
             **self.model_to_dict(model, 'monitor_script'),
             'response_text': 'thus spoke kishibe rohan\n',
@@ -1135,18 +1162,20 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             'script_slug': 'they-killed-kenny'
         }
 
-        model = self.generate_models(monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
+        model = self.generate_models(
+            monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
 
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='scripts'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 scripts for execution')])
         self.assertEqual(command.stderr.write.call_args_list, [])
 
         monitor_scripts = [{**x, 'last_run': None} for x in
-            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+                           self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
         self.assertEqual(monitor_scripts, [{
             **self.model_to_dict(model, 'monitor_script'),
             'response_text': 'aaaa\n',
@@ -1176,18 +1205,20 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             'script_slug': 'they-killed-kenny'
         }
 
-        model = self.generate_models(monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
+        model = self.generate_models(
+            monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
 
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='scripts'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 scripts for execution')])
         self.assertEqual(command.stderr.write.call_args_list, [])
 
         monitor_scripts = [{**x, 'last_run': None} for x in
-            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+                           self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
         self.assertEqual(monitor_scripts, [{
             **self.model_to_dict(model, 'monitor_script'),
             'response_text': 'thus spoke kishibe rohan\n',
@@ -1218,18 +1249,20 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             'script_slug': 'they-killed-kenny'
         }
 
-        model = self.generate_models(monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
+        model = self.generate_models(
+            monitor_script=True, monitor_script_kwargs=monitor_script_kwargs)
 
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='scripts'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 scripts for execution')])
         self.assertEqual(command.stderr.write.call_args_list, [])
 
         monitor_scripts = [{**x, 'last_run': None} for x in
-            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+                           self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
         self.assertEqual(monitor_scripts, [{
             **self.model_to_dict(model, 'monitor_script'),
             'response_text': 'thus spoke kishibe rohan\n',
@@ -1265,21 +1298,22 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         }
 
         model = self.generate_models(monitor_script=True,
-            slack_channel=True, credentials_slack=True,
-            slack_team=True, academy=True, application=True,
-            application_kwargs=application_kwargs,
-            monitor_script_kwargs=monitor_script_kwargs)
+                                     slack_channel=True, credentials_slack=True,
+                                     slack_team=True, academy=True, application=True,
+                                     application_kwargs=application_kwargs,
+                                     monitor_script_kwargs=monitor_script_kwargs)
 
         command = Command()
         command.stdout.write = MagicMock()
         command.stderr.write = MagicMock()
 
         self.assertEqual(command.handle(entity='scripts'), None)
-        self.assertEqual(command.stdout.write.call_args_list, [call('Enqueued 1 scripts for execution')])
+        self.assertEqual(command.stdout.write.call_args_list, [
+                         call('Enqueued 1 scripts for execution')])
         self.assertEqual(command.stderr.write.call_args_list, [])
 
         monitor_scripts = [{**x, 'last_run': None} for x in
-            self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
+                           self.all_monitor_script_dict() if self.assertDatetime(x['last_run'])]
         self.assertEqual(monitor_scripts, [{
             **self.model_to_dict(model, 'monitor_script'),
             'response_text': 'thus spoke kishibe rohan\n',
