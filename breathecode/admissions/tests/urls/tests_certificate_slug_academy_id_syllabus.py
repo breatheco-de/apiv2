@@ -99,6 +99,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'id': model['certificate'].id,
                 'name': model['certificate'].name,
                 'slug': model['certificate'].slug,
+                'duration_in_days': model['cohort'].syllabus.certificate.duration_in_days,
             },
             'version': model['syllabus'].version,
         }]
