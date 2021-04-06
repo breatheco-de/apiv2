@@ -101,6 +101,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                     'id': self.cohort.syllabus.certificate.id,
                     'slug': self.cohort.syllabus.certificate.slug,
                     'name': self.cohort.syllabus.certificate.name,
+                    'duration_in_days': self.cohort.syllabus.certificate.duration_in_days,
                 }
             },
             'academy': {
@@ -165,6 +166,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                     'id': self.cohort.syllabus.certificate.id,
                     'slug': self.cohort.syllabus.certificate.slug,
                     'name': self.cohort.syllabus.certificate.name,
+                    'duration_in_days': self.cohort.syllabus.certificate.duration_in_days,
                 }
             },
             'academy': {
@@ -212,6 +214,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                     'id': self.cohort.syllabus.certificate.id,
                     'slug': self.cohort.syllabus.certificate.slug,
                     'name': self.cohort.syllabus.certificate.name,
+                    'duration_in_days': self.cohort.syllabus.certificate.duration_in_days,
                 }
             },
             'academy': {
@@ -259,6 +262,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                     'id': self.cohort.syllabus.certificate.id,
                     'slug': self.cohort.syllabus.certificate.slug,
                     'name': self.cohort.syllabus.certificate.name,
+                    'duration_in_days': self.cohort.syllabus.certificate.duration_in_days,
                 }
             },
             'academy': {
@@ -325,6 +329,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                     'id': self.cohort.syllabus.certificate.id,
                     'slug': self.cohort.syllabus.certificate.slug,
                     'name': self.cohort.syllabus.certificate.name,
+                    'duration_in_days': self.cohort.syllabus.certificate.duration_in_days,
                 }
             },
             'academy': {
@@ -371,6 +376,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                     'id': self.cohort.syllabus.certificate.id,
                     'slug': self.cohort.syllabus.certificate.slug,
                     'name': self.cohort.syllabus.certificate.name,
+                    'duration_in_days': self.cohort.syllabus.certificate.duration_in_days,
                 }
             },
             'academy': {

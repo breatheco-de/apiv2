@@ -51,7 +51,7 @@ class TokenAdmin(admin.ModelAdmin):
 class UserInviteAdmin(admin.ModelAdmin):
     list_display = ('email', 'first_name', 'last_name', 'status', 'academy', 'token', 'created_at', 'invite_url')
     def invite_url(self,obj):
-        params = { "callback": "https://student.breatheco.de" }
+        params = { "callback": "https://learn.breatheco.de" }
         querystr = urllib.parse.urlencode(params)
         url = os.getenv('API_URL') + "/v1/auth/member/invite/" + str(obj.token) + "?" + querystr
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>")

@@ -61,6 +61,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'name': model['certificate'].name,
             'slug': model['certificate'].slug,
             'logo': model['certificate'].logo,
+            'duration_in_days': model['certificate'].duration_in_days,
             'description': model['certificate'].description,
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
