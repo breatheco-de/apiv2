@@ -1,4 +1,8 @@
-import os, requests, base64, logging, urllib.parse
+import os
+import requests
+import base64
+import logging
+import urllib.parse
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import update_session_auth_hash
@@ -35,8 +39,10 @@ from .serializers import (
 
 logger = logging.getLogger(__name__)
 
+
 class TemporalTokenView(ObtainAuthToken):
     permission_classes = [IsAuthenticated]
+
     def post(self, request):
 
         user = request.user
@@ -63,6 +69,7 @@ class LogoutView(APIView):
             'message': "User tokens successfully deleted",
         })
 
+
 class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('read_member')
@@ -70,14 +77,17 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         is_many = bool(not user_id)
 
         if user_id is not None:
-            item = ProfileAcademy.objects.filter(user__id=user_id, academy_id=academy_id).first()
+            item = ProfileAcademy.objects.filter(
+                user__id=user_id, academy_id=academy_id).first()
             if item is None:
-                raise ValidationException('Profile not found for this user and academy', 404)
+                raise ValidationException(
+                    'Profile not found for this user and academy', 404)
 
             serializer = GETProfileAcademy(item, many=False)
             return Response(serializer.data)
 
-        items = ProfileAcademy.objects.filter(academy__id=academy_id).exclude(role__slug="student")
+        items = ProfileAcademy.objects.filter(
+            academy__id=academy_id).exclude(role__slug="student")
 
         roles = request.GET.get('roles', None)
         if is_many and roles is not None:
@@ -112,8 +122,9 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('crud_member')
     def put(self, request, academy_id=None, user_id=None):
 
-        already = ProfileAcademy.objects.filter(user=user_id,academy__id=academy_id).first()
-        request_data = { **request.data, "user": user_id, "academy": academy_id }
+        already = ProfileAcademy.objects.filter(
+            user=user_id, academy__id=academy_id).first()
+        request_data = {**request.data, "user": user_id, "academy": academy_id}
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
@@ -136,22 +147,24 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if lookups and user_id:
             raise ValidationException('user_id or cohort_id was provided in url '
-                'in bulk mode request, use querystring style instead', code=400)
+                                      'in bulk mode request, use querystring style instead', code=400)
 
         if lookups:
             items = ProfileAcademy.objects.filter(**lookups,
-                academy__id=academy_id).exclude(role__slug="student")
+                                                  academy__id=academy_id).exclude(role__slug="student")
 
             for item in items:
                 item.delete()
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        member = ProfileAcademy.objects.filter(user=user_id,academy__id=academy_id).exclude(role__slug="student").first()
+        member = ProfileAcademy.objects.filter(
+            user=user_id, academy__id=academy_id).exclude(role__slug="student").first()
         if member is None:
             raise ValidationException("Member not found", 404)
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
 
 class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
@@ -159,18 +172,21 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def get(self, request, academy_id=None, user_id=None):
 
         if user_id is not None:
-            profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id).first()
+            profile = ProfileAcademy.objects.filter(
+                academy__id=academy_id, user__id=user_id).first()
             if profile is None:
                 raise ValidationException("Profile not found", 404)
 
             serializer = GETProfileAcademy(profile, many=False)
             return Response(serializer.data)
 
-        items = ProfileAcademy.objects.filter(role__slug='student', academy__id=academy_id)
+        items = ProfileAcademy.objects.filter(
+            role__slug='student', academy__id=academy_id)
 
         like = request.GET.get('like', None)
         if like is not None:
-            items = items.filter(Q(first_name__icontains=like) | Q(last_name__icontains=like) | Q(email__icontains=like))
+            items = items.filter(Q(first_name__icontains=like) | Q(
+                last_name__icontains=like) | Q(email__icontains=like))
 
         status = request.GET.get('status', None)
         if status is not None:
@@ -198,14 +214,18 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('crud_student')
     def put(self, request, academy_id=None, user_id=None):
 
-        already = ProfileAcademy.objects.filter(user=user_id,academy__id=academy_id).first()
+        already = ProfileAcademy.objects.filter(
+            user=user_id, academy__id=academy_id).first()
 
         if already and already.role.slug != "student":
-            raise ValidationException(f"This endpoint can only update student profiles (not {already.role.slug})")
+            raise ValidationException(
+                f"This endpoint can only update student profiles (not {already.role.slug})")
 
-        request_data = { **request.data, "user": user_id, "academy": academy_id, "role": "student" }
+        request_data = {**request.data, "user": user_id,
+                        "academy": academy_id, "role": "student"}
         if "role" in request.data:
-            raise ValidationException("The student role cannot be updated with this endpoint, user /member instead.")
+            raise ValidationException(
+                "The student role cannot be updated with this endpoint, user /member instead.")
 
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
@@ -221,7 +241,6 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id=None):
         lookups = self.generate_lookups(
@@ -231,10 +250,11 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if lookups and user_id:
             raise ValidationException('user_id was provided in url '
-                'in bulk mode request, use querystring style instead', code=400)
+                                      'in bulk mode request, use querystring style instead', code=400)
 
         if lookups:
-            items = ProfileAcademy.objects.filter(**lookups, academy__id=academy_id, role__slug='student')
+            items = ProfileAcademy.objects.filter(
+                **lookups, academy__id=academy_id, role__slug='student')
 
             for item in items:
                 item.delete()
@@ -242,14 +262,18 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if academy_id is None or user_id is None:
-            raise serializers.ValidationError("Missing user_id or academy_id", code=400)
+            raise serializers.ValidationError(
+                "Missing user_id or academy_id", code=400)
 
-        profile = ProfileAcademy.objects.filter(academy__id=academy_id, user__id=user_id, role__slug='student').first()
+        profile = ProfileAcademy.objects.filter(
+            academy__id=academy_id, user__id=user_id, role__slug='student').first()
         if profile is None:
-            raise serializers.ValidationError('User doest not exist or does not belong to this academy')
+            raise serializers.ValidationError(
+                'User doest not exist or does not belong to this academy')
 
         profile.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
 
 class LoginView(ObtainAuthToken):
 
@@ -258,15 +282,18 @@ class LoginView(ObtainAuthToken):
         utc_now = timezone.now()
         Token.objects.filter(expires_at__lt=utc_now).delete()
 
-        serializer = AuthSerializer(data=request.data, context={'request': request})
+        serializer = AuthSerializer(
+            data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-        token, created = Token.objects.get_or_create(user=user, token_type="login")
+        token, created = Token.objects.get_or_create(
+            user=user, token_type="login")
         return Response({
             'token': token.key,
             'user_id': user.pk,
             'email': user.email
         })
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -283,6 +310,7 @@ def get_token_info(request, token):
         'expires_at': token.expires_at,
         'user_id': token.user.pk
     })
+
 
 class UserMeView(APIView):
     def get(self, request, format=None):
@@ -306,13 +334,16 @@ class UserMeView(APIView):
         except User.DoesNotExist:
             raise PermissionDenied("You don't have a user")
 
-        serializer = UserMeSerializer(request.user, data=request.data, context={ "request": request })
+        serializer = UserMeSerializer(
+            request.user, data=request.data, context={"request": request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Create your views here.
+
+
 @api_view(['GET'])
 def get_users(request):
 
@@ -320,15 +351,18 @@ def get_users(request):
 
     name = request.GET.get('name', None)
     if name is not None:
-        query = query.filter(Q(first_name__icontains=name) | Q(last_name__icontains=name))
+        query = query.filter(Q(first_name__icontains=name)
+                             | Q(last_name__icontains=name))
 
     like = request.GET.get('like', None)
     if like is not None:
-        query = query.filter(Q(first_name__icontains=like) | Q(last_name__icontains=like) | Q(email__icontains=like))
+        query = query.filter(Q(first_name__icontains=like) | Q(
+            last_name__icontains=like) | Q(email__icontains=like))
 
     query = query.order_by('-date_joined')
     users = UserSmallSerializer(query, many=True)
     return Response(users.data)
+
 
 @api_view(['GET'])
 def get_roles(request):
@@ -337,6 +371,8 @@ def get_roles(request):
     return Response(serializer.data)
 
 # Create your views here.
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_github_token(request):
@@ -362,6 +398,8 @@ def get_github_token(request):
         return HttpResponseRedirect(redirect_to=redirect)
 
 # Create your views here.
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def save_github_token(request):
@@ -388,7 +426,8 @@ def save_github_token(request):
         'code': code,
     }
     headers = {'Accept': 'application/json'}
-    resp = requests.post('https://github.com/login/oauth/access_token', data=payload, headers=headers)
+    resp = requests.post(
+        'https://github.com/login/oauth/access_token', data=payload, headers=headers)
     if resp.status_code == 200:
 
         logger.debug("Github responded with 200")
@@ -398,15 +437,18 @@ def save_github_token(request):
             raise APIException(body['error_description'])
 
         github_token = body['access_token']
-        resp = requests.get('https://api.github.com/user', headers={'Authorization': 'token '+github_token })
+        resp = requests.get('https://api.github.com/user',
+                            headers={'Authorization': 'token '+github_token})
         if resp.status_code == 200:
             github_user = resp.json()
             logger.debug(github_user)
             if github_user['email'] is None:
-                resp = requests.get('https://api.github.com/user/emails', headers={'Authorization': 'token '+github_token })
+                resp = requests.get('https://api.github.com/user/emails',
+                                    headers={'Authorization': 'token '+github_token})
                 if resp.status_code == 200:
                     emails = resp.json()
-                    primary_emails = [x for x in emails if x["primary"] == True]
+                    primary_emails = [
+                        x for x in emails if x["primary"] == True]
                     if len(primary_emails) > 0:
                         github_user['email'] = primary_emails[0]["email"]
                     elif len(emails) > 0:
@@ -417,39 +459,43 @@ def save_github_token(request):
 
             user = User.objects.filter(email=github_user['email']).first()
             if user is None:
-                user = User(username=github_user['login'], email=github_user['email'])
+                user = User(
+                    username=github_user['login'], email=github_user['email'])
                 user.save()
 
-            CredentialsGithub.objects.filter(github_id=github_user['id']).delete()
+            CredentialsGithub.objects.filter(
+                github_id=github_user['id']).delete()
             github_credentials = CredentialsGithub(
-                github_id = github_user['id'],
+                github_id=github_user['id'],
                 user=user,
-                token = github_token,
+                token=github_token,
                 username=github_user['login'],
-                email = github_user['email'],
-                avatar_url = github_user['avatar_url'],
-                name = github_user['name'],
-                blog = github_user['blog'],
-                bio = github_user['bio'],
-                company = github_user['company'],
-                twitter_username = github_user['twitter_username']
+                email=github_user['email'],
+                avatar_url=github_user['avatar_url'],
+                name=github_user['name'],
+                blog=github_user['blog'],
+                bio=github_user['bio'],
+                company=github_user['company'],
+                twitter_username=github_user['twitter_username']
             )
             github_credentials.save()
 
-            profile = Profile.objects.filter(user__email=github_user['email']).first()
+            profile = Profile.objects.filter(
+                user__email=github_user['email']).first()
             if profile is None:
                 profile = Profile(user=user,
-                    avatar_url=github_user['avatar_url'],
-                    blog=github_user['blog'],
-                    bio=github_user['bio'],
-                    twitter_username=github_user['twitter_username']
-                )
+                                  avatar_url=github_user['avatar_url'],
+                                  blog=github_user['blog'],
+                                  bio=github_user['bio'],
+                                  twitter_username=github_user['twitter_username']
+                                  )
                 profile.save()
 
             student_role = Role.objects.get(slug="student")
-            cus = CohortUser.objects.filter(user=user,role="STUDENT")
+            cus = CohortUser.objects.filter(user=user, role="STUDENT")
             for cu in cus:
-                profile_academy = ProfileAcademy.objects.filter(user=cu.user, academy=cu.cohort.academy).first()
+                profile_academy = ProfileAcademy.objects.filter(
+                    user=cu.user, academy=cu.cohort.academy).first()
                 if profile_academy is None:
                     profile_academy = ProfileAcademy(
                         user=cu.user,
@@ -462,7 +508,8 @@ def save_github_token(request):
                     )
                     profile_academy.save()
 
-            token, created = Token.objects.get_or_create(user=user, token_type='login')
+            token, created = Token.objects.get_or_create(
+                user=user, token_type='login')
 
             return HttpResponseRedirect(redirect_to=url+'?token='+token.key)
         else:
@@ -491,9 +538,9 @@ def get_slack_token(request):
     url = base64.b64decode(url).decode("utf-8")
     # Missing scopes!! admin.invites:write, identify
     scopes = ("app_mentions:read", "channels:history", "channels:join", "channels:read",
-        "chat:write", "chat:write.customize", "commands", "files:read", "files:write",
-        "groups:history", "groups:read", "groups:write", "incoming-webhook", "team:read",
-        "users:read", "users:read.email", "users.profile:read", "users:read")
+              "chat:write", "chat:write.customize", "commands", "files:read", "files:write",
+              "groups:history", "groups:read", "groups:write", "incoming-webhook", "team:read",
+              "users:read", "users:read.email", "users.profile:read", "users:read")
 
     query_string = f'a={academy}&url={url}&user={user_id}'.encode("utf-8")
     payload = str(base64.urlsafe_b64encode(query_string), "utf-8")
@@ -512,6 +559,8 @@ def get_slack_token(request):
         return HttpResponseRedirect(redirect_to=redirect)
 
 # Create your views here.
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def save_slack_token(request):
@@ -521,7 +570,7 @@ def save_slack_token(request):
     error = request.query_params.get('error', False)
     error_description = request.query_params.get('error_description', '')
     if error:
-        raise APIException("Slack: "+ error_description)
+        raise APIException("Slack: " + error_description)
 
     original_payload = request.query_params.get('payload', None)
     payload = request.query_params.get('payload', None)
@@ -582,31 +631,32 @@ def save_slack_token(request):
         logger.debug(slack_data)
 
         # delete all previous credentials for the same team and cohort
-        CredentialsSlack.objects.filter(app_id=slack_data['app_id'], team_id=slack_data['team']['id'], user__id=user.id).delete()
+        CredentialsSlack.objects.filter(
+            app_id=slack_data['app_id'], team_id=slack_data['team']['id'], user__id=user.id).delete()
         credentials = CredentialsSlack(
             user=user,
-            app_id = slack_data['app_id'],
-            bot_user_id = slack_data['bot_user_id'],
-            token = slack_data['access_token'],
-            team_id = slack_data['team']['id'],
-            team_name = slack_data['team']['name'],
-            authed_user = slack_data['authed_user']['id'],
+            app_id=slack_data['app_id'],
+            bot_user_id=slack_data['bot_user_id'],
+            token=slack_data['access_token'],
+            team_id=slack_data['team']['id'],
+            team_name=slack_data['team']['name'],
+            authed_user=slack_data['authed_user']['id'],
         )
         credentials.save()
 
-        team = SlackTeam.objects.filter(academy__id=academy.id, slack_id=slack_data['team']['id']).first()
+        team = SlackTeam.objects.filter(
+            academy__id=academy.id, slack_id=slack_data['team']['id']).first()
         if team is None:
             team = SlackTeam(
-                slack_id = slack_data['team']['id'],
+                slack_id=slack_data['team']['id'],
                 owner=user,
-                academy = academy
+                academy=academy
             )
 
         team.name = slack_data['team']['name']
         team.save()
 
         return HttpResponseRedirect(redirect_to=payload["url"][0])
-
 
 
 # Create your views here.
@@ -629,8 +679,8 @@ def get_facebook_token(request):
     url = base64.b64decode(url).decode("utf-8")
     # Missing scopes!! admin.invites:write, identify
     scopes = ("email",
-        "ads_read", "business_management", "leads_retrieval", "pages_manage_metadata", "pages_read_engagement",
-    )
+              "ads_read", "business_management", "leads_retrieval", "pages_manage_metadata", "pages_read_engagement",
+              )
     query_string = f'a={academy}&url={url}&user={user_id}'.encode("utf-8")
     payload = str(base64.urlsafe_b64encode(query_string), "utf-8")
     params = {
@@ -649,7 +699,6 @@ def get_facebook_token(request):
         return HttpResponseRedirect(redirect_to=redirect)
 
 
-
 # Create your views here.
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -660,7 +709,7 @@ def save_facebook_token(request):
     error = request.query_params.get('error_code', False)
     error_description = request.query_params.get('error_message', '')
     if error:
-        raise APIException("Facebook: "+ error_description)
+        raise APIException("Facebook: " + error_description)
 
     original_payload = request.query_params.get('state', None)
     payload = request.query_params.get('state', None)
@@ -709,7 +758,8 @@ def save_facebook_token(request):
         'redirect_uri': os.getenv('FACEBOOK_REDIRECT_URL', ""),
         'code': code,
     }
-    resp = requests.post('https://graph.facebook.com/v8.0/oauth/access_token', data=params)
+    resp = requests.post(
+        'https://graph.facebook.com/v8.0/oauth/access_token', data=params)
     if resp.status_code == 200:
 
         logger.debug("Facebook responded with 200")
@@ -718,19 +768,21 @@ def save_facebook_token(request):
         if 'access_token' not in facebook_data:
             logger.debug("Facebook response body")
             logger.debug(facebook_data)
-            raise APIException("Facebook error status: "+facebook_data['error_message'])
+            raise APIException("Facebook error status: " +
+                               facebook_data['error_message'])
 
         # delete all previous credentials for the same team
         CredentialsFacebook.objects.filter(user_id=user.id).delete()
 
         utc_now = timezone.now()
-        expires_at = utc_now + timezone.timedelta(milliseconds=facebook_data['expires_in'])
+        expires_at = utc_now + \
+            timezone.timedelta(milliseconds=facebook_data['expires_in'])
 
         credentials = CredentialsFacebook(
             user=user,
             academy=academy,
-            expires_at = expires_at,
-            token = facebook_data['access_token'],
+            expires_at=expires_at,
+            token=facebook_data['access_token'],
         )
         credentials.save()
 
@@ -748,8 +800,8 @@ def save_facebook_token(request):
                 credentials.facebook_id = facebook_data['id']
             credentials.save()
 
-
         return HttpResponseRedirect(redirect_to=payload["url"][0])
+
 
 def change_password(request, token):
     if request.method == 'POST':
@@ -757,7 +809,8 @@ def change_password(request, token):
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)  # Important!
-            messages.success(request, 'Your password was successfully updated!')
+            messages.success(
+                request, 'Your password was successfully updated!')
             return redirect('change_password')
         else:
             messages.error(request, 'Please correct the error below.')
@@ -766,6 +819,7 @@ def change_password(request, token):
     return render(request, 'form.html', {
         'form': form
     })
+
 
 def reset_password_view(request):
 
@@ -783,7 +837,8 @@ def reset_password_view(request):
         if(users.count() > 0):
             reset_password(users)
         else:
-            logger.debug("No users with "+_dict["email"]+" email to reset password")
+            logger.debug("No users with " +
+                         _dict["email"]+" email to reset password")
 
         if "callback" in _dict and _dict["callback"] != "":
             return HttpResponseRedirect(redirect_to=_dict["callback"]+"?msg=Check your email for a password reset!")
@@ -798,6 +853,7 @@ def reset_password_view(request):
     return render(request, 'form.html', {
         'form': form
     })
+
 
 def pick_password(request, token):
     _dict = request.POST.copy()
@@ -835,15 +891,18 @@ def pick_password(request, token):
         'form': form
     })
 
+
 class AcademyInviteView(APIView):
     @capable_of('crud_member')
-    def put(self, request, user_id=None, academy_id=None):
-        if user_id is not None:
-            user = ProfileAcademy.objects.filter(user__id=user_id,academy__id=academy_id).first()
+    def put(self, request, pa_id=None, academy_id=None):
+        if pa_id is not None:
+            profile_academy = ProfileAcademy.objects.filter(
+                 id=pa_id).first()
 
-            if user is None:
+            if profile_academy is None:
                 raise ValidationException("Member not found", 400)
-            invite = UserInvite.objects.filter(academy__id=academy_id, email=user.email).first()
+            invite = UserInvite.objects.filter(
+                academy__id=academy_id, email=profile_academy.email).first()
 
             if invite is None:
                 raise ValidationException("Invite not found", 400)
@@ -853,13 +912,15 @@ class AcademyInviteView(APIView):
                 minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
 
                 if minutes_diff < 2:
-                    raise ValidationException("Imposible to resend invitation", 400)
+                    raise ValidationException(
+                        "Imposible to resend invitation", 400)
             resend_invite(invite.token, invite.email, invite.first_name)
 
             invite.sent_at = timezone.now()
             invite.save()
             serializer = UserInviteSerializer(invite, many=False)
             return Response(serializer.data)
+
 
 def render_invite(request, token, member_id=None):
     _dict = request.POST.copy()
@@ -897,7 +958,8 @@ def render_invite(request, token, member_id=None):
 
         invite = UserInvite.objects.filter(token=str(token)).first()
         if invite is None:
-            messages.error(request, 'Invalid or expired invitation: '+str(token))
+            messages.error(
+                request, 'Invalid or expired invitation: '+str(token))
             return render(request, 'form_invite.html', {
                 'form': form
             })
@@ -907,7 +969,8 @@ def render_invite(request, token, member_id=None):
 
         user = User.objects.filter(email=invite.email).first()
         if user is None:
-            user = User(email=invite.email, first_name=first_name, last_name=last_name)
+            user = User(email=invite.email, first_name=first_name,
+                        last_name=last_name)
             user.save()
             user.set_password(password1)
             user.save()
@@ -916,10 +979,12 @@ def render_invite(request, token, member_id=None):
         invite.save()
 
         if invite.academy is not None:
-            profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
+            profile = ProfileAcademy.objects.filter(
+                email=invite.email, academy=invite.academy).first()
             if profile is None:
                 role = invite.role.slug
-                profile = ProfileAcademy(email=invite.email, academy=invite.academy, role=invite.role)
+                profile = ProfileAcademy(
+                    email=invite.email, academy=invite.academy, role=invite.role)
 
             profile.user = user
             profile.status = 'ACTIVE'
@@ -940,6 +1005,7 @@ def render_invite(request, token, member_id=None):
                 'message': 'Welcome to BreatheCode, you can go ahead an log in'
             })
 
+
 def login_html_view(request):
 
     _dict = request.GET.copy()
@@ -951,14 +1017,16 @@ def login_html_view(request):
 
             url = request.POST.get("url", None)
             if url is None or url == "":
-                raise Exception("Invalid redirect url, you must specify a url to redirect to")
+                raise Exception(
+                    "Invalid redirect url, you must specify a url to redirect to")
 
             email = request.POST.get("email", None)
             password = request.POST.get("password", None)
 
             user = None
             if email and password:
-                user = User.objects.filter(Q(email=email) | Q(username=email)).first()
+                user = User.objects.filter(
+                    Q(email=email) | Q(username=email)).first()
                 if not user:
                     msg = 'Unable to log in with provided credentials.'
                     raise Exception(msg)
@@ -972,7 +1040,8 @@ def login_html_view(request):
                 msg = 'Must include "username" and "password".'
                 raise Exception(msg, code=403)
 
-            token, created = Token.objects.get_or_create(user=user, token_type='login')
+            token, created = Token.objects.get_or_create(
+                user=user, token_type='login')
             return HttpResponseRedirect(url+"?token="+str(token))
 
         except Exception as e:
@@ -983,7 +1052,8 @@ def login_html_view(request):
     else:
         url = request.GET.get("url", None)
         if url is None or url == "":
-            messages.error(request, "You must specify a 'url' (querystring) to redirect to after successfull login")
+            messages.error(
+                request, "You must specify a 'url' (querystring) to redirect to after successfull login")
 
     return render(request, 'login.html', {
         'form': form,

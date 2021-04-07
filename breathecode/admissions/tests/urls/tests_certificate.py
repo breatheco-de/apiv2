@@ -55,6 +55,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'slug': model['certificate'].slug,
             'logo': model['certificate'].logo,
             'description': model['certificate'].description,
+            'duration_in_days': model['certificate'].duration_in_days,
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -78,6 +79,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'name': model['certificate'].name,
             'slug': model['certificate'].slug,
             'logo': model['certificate'].logo,
+            'duration_in_days': model['certificate'].duration_in_days,
             'description': model['certificate'].description,
         } for model in models if model['certificate'].id <= 100])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -108,6 +110,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'name': model['certificate'].name,
                 'slug': model['certificate'].slug,
                 'logo': model['certificate'].logo,
+                'duration_in_days': model['certificate'].duration_in_days,
                 'description': model['certificate'].description,
             } for model in models if model['certificate'].id <= 5]
         })
@@ -139,6 +142,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'name': model['certificate'].name,
                 'slug': model['certificate'].slug,
                 'logo': model['certificate'].logo,
+                'duration_in_days': model['certificate'].duration_in_days,
                 'description': model['certificate'].description,
             } for model in models if model['certificate'].id > 5]
         })
