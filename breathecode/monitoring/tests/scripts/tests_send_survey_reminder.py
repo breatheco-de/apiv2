@@ -61,3 +61,149 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(self.all_monitor_script_dict(), [{
             **self.model_to_dict(model, 'monitor_script'),
         }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def tests_send_survey_ending_date_less_than_now(self):
+
+        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
+        ending_date = timezone.now() - timedelta(weeks=1)
+        model = self.generate_models(cohort=True, monitor_script=True,
+                                     monitor_script_kwargs=monitor_script_kwargs,
+                                     cohort_kwargs={'ending_date': ending_date})
+
+        script = run_script(model.monitor_script)
+
+        del script['slack_payload']
+
+        expected = {
+            "severity_level": 5,
+            "status": 'OPERATIONAL',
+            "details": '{\n'
+            '    "severity_level": 5,\n'
+            '    "details": "No reminders\\n",\n'
+            '    "status": "OPERATIONAL"\n'
+            '}',
+            "text": '{\n'
+                    '    "severity_level": 5,\n'
+                    '    "details": "No reminders\\n",\n'
+                    '    "status": "OPERATIONAL"\n'
+                    '}'
+        }
+        self.assertEqual(script, expected)
+
+        self.assertEqual(self.all_monitor_script_dict(), [{
+            **self.model_to_dict(model, 'monitor_script'),
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def tests_send_survey_kickoff_date_greater_than_now(self):
+
+        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
+        kickoff_date = timezone.now() + timedelta(weeks=1)
+        model = self.generate_models(cohort=True, monitor_script=True,
+                                     monitor_script_kwargs=monitor_script_kwargs,
+                                     cohort_kwargs={'kickoff_date': kickoff_date})
+
+        script = run_script(model.monitor_script)
+
+        del script['slack_payload']
+
+        expected = {
+            "severity_level": 5,
+            "status": 'OPERATIONAL',
+            "details": '{\n'
+            '    "severity_level": 5,\n'
+            '    "details": "No reminders\\n",\n'
+            '    "status": "OPERATIONAL"\n'
+            '}',
+            "text": '{\n'
+                    '    "severity_level": 5,\n'
+                    '    "details": "No reminders\\n",\n'
+                    '    "status": "OPERATIONAL"\n'
+                    '}'
+        }
+        self.assertEqual(script, expected)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def tests_send_survey_latest_survey_less_four_weeks(self):
+
+        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
+        ending_date = timezone.now() + timedelta(weeks=2)
+        kickoff_date = timezone.now() - timedelta(weeks=12)
+
+        base = self.generate_models(cohort=True, monitor_script=True,
+                                    monitor_script_kwargs=monitor_script_kwargs,
+                                    cohort_kwargs={'ending_date': ending_date,
+                                                   "kickoff_date": kickoff_date})
+        sent_at = timezone.now() - timedelta(weeks=3)
+        models = [self.generate_models(survey=True, survey_kwargs={'sent_at': sent_at},
+                                       models=base)
+                  for _ in range(0, 2)]
+
+        script = run_script(models[1].monitor_script)
+
+        del script['slack_payload']
+
+        expected = {
+            "severity_level": 5,
+            "status": 'OPERATIONAL',
+            "details": '{\n'
+            '    "severity_level": 5,\n'
+            '    "details": "No reminders\\n",\n'
+            '    "status": "OPERATIONAL"\n'
+            '}',
+            "text": '{\n'
+                    '    "severity_level": 5,\n'
+                    '    "details": "No reminders\\n",\n'
+                    '    "status": "OPERATIONAL"\n'
+                    '}'
+        }
+        self.assertEqual(script, expected)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def tests_send_survey_latest_survey_greater_four_weeks(self):
+        # find example to change kickoff date and ending date of the cohort, send invitation.cohort_kwargs = []
+        #  models = [self.generate_models(survey=True, models=base)
+        #           for _ in range(0, 2)]
+
+        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
+        ending_date = timezone.now() + timedelta(weeks=2)
+        kickoff_date = timezone.now() - timedelta(weeks=12)
+
+        base = self.generate_models(cohort=True, monitor_script=True,
+                                    monitor_script_kwargs=monitor_script_kwargs,
+                                    cohort_kwargs={'ending_date': ending_date,
+                                                   "kickoff_date": kickoff_date})
+        sent_at = timezone.now() - timedelta(weeks=5)
+        models = [self.generate_models(survey=True, survey_kwargs={'sent_at': sent_at},
+                                       models=base)
+                  for _ in range(0, 2)]
+
+        script = run_script(models[1].monitor_script)
+        print(models[1].monitor_script)
+
+        del script['slack_payload']
+
+        expected = {
+            "severity_level": 5,
+            "status": 'OPERATIONAL',
+            "details": '{\n'
+            '    "severity_level": 5,\n'
+            '    "details": "No reminders\\n",\n'
+            '    "status": "OPERATIONAL"\n'
+            '}',
+            "text": '{\n'
+                    '    "severity_level": 5,\n'
+                    '    "details": "No reminders\\n",\n'
+                    '    "status": "OPERATIONAL"\n'
+                    '}'
+        }
+        self.assertEqual(script, expected)

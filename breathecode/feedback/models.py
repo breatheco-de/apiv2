@@ -59,6 +59,7 @@ class Survey(models.Model):
         hours=24), help_text="No one will be able to answer after this period of time")
     created_at = models.DateTimeField(auto_now_add=True, editable=True)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+    sent_at = models.DateTimeField(default=None, null=True, blank=True)
 
     def __str__(self):
         return "Survey for "+self.cohort.name
