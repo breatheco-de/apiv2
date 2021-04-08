@@ -12,3 +12,15 @@ class AssetSerializer(serpy.Serializer):
     url = serpy.Field()
     gitpod = serpy.Field()
     preview = serpy.Field()
+
+class AssetBigSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    title = serpy.Field()
+    description = serpy.Field()
+    gitpod = serpy.Field()
+    visibility = serpy.Field()
+    asset_type = serpy.Field()
+    visibility = serpy.Field()
+    url = serpy.Field()
+    gitpod = serpy.Field()
+    preview = serpy.Field()

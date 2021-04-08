@@ -11,6 +11,7 @@ VISIBILITY = (
     (UNLISTED, 'Unlisted'),
     (PRIVATE, 'Private'),
 )
+
 PROJECT='PROJECT'
 EXERCISE='EXERCISE'
 LESSON='LESSON'
@@ -20,6 +21,16 @@ TYPE = (
     (EXERCISE, 'Exercise'),
     (LESSON, 'Lesson'),
     (LESSON, 'Video'),
+)
+
+
+OK='OK'
+WARNING='WARNING'
+ERROR='ERROR'
+ASSET_STATUS = (
+    (OK, 'Ok'),
+    (WARNING, 'Warning'),
+    (ERROR, 'Error'),
 )
 class Asset(models.Model):
     slug = models.SlugField(max_length=200, primary_key=True)
@@ -38,6 +49,9 @@ class Asset(models.Model):
 
     visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
     asset_type = models.CharField(max_length=20, choices=TYPE)
+
+    status = models.CharField(max_length=20, choices=ASSET_STATUS, default=OK)
+    status_text = models.TextField(null=True, default=None, blank=True)
 
     author = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, blank=True, null=True)
 
