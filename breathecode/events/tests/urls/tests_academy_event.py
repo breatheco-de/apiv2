@@ -1,4 +1,5 @@
 import re
+from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
 from datetime import datetime
 from breathecode.utils import Cache
@@ -14,7 +15,7 @@ from breathecode.services import datetime_to_iso_format
 from django.utils import timezone
 
 class AcademyEventTestSuite(EventTestCase):
-    cache = Cache('events', 'academy_events')
+    cache = EventCache()
 
     def test_all_academy_events_no_auth(self):
         self.headers(academy=1)
@@ -632,8 +633,8 @@ class AcademyEventTestSuite(EventTestCase):
     def test_all_academy_events_with_data_testing_cache(self):
         """Test /cohort without auth"""
         cache_keys = [
-            'events__academy_events__academy_id=1&event_id=None&city=None&'
-                'country=None&zip_code=None&upcoming=None&past=None&limit=None&offset=None__0'
+            'Event__academy_id=1&event_id=None&city=None&'
+                'country=None&zip_code=None&upcoming=None&past=None&limit=None&offset=None'
         ]
 
         self.assertEqual(self.cache.keys(), [])
@@ -665,8 +666,8 @@ class AcademyEventTestSuite(EventTestCase):
     def test_academy_cohort_with_data_testing_cache_and_remove_in_post(self):
         """Test /cohort without auth"""
         cache_keys = [
-            'events__academy_events__academy_id=1&event_id=None&city=None&'
-                'country=None&zip_code=None&upcoming=None&past=None&limit=None&offset=None__0'
+            'Event__academy_id=1&event_id=None&city=None&'
+                'country=None&zip_code=None&upcoming=None&past=None&limit=None&offset=None'
         ]
 
         self.assertEqual(self.cache.keys(), [])

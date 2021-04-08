@@ -1,3 +1,4 @@
+from breathecode.events.caches import EventCache
 import logging, datetime
 import re
 
@@ -113,7 +114,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
-    cache = Cache('events', 'academy_events')
+    cache = EventCache()
 
     @capable_of('read_event')
     def get(self, request, format=None, academy_id=None, event_id=None):

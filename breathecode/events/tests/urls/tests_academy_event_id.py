@@ -1,3 +1,4 @@
+from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
 from breathecode.utils import Cache
 from unittest.mock import patch
@@ -13,7 +14,7 @@ from breathecode.tests.mixins.cache_mixin import CacheMixin
 from .tests_academy_event import AcademyEventTestSuite
 
 class AcademyEventsTestSuite(EventTestCase):
-    cache = Cache('events', 'academy_events')
+    cache = EventCache()
 
     def test_academy_single_event_no_auth(self):
         self.headers(academy=1)
@@ -191,8 +192,8 @@ class AcademyEventsTestSuite(EventTestCase):
     def test_academy_cohort_with_data_testing_cache_and_remove_in_put(self):
         """Test /cohort without auth"""
         cache_keys = [
-            'events__academy_events__academy_id=1&event_id=None&city=None&'
-                'country=None&zip_code=None&upcoming=None&past=None&limit=None&offset=None__0'
+            'Event__academy_id=1&event_id=None&city=None&'
+                'country=None&zip_code=None&upcoming=None&past=None&limit=None&offset=None'
         ]
 
         self.assertEqual(self.cache.keys(), [])

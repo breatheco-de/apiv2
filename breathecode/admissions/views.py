@@ -1,3 +1,4 @@
+from breathecode.admissions.caches import CohortCache
 import logging, re, pytz
 from django.db.models import Q
 from django.http import HttpResponse
@@ -429,7 +430,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
     List all snippets, or create a new snippet.
     """
     permission_classes = [IsAuthenticated]
-    cache = Cache('admissions', 'academy_cohort')
+    cache = CohortCache()
 
     @capable_of('read_cohort')
     def get(self, request, cohort_id=None, academy_id=None):

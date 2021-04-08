@@ -1,6 +1,7 @@
 """
 Test /cohort
 """
+from breathecode.admissions.caches import CohortCache
 import re
 from unittest.mock import patch
 from django.urls.base import reverse_lazy
@@ -18,7 +19,7 @@ from .tests_academy_cohort import AcademyCohortTestSuite
 class AcademyCohortIdTestSuite(AdmissionsTestCase):
     """Test /cohort"""
 
-    cache = Cache('admissions', 'academy_cohort')
+    cache = CohortCache()
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -456,8 +457,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     def test_academy_cohort_id_with_data_testing_cache_and_remove_in_delete(self):
         """Test /cohort without auth"""
         cache_keys = [
-            'admissions__academy_cohort__academy_id=1&upcoming=None&academy='
-                'None&location=None&limit=None&offset=None__None'
+            'Cohort__resource=None&academy_id=1&upcoming=None&academy='
+                'None&location=None&limit=None&offset=None'
         ]
 
         self.assertEqual(self.cache.keys(), [])
@@ -505,8 +506,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     def test_academy_cohort_id_with_data_testing_cache_and_remove_in_delete(self):
         """Test /cohort without auth"""
         cache_keys = [
-            'admissions__academy_cohort__academy_id=1&upcoming=None&academy='
-                'None&location=None&limit=None&offset=None__None'
+            'Cohort__resource=None&academy_id=1&upcoming=None&academy='
+                'None&location=None&limit=None&offset=None'
         ]
 
         self.assertEqual(self.cache.keys(), [])

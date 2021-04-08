@@ -265,204 +265,161 @@ class CohortUserTestSuite(MarketingTestCase):
             capability='read_lead', role='potato')
 
         models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 105)]
+        ordened_models = sorted(models, key=lambda x: x['form_entry'].created_at,
+            reverse=True)
 
-        # self.client.force_authenticate(user=models[0]['user'])
-        base_url = reverse_lazy('marketing:academy_lead')
-        params = ','.join([model['academy'].slug for model in models])
-        url = f'{base_url}?location={params}'
+        url = reverse_lazy('marketing:academy_lead')
         response = self.client.get(url)
         json = response.json()
-        print(json)
         expected = [{
-            'country': None,
-            'course': None,
-            'email': None,
-            'first_name': '',
-            'id': 1,
-            'language': 'en',
-            'last_name': '',
-            'lead_type': None,
-            'location': None,
-            'storage_status': 'PENDING',
-            'tags': '',
-            'utm_campaign': None,
-            'utm_medium': None,
-            'utm_source': None,
-            'utm_url': None,
-        } for model in models if model['cohort'].id < 101]
+            'country': model['form_entry'].country,
+            'course': model['form_entry'].course,
+            'email': model['form_entry'].email,
+            'first_name': model['form_entry'].first_name,
+            'id': model['form_entry'].id,
+            'language': model['form_entry'].language,
+            'last_name': model['form_entry'].last_name,
+            'lead_type': model['form_entry'].lead_type,
+            'location': model['form_entry'].location,
+            'storage_status': model['form_entry'].storage_status,
+            'tags': model['form_entry'].tags,
+            'utm_campaign': model['form_entry'].utm_campaign,
+            'utm_medium': model['form_entry'].utm_medium,
+            'utm_source': model['form_entry'].utm_source,
+            'utm_url': model['form_entry'].utm_url,
+            'created_at': self.datetime_to_iso(model['form_entry'].created_at),
+        } for model in ordened_models][:100]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_form_entry_dict(), [{
             **self.model_to_dict(model, 'form_entry')
         } for model in models])
-        assert False
 
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_first_five(self):
-    #     """Test /cohort without auth"""
-    #     self.headers(academy=1)
-    #     models = [self.generate_models(authenticate=True, cohort=True, profile_academy=True,
-    #         capability='read_lead', role='potato', syllabus=True,
-    #         impossible_kickoff_date=True)]
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_first_five(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_lead', role='potato')
 
-    #     base = models[0].copy()
-    #     del base['cohort']
+        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
+        ordened_models = sorted(models, key=lambda x: x['form_entry'].created_at,
+            reverse=True)
 
-    #     models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 9)]
+        url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=0'
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'count': 10,
+            'first': None,
+            'next': 'http://testserver/v1/marketing/academy/lead?limit=5&'
+                f'offset=5',
+            'previous': None,
+            'last': 'http://testserver/v1/marketing/academy/lead?limit=5&'
+                f'offset=5',
+            'results': [{
+                'country': model['form_entry'].country,
+                'course': model['form_entry'].course,
+                'email': model['form_entry'].email,
+                'first_name': model['form_entry'].first_name,
+                'id': model['form_entry'].id,
+                'language': model['form_entry'].language,
+                'last_name': model['form_entry'].last_name,
+                'lead_type': model['form_entry'].lead_type,
+                'location': model['form_entry'].location,
+                'storage_status': model['form_entry'].storage_status,
+                'tags': model['form_entry'].tags,
+                'utm_campaign': model['form_entry'].utm_campaign,
+                'utm_medium': model['form_entry'].utm_medium,
+                'utm_source': model['form_entry'].utm_source,
+                'utm_url': model['form_entry'].utm_url,
+                'created_at': self.datetime_to_iso(model['form_entry'].created_at),
+            } for model in ordened_models][:5],
+        }
 
-    #     models_dict = self.all_cohort_dict()
-    #     self.client.force_authenticate(user=models[0]['user'])
-    #     base_url = reverse_lazy('marketing:academy_lead')
-    #     params = ','.join([model['academy'].slug for model in models])
-    #     url = f'{base_url}?limit=5&location={params}&offset=0'
-    #     response = self.client.get(url)
-    #     json = response.json()
-    #     expected = {
-    #         'count': 10,
-    #         'first': None,
-    #         'next': 'http://testserver/v1/admissions/academy/cohort?limit=5&'
-    #             f'location={params}&offset=5',
-    #         'previous': None,
-    #         'last': 'http://testserver/v1/admissions/academy/cohort?limit=5&'
-    #             f'location={params}&offset=5',
-    #         'results': [{
-    #             'id': model['cohort'].id,
-    #             'slug': model['cohort'].slug,
-    #             'name': model['cohort'].name,
-    #             'language': model['cohort'].language,
-    #             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
-    #             'ending_date': model['cohort'].ending_date,
-    #             'stage': model['cohort'].stage,
-    #             'syllabus': {
-    #                 'version': model['cohort'].syllabus.version,
-    #                 'certificate': {
-    #                     'id': model['cohort'].syllabus.certificate.id,
-    #                     'slug': model['cohort'].syllabus.certificate.slug,
-    #                     'name': model['cohort'].syllabus.certificate.name,
-    #                 },
-    #             },
-    #             'academy': {
-    #                 'id': model['cohort'].academy.id,
-    #                 'slug': model['cohort'].academy.slug,
-    #                 'name': model['cohort'].academy.name,
-    #                 'country': {
-    #                     'code': model['cohort'].academy.country.code,
-    #                     'name': model['cohort'].academy.country.name,
-    #                 },
-    #                 'city': {
-    #                     'name': model['cohort'].academy.city.name,
-    #                 },
-    #                 'logo_url': model['cohort'].academy.logo_url,
-    #             },
-    #         } for model in models if model['cohort'].id < 6],
-    #     }
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
 
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(self.all_cohort_dict(), models_dict)
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_last_five(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_lead', role='potato')
 
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_last_five(self):
-    #     """Test /cohort without auth"""
-    #     self.headers(academy=1)
-    #     models = [self.generate_models(authenticate=True, cohort=True, profile_academy=True,
-    #         capability='read_lead', role='potato', syllabus=True,
-    #         impossible_kickoff_date=True)]
+        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
+        ordened_models = sorted(models, key=lambda x: x['form_entry'].created_at,
+            reverse=True)
 
-    #     base = models[0].copy()
-    #     del base['cohort']
+        url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=5'
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'count': 10,
+            'first': 'http://testserver/v1/marketing/academy/lead?limit=5',
+            'next': None,
+            'previous': 'http://testserver/v1/marketing/academy/lead?limit=5',
+            'last': None,
+            'results': [{
+                'country': model['form_entry'].country,
+                'course': model['form_entry'].course,
+                'email': model['form_entry'].email,
+                'first_name': model['form_entry'].first_name,
+                'id': model['form_entry'].id,
+                'language': model['form_entry'].language,
+                'last_name': model['form_entry'].last_name,
+                'lead_type': model['form_entry'].lead_type,
+                'location': model['form_entry'].location,
+                'storage_status': model['form_entry'].storage_status,
+                'tags': model['form_entry'].tags,
+                'utm_campaign': model['form_entry'].utm_campaign,
+                'utm_medium': model['form_entry'].utm_medium,
+                'utm_source': model['form_entry'].utm_source,
+                'utm_url': model['form_entry'].utm_url,
+                'created_at': self.datetime_to_iso(model['form_entry'].created_at),
+            } for model in ordened_models][5:],
+        }
 
-    #     models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 9)]
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
 
-    #     models_dict = self.all_cohort_dict()
-    #     self.client.force_authenticate(user=models[0]['user'])
-    #     base_url = reverse_lazy('marketing:academy_lead')
-    #     params = ','.join([model['academy'].slug for model in models])
-    #     url = f'{base_url}?limit=5&location={params}&offset=5'
-    #     response = self.client.get(url)
-    #     json = response.json()
-    #     expected = {
-    #         'count': 10,
-    #         'first': 'http://testserver/v1/admissions/academy/cohort?limit=5&'
-    #             f'location={params}',
-    #         'next': None,
-    #         'previous': 'http://testserver/v1/admissions/academy/cohort?limit=5&'
-    #             f'location={params}',
-    #         'last': None,
-    #         'results': [{
-    #             'id': model['cohort'].id,
-    #             'slug': model['cohort'].slug,
-    #             'name': model['cohort'].name,
-    #             'language': model['cohort'].language,
-    #             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
-    #             'ending_date': model['cohort'].ending_date,
-    #             'stage': model['cohort'].stage,
-    #             'syllabus': {
-    #                 'version': model['cohort'].syllabus.version,
-    #                 'certificate': {
-    #                     'id': model['cohort'].syllabus.certificate.id,
-    #                     'slug': model['cohort'].syllabus.certificate.slug,
-    #                     'name': model['cohort'].syllabus.certificate.name,
-    #                 },
-    #             },
-    #             'academy': {
-    #                 'id': model['cohort'].academy.id,
-    #                 'slug': model['cohort'].academy.slug,
-    #                 'name': model['cohort'].academy.name,
-    #                 'country': {
-    #                     'code': model['cohort'].academy.country.code,
-    #                     'name': model['cohort'].academy.country.name,
-    #                 },
-    #                 'city': {
-    #                     'name': model['cohort'].academy.city.name,
-    #                 },
-    #                 'logo_url': model['cohort'].academy.logo_url,
-    #             },
-    #         } for model in models if model['cohort'].id > 5],
-    #     }
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_after_last_five(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_lead', role='potato')
 
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(self.all_cohort_dict(), models_dict)
+        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
 
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_after_last_five(self):
-    #     """Test /cohort without auth"""
-    #     self.headers(academy=1)
-    #     models = [self.generate_models(authenticate=True, cohort=True, profile_academy=True,
-    #         capability='read_lead', role='potato', syllabus=True,
-    #         impossible_kickoff_date=True)]
+        url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=10'
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'count': 10,
+            'first': 'http://testserver/v1/marketing/academy/lead?limit=5',
+            'next': None,
+            'previous': 'http://testserver/v1/marketing/academy/lead?limit=5&'
+                f'offset=5',
+            'last': None,
+            'results': [],
+        }
 
-    #     base = models[0].copy()
-    #     del base['cohort']
-
-    #     models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 9)]
-
-    #     models_dict = self.all_cohort_dict()
-    #     self.client.force_authenticate(user=models[0]['user'])
-    #     base_url = reverse_lazy('marketing:academy_lead')
-    #     params = ','.join([model['academy'].slug for model in models])
-    #     url = f'{base_url}?limit=5&location={params}&offset=10'
-    #     response = self.client.get(url)
-    #     json = response.json()
-    #     expected = {
-    #         'count': 10,
-    #         'first': 'http://testserver/v1/admissions/academy/cohort?limit=5&'
-    #             f'location={params}',
-    #         'next': None,
-    #         'previous': 'http://testserver/v1/admissions/academy/cohort?limit=5&'
-    #             f'location={params}&offset=5',
-    #         'last': None,
-    #         'results': [],
-    #     }
-
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])

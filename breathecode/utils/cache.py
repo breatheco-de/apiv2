@@ -5,20 +5,17 @@ from breathecode.tests.mixins import DatetimeMixin
 
 
 class Cache(DatetimeMixin):
-    app: str
-    name: str
+    model: str
+    parents: list[str]
 
-    def __init__(self, app: str, name: str):
-        self.app = app
-        self.name = name
+    def __generate_key__(self, storage_key=False, parent='', **kwargs):
+        key = self.model if not parent else parent
 
-    def __generate_key__(self, resource=0, storage_key=False, **kwargs):
-        key = f'{self.app}__{self.name}'
         if storage_key:
             return f'{key}__keys'
 
         credentials = urllib.parse.urlencode(kwargs)
-        return f'{key}__{credentials}__{resource}'
+        return f'{key}__{credentials}'
 
     def __add_key_to_storage__(self, key: str):
         storage_key = self.__generate_key__(storage_key=True)
@@ -37,9 +34,9 @@ class Cache(DatetimeMixin):
         json_data = cache.get(key)
         return json.loads(json_data) if json_data else []
 
-    def clear(self):
+    def __clear_one__(self, parent=''):
         # we get key from cache to support multiprocess
-        storage_key = self.__generate_key__(storage_key=True)
+        storage_key = self.__generate_key__(storage_key=True, parent=parent)
         keys = self.keys()
 
         for key in keys:
@@ -47,8 +44,16 @@ class Cache(DatetimeMixin):
 
         cache.set(storage_key, None)
 
-    def get(self, resource=0, **kwargs) -> dict:
-        key = self.__generate_key__(resource, **kwargs)
+    def clear(self):
+        # we get key from cache to support multiprocess
+        for parent in self.parents:
+            print('parent', parent)
+            self.__clear_one__(parent)
+
+        self.__clear_one__()
+
+    def get(self, **kwargs) -> dict:
+        key = self.__generate_key__(**kwargs)
         json_data = cache.get(key)
         return json.loads(json_data) if json_data else None
 
@@ -75,8 +80,8 @@ class Cache(DatetimeMixin):
 
         return check_data
 
-    def set(self, data, resource=0, **kwargs):
-        key = self.__generate_key__(resource, **kwargs)
+    def set(self, data, **kwargs):
+        key = self.__generate_key__(**kwargs)
         data = self.__fix_fields_in_array__(data)
 
         json_data = json.dumps(data)

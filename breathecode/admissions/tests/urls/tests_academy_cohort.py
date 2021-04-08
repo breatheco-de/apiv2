@@ -1,6 +1,7 @@
 """
 Test /academy/cohort
 """
+from breathecode.admissions.caches import CohortCache
 from django.core.validators import BaseValidator
 from breathecode.utils import Cache
 from breathecode.services import datetime_to_iso_format
@@ -21,7 +22,7 @@ from ..mixins.new_admissions_test_case import AdmissionsTestCase
 class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
 
-    cache = Cache('admissions', 'academy_cohort')
+    cache = CohortCache()
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1169,8 +1170,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_academy_cohort_with_data_testing_cache(self):
         """Test /cohort without auth"""
         cache_keys = [
-            'admissions__academy_cohort__academy_id=1&upcoming=None&academy='
-                'None&location=None&limit=None&offset=None__None'
+            'Cohort__resource=None&academy_id=1&upcoming=None&academy='
+                'None&location=None&limit=None&offset=None'
         ]
 
         self.assertEqual(self.cache.keys(), [])
@@ -1187,8 +1188,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_academy_cohort_with_data_testing_cache_and_remove_in_post(self):
         """Test /cohort without auth"""
         cache_keys = [
-            'admissions__academy_cohort__academy_id=1&upcoming=None&academy='
-                'None&location=None&limit=None&offset=None__None'
+            'Cohort__resource=None&academy_id=1&upcoming=None&academy='
+                'None&location=None&limit=None&offset=None'
         ]
 
         self.assertEqual(self.cache.keys(), [])

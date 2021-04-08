@@ -1,15 +1,12 @@
 """
 Test /academy/cohort
 """
-from breathecode.utils import Cache
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins.new_admissions_test_case import AdmissionsTestCase
 
 class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
-
-    cache = Cache('admissions', 'academy_ical_events')
 
     def test_academy_ical_events_without_authorization(self):
         """Test /academy/cohort without auth"""
