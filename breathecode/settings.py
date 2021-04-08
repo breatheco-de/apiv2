@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'breathecode.freelance',
     'breathecode.certificate',
     'breathecode.monitoring',
+    'breathecode.registry',
 ]
 
 REST_FRAMEWORK = {
