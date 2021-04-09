@@ -47,7 +47,7 @@ class GetAssetView(APIView):
 
         if 'type' in self.request.GET:
             param = self.request.GET.get('type')
-            lookup['asset_type'] = param
+            lookup['asset_type__iexact'] = param
 
         if 'slug' in self.request.GET:
             param = self.request.GET.get('academy')
@@ -59,15 +59,15 @@ class GetAssetView(APIView):
 
         if 'visibility' in self.request.GET:
             param = self.request.GET.get('visibility')
-            lookup['visibility__in'] = param.split(",")
+            lookup['visibility__in'] = [p.upper() for p in param.split(",")]
 
         if 'technologies' in self.request.GET:
             param = self.request.GET.get('technologies')
-            lookup['technologies__in'] = param.split(",")
+            lookup['technologies__in'] = [p.lower() for p in param.split(",")]
 
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
-            lookup['status__in'] = param.split(",")
+            lookup['status__in'] = [p.upper() for p in param.split(",")]
 
         if 'video' in self.request.GET:
             param = self.request.GET.get('video')
