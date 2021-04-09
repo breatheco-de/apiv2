@@ -235,7 +235,7 @@ class EventTypeView(APIView):
         return Response(serializer.data)
 
 
-class EventCheckinView(APIView):
+class EventCheckinView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
@@ -265,8 +265,13 @@ class EventCheckinView(APIView):
 
         items = items.filter(**lookup).order_by('-created_at')
 
-        serializer = EventCheckinSerializer(items, many=True)
-        return Response(serializer.data)
+        page = self.paginate_queryset(items, request)
+        serializer = EventCheckinSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
 
 @api_view(['POST'])
