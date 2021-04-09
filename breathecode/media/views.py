@@ -57,6 +57,7 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         lookups = self.generate_lookups(
             request,
+            fields=['mime'],
             relationships=['academy']
         )
 

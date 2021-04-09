@@ -132,6 +132,114 @@ class MediaTestSuite(MediaTestCase):
             **self.model_to_dict(model, 'media')
         }])
 
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_root_with_category_with_bad_academy_in_querystring(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_media', role='potato', media=True, category=True)
+        url = reverse_lazy('media:root') + '?academy=0'
+        response = self.client.get(url)
+        json = response.json()
+        self.print_model(model, 'media')
+        self.print_model(model, 'category')
+
+        self.assertEqual(json, [])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media')
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_root_with_category_with_academy_in_querystring(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_media', role='potato', media=True, category=True)
+        url = reverse_lazy('media:root') + '?academy=1'
+        response = self.client.get(url)
+        json = response.json()
+        self.print_model(model, 'media')
+        self.print_model(model, 'category')
+
+        self.assertEqual(json, [{
+            'categories': [{
+                'id': 1,
+                'medias': 1,
+                'name': model['category'].name,
+                'slug': model['category'].slug,
+            }],
+            'hash': model['media'].hash,
+            'hits': model['media'].hits,
+            'id': model['media'].id,
+            'mime': model['media'].mime,
+            'name': model['media'].name,
+            'slug': model['media'].slug,
+            'url': model['media'].url
+        }])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media')
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_root_with_category_with_bad_mime_in_querystring(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_media', role='potato', media=True, category=True)
+        url = reverse_lazy('media:root') + '?mime=application/hitman'
+        response = self.client.get(url)
+        json = response.json()
+        self.print_model(model, 'media')
+        self.print_model(model, 'category')
+
+        self.assertEqual(json, [])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media')
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_root_with_category_with_mime_in_querystring(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_media', role='potato', media=True, category=True)
+        url = reverse_lazy('media:root') + '?mime=' + model['media'].mime
+        response = self.client.get(url)
+        json = response.json()
+        self.print_model(model, 'media')
+        self.print_model(model, 'category')
+
+        self.assertEqual(json, [{
+            'categories': [{
+                'id': 1,
+                'medias': 1,
+                'name': model['category'].name,
+                'slug': model['category'].slug,
+            }],
+            'hash': model['media'].hash,
+            'hits': model['media'].hits,
+            'id': model['media'].id,
+            'mime': model['media'].mime,
+            'name': model['media'].name,
+            'slug': model['media'].slug,
+            'url': model['media'].url
+        }])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media')
+        }])
+
     def test_root_pagination_with_105(self):
         """Test /academy/student"""
         self.headers(academy=1)
