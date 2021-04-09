@@ -38,7 +38,7 @@ class GetAssetView(APIView):
             serializer = AssetBigSerializer(asset)
             return Response(serializer.data)
 
-        items = Asset.objects.all()
+        items = Asset.objects.filter(visibility='PUBLIC')
         lookup = {}
 
         if 'author' in self.request.GET:
@@ -56,6 +56,33 @@ class GetAssetView(APIView):
         if 'language' in self.request.GET:
             param = self.request.GET.get('language')
             lookup['lang'] = param
+
+        if 'visibility' in self.request.GET:
+            param = self.request.GET.get('visibility')
+            lookup['visibility__in'] = param.split(",")
+
+        if 'technologies' in self.request.GET:
+            param = self.request.GET.get('technologies')
+            lookup['technologies__in'] = param.split(",")
+
+        if 'status' in self.request.GET:
+            param = self.request.GET.get('status')
+            lookup['status__in'] = param.split(",")
+
+        if 'video' in self.request.GET:
+            param = self.request.GET.get('video')
+            if param == "true":
+                lookup['with_video'] = True
+                
+        if 'interactive' in self.request.GET:
+            param = self.request.GET.get('interactive')
+            if param == "true":
+                lookup['interactive'] = True
+
+        if 'graded' in self.request.GET:
+            param = self.request.GET.get('graded')
+            if param == "true":
+                lookup['graded'] = True
 
         items = items.filter(**lookup).order_by('-created_at')
         
