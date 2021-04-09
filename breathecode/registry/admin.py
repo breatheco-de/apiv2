@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug', 'user__email', 'cohort__slug']
-    list_display = ('title', 'slug', 'lang', 'asset_type', 'url_path')
+    list_display = ('slug', 'title', 'lang', 'asset_type', 'url_path')
     list_filter = ['asset_type', 'lang']
     def url_path(self,obj):
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{obj.url}'>open</a>")

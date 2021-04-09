@@ -23,6 +23,12 @@ TYPE = (
     (LESSON, 'Video'),
 )
 
+BEGINNER='BEGINNER'
+EASY='EASY'
+DIFFICULTY = (
+    (BEGINNER, 'Beginner'),
+    (EASY, 'Easy'),
+)
 
 OK='OK'
 WARNING='WARNING'
@@ -35,18 +41,24 @@ ASSET_STATUS = (
 class Asset(models.Model):
     slug = models.SlugField(max_length=200, primary_key=True)
     title = models.CharField(max_length=200, blank=True)
-    lang = models.CharField(max_length=3, blank=True, default='en')
+    lang = models.CharField(max_length=50, blank=True, default='en')
     
     url = models.URLField()
     preview = models.URLField()
     description = models.TextField()
+    readme_url = models.URLField(null=True, blank=True, default=None)
+    intro_video_url = models.URLField(null=True, blank=True, default=None)
+    solution_video_url = models.URLField(null=True, blank=True, default=None)
+    readme = models.TextField(null=True, blank=True, default=None)
 
     interactive = models.BooleanField(default=False)
     with_solutions = models.BooleanField(default=False)
     with_video = models.BooleanField(default=False)
+    graded = models.BooleanField(default=False)
     gitpod = models.BooleanField(default=False)
-    duration = models.IntegerField()
+    duration = models.IntegerField(null=True, blank=True, default=None, help_text="In hours")
 
+    difficulty = models.CharField(max_length=20, choices=DIFFICULTY, default=None, null=True, blank=True)
     visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
     asset_type = models.CharField(max_length=20, choices=TYPE)
 

@@ -55,7 +55,7 @@ class GetAssetView(APIView):
 
         if 'language' in self.request.GET:
             param = self.request.GET.get('language')
-            lookup['language'] = param
+            lookup['lang'] = param
 
         items = items.filter(**lookup).order_by('-created_at')
         
