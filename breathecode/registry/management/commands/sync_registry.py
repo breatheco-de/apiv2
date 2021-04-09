@@ -1,51 +1,48 @@
-import os, requests, sys, pytz
+import os, requests, logging
 from django.core.management.base import BaseCommand, CommandError
-from ...models import Asset
+from ...actions import create_asset
+
+logger = logging.getLogger(__name__)
 
 HOST_ASSETS = "https://assets.breatheco.de/apis"
-API_URL = os.getenv("API_URL","")
-HOST_ASSETS = "https://assets.breatheco.de/apis"
-HOST = os.environ.get("OLD_BREATHECODE_API")
-DATETIME_FORMAT="%Y-%m-%d"
 
 class Command(BaseCommand):
-    help = 'Sync academies from old breathecode'
+    help = 'Sync exercises and projects from old breathecode'
+
+    def add_arguments(self, parser):
+        parser.add_argument('entity', type=str)
+        parser.add_argument(
+            '--override',
+            action='store_true',
+            help='Delete and add again',
+        )
+        parser.add_argument(
+              '--limit',
+               action='store',
+               dest='limit',
+               type=int,
+               default=0,
+               help='How many to import'
+        )
 
     def handle(self, *args, **options):
+        try:
+            func = getattr(self,options['entity'],'entity_not_found') 
+        except TypeError:
+            print(f'Sync method for {options["entity"]} no Found!')
+        func(options)
 
+    def exercises(self, *args, **options):
         response = requests.get(f"{HOST_ASSETS}/registry/all")
         items = response.json()
-
         for slug in items:
             data = items[slug]
-            a = Asset.objects.filter(slug=slug).first()
-            if a is None:
-                a = Asset(
-                    slug=slug,
-                    asset_type="EXERCISE"
-                )
-                self.stdout.write(self.style.SUCCESS(f"Adding asset {a.slug}"))
-            else:
-                self.stdout.write(self.style.SUCCESS(f"Updating asset {slug}"))
+            create_asset(data)
 
-            a.title = data['title']
-            a.lang = data['language']
-            a.url = data['repository']
-            a.readme = data['readme']
-            
-            if "intro" in data:
-                a.intro_video_url = data['intro']
-            if "description" in data:
-                a.description = data['description']
-            if "duration" in data:
-                a.duration = data['duration']
-            if "difficulty" in data:
-                a.difficulty = data['difficulty']
-            if "graded" in data:
-                a.graded = data['graded']
-            if "preview" in data:
-                a.preview = data['preview']
-            if "video-solutions" in data:
-                a.with_solutions = data['video-solutions']
 
-            a.save()
+    def projects(self, *args, **options):
+        response = requests.get(f"{HOST_ASSETS}/project/registry/all")
+        items = response.json()
+        for slug in items:
+            data = items[slug]
+            create_asset(data)
