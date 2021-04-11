@@ -1,4 +1,12 @@
-import logging, datetime, hashlib, requests, json, re, os, subprocess, sys
+import logging
+import datetime
+import hashlib
+import requests
+import json
+import re
+import os
+import subprocess
+import sys
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
 from .models import Endpoint
@@ -6,7 +14,7 @@ from breathecode.services.slack.actions.monitoring import render_snooze_text_end
 
 
 logger = logging.getLogger(__name__)
-USER_AGENT="BreathecodeMonitoring/1.0"
+USER_AGENT = "BreathecodeMonitoring/1.0"
 SCRIPT_HEADER = """
 # from django.conf import settings
 # import breathecode.settings as app_settings
@@ -16,6 +24,7 @@ SCRIPT_HEADER = """
 # import django
 # django.setup()
 """
+
 
 def get_website_text(endp):
     """Make a request to get the content of the given URL."""
@@ -44,7 +53,7 @@ def get_website_text(endp):
                 and int(length) > 3000):
             status_code = 400
             status_text = ("Timeout: The payload of this request is too long "
-                "(more than 3 MB), remove the test_pattern to avoid timeout")
+                           "(more than 3 MB), remove the test_pattern to avoid timeout")
 
     except requests.Timeout:
         status_code = 500
@@ -98,7 +107,7 @@ def get_website_text(endp):
 
 def run_app_diagnostic(app, report=False):
 
-    failed_endpoints = [] #data to be send to slack
+    failed_endpoints = []  # data to be send to slack
     results = {
         "severity_level": 0,
         "details": ""
@@ -107,14 +116,16 @@ def run_app_diagnostic(app, report=False):
     now = timezone.now()
     _endpoints = app.endpoint_set.all()
     for endpoint in _endpoints:
-        if endpoint.last_check is not None and endpoint.last_check > now - timezone.timedelta(minutes = endpoint.frequency_in_minutes):
-            logger.debug(f"Ignoring {endpoint.url} because frequency hast not been met")
+        if endpoint.last_check is not None and endpoint.last_check > now - timezone.timedelta(minutes=endpoint.frequency_in_minutes):
+            logger.debug(
+                f"Ignoring {endpoint.url} because frequency hast not been met")
             endpoint.status_text = "Ignored because its paused"
             endpoint.save()
             continue
 
         if endpoint.paused_until is not None and endpoint.paused_until > now:
-            logger.debug(f"Ignoring endpoint:{endpoint.url} monitor because its paused")
+            logger.debug(
+                f"Ignoring endpoint:{endpoint.url} monitor because its paused")
             endpoint.status_text = "Ignored because its paused"
             endpoint.save()
             continue
@@ -147,7 +158,8 @@ def run_app_diagnostic(app, report=False):
 
     app.status = results["status"]
 
-    results["slack_payload"] = render_snooze_text_endpoint(failed_endpoints) #converting to json to send to slack
+    results["slack_payload"] = render_snooze_text_endpoint(
+        failed_endpoints)  # converting to json to send to slack
 
     if results["details"] != "":
         app.response_text = results["details"]
@@ -171,14 +183,16 @@ def run_endpoint_diagnostic(endpoint_id):
     now = timezone.now()
 
     if (endpoint.last_check and endpoint.last_check > now -
-            timezone.timedelta(minutes = endpoint.frequency_in_minutes)):
-        logger.debug(f"Ignoring {endpoint.url} because frequency hast not been met")
+            timezone.timedelta(minutes=endpoint.frequency_in_minutes)):
+        logger.debug(
+            f"Ignoring {endpoint.url} because frequency hast not been met")
         endpoint.status_text = "Ignored because its paused"
         endpoint.save()
         return
 
     if endpoint.paused_until and endpoint.paused_until > now:
-        logger.debug(f"Ignoring endpoint:{endpoint.url} monitor because its paused")
+        logger.debug(
+            f"Ignoring endpoint:{endpoint.url} monitor because its paused")
         endpoint.status_text = "Ignored because its paused"
         endpoint.save()
         return
@@ -207,7 +221,8 @@ def run_endpoint_diagnostic(endpoint_id):
         results["status"] = 'MINOR'
 
     results["text"] = json.dumps(results, indent=4)
-    results["slack_payload"] = render_snooze_text_endpoint([endpoint]) #converting to json to send to slack
+    results["slack_payload"] = render_snooze_text_endpoint(
+        [endpoint])  # converting to json to send to slack
 
     if results["details"] != "":
         endpoint.response_text = results["details"]
@@ -241,17 +256,19 @@ def run_script(script):
     if script.script_slug and script.script_slug != "other":
         dir_path = os.path.dirname(os.path.realpath(__file__))
         header = SCRIPT_HEADER
-        content = header + open(f"{dir_path}/scripts/{script.script_slug}.py").read()
+        content = header + \
+            open(f"{dir_path}/scripts/{script.script_slug}.py").read()
     elif script.script_body:
         content = script.script_body
     else:
-        raise Exception(f"Script not found or its body is empty: {script.script_slug}")
+        raise Exception(
+            f"Script not found or its body is empty: {script.script_slug}")
 
     if content:
-        local = { "result": { "details": "", "status": "OPERATIONAL" } }
+        local = {"result": {"details": "", "status": "OPERATIONAL"}}
         with stdoutIO() as s:
             try:
-                exec(content, { "academy": script.application.academy }, local)
+                exec(content, {"academy": script.application.academy}, local)
                 script.status_code = 0
                 script.status = 'OPERATIONAL'
                 results['severity_level'] = 5
@@ -279,7 +296,8 @@ def run_script(script):
         results['details'] = script.response_text
         results["text"] = json.dumps(results, indent=4)
         results["details"] = results["text"]
-        results["slack_payload"] = render_snooze_script([script]) #converting to json to send to slack
+        results["slack_payload"] = render_snooze_script(
+            [script])  # converting to json to send to slack
 
         return results
 
