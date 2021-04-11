@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Checks for Cohort status after ending date has passed on cohorts
+Checks if ending date has passed and cohort status is not ended
 """
 from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Cohort

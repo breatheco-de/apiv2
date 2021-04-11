@@ -1,17 +1,14 @@
 #!/usr/bin/env python
 """
-Checks for Cohort User status on ended Cohorts
+Checks for cohort users with status active on ended cohort
 """
 from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import CohortUser
 from django.utils import timezone
 
 active_user_on_ended_cohort = CohortUser.objects.filter(
-    cohort__stage="ENDED"
-).exclude(
-    educational_status="ACTIVE"
-)
-# TODO: use educational_status != ACTIVE, check monitoring to see tests
+    cohort__stage="ENDED", educational_status="ACTIVE")
+
 active_user_on_ended_cohort_list = [
     item.user.email for item in active_user_on_ended_cohort]
 
