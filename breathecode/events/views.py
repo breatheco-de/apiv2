@@ -1,11 +1,15 @@
-import logging
-import datetime
+from breathecode.events.caches import EventCache
+import logging, datetime
+import re
+
+from django.http.response import HttpResponse
+from breathecode.utils.cache import Cache
 from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from .models import Event, EventType, EventCheckin, Venue
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Cohort, CohortUser
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (
     EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
@@ -21,6 +25,7 @@ from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
 from breathecode.utils import ValidationException
+from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 
 
 logger = logging.getLogger(__name__)
@@ -109,9 +114,30 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
+    cache = EventCache()
 
     @capable_of('read_event')
     def get(self, request, format=None, academy_id=None, event_id=None):
+        city = self.request.GET.get('city')
+        country = self.request.GET.get('country')
+        zip_code = self.request.GET.get('zip_code')
+        upcoming = self.request.GET.get('upcoming')
+        past = self.request.GET.get('past')
+
+        cache_kwargs = {
+            'academy_id': academy_id,
+            'event_id': event_id,
+            'city': city,
+            'country': country,
+            'zip_code': zip_code,
+            'upcoming': upcoming,
+            'past': past,
+            **self.pagination_params(request),
+        }
+
+        cache = self.cache.get(**cache_kwargs)
+        if cache:
+            return Response(cache, status=status.HTTP_200_OK)
 
         if event_id is not None:
             single_event = Event.objects.filter(
@@ -120,29 +146,27 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
                 raise ValidationException("Event not found", 404)
 
             serializer = EventSmallSerializer(single_event, many=False)
+            self.cache.set(serializer.data, **cache_kwargs)
             return Response(serializer.data)
 
         items = Event.objects.filter(academy__id=academy_id)
         lookup = {}
 
-        if 'city' in self.request.GET:
-            city = self.request.GET.get('city')
+        if city:
             lookup['venue__city__iexact'] = city
 
-        if 'country' in self.request.GET:
-            value = self.request.GET.get('country')
-            lookup['venue__country__iexact'] = value
+        if country:
+            lookup['venue__country__iexact'] = country
 
-        if 'zip_code' in self.request.GET:
-            value = self.request.GET.get('zip_code')
-            lookup['venue__zip_code'] = value
+        if zip_code:
+            lookup['venue__zip_code'] = zip_code
 
-        if 'upcoming' in self.request.GET:
+        if upcoming:
             lookup['starting_at__gte'] = timezone.now()
-        elif 'past' in self.request.GET:
+        elif past:
             if 'starting_at__gte' in lookup:
                 lookup.pop("starting_at__gte")
-            if self.request.GET.get('past') == "true":
+            if past == "true":
                 lookup['starting_at__lte'] = timezone.now()
 
         items = items.filter(**lookup).order_by('-starting_at')
@@ -151,35 +175,42 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         serializer = EventSmallSerializerNoAcademy(page, many=True)
 
         if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
+            return self.get_paginated_response(
+                serializer.data,
+                cache=self.cache,
+                cache_kwargs=cache_kwargs
+            )
         else:
+            self.cache.set(serializer.data, **cache_kwargs)
             return Response(serializer.data, status=200)
 
     @capable_of('crud_event')
     def post(self, request, format=None, academy_id=None):
-
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
             raise ValidationException(f"Academy {academy_id} not found")
 
-        serializer = EventSerializer(
-            data={**request.data, "academy": academy.id})
+        data = {}
+        for key in request.data.keys():
+            data[key] = request.data.get(key)
+
+        serializer = EventSerializer(data={**data, "academy": academy.id})
         if serializer.is_valid():
+            self.cache.clear()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_event')
     def put(self, request, academy_id=None, event_id=None):
-
-        already = Event.objects.filter(
-            id=event_id, academy__id=academy_id).first()
+        already = Event.objects.filter(id=event_id,academy__id=academy_id).first()
         if already is None:
             raise ValidationException(
                 f"Event not found for this academy {academy_id}")
 
         serializer = EventSerializer(already, data=request.data)
         if serializer.is_valid():
+            self.cache.clear()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -204,7 +235,7 @@ class EventTypeView(APIView):
         return Response(serializer.data)
 
 
-class EventCheckinView(APIView):
+class EventCheckinView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
@@ -234,8 +265,13 @@ class EventCheckinView(APIView):
 
         items = items.filter(**lookup).order_by('-created_at')
 
-        serializer = EventCheckinSerializer(items, many=True)
-        return Response(serializer.data)
+        page = self.paginate_queryset(items, request)
+        serializer = EventCheckinSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
 
 @api_view(['POST'])
@@ -268,3 +304,58 @@ class AcademyVenueView(APIView):
 
         serializer = VenueSerializer(venues, many=True)
         return Response(serializer.data)
+
+
+class AcademyICalCohortsView(APIView):
+    # permission_classes = [AllowAny]
+
+    @capable_of('read_cohort')
+    def get(self, request, academy_id=None):
+        # academy_id = 1
+        items = Cohort.objects.filter(academy__id=academy_id).exclude(stage='DELETED')
+
+        calendar = iCalendar()
+        calendar.add('prodid', '-//4Geeks Academy//4Geeks events//') # //EN')
+        calendar.add('version', '2.0')
+
+        for item in items:
+            event = iEvent()
+
+            event.add('summary', item.name)
+            event.add('uid', item.id)
+            event.add('dtstart', item.kickoff_date)
+
+            if item.ending_date:
+                event.add('dtend', item.ending_date)
+
+            event.add('dtstamp', item.created_at)
+
+            teacher = CohortUser.objects.filter(role='TEACHER').first()
+
+            if teacher:
+                organizer = vCalAddress(f'MAILTO:{teacher.user.email}')
+
+                if teacher.user.first_name and teacher.user.last_name:
+                    organizer.params['cn'] = vText(f'{teacher.user.first_name} '
+                        f'{teacher.user.last_name}')
+                elif teacher.user.first_name:
+                    organizer.params['cn'] = vText(teacher.user.first_name)
+                elif teacher.user.last_name:
+                    organizer.params['cn'] = vText(teacher.user.last_name)
+
+                organizer.params['role'] = vText('OWNER')
+                event['organizer'] = organizer
+
+            location = item.academy.name
+
+            if item.academy.website_url:
+                location = f'{location} ({item.academy.website_url})'
+            event['location'] = vText(item.academy.name)
+
+            calendar.add_component(event)
+
+        calendar_text = calendar.to_ical()
+
+        response = HttpResponse(calendar_text, content_type='text/calendar')
+        response['Content-Disposition'] = 'attachment; filename="calendar.ics"'
+        return response

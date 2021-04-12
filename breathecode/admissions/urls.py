@@ -4,7 +4,7 @@ from rest_framework import routers
 from .views import (
     AcademyView, CohortUserView, get_cohorts, AcademyCohortView,
     get_timezones, UserView, UserMeView, AcademyCohortUserView,
-    get_single_course, SyllabusView, CertificateView
+    get_single_course, SyllabusView, CertificateView, AcademyICalEventView
 )
 
 app_name = 'admissions'
@@ -22,6 +22,7 @@ urlpatterns = [
     path('academy/cohort/<int:cohort_id>/user/<int:user_id>', AcademyCohortUserView.as_view()),
     path('academy/cohort/<int:cohort_id>/user', AcademyCohortUserView.as_view()),
 
+    path('academy/ical/events', AcademyICalEventView.as_view(), name="academy_ical_events"),
     path('academy/', AcademyView.as_view(), name="academy"),
     path('academy/cohort', AcademyCohortView.as_view(), name="academy_cohort"),
     path('user/me', UserMeView.as_view(), name="user_me"),

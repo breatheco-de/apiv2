@@ -13,3 +13,5 @@ from .generate_queries_mixin import GenerateQueriesMixin
 from .old_breathecode_mixin import OldBreathecodeMixin
 from .datetime_mixin import DatetimeMixin
 from .exception_mixin import ExceptionMixin
+from .ical_mixin import ICallMixin
+from .sha256_mixin import Sha256Mixin

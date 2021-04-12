@@ -8,7 +8,7 @@ class File:
     bucket = None
     blob = None
     file_name = None
-    
+
     def __init__(self, bucket, file_name: str):
         self.file_name = file_name
         self.bucket = bucket
