@@ -15,7 +15,7 @@ active_user_on_ended_cohort_list = [
 active_user_on_ended_cohort_list_names = (
     ", ").join(active_user_on_ended_cohort_list)
 
-if len(active_user_on_ended_cohort_list) > 0:
+if len(active_user_on_ended_cohort_list):
     raise ScriptNotification(
         f"This users: {active_user_on_ended_cohort_list_names} are active on ended cohorts")
 

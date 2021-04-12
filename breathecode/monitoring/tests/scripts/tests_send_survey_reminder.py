@@ -31,7 +31,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def tests_send_survey_no_kickoff_date_ending_date(self):
+    def tests_send_survey_reminder_no_survey(self):
 
         monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
 
@@ -83,7 +83,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             "status": 'OPERATIONAL',
             "details": '{\n'
             '    "severity_level": 5,\n'
-            '    "details": "No reminders\\n",\n'
+            '    "details": "No cohorts found\\nNo reminders\\n",\n'
             '    "status": "OPERATIONAL"\n'
             '}',
             "text": '{\n'
@@ -118,7 +118,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             "status": 'OPERATIONAL',
             "details": '{\n'
             '    "severity_level": 5,\n'
-            '    "details": "No reminders\\n",\n'
+            '    "details": "No cohorts found\\nNo reminders\\n",\n'
             '    "status": "OPERATIONAL"\n'
             '}',
             "text": '{\n'
@@ -191,10 +191,64 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
 
-        expected = {'details': script['details'],
+        cohort_names = (", ").join(
+            [model.cohort.name for model in models if model.cohort.id == 1])
+        print("cohortName", cohort_names)
+        cohort_name = models[0].cohort.name
+
+        details = ('{\n'
+                   '    "severity_level": 5,\n'
+                   '    "details": "There are surveys pending to be sent on theese '
+                   f'cohorts {cohort_name}\\n",\n'
+                   '    "status": "MINOR"\n'
+                   '}')
+
+        expected = {'details': details,
                     'severity_level': 5,
                     'status': 'MINOR',
-                    'text': script['text']
+                    'text': details
+                    }
+
+        self.assertEqual(script, expected)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def tests_send_survey_latest_survey_greater_four_weeks_two_cohorts_two_survey(self):
+
+        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
+        ending_date = timezone.now() + timedelta(days=2)
+        kickoff_date = timezone.now() - timedelta(days=2)
+
+        base = self.generate_models(academy=True,  monitor_script=True,
+                                    monitor_script_kwargs=monitor_script_kwargs,
+                                    )
+
+        sent_at = timezone.now() - timedelta(weeks=6)
+
+        models = [self.generate_models(survey=True, cohort=True, survey_kwargs={'sent_at': sent_at},
+                                       models=base, cohort_kwargs={'ending_date': ending_date,
+                                                                   "kickoff_date": kickoff_date})
+                  for _ in range(0, 2)]
+
+        script = run_script(models[1].monitor_script)
+        print(script)
+        del script['slack_payload']
+
+        cohort_names = (", ").join(
+            [model.cohort.name for model in models])
+
+        details = ('{\n'
+                   '    "severity_level": 5,\n'
+                   '    "details": "There are surveys pending to be sent on theese '
+                   f'cohorts {cohort_names}\\n",\n'
+                   '    "status": "MINOR"\n'
+                   '}')
+
+        expected = {'details': details,
+                    'severity_level': 5,
+                    'status': 'MINOR',
+                    'text': details
                     }
 
         self.assertEqual(script, expected)

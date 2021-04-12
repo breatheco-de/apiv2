@@ -20,6 +20,9 @@ cohorts = Cohort.objects.filter(academy__id=academy.id).exclude(
 
 cohorts_with_pending_surveys = []
 
+if not cohorts:
+    print("No cohorts found")
+
 for cohort in cohorts:
 
     lastest_survey = Survey.objects.filter(
@@ -33,7 +36,6 @@ for cohort in cohorts:
 
 if len(cohorts_with_pending_surveys) > 0:
     cohort_names = (", ").join(cohorts_with_pending_surveys)
-    # cuando tenga al menos dos cohorts que los separe por la ","
 
     raise ScriptNotification(
         f"There are surveys pending to be sent on theese cohorts {cohort_names}", status='MINOR'
