@@ -142,9 +142,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def delete(self, request, academy_id=None, user_id=None):
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'email', 'first_name', 'last_name', 'address',
-                         'phone', 'status'],
-            many_relationships=['user', 'academy', 'role']
+            many_fields=['id']
         )
 
         if lookups and user_id:
@@ -247,9 +245,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def delete(self, request, academy_id=None, user_id=None):
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'email', 'first_name', 'last_name', 'address',
-                         'phone', 'status'],
-            many_relationships=['user', 'academy', 'role']
+            many_fields=['id']
         )
 
         if lookups and user_id:

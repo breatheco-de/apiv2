@@ -12,7 +12,8 @@ class BucketMock():
         return self.files.get(blob_name)
 
     def blob(self, blob_name):
-        self.files[blob_name] = BlobMock(blob_name, self)
+        from google.cloud.storage import Blob
+        self.files[blob_name] = Blob(blob_name, self)
         return self.files[blob_name]
 
     def delete(self):

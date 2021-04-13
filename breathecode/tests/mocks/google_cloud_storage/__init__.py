@@ -1,7 +1,7 @@
 """
 Google Cloud Storage Mocks
 """
-from unittest.mock import Mock
+from unittest.mock import MagicMock
 from .blob_mock import BlobMock
 from .bucket_mock import BucketMock
 from .client_mock import ClientMock
@@ -15,9 +15,9 @@ GOOGLE_CLOUD_PATH = {
 
 
 GOOGLE_CLOUD_INSTANCES = {
-    'client': Mock(side_effect=ClientMock),
-    'bucket': Mock(side_effect=BucketMock),
-    'blob': Mock(side_effect=BlobMock),
+    'client': MagicMock(side_effect=ClientMock),
+    'bucket': MagicMock(side_effect=BucketMock),
+    'blob': MagicMock(side_effect=BlobMock),
 }
 
 
