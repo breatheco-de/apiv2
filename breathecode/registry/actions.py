@@ -25,17 +25,6 @@ def create_asset(data, asset_type):
     a.title = data['title']
     a.url = data['repository']
     a.readme_url = data['readme']
-    
-    if "translations" in data:
-        for lan in data["translations"]:
-            if lan == "en":
-                lan = "us" # english is really USA
-            l = AssetTranslation.objects.filter(slug=lan).first()
-            if l is not None: 
-                if a.translations.filter(slug=lan).first() is None:
-                    a.translations.add(l)
-            else:
-                logger.debug(f"Ignoring language {lan} because its not added as a possible AssetTranslation")
 
     if "intro" in data:
         a.intro_video_url = data['intro']
@@ -57,6 +46,17 @@ def create_asset(data, asset_type):
         a.with_solutions = data['video-solutions']
 
     a.save()
+    
+    if "translations" in data:
+        for lan in data["translations"]:
+            if lan == "en":
+                lan = "us" # english is really USA
+            l = AssetTranslation.objects.filter(slug=lan).first()
+            if l is not None: 
+                if a.translations.filter(slug=lan).first() is None:
+                    a.translations.add(l)
+            else:
+                logger.debug(f"Ignoring language {lan} because its not added as a possible AssetTranslation")
     
     aa = AssetAlias(slug=slug, asset=a)
     aa.save()
