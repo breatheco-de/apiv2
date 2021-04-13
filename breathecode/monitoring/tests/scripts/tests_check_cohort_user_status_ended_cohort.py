@@ -171,10 +171,19 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
 
-        expected = {'details': script['details'],
+        user = model.cohort_user.user.email
+
+        details = ('{\n'
+                   '    "severity_level": 5,\n'
+                   f'    "details": "This users: {user} '
+                   'are active on ended cohorts\\n",\n'
+                   '    "status": "MINOR"\n'
+                   '}')
+
+        expected = {'details': details,
                     'severity_level': 5,
                     'status': script['status'],
-                    'text': script['text']
+                    'text': details
                     }
 
         self.assertEqual(script, expected)

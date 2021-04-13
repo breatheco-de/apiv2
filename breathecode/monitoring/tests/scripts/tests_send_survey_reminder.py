@@ -47,12 +47,12 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             "status": 'OPERATIONAL',
             "details": '{\n'
             '    "severity_level": 5,\n'
-            '    "details": "No reminders\\n",\n'
+            '    "details": "No cohorts found\\nNo reminders\\n",\n'
             '    "status": "OPERATIONAL"\n'
             '}',
             "text": '{\n'
                     '    "severity_level": 5,\n'
-                    '    "details": "No reminders\\n",\n'
+                    '    "details": "No cohorts found\\nNo reminders\\n",\n'
                     '    "status": "OPERATIONAL"\n'
                     '}'
         }
@@ -88,7 +88,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             '}',
             "text": '{\n'
                     '    "severity_level": 5,\n'
-                    '    "details": "No reminders\\n",\n'
+                    '    "details": "No cohorts found\\nNo reminders\\n",\n'
                     '    "status": "OPERATIONAL"\n'
                     '}'
         }
@@ -123,7 +123,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             '}',
             "text": '{\n'
                     '    "severity_level": 5,\n'
-                    '    "details": "No reminders\\n",\n'
+                    '    "details": "No cohorts found\\nNo reminders\\n",\n'
                     '    "status": "OPERATIONAL"\n'
                     '}'
         }
@@ -232,7 +232,6 @@ class AcademyCohortTestSuite(MonitoringTestCase):
                   for _ in range(0, 2)]
 
         script = run_script(models[1].monitor_script)
-        print(script)
         del script['slack_payload']
 
         cohort_names = (", ").join(
