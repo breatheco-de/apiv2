@@ -974,7 +974,7 @@ def render_invite(request, token, member_id=None):
         user = User.objects.filter(email=invite.email).first()
         if user is None:
             user = User(email=invite.email, first_name=first_name,
-                        last_name=last_name)
+                        last_name=last_name, username=invite.email)
             user.save()
             user.set_password(password1)
             user.save()
