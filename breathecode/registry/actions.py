@@ -1,16 +1,22 @@
 import logging
-from .models import Asset, AssetTranslation, AssetTechnology
+from breathecode.utils import APIException
+from .models import Asset, AssetTranslation, AssetTechnology, AssetAlias
 
 logger = logging.getLogger(__name__)
 
 
-def create_asset(data):
+def create_asset(data, asset_type):
     slug = data["slug"]
+
+    aa = AssetAlias.objects.filter(slug=slug).first()
+    if aa is not None:
+        raise APIException("Asset with this alias "+slug+" alrady exists")
+
     a = Asset.objects.filter(slug=slug).first()
     if a is None:
         a = Asset(
             slug=slug,
-            asset_type="PROJECT"
+            asset_type=asset_type
         )
         logger.debug(f"Adding asset project {a.slug}")
     else:
@@ -51,3 +57,6 @@ def create_asset(data):
         a.with_solutions = data['video-solutions']
 
     a.save()
+    
+    aa = AssetAlias(slug=slug, asset=a)
+    aa.save()

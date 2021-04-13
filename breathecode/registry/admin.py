@@ -4,7 +4,7 @@ from django.utils.html import format_html
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
-from .models import Asset, AssetTranslation, AssetTechnology
+from .models import Asset, AssetTranslation, AssetTechnology, AssetAlias
 
 logger = logging.getLogger(__name__)
 
@@ -27,3 +27,9 @@ class AssetTranslationsAdmin(admin.ModelAdmin):
 class AssetTechnologyAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug']
     list_display = ('slug', 'title')
+
+# Register your models here.
+@admin.register(AssetAlias)
+class AssetAliasAdmin(admin.ModelAdmin):
+    search_fields = ['slug', 'asset']
+    list_display = ('slug', 'asset')

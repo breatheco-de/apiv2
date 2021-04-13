@@ -37,7 +37,7 @@ class Command(BaseCommand):
         items = response.json()
         for slug in items:
             data = items[slug]
-            create_asset(data)
+            create_asset(data, asset_type="EXERCISE")
 
 
     def projects(self, *args, **options):
@@ -45,4 +45,4 @@ class Command(BaseCommand):
         items = response.json()
         for slug in items:
             data = items[slug]
-            create_asset(data)
+            create_asset(data, asset_type="PROJECT")

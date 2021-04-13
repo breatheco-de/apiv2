@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.utils import timezone
 from django.http import HttpResponse
-from .models import Asset
+from .models import Asset, AssetAlias
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -16,11 +16,11 @@ from django.http import HttpResponseRedirect
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def redirect_gitpod(request, asset_slug):
-    asset = Asset.objects.filter(slug=asset_slug).first()
-    if asset is None:
-        raise exceptions.NotFound(detail="Asset not found", code=status.HTTP_404_NOT_FOUND)
+    alias = AssetAlias.objects.filter(slug=asset_slug).first()
+    if alias is None:
+        raise exceptions.NotFound(detail="Asset alias not found", code=status.HTTP_404_NOT_FOUND)
 
-    return HttpResponseRedirect(redirect_to='https://gitpod.io#'+package.url)
+    return HttpResponseRedirect(redirect_to='https://gitpod.io#'+alias.asset.url)
 
 # Create your views here.
 class GetAssetView(APIView):
