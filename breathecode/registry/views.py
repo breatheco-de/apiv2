@@ -20,7 +20,7 @@ def redirect_gitpod(request, asset_slug):
     if alias is None:
         raise ValidationException("Asset alias not found", status.HTTP_404_NOT_FOUND)
 
-    if alias.gitpod:
+    if alias.asset.gitpod:
         return HttpResponseRedirect(redirect_to='https://gitpod.io#'+alias.asset.url)
     else:
         return HttpResponseRedirect(redirect_to=alias.asset.url)
