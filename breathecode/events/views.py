@@ -322,7 +322,7 @@ class AcademyICalCohortsView(APIView):
             event = iEvent()
 
             event.add('summary', item.name)
-            event.add('uid', item.id)
+            event.add('uid', f'breathecode_cohort_{item.id}')
             event.add('dtstart', item.kickoff_date)
 
             if item.ending_date:

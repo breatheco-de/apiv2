@@ -96,7 +96,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'SUMMARY:{cohort.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
-            f'UID:{cohort.id}',
+            f'UID:breathecode_cohort_{cohort.id}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
             'END:VCALENDAR',
@@ -131,7 +131,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.ending_date)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
-            f'UID:{cohort.id}',
+            f'UID:breathecode_cohort_{cohort.id}',
             f'LOCATION:{academy.name}',
             self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
@@ -173,14 +173,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'SUMMARY:{cohort1.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
-            f'UID:{cohort1.id}',
+            f'UID:breathecode_cohort_{cohort1.id}',
             f'LOCATION:{academy1.name}',
             'END:VEVENT',
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
-            f'UID:{cohort2.id}',
+            f'UID:breathecode_cohort_{cohort2.id}',
             f'LOCATION:{academy2.name}',
             'END:VEVENT',
             'END:VCALENDAR',
@@ -226,7 +226,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
-            f'UID:{cohort1.id}',
+            f'UID:breathecode_cohort_{cohort1.id}',
             f'LOCATION:{academy1.name}',
             self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
@@ -235,7 +235,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.ending_date)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
-            f'UID:{cohort2.id}',
+            f'UID:breathecode_cohort_{cohort2.id}',
             f'LOCATION:{academy2.name}',
             self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
@@ -245,3 +245,36 @@ class AcademyCohortTestSuite(EventTestCase):
 
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # # this test is comment because is util to check and generate one example
+    # # ical file
+    # def test_generate_ical(self):
+    #     """Test /academy/cohort without auth"""
+    #     self.headers(academy=1)
+
+    #     cohort_user_kwargs = {'role': 'TEACHER'}
+    #     cohort_kwargs = {
+    #         'kickoff_date': datetime.now() + timedelta(days=1, hours=12),
+    #         'ending_date': datetime.now() + timedelta(days=1, hours=15),
+    #     }
+
+    #     base = self.generate_models(authenticate=True, profile_academy=True,
+    #         capability='read_cohort', role='potato', skip_cohort=True)
+
+    #     models = [
+    #         self.generate_models(cohort=True, cohort_user=True, models=base,
+    #             cohort_kwargs=cohort_kwargs, cohort_user_kwargs=cohort_user_kwargs),
+    #         self.generate_models(cohort=True, cohort_user=True, models=base,
+    #             cohort_kwargs=cohort_kwargs, cohort_user_kwargs=cohort_user_kwargs),
+    #     ]
+
+    #     url = reverse_lazy('events:academy_ical_cohorts')
+    #     response = self.client.get(url)
+
+    #     import os
+
+    #     calendar_path = os.path.join('C:\\', 'Users', 'admin', 'desktop', 'calendar.ics')
+    #     with open(calendar_path, 'w') as file:
+    #         file.write(response.content.decode('utf-8').replace('\r', ''))
+
+    #     assert False
