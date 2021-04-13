@@ -56,7 +56,7 @@ def reset_password(users=None):
 def resend_invite(token=None,email=None, first_name=None ):
     params = { "callback": "https://admin.breatheco.de" }
     querystr = urllib.parse.urlencode(params)
-    url = os.getenv('API_URL') + "/v1/auth/user/invite/" + str(token) + "?" + querystr
+    url = os.getenv('API_URL', '') + "/v1/auth/member/invite/" + str(token) + "?" + querystr
     send_email_message("welcome_academy",email, {
                 "email": email,
                 "subject": "Invitation",

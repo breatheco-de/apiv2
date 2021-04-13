@@ -10,6 +10,7 @@ from breathecode.utils import ValidationException
 from ...actions import generate_certificate, strings
 from ..mixins.new_certificate_test_case import CertificateTestCase
 from ....admissions.models import FULLY_PAID, UP_TO_DATE, LATE
+from breathecode.utils import ValidationException
 # from .mocks import CertificateBreathecodeMock
 from ..mocks import (
     GOOGLE_CLOUD_PATH,
@@ -552,3 +553,64 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
             [{**expected, 'token': token}])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_generate_certificate_repeated_certificate(self):
+        """
+        Step 16
+        Tests dennyy generate_certificate that is already created for same student
+        in same cohort
+        Status: BAD_REQUEST
+        """
+        model = self.generate_models(user=True, cohort=True, cohort_user=True,
+            specialty=True, layout_design=True, cohort_finished=True,
+            cohort_user_finantial_status='UP_TO_DATE', syllabus=True,
+            cohort_user_educational_status='GRADUATED',
+            cohort_stage='ENDED')
+
+        base = model.copy()
+        del base['user']
+        del base['cohort_user']
+
+        teacher_model = self.generate_models(user=True, cohort_user=True,
+        cohort_user_role='TEACHER', models=base)
+        result = generate_certificate(model['user'], model['cohort'])
+        
+        result.preview_url = 'http://potato.io'
+        result.save()
+        result = self.remove_dinamics_fields(result.__dict__)
+        
+        try:
+            generate_certificate(model['user'], model['cohort'])
+            assert False        
+        except ValidationException as e:
+            self.assertEqual(str(e), "This user already has a certificate created")
+        
+        expected = {
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + " " +
+                teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'specialty_id': 1,
+            'status': 'PERSISTED',
+            'status_text': 'Certificate successfully queued for PDF generation',
+            'user_id': 1,
+            'is_cleaned': True,
+            'preview_url': 'http://potato.io',
+        }
+
+        self.assertToken(result['token'])
+        token = result['token']
+        del result['token']
+
+        self.assertEqual(result, expected)
+        del expected['is_cleaned']
+        self.assertEqual(self.all_user_specialty_dict(), [{**expected, 'token': token}])
+        

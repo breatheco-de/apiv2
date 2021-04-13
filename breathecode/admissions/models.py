@@ -4,6 +4,8 @@ from django.core.validators import RegexValidator
 from django.db import models
 from .actions import get_bucket_object
 
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", None)
+
 def get_user_label(self):
     return f"{self.first_name} {self.last_name} ({self.email})"
 User.add_to_class("__str__", get_user_label)
@@ -40,24 +42,24 @@ class Academy(models.Model):
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)
-    
+
     marketing_email = models.EmailField(blank=True, null=True, default=None)
     phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
     marketing_phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True, default=None) # validators should be a list
-    
-    twitter_handle = models.CharField(max_length=15, blank=True, null=True, default=None) 
+
+    twitter_handle = models.CharField(max_length=15, blank=True, null=True, default=None)
     facebook_handle = models.CharField(max_length=30, blank=True, null=True, default=None)
     instagram_handle = models.CharField(max_length=30, blank=True, null=True, default=None)
     github_handle = models.CharField(max_length=20, blank=True, null=True, default=None)
     linkedin_url = models.URLField(blank=True, null=True, default=None)
     youtube_url = models.URLField(blank=True, null=True, default=None)
-    
+
     city = models.ForeignKey(City, on_delete=models.CASCADE, null=True)
     country = models.ForeignKey(Country, on_delete=models.CASCADE, null=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, blank=True, null=True)
     zip_code = models.IntegerField(blank=True, null=True)
- 
+
     active_campaign_slug = models.SlugField(max_length=100, unique=False, null=True, default=None)
 
     status = models.CharField(max_length=15, choices=ACADEMY_STATUS, default=ACTIVE)
@@ -118,9 +120,10 @@ class Certificate(models.Model):
 
     def save(self, *args, **kwargs):
 
-        obj = get_bucket_object("certificate-logo-"+self.slug)
-        if obj is not None:
-            self.logo = obj.public_url
+        if GOOGLE_APPLICATION_CREDENTIALS is not None and GOOGLE_APPLICATION_CREDENTIALS!="":
+            obj = get_bucket_object("certificate-logo-"+self.slug)
+            if obj is not None:
+                self.logo = obj.public_url
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
@@ -152,11 +155,10 @@ class Syllabus(models.Model):
 
     @property
     def slug(self):
-        return self.certificate.slug+".v"+str(self.version)
-        
+        return f'{self.certificate.slug}.v{self.version}'
 
     def __str__(self):
-        return self.certificate.name
+        return f'{self.certificate.slug}.v{self.version}'
 
 
 INACTIVE = 'INACTIVE'
@@ -181,7 +183,7 @@ class Cohort(models.Model):
     ending_date = models.DateTimeField(blank=True, null=True)
     current_day = models.IntegerField()
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
-    
+
     timezone = models.CharField(max_length=50, null=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)

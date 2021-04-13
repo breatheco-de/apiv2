@@ -110,6 +110,21 @@ LEAD_TYPE = (
     (SOFT, 'Soft'),
     (DISCOVERY, 'Discovery'),
 )
+
+WON = 'WON'
+LOST = 'LOST'
+DEAL_STATUS = (
+    (WON, 'Won'),
+    (LOST, 'Lost'),
+)
+
+
+GOOD = 'GOOD'
+BAD = 'BAD'
+DEAL_SENTIMENT = (
+    (GOOD, 'Good'),
+    (BAD, 'Bad'),
+)
 # Create your models here.
 class FormEntry(models.Model):
     contact = models.ForeignKey(Contact, on_delete=models.CASCADE, null=True, default=None, blank=True)
@@ -157,6 +172,9 @@ class FormEntry(models.Model):
     # is it saved into active campaign?
     storage_status = models.CharField(max_length=15, choices=STORAGE_SATUS, default=PENDING)
     lead_type = models.CharField(max_length=15, choices=LEAD_TYPE, null=True, default=None)
+    
+    deal_status = models.CharField(max_length=15, choices=DEAL_STATUS, default=None, null=True, blank=True)
+    sentiment = models.CharField(max_length=15, choices=DEAL_SENTIMENT, default=None, null=True, blank=True)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
     ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None, blank=True)

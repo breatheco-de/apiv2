@@ -15,7 +15,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
     MAILGUN_PATH,
     MAILGUN_INSTANCES,
-    apply_requests_post_mock,
+    apply_mailgun_requests_post_mock,
     OLD_BREATHECODE_PATH,
     OLD_BREATHECODE_INSTANCES,
     apply_old_breathecode_requests_request_mock
@@ -280,7 +280,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # @patch(MAILGUN_PATH['post'], apply_requests_post_mock())
+    # @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     # @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
     # def test_persist_single_lead_with_form_entry(self):
     #     """Test /answer/:id without auth"""

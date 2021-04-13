@@ -110,7 +110,7 @@ class CohortForm(forms.ModelForm):
 class CohortAdmin(admin.ModelAdmin):
     form = CohortForm
     search_fields = ['slug', 'name', 'academy__city__name', 'syllabus__slug']
-    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'certificate_name')
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus')
     list_filter = ['stage', 'academy__slug','syllabus__certificate__slug']
     actions = [sync_tasks]
 
@@ -118,7 +118,7 @@ class CohortAdmin(admin.ModelAdmin):
         return obj.academy.name
 
     def certificate_name(self, obj):
-        return obj.syllabus.slug
+        return obj.certificate.slug+".v"+str(obj.version)
 
 def sync_with_github(modeladmin, request, queryset):
     all_syllabus = queryset.all()

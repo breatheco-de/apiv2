@@ -2,7 +2,6 @@
 Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
-from breathecode.assignments.models import Task
 from mixer.backend.django import mixer
 
 class AssignmentsModelsMixin(ModelsMixin):

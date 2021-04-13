@@ -1,7 +1,6 @@
 """
 Collections of mixins used to login in authorize microservice
 """
-import os
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
 
@@ -34,7 +33,7 @@ class MarketingModelsMixin(ModelsMixin):
             models['automation'] = mixer.blend('marketing.Automation', **kargs)
 
         # OneToOneField
-        if not 'active_campaign_academy' in models and active_campaign_academy:
+        if 'active_campaign_academy' in models and active_campaign_academy:
             if 'automation' in models or automation:
                 models['active_campaign_academy'].event_attendancy_automation = models['automation']
 

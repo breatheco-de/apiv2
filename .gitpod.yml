@@ -11,10 +11,10 @@ tasks:
     - command: redis-server
     - init: pipenv install --dev && cp -n .env.example .env
       command: >
-        psql -U gitpod -c 'CREATE DATABASE breathecode;';
-        psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode;
-        pipenv run migrate;
-        pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json;
+        psql -U gitpod -c 'CREATE DATABASE breathecode;' &&
+        psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode &&
+        pipenv run migrate &&
+        pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
         pipenv run start;
     - init: pipenv install --dev && cp -n .env.example .env
       command: pipenv run celery

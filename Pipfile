@@ -4,12 +4,10 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pytest-mock = "*"
 pytest-cov = "*"
 coverage = "*"
-mock = "*"
 pylint-django = "*"
-celery = {extras = ["pytest"], version = "*"}
+atomicwrites = "*"
 
 [packages]
 django = "*"
@@ -37,8 +35,10 @@ redis = "*"
 eventbrite = "*"
 rollbar = "*"
 pillow = "*"
-django-redis-cache = "*"
 django-redis = "*"
+pytz = "*"
+hiredis = "*"
+icalendar = "*"
 
 [requires]
 python_version = "3.9"

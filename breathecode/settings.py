@@ -48,7 +48,7 @@ INSTALLED_APPS = [
 
     'drf_yasg',
     'corsheaders',
-    
+
     'breathecode.authenticate',
     'breathecode.admissions',
     'breathecode.events',
@@ -59,13 +59,15 @@ INSTALLED_APPS = [
     'breathecode.freelance',
     'breathecode.certificate',
     'breathecode.monitoring',
+    'breathecode.media',
+    'breathecode.registry',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'breathecode.utils.HeaderLimitOffsetPagination',
     'EXCEPTION_HANDLER': 'breathecode.utils.breathecode_exception_handler',
-    'PAGE_SIZE': 10,
+    'PAGE_SIZE': 100,
     'DEFAULT_VERSION': 'v1',
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'breathecode.authenticate.authentication.ExpiringTokenAuthentication',
@@ -276,41 +278,30 @@ CORS_ALLOW_HEADERS = [
 
 REDIS_URL = os.getenv('REDIS_URL', '')
 
-# def cache_opts(is_test_env):
-#     if is_test_env:
-#         return {
-#             'OPTIONS': {}
-#         }
-#     else:
-#         return {
-#             'OPTIONS': {
-#                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#                 "PARSER_CLASS": "redis.connection.HiredisParser",
-#             }
-#         }
+def cache_opts(is_test_env):
+    if is_test_env:
+        return {
+            'OPTIONS': {}
+        }
+    else:
+        return {
+            'OPTIONS': {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "PARSER_CLASS": "redis.connection.HiredisParser",
+            }
+        }
 
-# is_test_env = os.getenv('ENV') == 'test'
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if
-#             is_test_env else 'django_redis.cache.RedisCache',
-#         'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
-#         **cache_opts(is_test_env),
-#     },
-# }
+is_test_env = os.getenv('ENV') == 'test'
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if
+            is_test_env else 'django_redis.cache.RedisCache',
+        'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
+        # **cache_opts(is_test_env),
+    },
+}
 
-# # if not is_test_env:
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": REDIS_URL,
-#         "OPTIONS": {
-#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#         }
-#     }
-# }
-
-# CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
+CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 
 # Simplified static file serving.
 # https://warehouse.python.org/project/whitenoise/

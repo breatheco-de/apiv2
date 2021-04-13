@@ -49,6 +49,8 @@ class EventSmallSerializer(serpy.Serializer):
     lang = serpy.Field()
     url = serpy.Field()
     banner = serpy.Field()
+    description = serpy.Field()
+    capacity = serpy.Field()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
     status = serpy.Field()
@@ -85,7 +87,6 @@ class EventSerializer(serializers.ModelSerializer):
         exclude = ()
 
     def create(self, validated_data):
-
         # hard-code the organizer to the academy organizer
         try:
             validated_data['organizer'] = validated_data['academy'].organizer
@@ -103,5 +104,3 @@ class EventSerializer(serializers.ModelSerializer):
             pass
 
         return super().update(instance, validated_data)
-
-        
