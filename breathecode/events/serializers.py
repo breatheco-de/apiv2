@@ -78,7 +78,7 @@ class EventCheckinSerializer(serpy.Serializer):
     id = serpy.Field()
     email = serpy.Field()
     status = serpy.Field()
-    attendee = UserSerializer()
+    attendee = UserSerializer(required=False)
     event = EventTinySerializer()
 
 class EventSerializer(serializers.ModelSerializer):
@@ -87,7 +87,6 @@ class EventSerializer(serializers.ModelSerializer):
         exclude = ()
 
     def create(self, validated_data):
-
         # hard-code the organizer to the academy organizer
         try:
             validated_data['organizer'] = validated_data['academy'].organizer
@@ -105,5 +104,3 @@ class EventSerializer(serializers.ModelSerializer):
             pass
 
         return super().update(instance, validated_data)
-
-        

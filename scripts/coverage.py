@@ -3,6 +3,7 @@
 import os
 import sys
 import shutil
+import webbrowser
 from pathlib import Path
 from utils.environment import test_environment
 
@@ -40,6 +41,8 @@ if __name__ == '__main__':
         shutil.rmtree(htmlcov_path)
 
     exit_code = os.system(f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report html')
+
+    webbrowser.open('file://' + os.path.realpath(os.path.join(os.getcwd(), 'htmlcov', 'index.html')))
 
     # python don't return 256
     if exit_code:

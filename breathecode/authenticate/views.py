@@ -142,9 +142,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def delete(self, request, academy_id=None, user_id=None):
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'email', 'first_name', 'last_name', 'address',
-                         'phone', 'status'],
-            many_relationships=['user', 'academy', 'role']
+            many_fields=['id']
         )
 
         if lookups and user_id:
@@ -247,9 +245,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def delete(self, request, academy_id=None, user_id=None):
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'email', 'first_name', 'last_name', 'address',
-                         'phone', 'status'],
-            many_relationships=['user', 'academy', 'role']
+            many_fields=['id']
         )
 
         if lookups and user_id:
@@ -974,7 +970,7 @@ def render_invite(request, token, member_id=None):
         user = User.objects.filter(email=invite.email).first()
         if user is None:
             user = User(email=invite.email, first_name=first_name,
-                        last_name=last_name)
+                        last_name=last_name, username=invite.email)
             user.save()
             user.set_password(password1)
             user.save()

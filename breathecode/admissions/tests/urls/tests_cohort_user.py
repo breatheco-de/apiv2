@@ -753,7 +753,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_cohort_id_user_delete_in_bulk_with_one(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        many_fields = ['id', 'role', 'educational_status', 'finantial_status']
+        many_fields = ['id']
 
         base = self.generate_models(authenticate=True, profile_academy=True,
             capability='crud_cohort', role='potato')
@@ -786,7 +786,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_cohort_id_user_delete_in_bulk_with_two(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        many_fields = ['id', 'role', 'educational_status', 'finantial_status']
+        many_fields = ['id']
 
         base = self.generate_models(authenticate=True, profile_academy=True,
             capability='crud_cohort', role='potato')
@@ -815,58 +815,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
             url = (reverse_lazy('admissions:cohort_user') + f'?{field}=' +
                 str(getattr(model1['cohort_user'], field)) + ',' +
                 str(getattr(model2['cohort_user'], field)))
-            response = self.client.delete(url)
-
-            if response.status_code != 204:
-                print(response.json())
-
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_cohort_user_dict(), [])
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_delete_in_bulk_with_one_relationships(self):
-        """Test /cohort/:id/user without auth"""
-        self.headers(academy=1)
-        many_fields = ['user', 'cohort']
-
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_cohort', role='potato')
-
-        del base['user']
-        del base['cohort']
-
-        for field in many_fields:
-            model = self.generate_models(cohort_user=True, models=base)
-            url = reverse_lazy('admissions:cohort_user') + f'?{field}=' + str(model[field].id)
-            response = self.client.delete(url)
-
-            if response.status_code != 204:
-                print(response.json())
-
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_cohort_user_dict(), [])
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_delete_in_bulk_with_two_relationships(self):
-        """Test /cohort/:id/user without auth"""
-        self.headers(academy=1)
-        many_fields = ['user', 'cohort']
-
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_cohort', role='potato')
-
-        del base['user']
-        del base['cohort']
-
-        for field in many_fields:
-            model1 = self.generate_models(cohort_user=True, models=base)
-            model2 = self.generate_models(cohort_user=True, models=base)
-            url = (reverse_lazy('admissions:cohort_user') + f'?{field}=' +
-                str(model1[field].id) + ',' + str(model2[field].id))
             response = self.client.delete(url)
 
             if response.status_code != 204:

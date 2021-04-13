@@ -59,6 +59,8 @@ INSTALLED_APPS = [
     'breathecode.freelance',
     'breathecode.certificate',
     'breathecode.monitoring',
+    'breathecode.media',
+    'breathecode.registry',
 ]
 
 REST_FRAMEWORK = {
@@ -276,41 +278,30 @@ CORS_ALLOW_HEADERS = [
 
 REDIS_URL = os.getenv('REDIS_URL', '')
 
-# def cache_opts(is_test_env):
-#     if is_test_env:
-#         return {
-#             'OPTIONS': {}
-#         }
-#     else:
-#         return {
-#             'OPTIONS': {
-#                 "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#                 "PARSER_CLASS": "redis.connection.HiredisParser",
-#             }
-#         }
+def cache_opts(is_test_env):
+    if is_test_env:
+        return {
+            'OPTIONS': {}
+        }
+    else:
+        return {
+            'OPTIONS': {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+                "PARSER_CLASS": "redis.connection.HiredisParser",
+            }
+        }
 
-# is_test_env = os.getenv('ENV') == 'test'
-# CACHES = {
-#     'default': {
-#         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if
-#             is_test_env else 'django_redis.cache.RedisCache',
-#         'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
-#         **cache_opts(is_test_env),
-#     },
-# }
+is_test_env = os.getenv('ENV') == 'test'
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if
+            is_test_env else 'django_redis.cache.RedisCache',
+        'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
+        # **cache_opts(is_test_env),
+    },
+}
 
-# # if not is_test_env:
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": REDIS_URL,
-#         "OPTIONS": {
-#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#         }
-#     }
-# }
-
-# CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
+CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 
 # Simplified static file serving.
 # https://warehouse.python.org/project/whitenoise/

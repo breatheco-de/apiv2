@@ -15,12 +15,14 @@ from .assessment_models_mixin import AssessmentModelsMixin
 from .freelance_models_mixin import FreelanceModelsMixin
 from .marketing_models_mixin import MarketingModelsMixin
 from .monitoring_models_mixin import MonitoringModelsMixin
+from .media_models_mixin import MediaModelsMixin
+
 
 class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin,
         AdmissionsModelsMixin, AuthenticateMixin, CertificateModelsMixin,
         FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,
         AssessmentModelsMixin, FreelanceModelsMixin, MarketingModelsMixin,
-        MonitoringModelsMixin):
+        MonitoringModelsMixin, MediaModelsMixin):
 
     def __detect_invalid_arguments__(self, models={}, **kwargs):
         """check if one argument is invalid to prevent errors"""
@@ -74,6 +76,7 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin,
             self.generate_credentials,
             self.generate_assignments_models,
             self.generate_admissions_models,
+            self.generate_media_models,
             self.generate_marketing_models,
             self.generate_events_models,
             # self.generate_assessment_models,

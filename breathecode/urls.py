@@ -44,11 +44,13 @@ urlpatterns = [
     path('v1/assignment/', include('breathecode.assignments.urls', namespace='assignments')),
     path('v1/freelance/', include('breathecode.freelance.urls', namespace='freelance')),
     path('v1/events/', include('breathecode.events.urls', namespace='events')),
+    path('v1/registry/', include('breathecode.registry.urls', namespace='registry')),
     path('v1/activity/', include('breathecode.activity.urls', namespace='activity')),
     path('v1/feedback/', include('breathecode.feedback.urls', namespace='feedback')),
     path('v1/messaging/', include('breathecode.notify.urls', namespace='notify')),
     path('v1/certificate/', include('breathecode.certificate.urls', namespace='certificate')),
-    
+    path('v1/media/', include('breathecode.media.urls', namespace='media')),
+
     path('v1/marketing/', include('breathecode.marketing.urls', namespace='marketing')),
     path('s/', include('breathecode.marketing.urls_shortner', namespace='shortner')),
 ]
