@@ -36,7 +36,7 @@ class GetAssetView(APIView):
         if asset_slug is not None:
             asset = Asset.objects.filter(slug=asset_slug).first()
             if asset is None:
-                raise APIException("Asset not found", code=status.HTTP_404_NOT_FOUND)
+                raise ValidationException("Asset not found", status.HTTP_404_NOT_FOUND)
 
             serializer = AssetBigSerializer(asset)
             return Response(serializer.data)
