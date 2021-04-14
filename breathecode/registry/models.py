@@ -90,3 +90,12 @@ class Asset(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+
+class AssetAlias(models.Model):
+    slug = models.SlugField(max_length=200, primary_key=True)
+    asset = models.ForeignKey(Asset, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    def __str__(self):
+        return self.slug

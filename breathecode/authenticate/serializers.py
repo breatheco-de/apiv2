@@ -242,15 +242,15 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
         if "user" not in validated_data:
             validated_data.pop('invite')
-            email = validated_data["email"]
+            email = validated_data["email"].lower()
             invite = UserInvite.objects.filter(
-                email=validated_data['email'], author=self.context.get('request').user).first()
+                email=email, author=self.context.get('request').user).first()
             if invite is not None:
                 raise ValidationException(
                     "You already invited this user, check for previous invites and resend")
 
             invite = UserInvite(
-                email=validated_data['email'],
+                email=email,
                 first_name=validated_data['first_name'],
                 last_name=validated_data['last_name'],
                 academy=academy,
@@ -408,6 +408,7 @@ class AuthSerializer(serializers.Serializer):
         password = attrs.get('password')
 
         if email and password:
+            email = email.lower()
             user = User.objects.filter(
                 Q(email=email) | Q(username=email)).first()
             if not user:

@@ -251,7 +251,10 @@ class AcademyICalEventView(APIView):
             if item.title:
                 event.add('summary', item.title)
 
-            event.add('uid', item.id)
+            if item.description:
+                event.add('description', item.description)
+
+            event.add('uid', f'breathecode_event_{item.id}')
             event.add('dtstart', item.starting_at)
             event.add('dtend', item.ending_at)
             event.add('dtstamp', item.created_at)
