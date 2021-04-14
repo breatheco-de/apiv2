@@ -83,6 +83,10 @@ class GetSmallCertificateSerializer(serpy.Serializer):
     duration_in_days = serpy.Field()
 
 
+class GetTinnyCertificateSerializer(serpy.Serializer):
+    duration_in_hours = serpy.Field()
+
+
 class GithubSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -105,6 +109,12 @@ class SyllabusSmallSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     version = serpy.Field()
     certificate = GetSmallCertificateSerializer(required=False)
+
+
+class SyllabusCertificateSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    certificate = GetTinnyCertificateSerializer(required=False)
 
 
 class GetCohortSerializer(serpy.Serializer):
