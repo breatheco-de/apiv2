@@ -10,7 +10,10 @@ from django.db.models import Q
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, Sum, F, Func, Value, CharField
-from breathecode.utils import APIException, localize_query, capable_of, ValidationException, GenerateLookupsMixin
+from breathecode.utils import (
+    APIException, localize_query, capable_of, ValidationException,
+    GenerateLookupsMixin, HeaderLimitOffsetPagination
+)
 from .serializers import (
     PostFormEntrySerializer, FormEntrySerializer, FormEntrySmallSerializer, TagSmallSerializer,
     AutomationSmallSerializer
@@ -227,7 +230,7 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class AcademyLeadView(APIView, GenerateLookupsMixin):
+class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
@@ -262,23 +265,20 @@ class AcademyLeadView(APIView, GenerateLookupsMixin):
 
         items = items.filter(**lookup).order_by('-created_at')
 
-        serializer = FormEntrySmallSerializer(items, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        page = self.paginate_queryset(items, request)
+        serializer = FormEntrySmallSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
     @capable_of('crud_lead')
     def delete(self, request, academy_id=None):
         # TODO: here i don't add one single delete, because i don't know if it is required
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'fb_leadgen_id', 'fb_page_id', 'fb_form_id',
-                'fb_adgroup_id', 'fb_ad_id', 'first_name', 'last_name', 'email',
-                'phone', 'course', 'client_comments', 'location', 'language',
-                'utm_url', 'utm_medium', 'utm_campaign', 'utm_source',
-                'referral_key', 'gclid', 'tags', 'automations', 'street_address',
-                'country', 'city', 'latitude', 'longitude', 'state', 'zip_code',
-                'browser_lang', 'storage_status', 'lead_type', 'deal_status',
-                'sentiment'],
-            many_relationships=['contact', 'academy', 'ac_academy', 'automation_objects']
+            many_fields=['id']
         )
         # automation_objects
 

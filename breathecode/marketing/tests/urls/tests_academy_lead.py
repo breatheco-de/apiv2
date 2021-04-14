@@ -201,14 +201,7 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_academy_lead_in_bulk_with_one(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        many_fields = ['id', 'fb_leadgen_id', 'fb_page_id', 'fb_form_id',
-            'fb_adgroup_id', 'fb_ad_id', 'first_name', 'last_name', 'email',
-            'phone', 'course', 'client_comments', 'location', 'language',
-            'utm_url', 'utm_medium', 'utm_campaign', 'utm_source',
-            'referral_key', 'gclid', 'tags', 'automations', 'street_address',
-            'country', 'city', 'latitude', 'longitude', 'state', 'zip_code',
-            'browser_lang', 'storage_status', 'lead_type', 'deal_status',
-            'sentiment']
+        many_fields = ['id']
 
         base = self.generate_models(authenticate=True, profile_academy=True,
             capability='crud_lead', role='potato', academy=True,
@@ -235,14 +228,7 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_academy_lead_in_bulk_with_two(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        many_fields = ['id', 'fb_leadgen_id', 'fb_page_id', 'fb_form_id',
-            'fb_adgroup_id', 'fb_ad_id', 'first_name', 'last_name', 'email',
-            'phone', 'course', 'client_comments', 'location', 'language',
-            'utm_url', 'utm_medium', 'utm_campaign', 'utm_source',
-            'referral_key', 'gclid', 'tags', 'automations', 'street_address',
-            'country', 'city', 'latitude', 'longitude', 'state', 'zip_code',
-            'browser_lang', 'storage_status', 'lead_type', 'deal_status',
-            'sentiment']
+        many_fields = ['id']
 
         base = self.generate_models(authenticate=True, profile_academy=True,
             capability='crud_lead', role='potato', academy=True,
@@ -268,62 +254,172 @@ class CohortUserTestSuite(MarketingTestCase):
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_form_entry_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead_in_bulk_with_one_relationships(self):
-        """Test /cohort/:id/user without auth"""
-        self.headers(academy=1)
-        many_fields = ['contact', 'academy', 'ac_academy', 'automation_objects']
-
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_lead', role='potato', academy=True,
-            active_campaign_academy=True)
-
-        for field in many_fields:
-            model = self.generate_models(form_entry=True, contact=True,
-                automation=True, models=base)
-            model['ac_academy'] = model['active_campaign_academy']
-            model['automation_objects'] = model['automation']
-
-            url = reverse_lazy('marketing:academy_lead') + f'?{field}=' + str(model[field].id)
-            response = self.client.delete(url)
-
-            if response.status_code != 204:
-                print(response.json())
-
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_form_entry_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead_in_bulk_with_two_relationships(self):
-        """Test /cohort/:id/user without auth"""
+    def test_academy_cohort_with_ten_datas_with_location_with_comma_just_get_100(self):
+        """Test /cohort without auth"""
         self.headers(academy=1)
-        many_fields = ['contact', 'academy', 'ac_academy', 'automation_objects']
-
         base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_lead', role='potato', academy=True,
-            active_campaign_academy=True)
+            capability='read_lead', role='potato')
 
-        for field in many_fields:
-            model1 = self.generate_models(form_entry=True, contact=True,
-                automation=True, models=base)
-            model1['ac_academy'] = model1['active_campaign_academy']
-            model1['automation_objects'] = model1['automation']
+        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 105)]
+        ordened_models = sorted(models, key=lambda x: x['form_entry'].created_at,
+            reverse=True)
 
-            model2 = self.generate_models(form_entry=True, contact=True,
-                automation=True, models=base)
-            model2['ac_academy'] = model2['active_campaign_academy']
-            model2['automation_objects'] = model2['automation']
+        url = reverse_lazy('marketing:academy_lead')
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'country': model['form_entry'].country,
+            'course': model['form_entry'].course,
+            'email': model['form_entry'].email,
+            'first_name': model['form_entry'].first_name,
+            'id': model['form_entry'].id,
+            'language': model['form_entry'].language,
+            'last_name': model['form_entry'].last_name,
+            'lead_type': model['form_entry'].lead_type,
+            'location': model['form_entry'].location,
+            'storage_status': model['form_entry'].storage_status,
+            'tags': model['form_entry'].tags,
+            'utm_campaign': model['form_entry'].utm_campaign,
+            'utm_medium': model['form_entry'].utm_medium,
+            'utm_source': model['form_entry'].utm_source,
+            'utm_url': model['form_entry'].utm_url,
+            'created_at': self.datetime_to_iso(model['form_entry'].created_at),
+        } for model in ordened_models][:100]
 
-            url = (reverse_lazy('marketing:academy_lead') + f'?{field}=' +
-                str(model1[field].id) + ',' + str(model2[field].id))
-            response = self.client.delete(url)
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
 
-            if response.status_code != 204:
-                print(response.json())
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_first_five(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_lead', role='potato')
 
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_form_entry_dict(), [])
+        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
+        ordened_models = sorted(models, key=lambda x: x['form_entry'].created_at,
+            reverse=True)
+
+        url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=0'
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'count': 10,
+            'first': None,
+            'next': 'http://testserver/v1/marketing/academy/lead?limit=5&'
+                f'offset=5',
+            'previous': None,
+            'last': 'http://testserver/v1/marketing/academy/lead?limit=5&'
+                f'offset=5',
+            'results': [{
+                'country': model['form_entry'].country,
+                'course': model['form_entry'].course,
+                'email': model['form_entry'].email,
+                'first_name': model['form_entry'].first_name,
+                'id': model['form_entry'].id,
+                'language': model['form_entry'].language,
+                'last_name': model['form_entry'].last_name,
+                'lead_type': model['form_entry'].lead_type,
+                'location': model['form_entry'].location,
+                'storage_status': model['form_entry'].storage_status,
+                'tags': model['form_entry'].tags,
+                'utm_campaign': model['form_entry'].utm_campaign,
+                'utm_medium': model['form_entry'].utm_medium,
+                'utm_source': model['form_entry'].utm_source,
+                'utm_url': model['form_entry'].utm_url,
+                'created_at': self.datetime_to_iso(model['form_entry'].created_at),
+            } for model in ordened_models][:5],
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_last_five(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_lead', role='potato')
+
+        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
+        ordened_models = sorted(models, key=lambda x: x['form_entry'].created_at,
+            reverse=True)
+
+        url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=5'
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'count': 10,
+            'first': 'http://testserver/v1/marketing/academy/lead?limit=5',
+            'next': None,
+            'previous': 'http://testserver/v1/marketing/academy/lead?limit=5',
+            'last': None,
+            'results': [{
+                'country': model['form_entry'].country,
+                'course': model['form_entry'].course,
+                'email': model['form_entry'].email,
+                'first_name': model['form_entry'].first_name,
+                'id': model['form_entry'].id,
+                'language': model['form_entry'].language,
+                'last_name': model['form_entry'].last_name,
+                'lead_type': model['form_entry'].lead_type,
+                'location': model['form_entry'].location,
+                'storage_status': model['form_entry'].storage_status,
+                'tags': model['form_entry'].tags,
+                'utm_campaign': model['form_entry'].utm_campaign,
+                'utm_medium': model['form_entry'].utm_medium,
+                'utm_source': model['form_entry'].utm_source,
+                'utm_url': model['form_entry'].utm_url,
+                'created_at': self.datetime_to_iso(model['form_entry'].created_at),
+            } for model in ordened_models][5:],
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_after_last_five(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_lead', role='potato')
+
+        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
+
+        url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=10'
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'count': 10,
+            'first': 'http://testserver/v1/marketing/academy/lead?limit=5',
+            'next': None,
+            'previous': 'http://testserver/v1/marketing/academy/lead?limit=5&'
+                f'offset=5',
+            'last': None,
+            'results': [],
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])

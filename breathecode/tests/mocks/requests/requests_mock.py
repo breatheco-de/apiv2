@@ -11,7 +11,7 @@ def request_mock(endpoints=[]):
 
         if match:
             (status, data) = match[0]
-            return ResponseMock(data=data, status_code=status)
+            return ResponseMock(data=data, status_code=status, url=url)
 
         return ResponseMock(data='not fount', status_code=404)
 

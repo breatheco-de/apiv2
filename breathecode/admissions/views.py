@@ -1,33 +1,38 @@
+from breathecode.admissions.caches import CohortCache
 import logging, re, pytz
 from django.db.models import Q
+from django.http import HttpResponse
 from django.utils import timezone
 from django.shortcuts import render
 from django.contrib.auth.models import AnonymousUser
 from breathecode.utils import HeaderLimitOffsetPagination
 from rest_framework.views import APIView
 from django.db.models import Q
-from rest_framework import serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.parsers import JSONParser
 from django.contrib.auth.models import User
 from .serializers import (
-    AcademySerializer, CohortSerializer, CertificateSerializer,
-    GetCohortSerializer, SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer, UserSerializer, CohortUserSerializer,
-    GETCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
-    CohortUserPOSTSerializer, UserDJangoRestSerializer, UserMeSerializer,
-    GetCertificateSerializer, SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer
+    AcademySerializer, CohortSerializer, GetCohortSerializer,
+    SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer,
+    CohortUserSerializer, GETCohortUserSerializer, CohortUserPUTSerializer,
+    CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
+    GetCertificateSerializer, SyllabusGetSerializer, SyllabusSerializer,
+    SyllabusSmallSerializer
 )
-from .models import Academy, AcademyCertificate, City, CohortUser, Certificate, Cohort, Country, STUDENT, DELETED, Syllabus
+from .models import (
+    Academy, AcademyCertificate, CohortUser, Certificate, Cohort, Country,
+    STUDENT, DELETED, Syllabus
+)
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
-from breathecode.utils import Cache, localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
-from django.http import QueryDict
-from django.db.utils import IntegrityError
-from rest_framework.exceptions import NotFound, ParseError, PermissionDenied, ValidationError
-from breathecode.assignments.models import Task
-from rest_framework.pagination import PageNumberPagination
+from breathecode.utils import (
+    Cache, localize_query, capable_of, ValidationException,
+    HeaderLimitOffsetPagination, GenerateLookupsMixin
+)
+from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
+from breathecode.events.models import Event
+from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 
 logger = logging.getLogger(__name__)
 
@@ -198,8 +203,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
     def delete(self, request, cohort_id=None, user_id=None):
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'role', 'educational_status', 'finantial_status'],
-            many_relationships=['user', 'cohort']
+            many_fields=['id']
         )
 
         if lookups and (user_id or cohort_id):
@@ -227,6 +231,75 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         cu.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyICalEventView(APIView):
+    # permission_classes = [AllowAny]
+
+    @capable_of('read_event')
+    def get(self, request, academy_id=None):
+        # academy_id = 1
+        items = Event.objects.filter(academy__id=academy_id, status='ACTIVE')
+
+        calendar = iCalendar()
+        calendar.add('prodid', '-//4Geeks Academy//4Geeks events//') # //EN')
+        calendar.add('version', '2.0')
+
+        for item in items:
+            event = iEvent()
+
+            if item.title:
+                event.add('summary', item.title)
+
+            if item.description:
+                event.add('description', item.description)
+
+            event.add('uid', f'breathecode_event_{item.id}')
+            event.add('dtstart', item.starting_at)
+            event.add('dtend', item.ending_at)
+            event.add('dtstamp', item.created_at)
+
+            if item.author and item.author.email:
+                organizer = vCalAddress(f'MAILTO:{item.author.email}')
+
+                if item.author.first_name and item.author.last_name:
+                    organizer.params['cn'] = vText(f'{item.author.first_name} '
+                        f'{item.author.last_name}')
+                elif item.author.first_name:
+                    organizer.params['cn'] = vText(item.author.first_name)
+                elif item.author.last_name:
+                    organizer.params['cn'] = vText(item.author.last_name)
+
+                organizer.params['role'] = vText('OWNER')
+                event['organizer'] = organizer
+
+            if item.venue and (item.venue.country or item.venue.state or
+                    item.venue.city or item.venue.street_address):
+                value = ''
+
+                if item.venue.country:
+                    value = f'{value}{item.venue.country}, '
+
+                if item.venue.state:
+                    value = f'{value}{item.venue.state}, '
+
+                if item.venue.city:
+                    value = f'{value}{item.venue.city}, '
+
+                if item.venue.street_address:
+                    value = f'{value}{item.venue.street_address}'
+
+                value = re.sub(', $', '', value)
+                event['location'] = vText(value)
+
+            calendar.add_component(event)
+
+        calendar_text = calendar.to_ical()
+
+        response = HttpResponse(calendar_text, content_type='text/calendar')
+        response['Content-Disposition'] = 'attachment; filename="calendar.ics"'
+        return response
+
 
 class AcademyCohortUserView(APIView, GenerateLookupsMixin):
     """
@@ -328,8 +401,7 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
     def delete(self, request, cohort_id=None, user_id=None, academy_id=None):
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'role', 'educational_status', 'finantial_status'],
-            many_relationships=['user', 'cohort']
+            many_fields=['id']
         )
 
         if lookups and (user_id or cohort_id):
@@ -361,12 +433,26 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
     List all snippets, or create a new snippet.
     """
     permission_classes = [IsAuthenticated]
-
-    def cache(self):
-        return Cache('academy_cohort')
+    cache = CohortCache()
 
     @capable_of('read_cohort')
     def get(self, request, cohort_id=None, academy_id=None):
+        upcoming = request.GET.get('upcoming', None)
+        academy = request.GET.get('academy', None)
+        location = request.GET.get('location', None)
+        cache_kwargs = {
+            'resource': cohort_id,
+            'academy_id': academy_id,
+            'upcoming': upcoming,
+            'academy': academy,
+            'location': location,
+            **self.pagination_params(request),
+        }
+
+        cache = self.cache.get(**cache_kwargs)
+        if cache:
+            return Response(cache, status=status.HTTP_200_OK)
+
         if cohort_id is not None:
             item = None
             if str.isnumeric(cohort_id):
@@ -381,16 +467,14 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         items = Cohort.objects.filter(academy__id=academy_id)
-        upcoming = request.GET.get('upcoming', None)
+
         if upcoming == 'true':
             now = timezone.now()
             items = items.filter(kickoff_date__gte=now)
 
-        academy = request.GET.get('academy', None)
         if academy is not None:
             items = items.filter(academy__slug__in=academy.split(","))
 
-        location = request.GET.get('location', None)
         if location is not None:
             items = items.filter(academy__slug__in=location.split(","))
 
@@ -398,8 +482,13 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         serializer = GetCohortSerializer(page, many=True)
 
         if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
+            return self.get_paginated_response(
+                serializer.data,
+                cache=self.cache,
+                cache_kwargs=cache_kwargs
+            )
         else:
+            self.cache.set(serializer.data, **cache_kwargs)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_cohort')
@@ -428,6 +517,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         serializer = CohortSerializer(data=data, context={ "request": request, "academy": academy })
         if serializer.is_valid():
+            self.cache.clear()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -445,6 +535,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         serializer = CohortPUTSerializer(cohort, data=request.data, context={ "request": request, "cohort_id": cohort_id })
         if serializer.is_valid():
+            self.cache.clear()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -453,9 +544,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
     def delete(self, request, cohort_id=None, academy_id=None):
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'slug', 'name', 'kickoff_date', 'ending_date',
-                'current_day', 'stage', 'timezone', 'language'],
-            many_relationships=['academy', 'syllabus']
+            many_fields=['id']
         )
 
         if lookups and cohort_id:
@@ -468,6 +557,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             for item in items:
                 item.delete()
 
+            self.cache.clear()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if cohort_id is None:
@@ -481,15 +571,17 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         cohort.stage = DELETED
         cohort.save()
 
-        # STUDENT
+        # Student
         cohort_users = CohortUser.objects.filter(
             role=STUDENT,
             cohort__id=cohort_id
         )
 
+        # TODO: this in one future maybe will be removed
         for cohort_user in cohort_users:
             cohort_user.delete()
 
+        self.cache.clear()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
@@ -519,8 +611,7 @@ class CertificateView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         # TODO: here i don't add one single delete, because i don't know if it is required
         lookups = self.generate_lookups(
             request,
-            many_fields=['id', 'slug', 'name', 'logo', 'duration_in_hours',
-                'duration_in_days', 'week_hours', 'schedule_type', 'description']
+            many_fields=['id']
         )
 
         if not lookups:

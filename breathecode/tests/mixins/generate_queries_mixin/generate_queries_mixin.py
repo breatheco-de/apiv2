@@ -16,13 +16,16 @@ from .assessment_queries_mixin import AssessmentQueriesMixin
 from .freelance_queries_mixin import FreelanceQueriesMixin
 from .marketing_queries_mixin import MarketingQueriesMixin
 from .monitoring_queries_mixin import MonitoringQueriesMixin
+from .media_queries_mixin import MediaQueriesMixin
+
 
 class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin,
         AssessmentQueriesMixin, AssignmentsQueriesMixin,
         AuthenticateQueriesMixin, CertificateQueriesMixin, EventsQueriesMixin,
         FeedbackQueriesMixin, FreelanceQueriesMixin, MarketingQueriesMixin,
-        NotifyQueriesMixin, MonitoringQueriesMixin):
+        NotifyQueriesMixin, MonitoringQueriesMixin, MediaQueriesMixin):
     __project__ = 'breathecode'
+    __generate_queries_was_loaded__ = False
 
     def __get_model__(self, Model, key='id'):
         def get_model(pk):
@@ -65,6 +68,9 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin,
         setattr(self, f'count_{snake_case_name}', self.__count_model__(Model))
 
     def generate_queries(self):
+        if self.__generate_queries_was_loaded__:
+            return
+
         descriptors = [
             self.generate_admissions_queries,
             # self.generate_assessment_queries,
@@ -75,6 +81,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin,
             self.generate_feedback_queries,
             self.generate_freelance_queries,
             self.generate_marketing_queries,
+            self.generate_media_queries,
             self.generate_monitoring_queries,
             self.generate_notify_queries,
         ]
@@ -96,6 +103,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin,
                     print(f'{model} not exist in current path `{path}`')
 
         self.__set_queries__(User)
+        self.__generate_queries_was_loaded__ = True
 
     def setUp(self):
         self.generate_queries()
