@@ -117,7 +117,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event.created_at)}',
-            f'UID:{event.id}',
+            f'UID:breathecode_event_{event.id}',
             self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
@@ -161,7 +161,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event1.starting_at)}',
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event1.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event1.created_at)}',
-            f'UID:{event1.id}',
+            f'UID:breathecode_event_{event1.id}',
             self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
             # event
@@ -169,7 +169,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event2.starting_at)}',
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event2.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event2.created_at)}',
-            f'UID:{event2.id}',
+            f'UID:breathecode_event_{event2.id}',
             self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
@@ -178,3 +178,44 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # # this test is comment because is util to check and generate one example
+    # # ical file
+    # def test_generate_ical(self):
+    #     """Test /academy/cohort without auth"""
+    #     self.headers(academy=1)
+
+    #     from faker import Faker
+    #     from datetime import datetime, timedelta
+
+    #     fake = Faker()
+    #     event_kwargs = {
+    #         'status': 'ACTIVE',
+    #         'title': fake.name(),
+    #         'description': fake.text(),
+    #         'starting_at': datetime.now() + timedelta(days=1, hours=12),
+    #         'ending_at': datetime.now() + timedelta(days=1, hours=15),
+    #     }
+
+    #     base = self.generate_models(authenticate=True, profile_academy=True,
+    #             capability='read_event', role='potato', academy=True)
+
+    #     del base['user']
+
+    #     models = [
+    #         self.generate_models(user=True, event=True, event_kwargs=event_kwargs,
+    #             models=base),
+    #         self.generate_models(user=True, event=True, event_kwargs=event_kwargs,
+    #             models=base),
+    #     ]
+
+    #     url = reverse_lazy('admissions:academy_ical_events')
+    #     response = self.client.get(url)
+
+    #     import os
+
+    #     calendar_path = os.path.join('C:\\', 'Users', 'admin', 'desktop', 'calendar.ics')
+    #     with open(calendar_path, 'w') as file:
+    #         file.write(response.content.decode('utf-8').replace('\r', ''))
+
+    #     assert False
