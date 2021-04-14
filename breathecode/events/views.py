@@ -307,11 +307,9 @@ class AcademyVenueView(APIView):
 
 
 class AcademyICalCohortsView(APIView):
-    # permission_classes = [AllowAny]
+    permission_classes = [AllowAny]
 
-    @capable_of('read_cohort')
-    def get(self, request, academy_id=None):
-        # academy_id = 1
+    def get(self, request, academy_id):
         items = Cohort.objects.filter(academy__id=academy_id).exclude(stage='DELETED')
 
         calendar = iCalendar()
@@ -330,7 +328,7 @@ class AcademyICalCohortsView(APIView):
 
             event.add('dtstamp', item.created_at)
 
-            teacher = CohortUser.objects.filter(role='TEACHER').first()
+            teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.id).first()
 
             if teacher:
                 organizer = vCalAddress(f'MAILTO:{teacher.user.email}')

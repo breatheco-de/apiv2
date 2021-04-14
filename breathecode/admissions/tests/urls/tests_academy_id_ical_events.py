@@ -7,40 +7,10 @@ from ..mixins.new_admissions_test_case import AdmissionsTestCase
 
 class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
-
-    def test_academy_ical_events_without_authorization(self):
-        """Test /academy/cohort without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy('admissions:academy_ical_events')
-
-        response = self.client.get(url)
-        json = response.json()
-        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-
-    def test_acedemy_cohort_without_capability(self):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        url = reverse_lazy('admissions:academy_ical_events')
-        self.generate_models(authenticate=True)
-
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: read_event for academy 1",
-            'status_code': 403
-        })
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
     def test_academy_ical_events_without_events(self):
         """Test /academy/cohort without auth"""
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_event', role='potato')
-        url = reverse_lazy('admissions:academy_ical_events')
+        model = self.generate_models()
+        url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
 
         response = self.client.get(url)
         expected = '\r\n'.join([
@@ -56,10 +26,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
     def test_academy_ical_events_dont_get_status_draft(self):
         """Test /academy/cohort without auth"""
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_event', role='potato', event=True)
-        url = reverse_lazy('admissions:academy_ical_events')
+        model = self.generate_models(event=True)
+        url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
 
         response = self.client.get(url)
         expected = '\r\n'.join([
@@ -75,13 +43,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
     def test_academy_ical_events_dont_get_status_deleted(self):
         """Test /academy/cohort without auth"""
-        self.headers(academy=1)
-
         event_kwargs = {'status': 'DELETED'}
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_event', role='potato', event=True,
-            event_kwargs=event_kwargs)
-        url = reverse_lazy('admissions:academy_ical_events')
+        model = self.generate_models(event=True, event_kwargs=event_kwargs)
+        url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
 
         response = self.client.get(url)
         expected = '\r\n'.join([
@@ -97,13 +61,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
     def test_academy_ical_events_with_one(self):
         """Test /academy/cohort without auth"""
-        self.headers(academy=1)
-
         event_kwargs = {'status': 'ACTIVE'}
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_event', role='potato', event=True,
-            event_kwargs=event_kwargs)
-        url = reverse_lazy('admissions:academy_ical_events')
+        model = self.generate_models(academy=True, user=True, event=True, event_kwargs=event_kwargs)
+        url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
         response = self.client.get(url)
 
         event = model['event']
@@ -129,14 +89,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
     def test_academy_ical_events_with_two(self):
         """Test /academy/cohort without auth"""
-        self.headers(academy=1)
-
         event_kwargs = {'status': 'ACTIVE'}
-
-        base = self.generate_models(authenticate=True, profile_academy=True,
-                capability='read_event', role='potato', academy=True)
-
-        del base['user']
+        base = self.generate_models(academy=True)
 
         models = [
             self.generate_models(user=True, event=True, event_kwargs=event_kwargs,
@@ -145,7 +99,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 models=base),
         ]
 
-        url = reverse_lazy('admissions:academy_ical_events')
+        url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
         response = self.client.get(url)
 
         event1 = models[0]['event']
@@ -183,8 +137,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     # # ical file
     # def test_generate_ical(self):
     #     """Test /academy/cohort without auth"""
-    #     self.headers(academy=1)
-
     #     from faker import Faker
     #     from datetime import datetime, timedelta
 
@@ -200,8 +152,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     #     base = self.generate_models(authenticate=True, profile_academy=True,
     #             capability='read_event', role='potato', academy=True)
 
-    #     del base['user']
-
     #     models = [
     #         self.generate_models(user=True, event=True, event_kwargs=event_kwargs,
     #             models=base),
@@ -209,7 +159,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     #             models=base),
     #     ]
 
-    #     url = reverse_lazy('admissions:academy_ical_events')
+    #     url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
     #     response = self.client.get(url)
 
     #     import os

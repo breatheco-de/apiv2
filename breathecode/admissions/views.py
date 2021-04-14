@@ -234,11 +234,9 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
 
 class AcademyICalEventView(APIView):
-    # permission_classes = [AllowAny]
+    permission_classes = [AllowAny]
 
-    @capable_of('read_event')
-    def get(self, request, academy_id=None):
-        # academy_id = 1
+    def get(self, request, academy_id):
         items = Event.objects.filter(academy__id=academy_id, status='ACTIVE')
 
         calendar = iCalendar()
