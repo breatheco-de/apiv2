@@ -10,22 +10,26 @@ from .models import Academy, Cohort, Certificate, CohortUser, Syllabus
 
 logger = logging.getLogger(__name__)
 
+
 class CountrySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     code = serpy.Field()
     name = serpy.Field()
 
+
 class CitySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     name = serpy.Field()
+
 
 class UserSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     email = serpy.Field()
+
 
 class ProfileSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -34,6 +38,7 @@ class ProfileSerializer(serpy.Serializer):
     avatar_url = serpy.Field()
     show_tutorial = serpy.Field()
 
+
 class AcademySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -41,14 +46,16 @@ class AcademySerializer(serpy.Serializer):
     name = serpy.Field()
     slug = serpy.Field()
 
+
 class ProfileAcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     academy = AcademySerializer()
     role = serpy.MethodField()
 
-    def get_role(self,obj):
+    def get_role(self, obj):
         return obj.role.slug
+
 
 class UserSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -59,6 +66,7 @@ class UserSerializer(serpy.Serializer):
     email = serpy.Field()
     profile = ProfileSerializer(required=False)
 
+
 class GetCertificateSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -67,11 +75,13 @@ class GetCertificateSerializer(serpy.Serializer):
     description = serpy.Field()
     logo = serpy.Field()
 
+
 class GetSmallCertificateSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
     duration_in_days = serpy.Field()
+
 
 class GithubSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -79,6 +89,7 @@ class GithubSmallSerializer(serpy.Serializer):
     avatar_url = serpy.Field()
     name = serpy.Field()
     username = serpy.Field()
+
 
 class GetAcademySerializer(serpy.Serializer):
     id = serpy.Field()
@@ -88,11 +99,13 @@ class GetAcademySerializer(serpy.Serializer):
     city = CitySerializer(required=False)
     logo_url = serpy.Field()
 
+
 class SyllabusSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     version = serpy.Field()
     certificate = GetSmallCertificateSerializer(required=False)
+
 
 class GetCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -107,6 +120,7 @@ class GetCohortSerializer(serpy.Serializer):
     syllabus = SyllabusSmallSerializer(required=False)
     academy = GetAcademySerializer()
 
+
 class GetSmallCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -116,6 +130,7 @@ class GetSmallCohortSerializer(serpy.Serializer):
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     stage = serpy.Field()
+
 
 class GetMeCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -130,6 +145,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     academy = AcademySerializer()
     stage = serpy.Field()
 
+
 class GETCohortUserSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -139,6 +155,7 @@ class GETCohortUserSerializer(serpy.Serializer):
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
     created_at = serpy.Field()
+
 
 class GETCohortUserSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -150,6 +167,8 @@ class GETCohortUserSmallSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 # Create your models here.
+
+
 class UserMeSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -176,6 +195,7 @@ class UserMeSerializer(serpy.Serializer):
     def get_cohorts(self, obj):
         cohorts = CohortUser.objects.filter(user__id=obj.id)
         return GETCohortUserSmallSerializer(cohorts, many=True).data
+
 
 class SyllabusGetSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -218,11 +238,11 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
             if len(strings) != 2:
                 raise ValidationError('Syllabus field marformed('
-                    '`${certificate.slug}.v{syllabus.version}`)')
+                                      '`${certificate.slug}.v{syllabus.version}`)')
 
             [certificate_slug, syllabus_version] = strings
-            syllabus = Syllabus.objects.filter(version=syllabus_version, certificate__slug=
-                certificate_slug).first()
+            syllabus = Syllabus.objects.filter(
+                version=syllabus_version, certificate__slug=certificate_slug).first()
 
             if not syllabus:
                 raise ValidationError('Syllabus doesn\'t exist')
@@ -243,11 +263,12 @@ class CohortSerializer(CohortSerializerMixin):
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus',
-            'ending_date', 'stage', 'language', 'created_at', 'updated_at')
+                  'ending_date', 'stage', 'language', 'created_at', 'updated_at')
 
     def create(self, validated_data):
         del self.context['request']
         return Cohort.objects.create(**validated_data, **self.context)
+
 
 class CohortPUTSerializer(CohortSerializerMixin):
     slug = serializers.SlugField(required=False)
@@ -261,7 +282,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
-            'syllabus')
+                  'syllabus')
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
@@ -278,12 +299,13 @@ class UserDJangoRestSerializer(serializers.ModelSerializer):
         fields = ['id', 'first_name', 'last_name', 'email']
         # fields = ['id', 'user']
 
+
 class CohortUserSerializerMixin(serializers.ModelSerializer):
     index = -1
 
     def count_certificates_by_cohort(self, cohort, user_id):
         return (CohortUser.objects.filter(user_id=user_id, role='STUDENT', cohort__syllabus__certificate=cohort.syllabus.certificate)
-            .exclude(educational_status='POSTPONED').count())
+                .exclude(educational_status='POSTPONED').count())
 
     def validate_just_one(self):
         pass
@@ -312,7 +334,8 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             cohort_id = request_item['cohort']
 
         if id and (not user_id or not cohort_id):
-            ids = CohortUser.objects.filter(id=id).values_list('user_id', 'cohort_id').first()
+            ids = CohortUser.objects.filter(id=id).values_list(
+                'user_id', 'cohort_id').first()
 
             if not ids:
                 raise ValidationException("Invalid id", code=400)
@@ -332,25 +355,30 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         if not cohort:
             raise ValidationException("invalid cohort_id", code=400)
 
-        cohort = localize_query(cohort, request).first() # only from this academy
+        # only from this academy
+        cohort = localize_query(cohort, request).first()
 
         if cohort is None:
             logger.debug(f"Cohort not be found in related academies")
             raise ValidationException('Specified cohort not be found')
 
         if not disable_cohort_user_just_once and CohortUser.objects.filter(user_id=user_id,
-                cohort_id=cohort_id).count():
-            raise ValidationException('That user already exists in this cohort')
+                                                                           cohort_id=cohort_id).count():
+            raise ValidationException(
+                'That user already exists in this cohort')
 
         if (is_post_method and cohort.syllabus and
                 self.count_certificates_by_cohort(cohort, user_id) > 0):
-            raise ValidationException('This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort as POSTPONED before cotinuing')
+            raise ValidationException(
+                'This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort as POSTPONED before cotinuing')
 
         role = request_item.get('role')
         if role == 'TEACHER' and CohortUser.objects.filter(role=role, cohort_id=cohort_id).exclude(user__id__in=[user_id]).count():
-            raise ValidationException('There can only be one main instructor in a cohort')
+            raise ValidationException(
+                'There can only be one main instructor in a cohort')
 
-        cohort_user = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id).first()
+        cohort_user = CohortUser.objects.filter(
+            user__id=user_id, cohort__id=cohort_id).first()
 
         if not is_post_method and not cohort_user:
             raise ValidationException('Cannot find CohortUser')
@@ -360,15 +388,16 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 
         is_graduated = request_item.get('educational_status') == 'GRADUATED'
         is_late = (True if cohort_user and cohort_user.finantial_status == 'LATE' else request_item
-            .get('finantial_status') == 'LATE')
+                   .get('finantial_status') == 'LATE')
         if is_graduated and is_late:
             raise ValidationException(('Cannot be marked as `GRADUATED` if its financial '
-                'status is `LATE`'))
+                                       'status is `LATE`'))
 
         has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
-            task_type='PROJECT').count()
+                                        task_type='PROJECT').count()
         if is_graduated and has_tasks:
-            raise ValidationException('User has tasks with status pending the educational status cannot be GRADUATED')
+            raise ValidationException(
+                'User has tasks with status pending the educational status cannot be GRADUATED')
 
         data = {}
 
@@ -380,6 +409,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         user = User.objects.filter(id=user_id).first()
         return {**data, 'id': id, 'cohort': cohort, 'user': user}
 
+
 class CohortUserListSerializer(serializers.ListSerializer):
     def create(self, validated_data):
         books = [CohortUser(**item) for item in validated_data]
@@ -387,7 +417,8 @@ class CohortUserListSerializer(serializers.ListSerializer):
 
         for key in range(0, len(items)):
             item = items[key]
-            items[key].id = CohortUser.objects.filter(cohort__id=item.cohort_id, user__id=item.user_id).values_list('id', flat=True).first()
+            items[key].id = CohortUser.objects.filter(
+                cohort__id=item.cohort_id, user__id=item.user_id).values_list('id', flat=True).first()
 
         return items
 
@@ -412,6 +443,7 @@ class CohortUserListSerializer(serializers.ListSerializer):
 
         return ret
 
+
 class CohortUserSerializer(CohortUserSerializerMixin):
     cohort = CohortSerializer(many=False, read_only=True)
     user = UserDJangoRestSerializer(many=False, read_only=True)
@@ -421,13 +453,13 @@ class CohortUserSerializer(CohortUserSerializerMixin):
         fields = ['id', 'user', 'cohort', 'role']
         list_serializer_class = CohortUserListSerializer
 
-
     # def create(self, validated_data):
     #     # relationships, thank you amazing and incredible serializer!
     #     cohort = self.context.get('cohort')
     #     user = self.context.get('user')
 
     #     return CohortUser.objects.create(**validated_data, cohort_id=cohort, user_id=user)
+
 
 class CohortUserPOSTSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -436,16 +468,19 @@ class CohortUserPOSTSerializer(serpy.Serializer):
     cohort = serpy.Field()
     user = serpy.Field()
 
+
 class CohortUserPUTSerializer(CohortUserSerializerMixin):
     class Meta:
         model = CohortUser
         fields = ['id', 'role', 'educational_status', 'finantial_status']
         list_serializer_class = CohortUserListSerializer
 
+
 class CertificateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Certificate
         exclude = ()
+
 
 class SyllabusSerializer(serializers.ModelSerializer):
     class Meta:
@@ -458,7 +493,8 @@ class SyllabusSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
 
-        previous_syllabus = Syllabus.objects.filter(academy_owner=self.context['academy'], certificate=self.context['certificate']).order_by('-version').first()
+        previous_syllabus = Syllabus.objects.filter(
+            academy_owner=self.context['academy'], certificate=self.context['certificate']).order_by('-version').first()
         version = 1
         if previous_syllabus is not None:
             version = previous_syllabus.version + 1
@@ -468,6 +504,7 @@ class SyllabusSerializer(serializers.ModelSerializer):
             "academy_owner": self.context['academy'],
             "version": version
         })
+
 
 class SyllabusUpdateSerializer(serializers.ModelSerializer):
     class Meta:

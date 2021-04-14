@@ -36,7 +36,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
 
         model = self.generate_models(academy=True, monitor_script=True,
-                                     monitor_script_kwargs=monitor_script_kwargs)
+                                     monitor_script_kwargs=monitor_script_kwargs
+                                     )
 
         script = run_script(model.monitor_script)
 
@@ -70,9 +71,12 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
         ending_date = timezone.now() - timedelta(weeks=1)
+        sent_at = timezone.now() - timedelta(weeks=5)
         model = self.generate_models(cohort=True, monitor_script=True,
                                      monitor_script_kwargs=monitor_script_kwargs,
-                                     cohort_kwargs={'ending_date': ending_date})
+                                     cohort_kwargs={
+                                         'ending_date': ending_date},
+                                     survey=True, survey_kwargs={'sent_at': sent_at})
 
         script = run_script(model.monitor_script)
 
@@ -105,9 +109,12 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
         kickoff_date = timezone.now() + timedelta(weeks=1)
+        sent_at = timezone.now() - timedelta(weeks=5)
         model = self.generate_models(cohort=True, monitor_script=True,
                                      monitor_script_kwargs=monitor_script_kwargs,
-                                     cohort_kwargs={'kickoff_date': kickoff_date})
+                                     cohort_kwargs={
+                                         'kickoff_date': kickoff_date},
+                                     survey=True, survey_kwargs={'sent_at': sent_at})
 
         script = run_script(model.monitor_script)
 
