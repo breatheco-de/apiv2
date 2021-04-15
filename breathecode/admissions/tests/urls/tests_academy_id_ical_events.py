@@ -9,14 +9,16 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
     def test_academy_ical_events_without_events(self):
         """Test /academy/cohort without auth"""
-        model = self.generate_models()
         url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
 
         response = self.client.get(url)
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events//',
+            'PRODID:-//4Geeks Academy//4Geeks events',
+            'REFRESH-INTERVAL:PT1M',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:4Geeks - events',
             'END:VCALENDAR',
             '',
         ])
@@ -26,14 +28,18 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
     def test_academy_ical_events_dont_get_status_draft(self):
         """Test /academy/cohort without auth"""
-        model = self.generate_models(event=True)
+        model = self.generate_models(academy=True, event=True)
         url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
-
         response = self.client.get(url)
+
+        academy = model['academy']
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events//',
+            'PRODID:-//4Geeks Academy//4Geeks events',
+            'REFRESH-INTERVAL:PT1M',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:{academy.name} - events',
             'END:VCALENDAR',
             '',
         ])
@@ -44,14 +50,18 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_academy_ical_events_dont_get_status_deleted(self):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'DELETED'}
-        model = self.generate_models(event=True, event_kwargs=event_kwargs)
+        model = self.generate_models(academy=True, event=True, event_kwargs=event_kwargs)
         url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
-
         response = self.client.get(url)
+
+        academy = model['academy']
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events//',
+            'PRODID:-//4Geeks Academy//4Geeks events',
+            'REFRESH-INTERVAL:PT1M',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:{academy.name} - events',
             'END:VCALENDAR',
             '',
         ])
@@ -68,10 +78,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         event = model['event']
         user = model['user']
+        academy = model['academy']
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events//',
+            'PRODID:-//4Geeks Academy//4Geeks events',
+            'REFRESH-INTERVAL:PT1M',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:{academy.name} - events',
             # event
             'BEGIN:VEVENT',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
@@ -106,10 +120,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         event2 = models[1]['event']
         user1 = models[0]['user']
         user2 = models[1]['user']
+        academy = models[0]['academy']
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events//',
+            'PRODID:-//4Geeks Academy//4Geeks events',
+            'REFRESH-INTERVAL:PT1M',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:{academy.name} - events',
             # event
             'BEGIN:VEVENT',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event1.starting_at)}',

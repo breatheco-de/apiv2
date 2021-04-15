@@ -17,7 +17,10 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events//',
+            'PRODID:-//4Geeks Academy//4Geeks events',
+            'REFRESH-INTERVAL:PT1M',
+            'X-WR-CALDESC:',
+            'X-WR-CALNAME:4Geeks - cohorts',
             'END:VCALENDAR',
             '',
         ])
@@ -31,12 +34,16 @@ class AcademyCohortTestSuite(EventTestCase):
         model = self.generate_models(academy=True, event=True, cohort=True,
             cohort_kwargs=cohort_kwargs)
         url = reverse_lazy('events:academy_id_ical_cohorts', kwargs={'academy_id': 1})
-
         response = self.client.get(url)
+
+        academy = model['academy']
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events//',
+            'PRODID:-//4Geeks Academy//4Geeks events',
+            'REFRESH-INTERVAL:PT1M',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:{academy.name} - cohorts',
             'END:VCALENDAR',
             '',
         ])
@@ -55,7 +62,10 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events//',
+            'PRODID:-//4Geeks Academy//4Geeks events',
+            'REFRESH-INTERVAL:PT1M',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:{academy.name} - cohorts',
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
@@ -86,7 +96,10 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events//',
+            'PRODID:-//4Geeks Academy//4Geeks events',
+            'REFRESH-INTERVAL:PT1M',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:{academy.name} - cohorts',
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
@@ -123,7 +136,10 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events//',
+            'PRODID:-//4Geeks Academy//4Geeks events',
+            'REFRESH-INTERVAL:PT1M',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:{academy1.name} - cohorts',
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
@@ -172,7 +188,10 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events//',
+            'PRODID:-//4Geeks Academy//4Geeks events',
+            'REFRESH-INTERVAL:PT1M',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:{academy1.name} - cohorts',
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',

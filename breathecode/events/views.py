@@ -314,6 +314,10 @@ class AcademyICalCohortsView(APIView):
         academy_name = Academy.objects.filter(id=academy_id).values_list(
             'name', flat=True).first()
 
+        # generally this occurs just if academy id is invalid
+        if not academy_name:
+            academy_name = '4Geeks'
+
         calendar = iCalendar()
         calendar.add('prodid', '-//4Geeks Academy//4Geeks events') # //EN')
         calendar.add('X-WR-CALNAME', f'{academy_name} - cohorts')
