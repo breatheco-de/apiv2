@@ -238,11 +238,18 @@ class AcademyICalEventView(APIView):
 
     @capable_of('read_event')
     def get(self, request, academy_id=None):
+
+        academy = request.GET.get('academy', None)
+        academy_ids = []
+        if academy is None:
+            raise ValidationException("You need to specify at least one academy (comma separated) in the querystring")
+            academy_ids = academy.split(",")
+
         # academy_id = 1
-        items = Event.objects.filter(academy__id=academy_id, status='ACTIVE')
+        items = Event.objects.filter(academy__id__in=academy_ids, status='ACTIVE')
 
         calendar = iCalendar()
-        calendar.add('prodid', '-//4Geeks Academy//4Geeks events//') # //EN')
+        calendar.add('prodid', '-//Academy//Academy Events//') # //EN')
         calendar.add('version', '2.0')
 
         for item in items:
