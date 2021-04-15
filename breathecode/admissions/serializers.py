@@ -126,7 +126,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     current_day = serpy.Field()
-    syllabus = SyllabusSmallSerializer()
+    syllabus = SyllabusSmallSerializer(required=False)
     academy = AcademySerializer()
     stage = serpy.Field()
 
@@ -282,7 +282,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
     index = -1
 
     def count_certificates_by_cohort(self, cohort, user_id):
-        return (CohortUser.objects.filter(user_id=user_id, cohort__syllabus__certificate=cohort.syllabus.certificate)
+        return (CohortUser.objects.filter(user_id=user_id, role='STUDENT', cohort__syllabus__certificate=cohort.syllabus.certificate)
             .exclude(educational_status='POSTPONED').count())
 
     def validate_just_one(self):
