@@ -238,9 +238,15 @@ class AcademyICalEventView(APIView):
 
     def get(self, request, academy_id):
         items = Event.objects.filter(academy__id=academy_id, status='ACTIVE')
+        academy_name = Academy.objects.filter(id=academy_id).values_list(
+            'name', flat=True).first()
 
         calendar = iCalendar()
-        calendar.add('prodid', '-//4Geeks Academy//4Geeks events//') # //EN')
+        calendar.add('prodid', '-//4Geeks Academy//4Geeks events')
+        calendar.add('X-WR-CALNAME', f'{academy_name} - events')
+        calendar.add('X-WR-CALDESC', '')
+        calendar.add('REFRESH-INTERVAL', 'PT1M')
+
         calendar.add('version', '2.0')
 
         for item in items:

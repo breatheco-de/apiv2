@@ -311,9 +311,15 @@ class AcademyICalCohortsView(APIView):
 
     def get(self, request, academy_id):
         items = Cohort.objects.filter(academy__id=academy_id).exclude(stage='DELETED')
+        academy_name = Academy.objects.filter(id=academy_id).values_list(
+            'name', flat=True).first()
 
         calendar = iCalendar()
-        calendar.add('prodid', '-//4Geeks Academy//4Geeks events//') # //EN')
+        calendar.add('prodid', '-//4Geeks Academy//4Geeks events') # //EN')
+        calendar.add('X-WR-CALNAME', f'{academy_name} - cohorts')
+        calendar.add('X-WR-CALDESC', '')
+        calendar.add('REFRESH-INTERVAL', 'PT1M')
+
         calendar.add('version', '2.0')
 
         for item in items:
