@@ -285,17 +285,17 @@ class AcademyICalEventView(APIView):
                     item.venue.city or item.venue.street_address):
                 value = ''
 
-                if item.venue.country:
-                    value = f'{value}{item.venue.country}, '
-
-                if item.venue.state:
-                    value = f'{value}{item.venue.state}, '
+                if item.venue.street_address:
+                    value = f'{value}{item.venue.street_address}, '
 
                 if item.venue.city:
                     value = f'{value}{item.venue.city}, '
 
-                if item.venue.street_address:
-                    value = f'{value}{item.venue.street_address}'
+                if item.venue.state:
+                    value = f'{value}{item.venue.state}, '
+
+                if item.venue.country:
+                    value = f'{value}{item.venue.country}'
 
                 value = re.sub(', $', '', value)
                 event['location'] = vText(value)
