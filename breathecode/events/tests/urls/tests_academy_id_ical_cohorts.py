@@ -1,6 +1,7 @@
 """
 Test /academy/cohort
 """
+import urllib
 from datetime import datetime
 from django.urls.base import reverse_lazy
 from rest_framework import status
@@ -11,16 +12,18 @@ class AcademyCohortTestSuite(EventTestCase):
 
     def test_academy_ical_cohorts_without_events(self):
         """Test /academy/cohort without auth"""
-        url = reverse_lazy('events:academy_id_ical_cohorts', kwargs={'academy_id': 1})
+        
+        url = reverse_lazy('events:academy_id_ical_cohorts')
+        args ={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
-        response = self.client.get(url)
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Cohorts',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            'X-WR-CALNAME:4Geeks - cohorts',
+            'X-WR-CALNAME:Academy - Cohorts',
             'END:VCALENDAR',
             '',
         ])
@@ -33,17 +36,18 @@ class AcademyCohortTestSuite(EventTestCase):
         cohort_kwargs = {'stage': 'DELETED'}
         model = self.generate_models(academy=True, event=True, cohort=True,
             cohort_kwargs=cohort_kwargs)
-        url = reverse_lazy('events:academy_id_ical_cohorts', kwargs={'academy_id': 1})
-        response = self.client.get(url)
+        url = reverse_lazy('events:academy_id_ical_cohorts')
+        args ={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         academy = model['academy']
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Cohorts',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            f'X-WR-CALNAME:{academy.name} - cohorts',
+            f'X-WR-CALNAME:Academy - Cohorts',
             'END:VCALENDAR',
             '',
         ])
@@ -54,18 +58,19 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_academy_ical_cohorts_with_one(self):
         """Test /academy/cohort without auth"""
         model = self.generate_models(academy=True, cohort=True)
-        url = reverse_lazy('events:academy_id_ical_cohorts', kwargs={'academy_id': 1})
-        response = self.client.get(url)
+        url = reverse_lazy('events:academy_id_ical_cohorts')
+        args ={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         cohort = model['cohort']
         academy = model['academy']
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Cohorts',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            f'X-WR-CALNAME:{academy.name} - cohorts',
+            f'X-WR-CALNAME:Academy - Cohorts',
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
@@ -87,8 +92,9 @@ class AcademyCohortTestSuite(EventTestCase):
         cohort_kwargs = {'ending_date': datetime.now()}
         model = self.generate_models(academy=True, cohort=True, cohort_user=True,
             cohort_kwargs=cohort_kwargs, cohort_user_kwargs=cohort_user_kwargs)
-        url = reverse_lazy('events:academy_id_ical_cohorts', kwargs={'academy_id': 1})
-        response = self.client.get(url)
+        url = reverse_lazy('events:academy_id_ical_cohorts')
+        args ={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         cohort = model['cohort']
         academy = model['academy']
@@ -96,10 +102,10 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Cohorts',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            f'X-WR-CALNAME:{academy.name} - cohorts',
+            f'X-WR-CALNAME:Academy - Cohorts',
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
@@ -126,8 +132,9 @@ class AcademyCohortTestSuite(EventTestCase):
             self.generate_models(user=True, cohort=True, models=base),
         ]
 
-        url = reverse_lazy('events:academy_id_ical_cohorts', kwargs={'academy_id': 1})
-        response = self.client.get(url)
+        url = reverse_lazy('events:academy_id_ical_cohorts')
+        args ={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         cohort1 = models[0]['cohort']
         cohort2 = models[1]['cohort']
@@ -136,10 +143,10 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Cohorts',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            f'X-WR-CALNAME:{academy1.name} - cohorts',
+            f'X-WR-CALNAME:Academy - Cohorts',
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
@@ -175,8 +182,9 @@ class AcademyCohortTestSuite(EventTestCase):
                 cohort_kwargs=cohort_kwargs, cohort_user_kwargs=cohort_user_kwargs),
         ]
 
-        url = reverse_lazy('events:academy_id_ical_cohorts', kwargs={'academy_id': 1})
-        response = self.client.get(url)
+        url = reverse_lazy('events:academy_id_ical_cohorts')
+        args ={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         cohort1 = models[0]['cohort']
         cohort2 = models[1]['cohort']
@@ -188,10 +196,10 @@ class AcademyCohortTestSuite(EventTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Cohorts',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            f'X-WR-CALNAME:{academy1.name} - cohorts',
+            f'X-WR-CALNAME:Academy - Cohorts',
             # event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',

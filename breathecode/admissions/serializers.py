@@ -1,5 +1,6 @@
 import logging
 import serpy
+from django.db.models import Q
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, localize_query
 from rest_framework import serializers
@@ -282,8 +283,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
     index = -1
 
     def count_certificates_by_cohort(self, cohort, user_id):
-        return (CohortUser.objects.filter(user_id=user_id, role='STUDENT', cohort__syllabus__certificate=cohort.syllabus.certificate)
-            .exclude(educational_status='POSTPONED').count())
+        return CohortUser.objects.filter(user_id=user_id, role='STUDENT', cohort__syllabus__certificate=cohort.syllabus.certificate).filter(Q(educational_status='ACTIVE')|Q(educational_status__isnull=True)).count()
 
     def validate_just_one(self):
         pass
@@ -344,7 +344,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 
         if (is_post_method and cohort.syllabus and
                 self.count_certificates_by_cohort(cohort, user_id) > 0):
-            raise ValidationException('This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort as POSTPONED before cotinuing')
+            raise ValidationException('This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort different than ACTIVE before cotinuing')
 
         role = request_item.get('role')
         if role == 'TEACHER' and CohortUser.objects.filter(role=role, cohort_id=cohort_id).exclude(user__id__in=[user_id]).count():

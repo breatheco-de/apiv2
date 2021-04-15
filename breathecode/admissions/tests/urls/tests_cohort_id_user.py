@@ -310,7 +310,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
             'status_code': 400,
             'detail': 'This student is already in another cohort for the same '
                 'certificate, please mark him/her hi educational status on '
-                'this prior cohort as POSTPONED before cotinuing'
+                'this prior cohort different than ACTIVE before cotinuing'
         }
 
         self.assertEqual(json, expected)

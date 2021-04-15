@@ -1,6 +1,7 @@
 """
 Test /academy/cohort
 """
+import urllib
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins.new_admissions_test_case import AdmissionsTestCase
@@ -9,16 +10,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
     def test_academy_ical_events_without_events(self):
         """Test /academy/cohort without auth"""
-        url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
+        url = reverse_lazy('admissions:academy_id_ical_events')
+        args ={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
-        response = self.client.get(url)
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Events',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            f'X-WR-CALNAME:4Geeks - events',
+            f'X-WR-CALNAME:Academy - Events',
             'END:VCALENDAR',
             '',
         ])
@@ -29,17 +31,18 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_academy_ical_events_dont_get_status_draft(self):
         """Test /academy/cohort without auth"""
         model = self.generate_models(academy=True, event=True)
-        url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
-        response = self.client.get(url)
+        url = reverse_lazy('admissions:academy_id_ical_events')
+        args ={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         academy = model['academy']
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Events',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            f'X-WR-CALNAME:{academy.name} - events',
+            f'X-WR-CALNAME:Academy - Events',
             'END:VCALENDAR',
             '',
         ])
@@ -51,17 +54,18 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'DELETED'}
         model = self.generate_models(academy=True, event=True, event_kwargs=event_kwargs)
-        url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
-        response = self.client.get(url)
+        url = reverse_lazy('admissions:academy_id_ical_events')
+        args ={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         academy = model['academy']
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Events',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            f'X-WR-CALNAME:{academy.name} - events',
+            f'X-WR-CALNAME:Academy - Events',
             'END:VCALENDAR',
             '',
         ])
@@ -73,8 +77,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'ACTIVE'}
         model = self.generate_models(academy=True, user=True, event=True, event_kwargs=event_kwargs)
-        url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
-        response = self.client.get(url)
+        url = reverse_lazy('admissions:academy_id_ical_events')
+        args={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         event = model['event']
         user = model['user']
@@ -82,10 +87,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Events',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            f'X-WR-CALNAME:{academy.name} - events',
+            f'X-WR-CALNAME:Academy - Events',
             # event
             'BEGIN:VEVENT',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
@@ -113,8 +118,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         model = self.generate_models(academy=True, user=True, event=True,
             venue=True, event_kwargs=event_kwargs, venue_kwargs=venue_kwargs)
-        url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
-        response = self.client.get(url)
+        url = reverse_lazy('admissions:academy_id_ical_events')
+        args ={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         event = model['event']
         user = model['user']
@@ -122,10 +128,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Events',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            f'X-WR-CALNAME:{academy.name} - events',
+            f'X-WR-CALNAME:Academy - Events',
             # event
             'BEGIN:VEVENT',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
@@ -154,8 +160,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 models=base),
         ]
 
-        url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
-        response = self.client.get(url)
+        url = reverse_lazy('admissions:academy_id_ical_events')
+        args ={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         event1 = models[0]['event']
         event2 = models[1]['event']
@@ -165,10 +172,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Events',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            f'X-WR-CALNAME:{academy.name} - events',
+            f'X-WR-CALNAME:Academy - Events',
             # event
             'BEGIN:VEVENT',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event1.starting_at)}',
@@ -212,8 +219,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 models=base),
         ]
 
-        url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
-        response = self.client.get(url)
+        url = reverse_lazy('admissions:academy_id_ical_events')
+        args ={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         event1 = models[0]['event']
         event2 = models[1]['event']
@@ -223,10 +231,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
-            'PRODID:-//4Geeks Academy//4Geeks events',
+            'PRODID:-//Academy//Academy Events',
             'REFRESH-INTERVAL:PT1M',
             'X-WR-CALDESC:',
-            f'X-WR-CALNAME:{academy.name} - events',
+            f'X-WR-CALNAME:Academy - Events',
             # event
             'BEGIN:VEVENT',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event1.starting_at)}',
@@ -278,7 +286,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     #             models=base),
     #     ]
 
-    #     url = reverse_lazy('admissions:academy_id_ical_events', kwargs={'academy_id': 1})
+    #     url = reverse_lazy('admissions:academy_id_ical_events', args={'academy': "1"})
     #     response = self.client.get(url)
 
     #     import os
