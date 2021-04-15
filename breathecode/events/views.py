@@ -307,22 +307,30 @@ class AcademyVenueView(APIView):
 
 
 class AcademyICalCohortsView(APIView):
-    # permission_classes = [AllowAny]
+    permission_classes = [AllowAny]
 
-    @capable_of('read_cohort')
-    def get(self, request, academy_id=None):
-        # academy_id = 1
+    def get(self, request, academy_id):
         items = Cohort.objects.filter(academy__id=academy_id).exclude(stage='DELETED')
+        academy_name = Academy.objects.filter(id=academy_id).values_list(
+            'name', flat=True).first()
+
+        # generally this occurs just if academy id is invalid
+        if not academy_name:
+            academy_name = '4Geeks'
 
         calendar = iCalendar()
-        calendar.add('prodid', '-//4Geeks Academy//4Geeks events//') # //EN')
+        calendar.add('prodid', '-//4Geeks Academy//4Geeks events') # //EN')
+        calendar.add('X-WR-CALNAME', f'{academy_name} - cohorts')
+        calendar.add('X-WR-CALDESC', '')
+        calendar.add('REFRESH-INTERVAL', 'PT1M')
+
         calendar.add('version', '2.0')
 
         for item in items:
             event = iEvent()
 
             event.add('summary', item.name)
-            event.add('uid', item.id)
+            event.add('uid', f'breathecode_cohort_{item.id}')
             event.add('dtstart', item.kickoff_date)
 
             if item.ending_date:
@@ -330,7 +338,7 @@ class AcademyICalCohortsView(APIView):
 
             event.add('dtstamp', item.created_at)
 
-            teacher = CohortUser.objects.filter(role='TEACHER').first()
+            teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.id).first()
 
             if teacher:
                 organizer = vCalAddress(f'MAILTO:{teacher.user.email}')

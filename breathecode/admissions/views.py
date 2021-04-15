@@ -234,10 +234,9 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
 
 class AcademyICalEventView(APIView):
-    # permission_classes = [AllowAny]
+    permission_classes = [AllowAny]
 
-    @capable_of('read_event')
-    def get(self, request, academy_id=None):
+    def get(self, request):
 
         academy = request.GET.get('academy', None)
         academy_ids = []
@@ -248,8 +247,18 @@ class AcademyICalEventView(APIView):
         # academy_id = 1
         items = Event.objects.filter(academy__id__in=academy_ids, status='ACTIVE')
 
+        academy_name = "Academy"
+        if len(academy_ids) == 1:
+            _a = Academy.objects.filter(id=academy_ids[0]).first()
+            if _a is not None:
+                academy_name = _a.name
+
         calendar = iCalendar()
-        calendar.add('prodid', '-//Academy//Academy Events//') # //EN')
+        calendar.add('prodid', f'-//{academy_name}//{academy_name} Events')
+        calendar.add('X-WR-CALNAME', f'{academy_name} - Events')
+        calendar.add('X-WR-CALDESC', '')
+        calendar.add('REFRESH-INTERVAL', 'PT1M')
+
         calendar.add('version', '2.0')
 
         for item in items:
@@ -258,7 +267,10 @@ class AcademyICalEventView(APIView):
             if item.title:
                 event.add('summary', item.title)
 
-            event.add('uid', item.id)
+            if item.description:
+                event.add('description', item.description)
+
+            event.add('uid', f'breathecode_event_{item.id}')
             event.add('dtstart', item.starting_at)
             event.add('dtend', item.ending_at)
             event.add('dtstamp', item.created_at)
@@ -281,17 +293,17 @@ class AcademyICalEventView(APIView):
                     item.venue.city or item.venue.street_address):
                 value = ''
 
-                if item.venue.country:
-                    value = f'{value}{item.venue.country}, '
-
-                if item.venue.state:
-                    value = f'{value}{item.venue.state}, '
+                if item.venue.street_address:
+                    value = f'{value}{item.venue.street_address}, '
 
                 if item.venue.city:
                     value = f'{value}{item.venue.city}, '
 
-                if item.venue.street_address:
-                    value = f'{value}{item.venue.street_address}'
+                if item.venue.state:
+                    value = f'{value}{item.venue.state}, '
+
+                if item.venue.country:
+                    value = f'{value}{item.venue.country}'
 
                 value = re.sub(', $', '', value)
                 event['location'] = vText(value)
