@@ -22,7 +22,7 @@ urlpatterns = [
     path('academy/cohort/<int:cohort_id>/user/<int:user_id>', AcademyCohortUserView.as_view()),
     path('academy/cohort/<int:cohort_id>/user', AcademyCohortUserView.as_view()),
 
-    path('academy/ical/events', AcademyICalEventView.as_view(), name="academy_ical_events"),
+    path('academy/<int:academy_id>/ical/events', AcademyICalEventView.as_view(), name="academy_id_ical_events"),
     path('academy/', AcademyView.as_view(), name="academy"),
     path('academy/cohort', AcademyCohortView.as_view(), name="academy_cohort"),
     path('user/me', UserMeView.as_view(), name="user_me"),

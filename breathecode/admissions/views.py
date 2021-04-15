@@ -234,15 +234,23 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
 
 class AcademyICalEventView(APIView):
-    # permission_classes = [AllowAny]
+    permission_classes = [AllowAny]
 
-    @capable_of('read_event')
-    def get(self, request, academy_id=None):
-        # academy_id = 1
+    def get(self, request, academy_id):
         items = Event.objects.filter(academy__id=academy_id, status='ACTIVE')
+        academy_name = Academy.objects.filter(id=academy_id).values_list(
+            'name', flat=True).first()
+
+        # generally this occurs just if academy id is invalid
+        if not academy_name:
+            academy_name = '4Geeks'
 
         calendar = iCalendar()
-        calendar.add('prodid', '-//4Geeks Academy//4Geeks events//') # //EN')
+        calendar.add('prodid', '-//4Geeks Academy//4Geeks events')
+        calendar.add('X-WR-CALNAME', f'{academy_name} - events')
+        calendar.add('X-WR-CALDESC', '')
+        calendar.add('REFRESH-INTERVAL', 'PT1M')
+
         calendar.add('version', '2.0')
 
         for item in items:
@@ -277,17 +285,17 @@ class AcademyICalEventView(APIView):
                     item.venue.city or item.venue.street_address):
                 value = ''
 
-                if item.venue.country:
-                    value = f'{value}{item.venue.country}, '
-
-                if item.venue.state:
-                    value = f'{value}{item.venue.state}, '
+                if item.venue.street_address:
+                    value = f'{value}{item.venue.street_address}, '
 
                 if item.venue.city:
                     value = f'{value}{item.venue.city}, '
 
-                if item.venue.street_address:
-                    value = f'{value}{item.venue.street_address}'
+                if item.venue.state:
+                    value = f'{value}{item.venue.state}, '
+
+                if item.venue.country:
+                    value = f'{value}{item.venue.country}'
 
                 value = re.sub(', $', '', value)
                 event['location'] = vText(value)
