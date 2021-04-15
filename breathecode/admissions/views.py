@@ -238,20 +238,22 @@ class AcademyICalEventView(APIView):
 
     def get(self, request):
 
-        academy = request.GET.get('academy', None)
-        academy_ids = []
-        if academy is None:
-            raise ValidationException("You need to specify at least one academy (comma separated) in the querystring")
-            academy_ids = academy.split(",")
+        items = Event.objects.filter(status='ACTIVE')
 
-        # academy_id = 1
-        items = Event.objects.filter(academy__id__in=academy_ids, status='ACTIVE')
+        academies = []
+        slugs = request.GET.get('academy_slug', None)
+        ids = request.GET.get('academy', None)
+
+        if ids is not None:
+            items = Event.objects.filter(academy__id__in=ids.split(","), status='ACTIVE')
+
+        elif slugs is not None:
+            items = Event.objects.filter(academy__slug__in=slugs.split(","), status='ACTIVE')
+
+        if ids is None and slugs is None:
+            raise ValidationException("You need to specify at least one academy or academy_slug (comma separated) in the querystring")
 
         academy_name = "Academy"
-        if len(academy_ids) == 1:
-            _a = Academy.objects.filter(id=academy_ids[0]).first()
-            if _a is not None:
-                academy_name = _a.name
 
         calendar = iCalendar()
         calendar.add('prodid', f'-//{academy_name}//{academy_name} Events')
