@@ -9,7 +9,7 @@ urlpatterns = [
     path('', EventView.as_view(), name='root'),
     path('all', get_events, name='all'),
     path('academy/event', AcademyEventView.as_view(), name="academy_all_events"),
-    path('academy/ical/cohorts', AcademyICalCohortsView.as_view(), name="academy_ical_cohorts"),
+    path('academy/ical/cohorts', AcademyICalCohortsView.as_view(), name="academy_id_ical_cohorts"),
     path('academy/venues', AcademyVenueView.as_view(), name="academy_venues"),
     path('academy/event/<int:event_id>',
          AcademyEventView.as_view(), name="academy_single_event"),
