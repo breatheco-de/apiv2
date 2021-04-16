@@ -45,6 +45,7 @@ python_version = "3.9"
 
 [scripts]
 dev="heroku local"
+create_bucket="python ./scripts/create_bucket.py"
 test="python ./scripts/test.py"
 celery="python ./scripts/celery.py"
 coverage="python ./scripts/coverage.py"

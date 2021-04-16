@@ -11,12 +11,12 @@ def extend(roles, slugs):
     for roles in caps_groups:
         inhered_caps = inhered_caps + roles
     return list(dict.fromkeys(inhered_caps))
-    
+
 class Command(BaseCommand):
     help = 'Create default system capabilities'
 
     def handle(self, *args, **options):
-        
+
         caps = [
             { "slug": "crud_member", "description": "Create, update or delete academy members (very high level, almost the academy admin)" },
             { "slug": "read_member", "description": "Read academy staff member information" },
@@ -36,6 +36,8 @@ class Command(BaseCommand):
             { "slug": "read_nps_answers", "description": "List all the nps answers" },
             { "slug": "read_lead", "description": "List all the leads" },
             { "slug": "crud_lead", "description": "Create, update or delete academy leads" },
+            { "slug": "read_media", "description": "List all the medias" },
+            { "slug": "crud_media", "description": "Create, update or delete academy medias" },
             { "slug": "read_cohort_activity", "description": "Read low level activity in a cohort (attendancy, etc.)" },
         ]
 
@@ -59,7 +61,7 @@ class Command(BaseCommand):
         roles.append({ "slug": "admissions_developer", "name": "Admissions Developer", "caps": extend(roles, ["staff"]) + ["crud_lead","crud_student","crud_cohort", "read_cohort","read_lead", "read_event", "read_eventcheckin"] })
         roles.append({ "slug": "syllabus_coordinator", "name": "Manage Syllabus, Exercises and all academy content", "caps": extend(roles, ["staff"]) })
         roles.append({ "slug": "community_manager", "name": "Manage Syllabus, Exercises and all academy content", "caps": extend(roles, ["staff"]) + ["crud_lead","read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead", "read_cohort"] })
-        roles.append({ "slug": "growth_manager", "name": "Growth Manager", "caps": extend(roles, ["staff","community_manager"]) })
+        roles.append({ "slug": "growth_manager", "name": "Growth Manager", "caps": extend(roles, ["staff","community_manager"]) + ["read_media", "crud_media"] })
         roles.append({ "slug": "teacher", "name": "Teacher", "caps": extend(roles, ["assistant"]) })
         roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": extend(roles, ["teacher"]) + ["crud_syllabus", "crud_cohort", "crud_student"] })
         roles.append({ "slug": "country_manager", "name": "Country Manager", "caps": extend(roles,["academy_coordinator", "student", "career_support", "growth_manager", "admissions_developer", "syllabus_coordinator"]) + ["crud_member"] })
