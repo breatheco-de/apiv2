@@ -457,14 +457,13 @@ def save_github_token(request):
             if github_user['email'] is None:
                 raise ValidationError("Imposible to retrieve user email")
 
-            user = User.objects.filter(email=github_user['email']).first()
+            user = User.objects.filter(Q(email__iexact=github_user['email']) | Q(credentialsgithub__github_id=github_user['id'])).first()
             if user is None:
                 user = User(
                     username=github_user['login'], email=github_user['email'])
                 user.save()
 
-            CredentialsGithub.objects.filter(
-                github_id=github_user['id']).delete()
+            CredentialsGithub.objects.filter(github_id=github_user['id']).delete()
             github_credentials = CredentialsGithub(
                 github_id=github_user['id'],
                 user=user,
