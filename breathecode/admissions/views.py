@@ -458,12 +458,14 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         upcoming = request.GET.get('upcoming', None)
         academy = request.GET.get('academy', None)
         location = request.GET.get('location', None)
+        like = request.GET.get('like', None)
         cache_kwargs = {
             'resource': cohort_id,
             'academy_id': academy_id,
             'upcoming': upcoming,
             'academy': academy,
             'location': location,
+            'like': like,
             **self.pagination_params(request),
         }
 
@@ -495,6 +497,9 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         if location is not None:
             items = items.filter(academy__slug__in=location.split(","))
+
+        if like is not None:
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
         page = self.paginate_queryset(items, request)
         serializer = GetCohortSerializer(page, many=True)
