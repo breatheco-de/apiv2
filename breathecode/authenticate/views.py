@@ -460,7 +460,7 @@ def save_github_token(request):
             user = User.objects.filter(email__iexact=github_user['email']).first()
             if user is None:
                 user = User(
-                    username=github_user['login'], email=github_user['email'])
+                    username=github_user['email'], email=github_user['email'])
                 user.save()
 
             CredentialsGithub.objects.filter(
