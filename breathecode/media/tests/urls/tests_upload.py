@@ -123,7 +123,7 @@ class MediaTestSuite(MediaTestCase):
         storage_mock.call_args_list = []
         file_mock.delete.call_args_list = []
         file_mock.upload.call_args_list = []
-        file_mock.url.return_value = f'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
+        file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
 
         model = self.generate_models(authenticate=True, profile_academy=True,
             capability='crud_media', role='potato')
@@ -137,14 +137,8 @@ class MediaTestSuite(MediaTestCase):
             hash = hashlib.sha256(data.read()).hexdigest()
 
         with open(file.name, 'rb') as data:
-            response = self.client.post(url, {'name': 'filename.jpg', 'file': data})
+            response = self.client.put(url, {'name': 'filename.jpg', 'file': data})
             json = response.json()
-
-            print('asdasdasd', json)
-
-            json = [x for x in json if self.assertDatetime(x['created_at']) and
-                self.assertDatetime(x['updated_at']) and x.pop('created_at') and
-                x.pop('updated_at')]
 
             self.assertHash(hash)
 
@@ -161,13 +155,12 @@ class MediaTestSuite(MediaTestCase):
             }]
 
             self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(self.all_media_dict(), [{
                 'academy_id': 1,
                 'hash': hash,
                 'hits': 0,
                 'id': 1,
-                # TODO: this test should be improved
                 'mime': 'image/png',
                 'name': 'filename.jpg',
                 'slug': 'filename',
@@ -184,7 +177,7 @@ class MediaTestSuite(MediaTestCase):
         storage_mock.call_args_list = []
         file_mock.delete.call_args_list = []
         file_mock.upload.call_args_list = []
-        file_mock.url.return_value = f'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
+        file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
 
         file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
         file.write(os.urandom(1024))
@@ -202,11 +195,6 @@ class MediaTestSuite(MediaTestCase):
         with open(file.name, 'rb') as data:
             response = self.client.put(url, {'name': ['filename.jpg'], 'file': [data]})
             json = response.json()
-            print('uuuu', json)
-
-            json = [x for x in json if self.assertDatetime(x['created_at']) and
-                self.assertDatetime(x['updated_at']) and x.pop('created_at') and
-                x.pop('updated_at')]
 
             self.assertHash(hash)
 
@@ -232,9 +220,7 @@ class MediaTestSuite(MediaTestCase):
                 'slug': 'filename',
             }])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.services.google_cloud.Storage', storage_mock)
     def test_upload_with_media_with_same_slug(self):
         """Test /answer without auth"""
         self.headers(
@@ -269,10 +255,7 @@ class MediaTestSuite(MediaTestCase):
                 **self.model_to_dict(model, 'media'),
             }])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # @patch('breathecode.services.google_cloud.Storage', storage_mock)
+    @patch('breathecode.services.google_cloud.Storage', storage_mock)
     def test_upload_categories(self):
         """Test /answer without auth"""
         self.headers(
@@ -282,6 +265,7 @@ class MediaTestSuite(MediaTestCase):
         storage_mock.call_args_list = []
         file_mock.delete.call_args_list = []
         file_mock.upload.call_args_list = []
+        file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
 
         model = self.generate_models(authenticate=True, profile_academy=True,
             capability='crud_media', role='potato', category=True)
@@ -296,14 +280,9 @@ class MediaTestSuite(MediaTestCase):
 
         with open(file.name, 'rb') as file:
             data = {'name': 'filename.jpg', 'file': file, 'categories': '1'}
-            response = self.client.post(url, data, format='multipart')
+            response = self.client.put(url, data, format='multipart')
             json = response.json()
 
-            json = [x for x in json if self.assertDatetime(x['created_at']) and
-                self.assertDatetime(x['updated_at']) and x.pop('created_at') and
-                x.pop('updated_at')]
-
-            # hash = json['hash']
             self.assertHash(hash)
 
             expected = [{
@@ -315,21 +294,20 @@ class MediaTestSuite(MediaTestCase):
                 'mime': 'image/png',
                 'name': 'filename.jpg',
                 'slug': 'filename',
-                'url': f'https://storage.cloud.google.com/media-breathecode/{hash}'
+                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }]
 
             self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(self.all_media_dict(), [{
                 'academy_id': 1,
                 'hash': hash,
                 'hits': 0,
                 'id': 1,
-                # TODO: this test should be improved
                 'mime': 'image/png',
                 'name': 'filename.jpg',
                 'slug': 'filename',
-                'url': f'https://storage.cloud.google.com/media-breathecode/{hash}'
+                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }])
 
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
@@ -357,16 +335,12 @@ class MediaTestSuite(MediaTestCase):
             hash = hashlib.sha256(file_bytes).hexdigest()
 
         with open(file.name, 'rb') as file:
-            file_mock.url.return_value = f'https://storage.cloud.google.com/media-breathecode/{hash}'
+            file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             file_mock.url.call_args_list = []
 
             data = {'name': 'filename.jpg', 'file': file}
-            response = self.client.post(url, data, format='multipart')
+            response = self.client.put(url, data, format='multipart')
             json = response.json()
-
-            json = [x for x in json if self.assertDatetime(x['created_at']) and
-                self.assertDatetime(x['updated_at']) and x.pop('created_at') and
-                x.pop('updated_at')]
 
             self.assertHash(hash)
 
@@ -379,11 +353,11 @@ class MediaTestSuite(MediaTestCase):
                 'mime': 'image/png',
                 'name': 'filename.jpg',
                 'slug': 'filename',
-                'url': f'https://storage.cloud.google.com/media-breathecode/{hash}'
+                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }]
 
             self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(self.all_media_dict(), [{
                 'academy_id': 1,
                 'hash': hash,
@@ -392,11 +366,11 @@ class MediaTestSuite(MediaTestCase):
                 'mime': 'image/png',
                 'name': 'filename.jpg',
                 'slug': 'filename',
-                'url': f'https://storage.cloud.google.com/media-breathecode/{hash}'
+                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }])
 
             self.assertEqual(storage_mock.call_args_list, [call()])
-            self.assertEqual(file_mock.upload.call_args_list, [call(file_bytes, public=True)])
+            self.assertEqual(file_mock.upload.call_args_list, [call(file_bytes)])
             self.assertEqual(file_mock.url.call_args_list, [call()])
 
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
@@ -433,16 +407,12 @@ class MediaTestSuite(MediaTestCase):
 
         file1 = open(file1.name, 'rb')
         file2 = open(file2.name, 'rb')
-        file_mock.url.return_value = f'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
+        file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         file_mock.url.call_args_list = []
 
         data = {'name': ['filename1.jpg', 'filename2.jpg'], 'file': [file1, file2]}
-        response = self.client.post(url, data, format='multipart')
+        response = self.client.put(url, data, format='multipart')
         json = response.json()
-
-        json = [x for x in json if self.assertDatetime(x['created_at']) and
-            self.assertDatetime(x['updated_at']) and x.pop('created_at') and
-            x.pop('updated_at')]
 
         expected = [{
             'academy': 1,
@@ -453,7 +423,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': 'image/png',
             'name': 'filename1.jpg',
             'slug': 'filename1',
-            'url': f'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
+            'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         }, {
             'academy': 1,
             'categories': [1],
@@ -463,11 +433,11 @@ class MediaTestSuite(MediaTestCase):
             'mime': 'image/png',
             'name': 'filename2.jpg',
             'slug': 'filename2',
-            'url': f'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
+            'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         }]
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{
             'academy_id': 1,
             'hash': hash1,
@@ -476,7 +446,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': 'image/png',
             'name': 'filename1.jpg',
             'slug': 'filename1',
-            'url': f'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
+            'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         }, {
             'academy_id': 1,
             'hash': hash2,
@@ -485,15 +455,9 @@ class MediaTestSuite(MediaTestCase):
             'mime': 'image/png',
             'name': 'filename2.jpg',
             'slug': 'filename2',
-            'url': f'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
+            'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         }])
 
         self.assertEqual(storage_mock.call_args_list, [call(), call()])
-        print(file_mock.upload.call_args_list)
-        print('=======================')
-        print([call(file_bytes1, public=True), call(file_bytes2, public=True)])
-        # for x in file_mock.upload.call_args_list:
-        #     print('qqqqqqqqqqqqq', x)
-        # print('qqqqqqqqqqqqq', len(file_mock.upload.call_args_list))
-        self.assertEqual(file_mock.upload.call_args_list, [call(file_bytes1, public=True), call(file_bytes2, public=True)])
+        self.assertEqual(file_mock.upload.call_args_list, [call(file_bytes1), call(file_bytes2)])
         self.assertEqual(file_mock.url.call_args_list, [call(), call()])

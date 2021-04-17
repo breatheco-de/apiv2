@@ -175,12 +175,13 @@ class UploadView(APIView):
     parser_classes = [MultiPartParser, FileUploadParser]
     # permission_classes = [AllowAny]
 
+    # upload was separated because in one moment I think that the serializer
+    # not should get many create and update operations together
     def upload(self, request, academy_id=None, update=False):
         from ..services.google_cloud import Storage
 
         files = request.data.getlist('file')
         names = request.data.getlist('name')
-        # is_many = len(files) > 1
         result = {
             'data': [],
             'instance': [],
@@ -228,6 +229,11 @@ class UploadView(APIView):
             media = Media.objects.filter(hash=hash, academy__id=academy_id).first()
             if media:
                 data['id'] = media.id
+
+                url = Media.objects.filter(hash=hash).values_list('url', flat=True).first()
+                if url:
+                    data['url'] = url
+
             else:
                 url = Media.objects.filter(hash=hash).values_list('url', flat=True).first()
                 if url:
@@ -237,17 +243,11 @@ class UploadView(APIView):
                     # upload file section
                     storage = Storage()
                     cloud_file = storage.file(BUCKET_NAME, hash)
-                    cloud_file.upload(file_bytes, public=True)
+                    cloud_file.upload(file_bytes)
                     data['url'] = cloud_file.url()
 
             result['data'].append(data)
-            # result['instance'].append(media)
 
-        # if not is_many:
-        #     result = {
-        #         'data': result['data'][0],
-        #         'instance': result['instance'][0] if len(result['instance']) else None,
-        #     }
         from django.db.models import Q
         query = None
         datas_with_id = [x for x in result['data'] if 'id' in x]
@@ -260,37 +260,12 @@ class UploadView(APIView):
         if query:
             result['instance'] = Media.objects.filter(query)
 
-        if update and len(result['data']) != len(result['instance']):
-            raise ValidationException('some media not found')
-
-        print(result)
         return result
-
-    @capable_of('crud_media')
-    def post(self, request, academy_id=None):
-        upload = self.upload(request, academy_id)
-        # is_many = isinstance(upload['data'], list)
-
-        # print(upload)
-        serializer = MediaPUTSerializer(data=upload['data'], context=upload['data'], many=True)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_media')
     def put(self, request, academy_id=None):
         upload = self.upload(request, academy_id, update=True)
-        # is_many = isinstance(upload['data'], list)
-
-        # data = upload['instance'] if len(upload['instance']) > 1 else upload['instance'][0]
-
         serializer = MediaPUTSerializer(upload['instance'], data=upload['data'], context=upload['data'], many=True)
-        print( 'views', upload)
-        print( 'views', [x for x in upload['data']])
-        print( 'views', [x for x in upload['instance']])
-        print( 'views', [x for x in Media.objects.all()])
 
         if serializer.is_valid():
             serializer.save()
