@@ -479,8 +479,7 @@ def save_github_token(request):
             )
             github_credentials.save()
 
-            profile = Profile.objects.filter(
-                user__email=github_user['email']).first()
+            profile = Profile.objects.filter(user=user).first()
             if profile is None:
                 profile = Profile(user=user,
                                   avatar_url=github_user['avatar_url'],
