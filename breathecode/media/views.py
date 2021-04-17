@@ -218,7 +218,7 @@ class UploadView(APIView):
                 # upload file section
                 storage = Storage()
                 cloud_file = storage.file(BUCKET_NAME, hash)
-                cloud_file.upload(file_bytes, public=True)
+                cloud_file.upload(file_bytes)
                 data['url'] = cloud_file.url()
 
         if media:

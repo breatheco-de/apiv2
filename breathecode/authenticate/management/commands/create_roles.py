@@ -11,12 +11,12 @@ def extend(roles, slugs):
     for roles in caps_groups:
         inhered_caps = inhered_caps + roles
     return list(dict.fromkeys(inhered_caps))
-    
+
 class Command(BaseCommand):
     help = 'Create default system capabilities'
 
     def handle(self, *args, **options):
-        
+
         caps = [
             { "slug": "crud_member", "description": "Create, update or delete academy members (very high level, almost the academy admin)" },
             { "slug": "read_member", "description": "Read academy staff member information" },
@@ -36,6 +36,8 @@ class Command(BaseCommand):
             { "slug": "read_nps_answers", "description": "List all the nps answers" },
             { "slug": "read_lead", "description": "List all the leads" },
             { "slug": "crud_lead", "description": "Create, update or delete academy leads" },
+            { "slug": "read_media", "description": "List all the medias" },
+            { "slug": "crud_media", "description": "Create, update or delete academy medias" },
             { "slug": "read_cohort_activity", "description": "Read low level activity in a cohort (attendancy, etc.)" },
         ]
 
@@ -50,17 +52,17 @@ class Command(BaseCommand):
 
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
-            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort"] },
+            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media"] },
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort"] },
         ]
 
         roles.append({ "slug": "assistant", "name": "Growth Manager", "caps": extend(roles, ["staff"]) + ["read_assigment", "crud_assignment", "read_cohort_activity"] })
         roles.append({ "slug": "career_support", "name": "Career Support Specialist", "caps": extend(roles, ["staff"]) + ["read_certificate", "crud_certificate"] })
         roles.append({ "slug": "admissions_developer", "name": "Admissions Developer", "caps": extend(roles, ["staff"]) + ["crud_lead","crud_student","crud_cohort", "read_cohort","read_lead", "read_event", "read_eventcheckin"] })
-        roles.append({ "slug": "syllabus_coordinator", "name": "Syllabus Coordinator", "caps": extend(roles, ["staff", "crud_syllabus"]) })
+        roles.append({ "slug": "syllabus_coordinator", "name": "Syllabus Coordinator", "caps": extend(roles, ["staff", "crud_syllabus", "crud_media"]) })
         roles.append({ "slug": "culture_and_recruitment", "name": "Culture and Recruitment", "caps": extend(roles, ["staff", "crud_member"]) })
-        roles.append({ "slug": "community_manager", "name": "Manage Syllabus, Exercises and all academy content", "caps": extend(roles, ["staff"]) + ["crud_lead","read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead", "read_cohort"] })
-        roles.append({ "slug": "growth_manager", "name": "Growth Manager", "caps": extend(roles, ["community_manager"]) })
+        roles.append({ "slug": "community_manager", "name": "Manage Syllabus, Exercises and all academy content", "caps": extend(roles, ["staff"]) + ["crud_lead","read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead", "read_cohort", "crud_media"] })
+        roles.append({ "slug": "growth_manager", "name": "Growth Manager", "caps": extend(roles, ["staff","community_manager"]) + ["crud_media"] })
         roles.append({ "slug": "teacher", "name": "Teacher", "caps": extend(roles, ["assistant"]) })
         roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": extend(roles, ["teacher"]) + ["crud_syllabus", "crud_cohort", "crud_student"] })
         roles.append({ "slug": "country_manager", "name": "Country Manager", "caps": extend(roles,["academy_coordinator", "student", "career_support", "growth_manager", "admissions_developer", "syllabus_coordinator"]) + ["crud_member"] })
