@@ -21,7 +21,7 @@ class Profile(models.Model):
     phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, default='') # validators should be a list
 
     show_tutorial = models.BooleanField(default=True, help_text="Set true if you want to show the tutorial on the user UI/UX")
-    
+
     twitter_username = models.CharField(max_length=50, blank=True, null=True)
     github_username = models.CharField(max_length=50, blank=True, null=True)
     portfolio_url = models.CharField(max_length=50, blank=True, null=True)
@@ -81,6 +81,12 @@ class UserInvite(models.Model):
     def __str__(self):
         return f"Invite for {self.email}"
 
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.lower()
+
+        return super().save(*args, **kwargs)
+
 INVITED = 'INVITED'
 ACTIVE = 'ACTIVE'
 PROFILE_ACADEMY_STATUS = (
@@ -109,6 +115,11 @@ class ProfileAcademy(models.Model):
     def __str__(self):
         return f"{self.email} for academy ({self.academy.name})"
 
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.lower()
+
+        return super().save(*args, **kwargs)
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
@@ -128,6 +139,12 @@ class CredentialsGithub(models.Model):
 
     def __str__(self):
         return f"{self.email} ({self.user.id})"
+
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.lower()
+
+        return super().save(*args, **kwargs)
 
 class CredentialsSlack(models.Model):
 
@@ -163,6 +180,12 @@ class CredentialsFacebook(models.Model):
 
     def __str__(self):
         return f"Team {str(self.user)}"
+
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.lower()
+
+        return super().save(*args, **kwargs)
 
 class CredentialsQuickBooks(models.Model):
     quibooks_code = models.CharField(max_length=255, primary_key=True)

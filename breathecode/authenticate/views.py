@@ -457,6 +457,8 @@ def save_github_token(request):
             if github_user['email'] is None:
                 raise ValidationError("Imposible to retrieve user email")
 
+            github_user['email'] = github_user['email'].lower()
+
             user = User.objects.filter(email=github_user['email']).first()
             if user is None:
                 user = User(
@@ -795,7 +797,7 @@ def save_facebook_token(request):
             logger.debug("Facebook responded with 200")
             facebook_data = resp.json()
             if "email" in facebook_data:
-                credentials.email = facebook_data['email']
+                credentials.email = facebook_data['email'].lower()
             if "id" in facebook_data:
                 credentials.facebook_id = facebook_data['id']
             credentials.save()

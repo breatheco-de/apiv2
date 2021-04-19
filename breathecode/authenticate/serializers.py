@@ -194,6 +194,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                   'address', 'phone', 'invite', 'status')
 
     def validate(self, data):
+        if 'email' in data:
+            data['email'] = data['email'].lower()
 
         if "user" not in data:
             if "invite" not in data or data["invite"] != True:
@@ -290,6 +292,8 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                   'address', 'phone', 'invite', 'cohort', 'status')
 
     def validate(self, data):
+        if 'email' in data:
+            data['email'] = data['email'].lower()
 
         if "user" not in data:
             if "invite" not in data or data["invite"] != True:
@@ -406,6 +410,9 @@ class AuthSerializer(serializers.Serializer):
     def validate(self, attrs):
         email = attrs.get('email')
         password = attrs.get('password')
+
+        if email:
+            attrs['email'] = email.lower()
 
         if email and password:
             email = email.lower()
