@@ -98,6 +98,12 @@ class Contact(models.Model):
     def __str__(self):
         return self.first_name + " " + self.last_name
 
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.lower()
+
+        return super().save(*args, **kwargs)
+
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
 STORAGE_SATUS = (
@@ -172,7 +178,7 @@ class FormEntry(models.Model):
     # is it saved into active campaign?
     storage_status = models.CharField(max_length=15, choices=STORAGE_SATUS, default=PENDING)
     lead_type = models.CharField(max_length=15, choices=LEAD_TYPE, null=True, default=None)
-    
+
     deal_status = models.CharField(max_length=15, choices=DEAL_STATUS, default=None, null=True, blank=True)
     sentiment = models.CharField(max_length=15, choices=DEAL_SENTIMENT, default=None, null=True, blank=True)
 
@@ -206,6 +212,12 @@ class FormEntry(models.Model):
             "longitude": self.latitude,
         }
         return _entry
+
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.lower()
+
+        return super().save(*args, **kwargs)
 
 _ACTIVE = 'ACTIVE'
 NOT_FOUND = 'NOT_FOUND'

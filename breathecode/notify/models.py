@@ -34,9 +34,9 @@ class SlackTeam(models.Model):
     # the owner represents the channel
     # his/her credentials are used for interaction with the Slack API
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    
+
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True)
-    
+
     sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED, help_text="Automatically set when synqued from slack")
     sync_message = models.CharField(max_length=100, blank=True, null=True, default=None, help_text="Contains any success or error messages depending on the status")
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
@@ -49,7 +49,7 @@ class SlackTeam(models.Model):
 
 class SlackUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
-    
+
     slack_id = models.CharField(max_length=50)
     status_text = models.CharField(max_length=255, blank=True, null=True)
     status_emoji = models.CharField(max_length=100, blank=True, null=True)
@@ -62,6 +62,12 @@ class SlackUser(models.Model):
 
     def __str__(self):
         return self.slack_id
+
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.lower()
+
+        return super(SlackUser, self).save(*args, **kwargs)
 
 class SlackUserTeam(models.Model):
     slack_user = models.ForeignKey(SlackUser, on_delete=models.CASCADE)
@@ -77,11 +83,11 @@ class SlackUserTeam(models.Model):
 class SlackChannel(models.Model):
     cohort = models.OneToOneField(Cohort, on_delete=models.CASCADE, blank=True, null=True, default=None)
     # academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True, null=True, default=None)
-    
+
     slack_id = models.CharField(max_length=50)
     team = models.ForeignKey(SlackTeam, on_delete=models.CASCADE)
     name = models.CharField(max_length=100, blank=True, null=True)
-    
+
     topic = models.CharField(max_length=500, blank=True, null=True)
     purpose = models.CharField(max_length=500, blank=True, null=True)
 
