@@ -32,9 +32,11 @@ def send_survey_group(survey=None,cohort=None):
     for uc in ucs:
         if uc.educational_status in ['ACTIVE', 'GRADUATED']:
             send_cohort_survey.delay(uc.user.id, survey.id)
+            logger.debug(f"Survey scheduled to send for {uc.user.email}")
             result["success"].append(f"Survey scheduled to send for {uc.user.email}")
         else:
-            result["error"].append(f"Survey NOT sent to {uc.user.email} because it's not an active student")
+            logger.debug(f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
+            result["error"].append(f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
 
     return result
 

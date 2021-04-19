@@ -4,7 +4,8 @@ from rest_framework import routers
 from .views import (
     AcademyView, CohortUserView, get_cohorts, AcademyCohortView,
     get_timezones, UserView, UserMeView, AcademyCohortUserView,
-    get_single_course, SyllabusView, CertificateView, AcademyICalEventView
+    get_single_course, SyllabusView, CertificateView, AcademyICalEventView,
+    CertificateAllView, get_all_academies
 )
 
 app_name = 'admissions'
@@ -23,15 +24,16 @@ urlpatterns = [
     path('academy/cohort/<int:cohort_id>/user', AcademyCohortUserView.as_view()),
 
     path('academy/ical/events', AcademyICalEventView.as_view(), name="academy_id_ical_events"),
-    path('academy/', AcademyView.as_view(), name="academy"),
+    path('academy/', get_all_academies, name="academy"),
+    path('academy/me', AcademyView.as_view(), name="academy_me"),
     path('academy/cohort', AcademyCohortView.as_view(), name="academy_cohort"),
     path('user/me', UserMeView.as_view(), name="user_me"),
     path('user', UserView.as_view(), name="user"),
 
-    # update a cohort user information
-    path('certificate', CertificateView.as_view(), name="certificate"),
+    path('certificate', CertificateAllView.as_view(), name="certificate"),
     path('certificate/<str:certificate_slug>/', get_single_course,
         name="certificate_slug"),
+    path('academy/certificate', CertificateView.as_view(), name="academy_certificate"),
     path('certificate/<str:certificate_slug>/syllabus', SyllabusView.as_view(),
         name="certificate_slug_syllabus"),
     path('certificate/<str:certificate_slug>/syllabus/<int:version>',
