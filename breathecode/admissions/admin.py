@@ -5,7 +5,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
-from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions, Syllabus
+from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions, Syllabus, AcademyCertificate
 from breathecode.assignments.actions import sync_student_tasks
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,11 @@ class AcademyForm(forms.ModelForm):
 class AcademyAdmin(admin.ModelAdmin):
     form = AcademyForm
     list_display = ('slug', 'name', 'city')
+
+@admin.register(AcademyCertificate)
+class AcademyCertificateAdmin(admin.ModelAdmin):
+    list_display = ('certificate', 'academy')
+    list_filter = ['certificate__slug', 'academy__slug']
 
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):
@@ -83,7 +88,7 @@ def make_edu_stat_graduate(modeladmin, request, queryset):
 make_edu_stat_graduate.short_description = "Educational_status = GRADUATED"
 @admin.register(CohortUser)
 class CohortUserAdmin(admin.ModelAdmin):
-    search_fields = ['user__email', 'user__first_name', 'user__last_name', 'cohort__slug', 'cohort__name', 'cohort__slug']
+    search_fields = ['user__email', 'user__first_name', 'user__last_name', 'cohort__name', 'cohort__slug']
     list_display = ('get_student', 'cohort', 'role', 'educational_status', 'finantial_status', 'created_at')
     list_filter = ['role', 'educational_status','finantial_status']
     raw_id_fields = ["user", "cohort"]
@@ -109,7 +114,7 @@ class CohortForm(forms.ModelForm):
 @admin.register(Cohort)
 class CohortAdmin(admin.ModelAdmin):
     form = CohortForm
-    search_fields = ['slug', 'name', 'academy__city__name', 'syllabus__slug']
+    search_fields = ['slug', 'name', 'academy__city__name']
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus')
     list_filter = ['stage', 'academy__slug','syllabus__certificate__slug']
     actions = [sync_tasks]

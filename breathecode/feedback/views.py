@@ -7,7 +7,9 @@ from .tasks import generate_user_cohort_survey_answers
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import AnswerPUTSerializer, AnswerSerializer
+from .serializers import (
+    AnswerPUTSerializer, AnswerSerializer, SurveySerializer, SurveyPUTSerializer,
+)
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
@@ -101,6 +103,7 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 class AnswerView(APIView):
     """
     List all snippets, or create a new snippet.
@@ -129,3 +132,69 @@ class AnswerView(APIView):
 
         serializer = AnswerPUTSerializer(answer)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class SurveyView(APIView, HeaderLimitOffsetPagination):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('crud_survey')
+    def post(self, request, academy_id=None):
+
+        serializer = SurveySerializer(data=request.data, context={ "request": request, "academy_id": academy_id })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('crud_survey')
+    def put(self, request, survey_id=None, academy_id=None):
+        if survey_id is None:
+            raise ValidationException("Missing survey_id")
+
+        survey = Survey.objects.filter(id=survey_id).first()
+        if survey is None:
+            raise NotFound('This survey does not exist')
+
+        serializer = SurveyPUTSerializer(survey, data=request.data, context={ "request": request, "survey": survey_id, "academy_id": academy_id })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('read_survey')
+    def get(self, request, survey_id=None, academy_id=None):
+        
+        if survey_id is not None:
+            survey = Survey.objects.filter(id=survey_id).first()
+            if survey is None:
+                raise NotFound('This survey does not exist')
+
+            serializer = SurveySerializer(survey)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        items = Survey.objects.filter(cohort__academy__id=academy_id)
+        lookup = {}
+
+        if 'status' in self.request.GET:
+            param = self.request.GET.get('status')
+            lookup['status'] = param
+
+        if 'cohort' in self.request.GET:
+            param = self.request.GET.get('cohort')
+            lookup['cohort__slug'] = param
+
+        if 'lang' in self.request.GET:
+            param = self.request.GET.get('lang')
+            lookup['lang'] = param
+
+        items = items.filter(**lookup).order_by('-created_at')
+
+        page = self.paginate_queryset(items, request)
+        serializer = SurveySerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)

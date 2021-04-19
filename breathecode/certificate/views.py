@@ -4,6 +4,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
 from .models import Specialty, Badge, UserSpecialty
+from django.db.models import Q
 from breathecode.admissions.models import CohortUser
 from breathecode.utils import capable_of, ValidationException
 from .serializers import SpecialtySerializer, UserSpecialtySerializer, UserSmallSerializer
@@ -105,6 +106,11 @@ class CertificateAcademyView(APIView):
     def get(self, request, academy_id=None):
         # print(request.headers['Academy'])
         cert = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            cert = cert.filter(Q(user__profileacademy__first_name__icontains=like) | Q(user__profileacademy__last_name__icontains=like) | Q(user__profileacademy__email__icontains=like))
+
         serializer = UserSpecialtySerializer(cert, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

@@ -29,10 +29,14 @@ send_reset_password.short_description = "Send reset password link"
 @admin.register(CredentialsGithub)
 class CredentialsGithubAdmin(admin.ModelAdmin):
     list_display = ('github_id', 'user_id', 'email', 'token')
+    search_fields = ['user__first_name', 'user__last_name', 'user__email', 'email']
+    raw_id_fields = ["user"]
 
 @admin.register(CredentialsSlack)
 class CredentialsSlackAdmin(admin.ModelAdmin):
     list_display = ('user','app_id', 'bot_user_id', 'team_id', 'team_name')
+    search_fields = ['user__first_name', 'user__last_name', 'user__email']
+    raw_id_fields = ["user"]
 
 @admin.register(CredentialsFacebook)
 class CredentialsFacebookAdmin(admin.ModelAdmin):

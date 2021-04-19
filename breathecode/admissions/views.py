@@ -16,7 +16,7 @@ from .serializers import (
     CohortUserSerializer, GETCohortUserSerializer, CohortUserPUTSerializer,
     CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
     GetCertificateSerializer, SyllabusGetSerializer, SyllabusSerializer,
-    SyllabusSmallSerializer
+    SyllabusSmallSerializer, GetBigAcademySerializer
 )
 from .models import (
     Academy, AcademyCertificate, CohortUser, Certificate, Cohort, Country,
@@ -41,6 +41,12 @@ logger = logging.getLogger(__name__)
 def get_timezones(request, id=None):
     # timezones = [(x, x) for x in pytz.common_timezones]
     return Response(pytz.common_timezones)
+
+@api_view(['GET'])
+def get_all_academies(request, id=None):
+    items = Academy.objects.all()
+    serializer = AcademySerializer(items, many=True)
+    return Response(serializer.data)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -87,21 +93,26 @@ class AcademyView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-    def get(self, request, format=None):
-        items = Academy.objects.all()
-        serializer = AcademySerializer(items, many=True)
+    @capable_of('read_my_academy')
+    def get(self, request, format=None, academy_id=None):
+        item = Academy.objects.get(id=academy_id)
+        print("Item", item)
+        serializer = GetBigAcademySerializer(item)
         return Response(serializer.data)
 
-    def post(self, request, format=None):
+    @capable_of('crud_my_academy')
+    def put(self, request, format=None, academy_id=None):
+        academy = Academy.objects.get(id=academy_id)
         data = {}
 
         for key in request.data:
             data[key] = request.data.get(key)
 
-        serializer = AcademySerializer(data=data)
+        serializer = AcademySerializer(academy, data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # serializer = GetBigAcademySerializer(academy, data=data)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserView(APIView):
@@ -458,12 +469,14 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         upcoming = request.GET.get('upcoming', None)
         academy = request.GET.get('academy', None)
         location = request.GET.get('location', None)
+        like = request.GET.get('like', None)
         cache_kwargs = {
             'resource': cohort_id,
             'academy_id': academy_id,
             'upcoming': upcoming,
             'academy': academy,
             'location': location,
+            'like': like,
             **self.pagination_params(request),
         }
 
@@ -495,6 +508,9 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         if location is not None:
             items = items.filter(academy__slug__in=location.split(","))
+
+        if like is not None:
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
         page = self.paginate_queryset(items, request)
         serializer = GetCohortSerializer(page, many=True)
@@ -603,18 +619,22 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-# class CertificateView(APIView):
-#     """
-#     List all snippets, or create a new snippet.
-#     """
-#     def get(self, request, format=None):
-#         items = Certificate.objects.all()
-#         serializer = CertificateSerializer(items, many=True)
-#         return Response(serializer.data)
-
-class CertificateView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class CertificateAllView(APIView, HeaderLimitOffsetPagination):
     def get(self, request):
         items = Certificate.objects.all()
+        page = self.paginate_queryset(items, request)
+        serializer = GetCertificateSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+class CertificateView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    @capable_of('read_certificate')
+    def get(self, request, academy_id=None):
+        cert_ids = AcademyCertificate.objects.filter(academy__id=academy_id).values_list('certificate_id', flat=True)
+        items = Certificate.objects.filter(id__in=cert_ids)
 
         page = self.paginate_queryset(items, request)
         serializer = GetCertificateSerializer(page, many=True)

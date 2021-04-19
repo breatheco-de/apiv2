@@ -459,14 +459,13 @@ def save_github_token(request):
 
             github_user['email'] = github_user['email'].lower()
 
-            user = User.objects.filter(email=github_user['email']).first()
+            user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(email__iexact=github_user['email'])).first()
             if user is None:
                 user = User(
-                    username=github_user['login'], email=github_user['email'])
+                    username=github_user['email'], email=github_user['email'])
                 user.save()
 
-            CredentialsGithub.objects.filter(
-                github_id=github_user['id']).delete()
+            CredentialsGithub.objects.filter(github_id=github_user['id']).delete()
             github_credentials = CredentialsGithub(
                 github_id=github_user['id'],
                 user=user,
@@ -482,8 +481,7 @@ def save_github_token(request):
             )
             github_credentials.save()
 
-            profile = Profile.objects.filter(
-                user__email=github_user['email']).first()
+            profile = Profile.objects.filter(user=user).first()
             if profile is None:
                 profile = Profile(user=user,
                                   avatar_url=github_user['avatar_url'],

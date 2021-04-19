@@ -18,6 +18,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         caps = [
+            { "slug": "read_my_academy", "description": "Read your academy information" },
+            { "slug": "crud_my_academy", "description": "Read, or update your academy information (very high level, almost the academy admin)" },
             { "slug": "crud_member", "description": "Create, update or delete academy members (very high level, almost the academy admin)" },
             { "slug": "read_member", "description": "Read academy staff member information" },
             { "slug": "crud_student", "description": "Create, update or delete students" },
@@ -33,6 +35,8 @@ class Command(BaseCommand):
             { "slug": "read_cohort", "description": "List all the cohorts or a single cohort information" },
             { "slug": "crud_cohort", "description": "Create, update or delete cohort info" },
             { "slug": "read_eventcheckin", "description": "List and read all the event_checkins" },
+            { "slug": "read_survey", "description": "List all the nps answers" },
+            { "slug": "crud_survey", "description": "Create, update or delete surveys" },
             { "slug": "read_nps_answers", "description": "List all the nps answers" },
             { "slug": "read_lead", "description": "List all the leads" },
             { "slug": "crud_lead", "description": "Create, update or delete academy leads" },
@@ -52,19 +56,20 @@ class Command(BaseCommand):
 
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
-            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort"] },
-            { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort"] },
+            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy" ] },
+            { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort", "read_my_academy"] },
         ]
 
-        roles.append({ "slug": "assistant", "name": "Growth Manager", "caps": extend(roles, ["staff"]) + ["read_assigment", "crud_assignment", "read_cohort_activity"] })
+        roles.append({ "slug": "assistant", "name": "Growth Manager", "caps": extend(roles, ["staff"]) + ["read_assigment", "crud_assignment", "read_cohort_activity", "read_nps_answers"] })
         roles.append({ "slug": "career_support", "name": "Career Support Specialist", "caps": extend(roles, ["staff"]) + ["read_certificate", "crud_certificate"] })
         roles.append({ "slug": "admissions_developer", "name": "Admissions Developer", "caps": extend(roles, ["staff"]) + ["crud_lead","crud_student","crud_cohort", "read_cohort","read_lead", "read_event", "read_eventcheckin"] })
-        roles.append({ "slug": "syllabus_coordinator", "name": "Manage Syllabus, Exercises and all academy content", "caps": extend(roles, ["staff"]) })
-        roles.append({ "slug": "community_manager", "name": "Manage Syllabus, Exercises and all academy content", "caps": extend(roles, ["staff"]) + ["crud_lead","read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead", "read_cohort"] })
-        roles.append({ "slug": "growth_manager", "name": "Growth Manager", "caps": extend(roles, ["staff","community_manager"]) + ["read_media", "crud_media"] })
+        roles.append({ "slug": "syllabus_coordinator", "name": "Syllabus Coordinator", "caps": extend(roles, ["staff", "crud_syllabus", "crud_media"]) })
+        roles.append({ "slug": "culture_and_recruitment", "name": "Culture and Recruitment", "caps": extend(roles, ["staff", "crud_member"]) })
+        roles.append({ "slug": "community_manager", "name": "Manage Syllabus, Exercises and all academy content", "caps": extend(roles, ["staff"]) + ["crud_lead","read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead", "read_cohort", "crud_media"] })
+        roles.append({ "slug": "growth_manager", "name": "Growth Manager", "caps": extend(roles, ["staff","community_manager"]) + ["crud_media"] })
         roles.append({ "slug": "teacher", "name": "Teacher", "caps": extend(roles, ["assistant"]) })
-        roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": extend(roles, ["teacher"]) + ["crud_syllabus", "crud_cohort", "crud_student"] })
-        roles.append({ "slug": "country_manager", "name": "Country Manager", "caps": extend(roles,["academy_coordinator", "student", "career_support", "growth_manager", "admissions_developer", "syllabus_coordinator"]) + ["crud_member"] })
+        roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": extend(roles, ["teacher"]) + ["crud_syllabus", "crud_cohort", "crud_student", "crud_survey"] })
+        roles.append({ "slug": "country_manager", "name": "Country Manager", "caps": extend(roles,["academy_coordinator", "student", "career_support", "growth_manager", "admissions_developer", "syllabus_coordinator"]) + ["crud_member", "crud_my_academy"] })
 
         for r in roles:
             _r = Role.objects.filter(slug=r["slug"]).first()

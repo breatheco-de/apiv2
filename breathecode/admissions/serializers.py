@@ -89,6 +89,28 @@ class GetAcademySerializer(serpy.Serializer):
     city = CitySerializer(required=False)
     logo_url = serpy.Field()
 
+class GetBigAcademySerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    country = CountrySerializer(required=False)
+    city = CitySerializer(required=False)
+    logo_url = serpy.Field()
+    active_campaign_slug = serpy.Field()
+    logistical_information = serpy.Field()
+    latitude = serpy.Field()
+    longitude = serpy.Field()
+    marketing_email = serpy.Field()
+    street_address = serpy.Field()
+    website_url = serpy.Field()
+    marketing_phone = serpy.Field()
+    twitter_handle = serpy.Field()
+    facebook_handle = serpy.Field()
+    instagram_handle = serpy.Field()
+    github_handle = serpy.Field()
+    linkedin_url = serpy.Field()
+    youtube_url = serpy.Field()
+
 class SyllabusSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -202,6 +224,17 @@ class AcademySerializer(serializers.ModelSerializer):
     class Meta:
         model = Academy
         fields = ['id', 'slug', 'name', 'street_address', 'country', 'city']
+
+    def validate(self, data):
+
+        if "slug" in data and data["slug"] != self.instance.slug:
+            raise ValidationException('Academy slug cannot be updated')
+
+        return data
+
+    def update(self, instance, validated_data):
+        del validated_data['slug']
+        return super().update(instance, validated_data)
 
 
     def validate(self, data):
