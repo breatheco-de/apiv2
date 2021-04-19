@@ -411,9 +411,6 @@ class AuthSerializer(serializers.Serializer):
         email = attrs.get('email')
         password = attrs.get('password')
 
-        if email:
-            attrs['email'] = email.lower()
-
         if email and password:
             email = email.lower()
             user = User.objects.filter(
