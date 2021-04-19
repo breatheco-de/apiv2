@@ -8,6 +8,8 @@ from rest_framework.exceptions import ValidationError
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
 from .models import Academy, Cohort, Certificate, CohortUser, Syllabus
 
+from rest_pandas.serializers import PandasSerializer
+
 logger = logging.getLogger(__name__)
 
 

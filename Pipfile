@@ -39,6 +39,7 @@ django-redis = "*"
 pytz = "*"
 hiredis = "*"
 icalendar = "*"
+djangorestframework-csv = "*"
 
 [requires]
 python_version = "3.9"
