@@ -3,7 +3,8 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from breathecode.admissions.models import Cohort
-from datetime import datetime
+from django.utils import timezone
+from datetime import datetime, timedelta
 from mixer.backend.django import mixer
 
 class AdmissionsModelsMixin(ModelsMixin):
@@ -92,7 +93,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                 kargs['academy'] = models['academy']
 
             if impossible_kickoff_date:
-                kargs['kickoff_date'] = datetime(year=3000, month=1, day=1)
+                kargs['kickoff_date'] = timezone.now() + timedelta(days=365 * 2000)
 
             if cohort_finished:
                 kargs['current_day'] = models['certificate'].duration_in_days

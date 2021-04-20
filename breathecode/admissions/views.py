@@ -52,7 +52,7 @@ def get_all_academies(request, id=None):
 @permission_classes([AllowAny])
 def get_cohorts(request, id=None):
 
-    items = Cohort.objects.all()
+    items = Cohort.objects.filter(private=False)
 
     if isinstance(request.user, AnonymousUser) == False:
         # filter only to the local academy
