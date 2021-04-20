@@ -1,6 +1,7 @@
 """
 Test /cohort
 """
+from django.utils import timezone
 from breathecode.admissions.caches import CohortCache
 import re
 from unittest.mock import patch
@@ -267,8 +268,9 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     def test_cohort_id_put_with_id_with_data_in_body(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
+        cohort_kwargs = {'ending_date': timezone.now()}
         model = self.generate_models(authenticate=True, cohort=True, profile_academy=True,
-            capability='crud_cohort', role='potato', syllabus=True)
+            capability='crud_cohort', role='potato', syllabus=True, cohort_kwargs=cohort_kwargs)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'syllabus': model['certificate'].slug + '.v' + str(model['syllabus'].version),
@@ -277,8 +279,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day + 1,
             'language': 'es',
         }
+        print(vars(model.cohort))
         response = self.client.put(url, data)
         json = response.json()
+        print(json, 'aaaaaaaaaa',  self.datetime_to_iso(model['cohort'].kickoff_date, json['kickoff_date']))
         expected = {
             'id': model['cohort'].id,
             'slug': data['slug'],

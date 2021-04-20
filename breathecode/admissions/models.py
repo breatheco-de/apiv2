@@ -184,6 +184,7 @@ class Cohort(models.Model):
     current_day = models.IntegerField()
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
     private = models.BooleanField(default=False)
+    never_ends = models.BooleanField(default=False)
 
     timezone = models.CharField(max_length=50, null=True, default=None)
 

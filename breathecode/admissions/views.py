@@ -247,7 +247,11 @@ class AcademyICalEventView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        items = Event.objects.filter(status='ACTIVE')
+        items = Event.objects.filter(status='ACTIVE') # TODO: active and upcoming events
+
+        # if upcoming == 'true':
+        #     now = timezone.now()
+        #     items = items.filter(kickoff_date__gte=now)
 
         academies = []
         slugs = request.GET.get('academy_slug', None)
@@ -265,10 +269,10 @@ class AcademyICalEventView(APIView):
         academy_name = "Academy"
 
         calendar = iCalendar()
-        calendar.add('prodid', f'-//{academy_name}//{academy_name} Events')
-        calendar.add('X-WR-CALNAME', f'{academy_name} - Events')
+        calendar.add('prodid', f'-//BreatheCode//Academy Events (1,2,3)//EN')
+        calendar.add('X-WR-CALNAME', f'Academy - Events')
         calendar.add('X-WR-CALDESC', '')
-        calendar.add('REFRESH-INTERVAL', 'PT1M')
+        calendar.add('REFRESH-INTERVAL', 'PT15M')
 
         calendar.add('version', '2.0')
 

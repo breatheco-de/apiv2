@@ -161,8 +161,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
             'language': cohort.language,
-            'created_at': re.sub(r'\+00:00$', 'Z', cohort.created_at.isoformat()),
-            'updated_at': re.sub(r'\+00:00$', 'Z', cohort.updated_at.isoformat()),
+            'created_at': self.date_today_to_iso(cohort.created_at),
+            'updated_at': self.date_today_to_iso(cohort.updated_at),
         }
 
         del data['kickoff_date']
@@ -393,7 +393,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
-            'kickoff_date': model['cohort'].kickoff_date.isoformat() + 'Z',
+            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
@@ -464,7 +464,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
-            'kickoff_date': model['cohort'].kickoff_date.isoformat() + 'Z',
+            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
@@ -515,7 +515,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
-            'kickoff_date': model['cohort'].kickoff_date.isoformat() + 'Z',
+            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
@@ -643,7 +643,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
-            'kickoff_date': model['cohort'].kickoff_date.isoformat() + 'Z',
+            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
@@ -694,7 +694,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
-            'kickoff_date': model['cohort'].kickoff_date.isoformat() + 'Z',
+            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
@@ -1220,6 +1220,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         json = response.json()
         cohort = self.get_cohort(2)
 
+        print(json, cohort)
         expected = {
             'id': cohort.id,
             'current_day': cohort.current_day,
@@ -1234,8 +1235,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
             'language': cohort.language,
-            'created_at': re.sub(r'\+00:00$', 'Z', cohort.created_at.isoformat()),
-            'updated_at': re.sub(r'\+00:00$', 'Z', cohort.updated_at.isoformat()),
+            'created_at': self.date_today_to_iso(cohort.created_at),
+            'updated_at': self.date_today_to_iso(cohort.updated_at),
             **data,
         }
 

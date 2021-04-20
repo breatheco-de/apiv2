@@ -268,6 +268,23 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             if cohort is not None and self.instance.slug != data["slug"]:
                 raise ValidationError('Slug already exists for another cohort')
 
+        if self.instance:
+            never_ends = (data['never_ends'] if 'never_ends' in
+                data else self.instance.never_ends)
+
+            ending_date = (data['ending_date'] if 'ending_date' in
+                data else self.instance.ending_date)
+
+        else:
+            never_ends = 'never_ends' in data and data['never_ends']
+            ending_date = 'ending_date' in data and data['ending_date']
+
+        if never_ends and ending_date:
+            raise ValidationError('One cohort that never ends cannot have one ending date')
+
+        if not never_ends and not ending_date:
+            raise ValidationError('Cohort not have one ending date or ever_ends=true')
+
         return data
 
 
@@ -283,7 +300,20 @@ class CohortSerializer(CohortSerializerMixin):
         del self.context['request']
         return Cohort.objects.create(**validated_data, **self.context)
 
+    # def validate(self, validated_data):
+    #     never_ends = 'never_ends' in validated_data and validated_data['never_ends']
+    #     ending_date = 'ending_date' in validated_data and validated_data['ending_date']
+
+    #     if never_ends and ending_date:
+    #         raise ValidationError('One cohort that never ends cannot have one ending date')
+
+    #     if not never_ends and not ending_date:
+    #         raise ValidationError('Cohort not have one ending date or ever_ends=true')
+
+    #     return validated_data
+
 class CohortPUTSerializer(CohortSerializerMixin):
+    # id = serializers.IntegerField(required=True)
     slug = serializers.SlugField(required=False)
     name = serializers.CharField(required=False)
     kickoff_date = serializers.DateTimeField(required=False)
@@ -296,6 +326,29 @@ class CohortPUTSerializer(CohortSerializerMixin):
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
             'syllabus')
+
+    # def validate(self, validated_data):
+    #     print('==========', validated_data)
+    #     print('==========', self.context['cohort_id'])
+    #     print('==========', type(self.instance))
+    #     print('==========', self.instance)
+
+    #     never_ends = (validated_data['never_ends'] if 'never_ends' in
+    #         validated_data else self.instance.never_ends)
+
+    #     ending_date = (validated_data['ending_date'] if 'ending_date' in
+    #         validated_data else self.instance.ending_date)
+
+    #     # never_ends = 'never_ends' in validated_data and validated_data['never_ends']
+    #     # ending_date = 'ending_date' in validated_data and validated_data['ending_date']
+
+    #     if never_ends and ending_date:
+    #         raise ValidationError('One cohort that never ends cannot have one ending date')
+
+    #     if not never_ends and not ending_date:
+    #         raise ValidationError('Cohort not have one ending date or ever_ends=true')
+
+    #     return validated_data
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
