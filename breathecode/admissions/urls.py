@@ -5,7 +5,7 @@ from .views import (
     AcademyView, CohortUserView, AcademyCohortView,
     get_timezones, UserView, UserMeView, AcademyCohortUserView,
     get_single_course, SyllabusView, CertificateView, AcademyICalEventView,
-    CertificateAllView, get_all_academies
+    CertificateAllView, get_all_academies, get_cohorts
 )
 
 app_name = 'admissions'

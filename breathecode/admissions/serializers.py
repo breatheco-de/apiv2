@@ -432,37 +432,37 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             raise ValidationException(
                 'There can only be one main instructor in a cohort')
 
-    cohort_user = CohortUser.objects.filter(
-        user__id=user_id, cohort__id=cohort_id).first()
+        cohort_user = CohortUser.objects.filter(
+            user__id=user_id, cohort__id=cohort_id).first()
 
-    if not is_post_method and not cohort_user:
-        raise ValidationException('Cannot find CohortUser')
+        if not is_post_method and not cohort_user:
+            raise ValidationException('Cannot find CohortUser')
 
-    if not id and cohort_user:
-        id = cohort_user.id
+        if not id and cohort_user:
+            id = cohort_user.id
 
-    is_graduated = request_item.get('educational_status') == 'GRADUATED'
-    is_late = (True if cohort_user and cohort_user.finantial_status == 'LATE' else request_item
-               .get('finantial_status') == 'LATE')
-    if is_graduated and is_late:
-        raise ValidationException(('Cannot be marked as `GRADUATED` if its financial '
-                                   'status is `LATE`'))
+        is_graduated = request_item.get('educational_status') == 'GRADUATED'
+        is_late = (True if cohort_user and cohort_user.finantial_status == 'LATE' else request_item
+                   .get('finantial_status') == 'LATE')
+        if is_graduated and is_late:
+            raise ValidationException(('Cannot be marked as `GRADUATED` if its financial '
+                                       'status is `LATE`'))
 
-    has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
-                                    task_type='PROJECT').count()
-    if is_graduated and has_tasks:
-        raise ValidationException(
-            'User has tasks with status pending the educational status cannot be GRADUATED')
+        has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
+                                        task_type='PROJECT').count()
+        if is_graduated and has_tasks:
+            raise ValidationException(
+                'User has tasks with status pending the educational status cannot be GRADUATED')
 
-    data = {}
+        data = {}
 
-    for key in request_item:
-        data[key] = request_item.get(key)
+        for key in request_item:
+            data[key] = request_item.get(key)
 
-    data['cohort'] = cohort_id
+        data['cohort'] = cohort_id
 
-    user = User.objects.filter(id=user_id).first()
-    return {**data, 'id': id, 'cohort': cohort, 'user': user}
+        user = User.objects.filter(id=user_id).first()
+        return {**data, 'id': id, 'cohort': cohort, 'user': user}
 
 
 class CohortUserListSerializer(serializers.ListSerializer):
