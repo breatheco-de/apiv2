@@ -4,12 +4,8 @@ from rest_framework import routers
 from .views import (
     AcademyView, CohortUserView, AcademyCohortView,
     get_timezones, UserView, UserMeView, AcademyCohortUserView,
-<<<<<<< HEAD
-    get_single_course, SyllabusView, CertificateView, AcademyICalEventView, get_cohorts
-=======
     get_single_course, SyllabusView, CertificateView, AcademyICalEventView,
     CertificateAllView, get_all_academies
->>>>>>> 88a034b1a8ea9269c14ca899a9627e87678fb7d7
 )
 
 app_name = 'admissions'
@@ -32,27 +28,19 @@ urlpatterns = [
     path('academy/cohort/<int:cohort_id>/user',
          AcademyCohortUserView.as_view()),
 
-<<<<<<< HEAD
     path('academy/ical/events', AcademyICalEventView.as_view(),
-         name="academy_ical_events"),
-    path('academy/', AcademyView.as_view(), name="academy"),
-=======
-    path('academy/ical/events', AcademyICalEventView.as_view(), name="academy_id_ical_events"),
+         name="academy_id_ical_events"),
     path('academy/', get_all_academies, name="academy"),
     path('academy/me', AcademyView.as_view(), name="academy_me"),
->>>>>>> 88a034b1a8ea9269c14ca899a9627e87678fb7d7
     path('academy/cohort', AcademyCohortView.as_view(), name="academy_cohort"),
     path('user/me', UserMeView.as_view(), name="user_me"),
     path('user', UserView.as_view(), name="user"),
 
     path('certificate', CertificateAllView.as_view(), name="certificate"),
     path('certificate/<str:certificate_slug>/', get_single_course,
-<<<<<<< HEAD
          name="certificate_slug"),
-=======
-        name="certificate_slug"),
-    path('academy/certificate', CertificateView.as_view(), name="academy_certificate"),
->>>>>>> 88a034b1a8ea9269c14ca899a9627e87678fb7d7
+    path('academy/certificate', CertificateView.as_view(),
+         name="academy_certificate"),
     path('certificate/<str:certificate_slug>/syllabus', SyllabusView.as_view(),
          name="certificate_slug_syllabus"),
     path('certificate/<str:certificate_slug>/syllabus/<int:version>',
