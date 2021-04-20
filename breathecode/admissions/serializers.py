@@ -237,15 +237,6 @@ class AcademySerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
 
-    def validate(self, data):
-        marketing_email = data.get('marketing_email')
-
-        if marketing_email:
-            data['marketing_email'] = marketing_email.lower()
-
-        return data
-
-
 class SyllabusPOSTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Syllabus

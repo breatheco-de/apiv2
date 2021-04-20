@@ -96,7 +96,6 @@ class AcademyView(APIView):
     @capable_of('read_my_academy')
     def get(self, request, format=None, academy_id=None):
         item = Academy.objects.get(id=academy_id)
-        print("Item", item)
         serializer = GetBigAcademySerializer(item)
         return Response(serializer.data)
 
@@ -248,7 +247,6 @@ class AcademyICalEventView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-
         items = Event.objects.filter(status='ACTIVE')
 
         academies = []

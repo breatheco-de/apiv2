@@ -82,9 +82,6 @@ class Academy(models.Model):
     #     super(Image, self).delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-        if self.marketing_email:
-            self.marketing_email = self.marketing_email.lower()
-
         if os.getenv('ENV', "") == 'production':
             obj = get_bucket_object(f'location-{self.slug}')
             if obj is not None:

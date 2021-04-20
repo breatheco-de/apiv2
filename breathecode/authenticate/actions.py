@@ -26,7 +26,7 @@ def create_token(user, hours_length=1):
 
 def delete_tokens(users=None, status='expired'):
     now = timezone.now()
-    
+
     tokens = Token.objects.all()
     if users is not None:
         tokens = tokens.filter(user__id__in=[users])
@@ -38,7 +38,7 @@ def delete_tokens(users=None, status='expired'):
     return count
 
 def reset_password(users=None):
-
+    from breathecode.notify.actions import send_email_message
     if users is None or len(users) == 0:
         raise Exception("Missing users")
 
@@ -50,7 +50,7 @@ def reset_password(users=None):
             "SUBJECT": "You asked to reset your password at BreatheCode",
             "LINK": os.getenv('API_URL','') + f"/v1/auth/password/{token}"
         })
-    
+
     return True
 
 def resend_invite(token=None,email=None, first_name=None ):
