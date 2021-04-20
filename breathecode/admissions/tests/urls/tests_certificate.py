@@ -202,7 +202,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
             capability='crud_certificate', role='potato')
-        url = reverse_lazy('admissions:certificate')
+        url = reverse_lazy('admissions:academy_certificate')
         response = self.client.delete(url)
         json = response.json()
         expected = {
@@ -236,7 +236,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 capability='crud_certificate', role='potato',
                 certificate_kwargs=certificate_kwargs, academy_certificate=True,
                 certificate=True, models=base)
-            url = (reverse_lazy('admissions:certificate') + f'?{field}=' +
+            url = (reverse_lazy('admissions:academy_certificate') + f'?{field}=' +
                 str(getattr(model['certificate'], field)))
             response = self.client.delete(url)
 
@@ -271,7 +271,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 capability='crud_certificate', role='potato', certificate_kwargs=certificate_kwargs,
                 academy_certificate=True, certificate=True, models=base)
 
-            url = (reverse_lazy('admissions:certificate') + f'?{field}=' +
+            url = (reverse_lazy('admissions:academy_certificate') + f'?{field}=' +
                 str(getattr(model1['certificate'], field)) + ',' +
                 str(getattr(model2['certificate'], field)))
             response = self.client.delete(url)

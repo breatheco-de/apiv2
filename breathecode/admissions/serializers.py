@@ -1,5 +1,6 @@
 import logging
 import serpy
+from django.db.models import Q
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, localize_query
 from rest_framework import serializers
@@ -104,6 +105,29 @@ class GetAcademySerializer(serpy.Serializer):
     country = CountrySerializer(required=False)
     city = CitySerializer(required=False)
     logo_url = serpy.Field()
+
+
+class GetBigAcademySerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    country = CountrySerializer(required=False)
+    city = CitySerializer(required=False)
+    logo_url = serpy.Field()
+    active_campaign_slug = serpy.Field()
+    logistical_information = serpy.Field()
+    latitude = serpy.Field()
+    longitude = serpy.Field()
+    marketing_email = serpy.Field()
+    street_address = serpy.Field()
+    website_url = serpy.Field()
+    marketing_phone = serpy.Field()
+    twitter_handle = serpy.Field()
+    facebook_handle = serpy.Field()
+    instagram_handle = serpy.Field()
+    github_handle = serpy.Field()
+    linkedin_url = serpy.Field()
+    youtube_url = serpy.Field()
 
 
 class SyllabusSmallSerializer(serpy.Serializer):
@@ -234,6 +258,25 @@ class AcademySerializer(serializers.ModelSerializer):
         model = Academy
         fields = ['id', 'slug', 'name', 'street_address', 'country', 'city']
 
+    def validate(self, data):
+
+        if "slug" in data and data["slug"] != self.instance.slug:
+            raise ValidationException('Academy slug cannot be updated')
+
+        return data
+
+    def update(self, instance, validated_data):
+        del validated_data['slug']
+        return super().update(instance, validated_data)
+
+    def validate(self, data):
+        marketing_email = data.get('marketing_email')
+
+        if marketing_email:
+            data['marketing_email'] = marketing_email.lower()
+
+        return data
+
 
 class SyllabusPOSTSerializer(serializers.ModelSerializer):
     class Meta:
@@ -316,8 +359,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
     index = -1
 
     def count_certificates_by_cohort(self, cohort, user_id):
-        return (CohortUser.objects.filter(user_id=user_id, role='STUDENT', cohort__syllabus__certificate=cohort.syllabus.certificate)
-                .exclude(educational_status='POSTPONED').count())
+        return CohortUser.objects.filter(user_id=user_id, role='STUDENT', cohort__syllabus__certificate=cohort.syllabus.certificate).filter(Q(educational_status='ACTIVE') | Q(educational_status__isnull=True)).count()
 
     def validate_just_one(self):
         pass
@@ -381,45 +423,46 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 
         if (is_post_method and cohort.syllabus and
                 self.count_certificates_by_cohort(cohort, user_id) > 0):
+
             raise ValidationException(
-                'This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort as POSTPONED before cotinuing')
+                'This student is already in another cohort for the same certificate, please mark him/her hi educational status on this prior cohort different than ACTIVE before cotinuing')
 
         role = request_item.get('role')
         if role == 'TEACHER' and CohortUser.objects.filter(role=role, cohort_id=cohort_id).exclude(user__id__in=[user_id]).count():
             raise ValidationException(
                 'There can only be one main instructor in a cohort')
 
-        cohort_user = CohortUser.objects.filter(
-            user__id=user_id, cohort__id=cohort_id).first()
+    cohort_user = CohortUser.objects.filter(
+        user__id=user_id, cohort__id=cohort_id).first()
 
-        if not is_post_method and not cohort_user:
-            raise ValidationException('Cannot find CohortUser')
+    if not is_post_method and not cohort_user:
+        raise ValidationException('Cannot find CohortUser')
 
-        if not id and cohort_user:
-            id = cohort_user.id
+    if not id and cohort_user:
+        id = cohort_user.id
 
-        is_graduated = request_item.get('educational_status') == 'GRADUATED'
-        is_late = (True if cohort_user and cohort_user.finantial_status == 'LATE' else request_item
-                   .get('finantial_status') == 'LATE')
-        if is_graduated and is_late:
-            raise ValidationException(('Cannot be marked as `GRADUATED` if its financial '
-                                       'status is `LATE`'))
+    is_graduated = request_item.get('educational_status') == 'GRADUATED'
+    is_late = (True if cohort_user and cohort_user.finantial_status == 'LATE' else request_item
+               .get('finantial_status') == 'LATE')
+    if is_graduated and is_late:
+        raise ValidationException(('Cannot be marked as `GRADUATED` if its financial '
+                                   'status is `LATE`'))
 
-        has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
-                                        task_type='PROJECT').count()
-        if is_graduated and has_tasks:
-            raise ValidationException(
-                'User has tasks with status pending the educational status cannot be GRADUATED')
+    has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
+                                    task_type='PROJECT').count()
+    if is_graduated and has_tasks:
+        raise ValidationException(
+            'User has tasks with status pending the educational status cannot be GRADUATED')
 
-        data = {}
+    data = {}
 
-        for key in request_item:
-            data[key] = request_item.get(key)
+    for key in request_item:
+        data[key] = request_item.get(key)
 
-        data['cohort'] = cohort_id
+    data['cohort'] = cohort_id
 
-        user = User.objects.filter(id=user_id).first()
-        return {**data, 'id': id, 'cohort': cohort, 'user': user}
+    user = User.objects.filter(id=user_id).first()
+    return {**data, 'id': id, 'cohort': cohort, 'user': user}
 
 
 class CohortUserListSerializer(serializers.ListSerializer):

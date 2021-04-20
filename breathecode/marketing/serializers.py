@@ -57,3 +57,9 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = FormEntry
         exclude = ()
+
+    def validate(self, data):
+        if 'email' in data:
+            data['email'] = data['email'].lower()
+
+        return data

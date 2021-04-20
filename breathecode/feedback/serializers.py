@@ -1,5 +1,9 @@
 from breathecode.authenticate.models import Token
-from .models import Answer
+from breathecode.admissions.models import CohortUser, Cohort
+from breathecode.admissions.serializers import CohortSerializer
+from breathecode.utils import ValidationException
+from .models import Answer, Survey
+from .actions import send_survey_group
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 import serpy
@@ -78,3 +82,82 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+
+
+class SurveySerializer(serializers.ModelSerializer):
+    send_now = serializers.BooleanField(required=False, write_only=True)
+
+    class Meta:
+        model = Survey
+        exclude = ('avg_score', 'status_json', 'status')
+
+    def validate(self, data):
+
+        if not 'cohort' in data:
+            raise ValidationException('No cohort has been specified for this survey')
+
+        if data["cohort"].academy.id != int(self.context['academy_id']):
+            raise ValidationException(f'You don\'t have rights for this cohort academy {self.context["academy_id"]}')
+
+        cohort_teacher = CohortUser.objects.filter(cohort=data["cohort"], role="TEACHER")
+        if cohort_teacher.count() == 0:
+            raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
+        
+        return data
+
+    def create(self, validated_data):
+
+        send_now = False
+        if "send_now" in validated_data:
+            if validated_data["send_now"]:
+                send_now = True
+            del validated_data["send_now"]
+
+        cohort = validated_data["cohort"]
+
+        if "lang" not in validated_data:
+            validated_data["lang"] = cohort.language
+
+        
+        result = super().create(validated_data)
+
+        if send_now:
+            send_survey_group(survey=result)
+
+        return result
+
+class SurveyPUTSerializer(serializers.ModelSerializer):
+    send_now = serializers.BooleanField(required=False, write_only=True)
+    cohort = serializers.IntegerField(required=False, write_only=True)
+
+    class Meta:
+        model = Survey
+        exclude = ('avg_score', 'status_json', 'status')
+
+    def validate(self, data):
+
+        if self.instance.status == 'PENDING':
+            raise ValidationException("This survey was already send, therefore it cannot be updated")
+
+        if 'cohort' in data:
+            raise ValidationException("The cohort cannot be updated in a survey, please create a new survey instead.")
+
+        if self.instance.cohort.academy.id != int(self.context['academy_id']):
+            raise ValidationException('You don\'t have rights for this cohort academy')
+        
+        return data
+
+    def update(self, instance, validated_data):
+
+        send_now = False
+        if "send_now" in validated_data:
+            if validated_data["send_now"]:
+                send_now = True
+            del validated_data["send_now"]
+
+        result = super().update(instance, validated_data)
+
+        if send_now:
+            send_survey_group(survey=result)
+
+        return result

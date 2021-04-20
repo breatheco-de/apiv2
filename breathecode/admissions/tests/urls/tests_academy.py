@@ -63,56 +63,56 @@ class academyTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_academy(), 1)
         self.assertEqual(self.get_academy_dict(1), model_dict)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_new_without_require_fields(self):
-        """Test /academy without auth"""
-        url = reverse_lazy('admissions:academy')
-        self.generate_models(authenticate=True, academy=True)
-        data = {}
-        response = self.client.post(url, data)
-        json = response.json()
+    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    # def test_academy_new_without_require_fields(self):
+    #     """Test /academy without auth"""
+    #     url = reverse_lazy('admissions:academy_me')
+    #     self.generate_models(authenticate=True, academy=True)
+    #     data = {}
+    #     response = self.client.post(url, data)
+    #     json = response.json()
 
-        self.assertEqual(json, {
-            # 'city': ['This field is required.'],
-            # 'country': ['This field is required.'],
-            'slug': ['This field is required.'],
-            'name': ['This field is required.'],
-            'street_address': ['This field is required.']
-        })
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    #     self.assertEqual(json, {
+    #         # 'city': ['This field is required.'],
+    #         # 'country': ['This field is required.'],
+    #         'slug': ['This field is required.'],
+    #         'name': ['This field is required.'],
+    #         'street_address': ['This field is required.']
+    #     })
+    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_new_element(self):
-        """Test /academy without auth"""
-        url = reverse_lazy('admissions:academy')
-        self.generate_models(authenticate=True, country=True)
-        data = {
-            'slug': 'oh-my-god',
-            'name': 'they killed kenny',
-            'street_address': 'you bastards',
-            'country': self.country.code,
-            'city': self.city.id,
-        }
-        response = self.client.post(url, data)
-        json = response.json()
+    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    # def test_academy_new_element(self):
+    #     """Test /academy without auth"""
+    #     url = reverse_lazy('admissions:academy_me')
+    #     self.generate_models(authenticate=True, country=True)
+    #     data = {
+    #         'slug': 'oh-my-god',
+    #         'name': 'they killed kenny',
+    #         'street_address': 'you bastards',
+    #         'country': self.country.code,
+    #         'city': self.city.id,
+    #     }
+    #     response = self.client.post(url, data)
+    #     json = response.json()
 
-        expected = {
-            'id': 1,
-        }
-        expected.update(data)
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    #     expected = {
+    #         'id': 1,
+    #     }
+    #     expected.update(data)
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        model_dict = self.get_academy_dict(1)
-        data['country_id'] = data['country']
-        data['city_id'] = data['city']
-        del data['country']
-        del data['city']
-        model_dict.update(data)
+    #     model_dict = self.get_academy_dict(1)
+    #     data['country_id'] = data['country']
+    #     data['city_id'] = data['city']
+    #     del data['country']
+    #     del data['city']
+    #     model_dict.update(data)
 
-        self.assertEqual(self.count_academy(), 1)
-        self.assertEqual(self.get_academy_dict(1), model_dict)
+    #     self.assertEqual(self.count_academy(), 1)
+    #     self.assertEqual(self.get_academy_dict(1), model_dict)

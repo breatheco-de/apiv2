@@ -1,3 +1,4 @@
+from breathecode.admissions.models import Academy
 from .models import Media, Category
 from rest_framework import serializers
 import serpy
@@ -47,12 +48,50 @@ class MediaSerializer(serializers.ModelSerializer):
         exclude = ()
 
 
+class MediaListSerializer(serializers.ListSerializer):
+    def update(self, instance, validated_data):
+        ret = []
+
+        for data in validated_data:
+            item = [x for x in instance if x.id == data['id']]
+            item = item[0] if len(item) else None
+
+            if 'id' in data and not data['id']:
+                del data['id']
+
+            if 'id' in data:
+                if item and 'categories' in data and data['categories']:
+                    item.categories.set(data['categories'])
+                    del data['categories']
+                ret.append(self.child.update(item, data))
+
+            else:
+                ret.append(self.child.create(data))
+
+        return ret
+
+
 class MediaPUTSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
     url = serializers.CharField(required=False)
+    hash = serializers.CharField()
+    slug = serializers.SlugField()
+    mime = serializers.CharField()
+    name = serializers.CharField()
 
     class Meta:
         model = Media
+        fields = ('id', 'url', 'hash', 'hits', 'slug', 'mime', 'name',
+            'categories', 'academy')
         exclude = ()
+        list_serializer_class = MediaListSerializer
+
+    def validate(self, data):
+        if 'hash' in data and 'academy' in data and isinstance(data['academy'], Academy):
+            data['id'] = Media.objects.filter(hash=data['hash'],
+                academy__id=data['academy'].id).values_list('id', flat=True).first()
+
+        return data
 
 
 class CategorySerializer(serializers.ModelSerializer):

@@ -26,6 +26,7 @@ def order_placed(self, webhook, payload: dict):
 
     academy_id = org.academy.id
     event_id = payload['event_id']
+    email = payload['email'].lower()
 
     local_event = Event.objects.filter(eventbrite_id=event_id).first()
 
@@ -37,22 +38,21 @@ def order_placed(self, webhook, payload: dict):
         logger.debug(message)
         raise Exception(message)
 
-    local_attendee = User.objects.filter(email=payload['email']).first()
+    local_attendee = User.objects.filter(email=email).first()
 
-    if not EventCheckin.objects.filter(email=payload['email'],
-            event=local_event).count():
-        EventCheckin(email=payload['email'], status='PENDING', event=local_event,
+    if not EventCheckin.objects.filter(email=email, event=local_event).count():
+        EventCheckin(email=email, status='PENDING', event=local_event,
             attendee=local_attendee).save()
 
-    elif not EventCheckin.objects.filter(email=payload['email'],
+    elif not EventCheckin.objects.filter(email=email,
             event=local_event, attendee=local_attendee).count():
-        event_checkin = EventCheckin.objects.filter(email=payload['email'],
+        event_checkin = EventCheckin.objects.filter(email=email,
             event=local_event).first()
         event_checkin.attendee = local_attendee
         event_checkin.save()
 
     contact = {
-        'email': payload['email'],
+        'email': email,
         'first_name': payload['first_name'],
         'last_name': payload['last_name'],
     }

@@ -457,14 +457,15 @@ def save_github_token(request):
             if github_user['email'] is None:
                 raise ValidationError("Imposible to retrieve user email")
 
-            user = User.objects.filter(email=github_user['email']).first()
+            github_user['email'] = github_user['email'].lower()
+
+            user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(email__iexact=github_user['email'])).first()
             if user is None:
                 user = User(
-                    username=github_user['login'], email=github_user['email'])
+                    username=github_user['email'], email=github_user['email'])
                 user.save()
 
-            CredentialsGithub.objects.filter(
-                github_id=github_user['id']).delete()
+            CredentialsGithub.objects.filter(github_id=github_user['id']).delete()
             github_credentials = CredentialsGithub(
                 github_id=github_user['id'],
                 user=user,
@@ -480,8 +481,7 @@ def save_github_token(request):
             )
             github_credentials.save()
 
-            profile = Profile.objects.filter(
-                user__email=github_user['email']).first()
+            profile = Profile.objects.filter(user=user).first()
             if profile is None:
                 profile = Profile(user=user,
                                   avatar_url=github_user['avatar_url'],
@@ -795,7 +795,7 @@ def save_facebook_token(request):
             logger.debug("Facebook responded with 200")
             facebook_data = resp.json()
             if "email" in facebook_data:
-                credentials.email = facebook_data['email']
+                credentials.email = facebook_data['email'].lower()
             if "id" in facebook_data:
                 credentials.facebook_id = facebook_data['id']
             credentials.save()

@@ -307,15 +307,32 @@ class AcademyVenueView(APIView):
 
 
 class AcademyICalCohortsView(APIView):
-    # permission_classes = [AllowAny]
+    permission_classes = [AllowAny]
 
-    @capable_of('read_cohort')
-    def get(self, request, academy_id=None):
-        # academy_id = 1
-        items = Cohort.objects.filter(academy__id=academy_id).exclude(stage='DELETED')
+    def get(self, request):
+        items = Cohort.objects.all()
+
+        academies = []
+        slugs = request.GET.get('academy_slug', None)
+        ids = request.GET.get('academy', None)
+
+        if ids is not None:
+            items = Cohort.objects.filter(academy__id__in=ids.split(","))
+
+        elif slugs is not None:
+            items = Cohort.objects.filter(academy__slug__in=slugs.split(","))
+
+        if ids is None and slugs is None:
+            raise ValidationException("You need to specify at least one academy or academy_slug (comma separated) in the querystring")
+
+        items = items.exclude(stage='DELETED')
 
         calendar = iCalendar()
-        calendar.add('prodid', '-//4Geeks Academy//4Geeks events//') # //EN')
+        calendar.add('prodid', '-//Academy//Academy Cohorts') # //EN')
+        calendar.add('X-WR-CALNAME', f'Academy - Cohorts')
+        calendar.add('X-WR-CALDESC', '')
+        calendar.add('REFRESH-INTERVAL', 'PT1M')
+
         calendar.add('version', '2.0')
 
         for item in items:
@@ -330,7 +347,7 @@ class AcademyICalCohortsView(APIView):
 
             event.add('dtstamp', item.created_at)
 
-            teacher = CohortUser.objects.filter(role='TEACHER').first()
+            teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.id).first()
 
             if teacher:
                 organizer = vCalAddress(f'MAILTO:{teacher.user.email}')

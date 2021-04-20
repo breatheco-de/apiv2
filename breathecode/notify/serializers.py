@@ -11,4 +11,3 @@ class DeviceSerializer(serpy.Serializer):
     id = serpy.Field()
     registration_id = serpy.Field()
     created_at = serpy.Field()
-

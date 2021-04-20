@@ -175,63 +175,102 @@ class UploadView(APIView):
     parser_classes = [MultiPartParser, FileUploadParser]
     # permission_classes = [AllowAny]
 
-    @capable_of('crud_media')
-    def put(self, request, academy_id=None):
+    # upload was separated because in one moment I think that the serializer
+    # not should get many create and update operations together
+    def upload(self, request, academy_id=None, update=False):
         from ..services.google_cloud import Storage
+
+        files = request.data.getlist('file')
+        names = request.data.getlist('name')
+        result = {
+            'data': [],
+            'instance': [],
+        }
 
         file = request.data.get('file')
         if not file:
             raise ValidationException('Missing file in request', code=400)
 
+        if not len(files):
+            raise ValidationException('empty files in request')
 
-        file_bytes = file.read()
-        hash = hashlib.sha256(file_bytes).hexdigest()
-        file = request.data.get('file')
-        name = request.data.get('name', file.name)
-        slug = name.split('.')[0]
+        if not len(names):
+            for file in files:
+                names.append(file.name)
 
-        if Media.objects.filter(slug=slug).exclude(hash=hash).count():
-            raise ValidationException('slug already exists', code=400)
+        elif len(files) != len(names):
+            raise ValidationException('numbers of files and names not match')
 
-        data = {
-            'hash': hash,
-            'slug': slug,
-            'mime': file.content_type,
-            'name': name,
-            'categories': [],
-            'academy': academy_id,
-        }
+        for index in range(0, len(files)):
+            file = files[index]
+            name = names[index] if len(names) else file.name
+            file_bytes = file.read()
+            hash = hashlib.sha256(file_bytes).hexdigest()
+            slug = name.split('.')[0]
 
-        # it is receive in url encoded
-        if 'categories' in request.data:
-            data['categories'] = request.data['categories'].split(',')
-        elif 'Categories' in request.headers:
-            data['categories'] = request.headers['Categories'].split(',')
+            if Media.objects.filter(slug=slug).exclude(hash=hash).count():
+                raise ValidationException('slug already exists', code=400)
 
-        media = Media.objects.filter(hash=hash, academy__id=academy_id).first()
-        if not media:
-            url = Media.objects.filter(hash=hash).values_list('url', flat=True).first()
-            if url:
-                data['url'] = url
+            data = {
+                'hash': hash,
+                'slug': slug,
+                'mime': file.content_type,
+                'name': name,
+                'categories': [],
+                'academy': academy_id,
+            }
+
+            # it is receive in url encoded
+            if 'categories' in request.data:
+                data['categories'] = request.data['categories'].split(',')
+            elif 'Categories' in request.headers:
+                data['categories'] = request.headers['Categories'].split(',')
+
+            media = Media.objects.filter(hash=hash, academy__id=academy_id).first()
+            if media:
+                data['id'] = media.id
+
+                url = Media.objects.filter(hash=hash).values_list('url', flat=True).first()
+                if url:
+                    data['url'] = url
 
             else:
-                # upload file section
-                storage = Storage()
-                cloud_file = storage.file(BUCKET_NAME, hash)
-                cloud_file.upload(file_bytes, public=True)
-                data['url'] = cloud_file.url()
+                url = Media.objects.filter(hash=hash).values_list('url', flat=True).first()
+                if url:
+                    data['url'] = url
 
-        if media:
-            serializer = MediaPUTSerializer(media, data=data, many=False)
-        else:
-            serializer = MediaPUTSerializer(data=data, many=False)
+                else:
+                    # upload file section
+                    storage = Storage()
+                    cloud_file = storage.file(BUCKET_NAME, hash)
+                    cloud_file.upload(file_bytes)
+                    data['url'] = cloud_file.url()
+
+            result['data'].append(data)
+
+        from django.db.models import Q
+        query = None
+        datas_with_id = [x for x in result['data'] if 'id' in x]
+        for x in datas_with_id:
+            if query:
+                query = query | Q(id=x['id'])
+            else:
+                query = Q(id=x['id'])
+
+        if query:
+            result['instance'] = Media.objects.filter(query)
+
+        return result
+
+    @capable_of('crud_media')
+    def put(self, request, academy_id=None):
+        upload = self.upload(request, academy_id, update=True)
+        serializer = MediaPUTSerializer(upload['instance'], data=upload['data'], context=upload['data'], many=True)
 
         if serializer.is_valid():
             serializer.save()
-            status_code = status.HTTP_200_OK if media else status.HTTP_201_CREATED
-            return Response(serializer.data, status=status_code)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class MaskingUrlView(APIView):
     parser_classes = [FileUploadParser]
