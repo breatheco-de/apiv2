@@ -37,8 +37,8 @@ from breathecode.events.models import Event
 from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 
 from rest_framework.decorators import renderer_classes
-from rest_framework.renderers import JSONRenderer
 from rest_framework_csv import renderers as r
+from rest_framework.renderers import JSONRenderer
 
 logger = logging.getLogger(__name__)
 
