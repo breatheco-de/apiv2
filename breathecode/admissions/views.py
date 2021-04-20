@@ -59,7 +59,6 @@ def get_all_academies(request, id=None):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-@renderer_classes([JSONRenderer, r.CSVRenderer])
 def get_cohorts(request, id=None):
 
     items = Cohort.objects.all()
@@ -84,9 +83,9 @@ def get_cohorts(request, id=None):
     items = items.order_by('kickoff_date')
     serializer = GetCohortSerializer(items, many=True)
 
-    if request.accepted_renderer.format == 'csv':
+    # if request.accepted_renderer.format == 'csv':
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    #     return Response(serializer.data, status=status.HTTP_200_OK)
 
     return Response(serializer.data)
 

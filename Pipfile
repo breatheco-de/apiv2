@@ -38,8 +38,8 @@ pillow = "*"
 django-redis = "*"
 pytz = "*"
 hiredis = "*"
-djangorestframework-csv = "*"
 icalendar = "*"
+djangorestframework-csv = "*"
 
 [requires]
 python_version = "3.9"
