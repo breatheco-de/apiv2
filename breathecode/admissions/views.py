@@ -36,11 +36,8 @@ from rest_framework.exceptions import ParseError, PermissionDenied, ValidationEr
 from breathecode.events.models import Event
 from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 
-import csv
-# from rest_framework import renderers
-from rest_framework.decorators import api_view, throttle_classes, renderer_classes
+from rest_framework.decorators import renderer_classes
 from rest_framework.renderers import JSONRenderer
-from rest_framework.settings import api_settings
 from rest_framework_csv import renderers as r
 
 logger = logging.getLogger(__name__)
@@ -82,14 +79,7 @@ def get_cohorts(request, id=None):
 
     if request.accepted_renderer.format == 'csv':
 
-        syllabus = serializer.data[0]['syllabus']
-        academy = serializer.data[0]['academy']
-        del serializer.data[0]['syllabus']
-        del serializer.data[0]['academy']
-
-        content = {**serializer.data[0], **syllabus, **academy, }
-
-        return Response(content, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     return Response(serializer.data)
 
