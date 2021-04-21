@@ -200,7 +200,6 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         cohort_names = (", ").join(
             [model.cohort.name for model in models if model.cohort.id == 1])
-        print("cohortName", cohort_names)
         cohort_name = models[0].cohort.name
 
         details = ('{\n'
