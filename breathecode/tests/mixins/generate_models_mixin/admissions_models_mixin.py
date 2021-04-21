@@ -6,21 +6,22 @@ from breathecode.admissions.models import Cohort
 from datetime import datetime
 from mixer.backend.django import mixer
 
+
 class AdmissionsModelsMixin(ModelsMixin):
     def count_cohort_stage(self, cohort_id):
         cohort = Cohort.objects.get(id=cohort_id)
         return cohort.stage
 
     def generate_admissions_models(self, certificate=False, academy=False,
-            cohort=False, profile_academy=False, cohort_user=False,
-            impossible_kickoff_date=False, cohort_user_finantial_status='',
-            cohort_user_educational_status='', city=False, country=False,
-            skip_cohort=False, specialty=False, cohort_finished=False,
-            cohort_stage='', language='', cohort_user_role='', syllabus=False,
-            academy_certificate=False, country_kwargs={}, city_kwargs={},
-            academy_kwargs={}, certificate_kwargs={},
-            academy_certificate_kwargs={}, syllabus_kwargs={}, cohort_kwargs={},
-            cohort_user_kwargs={}, models={}, **kwargs):
+                                   cohort=False, profile_academy=False, cohort_user=False,
+                                   impossible_kickoff_date=False, cohort_user_finantial_status='',
+                                   cohort_user_educational_status='', city=False, country=False,
+                                   skip_cohort=False, specialty=False, cohort_finished=False,
+                                   cohort_stage='', language='', cohort_user_role='', syllabus=False,
+                                   academy_certificate=False, country_kwargs={}, city_kwargs={},
+                                   academy_kwargs={}, certificate_kwargs={},
+                                   academy_certificate_kwargs={}, syllabus_kwargs={}, cohort_kwargs={},
+                                   cohort_user_kwargs={}, models={}, **kwargs):
         models = models.copy()
 
         if not 'country' in models and country:
@@ -38,8 +39,11 @@ class AdmissionsModelsMixin(ModelsMixin):
             kargs = {**kargs, **city_kwargs}
             models['city'] = mixer.blend('admissions.City', **kargs)
 
+        print((academy or profile_academy or syllabus or
+               academy_certificate))
+
         if not 'academy' in models and (academy or profile_academy or syllabus or
-                academy_certificate):
+                                        academy_certificate):
             kargs = {}
 
             if 'country' in models:
@@ -52,11 +56,12 @@ class AdmissionsModelsMixin(ModelsMixin):
             models['academy'] = mixer.blend('admissions.Academy', **kargs)
 
         if not 'certificate' in models and (certificate or profile_academy or
-                specialty or cohort or cohort_user or academy_certificate):
+                                            specialty or cohort or cohort_user or academy_certificate):
             kargs = {}
 
             kargs = {**kargs, **certificate_kwargs}
-            models['certificate'] = mixer.blend('admissions.Certificate', **kargs)
+            models['certificate'] = mixer.blend(
+                'admissions.Certificate', **kargs)
 
         if not 'academy_certificate' in models and academy_certificate:
             kargs = {}
@@ -68,7 +73,8 @@ class AdmissionsModelsMixin(ModelsMixin):
                 kargs['academy'] = models['academy']
 
             kargs = {**kargs, **academy_certificate_kwargs}
-            models['academy_certificate'] = mixer.blend('admissions.AcademyCertificate', **kargs)
+            models['academy_certificate'] = mixer.blend(
+                'admissions.AcademyCertificate', **kargs)
 
         if not 'syllabus' in models and syllabus:
             kargs = {}
@@ -125,6 +131,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                 kargs['role'] = cohort_user_role
 
             kargs = {**kargs, **cohort_user_kwargs}
-            models['cohort_user'] = mixer.blend('admissions.CohortUser', **kargs)
+            models['cohort_user'] = mixer.blend(
+                'admissions.CohortUser', **kargs)
 
         return models

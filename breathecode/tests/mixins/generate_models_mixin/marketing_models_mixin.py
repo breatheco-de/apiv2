@@ -4,13 +4,14 @@ Collections of mixins used to login in authorize microservice
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
 
+
 class MarketingModelsMixin(ModelsMixin):
     def generate_marketing_models(self, active_campaign_academy=False,
-            automation=False, academy=False, tag=False, contact=False,
-            form_entry=False, short_link=False, user=False,
-            active_campaign_academy_kwargs={}, automation_kwargs={},
-            tag_kwargs={}, contact_kwargs={}, form_entry_kwargs={},
-            short_link_kwargs={}, models={}, **kwargs):
+                                  automation=False, academy=False, tag=False, contact=False,
+                                  form_entry=False, short_link=False, user=False,
+                                  active_campaign_academy_kwargs={}, automation_kwargs={},
+                                  tag_kwargs={}, contact_kwargs={}, form_entry_kwargs={},
+                                  short_link_kwargs={}, models={}, **kwargs):
         """Generate models"""
         models = models.copy()
 
@@ -21,7 +22,8 @@ class MarketingModelsMixin(ModelsMixin):
                 kargs['academy'] = models['academy']
 
             kargs = {**kargs, **active_campaign_academy_kwargs}
-            models['active_campaign_academy'] = mixer.blend('marketing.ActiveCampaignAcademy', **kargs)
+            models['active_campaign_academy'] = mixer.blend(
+                'marketing.ActiveCampaignAcademy', **kargs)
 
         if not 'automation' in models and automation:
             kargs = {}

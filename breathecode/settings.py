@@ -7,7 +7,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
-import os, django_heroku, dj_database_url, sys, logging
+import os
+import django_heroku
+import dj_database_url
+import sys
+import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -76,7 +80,11 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         # 'rest_framework.permissions.AllowAny',
         'rest_framework.permissions.IsAuthenticated',
-    ]
+    ],
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework_csv.renderers.CSVRenderer',
+    ),
 }
 
 MIDDLEWARE = [
@@ -102,8 +110,8 @@ MIDDLEWARE = [
 ]
 
 AUTHENTICATION_BACKENDS = (
-        'django.contrib.auth.backends.ModelBackend',
-    )
+    'django.contrib.auth.backends.ModelBackend',
+)
 
 ROOT_URLCONF = 'breathecode.urls'
 
@@ -144,7 +152,6 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
 
 
 # Disable Django's logging setup
@@ -218,7 +225,6 @@ ROLLBAR = {
 }
 
 
-
 MESSAGE_TAGS = {
     messages.DEBUG: 'alert-info',
     messages.INFO: 'alert-info',
@@ -278,6 +284,7 @@ CORS_ALLOW_HEADERS = [
 
 REDIS_URL = os.getenv('REDIS_URL', '')
 
+
 def cache_opts(is_test_env):
     if is_test_env:
         return {
@@ -291,11 +298,12 @@ def cache_opts(is_test_env):
             }
         }
 
+
 is_test_env = os.getenv('ENV') == 'test'
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if
-            is_test_env else 'django_redis.cache.RedisCache',
+        is_test_env else 'django_redis.cache.RedisCache',
         'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
         # **cache_opts(is_test_env),
     },
@@ -307,7 +315,7 @@ CACHE_MIDDLEWARE_SECONDS = 60 * int(os.getenv('CACHE_MIDDLEWARE_MINUTES', 120))
 # https://warehouse.python.org/project/whitenoise/
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-SITE_ID=1
+SITE_ID = 1
 
 _locals = locals()
 django_heroku.settings(_locals)

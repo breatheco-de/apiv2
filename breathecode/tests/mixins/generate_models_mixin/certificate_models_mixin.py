@@ -5,15 +5,16 @@ from breathecode.certificate.models import Badge, LayoutDesign, Specialty, UserS
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
 
+
 class CertificateModelsMixin(ModelsMixin):
     # TODO: Implement Badge
     user_specialty_token = '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
 
     def generate_certificate_models(self, layout_design=False, specialty=False,
-            certificate=False, user_specialty=False, layout_design_slug='',
-            user_specialty_preview_url='', user_specialty_token='', badge=False,
-            specialty_kwargs={}, badge_kwargs={}, layout_design_kwargs={},
-            user_specialty_kwargs={}, models={}, **kwargs):
+                                    certificate=False, user_specialty=False, layout_design_slug='',
+                                    user_specialty_preview_url='', user_specialty_token='', badge=False,
+                                    specialty_kwargs={}, badge_kwargs={}, layout_design_kwargs={},
+                                    user_specialty_kwargs={}, models={}, **kwargs):
         """Generate models"""
         models = models.copy()
 
@@ -44,7 +45,8 @@ class CertificateModelsMixin(ModelsMixin):
                 kargs['slug'] = layout_design_slug
 
             kargs = {**kargs, **layout_design_kwargs}
-            models['layout_design'] = mixer.blend('certificate.LayoutDesign', **kargs)
+            models['layout_design'] = mixer.blend(
+                'certificate.LayoutDesign', **kargs)
 
         if not 'user_specialty' in models and user_specialty:
             kargs = {
@@ -74,6 +76,7 @@ class CertificateModelsMixin(ModelsMixin):
                 kargs['cohort'] = models['cohort']
 
             kargs = {**kargs, **user_specialty_kwargs}
-            models['user_specialty'] = mixer.blend('certificate.UserSpecialty', **kargs)
+            models['user_specialty'] = mixer.blend(
+                'certificate.UserSpecialty', **kargs)
 
         return models

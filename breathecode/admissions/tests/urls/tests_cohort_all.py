@@ -13,6 +13,7 @@ from breathecode.tests.mocks import (
 )
 from ..mixins import AdmissionsTestCase
 
+
 class CohortAllTestSuite(AdmissionsTestCase):
     """Test /cohort/all"""
 
@@ -64,7 +65,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_all_with_data_with_bad_get_academy(self):
         """Test /cohort/all without auth"""
-        self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        self.generate_models(
+            authenticate=True, cohort=True, profile_academy=True)
         model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?academy=they-killed-kenny'
@@ -81,7 +83,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_all_with_data_with_get_academy(self):
         """Test /cohort/all without auth"""
-        self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        self.generate_models(
+            authenticate=True, cohort=True, profile_academy=True)
         model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?academy={self.academy.slug}'
@@ -129,7 +132,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_all_with_data_with_bad_get_location(self):
         """Test /cohort/all without auth"""
-        self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        self.generate_models(
+            authenticate=True, cohort=True, profile_academy=True)
         model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?location=they-killed-kenny'
@@ -146,7 +150,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_all_with_data_with_get_location(self):
         """Test /cohort/all without auth"""
-        self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        self.generate_models(
+            authenticate=True, cohort=True, profile_academy=True)
         model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?location={self.academy.slug}'
@@ -194,7 +199,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_all_with_data_with_get_location_with_comma(self):
         """Test /cohort/all without auth"""
-        self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        self.generate_models(
+            authenticate=True, cohort=True, profile_academy=True)
         model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?location={self.academy.slug},they-killed-kenny'
@@ -242,7 +248,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_all_with_data_with_get_upcoming_false(self):
         """Test /cohort/all without auth"""
-        self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        self.generate_models(
+            authenticate=True, cohort=True, profile_academy=True)
         model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?upcoming=false'
@@ -290,7 +297,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_all_with_data_with_get_upcoming_true_without_current_data(self):
         """Test /cohort/all without auth"""
-        self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        self.generate_models(
+            authenticate=True, cohort=True, profile_academy=True)
         model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?upcoming=true'
@@ -309,7 +317,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
     def test_cohort_all_with_data_with_get_upcoming_true_with_current_data(self):
         """Test /cohort/all without auth"""
         self.generate_models(authenticate=True, cohort=True, profile_academy=True,
-            impossible_kickoff_date=True)
+                             impossible_kickoff_date=True)
         model_dict = self.get_cohort_dict(1)
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?upcoming=true'
@@ -357,7 +365,8 @@ class CohortAllTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_all_with_data(self):
         """Test /cohort/all without auth"""
-        self.generate_models(authenticate=True, cohort=True, profile_academy=True)
+        self.generate_models(
+            authenticate=True, cohort=True, profile_academy=True)
         model_dict = self.remove_dinamics_fields(self.cohort.__dict__)
         url = reverse_lazy('admissions:cohort_all')
         response = self.client.get(url)
