@@ -207,11 +207,13 @@ class AcademyCohortTestSuite(MonitoringTestCase):
                    '    "severity_level": 5,\n'
                    '    "details": "There are surveys pending to be sent on theese '
                    f'cohorts {cohort_name}\\n",\n'
+                   '    "slug": null,\n'
                    '    "status": "MINOR"\n'
                    '}')
 
         expected = {'details': details,
                     'severity_level': 5,
+                    'slug': None,
                     'status': 'MINOR',
                     'text': details
                     }
@@ -248,12 +250,14 @@ class AcademyCohortTestSuite(MonitoringTestCase):
                    '    "severity_level": 5,\n'
                    '    "details": "There are surveys pending to be sent on theese '
                    f'cohorts {cohort_names}\\n",\n'
+                   '    "slug": null,\n'
                    '    "status": "MINOR"\n'
                    '}')
 
         expected = {'details': details,
                     'severity_level': 5,
                     'status': 'MINOR',
+                    'slug': None,
                     'text': details
                     }
 

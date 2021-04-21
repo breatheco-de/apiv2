@@ -106,12 +106,14 @@ class AcademyCohortTestSuite(MonitoringTestCase):
                    '    "severity_level": 5,\n'
                    f'    "details": "These cohorts {cohort_name} ended but their stage '
                    'is different that ENDED\\n",\n'
+                   '    "slug": null,\n'
                    '    "status": "MINOR"\n'
                    '}')
 
         expected = {'details': details,
                     'severity_level': 5,
                     'status': script['status'],
+                    'slug': None,
                     'text': details
                     }
 
