@@ -281,10 +281,12 @@ def run_script(script):
                 else:
                     script.status = 'MINOR'
                     results['severity_level'] = 5
+                results['slug'] = e.slug
                 print(e)
             except Exception as e:
                 script.status_code = 1
                 script.status = 'CRITICAL'
+                results['slug'] = "uknown"
                 results['severity_level'] = 100
                 print(e)
 
