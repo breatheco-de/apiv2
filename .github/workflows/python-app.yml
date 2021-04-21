@@ -22,7 +22,7 @@ jobs:
           PYTHONUNBUFFERED=1
           python -m pip install --upgrade pip
           python -m pip install pipenv
-          pipenv install --system --deploy 
+          pipenv install --system --deploy --skip-lock 
           # python manage.py migrate
       - name: Test with pytest
         run: |
