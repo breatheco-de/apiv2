@@ -8,6 +8,7 @@ pytest-cov = "*"
 coverage = "*"
 pylint-django = "*"
 atomicwrites = "*"
+rope = "*"
 
 [packages]
 django = "*"
