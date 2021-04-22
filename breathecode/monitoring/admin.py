@@ -32,6 +32,7 @@ class ApplicationAdmin(admin.ModelAdmin):
     list_display = ('title', 'current_status', 'academy', 'paused_until', 'status_text')
     actions=[test_app]
     list_filter = ['status', 'academy__slug']
+    raw_id_fields = ["notify_slack_channel"]
 
     def current_status(self,obj):
         colors = {
