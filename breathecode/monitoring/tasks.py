@@ -104,7 +104,7 @@ def execute_scripts(self, script_id):
         if app.notify_email:
             send_email_message("diagnostic", app.notify_email, {
                 "subject": f"Errors have been found on {app.title} script {script.id} (slug: {script.script_slug})",
-                "details": result["details"]
+                "details": result["text"]
             })
         if (app.notify_slack_channel and app.academy and
                 hasattr(app.academy, 'slackteam') and
