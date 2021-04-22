@@ -376,6 +376,11 @@ def get_roles(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_github_token(request):
+    # TODO: user_id
+    # url = request.query_params.get('url', None)
+    # if url == None:
+    #     raise ValidationError("No callback URL specified")
+
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationError("No callback URL specified")
@@ -456,6 +461,8 @@ def save_github_token(request):
 
             if github_user['email'] is None:
                 raise ValidationError("Imposible to retrieve user email")
+
+            # TODO: if user_id: User.objects.filter(id=user_id).first()
 
             user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(email__iexact=github_user['email'])).first()
             if user is None:

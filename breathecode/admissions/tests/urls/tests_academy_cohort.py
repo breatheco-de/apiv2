@@ -126,12 +126,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_post(self):
+    def test_academy_cohort_post_without_ending_date_or_never_ends(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, user=True, profile_academy=True,
-            capability='crud_cohort', role='potato', syllabus=True)
-        models_dict = self.all_cohort_dict()
+            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True)
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
@@ -141,12 +140,100 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         }
         response = self.client.post(url, data)
         json = response.json()
-        cohort = self.get_cohort(2)
-        assert cohort is not None
+        expected = {
+            'non_field_errors': [
+                'Cohort not have one ending date or ever_ends=true'
+            ]
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_post_with_ending_date_and_never_ends_true(self):
+        """Test /academy/cohort without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, user=True, profile_academy=True,
+            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True)
+        url = reverse_lazy('admissions:academy_cohort')
+        data = {
+            'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
+            'slug':  'they-killed-kenny',
+            'name':  'They killed kenny',
+            'kickoff_date':  datetime.today().isoformat(),
+            'ending_date':  datetime.today().isoformat(),
+            'never_ends': True,
+
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {
+            'non_field_errors': [
+                'One cohort that never ends cannot have one ending date'
+            ]
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_post_without_ending_date_and_never_ends_false(self):
+        """Test /academy/cohort without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, user=True, profile_academy=True,
+            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True)
+        url = reverse_lazy('admissions:academy_cohort')
+        data = {
+            'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
+            'slug':  'they-killed-kenny',
+            'name':  'They killed kenny',
+            'kickoff_date':  datetime.today().isoformat(),
+            'never_ends': False,
+
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {
+            'non_field_errors': [
+                'Cohort not have one ending date or ever_ends=true'
+            ]
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_post(self):
+        """Test /academy/cohort without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, user=True, profile_academy=True,
+            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True)
+        models_dict = self.all_cohort_dict()
+        url = reverse_lazy('admissions:academy_cohort')
+        data = {
+            'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
+            'slug':  'they-killed-kenny',
+            'name':  'They killed kenny',
+            'kickoff_date':  datetime.today().isoformat(),
+            'never_ends': True,
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        cohort = self.get_cohort(1)
         expected = {
             'id': cohort.id,
             'slug': cohort.slug,
             'name': cohort.name,
+            'never_ends': True,
             'kickoff_date': self.datetime_to_iso(cohort.kickoff_date),
             'current_day': cohort.current_day,
             'academy': {
@@ -161,8 +248,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
             'language': cohort.language,
-            'created_at': self.date_today_to_iso(cohort.created_at),
-            'updated_at': self.date_today_to_iso(cohort.updated_at),
+            'created_at': self.datetime_to_iso(cohort.created_at),
+            'updated_at': self.datetime_to_iso(cohort.updated_at),
         }
 
         del data['kickoff_date']
@@ -1214,13 +1301,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'kickoff_date': self.datetime_to_iso(datetime.today()),
+            'never_ends': True,
         }
 
         response = self.client.post(url, data)
         json = response.json()
         cohort = self.get_cohort(2)
 
-        print(json, cohort)
         expected = {
             'id': cohort.id,
             'current_day': cohort.current_day,
@@ -1235,8 +1322,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
             'language': cohort.language,
-            'created_at': self.date_today_to_iso(cohort.created_at),
-            'updated_at': self.date_today_to_iso(cohort.updated_at),
+            'created_at': self.datetime_to_iso(cohort.created_at),
+            'updated_at': self.datetime_to_iso(cohort.updated_at),
             **data,
         }
 

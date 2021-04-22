@@ -19,35 +19,10 @@ def decorator(func, with_self=True):
     return wrapper
 
 def shared_task(func=None, *args, **kwargs):
-    def inner(func): 
+    def inner(func):
         return decorator(func)
-    print('asddddddddddddddddddddd111')
 
     if func:
         return decorator(func, with_self=False)
 
-    print('asddddddddddddddddddddd222')
-
-    return inner #this is the fun_obj mentioned in the above content 
-  
-
-# @shared_task(aaaaa=1, bbbb=2)
-# def main(self, a):
-#     print('rrrrrrrrrrrrrrrrr', a)
-
-# print(main)
-# print(main(11111))
-
-# @shared_task()
-# def main(self, a):
-#     print('rrrrrrrrrrrrrrrrr', a)
-
-# print(main)
-# print(main(22222))
-
-# @shared_task
-# def main(a):
-#     print('rrrrrrrrrrrrrrrrr', a)
-
-# print(main)
-# print(main(33333))
+    return inner #this is the fun_obj mentioned in the above content
