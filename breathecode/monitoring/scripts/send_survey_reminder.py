@@ -28,11 +28,13 @@ for cohort in cohorts:
     lastest_survey = Survey.objects.filter(
         cohort__id=cohort.id).order_by('sent_at').first()
 
-    num_weeks = calculate_weeks(
-        lastest_survey.sent_at.date(), datetime.now().date())
-
-    if num_weeks > 4:
+    if lastest_survey is None:
         cohorts_with_pending_surveys.append(cohort.name)
+    else:
+        num_weeks = calculate_weeks(
+            lastest_survey.sent_at.date(), datetime.now().date())
+        if num_weeks > 4:
+            cohorts_with_pending_surveys.append(cohort.name)
 
 if len(cohorts_with_pending_surveys) > 0:
     cohort_names = ("\n").join(["- "+cohort_name for cohort_name in cohorts_with_pending_surveys])
