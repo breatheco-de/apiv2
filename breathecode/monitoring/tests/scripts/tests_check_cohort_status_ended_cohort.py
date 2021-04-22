@@ -43,11 +43,11 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         script = run_script(model.monitor_script)
 
         del script['slack_payload']
+        del script['text']
 
-        expected = {'details': script['details'],
+        expected = {
                     'severity_level': 5,
-                    'status': script['status'],
-                    'text': script['text']
+                    'status': 'OPERATIONAL',
                     }
 
         self.assertEqual(script, expected)
@@ -71,11 +71,11 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         script = run_script(model.monitor_script)
 
         del script['slack_payload']
+        del script['text']
 
-        expected = {'details': script['details'],
+        expected = {
                     'severity_level': 5,
-                    'status': script['status'],
-                    'text': script['text']
+                    'status': 'OPERATIONAL'
                     }
 
         self.assertEqual(script, expected)
@@ -99,22 +99,12 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         script = run_script(model.monitor_script)
 
         del script['slack_payload']
+        del script['text']
 
-        cohort_name = model.cohort.name
-
-        details = ('{\n'
-                   '    "severity_level": 5,\n'
-                   f'    "details": "These cohorts {cohort_name} ended but their stage '
-                   'is different that ENDED\\n",\n'
-                   '    "slug": null,\n'
-                   '    "status": "MINOR"\n'
-                   '}')
-
-        expected = {'details': details,
+        expected = {
                     'severity_level': 5,
-                    'status': script['status'],
-                    'slug': None,
-                    'text': details
+                    'status': 'MINOR',
+                    'error_slug': None,
                     }
 
         self.assertEqual(script, expected)

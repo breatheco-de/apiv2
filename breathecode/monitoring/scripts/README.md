@@ -32,6 +32,14 @@ raise ScriptNotification("There are 2 pending taks", status='MINOR', slug="pendi
 7. Check for other scripts as examples.	7. Test your script.
 8. Test your script.
 
+## Global Context
+
+There are some global variables that you have available during your scripts:
+
+| Variable name     | Value |
+| ----------------- | ----- |
+| academy           | Contains the academy model object, you can use it to retrieve the current academy id like this: `query.filter(academy__id=academy.id)` |
+
 ## Manually running your script
 
 You can test your scripts by running the following command:
