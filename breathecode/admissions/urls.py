@@ -1,10 +1,8 @@
-from django.contrib import admin
-from django.urls import path, include
-from rest_framework import routers
+from django.urls import path
 from .views import (
     AcademyView, CohortUserView, get_cohorts, AcademyCohortView,
     get_timezones, UserView, UserMeView, AcademyCohortUserView,
-    get_single_course, SyllabusView, CertificateView, AcademyICalEventView,
+    get_single_course, SyllabusView, CertificateView,
     CertificateAllView, get_all_academies
 )
 
@@ -23,7 +21,6 @@ urlpatterns = [
     path('academy/cohort/<int:cohort_id>/user/<int:user_id>', AcademyCohortUserView.as_view()),
     path('academy/cohort/<int:cohort_id>/user', AcademyCohortUserView.as_view()),
 
-    path('academy/ical/events', AcademyICalEventView.as_view(), name="academy_id_ical_events"),
     path('academy/', get_all_academies, name="academy"),
     path('academy/me', AcademyView.as_view(), name="academy_me"),
     path('academy/cohort', AcademyCohortView.as_view(), name="academy_cohort"),

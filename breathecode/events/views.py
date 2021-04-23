@@ -306,32 +306,72 @@ class AcademyVenueView(APIView):
         return Response(serializer.data)
 
 
-class AcademyICalCohortsView(APIView):
+def ical_academies_repr(slugs=None, ids=None):
+    ret = []
+
+    if not ids:
+        ids = []
+
+    if not slugs:
+        slugs = []
+
+    if ids:
+        ret = ret + list(Academy.objects.filter(id__in=ids).values_list('id', flat=True))
+
+    if slugs:
+        ret = ret + list(Academy.objects.filter(slug__in=slugs).values_list('id', flat=True))
+
+    ret = sorted(list(dict.fromkeys(ret)))
+    ret = ','.join([str(id) for id in ret])
+
+    if ret:
+        ret = f' ({ret})'
+
+    return ret
+
+
+class ICalCohortsView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
         items = Cohort.objects.all()
 
-        academies = []
-        slugs = request.GET.get('academy_slug', None)
-        ids = request.GET.get('academy', None)
+        ids = request.GET.get('academy', '')
+        slugs = request.GET.get('academy_slug', '')
 
-        if ids is not None:
-            items = Cohort.objects.filter(academy__id__in=ids.split(","))
+        ids = ids.split(",") if ids else []
+        slugs = slugs.split(",") if slugs else []
 
-        elif slugs is not None:
-            items = Cohort.objects.filter(academy__slug__in=slugs.split(","))
+        if ids:
+            items = Cohort.objects.filter(academy__id__in=ids)
 
-        if ids is None and slugs is None:
+        elif slugs:
+            items = Cohort.objects.filter(academy__slug__in=slugs)
+
+        else:
+            items = []
+
+        if not ids and not slugs:
             raise ValidationException("You need to specify at least one academy or academy_slug (comma separated) in the querystring")
+
+        if (Academy.objects.filter(id__in=ids).count() != len(ids) or
+                Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
+            raise ValidationException("Some academy not exist")
 
         items = items.exclude(stage='DELETED')
 
+        upcoming = request.GET.get('upcoming')
+        if upcoming == 'true':
+            now = timezone.now()
+            items = items.filter(kickoff_date__gte=now)
+
+        academies_repr = ical_academies_repr(ids=ids, slugs=slugs)
+
         calendar = iCalendar()
-        calendar.add('prodid', '-//Academy//Academy Cohorts') # //EN')
+        calendar.add('prodid', f'-//BreatheCode//Academy Cohorts{academies_repr}//EN')
         calendar.add('X-WR-CALNAME', f'Academy - Cohorts')
         calendar.add('X-WR-CALDESC', '')
-        calendar.add('REFRESH-INTERVAL', 'PT1M')
+        calendar.add('REFRESH-INTERVAL', 'PT15M')
 
         calendar.add('version', '2.0')
 
@@ -368,6 +408,106 @@ class AcademyICalCohortsView(APIView):
             if item.academy.website_url:
                 location = f'{location} ({item.academy.website_url})'
             event['location'] = vText(item.academy.name)
+
+            calendar.add_component(event)
+
+        calendar_text = calendar.to_ical()
+
+        response = HttpResponse(calendar_text, content_type='text/calendar')
+        response['Content-Disposition'] = 'attachment; filename="calendar.ics"'
+        return response
+
+
+class ICalEventView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        items = Event.objects.filter(status='ACTIVE')
+
+        academies = []
+        ids = request.GET.get('academy', '')
+        slugs = request.GET.get('academy_slug', '')
+
+        ids = ids.split(",") if ids else []
+        slugs = slugs.split(",") if slugs else []
+
+        if ids:
+            items = Event.objects.filter(academy__id__in=ids, status='ACTIVE')
+
+        elif slugs:
+            items = Event.objects.filter(academy__slug__in=slugs, status='ACTIVE')
+
+        else:
+            items = []
+
+        if not ids and not slugs:
+            raise ValidationException("You need to specify at least one academy or academy_slug (comma separated) in the querystring")
+
+        if (Academy.objects.filter(id__in=ids).count() != len(ids) or
+                Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
+            raise ValidationException("Some academy not exist")
+
+        upcoming = request.GET.get('upcoming')
+        if upcoming == 'true':
+            now = timezone.now()
+            items = items.filter(starting_at__gte=now)
+
+        academies_repr = ical_academies_repr(ids=ids, slugs=slugs)
+
+        calendar = iCalendar()
+        calendar.add('prodid', f'-//BreatheCode//Academy Events{academies_repr}//EN')
+        calendar.add('X-WR-CALNAME', f'Academy - Events')
+        calendar.add('X-WR-CALDESC', '')
+        calendar.add('REFRESH-INTERVAL', 'PT15M')
+
+        calendar.add('version', '2.0')
+
+        for item in items:
+            event = iEvent()
+
+            if item.title:
+                event.add('summary', item.title)
+
+            if item.description:
+                event.add('description', item.description)
+
+            event.add('uid', f'breathecode_event_{item.id}')
+            event.add('dtstart', item.starting_at)
+            event.add('dtend', item.ending_at)
+            event.add('dtstamp', item.created_at)
+
+            if item.author and item.author.email:
+                organizer = vCalAddress(f'MAILTO:{item.author.email}')
+
+                if item.author.first_name and item.author.last_name:
+                    organizer.params['cn'] = vText(f'{item.author.first_name} '
+                        f'{item.author.last_name}')
+                elif item.author.first_name:
+                    organizer.params['cn'] = vText(item.author.first_name)
+                elif item.author.last_name:
+                    organizer.params['cn'] = vText(item.author.last_name)
+
+                organizer.params['role'] = vText('OWNER')
+                event['organizer'] = organizer
+
+            if item.venue and (item.venue.country or item.venue.state or
+                    item.venue.city or item.venue.street_address):
+                value = ''
+
+                if item.venue.street_address:
+                    value = f'{value}{item.venue.street_address}, '
+
+                if item.venue.city:
+                    value = f'{value}{item.venue.city}, '
+
+                if item.venue.state:
+                    value = f'{value}{item.venue.state}, '
+
+                if item.venue.country:
+                    value = f'{value}{item.venue.country}'
+
+                value = re.sub(', $', '', value)
+                event['location'] = vText(value)
 
             calendar.add_component(event)
 
