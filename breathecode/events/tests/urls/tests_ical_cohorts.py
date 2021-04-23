@@ -407,6 +407,8 @@ class AcademyCohortTestSuite(EventTestCase):
                 cohort_kwargs=cohort_kwargs, cohort_user_kwargs=cohort_user_kwargs),
         ]
 
+        models = sorted(models, key=lambda x: x.cohort.id)
+
         url = reverse_lazy('events:academy_id_ical_cohorts')
         args ={'academy_slug': ','.join(list(dict.fromkeys([x.academy.slug for x in models])))}
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))

@@ -343,10 +343,10 @@ class ICalCohortsView(APIView):
         slugs = slugs.split(",") if slugs else []
 
         if ids:
-            items = Cohort.objects.filter(academy__id__in=ids)
+            items = Cohort.objects.filter(academy__id__in=ids).order_by('id')
 
         elif slugs:
-            items = Cohort.objects.filter(academy__slug__in=slugs)
+            items = Cohort.objects.filter(academy__slug__in=slugs).order_by('id')
 
         else:
             items = []
@@ -432,10 +432,10 @@ class ICalEventView(APIView):
         slugs = slugs.split(",") if slugs else []
 
         if ids:
-            items = Event.objects.filter(academy__id__in=ids, status='ACTIVE')
+            items = Event.objects.filter(academy__id__in=ids, status='ACTIVE').order_by('id')
 
         elif slugs:
-            items = Event.objects.filter(academy__slug__in=slugs, status='ACTIVE')
+            items = Event.objects.filter(academy__slug__in=slugs, status='ACTIVE').order_by('id')
 
         else:
             items = []
