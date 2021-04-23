@@ -13,6 +13,7 @@ from breathecode.tests.mocks import (
 )
 from ..mixins.new_admissions_test_case import AdmissionsTestCase
 
+
 class CohortAllTestSuite(AdmissionsTestCase):
     """Test /cohort/all"""
 
@@ -322,7 +323,6 @@ class CohortAllTestSuite(AdmissionsTestCase):
         """Test /cohort/all without auth"""
         model = self.generate_models(authenticate=True, cohort=True, profile_academy=True,
             impossible_kickoff_date=True, syllabus=True)
-        model_dict = self.get_cohort_dict(1)
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?upcoming=true'
         response = self.client.get(url)

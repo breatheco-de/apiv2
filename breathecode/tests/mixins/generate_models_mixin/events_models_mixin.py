@@ -4,13 +4,14 @@ Collections of mixins used to login in authorize microservice
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
 
+
 class EventsModelsMixin(ModelsMixin):
     def generate_events_models(self, organization=False, user=False,
-            organizer=False, academy=False, venue=False, event_type=False,
-            event=False, event_checkin=False, eventbrite_webhook=False,
-            organization_kwargs={}, organizer_kwargs={}, venue_kwargs={},
-            event_type_kwargs={}, event_kwargs={}, event_checkin_kwargs={},
-            eventbrite_webhook_kwargs={}, models={}, **kwargs):
+                               organizer=False, academy=False, venue=False, event_type=False,
+                               event=False, event_checkin=False, eventbrite_webhook=False,
+                               organization_kwargs={}, organizer_kwargs={}, venue_kwargs={},
+                               event_type_kwargs={}, event_kwargs={}, event_checkin_kwargs={},
+                               eventbrite_webhook_kwargs={}, models={}, **kwargs):
         """Generate models"""
         models = models.copy()
 
@@ -21,7 +22,8 @@ class EventsModelsMixin(ModelsMixin):
                 kargs['academy'] = models['academy']
 
             kargs = {**kargs, **organization_kwargs}
-            models['organization'] = mixer.blend('events.Organization', **kargs)
+            models['organization'] = mixer.blend(
+                'events.Organization', **kargs)
 
         if not 'organizer' in models or organizer:
             kargs = {}
@@ -90,12 +92,14 @@ class EventsModelsMixin(ModelsMixin):
                 kargs['event'] = models['event']
 
             kargs = {**kargs, **event_checkin_kwargs}
-            models['event_checkin'] = mixer.blend('events.EventCheckin', **kargs)
+            models['event_checkin'] = mixer.blend(
+                'events.EventCheckin', **kargs)
 
         if not 'eventbrite_webhook' in models and eventbrite_webhook:
             kargs = {}
 
             kargs = {**kargs, **eventbrite_webhook_kwargs}
-            models['eventbrite_webhook'] = mixer.blend('events.EventbriteWebhook', **kargs)
+            models['eventbrite_webhook'] = mixer.blend(
+                'events.EventbriteWebhook', **kargs)
 
         return models

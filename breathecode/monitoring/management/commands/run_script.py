@@ -41,4 +41,14 @@ class Command(BaseCommand):
         result = run_script(script)
 
         self.stdout.write(self.style.SUCCESS('The script was tested with the following outcome:'))
-        print(result)
+        
+        stdout = result["text"]
+        del result["text"]
+        del result["slack_payload"]
+        
+        if "details" in result:
+            del result["details"]
+
+        print("Details: ", result)
+        print("\nStdout: ")
+        print(stdout)

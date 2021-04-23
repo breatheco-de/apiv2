@@ -52,19 +52,17 @@ def sync_student_tasks(user, cohort=None):
             task = Task(
                 user=user,
             )
+            task.task_status=task_status[_task['status']]
+            task.live_url=_task['live_url']
+            task.github_url=_task['github_url']
+            task.associated_slug=_task['associated_slug']
+            task.title=_task['title']
+            task.task_type=task_type[_task['type']]
+            task.revision_status=revision_status[str(_task['revision_status'])]
+            task.description=_task['description']
+            task.cohort=cohort
             task.save()
-
-        task.associated_slug=_task['associated_slug']
-        task.title=_task['title']
-        task.task_status=task_status[_task['status']]
-        task.task_type=task_type[_task['type']]
-        task.revision_status=revision_status[str(_task['revision_status'])]
-        task.github_url=_task['github_url']
-        task.live_url=_task['live_url']
-        task.description=_task['description']
-        task.cohort=cohort
-        task.save()
-
+            task.save()
         syncronized.append(task)
     logger.debug(f"Added {len(syncronized)} tasks for student {user.email}")
     return syncronized

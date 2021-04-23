@@ -111,6 +111,7 @@ class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
                      'user__last_name', 'user__email', 'cohort__slug']
     list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
     actions = ["export_as_csv", add_academy_to_answer]
+    raw_id_fields = ["user", "cohort", "mentor"]
 
     def answer_url(self, obj):
         url = "https://nps.breatheco.de/" + str(obj.id)
@@ -155,6 +156,7 @@ class SurveyAdmin(admin.ModelAdmin):
     search_fields = ['cohort__slug', 'cohort__academy__slug',
                      'cohort__name', 'cohort__academy__name']
     list_filter = ['status', 'cohort__academy__slug']
+    raw_id_fields = ["cohort"]
     actions = [send_big_cohort_bulk_survey]
 
     def survey_url(self, obj):

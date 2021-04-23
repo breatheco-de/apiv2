@@ -18,6 +18,7 @@ from breathecode.tests.mocks import (
 from ..mixins import EventTestCase
 from ...actions import sync_org_venues
 
+
 class SyncOrgVenuesTestSuite(EventTestCase):
     """Test /answer"""
 
@@ -31,7 +32,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         try:
             sync_org_venues(model['organization'])
         except Exception as e:
-            self.assertEquals(str(e), ('First you must specify to which academy this organization belongs'))
+            self.assertEquals(
+                str(e), ('First you must specify to which academy this organization belongs'))
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -43,4 +45,5 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         try:
             sync_org_venues(model['organization'])
         except Exception as e:
-            self.assertEquals(str(e), ('The path you requested does not exist.'))
+            self.assertEquals(
+                str(e), ('The path you requested does not exist.'))

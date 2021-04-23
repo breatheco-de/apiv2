@@ -105,6 +105,18 @@ def sync_tasks(modeladmin, request, queryset):
 
 sync_tasks.short_description = "Sync Tasks"
 
+def mark_as_ended(modeladmin, request, queryset):
+    issues = queryset.update(stage='ENDED')
+mark_as_ended.short_description = "Mark as ENDED"
+
+def mark_as_started(modeladmin, request, queryset):
+    issues = queryset.update(stage='STARTED')
+mark_as_started.short_description = "Mark as STARTED"
+
+def mark_as_innactive(modeladmin, request, queryset):
+    issues = queryset.update(stage='INACTIVE')
+mark_as_innactive.short_description = "Mark as INACTIVE"
+
 class CohortForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
        super(CohortForm, self).__init__(*args, **kwargs)
@@ -117,7 +129,7 @@ class CohortAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'name', 'academy__city__name']
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus')
     list_filter = ['stage', 'academy__slug','syllabus__certificate__slug']
-    actions = [sync_tasks]
+    actions = [sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive]
 
     def academy_name(self, obj):
         return obj.academy.name
