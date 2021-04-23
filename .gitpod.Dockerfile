@@ -14,7 +14,7 @@ FROM gitpod/workspace-full:latest
 RUN sudo apt-get update \
  && sudo add-apt-repository ppa:deadsnakes/ppa \
  && sudo apt-get update \
- && sudo apt-get install -y redis-server postgresql postgresql-contrib python3.9 python3-pip \
+ && sudo apt-get install -y redis-server postgresql postgresql-contrib python3.9 python3-pip python3.9-devel \
  && sudo apt-get clean \
  && sudo rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
 
