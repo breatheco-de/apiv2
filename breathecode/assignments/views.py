@@ -19,9 +19,9 @@ def get_tasks(request, id=None):
 
     items = Task.objects.all()
     logger.debug(f"Found {items.count()} tasks")
-#     if isinstance(request.user, AnonymousUser) == False:
-#         # filter only to the local academy
-#         items = localize_query(items, request, "cohort__academy__id__in")
+    if isinstance(request.user, AnonymousUser) == False:
+        # filter only to the local academy
+        items = localize_query(items, request, "cohort__academy__id__in")
 
     academy = request.GET.get('academy', None)
     if academy is not None:
