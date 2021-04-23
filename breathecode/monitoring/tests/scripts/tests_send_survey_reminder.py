@@ -42,20 +42,11 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         script = run_script(model.monitor_script)
 
         del script['slack_payload']
+        del script['text']
 
         expected = {
             "severity_level": 5,
             "status": 'OPERATIONAL',
-            "details": '{\n'
-            '    "severity_level": 5,\n'
-            '    "details": "No cohorts found\\nNo reminders\\n",\n'
-            '    "status": "OPERATIONAL"\n'
-            '}',
-            "text": '{\n'
-                    '    "severity_level": 5,\n'
-                    '    "details": "No cohorts found\\nNo reminders\\n",\n'
-                    '    "status": "OPERATIONAL"\n'
-                    '}'
         }
 
         self.assertEqual(script, expected)
@@ -81,20 +72,11 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         script = run_script(model.monitor_script)
 
         del script['slack_payload']
-
+        del script['text']
+        
         expected = {
             "severity_level": 5,
             "status": 'OPERATIONAL',
-            "details": '{\n'
-            '    "severity_level": 5,\n'
-            '    "details": "No cohorts found\\nNo reminders\\n",\n'
-            '    "status": "OPERATIONAL"\n'
-            '}',
-            "text": '{\n'
-                    '    "severity_level": 5,\n'
-                    '    "details": "No cohorts found\\nNo reminders\\n",\n'
-                    '    "status": "OPERATIONAL"\n'
-                    '}'
         }
         self.assertEqual(script, expected)
 
@@ -119,20 +101,11 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         script = run_script(model.monitor_script)
 
         del script['slack_payload']
+        del script['text']
 
         expected = {
             "severity_level": 5,
-            "status": 'OPERATIONAL',
-            "details": '{\n'
-            '    "severity_level": 5,\n'
-            '    "details": "No cohorts found\\nNo reminders\\n",\n'
-            '    "status": "OPERATIONAL"\n'
-            '}',
-            "text": '{\n'
-                    '    "severity_level": 5,\n'
-                    '    "details": "No cohorts found\\nNo reminders\\n",\n'
-                    '    "status": "OPERATIONAL"\n'
-                    '}'
+            "status": 'OPERATIONAL'
         }
         self.assertEqual(script, expected)
 
@@ -157,20 +130,11 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         script = run_script(models[1].monitor_script)
 
         del script['slack_payload']
+        del script['text']
 
         expected = {
             "severity_level": 5,
             "status": 'OPERATIONAL',
-            "details": '{\n'
-            '    "severity_level": 5,\n'
-            '    "details": "No reminders\\n",\n'
-            '    "status": "OPERATIONAL"\n'
-            '}',
-            "text": '{\n'
-                    '    "severity_level": 5,\n'
-                    '    "details": "No reminders\\n",\n'
-                    '    "status": "OPERATIONAL"\n'
-                    '}'
         }
         self.assertEqual(script, expected)
 
@@ -197,23 +161,13 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         script = run_script(models[1].monitor_script)
 
         del script['slack_payload']
+        del script['text']
 
-        cohort_names = (", ").join(
-            [model.cohort.name for model in models if model.cohort.id == 1])
-        print("cohortName", cohort_names)
-        cohort_name = models[0].cohort.name
 
-        details = ('{\n'
-                   '    "severity_level": 5,\n'
-                   '    "details": "There are surveys pending to be sent on theese '
-                   f'cohorts {cohort_name}\\n",\n'
-                   '    "status": "MINOR"\n'
-                   '}')
-
-        expected = {'details': details,
+        expected = {
                     'severity_level': 5,
+                    'error_slug': None,
                     'status': 'MINOR',
-                    'text': details
                     }
 
         self.assertEqual(script, expected)
@@ -240,21 +194,12 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         script = run_script(models[1].monitor_script)
         del script['slack_payload']
+        del script['text']
 
-        cohort_names = (", ").join(
-            [model.cohort.name for model in models])
-
-        details = ('{\n'
-                   '    "severity_level": 5,\n'
-                   '    "details": "There are surveys pending to be sent on theese '
-                   f'cohorts {cohort_names}\\n",\n'
-                   '    "status": "MINOR"\n'
-                   '}')
-
-        expected = {'details': details,
+        expected = {
                     'severity_level': 5,
                     'status': 'MINOR',
-                    'text': details
+                    'error_slug': None,
                     }
 
         self.assertEqual(script, expected)

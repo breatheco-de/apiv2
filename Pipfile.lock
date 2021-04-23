@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "68f0adfc82bd4b7392c8e952934b99c1a4e7ea432696b42093da2d36ff98d0a3"
+            "sha256": "28aed70b68c47197230315471ab78d194eb2e2194425fedc3199f4624c8d92bf"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -1052,10 +1052,17 @@
         },
         "twilio": {
             "hashes": [
+<<<<<<< HEAD
                 "sha256:3a9a0e3882897185bf3a997408a43662bcfdec84250a701d06aff5b89bbaa9a1"
             ],
             "index": "pypi",
             "version": "==6.57.0"
+=======
+                "sha256:f3d65dcea106383e005460d1cd71703d4f106bcef1e8d289720009ef0f219f28"
+            ],
+            "index": "pypi",
+            "version": "==6.56.0"
+>>>>>>> ec7b47afb68eee35fe12324fd71f91b1e8e9fe9e
         },
         "typing-extensions": {
             "hashes": [
@@ -1219,7 +1226,7 @@
                 "sha256:0a943902919f65c5684ac4e0154b1ad4fac6dcaa5d9f3426b732f1c8b5419be6",
                 "sha256:2bb1680aad211e3c9944dbce1d4ba09a989f04e238296c87fe2139faa26d655d"
             ],
-            "markers": "python_version >= '3.6' and python_version < '4'",
+            "markers": "python_version >= '3.6' and python_version < '4.0'",
             "version": "==5.8.0"
         },
         "lazy-object-proxy": {

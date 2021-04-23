@@ -78,7 +78,7 @@ def render_snooze_script(scripts):
 			"type": "section",
 			"text": {
 				"type": "mrkdwn",
-				"text": f"*App:* {e.application.title} \n *Slug:* {e.script_slug} \n *Status:* {e.status} \n *Details:* {e.response_text}",
+				"text": f"*App:* {e.application.title} \n *Slug:* {e.script_slug} \n *Status:* {e.status} \n *Details:* \n ```{e.response_text}```",
 			},
 			"accessory": {
 				"type": "datepicker",

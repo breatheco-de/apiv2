@@ -6,13 +6,14 @@ from breathecode.utils import ScriptNotification
 from breathecode.admissions.models import Cohort
 from django.utils import timezone
 
-to_fix_cohort_stage = Cohort.objects.filter(ending_date__lt=timezone.now())\
+to_fix_cohort_stage = Cohort.objects.filter(ending_date__lt=timezone.now(), academy__id=academy.id)\
     .exclude(stage='ENDED').values_list('name', flat=True)
 
 if len(to_fix_cohort_stage) > 0:
-    to_fix_cohort_name = (", ").join(to_fix_cohort_stage)
+    to_fix_cohort_name = ("\n").join(["- "+cohort_name for cohort_name in to_fix_cohort_stage])
 
     raise ScriptNotification(
-        f"These cohorts {to_fix_cohort_name} ended but their stage is different that ENDED", status='MINOR')
+        f"These cohorts ended but their stage is different that ENDED: \n {to_fix_cohort_name}", status='MINOR')
 
-print("Everything up to date")
+else:
+    print("Everything up to date")

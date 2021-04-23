@@ -325,3 +325,4 @@ django_heroku.settings(_locals)
 DATABASES = {
     'default': dj_database_url.config(default=DATABASE_URL),
 }
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'

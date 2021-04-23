@@ -237,7 +237,6 @@ def run_endpoint_diagnostic(endpoint_id):
 def run_script(script):
     results = {
         "severity_level": 0,
-        "details": ""
     }
 
     from io import StringIO
@@ -265,7 +264,7 @@ def run_script(script):
             f"Script not found or its body is empty: {script.script_slug}")
 
     if content:
-        local = {"result": {"details": "", "status": "OPERATIONAL"}}
+        local = {"result": { "status": "OPERATIONAL"}}
         with stdoutIO() as s:
             try:
                 exec(content, {"academy": script.application.academy}, local)
@@ -281,10 +280,12 @@ def run_script(script):
                 else:
                     script.status = 'MINOR'
                     results['severity_level'] = 5
+                results['error_slug'] = e.slug
                 print(e)
             except Exception as e:
                 script.status_code = 1
                 script.status = 'CRITICAL'
+                results['error_slug'] = "uknown"
                 results['severity_level'] = 100
                 print(e)
 
@@ -293,9 +294,7 @@ def run_script(script):
         script.save()
 
         results['status'] = script.status
-        results['details'] = script.response_text
-        results["text"] = json.dumps(results, indent=4)
-        results["details"] = results["text"]
+        results["text"] = script.response_text
         results["slack_payload"] = render_snooze_script(
             [script])  # converting to json to send to slack
 

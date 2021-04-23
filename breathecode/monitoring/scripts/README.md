@@ -25,14 +25,22 @@ from breathecode.utils import ScriptNotification
 
 ```py
 # here we are raising a notification because there are 2 pending tasks
-raise ScriptNotification("There are 2 pending taks", status='MINOR')
+raise ScriptNotification("There are 2 pending taks", status='MINOR', slug="pending_tasks")
 ```
 5. If you dont raise any ScriptNotification and there are no other Exceptions in the script, it will be considered successfull and **no notifications** will trigger.
 6. When a ScriptNotification has been raise the Application owner will recive a notification to the application.email and slack channel configured for notifications.	6. Check for other scripts as examples.
 7. Check for other scripts as examples.	7. Test your script.
 8. Test your script.
 
-## Testing your script
+## Global Context
+
+There are some global variables that you have available during your scripts:
+
+| Variable name     | Value |
+| ----------------- | ----- |
+| academy           | Contains the academy model object, you can use it to retrieve the current academy id like this: `query.filter(academy__id=academy.id)` |
+
+## Manually running your script
 
 You can test your scripts by running the following command:
 
@@ -65,4 +73,26 @@ if len(pending_leads) > 0:
 
 # You can print this and it will show on the script results
 print("No pending leads")
+```
+
+## Unit testing your script
+
+from breathecode.monitoring.actions import run_script
+
+```python
+script = run_script(model.monitor_script)
+
+del script['slack_payload']
+
+expected = {'details': script['details'],
+            'severity_level': 5,
+            'status': script['status'],
+            'text': script['text']
+            }
+
+self.assertEqual(script, expected)
+
+self.assertEqual(self.all_monitor_script_dict(), [{
+    **self.model_to_dict(model, 'monitor_script'),
+}])
 ```

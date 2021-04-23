@@ -28,9 +28,12 @@ class TaskGETSerializer(serpy.Serializer):
     user = UserSmallSerializer()
 
 class PostTaskSerializer(serializers.ModelSerializer):
+    task_status = serializers.CharField(read_only=True)
+    revision_status = serializers.CharField(read_only=True)
+
     class Meta:
         model = Task
-        exclude = ('task_status','revision_status', 'user')
+        exclude = ('user',)
 
     def validate(self, data):
 
