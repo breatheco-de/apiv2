@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import GetAssetView, redirect_gitpod
+from .views import GetAssetView, redirect_gitpod, get_readme
 
 app_name='feedback'
 urlpatterns = [
