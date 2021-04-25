@@ -25,6 +25,15 @@ def redirect_gitpod(request, asset_slug):
     else:
         return HttpResponseRedirect(redirect_to=alias.asset.url)
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_readme(request, asset_slug):
+    asset = Asset.objects.filter(slug=asset_slug).first()
+    if asset is None:
+        raise ValidationException("Asset alias not found", status.HTTP_404_NOT_FOUND)
+
+    return Response(asset.readme)
+
 # Create your views here.
 class GetAssetView(APIView):
     """
