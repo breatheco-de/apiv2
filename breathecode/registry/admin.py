@@ -6,6 +6,7 @@ from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
 from .models import Asset, AssetTranslation, AssetTechnology, AssetAlias
 from .tasks import async_sync_with_github
+from .actions import sync_with_github
 
 logger = logging.getLogger(__name__)
 
@@ -17,18 +18,19 @@ def remove_gitpod(modeladmin, request, queryset):
     assets = queryset.update(gitpod=False)
 remove_gitpod.short_description = "Remove GITPOD"
 
-def sync_with_github(modeladmin, request, queryset):
+def sync_github(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         async_sync_with_github.delay(a.slug, request.user.id)
-sync_with_github.short_description = "Sync With Github"
+        # sync_with_github(a.slug, request.user.id)
+sync_github.short_description = "Sync With Github"
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
-    search_fields = ['title', 'slug', 'user__email', 'cohort__slug']
+    search_fields = ['title', 'slug', 'user__email', 'url']
     list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'url_path')
     list_filter = ['asset_type', 'lang']
-    actions = [add_gitpod, remove_gitpod, sync_with_github]
+    actions = [add_gitpod, remove_gitpod, sync_github]
     def url_path(self,obj):
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{obj.url}'>open</a>")
 

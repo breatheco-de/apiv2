@@ -86,27 +86,23 @@ def sync_with_github(asset_slug, author_id):
         learn_file = None
         try:
             learn_file = repo.get_contents("learn.json")
-            logger.debug("learn.json not found for sync")
         except:
             try:
                 learn_file = repo.get_contents(".learn/learn.json")
-                logger.debug("./learn/learn.json not found for sync")
             except:
                 try:
                     learn_file = repo.get_contents("bc.json")
-                    logger.debug("bc.json not found for sync")
                 except:
                     try:
                         learn_file = repo.get_contents(".learn/bc.json")
-                        logger.debug(".learn/bc.json not found for sync")
                     except:
                         raise Exception("No configuration learn.json or bc.json file was found")
 
-        asset.readme = readme_file.decoded_content
+        asset.readme = str(readme_file.content)
 
         if learn_file is not None:
-            config = json.loads(learn_file.decoded_content)
-            print("config", config)
+            config = json.loads(learn_file.decoded_content.decode('utf-8'))
+            asset.config = config
             if "title" in config:
                 asset.title =  config["title"]
             if "description" in config:
