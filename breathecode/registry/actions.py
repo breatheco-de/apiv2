@@ -1,6 +1,9 @@
-import logging
+import logging, json
+from slugify import slugify
 from breathecode.utils import APIException
+from breathecode.authenticate.models import CredentialsGithub
 from .models import Asset, AssetTranslation, AssetTechnology, AssetAlias
+from github import Github
 
 logger = logging.getLogger(__name__)
 
@@ -60,3 +63,112 @@ def create_asset(data, asset_type):
     
     aa = AssetAlias(slug=slug, asset=a)
     aa.save()
+
+def sync_with_github(asset_slug, author_id):
+
+    try:
+
+        asset = Asset.objects.filter(slug=asset_slug).first()
+        if asset is None:
+            raise Exception(f"Asset with slug {asset_slug} not found when attempting to sync with github")
+
+        org_name, repo_name = get_url_info(asset.url)
+
+        credentials = CredentialsGithub.objects.filter(user__id=author_id).first()
+        if credentials is None:
+            raise Exception(f"Github credentials for this user {author_id} not found")
+
+
+        g = Github(credentials.token)
+        repo = g.get_repo(f"{org_name}/{repo_name}")
+        readme_file = repo.get_contents("README.md")
+        
+        learn_file = None
+        try:
+            learn_file = repo.get_contents("learn.json")
+            logger.debug("learn.json not found for sync")
+        except:
+            try:
+                learn_file = repo.get_contents(".learn/learn.json")
+                logger.debug("./learn/learn.json not found for sync")
+            except:
+                try:
+                    learn_file = repo.get_contents("bc.json")
+                    logger.debug("bc.json not found for sync")
+                except:
+                    try:
+                        learn_file = repo.get_contents(".learn/bc.json")
+                        logger.debug(".learn/bc.json not found for sync")
+                    except:
+                        raise Exception("No configuration learn.json or bc.json file was found")
+
+        asset.readme = readme_file.decoded_content
+
+        if learn_file is not None:
+            config = json.loads(learn_file.decoded_content)
+            print("config", config)
+            if "title" in config:
+                asset.title =  config["title"]
+            if "description" in config:
+                asset.description =  config["description"]
+            
+            if "preview" in config:
+                asset.preview =  config["preview"]
+            else:
+                raise Exception(f"Missing preview URL")
+
+            if "duration" in config:
+                asset.duration =  config["duration"]
+            if "difficulty" in config:
+                asset.difficulty =  config["difficulty"]
+            if "solution" in config:
+                asset.solution =  config["solution"]
+            
+            if "language" in config:
+                asset.lang =  config["language"]
+            elif "syntax" in config:
+                asset.lang =  config["syntax"]
+
+            
+            if "translations" in config:
+                for lang in config["translations"]:
+                    language = AssetTranslation.objects.filter(slug__iexact=lang).first()
+                    if language is None:
+                        raise Exception(f"Language '{lang}' not found")
+                    asset.translations.add(language)
+            
+            if "technologies" in config:
+                for tech_slug in config["technologies"]:
+                    _slug = slugify(tech_slug)
+                    technology = AssetTechnology.objects.filter(slug__iexact=_slug).first()
+                    if technology is None:
+                        technology = AssetTechnology(slug=_slug, title=tech_slug)
+                        technology.save()
+                    asset.technologies.add(technology)
+        
+        asset.status = "OK"
+        asset.save()
+    except Exception as e:
+        asset.status_text = str(e)
+        asset.status = 'ERROR'
+        asset.save()
+        logger.error(f"Error updating {asset.slug} from github: "+str(e))
+
+    return asset.status
+
+def get_url_info(url: str):
+    last_slash_index = url.rfind("/")
+    last_suffix_index = url.rfind(".git")
+    if last_suffix_index < 0:
+        last_suffix_index = len(url)
+
+    if last_slash_index < 0 or last_suffix_index <= last_slash_index:
+        raise Exception("Badly formatted url {}".format(url))
+
+    repo_name_position = last_slash_index + 1
+    repo_name = url[repo_name_position:last_suffix_index]
+    
+    last_slash_index = url[0:repo_name_position - 2].rfind("/")
+    org_name = url[last_slash_index + 1:repo_name_position - 1]
+
+    return org_name, repo_name

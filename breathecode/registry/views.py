@@ -5,7 +5,7 @@ from .models import Asset, AssetAlias
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import AssetSerializer, AssetBigSerializer
+from .serializers import AssetSerializer, AssetBigSerializer, AssetMidSerializer
 from breathecode.utils import ValidationException
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -89,5 +89,8 @@ class GetAssetView(APIView):
 
         items = items.filter(**lookup).order_by('-created_at')
         
-        serializer = AssetSerializer(items, many=True)
+        if 'big' in self.request.GET:
+            serializer = AssetMidSerializer(items, many=True)
+        else:
+            serializer = AssetSerializer(items, many=True)
         return Response(serializer.data)

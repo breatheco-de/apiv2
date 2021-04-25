@@ -42,9 +42,9 @@ class ApplicationAdmin(admin.ModelAdmin):
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
-            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</a>")
+            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
 
-        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</a>")
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
 def test_endpoint(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
@@ -76,9 +76,9 @@ class EndpointAdmin(admin.ModelAdmin):
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
-            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</a>")
+            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
 
-        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</a>")
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
 def run_single_script(modeladmin, request, queryset):
     # stay this here for use the poor mocking system
@@ -122,6 +122,6 @@ class MonitorScriptAdmin(admin.ModelAdmin):
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
-            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</a>")
+            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
 
-        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</a>")
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
