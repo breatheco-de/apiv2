@@ -11,6 +11,7 @@ class AssetSerializer(serpy.Serializer):
     asset_type = serpy.Field()
     visibility = serpy.Field()
     url = serpy.Field()
+    readme_url = serpy.Field()
     difficulty = serpy.Field()
     duration = serpy.Field()
     status = serpy.Field()
