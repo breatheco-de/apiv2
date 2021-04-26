@@ -26,10 +26,11 @@ class TaskTeacherView(APIView):
         logger.debug(f"Found {items.count()} tasks")
 
         if request.user is not None:
-            profile = ProfileAcademy.objects.filter(user=request.user.id).first()
-            if profile is None:
+            profile_ids = ProfileAcademy.objects.filter(user=request.user.id).values_list('academy__id', flat=True)
+            if profile_ids is None:
                 raise APIException("The quest user must belong to at least one academy to be able to request student tasks")
-            items = items.filter(Q(cohort__academy_id=profile.academy.id) | Q(cohort__isnull=True))
+            items = items.filter(Q(cohort__academy__id__in=profile_ids) | Q(cohort__isnull=True))
+            print(items)
 
         academy = request.GET.get('academy', None)
         if academy is not None:
