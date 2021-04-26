@@ -1,3 +1,4 @@
+from breathecode.authenticate.actions import server_id
 from breathecode.events.caches import EventCache
 import logging, datetime
 import re
@@ -366,12 +367,13 @@ class ICalCohortsView(APIView):
             items = items.filter(kickoff_date__gte=now)
 
         academies_repr = ical_academies_repr(ids=ids, slugs=slugs)
+        key = server_id()
 
         calendar = iCalendar()
-        calendar.add('prodid', f'-//BreatheCode//Academy Cohorts{academies_repr}//EN')
+        calendar.add('prodid', f'-//BreatheCode//Academy Cohorts{academies_repr} {key}//EN')
         calendar.add('X-WR-CALNAME', f'Academy - Cohorts')
         calendar.add('X-WR-CALDESC', '')
-        calendar.add('REFRESH-INTERVAL', 'PT15M')
+        calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
 
         calendar.add('version', '2.0')
 
@@ -379,7 +381,7 @@ class ICalCohortsView(APIView):
             event = iEvent()
 
             event.add('summary', item.name)
-            event.add('uid', f'breathecode_cohort_{item.id}')
+            event.add('uid', f'breathecode_cohort_{item.id}_{key}')
             event.add('dtstart', item.kickoff_date)
 
             if item.ending_date:
@@ -424,7 +426,6 @@ class ICalEventView(APIView):
     def get(self, request):
         items = Event.objects.filter(status='ACTIVE')
 
-        academies = []
         ids = request.GET.get('academy', '')
         slugs = request.GET.get('academy_slug', '')
 
@@ -453,12 +454,13 @@ class ICalEventView(APIView):
             items = items.filter(starting_at__gte=now)
 
         academies_repr = ical_academies_repr(ids=ids, slugs=slugs)
+        key = server_id()
 
         calendar = iCalendar()
-        calendar.add('prodid', f'-//BreatheCode//Academy Events{academies_repr}//EN')
+        calendar.add('prodid', f'-//BreatheCode//Academy Events{academies_repr} {key}//EN')
         calendar.add('X-WR-CALNAME', f'Academy - Events')
         calendar.add('X-WR-CALDESC', '')
-        calendar.add('REFRESH-INTERVAL', 'PT15M')
+        calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
 
         calendar.add('version', '2.0')
 
@@ -468,10 +470,22 @@ class ICalEventView(APIView):
             if item.title:
                 event.add('summary', item.title)
 
-            if item.description:
-                event.add('description', item.description)
+            description = ''
+            description = f'{description}Url: {item.url}\n'
 
-            event.add('uid', f'breathecode_event_{item.id}')
+            if item.academy:
+                description = f'{description}Academy: {item.academy.name}\n'
+
+            if item.venue and item.venue.title:
+                description = f'{description}Venue: {item.venue.title}\n'
+
+            if item.event_type:
+                description = f'{description}Event type: {item.event_type.name}\n'
+
+            description = f'{description}Location: online\n'
+
+            event.add('description', description)
+            event.add('uid', f'breathecode_event_{item.id}_{key}')
             event.add('dtstart', item.starting_at)
             event.add('dtend', item.ending_at)
             event.add('dtstamp', item.created_at)

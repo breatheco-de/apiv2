@@ -29,12 +29,10 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
 from breathecode.utils import (
-    Cache, localize_query, capable_of, ValidationException,
+    localize_query, capable_of, ValidationException,
     HeaderLimitOffsetPagination, GenerateLookupsMixin
 )
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
-from breathecode.events.models import Event
-from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 
 from rest_framework.decorators import renderer_classes
 from rest_framework_csv import renderers as r
@@ -82,10 +80,6 @@ def get_cohorts(request, id=None):
 
     items = items.order_by('kickoff_date')
     serializer = GetCohortSerializer(items, many=True)
-
-    # if request.accepted_renderer.format == 'csv':
-
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
 
     return Response(serializer.data)
 

@@ -14,7 +14,8 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
     def generate_authenticate_models(self, profile_academy=False, capability='',
                                      role='', profile=False, user_invite=False, credentials_github=False,
                                      credentials_slack=False, credentials_facebook=False,
-                                     credentials_quick_books=False, token=False, profile_kwargs={},
+                                     credentials_quick_books=False, token=False, device_id=False,
+                                     profile_kwargs={}, device_id_kwargs={},
                                      capability_kwargs={}, role_kwargs={}, user_invite_kwargs={},
                                      profile_academy_kwargs={}, credentials_github_kwargs={},
                                      credentials_slack_kwargs={}, credentials_facebook_kwargs={},
@@ -139,5 +140,11 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
 
             kargs = {**kargs, **token_kwargs}
             models['token'] = mixer.blend('authenticate.Token', **kargs)
+
+        if not 'device_id' in models and device_id:
+            kargs = {}
+
+            kargs = {**kargs, **device_id_kwargs}
+            models['device_id'] = mixer.blend('authenticate.DeviceId', **kargs)
 
         return models

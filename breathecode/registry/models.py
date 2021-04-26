@@ -61,7 +61,7 @@ class Asset(models.Model):
 
     translations = models.ManyToManyField(AssetTranslation)
     technologies = models.ManyToManyField(AssetTechnology)
-    
+
     url = models.URLField()
     solution_url = models.URLField(null=True, blank=True, default=None)
     preview = models.URLField()

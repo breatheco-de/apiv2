@@ -40,9 +40,6 @@ class AdmissionsModelsMixin(ModelsMixin):
             kargs = {**kargs, **city_kwargs}
             models['city'] = mixer.blend('admissions.City', **kargs)
 
-        print((academy or profile_academy or syllabus or
-               academy_certificate))
-
         if not 'academy' in models and (academy or profile_academy or syllabus or
                                         academy_certificate):
             kargs = {}

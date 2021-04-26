@@ -1,8 +1,9 @@
-import os, requests, logging, urllib.parse
+import os, string, logging, urllib.parse, random
 from django.contrib.auth.models import User, Group
 from django.utils import timezone
-from .models import Token, CredentialsSlack, UserInvite
+from .models import DeviceId, Token, CredentialsSlack, UserInvite
 from breathecode.notify.actions import send_email_message
+from random import randint
 
 logger = logging.getLogger(__name__)
 
@@ -63,3 +64,25 @@ def resend_invite(token=None,email=None, first_name=None ):
                 "LINK": url,
                 "FIST_NAME": first_name
             })
+
+def server_id():
+    key = DeviceId.objects.filter(name='server').values_list('key', flat=True).first()
+
+    if key:
+        return key
+
+    n1 = str(randint(0, 100))
+    n2 = str(randint(0, 100))
+    n3 = str(randint(0, 100))
+
+    letters = string.ascii_lowercase
+    s1 = ''.join(random.choice(letters) for i in range(2))
+    s2 = ''.join(random.choice(letters) for i in range(2))
+    s3 = ''.join(random.choice(letters) for i in range(2))
+
+    key = f'{n1}{s1}.{n2}{s2}.{n3}{s3}'
+
+    device = DeviceId(name='server', key=key)
+    device.save()
+
+    return key

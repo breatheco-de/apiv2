@@ -220,3 +220,7 @@ class Token(rest_framework.authtoken.models.Token):
     class Meta:
         # ensure user and name are unique
         unique_together = (('user', 'key'),)
+
+class DeviceId(models.Model):
+    name = models.CharField(max_length=40)
+    key = models.CharField(max_length=64)
