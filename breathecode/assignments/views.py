@@ -1,3 +1,4 @@
+from breathecode.authenticate.models import ProfileAcademy
 import logging
 from django.shortcuts import render
 from django.db.models import Q
@@ -13,11 +14,13 @@ from .models import Task
 from .serializers import TaskGETSerializer, PUTTaskSerializer, PostTaskSerializer
 from .actions import sync_cohort_tasks
 
+
 logger = logging.getLogger(__name__)
 
+
 class TaskTeacherView(APIView):
-    
-    def get(self, request, pupu=None, mama=None):
+
+    def get(self, request):
 
         items = Task.objects.all()
         logger.debug(f"Found {items.count()} tasks")
@@ -103,11 +106,11 @@ class TaskMeView(APIView):
         return Response(serializer.data)
 
     def put(self, request, task_id):
-        
+
         item = Task.objects.filter(id=task_id).first()
         if item is None:
             raise ValidationException("Task not found")
-        
+
         serializer = PUTTaskSerializer(item, data=request.data, context={ "request": request })
         if serializer.is_valid():
             serializer.save()
