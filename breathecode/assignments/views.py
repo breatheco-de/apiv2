@@ -1,3 +1,4 @@
+from breathecode.authenticate.models import ProfileAcademy
 import logging
 from django.shortcuts import render
 from django.db.models import Q
@@ -13,20 +14,23 @@ from .models import Task
 from .serializers import TaskGETSerializer, PUTTaskSerializer, PostTaskSerializer
 from .actions import sync_cohort_tasks
 
+
 logger = logging.getLogger(__name__)
 
+
 class TaskTeacherView(APIView):
-    
-    def get(self, request, pupu=None, mama=None):
+
+    def get(self, request):
 
         items = Task.objects.all()
         logger.debug(f"Found {items.count()} tasks")
 
         if request.user is not None:
-            profile = ProfileAcademy.objects.filter(user=request.user.id).first()
-            if profile is None:
+            profile_ids = ProfileAcademy.objects.filter(user=request.user.id).values_list('academy__id', flat=True)
+            if profile_ids is None:
                 raise APIException("The quest user must belong to at least one academy to be able to request student tasks")
-            items = items.filter(Q(cohort__academy_id=profile.academy.id) | Q(cohort__isnull=True))
+            items = items.filter(Q(cohort__academy__id__in=profile_ids) | Q(cohort__isnull=True))
+            print(items)
 
         academy = request.GET.get('academy', None)
         if academy is not None:
@@ -103,11 +107,11 @@ class TaskMeView(APIView):
         return Response(serializer.data)
 
     def put(self, request, task_id):
-        
+
         item = Task.objects.filter(id=task_id).first()
         if item is None:
             raise ValidationException("Task not found")
-        
+
         serializer = PUTTaskSerializer(item, data=request.data, context={ "request": request })
         if serializer.is_valid():
             serializer.save()
