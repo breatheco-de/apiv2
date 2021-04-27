@@ -70,6 +70,8 @@ class Asset(models.Model):
     intro_video_url = models.URLField(null=True, blank=True, default=None)
     solution_video_url = models.URLField(null=True, blank=True, default=None)
     readme = models.TextField(null=True, blank=True, default=None)
+    
+    config = models.JSONField(null=True, blank=True, default=None)
 
     interactive = models.BooleanField(default=False)
     with_solutions = models.BooleanField(default=False)

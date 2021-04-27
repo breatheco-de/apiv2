@@ -18,10 +18,12 @@ from breathecode.services.google_cloud import Datastore
 # https://cloud.google.com/datastore/docs/concepts/entities
 # https://googleapis.dev/python/datastore/latest/index.html
 
+
 class ActivityView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, format=None):
         # datastore = Datastore()
         # return datastore.fetch(kind='nps_answer')
@@ -30,13 +32,13 @@ class ActivityView(APIView):
         client = datastore.Client()
         query = client.query(kind='nps_answer')
         query_iter = query.fetch()
-        
+
         return Response(query_iter)
 
     def post(self, request, format=None):
         resolve_google_credentials()
 
-        answer_dict=request.data
+        answer_dict = request.data
 
         check_params(answer_dict, 'comment', 'score', 'user_id')
 
@@ -80,19 +82,20 @@ class CohortActivityView(APIView):
     @capable_of('read_cohort_activity')
     def get(self, request, cohort_slug=None, academy_id=None, format=None):
 
-        cohort = Cohort.objects.filter(Q(slug=cohort_slug) | Q(id=cohort_slug)).first()
+        cohort = Cohort.objects.filter(
+            Q(slug=cohort_slug) | Q(id=cohort_slug)).first()
         if cohort is None:
             raise ValidationException("Cohort slug or id not found")
 
         datastore = Datastore()
         query_iter = datastore.fetch(kind='student_activity')
-        
+
         return Response(query_iter)
 
     def post(self, request, format=None):
         resolve_google_credentials()
 
-        answer_dict=request.data
+        answer_dict = request.data
 
         check_params(answer_dict, 'comment', 'score', 'user_id')
 
@@ -126,4 +129,3 @@ class CohortActivityView(APIView):
         # })
 
         # return Response(answer_dict, status=status.HTTP_201_CREATED)
-

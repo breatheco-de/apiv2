@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from .models import Specialty, Badge, UserSpecialty
 from django.db.models import Q
 from breathecode.admissions.models import CohortUser
-from breathecode.utils import capable_of, ValidationException
+from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination
 from .serializers import SpecialtySerializer, UserSpecialtySerializer, UserSmallSerializer
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import api_view, permission_classes
@@ -19,6 +19,7 @@ from .actions import generate_certificate
 
 logger = logging.getLogger(__name__)
 
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_specialties(request):
@@ -26,12 +27,14 @@ def get_specialties(request):
     serializer = SpecialtySerializer(items, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_badges(request):
     items = Badge.objects.all()
     serializer = SpecialtySerializer(items, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -43,10 +46,12 @@ def get_certificate(request, token):
     serializer = UserSpecialtySerializer(item)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 @receiver(post_save, sender=UserSpecialty)
-def post_save_course_dosomething(sender,instance, **kwargs):
+def post_save_course_dosomething(sender, instance, **kwargs):
     if instance.preview_url is None or instance.preview_url == "":
         take_screenshot.delay(instance.id)
+
 
 class CertificateView(APIView):
     """
@@ -55,9 +60,11 @@ class CertificateView(APIView):
     @capable_of('read_certificate')
     def get(self, request, cohort_id, student_id, academy_id=None):
 
-        cert = UserSpecialty.objects.filter(cohort__id=cohort_id, user__id=student_id, cohort__academy__id=academy_id).first()
+        cert = UserSpecialty.objects.filter(
+            cohort__id=cohort_id, user__id=student_id, cohort__academy__id=academy_id).first()
         if cert is None:
-            raise serializers.ValidationError("Certificate not found", code=404)
+            raise serializers.ValidationError(
+                "Certificate not found", code=404)
 
         serializer = UserSpecialtySerializer(cert, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -65,13 +72,16 @@ class CertificateView(APIView):
     @capable_of('crud_certificate')
     def post(self, request, cohort_id, student_id, academy_id=None):
 
-        cu = CohortUser.objects.filter(cohort__id=cohort_id, user__id=student_id, role="STUDENT", cohort__academy__id=academy_id).first()
+        cu = CohortUser.objects.filter(
+            cohort__id=cohort_id, user__id=student_id, role="STUDENT", cohort__academy__id=academy_id).first()
         if cu is None:
-            raise serializers.ValidationError(f"Student not found for this cohort", code=404)
+            raise serializers.ValidationError(
+                f"Student not found for this cohort", code=404)
 
         cert = generate_certificate(cu.user, cu.cohort)
         serializer = UserSpecialtySerializer(cert, many=False)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
 
 class CertificateCohortView(APIView):
     """
@@ -80,14 +90,16 @@ class CertificateCohortView(APIView):
     @capable_of('read_certificate')
     def get(self, request, cohort_id, academy_id=None):
 
-        cert = UserSpecialty.objects.filter(cohort__id=cohort_id, cohort__academy__id=academy_id)
+        cert = UserSpecialty.objects.filter(
+            cohort__id=cohort_id, cohort__academy__id=academy_id).order_by('-created_at')
         serializer = UserSpecialtySerializer(cert, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_certificate')
     def post(self, request, cohort_id, academy_id=None):
 
-        cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role='STUDENT', cohort__academy__id=academy_id)
+        cohort_users = CohortUser.objects.filter(
+            cohort__id=cohort_id, role='STUDENT', cohort__academy__id=academy_id)
         all_certs = []
 
         for cu in cohort_users:
@@ -98,21 +110,26 @@ class CertificateCohortView(APIView):
         return Response(all_certs, status=status.HTTP_201_CREATED)
 
 
-class CertificateAcademyView(APIView):
+class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
     @capable_of('read_certificate')
     def get(self, request, academy_id=None):
         # print(request.headers['Academy'])
-        cert = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
+        items = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
 
         like = request.GET.get('like', None)
         if like is not None:
-            cert = cert.filter(Q(user__profileacademy__first_name__icontains=like) | Q(user__profileacademy__last_name__icontains=like) | Q(user__profileacademy__email__icontains=like))
+            items = items.filter(Q(user__profileacademy__first_name__icontains=like) | Q(
+                user__profileacademy__last_name__icontains=like) | Q(user__profileacademy__email__icontains=like))
 
-        serializer = UserSpecialtySerializer(cert, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        page = self.paginate_queryset(items, request)
+        serializer = UserSpecialtySerializer(items, many=True)
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # class SyllabusView(APIView):
@@ -131,7 +148,7 @@ class CertificateAcademyView(APIView):
 #             return Response(serializer.data, status=status.HTTP_200_OK)
 #         else:
 #             syl = course.syllabus_set.filter(version=version).first()
-        
+
 #         if syl is None:
 #             raise serializers.ValidationError("Syllabus not found", code=404)
 
@@ -157,11 +174,11 @@ class CertificateAcademyView(APIView):
 #     def put(self, request, course_slug=None, version=None):
 #         if version is None:
 #             raise serializers.ValidationError("Missing syllabus version", code=400)
-        
+
 #         item = Syllabus.objects.filter(course__slug=course_slug, version=version).first()
 #         if item is None:
 #             raise serializers.ValidationError("Syllabus version not found", code=404)
-        
+
 #         serializer = SyllabusSerializer(item, data=request.data, many=False)
 #         if serializer.is_valid():
 #             serializer.save()

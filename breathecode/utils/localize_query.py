@@ -10,9 +10,6 @@ def localize_query(query, request, matcher=None):
     if isinstance(request.user, AnonymousUser):
         return None
 
-    if request.user.is_staff == True:
-        return query
-
     academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list('academy__id',
         flat=True)
 
