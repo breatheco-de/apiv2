@@ -1,13 +1,5 @@
-from breathecode.admissions.models import Academy
 import hashlib, requests
 from django.shortcuts import redirect
-from breathecode.media.serializers import (
-    GetMediaSerializer,
-    MediaSerializer,
-    MediaPUTSerializer,
-    GetCategorySerializer,
-    CategorySerializer
-)
 from breathecode.media.models import Media, Category
 from breathecode.utils import GenerateLookupsMixin
 from rest_framework.views import APIView
@@ -17,6 +9,14 @@ from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.http import StreamingHttpResponse
+from django.db.models import Q
+from breathecode.media.serializers import (
+    GetMediaSerializer,
+    MediaSerializer,
+    MediaPUTSerializer,
+    GetCategorySerializer,
+    CategorySerializer
+)
 
 
 BUCKET_NAME = "media-breathecode"
@@ -66,6 +66,10 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         tp = request.GET.get('type')
         if tp:
             items = items.filter(mime__icontains=tp)
+
+        like = request.GET.get('like')
+        if like:
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
         items = items.order_by('id')
 

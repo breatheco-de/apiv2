@@ -751,6 +751,96 @@ class MediaTestSuite(MediaTestCase):
         }])
 
     """
+    🔽🔽🔽 Like in querystring
+    """
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_root__with_category__with_bad_like_in_querystring(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_media', role='potato', media=True, category=True)
+        url = reverse_lazy('media:root') + '?like=freyja'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media')
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_root__with_category__with_like_in_querystring__like_match_name(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        media_kwargs = {'name': 'Freyja'}
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_media', role='potato', media=True, category=True,
+            media_kwargs=media_kwargs)
+        url = reverse_lazy('media:root') + '?like=fre'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [{
+            'categories': [{
+                'id': 1,
+                'medias': 1,
+                'name': model['category'].name,
+                'slug': model['category'].slug,
+            }],
+            'hash': model['media'].hash,
+            'hits': model['media'].hits,
+            'id': model['media'].id,
+            'mime': model['media'].mime,
+            'name': model['media'].name,
+            'slug': model['media'].slug,
+            'url': model['media'].url
+        }])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media')
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_root__with_category__with_like_in_querystring__like_match_slug(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        media_kwargs = {'slug': 'freyja'}
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_media', role='potato', media=True, category=True,
+            media_kwargs=media_kwargs)
+        url = reverse_lazy('media:root') + '?like=Fre'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [{
+            'categories': [{
+                'id': 1,
+                'medias': 1,
+                'name': model['category'].name,
+                'slug': model['category'].slug,
+            }],
+            'hash': model['media'].hash,
+            'hits': model['media'].hits,
+            'id': model['media'].id,
+            'mime': model['media'].mime,
+            'name': model['media'].name,
+            'slug': model['media'].slug,
+            'url': model['media'].url
+        }])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media')
+        }])
+
+    """
     🔽🔽🔽 Pagination tests
     """
 

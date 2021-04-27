@@ -1,7 +1,4 @@
-from django.shortcuts import render
-from django.utils import timezone
 from .utils import resolve_google_credentials, check_params
-from .serializers import ActivitySerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from google.cloud import datastore
@@ -30,7 +27,7 @@ class ActivityView(APIView):
         client = datastore.Client()
         query = client.query(kind='nps_answer')
         query_iter = query.fetch()
-        
+
         return Response(query_iter)
 
     def post(self, request, format=None):
@@ -86,7 +83,7 @@ class CohortActivityView(APIView):
 
         datastore = Datastore()
         query_iter = datastore.fetch(kind='student_activity')
-        
+
         return Response(query_iter)
 
     def post(self, request, format=None):
@@ -126,4 +123,3 @@ class CohortActivityView(APIView):
         # })
 
         # return Response(answer_dict, status=status.HTTP_201_CREATED)
-
