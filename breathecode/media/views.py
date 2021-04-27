@@ -67,6 +67,8 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if tp:
             items = items.filter(mime__ilike=tp)
 
+        items = items.order_by('id')
+
         page = self.paginate_queryset(items, request)
         serializer = GetMediaSerializer(page, many=True)
 
