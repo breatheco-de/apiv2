@@ -39,6 +39,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'VERSION:2.0',
             f'PRODID:-//BreatheCode//Academy Events (1) {key}//EN',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/events?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Events',
             'END:VCALENDAR',
@@ -65,6 +66,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'VERSION:2.0',
             f'PRODID:-//BreatheCode//Academy Events (1) {key}//EN',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/events?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Events',
             'END:VCALENDAR',
@@ -92,6 +94,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'VERSION:2.0',
             f'PRODID:-//BreatheCode//Academy Events (1) {key}//EN',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/events?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Events',
             'END:VCALENDAR',
@@ -121,6 +124,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'VERSION:2.0',
             f'PRODID:-//BreatheCode//Academy Events (1) {key}//EN',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/events?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Events',
             # event
@@ -160,6 +164,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'VERSION:2.0',
             f'PRODID:-//BreatheCode//Academy Events (1) {key}//EN',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/events?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Events',
             # event
@@ -207,6 +212,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'VERSION:2.0',
             f'PRODID:-//BreatheCode//Academy Events (1) {key}//EN',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/events?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Events',
             # event
@@ -255,6 +261,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'VERSION:2.0',
             f'PRODID:-//BreatheCode//Academy Events (1) {key}//EN',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/events?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Events',
             'END:VCALENDAR',
@@ -295,6 +302,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'VERSION:2.0',
             f'PRODID:-//BreatheCode//Academy Events (1) {key}//EN',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/events?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Events',
             # event
@@ -345,6 +353,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'VERSION:2.0',
             f'PRODID:-//BreatheCode//Academy Events (1) {key}//EN',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/events?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Events',
             # event
@@ -412,6 +421,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'VERSION:2.0',
             f'PRODID:-//BreatheCode//Academy Events (1) {key}//EN',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/events?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Events',
             # event
@@ -481,7 +491,8 @@ class AcademyCohortTestSuite(EventTestCase):
 
         url = reverse_lazy('events:academy_id_ical_events')
         args ={'academy': "1,2"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        url = url + "?" + urllib.parse.urlencode(args)
+        response = self.client.get(url)
 
         event1 = models[0]['event']
         event2 = models[1]['event']
@@ -491,13 +502,14 @@ class AcademyCohortTestSuite(EventTestCase):
         user2 = models[1]['user']
         user3 = models[2]['user']
         user4 = models[3]['user']
-        # academy = models[0]['academy']
         key = base.device_id.key
+        url = url.replace('%2C', ',')
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
             f'PRODID:-//BreatheCode//Academy Events (1\,2) {key}//EN',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            self.line_limit(f'URL:http://localhost:8000{url}'),
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Events',
             # event
@@ -591,6 +603,7 @@ class AcademyCohortTestSuite(EventTestCase):
 
         url = reverse_lazy('events:academy_id_ical_events')
         args ={'academy_slug': ','.join(list(dict.fromkeys([x.academy.slug for x in models])))}
+        url = url + "?" + urllib.parse.urlencode(args)
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         event1 = models[0]['event']
@@ -602,11 +615,13 @@ class AcademyCohortTestSuite(EventTestCase):
         user3 = models[2]['user']
         user4 = models[3]['user']
         key = base.device_id.key
+        url = url.replace('%2C', ',')
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
             'VERSION:2.0',
             f'PRODID:-//BreatheCode//Academy Events (1\,2) {key}//EN',
             'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            self.line_limit(f'URL:http://localhost:8000{url}'),
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Events',
             # event

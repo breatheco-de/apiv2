@@ -1,3 +1,4 @@
+import os
 from breathecode.authenticate.actions import server_id
 from breathecode.events.caches import EventCache
 import logging, datetime
@@ -375,6 +376,23 @@ class ICalCohortsView(APIView):
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
 
+        url = os.getenv('API_URL')
+        if url:
+            url = re.sub(r'/$', '', url) + '/v1/events/ical/cohorts'
+            if ids or slugs:
+                url = url + '?'
+
+                if ids:
+                    url = url + 'academy=' + ','.join(ids)
+
+                if ids and slugs:
+                    url = url + '&'
+
+                if slugs:
+                    url = url + 'academy_slug=' + ','.join(slugs)
+
+            calendar.add('url', url)
+
         calendar.add('version', '2.0')
 
         for item in items:
@@ -461,6 +479,23 @@ class ICalEventView(APIView):
         calendar.add('X-WR-CALNAME', f'Academy - Events')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
+
+        url = os.getenv('API_URL')
+        if url:
+            url = re.sub(r'/$', '', url) + '/v1/events/ical/events'
+            if ids or slugs:
+                url = url + '?'
+
+                if ids:
+                    url = url + 'academy=' + ','.join(ids)
+
+                if ids and slugs:
+                    url = url + '&'
+
+                if slugs:
+                    url = url + 'academy_slug=' + ','.join(slugs)
+
+            calendar.add('url', url)
 
         calendar.add('version', '2.0')
 
