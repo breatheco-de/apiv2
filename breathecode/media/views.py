@@ -65,7 +65,7 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         tp = request.GET.get('type')
         if tp:
-            items = items.filter(mime__ilike=tp)
+            items = items.filter(mime__icontains=tp)
 
         items = items.order_by('id')
 
