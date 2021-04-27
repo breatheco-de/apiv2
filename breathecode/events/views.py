@@ -252,6 +252,13 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
         if 'event' in self.request.GET:
             value = self.request.GET.get('event')
             lookup['event__id'] = value
+            
+        if 'like' in self.request.GET:
+            items = items.filter(Q(attendee__first_name__icontains=like) |
+                                 Q(attendee__last_name_icontains=like) |
+                                 Q(attendee__email_icontains=like) |
+                                 Q(email_icontains=like)
+                                )
 
         start = request.GET.get('start', None)
         if start is not None:
