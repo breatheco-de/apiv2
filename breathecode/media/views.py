@@ -57,11 +57,15 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         lookups = self.generate_lookups(
             request,
-            fields=['mime'],
-            relationships=['academy']
+            many_fields=['mime', 'name', 'slug', 'id'],
+            many_relationships=['academy', 'categories']
         )
 
         items = Media.objects.filter(**lookups)
+
+        tp = request.GET.get('type')
+        if tp:
+            items = items.filter(mime__ilike=tp)
 
         page = self.paginate_queryset(items, request)
         serializer = GetMediaSerializer(page, many=True)
