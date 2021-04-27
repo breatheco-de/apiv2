@@ -5,7 +5,7 @@ from .models import Asset, AssetAlias
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import AssetSerializer, AssetBigSerializer
+from .serializers import AssetSerializer, AssetBigSerializer, AssetMidSerializer
 from breathecode.utils import ValidationException
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -24,6 +24,15 @@ def redirect_gitpod(request, asset_slug):
         return HttpResponseRedirect(redirect_to='https://gitpod.io#'+alias.asset.url)
     else:
         return HttpResponseRedirect(redirect_to=alias.asset.url)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_readme(request, asset_slug):
+    asset = Asset.objects.filter(slug=asset_slug).first()
+    if asset is None:
+        raise ValidationException("Asset alias not found", status.HTTP_404_NOT_FOUND)
+
+    return Response(asset.readme)
 
 # Create your views here.
 class GetAssetView(APIView):
@@ -89,5 +98,8 @@ class GetAssetView(APIView):
 
         items = items.filter(**lookup).order_by('-created_at')
         
-        serializer = AssetSerializer(items, many=True)
+        if 'big' in self.request.GET:
+            serializer = AssetMidSerializer(items, many=True)
+        else:
+            serializer = AssetSerializer(items, many=True)
         return Response(serializer.data)

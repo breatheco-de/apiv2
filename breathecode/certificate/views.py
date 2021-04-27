@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from .models import Specialty, Badge, UserSpecialty
 from django.db.models import Q
 from breathecode.admissions.models import CohortUser
-from breathecode.utils import capable_of, ValidationException
+from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination
 from .serializers import SpecialtySerializer, UserSpecialtySerializer, UserSmallSerializer
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import api_view, permission_classes
@@ -98,22 +98,26 @@ class CertificateCohortView(APIView):
         return Response(all_certs, status=status.HTTP_201_CREATED)
 
 
-class CertificateAcademyView(APIView):
+class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
     @capable_of('read_certificate')
     def get(self, request, academy_id=None):
         # print(request.headers['Academy'])
-        cert = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
+        items = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
 
         like = request.GET.get('like', None)
         if like is not None:
-            cert = cert.filter(Q(user__profileacademy__first_name__icontains=like) | Q(user__profileacademy__last_name__icontains=like) | Q(user__profileacademy__email__icontains=like))
+            items = items.filter(Q(user__profileacademy__first_name__icontains=like) | Q(user__profileacademy__last_name__icontains=like) | Q(user__profileacademy__email__icontains=like))
 
-        serializer = UserSpecialtySerializer(cert, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
+        page = self.paginate_queryset(items, request)
+        serializer = UserSpecialtySerializer(items, many=True)
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
 
 # class SyllabusView(APIView):
 #     """
