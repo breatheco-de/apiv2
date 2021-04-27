@@ -41,6 +41,7 @@ hiredis = "*"
 icalendar = "*"
 djangorestframework-csv = "*"
 psycopg2-binary = "==2.8.6"
+python-slugify = "*"
 
 [requires]
 python_version = "3.9"
