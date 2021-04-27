@@ -130,6 +130,45 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event.created_at)}',
             f'UID:breathecode_event_{event.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
+                f'{event.academy.name}\\n'),
+            self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
+            'END:VEVENT',
+            'END:VCALENDAR',
+            '',
+        ])
+
+        self.assertEqual(response.content.decode('utf-8'), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_ical_events__with_one_and_online_event(self):
+        """Test /academy/cohort without auth"""
+        event_kwargs = {'status': 'ACTIVE', 'online_event': True}
+        device_id_kwargs = {'name': 'server'}
+        model = self.generate_models(academy=True, user=True, event=True, device_id=True,
+            event_kwargs=event_kwargs, device_id_kwargs=device_id_kwargs)
+
+        url = reverse_lazy('events:academy_id_ical_events')
+        args={'academy': "1"}
+        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+
+        event = model['event']
+        user = model['user']
+        academy = model['academy']
+        key = model.device_id.key
+        expected = '\r\n'.join([
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            f'PRODID:-//BreatheCode//Academy Events (1) {key}//EN',
+            'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'X-WR-CALDESC:',
+            f'X-WR-CALNAME:Academy - Events',
+            # event
+            'BEGIN:VEVENT',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event.ending_at)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event.created_at)}',
+            f'UID:breathecode_event_{event.id}_{key}',
+            self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
                 f'{event.academy.name}\\nLocation: online\\n'),
             self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
@@ -178,7 +217,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
                 f'{event.academy.name}\\nVenue: {event.venue.title}\\n'
-                'Location: online\\n'),
+                ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
             self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
@@ -266,7 +305,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
                 f'{event.academy.name}\\nVenue: {event.venue.title}\\n'
-                'Location: online\\n'),
+                ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
             self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
@@ -315,7 +354,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event1.created_at)}',
             f'UID:breathecode_event_{event1.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
-                f'{event1.academy.name}\\nLocation: online\\n'),
+                f'{event1.academy.name}\\n'),
             self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
             # event
@@ -325,7 +364,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event2.created_at)}',
             f'UID:breathecode_event_{event2.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
-                f'{event2.academy.name}\\nLocation: online\\n'),
+                f'{event2.academy.name}\\n'),
             self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
@@ -383,7 +422,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event1.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
                 f'{event1.academy.name}\\nVenue: {event1.venue.title}\\n'
-                'Location: online\\n'),
+                ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
             self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
@@ -395,7 +434,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event2.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
                 f'{event2.academy.name}\\nVenue: {event2.venue.title}\\n'
-                'Location: online\\n'),
+                ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
             self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
@@ -469,7 +508,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event1.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
                 f'{event1.academy.name}\\nVenue: {event1.venue.title}\\n'
-                'Location: online\\n'),
+                ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
             self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
@@ -481,7 +520,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event2.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
                 f'{event2.academy.name}\\nVenue: {event2.venue.title}\\n'
-                'Location: online\\n'),
+                ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
             self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
@@ -493,7 +532,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event3.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event3.url}\\nAcademy: '
                 f'{event3.academy.name}\\nVenue: {event3.venue.title}\\n'
-                'Location: online\\n'),
+                ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
             self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
             'END:VEVENT',
@@ -505,7 +544,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event4.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event4.url}\\nAcademy: '
                 f'{event4.academy.name}\\nVenue: {event4.venue.title}\\n'
-                'Location: online\\n'),
+                ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
             self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
             'END:VEVENT',
@@ -578,7 +617,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event1.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
                 f'{event1.academy.name}\\nVenue: {event1.venue.title}\\n'
-                'Location: online\\n'),
+                ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
             self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
@@ -590,7 +629,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event2.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
                 f'{event2.academy.name}\\nVenue: {event2.venue.title}\\n'
-                'Location: online\\n'),
+                ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
             self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
@@ -602,7 +641,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event3.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event3.url}\\nAcademy: '
                 f'{event3.academy.name}\\nVenue: {event3.venue.title}\\n'
-                'Location: online\\n'),
+                ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
             self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
             'END:VEVENT',
@@ -614,7 +653,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_event_{event4.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event4.url}\\nAcademy: '
                 f'{event4.academy.name}\\nVenue: {event4.venue.title}\\n'
-                'Location: online\\n'),
+                ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
             self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
             'END:VEVENT',

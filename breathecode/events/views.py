@@ -482,7 +482,8 @@ class ICalEventView(APIView):
             if item.event_type:
                 description = f'{description}Event type: {item.event_type.name}\n'
 
-            description = f'{description}Location: online\n'
+            if item.online_event:
+                description = f'{description}Location: online\n'
 
             event.add('description', description)
             event.add('uid', f'breathecode_event_{item.id}_{key}')
