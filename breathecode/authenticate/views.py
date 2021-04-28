@@ -376,6 +376,11 @@ def get_roles(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_github_token(request):
+    # TODO: user_id
+    # url = request.query_params.get('url', None)
+    # if url == None:
+    #     raise ValidationError("No callback URL specified")
+
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationError("No callback URL specified")
@@ -410,7 +415,7 @@ def save_github_token(request):
     error = request.query_params.get('error', False)
     error_description = request.query_params.get('error_description', '')
     if error:
-        raise APIException("Github: "+error_description)
+        raise APIException("Github: " + error_description)
 
     url = request.query_params.get('url', None)
     if url == None:
@@ -438,13 +443,13 @@ def save_github_token(request):
 
         github_token = body['access_token']
         resp = requests.get('https://api.github.com/user',
-                            headers={'Authorization': 'token '+github_token})
+                            headers={'Authorization': 'token ' + github_token})
         if resp.status_code == 200:
             github_user = resp.json()
             logger.debug(github_user)
             if github_user['email'] is None:
                 resp = requests.get('https://api.github.com/user/emails',
-                                    headers={'Authorization': 'token '+github_token})
+                                    headers={'Authorization': 'token ' + github_token})
                 if resp.status_code == 200:
                     emails = resp.json()
                     primary_emails = [
@@ -457,7 +462,7 @@ def save_github_token(request):
             if github_user['email'] is None:
                 raise ValidationError("Imposible to retrieve user email")
 
-            github_user['email'] = github_user['email'].lower()
+            # TODO: if user_id: User.objects.filter(id=user_id).first()
 
             user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(email__iexact=github_user['email'])).first()
             if user is None:
@@ -795,7 +800,7 @@ def save_facebook_token(request):
             logger.debug("Facebook responded with 200")
             facebook_data = resp.json()
             if "email" in facebook_data:
-                credentials.email = facebook_data['email'].lower()
+                credentials.email = facebook_data['email']
             if "id" in facebook_data:
                 credentials.facebook_id = facebook_data['id']
             credentials.save()
@@ -828,17 +833,17 @@ def reset_password_view(request):
         form = PickPasswordForm(_dict)
 
         if "email" not in _dict or _dict["email"] == "":
-            messages.error(request, 'Passwords don\'t match')
+            messages.error(request, 'Email is required')
             return render(request, 'form.html', {
                 'form': form
             })
 
-        users = User.objects.filter(email=_dict["email"])
+        users = User.objects.filter(email__iexact=_dict["email"])
         if(users.count() > 0):
             reset_password(users)
         else:
             logger.debug("No users with " +
-                         _dict["email"]+" email to reset password")
+                         _dict["email"] + " email to reset password")
 
         if "callback" in _dict and _dict["callback"] != "":
             return HttpResponseRedirect(redirect_to=_dict["callback"]+"?msg=Check your email for a password reset!")

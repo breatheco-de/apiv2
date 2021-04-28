@@ -82,9 +82,6 @@ class Academy(models.Model):
     #     super(Image, self).delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-        if self.marketing_email:
-            self.marketing_email = self.marketing_email.lower()
-
         if os.getenv('ENV', "") == 'production':
             obj = get_bucket_object(f'location-{self.slug}')
             if obj is not None:
@@ -186,6 +183,8 @@ class Cohort(models.Model):
     ending_date = models.DateTimeField(blank=True, null=True)
     current_day = models.IntegerField()
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
+    private = models.BooleanField(default=False)
+    never_ends = models.BooleanField(default=False)
 
     timezone = models.CharField(max_length=50, null=True, default=None)
 

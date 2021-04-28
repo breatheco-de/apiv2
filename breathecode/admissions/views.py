@@ -29,12 +29,10 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import status
 from breathecode.utils import (
-    Cache, localize_query, capable_of, ValidationException,
+    localize_query, capable_of, ValidationException,
     HeaderLimitOffsetPagination, GenerateLookupsMixin
 )
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
-from breathecode.events.models import Event
-from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 
 from rest_framework.decorators import renderer_classes
 from rest_framework_csv import renderers as r
@@ -61,7 +59,7 @@ def get_all_academies(request, id=None):
 @permission_classes([AllowAny])
 def get_cohorts(request, id=None):
 
-    items = Cohort.objects.all()
+    items = Cohort.objects.filter(private=False)
 
     if isinstance(request.user, AnonymousUser) == False:
         # filter only to the local academy
@@ -82,10 +80,6 @@ def get_cohorts(request, id=None):
 
     items = items.order_by('kickoff_date')
     serializer = GetCohortSerializer(items, many=True)
-
-    # if request.accepted_renderer.format == 'csv':
-
-    #     return Response(serializer.data, status=status.HTTP_200_OK)
 
     return Response(serializer.data)
 
@@ -113,7 +107,6 @@ class AcademyView(APIView):
     @capable_of('read_my_academy')
     def get(self, request, format=None, academy_id=None):
         item = Academy.objects.get(id=academy_id)
-        print("Item", item)
         serializer = GetBigAcademySerializer(item)
         return Response(serializer.data)
 
@@ -268,95 +261,6 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         cu.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
-
-
-class AcademyICalEventView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request):
-
-        items = Event.objects.filter(status='ACTIVE')
-
-        academies = []
-        slugs = request.GET.get('academy_slug', None)
-        ids = request.GET.get('academy', None)
-
-        if ids is not None:
-            items = Event.objects.filter(
-                academy__id__in=ids.split(","), status='ACTIVE')
-
-        elif slugs is not None:
-            items = Event.objects.filter(
-                academy__slug__in=slugs.split(","), status='ACTIVE')
-
-        if ids is None and slugs is None:
-            raise ValidationException(
-                "You need to specify at least one academy or academy_slug (comma separated) in the querystring")
-
-        academy_name = "Academy"
-
-        calendar = iCalendar()
-        calendar.add('prodid', f'-//{academy_name}//{academy_name} Events')
-        calendar.add('X-WR-CALNAME', f'{academy_name} - Events')
-        calendar.add('X-WR-CALDESC', '')
-        calendar.add('REFRESH-INTERVAL', 'PT1M')
-
-        calendar.add('version', '2.0')
-
-        for item in items:
-            event = iEvent()
-
-            if item.title:
-                event.add('summary', item.title)
-
-            if item.description:
-                event.add('description', item.description)
-
-            event.add('uid', f'breathecode_event_{item.id}')
-            event.add('dtstart', item.starting_at)
-            event.add('dtend', item.ending_at)
-            event.add('dtstamp', item.created_at)
-
-            if item.author and item.author.email:
-                organizer = vCalAddress(f'MAILTO:{item.author.email}')
-
-                if item.author.first_name and item.author.last_name:
-                    organizer.params['cn'] = vText(f'{item.author.first_name} '
-                                                   f'{item.author.last_name}')
-                elif item.author.first_name:
-                    organizer.params['cn'] = vText(item.author.first_name)
-                elif item.author.last_name:
-                    organizer.params['cn'] = vText(item.author.last_name)
-
-                organizer.params['role'] = vText('OWNER')
-                event['organizer'] = organizer
-
-            if item.venue and (item.venue.country or item.venue.state or
-                               item.venue.city or item.venue.street_address):
-                value = ''
-
-                if item.venue.street_address:
-                    value = f'{value}{item.venue.street_address}, '
-
-                if item.venue.city:
-                    value = f'{value}{item.venue.city}, '
-
-                if item.venue.state:
-                    value = f'{value}{item.venue.state}, '
-
-                if item.venue.country:
-                    value = f'{value}{item.venue.country}'
-
-                value = re.sub(', $', '', value)
-                event['location'] = vText(value)
-
-            calendar.add_component(event)
-
-        calendar_text = calendar.to_ical()
-
-        response = HttpResponse(calendar_text, content_type='text/calendar')
-        response['Content-Disposition'] = 'attachment; filename="calendar.ics"'
-        return response
 
 
 class AcademyCohortUserView(APIView, GenerateLookupsMixin):

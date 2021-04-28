@@ -754,6 +754,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].id,
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
+                'never_ends': False,
                 'kickoff_date': re.sub(
                     r'\+00:00$', 'Z',
                     model['cohort'].kickoff_date.isoformat()
@@ -818,6 +819,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].id,
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
+                'never_ends': False,
                 'kickoff_date': re.sub(
                     r'\+00:00$', 'Z',
                     model['cohort'].kickoff_date.isoformat()
