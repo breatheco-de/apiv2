@@ -9,5 +9,5 @@ class AuthenticateQueriesMixin():
             'module': 'authenticate',
             'models': ['Profile', 'Capability', 'Role', 'UserInvite',
                 'ProfileAcademy', 'CredentialsGithub', 'CredentialsSlack',
-                'CredentialsFacebook', 'CredentialsQuickBooks', 'Token']
+                'CredentialsFacebook', 'CredentialsQuickBooks', 'Token', 'DeviceId']
         }

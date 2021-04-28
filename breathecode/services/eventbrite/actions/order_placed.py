@@ -26,7 +26,7 @@ def order_placed(self, webhook, payload: dict):
 
     academy_id = org.academy.id
     event_id = payload['event_id']
-    email = payload['email'].lower()
+    email = payload['email']
 
     local_event = Event.objects.filter(eventbrite_id=event_id).first()
 

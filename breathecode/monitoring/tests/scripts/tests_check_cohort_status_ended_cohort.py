@@ -25,13 +25,15 @@ from breathecode.admissions.models import Cohort, Academy
 
 
 class AcademyCohortTestSuite(MonitoringTestCase):
+
     """
-    🔽🔽🔽 With bad entity 🔽🔽🔽
+    🔽🔽🔽 Check for cohort.stage == 'ENDED'
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def tests_check_cohort_status_ended_date_greater_than_now(self):
+    def tests_check_cohort__status_ended_date_greater_than_now(self):
 
         monitor_script_kwargs = {
             "script_slug": "check_cohort_status_ended_cohort"}
@@ -53,13 +55,13 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         self.assertEqual(script, expected)
 
         self.assertEqual(self.all_monitor_script_dict(), [{
-            **self.model_to_dict(model, 'monitor_script'),
+            **self.model_to_dict(model, 'monitor_script')
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def tests_check_cohort_ending_date_passed_with_status_ended(self):
+    def tests_check_cohort__ending_date_passed_with_status_ended(self):
 
         monitor_script_kwargs = {
             "script_slug": "check_cohort_status_ended_cohort"}
@@ -87,7 +89,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def tests_check_cohort_ending_date_passed_with_status_final_project(self):
+    def tests_check_cohort__ending_date_passed_with_status_final_project(self):
 
         monitor_script_kwargs = {
             "script_slug": "check_cohort_status_ended_cohort"}

@@ -63,11 +63,6 @@ class SlackUser(models.Model):
     def __str__(self):
         return self.slack_id
 
-    def save(self, *args, **kwargs):
-        if self.email:
-            self.email = self.email.lower()
-
-        return super(SlackUser, self).save(*args, **kwargs)
 
 class SlackUserTeam(models.Model):
     slack_user = models.ForeignKey(SlackUser, on_delete=models.CASCADE)

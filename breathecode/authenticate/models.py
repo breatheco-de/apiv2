@@ -81,12 +81,6 @@ class UserInvite(models.Model):
     def __str__(self):
         return f"Invite for {self.email}"
 
-    def save(self, *args, **kwargs):
-        if self.email:
-            self.email = self.email.lower()
-
-        return super().save(*args, **kwargs)
-
 INVITED = 'INVITED'
 ACTIVE = 'ACTIVE'
 PROFILE_ACADEMY_STATUS = (
@@ -115,11 +109,6 @@ class ProfileAcademy(models.Model):
     def __str__(self):
         return f"{self.email} for academy ({self.academy.name})"
 
-    def save(self, *args, **kwargs):
-        if self.email:
-            self.email = self.email.lower()
-
-        return super().save(*args, **kwargs)
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
@@ -181,12 +170,6 @@ class CredentialsFacebook(models.Model):
     def __str__(self):
         return f"Team {str(self.user)}"
 
-    def save(self, *args, **kwargs):
-        if self.email:
-            self.email = self.email.lower()
-
-        return super().save(*args, **kwargs)
-
 class CredentialsQuickBooks(models.Model):
     quibooks_code = models.CharField(max_length=255, primary_key=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True)
@@ -237,3 +220,7 @@ class Token(rest_framework.authtoken.models.Token):
     class Meta:
         # ensure user and name are unique
         unique_together = (('user', 'key'),)
+
+class DeviceId(models.Model):
+    name = models.CharField(max_length=40)
+    key = models.CharField(max_length=64)
