@@ -160,47 +160,40 @@ def get_leads(request, id=None):
 
 
 @api_view(['GET'])
-def get_leads_report(request, id=None):
+def count_leads_report(request, id=None):
+    count = FormEntry.objects.count()
+    return Response({'count': count}, status=status.HTTP_200_OK)
 
+
+@api_view(['GET'])
+def get_leads_report(request, id=None):
     items = FormEntry.objects.all()
+    print(items)
 
     if isinstance(request.user, AnonymousUser) == False:
-        # filter only to the local academy
         items = localize_query(items, request)
-
-    group_by = request.GET.get('by', 'location,created_at__date,course')
-    if group_by != '':
-        group_by = group_by.split(",")
-    else:
-        group_by = ['location', 'created_at__date', 'course']
+    print(items)
 
     academy = request.GET.get('academy', None)
     if academy is not None:
         items = items.filter(location__in=academy.split(","))
+    print(items)
 
     start = request.GET.get('start', None)
     if start is not None:
         start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
         items = items.filter(created_at__gte=start_date)
+    print(items)
 
     end = request.GET.get('end', None)
     if end is not None:
+        print(end)
         end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
         items = items.filter(created_at__lte=end_date)
+    print(items)
 
-    items = items.values(*group_by).annotate(total_leads=Count('location'))
-
-    if "created_at__date" in group_by:
-        items = items.annotate(
-            created_date=Func(
-                F('created_at'),
-                Value('YYYYMMDD'),
-                function='to_char',
-                output_field=CharField()
-            )
-        )
-    # items = items.order_by('created_at')
-    return Response(items)
+    serializer = FormEntrySerializer(items, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class AcademyTagView(APIView, GenerateLookupsMixin):
