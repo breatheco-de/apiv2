@@ -267,14 +267,6 @@ class AcademySerializer(serializers.ModelSerializer):
         del validated_data['slug']
         return super().update(instance, validated_data)
 
-    def validate(self, data):
-        marketing_email = data.get('marketing_email')
-
-        if marketing_email:
-            data['marketing_email'] = marketing_email.lower()
-
-        return data
-
 
 class SyllabusPOSTSerializer(serializers.ModelSerializer):
     class Meta:
@@ -307,6 +299,23 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             if cohort is not None and self.instance.slug != data["slug"]:
                 raise ValidationError('Slug already exists for another cohort')
 
+        if self.instance:
+            never_ends = (data['never_ends'] if 'never_ends' in
+                data else self.instance.never_ends)
+
+            ending_date = (data['ending_date'] if 'ending_date' in
+                data else self.instance.ending_date)
+
+        else:
+            never_ends = 'never_ends' in data and data['never_ends']
+            ending_date = 'ending_date' in data and data['ending_date']
+
+        if never_ends and ending_date:
+            raise ValidationError('One cohort that never ends cannot have one ending date')
+
+        if not never_ends and not ending_date:
+            raise ValidationError('Cohort not have one ending date or ever_ends=true')
+
         return data
 
 
@@ -316,7 +325,7 @@ class CohortSerializer(CohortSerializerMixin):
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus',
-                  'ending_date', 'stage', 'language', 'created_at', 'updated_at')
+            'ending_date', 'stage', 'language', 'created_at', 'updated_at', 'never_ends')
 
     def create(self, validated_data):
         del self.context['request']
@@ -324,6 +333,7 @@ class CohortSerializer(CohortSerializerMixin):
 
 
 class CohortPUTSerializer(CohortSerializerMixin):
+    # id = serializers.IntegerField(required=True)
     slug = serializers.SlugField(required=False)
     name = serializers.CharField(required=False)
     kickoff_date = serializers.DateTimeField(required=False)
@@ -335,7 +345,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
-                  'syllabus')
+            'syllabus', 'never_ends')
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):

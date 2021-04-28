@@ -47,7 +47,6 @@ class Cache(DatetimeMixin):
     def clear(self):
         # we get key from cache to support multiprocess
         for parent in self.parents:
-            print('parent', parent)
             self.__clear_one__(parent)
 
         self.__clear_one__()

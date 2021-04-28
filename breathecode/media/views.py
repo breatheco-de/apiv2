@@ -20,6 +20,7 @@ from django.http import StreamingHttpResponse
 
 
 BUCKET_NAME = "media-breathecode"
+# TODO: Mimes permitidos como una constante
 
 
 class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -54,7 +55,6 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             serializer = GetMediaSerializer(item, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-
         lookups = self.generate_lookups(
             request,
             fields=['mime'],
@@ -62,6 +62,10 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         )
 
         items = Media.objects.filter(**lookups)
+
+
+        # if like is not None:
+        #     items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
         page = self.paginate_queryset(items, request)
         serializer = GetMediaSerializer(page, many=True)
@@ -99,7 +103,6 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             storage = Storage()
             file = storage.file(BUCKET_NAME, url)
             file.delete()
-
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 

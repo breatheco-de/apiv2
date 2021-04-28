@@ -194,9 +194,6 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                   'address', 'phone', 'invite', 'status')
 
     def validate(self, data):
-        if 'email' in data:
-            data['email'] = data['email'].lower()
-
         if "user" not in data:
             if "invite" not in data or data["invite"] != True:
                 raise ValidationException(
@@ -414,7 +411,7 @@ class AuthSerializer(serializers.Serializer):
         if email and password:
             email = email.lower()
             user = User.objects.filter(
-                Q(email=email) | Q(username=email)).first()
+                Q(email__iexact=email) | Q(username=email)).first()
             if not user:
                 msg = 'Unable to log in with provided credentials.'
                 raise serializers.ValidationError(msg, code=403)
