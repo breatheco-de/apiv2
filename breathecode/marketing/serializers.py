@@ -62,8 +62,8 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
     def create(self, validated_data):
 
         academy = None
-        if "utm_location" in validated_data:
-            academy = Academy.objects.filter(active_campaign_slug=validated_data['utm_location']).first()
+        if "location" in validated_data:
+            academy = Academy.objects.filter(active_campaign_slug=validated_data['location']).first()
         
         result = super().create({ **validated_data, "academy": academy })
         return result
