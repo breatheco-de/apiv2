@@ -1,13 +1,5 @@
-from breathecode.admissions.models import Academy
 import hashlib, requests
 from django.shortcuts import redirect
-from breathecode.media.serializers import (
-    GetMediaSerializer,
-    MediaSerializer,
-    MediaPUTSerializer,
-    GetCategorySerializer,
-    CategorySerializer
-)
 from breathecode.media.models import Media, Category
 from breathecode.utils import GenerateLookupsMixin
 from rest_framework.views import APIView
@@ -17,9 +9,18 @@ from rest_framework.parsers import FileUploadParser, MultiPartParser
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.http import StreamingHttpResponse
+from django.db.models import Q
+from breathecode.media.serializers import (
+    GetMediaSerializer,
+    MediaSerializer,
+    MediaPUTSerializer,
+    GetCategorySerializer,
+    CategorySerializer
+)
 
 
 BUCKET_NAME = "media-breathecode"
+# TODO: Mimes permitidos como una constante
 
 
 class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -54,7 +55,6 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             serializer = GetMediaSerializer(item, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-
         lookups = self.generate_lookups(
             request,
             many_fields=['mime', 'name', 'slug', 'id'],
@@ -65,7 +65,13 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         tp = request.GET.get('type')
         if tp:
-            items = items.filter(mime__ilike=tp)
+            items = items.filter(mime__icontains=tp)
+
+        like = request.GET.get('like')
+        if like:
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+
+        items = items.order_by('id')
 
         page = self.paginate_queryset(items, request)
         serializer = GetMediaSerializer(page, many=True)
@@ -103,7 +109,6 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             storage = Storage()
             file = storage.file(BUCKET_NAME, url)
             file.delete()
-
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 

@@ -98,12 +98,6 @@ class Contact(models.Model):
     def __str__(self):
         return self.first_name + " " + self.last_name
 
-    def save(self, *args, **kwargs):
-        if self.email:
-            self.email = self.email.lower()
-
-        return super().save(*args, **kwargs)
-
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
 STORAGE_SATUS = (
@@ -212,12 +206,6 @@ class FormEntry(models.Model):
             "longitude": self.latitude,
         }
         return _entry
-
-    def save(self, *args, **kwargs):
-        if self.email:
-            self.email = self.email.lower()
-
-        return super().save(*args, **kwargs)
 
 _ACTIVE = 'ACTIVE'
 NOT_FOUND = 'NOT_FOUND'

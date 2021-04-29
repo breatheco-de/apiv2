@@ -5,7 +5,7 @@ Collections of mixins used to login in authorize microservice
 class ModelsMixin():
     """Mixins for models"""
 
-    def remove_dinamics_fields(self, dict, fields=['_state', 'created_at', 'updated_at']):
+    def remove_dinamics_fields(self, dict, fields=['_state', 'created_at', 'updated_at', '_password']):
         """Remove dinamics fields from django models as dict"""
         if not dict:
             return None
@@ -38,4 +38,3 @@ class ModelsMixin():
             self.print_model(models, key, prefix)
 
         print(prefix, 'Ending to print models in dict format')
-

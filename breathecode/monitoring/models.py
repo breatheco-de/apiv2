@@ -33,12 +33,6 @@ class Application(models.Model):
     def __str__(self):
         return self.title
 
-    def save(self, *args, **kwargs):
-        if self.notify_email:
-            self.notify_email = self.notify_email.lower()
-
-        return super().save(*args, **kwargs)
-
 
 class Endpoint(models.Model):
 

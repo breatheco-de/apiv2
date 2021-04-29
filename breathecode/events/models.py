@@ -157,12 +157,6 @@ class EventCheckin(models.Model):
     def __str__(self):
         return self.email
 
-    def save(self, *args, **kwargs):
-        if self.email:
-            self.email = self.email.lower()
-
-        return super().save(*args, **kwargs)
-
 # PENDING = 'PENDING'
 # DONE = 'DONE'
 # ERROR='ERROR'
