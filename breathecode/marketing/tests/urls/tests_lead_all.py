@@ -28,6 +28,7 @@ def generate_form_entry_kwargs():
         'fb_form_id': randint(0, 9999),
         'fb_adgroup_id': randint(0, 9999),
         'fb_ad_id': randint(0, 9999),
+        'gclid': random_string(),
         'first_name': choice(['Rene', 'Albert', 'Immanuel']),
         'last_name': choice(['Descartes', 'Camus', 'Kant']),
         'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
@@ -68,9 +69,9 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__without_auth(self):
+    def test_lead_all__without_auth(self):
         """Test /cohort/:id/user without auth"""
-        url = reverse_lazy('marketing:report_lead')
+        url = reverse_lazy('marketing:lead_all')
         response = self.client.get(url)
         json = response.json()
         expected = {
@@ -85,10 +86,10 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__without_profile_acedemy(self):
+    def test_lead_all__without_profile_acedemy(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('marketing:report_lead')
+        url = reverse_lazy('marketing:lead_all')
         model = self.generate_models(authenticate=True, form_entry=True)
 
         response = self.client.get(url)
@@ -108,10 +109,10 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__without_data(self):
+    def test_lead_all__without_data(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('marketing:report_lead')
+        url = reverse_lazy('marketing:lead_all')
         model = self.generate_models(authenticate=True, profile_academy=True,
             capability='read_lead', role='potato')
 
@@ -129,12 +130,13 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead(self):
+    def test_lead_all(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('marketing:report_lead')
+        url = reverse_lazy('marketing:lead_all')
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_lead', role='potato', form_entry=True)
+            capability='read_lead', role='potato', form_entry=True,
+            form_entry_kwargs=generate_form_entry_kwargs())
 
         response = self.client.get(url)
         json = response.json()
@@ -178,12 +180,12 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__with_bad_academy_in_querystring(self):
+    def test_lead_all__with_bad_academy_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('marketing:report_lead') + '?academy=0'
+        url = reverse_lazy('marketing:lead_all') + '?academy=freyja'
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_lead', role='potato', form_entry=True)
+            capability='read_lead', role='potato', form_entry=True)
 
         response = self.client.get(url)
         json = response.json()
@@ -198,18 +200,17 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__with_academy_in_querystring(self):
+    def test_lead_all__with_academy_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        form_entry_kwargs = {'location': 'freyja'}
+        academy_kwargs = {'slug': 'freyja'}
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_lead', role='potato', form_entry=True,
-            form_entry_kwargs=form_entry_kwargs)
+            capability='read_lead', role='potato', form_entry=True,
+            academy_kwargs=academy_kwargs)
 
-        url = reverse_lazy('marketing:report_lead') + '?academy=freyja'
+        url = reverse_lazy('marketing:lead_all') + '?academy=freyja'
         response = self.client.get(url)
         json = response.json()
-        print(json, 'aaaaaaaaaaa')
 
         self.assertDatetime(json[0]['created_at'])
         del json[0]['created_at']
@@ -247,20 +248,20 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__with_two_academy_in_querystring(self):
+    def test_lead_all__with_two_academy_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         base = self.generate_models(user=True)
 
         models = [self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_lead', role='potato', form_entry=True, models=base,
-            form_entry_kwargs={'location': 'konan' if index == 0 else 'freyja'})
+            capability='read_lead', role='potato', form_entry=True, models=base,
+            academy_kwargs={'slug': 'konan' if index == 0 else 'freyja'})
             for index in range(0, 2)]
 
-        url = reverse_lazy('marketing:report_lead') + '?academy=' + ','.join([x.form_entry.location for x in models])
+        models.sort(key=lambda x: x.form_entry.created_at)
+        url = reverse_lazy('marketing:lead_all') + '?academy=' + ','.join([x.academy.slug for x in models])
         response = self.client.get(url)
         json = response.json()
-        print(json, 'asdasdsad')
 
         self.assertDatetime(json[0]['created_at'])
         del json[0]['created_at']
@@ -298,19 +299,18 @@ class CohortUserTestSuite(MarketingTestCase):
             **self.model_to_dict(model, 'form_entry')
         } for model in models])
 
-
     """
     🔽🔽🔽 Start in querystring
     """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__with_bad_start_in_querystring(self):
+    def test_lead_all__with_bad_start_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('marketing:report_lead') + '?start=2100-01-01'
+        url = reverse_lazy('marketing:lead_all') + '?start=2100-01-01'
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_lead', role='potato', form_entry=True)
+            capability='read_lead', role='potato', form_entry=True)
 
         response = self.client.get(url)
         json = response.json()
@@ -325,17 +325,16 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__with_start_in_querystring(self):
+    def test_lead_all__with_start_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        query_date = (timezone.now() + timedelta(hours=1)).strftime("%Y-%m-%d")
+        query_date = (timezone.now() - timedelta(hours=48)).strftime("%Y-%m-%d")
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_lead', role='potato', form_entry=True)
+            capability='read_lead', role='potato', form_entry=True)
 
-        url = reverse_lazy('marketing:report_lead') + f'?start={query_date}'
+        url = reverse_lazy('marketing:lead_all') + f'?start={query_date}'
         response = self.client.get(url)
         json = response.json()
-        print(json, 'aaaaaaaaaaa')
 
         self.assertDatetime(json[0]['created_at'])
         del json[0]['created_at']
@@ -376,12 +375,12 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__with_bad_end_in_querystring(self):
+    def test_lead_all__with_bad_end_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('marketing:report_lead') + '?end=1900-01-01'
+        url = reverse_lazy('marketing:lead_all') + '?end=1900-01-01'
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_lead', role='potato', form_entry=True)
+            capability='read_lead', role='potato', form_entry=True)
 
         response = self.client.get(url)
         json = response.json()
@@ -396,17 +395,16 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__with_end_in_querystring(self):
+    def test_lead_all__with_end_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        query_date = (timezone.now() - timedelta(hours=1)).strftime("%Y-%m-%d")
+        query_date = (timezone.now() + timedelta(hours=48)).strftime("%Y-%m-%d")
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_lead', role='potato', form_entry=True)
+            capability='read_lead', role='potato', form_entry=True)
 
-        url = reverse_lazy('marketing:report_lead') + f'?end={query_date}'
+        url = reverse_lazy('marketing:lead_all') + f'?end={query_date}'
         response = self.client.get(url)
         json = response.json()
-        print(json, 'aaaaaaaaaaa', [vars(x) for x in self.all_form_entry()])
 
         self.assertDatetime(json[0]['created_at'])
         del json[0]['created_at']

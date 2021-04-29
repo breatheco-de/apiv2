@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from .views import (
-    count_leads_report, create_lead, sync_tags_with_active_campaign, sync_automations_with_active_campaign,
+    create_lead, sync_tags_with_active_campaign, sync_automations_with_active_campaign,
     receive_facebook_lead, get_leads, get_leads_report, AcademyLeadView, AcademyTagView,
     AcademyAutomationView
 )
@@ -20,6 +20,5 @@ urlpatterns = [
 
     path('facebook/lead', receive_facebook_lead, name="facebook_all"),
     path('report/lead', get_leads_report, name="report_lead"),
-    path('report/lead/count', count_leads_report, name="report_lead_count"),
     # path('report/summary', get_summary, name="report_summary"),
 ]

@@ -1,15 +1,14 @@
 import os, datetime
 from urllib import parse
 
-from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseNotFound, HttpResponseRedirect
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
-from django.db.models import Count, Sum, F, Func, Value, CharField
+from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (
     APIException, localize_query, capable_of, ValidationException,
     GenerateLookupsMixin, HeaderLimitOffsetPagination
@@ -18,7 +17,7 @@ from .serializers import (
     PostFormEntrySerializer, FormEntrySerializer, FormEntrySmallSerializer, TagSmallSerializer,
     AutomationSmallSerializer
 )
-from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
+from .actions import sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount
 from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation
 from breathecode.admissions.models import Academy
@@ -37,6 +36,7 @@ def create_lead(request):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 # Create your views here.
 @api_view(['POST', 'GET'])
@@ -160,40 +160,47 @@ def get_leads(request, id=None):
 
 
 @api_view(['GET'])
-def count_leads_report(request, id=None):
-    count = FormEntry.objects.count()
-    return Response({'count': count}, status=status.HTTP_200_OK)
-
-
-@api_view(['GET'])
 def get_leads_report(request, id=None):
+
     items = FormEntry.objects.all()
-    print(items)
 
     if isinstance(request.user, AnonymousUser) == False:
+        # filter only to the local academy
         items = localize_query(items, request)
-    print(items)
+
+    group_by = request.GET.get('by', 'location,created_at__date,course')
+    if group_by != '':
+        group_by = group_by.split(",")
+    else:
+        group_by = ['location', 'created_at__date', 'course']
 
     academy = request.GET.get('academy', None)
     if academy is not None:
         items = items.filter(location__in=academy.split(","))
-    print(items)
 
     start = request.GET.get('start', None)
     if start is not None:
         start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
         items = items.filter(created_at__gte=start_date)
-    print(items)
 
     end = request.GET.get('end', None)
     if end is not None:
-        print(end)
         end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
         items = items.filter(created_at__lte=end_date)
-    print(items)
 
-    serializer = FormEntrySerializer(items, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    items = items.values(*group_by).annotate(total_leads=Count('location'))
+
+    if "created_at__date" in group_by:
+        items = items.annotate(
+            created_date=Func(
+                F('created_at'),
+                Value('YYYYMMDD'),
+                function='to_char',
+                output_field=CharField()
+            )
+        )
+    # items = items.order_by('created_at')
+    return Response(items)
 
 
 class AcademyTagView(APIView, GenerateLookupsMixin):
