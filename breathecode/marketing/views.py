@@ -1,15 +1,14 @@
 import os, datetime
 from urllib import parse
 
-from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseNotFound, HttpResponseRedirect
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
-from django.db.models import Count, Sum, F, Func, Value, CharField
+from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (
     APIException, localize_query, capable_of, ValidationException,
     GenerateLookupsMixin, HeaderLimitOffsetPagination
@@ -18,7 +17,7 @@ from .serializers import (
     PostFormEntrySerializer, FormEntrySerializer, FormEntrySmallSerializer, TagSmallSerializer,
     AutomationSmallSerializer
 )
-from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
+from .actions import sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount
 from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation
 from breathecode.admissions.models import Academy
@@ -37,6 +36,7 @@ def create_lead(request):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 # Create your views here.
 @api_view(['POST', 'GET'])
