@@ -1,5 +1,6 @@
 import serpy
 from .models import FormEntry
+from breathecode.admissions.models import Academy
 from rest_framework import serializers
 
 class AcademySmallSerializer(serpy.Serializer):
@@ -57,3 +58,12 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = FormEntry
         exclude = ()
+
+    def create(self, validated_data):
+
+        academy = None
+        if "utm_location" in validated_data:
+            academy = Academy.objects.filter(active_campaign_slug=validated_data['utm_location']).first()
+        
+        result = super().create({ **validated_data, "academy": academy })
+        return result
