@@ -19,14 +19,9 @@ from .serializers import (
     PostFormEntrySerializer, FormEntrySerializer, FormEntrySmallSerializer, TagSmallSerializer,
     AutomationSmallSerializer
 )
-<<<<<<< HEAD
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
-=======
-from .actions import sync_tags, sync_automations
-from .tasks import persist_single_lead, update_link_viewcount
->>>>>>> ddc4f3523da4661c5330b5d189112075bac008ad
 from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation
 from breathecode.admissions.models import Academy
 from rest_framework.views import APIView
