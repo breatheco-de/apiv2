@@ -41,7 +41,6 @@ def create_lead(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-<<<<<<< HEAD
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @renderer_classes([PlainTextRenderer])
@@ -57,8 +56,6 @@ def activecampaign_webhook(request, ac_academy_id):
 
     # async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')
-=======
->>>>>>> ddc4f3523da4661c5330b5d189112075bac008ad
 
 # Create your views here.
 @api_view(['POST', 'GET'])
