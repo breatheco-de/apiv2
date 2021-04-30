@@ -3,7 +3,7 @@ from django.urls import path, include
 from .views import (
     create_lead, sync_tags_with_active_campaign, sync_automations_with_active_campaign,
     receive_facebook_lead, get_leads, get_leads_report, AcademyLeadView, AcademyTagView,
-    AcademyAutomationView, activecampaign_webhook
+    AcademyAutomationView, activecampaign_webhook, googleads_enrollments
 )
 from rest_framework.authtoken import views
 
@@ -23,4 +23,7 @@ urlpatterns = [
     # path('report/summary', get_summary, name="report_summary"),
     
     path('activecampaign/webhook/<int:ac_academy_id>', activecampaign_webhook, name="activecampaign_webhook"),
+    path('activecampaign/webhook/<str:academy_slug>', activecampaign_webhook, name="activecampaign_webhook"),
+
+    path('googleads/enrollments/<str:academy_slugs>', googleads_enrollments, name="activecampaign_webhook"),
 ]

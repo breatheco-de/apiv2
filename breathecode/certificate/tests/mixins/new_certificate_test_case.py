@@ -21,3 +21,10 @@ class CertificateTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         certificate tests
         """
         return [{**item, 'preview_url': None} for item in dicts]
+
+    def clear_keys(self, dicts, keys):
+        _d = {}
+        for k in keys:
+            _d[k] = None
+
+        return [{**item, **_d } for item in dicts]

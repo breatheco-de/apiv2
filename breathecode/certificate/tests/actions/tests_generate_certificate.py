@@ -163,6 +163,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         cohort_user_role='TEACHER', models=base)
         result = self.remove_dinamics_fields(generate_certificate(
             model['user'], model['cohort']).__dict__)
+
+        self.assertToken(result['token'])
+        result['token'] = None
+
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -175,14 +179,14 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
             'specialty_id': 1,
             'status': 'ERROR',
+            'token': None,
             'status_text': 'The student must have finantial status FULLY_PAID '
                 'or UP_TO_DATE',
-            'token': '',
             'user_id': 1,
         }
+
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
-            [expected])
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),[expected])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -205,6 +209,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         cohort_user_role='TEACHER', models=base)
         result = self.remove_dinamics_fields(generate_certificate(
             model['user'], model['cohort']).__dict__)
+
+        self.assertToken(result["token"])
+        result["token"] = None
+
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -217,13 +225,12 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
             'specialty_id': 1,
             'status': 'ERROR',
+            'token': None,
             'status_text': 'The student has 1 pending tasks',
-            'token': '',
             'user_id': 1,
         }
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
-            [expected])
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),[expected])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -246,6 +253,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         cohort_user_role='TEACHER', models=base)
         result = self.remove_dinamics_fields(generate_certificate(
             model['user'], model['cohort']).__dict__)
+
+        self.assertToken(result["token"])
+        result["token"] = None
+
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -259,12 +270,11 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'specialty_id': 1,
             'status': 'ERROR',
             'status_text': 'The student must have educational status GRADUATED',
-            'token': '',
+            'token': None,
             'user_id': 1,
         }
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
-            [expected])
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),[expected])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -287,6 +297,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         cohort_user_role='TEACHER', models=base)
         result = self.remove_dinamics_fields(generate_certificate(
             model['user'], model['cohort']).__dict__)
+        self.assertToken(result["token"])
+        result["token"] = None
+        
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -300,13 +313,12 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'specialty_id': 1,
             'status': 'ERROR',
             'status_text': 'The student must have educational status GRADUATED',
-            'token': '',
+            'token': None,
             'user_id': 1,
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
-            [expected])
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),[expected])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -331,6 +343,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         cohort_user_role='TEACHER', models=base)
         result = self.remove_dinamics_fields(generate_certificate(
             model['user'], model['cohort']).__dict__)
+
+        self.assertToken(result["token"])
+        result["token"] = None
+
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -344,13 +360,12 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'specialty_id': 1,
             'status': 'ERROR',
             'status_text': 'The student must have educational status GRADUATED',
-            'token': '',
+            'token': None,
             'user_id': 1,
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
-            [expected])
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),[expected])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

@@ -1,7 +1,9 @@
 """
 Certificate actions
 """
+import hashlib
 import requests, os, logging
+from django.utils import timezone
 from urllib.parse import urlencode
 from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
 from breathecode.assignments.models import Task
@@ -66,12 +68,16 @@ def generate_certificate(user, cohort=None):
         raise APIException(message)
     
     if uspe is None:
+        utc_now = timezone.now()
         uspe = UserSpecialty(
             user = user,
             cohort = cohort,
+            token = hashlib.sha1((str(user.id) + str(utc_now)).encode("UTF-8")).hexdigest(),
             specialty = cohort.syllabus.certificate.specialty,
             signed_by_role = strings[cohort.language]["Main Instructor"],
         )
+        if cohort.syllabus.certificate.specialty.expiration_day_delta is not None:
+            uspe.expires_at = utc_now + timezone.timedelta(days=cohort.syllabus.certificate.specialty.expiration_day_delta)
 
     layout = LayoutDesign.objects.filter(slug='default').first()
     if layout is None:

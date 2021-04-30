@@ -1,5 +1,6 @@
 import os, datetime, logging
 from urllib import parse
+from rest_framework_csv.renderers import CSVRenderer
 from breathecode.renderers import PlainTextRenderer
 from rest_framework.decorators import renderer_classes
 from django.shortcuts import render, get_object_or_404
@@ -44,9 +45,16 @@ def create_lead(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @renderer_classes([PlainTextRenderer])
-def activecampaign_webhook(request, ac_academy_id):
-    webhook = ActiveCampaign.add_webhook_to_log(request.data, ac_academy_id)
+def activecampaign_webhook(request, ac_academy_id=None, academy_slug=None):
 
+    if ac_academy_id is not None:
+        a = Academy.objects.filter(slug=academy_slug).first()
+        webhook = ActiveCampaign.add_webhook_to_log(request.data, a.slug)
+    elif academy_slug is not None:
+        webhook = ActiveCampaign.add_webhook_to_log(request.data, academy_slug)
+    else:
+        raise APIException("Please specify a valid academy slug or id")
+        
     if webhook:
         async_activecampaign_webhook.delay(webhook.id)
     else:
@@ -56,6 +64,17 @@ def activecampaign_webhook(request, ac_academy_id):
 
     # async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@renderer_classes([CSVRenderer])
+def googleads_enrollments(request, academy_slugs):
+
+    slugs = academy_slugs.split(",")
+    academies = FormEntry.objects.filter(Q(academy__slug__in=slugs) | Q(ac_academy__academy__slug__in=slugs)).exclude(gclid__isnull=True)
+
+    serializer = FormEntrySerializer(academies, many=True)
+    return Response(serializer.data)
 
 # Create your views here.
 @api_view(['POST', 'GET'])
