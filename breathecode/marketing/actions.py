@@ -6,10 +6,10 @@ from schema import Schema, And, Use, Optional, SchemaError
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from activecampaign.client import Client
 from rest_framework.decorators import api_view, permission_classes
-from .utils import AC_Old_Client
 from .serializers import FormEntrySerializer
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import CredentialsFacebook
+from breathecode.services.activecampaign import AC_Old_Client
 
 logger = logging.getLogger(__name__)
 
@@ -216,6 +216,12 @@ def register_new_lead(form_entry=None):
     old_client = AC_Old_Client(ac_academy.ac_url, ac_academy.ac_key)
     response = old_client.contacts.create_contact(contact)
     contact_id = response['subscriber_id']
+    
+    # save contact_id from active campaign
+    entry.ac_contact_id = contact_id
+    entry.save()
+
+
     if 'subscriber_id' not in response:
         logger.error("error adding contact", response)
         raise APIException('Could not save contact in CRM')
