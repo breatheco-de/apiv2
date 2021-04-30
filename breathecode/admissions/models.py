@@ -203,9 +203,11 @@ class Cohort(models.Model):
 TEACHER = 'TEACHER'
 ASSISTANT = 'ASSISTANT'
 STUDENT = 'STUDENT'
+REVIEWER = 'REVIEWER'
 COHORT_ROLE = (
     (TEACHER, 'Teacher'),
     (ASSISTANT, 'Assistant'),
+    (REVIEWER, 'Reviewer'),
     (STUDENT, 'Student'),
 )
 

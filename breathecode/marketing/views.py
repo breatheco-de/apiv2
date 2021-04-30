@@ -1,6 +1,7 @@
-import os, datetime
+import os, datetime, logging
 from urllib import parse
-
+from breathecode.renderers import PlainTextRenderer
+from rest_framework.decorators import renderer_classes
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import AnonymousUser
@@ -9,7 +10,7 @@ from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
-from django.db.models import Count, Sum, F, Func, Value, CharField
+from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (
     APIException, localize_query, capable_of, ValidationException,
     GenerateLookupsMixin, HeaderLimitOffsetPagination
@@ -18,12 +19,14 @@ from .serializers import (
     PostFormEntrySerializer, FormEntrySerializer, FormEntrySmallSerializer, TagSmallSerializer,
     AutomationSmallSerializer
 )
+from breathecode.services.activecampaign import ActiveCampaign
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
-from .tasks import persist_single_lead, update_link_viewcount
+from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
 from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation
 from breathecode.admissions.models import Academy
 from rest_framework.views import APIView
 
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 @api_view(['POST'])
@@ -37,6 +40,22 @@ def create_lead(request):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@renderer_classes([PlainTextRenderer])
+def activecampaign_webhook(request, ac_academy_id):
+    webhook = ActiveCampaign.add_webhook_to_log(request.data, ac_academy_id)
+
+    if webhook:
+        async_activecampaign_webhook.delay(webhook.id)
+    else:
+        logger.debug('One request cannot be parsed, maybe you should update `ActiveCampaign'
+                     '.add_webhook_to_log`')
+        logger.debug(request.data)
+
+    # async_eventbrite_webhook(request.data)
+    return Response('ok', content_type='text/plain')
 
 # Create your views here.
 @api_view(['POST', 'GET'])

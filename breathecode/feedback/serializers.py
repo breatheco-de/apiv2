@@ -136,7 +136,7 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        if self.instance.status == 'PENDING':
+        if self.instance.status != 'PENDING':
             raise ValidationException("This survey was already send, therefore it cannot be updated")
 
         if 'cohort' in data:

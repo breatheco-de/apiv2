@@ -24,16 +24,33 @@ def generate_bill(modeladmin, request, queryset):
             messages.error(request,err)
 generate_bill.short_description = "Generate bill"
 
+def mark_as(queryset, status, request):
+    freelancers = {}
+    issues = queryset.all()
+
+    try:
+        for i in issues:
+            if i.bill is not None and i.bill.status != 'DUE':
+                raise Exception(f"Github {i.github_number} cannot be updated because it was already approved for payment")
+            freelancers[i.freelancer.id] = i.freelancer
+            i.status = 'DONE'
+            i.save()
+
+        for freelancer_id in freelancers:
+            actions.generate_freelancer_bill(freelancers[freelancer_id])
+    except Exception as e:
+        messages.error(request,e)
+
 def mask_as_done(modeladmin, request, queryset):
-    issues = queryset.update(status='DONE')
+    mark_as(queryset, 'DONE', request)
 mask_as_done.short_description = "Mark as DONE"
 
 def mask_as_todo(modeladmin, request, queryset):
-    issues = queryset.update(status='TODO')
+    mark_as(queryset, 'TODO', request)
 mask_as_todo.short_description = "Mark as TODO"
 
 def mask_as_ignored(modeladmin, request, queryset):
-    issues = queryset.update(status='IGNORED')
+    mark_as(queryset, 'IGNORED', request)
 mask_as_ignored.short_description = "Mark as IGNORED"
 
 @admin.register(Freelancer)

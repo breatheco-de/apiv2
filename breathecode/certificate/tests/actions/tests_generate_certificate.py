@@ -6,11 +6,10 @@ import re
 from unittest.mock import patch
 from django.core.exceptions import ValidationError
 from breathecode.admissions.models import Certificate
-from breathecode.utils import ValidationException
+from breathecode.utils import ValidationException, APIException
 from ...actions import generate_certificate, strings
 from ..mixins.new_certificate_test_case import CertificateTestCase
 from ....admissions.models import FULLY_PAID, UP_TO_DATE, LATE
-from breathecode.utils import ValidationException
 # from .mocks import CertificateBreathecodeMock
 from ..mocks import (
     GOOGLE_CLOUD_PATH,
@@ -585,7 +584,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         try:
             generate_certificate(model['user'], model['cohort'])
             assert False        
-        except ValidationException as e:
+        except APIException as e:
             self.assertEqual(str(e), "This user already has a certificate created")
         
         expected = {

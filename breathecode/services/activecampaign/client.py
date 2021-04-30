@@ -1,8 +1,108 @@
-import requests
+import requests, json
 from requests.auth import HTTPBasicAuth
+import breathecode.services.activecampaign.actions as actions
+import logging, re, os, json, inspect, urllib
 
-# class ActiveCampaignError(Exception):
-#     pass
+logger = logging.getLogger(__name__)
+
+class ActiveCampaign:
+    headers = {}
+
+    def __init__(self, token=None, url=None):
+        if token is None:
+            token = os.getenv('ACTIVE_CAMPAIGN_KEY', "")
+
+        if url is None:
+            url = os.getenv('ACTIVE_CAMPAIGN_URL', "")
+
+        self.host = url
+        self.token = token
+        self.headers = {
+            "Authorization": f"Bearer {token}"
+        }
+
+    def execute_action(self, webhook_id: int):
+        # wonderful way to fix one poor mocking system
+        import requests
+
+        # prevent circular dependency import between thousand modules previuosly loaded and cached
+        from breathecode.marketing.models import ActiveCampaignWebhook
+
+        # example = {
+        #     'api_url': 'https://www.eventbriteapi.com/{api-endpoint-to-fetch-object-details}/',
+        #     'config': {
+        #         'user_id': '154764716258',
+        #         'action': 'test',
+        #         'webhook_id': '5630182',
+        #         'endpoint_url': 'https://8000-ed64b782-cdd5-479d-af25-8889ba085657.ws-us03.gitpod.io/v1/events/eventbrite/webhook'
+        #     }
+        # }
+
+        webhook = ActiveCampaignWebhook.objects.filter(id=webhook_id).first()
+
+        if not webhook:
+            raise Exception("Invalid webhook")
+
+        if not webhook.webhook_type:
+            raise Exception("Imposible to webhook_type")
+
+        action = webhook.webhook_type
+        logger.debug(f"Executing ActiveCampaign Webhook => {action}")
+        if hasattr(actions, action):
+
+            logger.debug("Action found")
+            fn = getattr(actions, action)
+
+            try:
+                fn(self, webhook, json.loads(webhook.payload))
+                logger.debug("Mark active campaign action as done")
+                webhook.status = 'DONE'
+                webhook.status_text = 'OK'
+                webhook.save()
+
+            except Exception as e:
+                logger.debug("Mark active campaign action with error")
+
+                webhook.status = 'ERROR'
+                webhook.status_text = str(e)
+                webhook.save()
+
+        else:
+            message = f"ActiveCampaign Action `{action}` is not implemented"
+            logger.debug(message)
+
+            webhook.status = 'ERROR'
+            webhook.status_text = message
+            webhook.save()
+
+            raise Exception(message)
+
+    @staticmethod
+    def add_webhook_to_log(context: dict, ac_academy: str):
+
+        """Add one incoming webhook request to log"""
+
+        # prevent circular dependency import between thousand modules previuosly loaded and cached
+        from breathecode.marketing.models import ActiveCampaignWebhook, ActiveCampaignAcademy
+
+        if not context or not len(context):
+            return None
+
+        ac_academy = ActiveCampaignAcademy.objects.filter(id=ac_academy).first()
+        if ac_academy is None:
+            logger.debug(f"ActiveCampaign academy {str(ac_academy)} not found")
+            raise APIException(f"ActiveCampaign academy {str(ac_academy)} not found")
+
+        webhook = ActiveCampaignWebhook()
+        webhook.webhook_type = context['type']
+        webhook.run_at = context['date_time']
+        webhook.initiated_by = context['initiated_by']
+        webhook.ac_academy = ac_academy
+        webhook.status = 'PENDING'
+        webhook.payload = json.dumps(context)
+        webhook.save()
+
+        return webhook
 
 class Contacts(object):
     def __init__(self, client):

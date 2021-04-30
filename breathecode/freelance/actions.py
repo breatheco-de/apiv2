@@ -18,8 +18,6 @@ def sync_user_issues(freelancer):
     open_issues = user.get_user_issues(state='open')
     for issue in open_issues:
         _issue = Issue.objects.filter(github_number=issue.number).first()
-        if _issue is not None:
-            continue #jump to the next issue
 
         p = re.compile("<hrs>(\d+\.?\d*)</hrs>")
         result = p.search(issue.body)
@@ -27,16 +25,21 @@ def sync_user_issues(freelancer):
         if result is not None:
             hours = float(result.group(1))
 
-        new_issue = Issue(
-            title=issue.title,
-            github_number=issue.number,
-            body=issue.body[0:500],
-            url=issue.html_url,
-            freelancer=freelancer,
-            duration_in_minutes=hours * 60,
-            duration_in_hours=hours,
-        )
-        new_issue.save()
+        if _issue is not None:
+            _issue.duration_in_minutes=hours * 60
+            _issue.duration_in_hours=hours
+            _issue.save()
+        else:
+            new_issue = Issue(
+                title=issue.title[:255],
+                github_number=issue.number,
+                body=issue.body[0:500],
+                url=issue.html_url,
+                freelancer=freelancer,
+                duration_in_minutes=hours * 60,
+                duration_in_hours=hours,
+            )
+            new_issue.save()
 
     return None
 

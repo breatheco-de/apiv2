@@ -134,6 +134,9 @@ class FormEntry(models.Model):
     fb_form_id = models.BigIntegerField(null=True, default=None, blank=True)
     fb_adgroup_id = models.BigIntegerField(null=True, default=None, blank=True)
     fb_ad_id = models.BigIntegerField(null=True, default=None, blank=True)
+    
+    ac_contact_id = models.CharField(max_length=20,null=True, default=None, blank=True, help_text="Active Campaign Contact ID")
+    ac_deal_id = models.CharField(max_length=20,null=True, default=None, blank=True, help_text="Active Campaign Deal ID")
 
     first_name = models.CharField(max_length=150, default='')
     last_name = models.CharField(max_length=150, default='', blank=True)
@@ -234,3 +237,34 @@ class ShortLink(models.Model):
 
     def __str__(self):
         return f"{str(self.hits)} {self.slug}"
+
+
+PENDING = 'PENDING'
+DONE = 'DONE'
+ERROR='ERROR'
+WEBHOOK_STATUS = (
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+    (ERROR, 'Error'),
+)
+
+class ActiveCampaignWebhook(models.Model):
+
+    webhook_type = models.CharField(max_length=100, blank=True, null=True, default=None)
+    run_at = models.DateTimeField(help_text="Date/time that the webhook ran")
+    initiated_by = models.CharField(max_length=100, help_text="Source/section of the software that triggered the webhook to run")
+
+    payload = models.JSONField(help_text="Extra info that came on the request, it varies depending on the webhook type")
+    
+    ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE)
+    contact = models.ForeignKey(Contact, on_delete=models.CASCADE, default=None, null=True, blank=True)
+    form_entry = models.ForeignKey(FormEntry, on_delete=models.CASCADE, default=None, null=True, blank=True)
+
+    status = models.CharField(max_length=9, choices=WEBHOOK_STATUS, default=PENDING)
+    status_text = models.CharField(max_length=255, default=None, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'Webhook {self.webhook_type} {self.status} => {self.status_text}'
