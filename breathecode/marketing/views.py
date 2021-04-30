@@ -10,7 +10,7 @@ from rest_framework import status
 from django.db.models import Q
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
-from django.db.models import Count, Sum, F, Func, Value, CharField
+from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (
     APIException, localize_query, capable_of, ValidationException,
     GenerateLookupsMixin, HeaderLimitOffsetPagination
@@ -19,9 +19,14 @@ from .serializers import (
     PostFormEntrySerializer, FormEntrySerializer, FormEntrySmallSerializer, TagSmallSerializer,
     AutomationSmallSerializer
 )
+<<<<<<< HEAD
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
+=======
+from .actions import sync_tags, sync_automations
+from .tasks import persist_single_lead, update_link_viewcount
+>>>>>>> ddc4f3523da4661c5330b5d189112075bac008ad
 from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation
 from breathecode.admissions.models import Academy
 from rest_framework.views import APIView
@@ -41,6 +46,7 @@ def create_lead(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+<<<<<<< HEAD
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @renderer_classes([PlainTextRenderer])
@@ -56,6 +62,8 @@ def activecampaign_webhook(request, ac_academy_id):
 
     # async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')
+=======
+>>>>>>> ddc4f3523da4661c5330b5d189112075bac008ad
 
 # Create your views here.
 @api_view(['POST', 'GET'])
