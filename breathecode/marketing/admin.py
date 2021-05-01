@@ -1,11 +1,13 @@
 import logging
 from django.contrib import admin, messages
 from django import forms 
-from .models import FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy
+from .models import FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook
 from .actions import (
     register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
     sync_tags, sync_automations,
 )
+from breathecode.services.activecampaign import ActiveCampaign
+from django.utils.html import format_html
 from django.contrib.admin import SimpleListFilter
 from breathecode.utils import AdminExportCsvMixin
 # Register your models here.
@@ -151,3 +153,25 @@ class ShortLinkAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = ('id', 'slug', 'hits', 'active', 'destination_status', 'destination')
     list_filter = ['destination_status', 'active']
     actions = ["export_as_csv"]
+
+def run_hook(modeladmin, request, queryset):
+    # stay this here for use the poor mocking system
+    for hook in queryset.all():
+        ac_academy = hook.ac_academy
+        client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+        client.execute_action(hook.id)
+
+run_hook.short_description = "Process Hook"
+@admin.register(ActiveCampaignWebhook)
+class ActiveCampaignWebhookAdmin(admin.ModelAdmin):
+    list_display = ('id', 'webhook_type', 'current_status' , 'run_at',
+        'initiated_by', 'created_at')
+    actions=[run_hook]
+
+    def current_status(self,obj):
+        colors = {
+            "DONE": "bg-success",
+            "ERROR": "bg-error",
+            "PENDING": "bg-warning",
+        }
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")

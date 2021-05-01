@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from .models import Specialty, Badge, UserSpecialty
 from django.db.models import Q
 from breathecode.admissions.models import CohortUser
-from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination
+from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, APIException
 from .serializers import SpecialtySerializer, UserSpecialtySerializer, UserSmallSerializer
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import api_view, permission_classes
@@ -102,6 +102,9 @@ class CertificateCohortView(APIView):
             cohort__id=cohort_id, role='STUDENT', cohort__academy__id=academy_id)
         all_certs = []
 
+        if cohort_users.count() == 0:
+            raise APIException("There are no users with STUDENT role in this cohort")
+
         for cu in cohort_users:
             cert = generate_certificate(cu.user, cu.cohort)
             serializer = UserSpecialtySerializer(cert, many=False)
@@ -120,9 +123,10 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
         items = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
 
         like = request.GET.get('like', None)
-        if like is not None:
+        if like is not None and like != "":
             items = items.filter(Q(user__profileacademy__first_name__icontains=like) | Q(
-                user__profileacademy__last_name__icontains=like) | Q(user__profileacademy__email__icontains=like))
+                user__profileacademy__last_name__icontains=like) | Q(user__first_name__icontains=like) | Q(
+                user__last_name__icontains=like) | Q(user__profileacademy__email__icontains=like) | Q(user__email__icontains=like))
 
         page = self.paginate_queryset(items, request)
         serializer = UserSpecialtySerializer(items, many=True)
