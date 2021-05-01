@@ -31,7 +31,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def tests_send_survey_reminder_no_survey(self):
+    def tests_send_survey__reminder_no_survey(self):
 
         monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
 
@@ -58,7 +58,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def tests_send_survey_ending_date_less_than_now(self):
+    def tests_send_survey__ending_date_less_than_now(self):
 
         monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
         ending_date = timezone.now() - timedelta(weeks=1)
@@ -73,7 +73,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
-        
+
         expected = {
             "severity_level": 5,
             "status": 'OPERATIONAL',
@@ -87,7 +87,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def tests_send_survey_kickoff_date_greater_than_now(self):
+    def tests_send_survey__kickoff_date_greater_than_now(self):
 
         monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
         kickoff_date = timezone.now() + timedelta(weeks=1)
@@ -112,7 +112,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def tests_send_survey_latest_survey_less_four_weeks(self):
+    def tests_send_survey__latest_survey_less_four_weeks(self):
 
         monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
         ending_date = timezone.now() + timedelta(weeks=2)
@@ -138,10 +138,13 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         }
         self.assertEqual(script, expected)
 
+    """
+    🔽🔽🔽 Cohort have pending surveys to send
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def tests_send_survey_latest_survey_greater_four_weeks(self):
+    def tests_send_survey__latest_survey_greater_four_weeks(self):
 
         monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
         ending_date = timezone.now() + timedelta(days=2)
@@ -166,7 +169,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         expected = {
                     'severity_level': 5,
-                    'error_slug': None,
+                    'error_slug': 'cohort-have-pending-surveys',
                     'status': 'MINOR',
                     }
 
@@ -175,7 +178,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def tests_send_survey_latest_survey_greater_four_weeks_two_cohorts_two_survey(self):
+    def tests_send_survey__latest_survey_greater_four_weeks__two_cohorts__two_survey(self):
 
         monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
         ending_date = timezone.now() + timedelta(days=2)
@@ -199,7 +202,43 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         expected = {
                     'severity_level': 5,
                     'status': 'MINOR',
-                    'error_slug': None,
+                    'error_slug': 'cohort-have-pending-surveys',
                     }
+
+        self.assertEqual(script, expected)
+
+    """
+    🔽🔽🔽 Cohort that never ends
+    """
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def tests_send_survey__latest_survey_greater_four_weeks__cohort_never_ends(self):
+
+        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
+        ending_date = timezone.now() + timedelta(days=2)
+        kickoff_date = timezone.now() - timedelta(days=2)
+
+        base = self.generate_models(academy=True, cohort=True, monitor_script=True,
+                                    monitor_script_kwargs=monitor_script_kwargs,
+                                    cohort_kwargs={'ending_date': ending_date,
+                                                   "kickoff_date": kickoff_date,
+                                                   'never_ends': True})
+
+        sent_at = timezone.now() - timedelta(weeks=6)
+
+        models = [self.generate_models(survey=True, survey_kwargs={'sent_at': sent_at},
+                                       models=base)
+                  for _ in range(0, 2)]
+
+        script = run_script(models[1].monitor_script)
+
+        del script['slack_payload']
+        del script['text']
+
+        expected = {
+            'severity_level': 5,
+            'status': 'OPERATIONAL',
+        }
 
         self.assertEqual(script, expected)

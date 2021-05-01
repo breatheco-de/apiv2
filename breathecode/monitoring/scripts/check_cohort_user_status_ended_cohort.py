@@ -7,7 +7,9 @@ from breathecode.admissions.models import CohortUser
 from django.utils import timezone
 
 active_user_on_ended_cohort = CohortUser.objects.filter(
-    cohort__stage="ENDED", educational_status="ACTIVE", cohort__academy__id=academy.id)
+    cohort__stage="ENDED",
+    educational_status="ACTIVE",
+    cohort__academy__id=academy.id).exclude(cohort__never_ends=True)
 
 active_user_on_ended_cohort_list = [
     "- " + item.user.first_name + " " + item.user.last_name + " (" +item.user.email + ") => " + item.cohort.name for item in active_user_on_ended_cohort]
@@ -17,6 +19,7 @@ active_user_on_ended_cohort_list_names = (
 
 if len(active_user_on_ended_cohort_list):
     raise ScriptNotification(
-        f"This users: {active_user_on_ended_cohort_list_names} are active on ended cohorts")
+        f"This users: {active_user_on_ended_cohort_list_names} are active on ended cohorts",
+        slug='ended-cohort-had-active-users')
 
 print("Everything up to date")
