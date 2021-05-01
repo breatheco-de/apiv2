@@ -429,14 +429,10 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             raise ValidationException(
                 'That user already exists in this cohort')
 
-        if (#is_post_method and
-                'role' in request_item and
-                request_item['role'] == 'TEACHER' and
+        if ('role' in request_item and request_item['role'] == 'TEACHER' and
                 not ProfileAcademy.objects.filter(user_id=user_id,role__slug='staff').count()):
             raise ValidationException(
                 'The user must be staff member to this academy before it can be a teacher')
-
-        # elif (not is_post_method and)
 
         if (is_post_method and cohort.syllabus and
                 self.count_certificates_by_cohort(cohort, user_id) > 0):

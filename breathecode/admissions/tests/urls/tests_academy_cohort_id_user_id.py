@@ -102,92 +102,92 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'user_id': 1,
         }])
 
-    # """
-    # 🔽🔽🔽 Add the same teacher to two cohors
-    # """
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # def test_academy_cohort_user__post__same_teacher_in_two_cohorts(self):
-    #     """Test /cohort/:id/user without auth"""
-    #     self.headers(academy=1)
-    #     models = [self.generate_models(authenticate=True, user=True, cohort=True,
-    #         profile_academy=True, capability='crud_cohort', role='potato')]
+    """
+    🔽🔽🔽 Add the same teacher to two cohors
+    """
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_user__post__same_teacher_in_two_cohorts(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        models = [self.generate_models(authenticate=True, user=True, cohort=True,
+            profile_academy=True, capability='crud_cohort', role='staff')]
 
-    #     base = models[0].copy()
-    #     del base['cohort']
+        base = models[0].copy()
+        del base['cohort']
 
-    #     models = models + [self.generate_models(cohort=True, models=base)]
-    #     url = reverse_lazy('admissions:academy_cohort_id_user_id', kwargs={'cohort_id': 1, 'user_id': 1})
-    #     data = {
-    #         'user':  1,
-    #         'cohort':  1,
-    #         'role': 'TEACHER',
-    #     }
-    #     response = self.client.post(url, data, format='json')
+        models = models + [self.generate_models(cohort=True, models=base)]
+        url = reverse_lazy('admissions:academy_cohort_id_user_id', kwargs={'cohort_id': 1, 'user_id': 1})
+        data = {
+            'user':  1,
+            'cohort':  1,
+            'role': 'TEACHER',
+        }
+        response = self.client.post(url, data, format='json')
 
-    #     data = {
-    #         'user':  1,
-    #         'cohort':  2,
-    #         'role': 'TEACHER',
-    #     }
-    #     url = reverse_lazy('admissions:academy_cohort_id_user_id', kwargs={'cohort_id': 2, 'user_id': 1})
-    #     response = self.client.post(url, data, format='json')
-    #     json = response.json()
-    #     model = models[1]
-    #     expected = {
-    #         'id': 2,
-    #         'role': 'TEACHER',
-    #         'user': {
-    #             'id': model['user'].id,
-    #             'first_name': model['user'].first_name,
-    #             'last_name': model['user'].last_name,
-    #             'email': model['user'].email,
-    #         },
-    #         'cohort': {
-    #             'id': model['cohort'].id,
-    #             'slug': model['cohort'].slug,
-    #             'name': model['cohort'].name,
-    #             'never_ends': False,
-    #             'kickoff_date': re.sub(
-    #                 r'\+00:00$', 'Z',
-    #                 model['cohort'].kickoff_date.isoformat()
-    #             ),
-    #             'current_day': model['cohort'].current_day,
-    #             'academy': {
-    #                 'id': model['cohort'].academy.id,
-    #                 'name': model['cohort'].academy.name,
-    #                 'slug': model['cohort'].academy.slug,
-    #                 'country': model['cohort'].academy.country.code,
-    #                 'city': model['cohort'].academy.city.id,
-    #                 'street_address': model['cohort'].academy.street_address,
-    #             },
-    #             'syllabus': None,
-    #             'ending_date': model['cohort'].ending_date,
-    #             'stage': model['cohort'].stage,
-    #             'language': model['cohort'].language,
-    #             'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
-    #             'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
-    #         },
-    #     }
+        data = {
+            'user':  1,
+            'cohort':  2,
+            'role': 'TEACHER',
+        }
+        url = reverse_lazy('admissions:academy_cohort_id_user_id', kwargs={'cohort_id': 2, 'user_id': 1})
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        model = models[1]
+        expected = {
+            'id': 2,
+            'role': 'TEACHER',
+            'user': {
+                'id': model['user'].id,
+                'first_name': model['user'].first_name,
+                'last_name': model['user'].last_name,
+                'email': model['user'].email,
+            },
+            'cohort': {
+                'id': model['cohort'].id,
+                'slug': model['cohort'].slug,
+                'name': model['cohort'].name,
+                'never_ends': False,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    model['cohort'].kickoff_date.isoformat()
+                ),
+                'current_day': model['cohort'].current_day,
+                'academy': {
+                    'id': model['cohort'].academy.id,
+                    'name': model['cohort'].academy.name,
+                    'slug': model['cohort'].academy.slug,
+                    'country': model['cohort'].academy.country.code,
+                    'city': model['cohort'].academy.city.id,
+                    'street_address': model['cohort'].academy.street_address,
+                },
+                'syllabus': None,
+                'ending_date': model['cohort'].ending_date,
+                'stage': model['cohort'].stage,
+                'language': model['cohort'].language,
+                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
+                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
+            },
+        }
 
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-    #     self.assertEqual(self.all_cohort_user_dict(), [{
-    #         'cohort_id': 1,
-    #         'educational_status': None,
-    #         'finantial_status': None,
-    #         'id': 1,
-    #         'role': 'TEACHER',
-    #         'user_id': 1,
-    #     }, {
-    #         'cohort_id': 2,
-    #         'educational_status': None,
-    #         'finantial_status': None,
-    #         'id': 2,
-    #         'role': 'TEACHER',
-    #         'user_id': 1,
-    #     }])
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_cohort_user_dict(), [{
+            'cohort_id': 1,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 1,
+            'role': 'TEACHER',
+            'user_id': 1,
+        }, {
+            'cohort_id': 2,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 2,
+            'role': 'TEACHER',
+            'user_id': 1,
+        }])
 
     """
     🔽🔽🔽 Put
