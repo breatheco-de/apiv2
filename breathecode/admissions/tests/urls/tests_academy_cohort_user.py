@@ -17,10 +17,13 @@ from ..mixins.new_admissions_test_case import AdmissionsTestCase
 class CohortUserTestSuite(AdmissionsTestCase):
     """Test /cohort/user"""
 
+    """
+    🔽🔽🔽 Auth
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_without_auth(self):
+    def test_academy_cohort_user__without_auth(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -33,10 +36,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    """
+    🔽🔽🔽 Without data
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_without_data(self):
+    def test_academy_cohort_user__without_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
@@ -49,10 +55,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort_user(), 0)
 
+    """
+    🔽🔽🔽 With data
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data(self):
+    def test_academy_cohort_user__with_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -90,10 +99,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    """
+    🔽🔽🔽 Roles in querystring
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_bad_roles(self):
+    def test_academy_cohort_user__with_data__with_bad_roles(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -112,7 +124,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_roles(self):
+    def test_academy_cohort_user__with_data__with_roles(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -154,7 +166,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_roles_with_comma(self):
+    def test_academy_cohort_user__with_data__with_roles__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -195,10 +207,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    """
+    🔽🔽🔽 Finantial status in querystring
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_bad_finantial_status(self):
+    def test_academy_cohort_user__with_data__with_bad_finantial_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -217,7 +232,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_finantial_status(self):
+    def test_academy_cohort_user__with_data__with_finantial_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -260,7 +275,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_finantial_status_with_comma(self):
+    def test_academy_cohort_user__with_data__with_finantial_status__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -302,10 +317,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    """
+    🔽🔽🔽 Educational status in querystring
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_bad_educational_status(self):
+    def test_academy_cohort_user__with_data__with_bad_educational_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -324,7 +342,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_educational_status(self):
+    def test_academy_cohort_user__with_data__with_educational_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -368,7 +386,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_educational_status_with_comma(self):
+    def test_academy_cohort_user__with_data__with_educational_status__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -410,10 +428,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    """
+    🔽🔽🔽 Academy in querystring
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_academy(self):
+    def test_academy_cohort_user__with_data__with_academy(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -457,7 +478,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_academy_with_comma(self):
+    def test_academy_cohort_user__with_data__with_academy__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -498,10 +519,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    """
+    🔽🔽🔽 Cohorts in querystring
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_bad_cohorts(self):
+    def test_academy_cohort_user__with_data__with_bad_cohorts(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -520,7 +544,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_with_data_with_cohorts(self):
+    def test_academy_cohort_user__with_data__with_cohorts(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort_user=True,
@@ -561,10 +585,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.get_cohort_user_dict(1), model_dict)
 
+    """
+    🔽🔽🔽 Put without id
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_put_without_id(self):
+    def test_academy_cohort_user__put__without_id(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -578,10 +605,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_user_dict(), [])
 
+    """
+    🔽🔽🔽 Put bulk mode
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_put_in_bulk_without_data(self):
+    def test_academy_cohort_user__put__in_bulk__without_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -599,7 +629,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_put_in_bulk_without_data(self):
+    def test_academy_cohort_user__put__in_bulk__without_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -620,7 +650,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_put_in_bulk_with_one_item(self):
+    def test_academy_cohort_user__put__in_bulk__with_one_item(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -652,7 +682,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_user_put_in_bulk_with_two_items(self):
+    def test_academy_cohort_user__put__in_bulk__with_two_items(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -708,10 +738,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'educational_status': 'GRADUATED'
         }])
 
+    """
+    🔽🔽🔽 Post bulk mode
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_post_in_bulk_0_items(self):
+    def test_academy_cohort_user__post__in_bulk__0_items(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True,
@@ -729,7 +762,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_post_in_bulk_1_items(self):
+    def test_academy_cohort_user__post__in_bulk__1_item(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True, user=True,
@@ -791,7 +824,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_post_in_bulk_2_items(self):
+    def test_academy_cohort_user__post_in_bulk__2_items(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         base = self.generate_models(authenticate=True, cohort=True,
@@ -860,64 +893,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'user_id': 3,
         }])
 
+    """
+    🔽🔽🔽 Delete in bulk
+    """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_delete_without_auth(self):
-        """Test /cohort/:id/user without auth"""
-        url = reverse_lazy('admissions:academy_cohort_user')
-        response = self.client.delete(url)
-        json = response.json()
-        expected = {
-            'detail': 'Authentication credentials were not provided.',
-            'status_code': 401
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.all_cohort_user_dict(), [])
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_delete_without_header(self):
-        """Test /cohort/:id/user without auth"""
-        model = self.generate_models(authenticate=True)
-        url = reverse_lazy('admissions:academy_cohort_user')
-        response = self.client.delete(url)
-        json = response.json()
-        expected = {
-            'detail': 'Missing academy_id parameter expected for the endpoint url or \'Academy\' header',
-            'status_code': 403
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.all_cohort_user_dict(), [])
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_delete_without_capability(self):
-        """Test /cohort/:id/user without auth"""
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True)
-        url = reverse_lazy('admissions:academy_cohort_user')
-        response = self.client.delete(url)
-        json = response.json()
-        expected = {
-            'detail': "You (user: 1) don't have this capability: crud_cohort for academy 1",
-            'status_code': 403
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.all_cohort_user_dict(), [])
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_delete_without_args_in_url_or_bulk(self):
+    def test_academy_cohort_user__delete__without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
@@ -937,7 +919,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_delete_in_bulk_with_one(self):
+    def test_academy_cohort_user__delete__in_bulk__with_one(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         many_fields = ['id']
@@ -970,7 +952,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id_user_delete_in_bulk_with_two(self):
+    def test_academy_cohort_user__delete__in_bulk__with_two(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         many_fields = ['id']

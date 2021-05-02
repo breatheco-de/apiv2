@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from .models import Specialty, Badge, UserSpecialty
 from django.db.models import Q
 from breathecode.admissions.models import CohortUser
-from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination
+from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, APIException
 from .serializers import SpecialtySerializer, UserSpecialtySerializer, UserSmallSerializer
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import api_view, permission_classes
@@ -101,6 +101,9 @@ class CertificateCohortView(APIView):
         cohort_users = CohortUser.objects.filter(
             cohort__id=cohort_id, role='STUDENT', cohort__academy__id=academy_id)
         all_certs = []
+
+        if cohort_users.count() == 0:
+            raise APIException("There are no users with STUDENT role in this cohort")
 
         for cu in cohort_users:
             cert = generate_certificate(cu.user, cu.cohort)

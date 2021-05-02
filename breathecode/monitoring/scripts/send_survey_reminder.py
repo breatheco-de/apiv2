@@ -16,7 +16,8 @@ def calculate_weeks(date_created, current_date):
 
 
 cohorts = Cohort.objects.filter(academy__id=academy.id).exclude(
-    ending_date__lt=timezone.now(), kickoff_date__gt=timezone.now())
+    ending_date__lt=timezone.now(),
+    kickoff_date__gt=timezone.now()).exclude(never_ends=True)
 
 cohorts_with_pending_surveys = []
 
@@ -40,7 +41,8 @@ if len(cohorts_with_pending_surveys) > 0:
     cohort_names = ("\n").join(["- "+cohort_name for cohort_name in cohorts_with_pending_surveys])
 
     raise ScriptNotification(
-        f"There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent on theese cohorts: \n {cohort_names}", status='MINOR'
+        f"There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent on theese cohorts: \n {cohort_names}", status='MINOR',
+        slug='cohort-have-pending-surveys'
     )
 
 print("No reminders")

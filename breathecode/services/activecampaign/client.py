@@ -78,7 +78,7 @@ class ActiveCampaign:
             raise Exception(message)
 
     @staticmethod
-    def add_webhook_to_log(context: dict, ac_academy: str):
+    def add_webhook_to_log(context: dict, academy_slug: str):
 
         """Add one incoming webhook request to log"""
 
@@ -88,10 +88,10 @@ class ActiveCampaign:
         if not context or not len(context):
             return None
 
-        ac_academy = ActiveCampaignAcademy.objects.filter(id=ac_academy).first()
+        ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=academy_slug).first()
         if ac_academy is None:
-            logger.debug(f"ActiveCampaign academy {str(ac_academy)} not found")
-            raise APIException(f"ActiveCampaign academy {str(ac_academy)} not found")
+            logger.debug(f"ActiveCampaign academy {str(academy_slug)} not found")
+            raise APIException(f"ActiveCampaign academy {str(academy_slug)} not found")
 
         webhook = ActiveCampaignWebhook()
         webhook.webhook_type = context['type']
