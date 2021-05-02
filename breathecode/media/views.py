@@ -1,4 +1,5 @@
-import hashlib, requests
+import hashlib
+import requests
 from django.shortcuts import redirect
 from breathecode.media.models import Media, Category
 from breathecode.utils import GenerateLookupsMixin
@@ -20,6 +21,8 @@ from breathecode.media.serializers import (
 
 
 BUCKET_NAME = "media-breathecode"
+MIME_ALLOW = ["image/png", "image/svg+xml",
+              "image/jpeg", "image/gif", "video/quicktime", "video/mp4", "audio/mpeg", "application/pdf", "image/jpg"]
 # TODO: Mimes permitidos como una constante
 
 
@@ -69,7 +72,8 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         like = request.GET.get('like')
         if like:
-            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+            items = items.filter(Q(name__icontains=like) |
+                                 Q(slug__icontains=like))
 
         items = items.order_by('id')
 
@@ -97,7 +101,8 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def delete(self, request, media_id=None, academy_id=None):
         from ..services.google_cloud import Storage
 
-        data = Media.objects.filter(id=media_id, academy__id=academy_id).first()
+        data = Media.objects.filter(
+            id=media_id, academy__id=academy_id).first()
         if not data:
             raise ValidationException('Media not found', code=404)
 
@@ -210,6 +215,13 @@ class UploadView(APIView):
         elif len(files) != len(names):
             raise ValidationException('numbers of files and names not match')
 
+        # files validation below
+        for index in range(0, len(files)):
+            file = files[index]
+            if file.content_type not in MIME_ALLOW:
+                raise ValidationException(
+                    'this format is not allowed')
+
         for index in range(0, len(files)):
             file = files[index]
             name = names[index] if len(names) else file.name
@@ -235,16 +247,19 @@ class UploadView(APIView):
             elif 'Categories' in request.headers:
                 data['categories'] = request.headers['Categories'].split(',')
 
-            media = Media.objects.filter(hash=hash, academy__id=academy_id).first()
+            media = Media.objects.filter(
+                hash=hash, academy__id=academy_id).first()
             if media:
                 data['id'] = media.id
 
-                url = Media.objects.filter(hash=hash).values_list('url', flat=True).first()
+                url = Media.objects.filter(hash=hash).values_list(
+                    'url', flat=True).first()
                 if url:
                     data['url'] = url
 
             else:
-                url = Media.objects.filter(hash=hash).values_list('url', flat=True).first()
+                url = Media.objects.filter(hash=hash).values_list(
+                    'url', flat=True).first()
                 if url:
                     data['url'] = url
 
@@ -274,12 +289,14 @@ class UploadView(APIView):
     @capable_of('crud_media')
     def put(self, request, academy_id=None):
         upload = self.upload(request, academy_id, update=True)
-        serializer = MediaPUTSerializer(upload['instance'], data=upload['data'], context=upload['data'], many=True)
+        serializer = MediaPUTSerializer(
+            upload['instance'], data=upload['data'], context=upload['data'], many=True)
 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class MaskingUrlView(APIView):
     parser_classes = [FileUploadParser]
@@ -313,8 +330,8 @@ class MaskingUrlView(APIView):
         )
 
         header_keys = [x for x in response.headers.keys() if x !=
-            'Transfer-Encoding' and x != 'Content-Encoding' and x !=
-            'Keep-Alive' and x != 'Connection']
+                       'Transfer-Encoding' and x != 'Content-Encoding' and x !=
+                       'Keep-Alive' and x != 'Connection']
 
         for header in header_keys:
             resource[header] = response.headers[header]
