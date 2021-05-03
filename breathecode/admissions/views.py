@@ -454,6 +454,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             items = items.filter(Q(name__icontains=like) |
                                  Q(slug__icontains=like))
 
+        items = items.order_by('-cohort__kickoff_date')
         page = self.paginate_queryset(items, request)
         serializer = GetCohortSerializer(page, many=True)
 
