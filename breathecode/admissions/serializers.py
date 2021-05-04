@@ -7,7 +7,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from rest_framework.exceptions import ValidationError
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
-from .models import Academy, Cohort, Certificate, CohortUser, Syllabus
+from .models import Academy, Cohort, Certificate, CohortTimeSlot, CohortUser, Syllabus
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +189,23 @@ class GETCohortUserSerializer(serpy.Serializer):
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
     created_at = serpy.Field()
+
+
+class GETCohortTimeSlotSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    id = serpy.Field()
+    cohort = serpy.MethodField()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    starting_hour = serpy.Field()
+    ending_hour = serpy.Field()
+    recurrent = serpy.Field()
+    recurrency_type = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_cohort(self, obj):
+        return obj.cohort.id
 
 
 class GETCohortUserSmallSerializer(serpy.Serializer):
@@ -520,12 +537,12 @@ class CohortUserSerializer(CohortUserSerializerMixin):
         fields = ['id', 'user', 'cohort', 'role']
         list_serializer_class = CohortUserListSerializer
 
-    # def create(self, validated_data):
-    #     # relationships, thank you amazing and incredible serializer!
-    #     cohort = self.context.get('cohort')
-    #     user = self.context.get('user')
 
-    #     return CohortUser.objects.create(**validated_data, cohort_id=cohort, user_id=user)
+class CohortTimeSlotSerializer(serializers.ListSerializer):
+    class Meta:
+        model = CohortTimeSlot
+        fields = ['id', 'cohort', 'starting_at', 'ending_at', 'starting_hour',
+            'ending_hour', 'recurrent', 'recurrency_type']
 
 
 class CohortUserPOSTSerializer(serpy.Serializer):

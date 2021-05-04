@@ -1,4 +1,6 @@
 import os
+
+from django.contrib.auth.models import User
 from breathecode.authenticate.actions import server_id
 from breathecode.events.caches import EventCache
 import logging, datetime
@@ -11,7 +13,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from .models import Event, EventType, EventCheckin, Venue
-from breathecode.admissions.models import Academy, Cohort, CohortUser
+from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (
     EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
@@ -254,7 +256,7 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
         if 'event' in self.request.GET:
             value = self.request.GET.get('event')
             lookup['event__id'] = value
-            
+
         if 'like' in self.request.GET:
             items = items.filter(Q(attendee__first_name__icontains=like) |
                                  Q(attendee__last_name_icontains=like) |
@@ -337,6 +339,83 @@ def ical_academies_repr(slugs=None, ids=None):
         ret = f' ({ret})'
 
     return ret
+
+
+class ICalStudentScheduleView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, user_id):
+        items = Cohort.objects.all()
+
+        if (User.objects.filter(id=user_id).count()):
+            raise ValidationException("Student not exist", 404)
+
+        ids = CohortUser.objects.filter(user_id=user_id).values_list('cohort_id', flat=True)
+
+        items = CohortTimeSlot.objects.filter(cohort__id__in=ids).order_by('id')
+        items = items.exclude(cohort__stage='DELETED')
+
+        upcoming = request.GET.get('upcoming')
+        if upcoming == 'true':
+            now = timezone.now()
+            items = items.filter(cohort__kickoff_date__gte=now)
+
+        key = server_id()
+
+        calendar = iCalendar()
+        calendar.add('prodid', f'-//BreatheCode//Student Schedule ({user_id}) {key}//EN')
+        calendar.add('X-WR-CALNAME', f'Academy - Schedule')
+        calendar.add('X-WR-CALDESC', '')
+        calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
+
+        url = os.getenv('API_URL')
+        if url:
+            url = re.sub(r'/$', '', url) + '/v1/events/ical/student/schedule/' + str(user_id)
+            calendar.add('url', url)
+
+        calendar.add('version', '2.0')
+
+        for item in items:
+            event = iEvent()
+
+            event.add('summary', item.cohort.name)
+            event.add('uid', f'breathecode_cohort_time_slot_{item.id}_{key}')
+            event.add('dtstart', item.kickoff_date)
+
+            if item.ending_date:
+                event.add('dtend', item.ending_date)
+
+            event.add('dtstamp', item.created_at)
+
+            teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.cohort.id).first()
+
+            if teacher:
+                organizer = vCalAddress(f'MAILTO:{teacher.user.email}')
+
+                if teacher.user.first_name and teacher.user.last_name:
+                    organizer.params['cn'] = vText(f'{teacher.user.first_name} '
+                        f'{teacher.user.last_name}')
+                elif teacher.user.first_name:
+                    organizer.params['cn'] = vText(teacher.user.first_name)
+                elif teacher.user.last_name:
+                    organizer.params['cn'] = vText(teacher.user.last_name)
+
+                organizer.params['role'] = vText('OWNER')
+                event['organizer'] = organizer
+
+            location = item.cohort.academy.name
+
+            if item.cohort.academy.website_url:
+                location = f'{location} ({item.cohort.academy.website_url})'
+            event['location'] = vText(item.cohort.academy.name)
+
+            calendar.add_component(event)
+
+        calendar_text = calendar.to_ical()
+
+        response = HttpResponse(calendar_text, content_type='text/calendar')
+        response['Content-Disposition'] = 'attachment; filename="calendar.ics"'
+        return response
 
 
 class ICalCohortsView(APIView):

@@ -13,7 +13,7 @@ from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
 from .serializers import (
-    AcademySerializer, CohortSerializer, GetCohortSerializer,
+    AcademySerializer, CohortSerializer, CohortTimeSlotSerializer, GETCohortTimeSlotSerializer, GetCohortSerializer,
     SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer,
     CohortUserSerializer, GETCohortUserSerializer, CohortUserPUTSerializer,
     CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
@@ -21,7 +21,7 @@ from .serializers import (
     SyllabusSmallSerializer, GetBigAcademySerializer
 )
 from .models import (
-    Academy, AcademyCertificate, CohortUser, Certificate, Cohort, Country,
+    Academy, AcademyCertificate, CohortTimeSlot, CohortUser, Certificate, Cohort, Country,
     STUDENT, DELETED, Syllabus
 )
 from breathecode.authenticate.models import ProfileAcademy
@@ -393,6 +393,87 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
                 'Specified cohort and user could not be found')
 
         cu.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
+    @capable_of('read_cohort')
+    def get(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
+
+        if timeslot_id is not None:
+            item = CohortTimeSlot.objects.filter(
+                cohort__academy__id=academy_id,
+                cohort__id=cohort_id,
+                id=timeslot_id).first()
+
+            if item is None:
+                raise ValidationException("Time slot not found", 404)
+
+            serializer = GETCohortTimeSlotSerializer(item, many=False)
+            return Response(serializer.data)
+
+        items = CohortTimeSlot.objects.filter(
+            cohort__academy__id=academy_id,
+            cohort__id=cohort_id
+        )
+
+        serializer = GETCohortTimeSlotSerializer(items, many=True)
+        return Response(serializer.data)
+
+    @capable_of('crud_cohort')
+    def post(self, request, cohort_id=None, academy_id=None):
+        if 'cohort' in request.data or 'cohort_id' in request.data:
+            raise ValidationException("Cohort can't be passed is the body", 400)
+
+        cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id).first()
+
+        if cohort_id and not cohort:
+            raise ValidationException("Cohort not found", 404)
+
+        serializer = CohortTimeSlotSerializer(data={**request.data, 'cohort': cohort})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_cohort')
+    def put(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
+        if 'cohort' in request.data or 'cohort_id' in request.data:
+            raise ValidationException("Cohort can't be passed is the body", 400)
+
+        cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id).first()
+
+        if cohort_id and not cohort:
+            raise ValidationException("Cohort not found", 404)
+
+        item = CohortTimeSlot.objects.filter(
+            cohort__academy__id=academy_id,
+            cohort__id=cohort_id,
+            id=timeslot_id).first()
+
+        if not item:
+            raise ValidationException("Time slot not found", 404)
+
+        data = {**request.data, 'id': timeslot_id, 'cohort': cohort}
+
+        serializer = CohortTimeSlotSerializer(item, data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_cohort')
+    def delete(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
+        item = CohortTimeSlot.objects.filter(
+            cohort__academy__id=academy_id,
+            cohort__id=cohort_id,
+            id=timeslot_id).first()
+
+        if not item:
+            raise ValidationException("Time slot not found", 404)
+
+        item.delete()
+
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
