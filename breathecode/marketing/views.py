@@ -48,7 +48,9 @@ def create_lead(request):
 def activecampaign_webhook(request, ac_academy_id=None, academy_slug=None):
 
     if ac_academy_id is not None:
-        a = Academy.objects.filter(slug=academy_slug).first()
+        a = Academy.objects.filter(slug=ac_academy_id).first()
+        if a is None:
+            raise APIException(f"Academy not found (id:{ac_academy_id}) ")
         webhook = ActiveCampaign.add_webhook_to_log(request.data, a.slug)
     elif academy_slug is not None:
         webhook = ActiveCampaign.add_webhook_to_log(request.data, academy_slug)
