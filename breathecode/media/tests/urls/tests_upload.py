@@ -5,6 +5,7 @@ import re
 import urllib
 import tempfile
 import os
+import random
 import hashlib
 from unittest.mock import MagicMock, Mock, call, patch, mock_open, sentinel
 from django.urls.base import reverse_lazy
@@ -17,6 +18,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins import MediaTestCase
+from breathecode.media.views import MIME_ALLOW
 
 
 class FileMock():
@@ -478,420 +480,28 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(file_mock.url.call_args_list, [call(), call()])
 
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
-    def test_upload_validate_format_svg(self):
-        """Test /answer without auth"""
+    def test_upload_valid_format(self):
+        """Test / valid format"""
         self.headers(
             academy=1,
         )
-
         storage_mock.call_args_list = []
         file_mock.delete.call_args_list = []
         file_mock.upload.call_args_list = []
         file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-
         model = self.generate_models(authenticate=True, profile_academy=True,
                                      capability='crud_media', role='potato')
         url = reverse_lazy('media:upload')
-
-        file = tempfile.NamedTemporaryFile(suffix='.svg', delete=False)
-        file.write(os.urandom(1024))
-        file.close()
-
-        with open(file.name, 'rb') as data:
-            hash = hashlib.sha256(data.read()).hexdigest()
-
-        with open(file.name, 'rb') as data:
-            response = self.client.put(
-                url, {'name': 'filename.svg', 'file': data})
-            json = response.json()
-
-            self.assertHash(hash)
-
-            expected = [{
-                'academy': 1,
-                'categories': [],
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'image/svg+xml',
-                'name': 'filename.svg',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }]
-
-            self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.all_media_dict(), [{
-                'academy_id': 1,
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'image/svg+xml',
-                'name': 'filename.svg',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }])
-
-    @patch('breathecode.services.google_cloud.Storage', storage_mock)
-    def test_upload_validate_format_jpeg(self):
-        """Test /answer without auth"""
-        self.headers(
-            academy=1,
-        )
-
-        storage_mock.call_args_list = []
-        file_mock.delete.call_args_list = []
-        file_mock.upload.call_args_list = []
-        file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-
-        model = self.generate_models(authenticate=True, profile_academy=True,
-                                     capability='crud_media', role='potato')
-        url = reverse_lazy('media:upload')
-
-        file = tempfile.NamedTemporaryFile(suffix='.jpeg', delete=False)
-        file.write(os.urandom(1024))
-        file.close()
-
-        with open(file.name, 'rb') as data:
-            hash = hashlib.sha256(data.read()).hexdigest()
-
-        with open(file.name, 'rb') as data:
-            response = self.client.put(
-                url, {'name': 'filename.jpeg', 'file': data})
-            json = response.json()
-
-            self.assertHash(hash)
-
-            expected = [{
-                'academy': 1,
-                'categories': [],
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'image/jpeg',
-                'name': 'filename.jpeg',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }]
-
-            self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.all_media_dict(), [{
-                'academy_id': 1,
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'image/jpeg',
-                'name': 'filename.jpeg',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }])
-
-    @patch('breathecode.services.google_cloud.Storage', storage_mock)
-    def test_upload_validate_format_gif(self):
-        """Test /answer without auth"""
-        self.headers(
-            academy=1,
-        )
-
-        storage_mock.call_args_list = []
-        file_mock.delete.call_args_list = []
-        file_mock.upload.call_args_list = []
-        file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-
-        model = self.generate_models(authenticate=True, profile_academy=True,
-                                     capability='crud_media', role='potato')
-        url = reverse_lazy('media:upload')
-
-        file = tempfile.NamedTemporaryFile(suffix='.gif', delete=False)
-        file.write(os.urandom(1024))
-        file.close()
-
-        with open(file.name, 'rb') as data:
-            hash = hashlib.sha256(data.read()).hexdigest()
-
-        with open(file.name, 'rb') as data:
-            response = self.client.put(
-                url, {'name': 'filename.gif', 'file': data})
-            json = response.json()
-
-            self.assertHash(hash)
-
-            expected = [{
-                'academy': 1,
-                'categories': [],
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'image/gif',
-                'name': 'filename.gif',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }]
-
-            self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.all_media_dict(), [{
-                'academy_id': 1,
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'image/gif',
-                'name': 'filename.gif',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }])
-
-    @patch('breathecode.services.google_cloud.Storage', storage_mock)
-    def test_upload_validate_format_mov(self):
-        """Test /answer without auth"""
-        self.headers(
-            academy=1,
-        )
-
-        storage_mock.call_args_list = []
-        file_mock.delete.call_args_list = []
-        file_mock.upload.call_args_list = []
-        file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-
-        model = self.generate_models(authenticate=True, profile_academy=True,
-                                     capability='crud_media', role='potato')
-        url = reverse_lazy('media:upload')
-
-        file = tempfile.NamedTemporaryFile(suffix='.mov', delete=False)
-        file.write(os.urandom(1024))
-        file.close()
-
-        with open(file.name, 'rb') as data:
-            hash = hashlib.sha256(data.read()).hexdigest()
-
-        with open(file.name, 'rb') as data:
-            response = self.client.put(
-                url, {'name': 'filename.mov', 'file': data})
-            json = response.json()
-
-            self.assertHash(hash)
-
-            expected = [{
-                'academy': 1,
-                'categories': [],
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'video/quicktime',
-                'name': 'filename.mov',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }]
-
-            self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.all_media_dict(), [{
-                'academy_id': 1,
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'video/quicktime',
-                'name': 'filename.mov',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }])
-
-    @patch('breathecode.services.google_cloud.Storage', storage_mock)
-    def test_upload_validate_format_mp4(self):
-        """Test /answer without auth"""
-        self.headers(
-            academy=1,
-        )
-
-        storage_mock.call_args_list = []
-        file_mock.delete.call_args_list = []
-        file_mock.upload.call_args_list = []
-        file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-
-        model = self.generate_models(authenticate=True, profile_academy=True,
-                                     capability='crud_media', role='potato')
-        url = reverse_lazy('media:upload')
-
-        file = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
-        file.write(os.urandom(1024))
-        file.close()
-
-        with open(file.name, 'rb') as data:
-            hash = hashlib.sha256(data.read()).hexdigest()
-
-        with open(file.name, 'rb') as data:
-            response = self.client.put(
-                url, {'name': 'filename.mp4', 'file': data})
-            json = response.json()
-
-            self.assertHash(hash)
-
-            expected = [{
-                'academy': 1,
-                'categories': [],
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'video/mp4',
-                'name': 'filename.mp4',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }]
-
-            self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.all_media_dict(), [{
-                'academy_id': 1,
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'video/mp4',
-                'name': 'filename.mp4',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }])
-
-    @patch('breathecode.services.google_cloud.Storage', storage_mock)
-    def test_upload_validate_format_mp3(self):
-        """Test /answer without auth"""
-        self.headers(
-            academy=1,
-        )
-
-        storage_mock.call_args_list = []
-        file_mock.delete.call_args_list = []
-        file_mock.upload.call_args_list = []
-        file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-
-        model = self.generate_models(authenticate=True, profile_academy=True,
-                                     capability='crud_media', role='potato')
-        url = reverse_lazy('media:upload')
-
-        file = tempfile.NamedTemporaryFile(suffix='.mp3', delete=False)
-        file.write(os.urandom(1024))
-        file.close()
-
-        with open(file.name, 'rb') as data:
-            hash = hashlib.sha256(data.read()).hexdigest()
-
-        with open(file.name, 'rb') as data:
-            response = self.client.put(
-                url, {'name': 'filename.mp3', 'file': data})
-            json = response.json()
-
-            self.assertHash(hash)
-
-            expected = [{
-                'academy': 1,
-                'categories': [],
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'audio/mpeg',
-                'name': 'filename.mp3',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }]
-
-            self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.all_media_dict(), [{
-                'academy_id': 1,
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'audio/mpeg',
-                'name': 'filename.mp3',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }])
-
-    @patch('breathecode.services.google_cloud.Storage', storage_mock)
-    def test_upload_validate_format_pdf(self):
-        """Test /answer without auth"""
-        self.headers(
-            academy=1,
-        )
-
-        storage_mock.call_args_list = []
-        file_mock.delete.call_args_list = []
-        file_mock.upload.call_args_list = []
-        file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-
-        model = self.generate_models(authenticate=True, profile_academy=True,
-                                     capability='crud_media', role='potato')
-        url = reverse_lazy('media:upload')
-
-        file = tempfile.NamedTemporaryFile(suffix='.pdf', delete=False)
-        file.write(os.urandom(1024))
-        file.close()
-
-        with open(file.name, 'rb') as data:
-            hash = hashlib.sha256(data.read()).hexdigest()
-
-        with open(file.name, 'rb') as data:
-            response = self.client.put(
-                url, {'name': 'filename.pdf', 'file': data})
-            json = response.json()
-
-            self.assertHash(hash)
-
-            expected = [{
-                'academy': 1,
-                'categories': [],
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'application/pdf',
-                'name': 'filename.pdf',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }]
-
-            self.assertEqual(json, expected)
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(self.all_media_dict(), [{
-                'academy_id': 1,
-                'hash': hash,
-                'hits': 0,
-                'id': 1,
-                'mime': 'application/pdf',
-                'name': 'filename.pdf',
-                'slug': 'filename',
-                'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-            }])
-
-    @patch('breathecode.services.google_cloud.Storage', storage_mock)
-    def test_upload_validate_format_jpg(self):
-        """Test /answer without auth"""
-        self.headers(
-            academy=1,
-        )
-
-        storage_mock.call_args_list = []
-        file_mock.delete.call_args_list = []
-        file_mock.upload.call_args_list = []
-        file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
-
-        model = self.generate_models(authenticate=True, profile_academy=True,
-                                     capability='crud_media', role='potato')
-        url = reverse_lazy('media:upload')
-
         file = tempfile.NamedTemporaryFile(suffix='.jpg', delete=False)
         file.write(os.urandom(1024))
         file.close()
-
         with open(file.name, 'rb') as data:
             hash = hashlib.sha256(data.read()).hexdigest()
-
         with open(file.name, 'rb') as data:
             response = self.client.put(
                 url, {'name': 'filename.jpg', 'file': data})
             json = response.json()
-
             self.assertHash(hash)
-
             expected = [{
                 'academy': 1,
                 'categories': [],
@@ -903,7 +513,6 @@ class MediaTestSuite(MediaTestCase):
                 'slug': 'filename',
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }]
-
             self.assertEqual(json, expected)
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(self.all_media_dict(), [{
@@ -919,7 +528,7 @@ class MediaTestSuite(MediaTestCase):
 
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
     def test_upload_invalid_format(self):
-        """Test /answer without auth"""
+        """Test /invalid format"""
         self.headers(
             academy=1,
         )
@@ -948,7 +557,7 @@ class MediaTestSuite(MediaTestCase):
 
             self.assertHash(hash)
 
-            expected = {'detail': 'this format is not allowed',
+            expected = {'detail': f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}',
                         'status_code': 400}
 
             self.assertEqual(json, expected)

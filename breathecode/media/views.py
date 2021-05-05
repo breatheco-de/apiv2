@@ -220,7 +220,7 @@ class UploadView(APIView):
             file = files[index]
             if file.content_type not in MIME_ALLOW:
                 raise ValidationException(
-                    'this format is not allowed')
+                    f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}')
 
         for index in range(0, len(files)):
             file = files[index]
