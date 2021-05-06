@@ -141,9 +141,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {
-            'non_field_errors': [
-                'Cohort not have one ending date or ever_ends=true'
-            ]
+            'detail': 'cohort-without-ending-date-and-never-ends',
+            'status_code': 400,
         }
 
         self.assertEqual(json, expected)
@@ -171,9 +170,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {
-            'non_field_errors': [
-                'One cohort that never ends cannot have one ending date'
-            ]
+            'detail': 'cohort-with-ending-date-and-never-ends',
+            'status_code': 400,
         }
 
         self.assertEqual(json, expected)
@@ -200,9 +198,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {
-            'non_field_errors': [
-                'Cohort not have one ending date or ever_ends=true'
-            ]
+            'detail': 'cohort-without-ending-date-and-never-ends',
+            'status_code': 400,
         }
 
         self.assertEqual(json, expected)
