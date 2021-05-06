@@ -407,7 +407,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
                 id=timeslot_id).first()
 
             if item is None:
-                raise ValidationException("Time slot not found", 404)
+                raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
 
             serializer = GETCohortTimeSlotSerializer(item, many=False)
             return Response(serializer.data)
@@ -423,14 +423,16 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
     @capable_of('crud_cohort')
     def post(self, request, cohort_id=None, academy_id=None):
         if 'cohort' in request.data or 'cohort_id' in request.data:
-            raise ValidationException("Cohort can't be passed is the body", 400)
+            raise ValidationException("Cohort can't be passed is the body", 400, slug='cohort-in-body')
 
         cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id).first()
 
         if cohort_id and not cohort:
-            raise ValidationException("Cohort not found", 404)
+            raise ValidationException("Cohort not found", 404, slug='cohort-not-found')
 
-        serializer = CohortTimeSlotSerializer(data={**request.data, 'cohort': cohort})
+        request.data['cohort'] = cohort.id
+
+        serializer = CohortTimeSlotSerializer(data=request.data, many=False)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -444,7 +446,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id).first()
 
         if cohort_id and not cohort:
-            raise ValidationException("Cohort not found", 404)
+            raise ValidationException("Cohort not found", 404, slug='cohort-not-found')
 
         item = CohortTimeSlot.objects.filter(
             cohort__academy__id=academy_id,
@@ -452,9 +454,9 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
             id=timeslot_id).first()
 
         if not item:
-            raise ValidationException("Time slot not found", 404)
+            raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
 
-        data = {**request.data, 'id': timeslot_id, 'cohort': cohort}
+        data = {**request.data, 'id': timeslot_id, 'cohort': cohort.id}
 
         serializer = CohortTimeSlotSerializer(item, data=data)
         if serializer.is_valid():
@@ -470,7 +472,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
             id=timeslot_id).first()
 
         if not item:
-            raise ValidationException("Time slot not found", 404)
+            raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
 
         item.delete()
 

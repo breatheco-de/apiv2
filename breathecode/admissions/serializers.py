@@ -551,7 +551,7 @@ class CohortUserSerializer(CohortUserSerializerMixin):
         list_serializer_class = CohortUserListSerializer
 
 
-class CohortTimeSlotSerializer(serializers.ListSerializer):
+class CohortTimeSlotSerializer(serializers.ModelSerializer):
     class Meta:
         model = CohortTimeSlot
         fields = ['id', 'cohort', 'starting_at', 'ending_at', 'starting_hour',

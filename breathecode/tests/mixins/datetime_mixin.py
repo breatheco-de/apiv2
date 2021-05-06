@@ -3,7 +3,7 @@ Headers mixin
 """
 
 import re
-from datetime import datetime, tzinfo, timedelta
+from datetime import datetime, time, tzinfo, timedelta
 from django.utils import timezone
 
 def get_utc():
@@ -13,7 +13,11 @@ def get_utc():
 UTC = get_utc()
 
 class DatetimeMixin():
-    """Headers mixin"""
+    """Datetime mixin"""
+
+    def time_to_string(self, t):
+        return t.strftime("%H:%M:%S")
+
     def datetime_now(*args, **kwargs):
         return timezone.now()
 

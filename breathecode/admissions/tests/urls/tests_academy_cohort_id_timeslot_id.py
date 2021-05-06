@@ -22,7 +22,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Auth
     """
     def test_cohort_time_slot__without_auth(self):
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot_id', kwargs={'cohort_id': 1, 'timeslot_id': 1})
         response = self.client.get(url)
         json = response.json()
 
@@ -34,7 +34,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
     def test_cohort_time_slot__without_academy_header(self):
         model = self.generate_models(authenticate=True)
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot_id', kwargs={'cohort_id': 1, 'timeslot_id': 1})
         response = self.client.get(url)
         json = response.json()
 
@@ -48,7 +48,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_cohort_time_slot__without_capabilities(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True)
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot_id', kwargs={'cohort_id': 1, 'timeslot_id': 1})
         response = self.client.get(url)
         json = response.json()
 
@@ -66,12 +66,16 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
             capability='read_cohort', role='potato')
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot_id', kwargs={'cohort_id': 1, 'timeslot_id': 1})
         response = self.client.get(url)
         json = response.json()
+        expected = {
+            'detail': 'time-slot-not-found',
+            'status_code': 404,
+        }
 
-        self.assertEqual(json, [])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     """
@@ -84,11 +88,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
             capability='read_cohort', role='potato', cohort_time_slot=True)
-        model_dict = self.remove_dinamics_fields(model['cohort_time_slot'].__dict__)
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot_id', kwargs={'cohort_id': 1, 'timeslot_id': 1})
         response = self.client.get(url)
         json = response.json()
-        expected = [{
+        expected = {
             'id': model.cohort_time_slot.id,
             'cohort': model.cohort_time_slot.cohort.id,
             'starting_at': model.cohort_time_slot.starting_at,
@@ -99,7 +102,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'recurrency_type': model.cohort_time_slot.recurrency_type,
             'created_at': self.datetime_to_iso(model.cohort_time_slot.created_at),
             'updated_at': self.datetime_to_iso(model.cohort_time_slot.updated_at),
-        }]
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -108,18 +111,38 @@ class CohortUserTestSuite(AdmissionsTestCase):
         }])
 
     """
-    🔽🔽🔽 Post
+    🔽🔽🔽 Put
     """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_time_slot__post__without_ending_hour_and_starting_hour(self):
+    def test_cohort_time_slot__put__without_time_slot(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
             capability='crud_cohort', role='potato')
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot_id', kwargs={'cohort_id': 1, 'timeslot_id': 1})
         data = {}
-        response = self.client.post(url, data, format='json')
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+        expected = {
+            'detail': 'time-slot-not-found',
+            'status_code': 404,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_time_slot__put__without_ending_hour_and_starting_hour(self):
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='crud_cohort', role='potato', cohort_time_slot=True)
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot_id', kwargs={'cohort_id': 1, 'timeslot_id': 1})
+        data = {}
+        response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {
             'ending_hour': ['This field is required.'],
@@ -128,21 +151,23 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [{
+            **self.model_to_dict(model, 'cohort_time_slot'),
+        }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_time_slot__post(self):
+    def test_cohort_time_slot__put(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_cohort', role='potato')
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
+            capability='crud_cohort', role='potato', cohort_time_slot=True)
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot_id', kwargs={'cohort_id': 1, 'timeslot_id': 1})
         data = {
             'ending_hour': '10:00:00',
             'starting_hour': '12:00:00',
         }
-        response = self.client.post(url, data, format='json')
+        response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {
             'cohort': 1,
@@ -155,14 +180,47 @@ class CohortUserTestSuite(AdmissionsTestCase):
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_cohort_time_slot_dict(), [{
-            'cohort_id': 1,
-            'ending_at': None,
+            **self.model_to_dict(model, 'cohort_time_slot'),
             'ending_hour': time(10, 0),
-            'id': 1,
-            'recurrency_type': 'WEEKLY',
-            'recurrent': True,
-            'starting_at': None,
             'starting_hour': time(12, 0),
         }])
+
+    """
+    🔽🔽🔽 Delete
+    """
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_time_slot__delete__without_time_slot(self):
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='crud_cohort', role='potato')
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot_id', kwargs={'cohort_id': 1, 'timeslot_id': 1})
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {
+            'detail': 'time-slot-not-found',
+            'status_code': 404,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_time_slot__delete(self):
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='crud_cohort', role='potato', cohort_time_slot=True)
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot_id', kwargs={'cohort_id': 1, 'timeslot_id': 1})
+        response = self.client.delete(url)
+
+        if response.status_code != 204:
+            print(response.json())
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
