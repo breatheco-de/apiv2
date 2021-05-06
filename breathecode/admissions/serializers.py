@@ -5,7 +5,6 @@ from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, localize_query
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from rest_framework.exceptions import ValidationError
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
 from .models import Academy, Cohort, Certificate, CohortTimeSlot, CohortUser, Syllabus
 
@@ -299,22 +298,30 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             strings = data['syllabus'].split('.v')
 
             if len(strings) != 2:
-                raise ValidationError('Syllabus field marformed('
-                                      '`${certificate.slug}.v{syllabus.version}`)')
+                raise ValidationException(
+                    'Syllabus field marformed(`${certificate.slug}.v{syllabus.version}`)',
+                    slug='syllabus-field-marformed'
+                )
 
             [certificate_slug, syllabus_version] = strings
             syllabus = Syllabus.objects.filter(
                 version=syllabus_version, certificate__slug=certificate_slug).first()
 
             if not syllabus:
-                raise ValidationError('Syllabus doesn\'t exist')
+                raise ValidationException(
+                    'Syllabus doesn\'t exist',
+                    slug='syllabus-doesnt-exist'
+                )
 
             data['syllabus'] = syllabus
 
         if "slug" in data:
             cohort = Cohort.objects.filter(slug=data["slug"]).first()
             if cohort is not None and self.instance.slug != data["slug"]:
-                raise ValidationError('Slug already exists for another cohort')
+                raise ValidationException(
+                    'Slug already exists for another cohort',
+                    slug='slug-already-exists'
+                )
 
         if self.instance:
             never_ends = (data['never_ends'] if 'never_ends' in
@@ -328,10 +335,16 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             ending_date = 'ending_date' in data and data['ending_date']
 
         if never_ends and ending_date:
-            raise ValidationError('One cohort that never ends cannot have one ending date')
+            raise ValidationException(
+                'A cohort that never ends cannot have one ending date',
+                slug='cohort-with-ending-date-and-never-ends'
+            )
 
         if not never_ends and not ending_date:
-            raise ValidationError('Cohort not have one ending date or ever_ends=true')
+            raise ValidationException(
+                'A cohort most have ending date or it should be marked as ever_ends',
+                slug='cohort-without-ending-date-and-never-ends'
+            )
 
         return data
 
