@@ -165,7 +165,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-class StudentInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class UserInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('read_invite')
     def get(self, request, academy_id, user_id):
