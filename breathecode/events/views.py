@@ -401,7 +401,9 @@ class ICalStudentView(APIView):
                     second=00
                 ))
 
-            event.add('rrule', {'freq': item.recurrency_type, 'until': until_date})
+            if item.recurrent:
+                event.add('rrule', {'freq': item.recurrency_type, 'until': until_date})
+
             event.add('dtend', item.ending_at)
 
             teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.cohort.id).first()

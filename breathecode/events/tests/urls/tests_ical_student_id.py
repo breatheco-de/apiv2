@@ -94,6 +94,46 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     """
+    🔽🔽🔽 One time slot it's not recurrent
+    """
+    def test_ical_cohorts__with_one__not_recurrent(self):
+        device_id_kwargs = {'name': 'server'}
+        cohort_kwargs = {'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0)}
+        cohort_time_slot_kwargs = {'recurrent': False}
+        model = self.generate_models(academy=True, device_id=True,
+            device_id_kwargs=device_id_kwargs, cohort_user=True,
+            cohort_time_slot=True, cohort_kwargs=cohort_kwargs,
+            cohort_time_slot_kwargs=cohort_time_slot_kwargs)
+
+        url = reverse_lazy('events:ical_student_id', kwargs={'user_id': 1})
+        response = self.client.get(url)
+
+        key = model.device_id.key
+        expected = '\r\n'.join([
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/student/1',
+            'X-WR-CALDESC:',
+            'X-WR-CALNAME:Academy - Schedule',
+            # event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{model.cohort.name}',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(model.cohort_time_slot.starting_at)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(model.cohort_time_slot.ending_at)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(model.cohort_time_slot.starting_at)}',
+            f'UID:breathecode_cohort_time_slot_{model.cohort_time_slot.id}_{key}',
+            f'LOCATION:{model.academy.name}',
+            'END:VEVENT',
+            'END:VCALENDAR',
+            '',
+        ])
+
+        self.assertEqual(response.content.decode('utf-8'), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    """
     🔽🔽🔽 One time slot without cohort ending date
     """
     def test_ical_cohorts__with_one__without_ending_date(self):
