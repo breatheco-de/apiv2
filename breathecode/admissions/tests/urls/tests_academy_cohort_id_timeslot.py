@@ -91,10 +91,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
         expected = [{
             'id': model.cohort_time_slot.id,
             'cohort': model.cohort_time_slot.cohort.id,
-            'starting_at': model.cohort_time_slot.starting_at,
-            'ending_at': model.cohort_time_slot.ending_at,
-            'starting_hour': self.time_to_string(model.cohort_time_slot.starting_hour),
-            'ending_hour': self.time_to_string(model.cohort_time_slot.ending_hour),
+            'starting_at': self.datetime_to_iso(model.cohort_time_slot.starting_at),
+            'ending_at': self.datetime_to_iso(model.cohort_time_slot.ending_at),
             'recurrent': model.cohort_time_slot.recurrent,
             'recurrency_type': model.cohort_time_slot.recurrency_type,
             'created_at': self.datetime_to_iso(model.cohort_time_slot.created_at),
@@ -113,7 +111,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_time_slot__post__without_ending_hour_and_starting_hour(self):
+    def test_cohort_time_slot__post__without_ending_at_and_starting_at(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
             capability='crud_cohort', role='potato')
@@ -122,8 +120,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = {
-            'ending_hour': ['This field is required.'],
-            'starting_hour': ['This field is required.'],
+            'ending_at': ['This field is required.'],
+            'starting_at': ['This field is required.'],
         }
 
         self.assertEqual(json, expected)
@@ -138,9 +136,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True, profile_academy=True,
             capability='crud_cohort', role='potato')
         url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
+
+        starting_at = self.datetime_now()
+        ending_at = self.datetime_now()
         data = {
-            'ending_hour': '10:00:00',
-            'starting_hour': '12:00:00',
+            'ending_at': self.datetime_to_iso(ending_at),
+            'starting_at': self.datetime_to_iso(starting_at),
         }
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -158,11 +159,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_cohort_time_slot_dict(), [{
             'cohort_id': 1,
-            'ending_at': None,
-            'ending_hour': time(10, 0),
+            'ending_at': ending_at,
             'id': 1,
             'recurrency_type': 'WEEKLY',
             'recurrent': True,
-            'starting_at': None,
-            'starting_hour': time(12, 0),
+            'starting_at': starting_at,
         }])

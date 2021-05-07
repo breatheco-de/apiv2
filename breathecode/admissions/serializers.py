@@ -196,8 +196,6 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
     cohort = serpy.MethodField()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
-    starting_hour = serpy.Field()
-    ending_hour = serpy.Field()
     recurrent = serpy.Field()
     recurrency_type = serpy.Field()
     created_at = serpy.Field()
@@ -554,8 +552,8 @@ class CohortUserSerializer(CohortUserSerializerMixin):
 class CohortTimeSlotSerializer(serializers.ModelSerializer):
     class Meta:
         model = CohortTimeSlot
-        fields = ['id', 'cohort', 'starting_at', 'ending_at', 'starting_hour',
-            'ending_hour', 'recurrent', 'recurrency_type']
+        fields = ['id', 'cohort', 'starting_at', 'ending_at', 'recurrent',
+            'recurrency_type']
 
 
 class CohortUserPOSTSerializer(serpy.Serializer):
