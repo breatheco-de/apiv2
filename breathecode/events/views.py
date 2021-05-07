@@ -1,9 +1,11 @@
 import os
 
 from django.contrib.auth.models import User
+from django.db.models.query_utils import Q
 from breathecode.authenticate.actions import server_id
 from breathecode.events.caches import EventCache
-import logging, datetime
+from datetime import datetime
+import logging
 import re
 
 from django.http.response import HttpResponse
@@ -257,6 +259,7 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
             value = self.request.GET.get('event')
             lookup['event__id'] = value
 
+        like = self.request.GET.get('like')
         if 'like' in self.request.GET:
             items = items.filter(Q(attendee__first_name__icontains=like) |
                                  Q(attendee__last_name_icontains=like) |
@@ -266,12 +269,12 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
 
         start = request.GET.get('start', None)
         if start is not None:
-            start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
+            start_date = datetime.strptime(start, "%Y-%m-%d").date()
             items = items.filter(created_at__gte=start_date)
 
         end = request.GET.get('end', None)
         if end is not None:
-            end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end, "%Y-%m-%d").date()
             items = items.filter(created_at__lte=end_date)
 
         items = items.filter(**lookup).order_by('-created_at')
@@ -341,19 +344,21 @@ def ical_academies_repr(slugs=None, ids=None):
     return ret
 
 
-class ICalStudentScheduleView(APIView):
+class ICalStudentView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, user_id):
         items = Cohort.objects.all()
 
-        if (User.objects.filter(id=user_id).count()):
-            raise ValidationException("Student not exist", 404)
+        if not User.objects.filter(id=user_id).count():
+            raise ValidationException("Student not exist", 404, slug='student-not-exist')
 
-        ids = CohortUser.objects.filter(user_id=user_id).values_list('cohort_id', flat=True)
+        ids = (CohortUser.objects.filter(user_id=user_id)
+            .exclude(cohort__stage='DELETED')
+            .values_list('cohort_id', flat=True))
 
         items = CohortTimeSlot.objects.filter(cohort__id__in=ids).order_by('id')
-        items = items.exclude(cohort__stage='DELETED')
+        items = items
 
         upcoming = request.GET.get('upcoming')
         if upcoming == 'true':
@@ -370,7 +375,7 @@ class ICalStudentScheduleView(APIView):
 
         url = os.getenv('API_URL')
         if url:
-            url = re.sub(r'/$', '', url) + '/v1/events/ical/student/schedule/' + str(user_id)
+            url = re.sub(r'/$', '', url) + '/v1/events/ical/student/' + str(user_id)
             calendar.add('url', url)
 
         calendar.add('version', '2.0')
@@ -380,12 +385,24 @@ class ICalStudentScheduleView(APIView):
 
             event.add('summary', item.cohort.name)
             event.add('uid', f'breathecode_cohort_time_slot_{item.id}_{key}')
-            event.add('dtstart', item.kickoff_date)
 
-            if item.ending_date:
-                event.add('dtend', item.ending_date)
+            event.add('dtstart', item.starting_at)
+            event.add('dtstamp', item.starting_at)
 
-            event.add('dtstamp', item.created_at)
+            until_date = item.cohort.ending_date
+
+            if not until_date:
+                until_date = timezone.make_aware(datetime(
+                    year=2100,
+                    month=12,
+                    day=31,
+                    hour=12,
+                    minute=00,
+                    second=00
+                ))
+
+            event.add('rrule', {'freq': item.recurrency_type, 'until': until_date})
+            event.add('dtend', item.ending_at)
 
             teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.cohort.id).first()
 

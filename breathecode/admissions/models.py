@@ -259,15 +259,10 @@ RECURRENCY_TYPE = (
 class CohortTimeSlot(models.Model):
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, default=None, null=True)
 
-    starting_at = models.DateField(blank=True, null=True, default=None)
-    ending_at = models.DateField(blank=True, null=True, default=None)
-
-    starting_hour = models.TimeField()
-    ending_hour = models.TimeField()
+    starting_at = models.DateTimeField()
+    ending_at = models.DateTimeField()
 
     recurrent = models.BooleanField(default=True)
-    # allday = models.BooleanField(default=False)
-
     recurrency_type = models.CharField(
         max_length=10,
         choices=RECURRENCY_TYPE,
