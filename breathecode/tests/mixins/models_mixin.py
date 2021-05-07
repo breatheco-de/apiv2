@@ -22,8 +22,11 @@ class ModelsMixin():
         if key in models:
             return self.remove_dinamics_fields(models[key].__dict__)
 
-    def all_model_dict(self, models: list[dict]) -> list[dict]:
+    def all_model_dict(self, models: list[dict], sort_by='id') -> list[dict]:
         """Convert all django models to dict"""
+        if models:
+            models.sort(key=lambda x: getattr(x, sort_by))
+
         return [self.remove_dinamics_fields(data.__dict__.copy()) for data in models]
 
     def print_model(self, models: list[dict], key: str, prefix=''):
