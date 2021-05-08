@@ -24,6 +24,7 @@ class Command(BaseCommand):
             { "slug": "read_member", "description": "Read academy staff member information" },
             { "slug": "crud_student", "description": "Create, update or delete students" },
             { "slug": "read_student", "description": "Read student information" },
+            { "slug": "read_invite", "description": "Read invites from users" },
             { "slug": "read_assignment", "description": "Read assigment information" },
             { "slug": "crud_assignment", "description": "Update assignments" },
             { "slug": "read_certificate", "description": "List and read all academy certificates" },
@@ -56,7 +57,7 @@ class Command(BaseCommand):
 
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
-            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy" ] },
+            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite" ] },
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort", "read_my_academy"] },
         ]
 

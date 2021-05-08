@@ -1,7 +1,4 @@
-import serpy
-import logging
-import random
-import os
+import serpy, logging, random, os
 import urllib.parse
 from django.contrib.auth.models import User, Group
 from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile
@@ -42,6 +39,13 @@ class UserInviteSerializer(serpy.Serializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     token = serpy.Field()
+
+    invite_url = serpy.MethodField()
+
+    def get_invite_url(self, _invite):
+        if _invite.token is None:
+            return None
+        return os.getenv('API_URL') + "/v1/auth/member/invite/" + str(_invite.token)
 
 
 class AcademySerializer(serpy.Serializer):
