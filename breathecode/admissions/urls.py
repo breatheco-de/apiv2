@@ -1,10 +1,10 @@
 from django.urls import path
 from .views import (
-    AcademyView, CohortUserView, AcademyCohortView,
+    AcademyImportCohortTimeSlotView, AcademyView, CohortUserView, AcademyCohortView,
     get_timezones, UserView, UserMeView, AcademyCohortUserView,
     get_single_course, SyllabusView, CertificateView,
     CertificateAllView, get_all_academies, get_cohorts,
-    AcademyCohortTimeSlotView
+    AcademyCohortTimeSlotView, AcademyCertificateTimeSlotView
 )
 
 app_name = 'admissions'
@@ -31,6 +31,14 @@ urlpatterns = [
          AcademyCohortTimeSlotView.as_view(), name='academy_cohort_id_timeslot'),
     path('academy/cohort/<int:cohort_id>/timeslot/<int:timeslot_id>',
          AcademyCohortTimeSlotView.as_view(), name='academy_cohort_id_timeslot_id'),
+
+    path('academy/certificate/<int:certificate_id>/timeslot',
+         AcademyCertificateTimeSlotView.as_view(), name='academy_certificate_id_timeslot'),
+    path('academy/certificate/<int:certificate_id>/timeslot/<int:timeslot_id>',
+         AcademyCertificateTimeSlotView.as_view(), name='academy_certificate_id_timeslot_id'),
+
+    path('academy/timeslots/certificate/<int:certificate_id>/to/cohort/<int:cohort_id>',
+         AcademyImportCohortTimeSlotView.as_view(), name='academy_timeslots_certificate_id_to_cohort_id'),
 
     path('academy/', get_all_academies, name="academy"),
     path('academy/me', AcademyView.as_view(), name="academy_me"),

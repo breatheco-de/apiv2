@@ -256,9 +256,7 @@ RECURRENCY_TYPE = (
     (MONTHLY, 'Monthly'),
     # (YEARLY, 'Yearly'),
 )
-class CohortTimeSlot(models.Model):
-    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, default=None, null=True)
-
+class TimeSlot(models.Model):
     starting_at = models.DateTimeField()
     ending_at = models.DateTimeField()
 
@@ -270,3 +268,12 @@ class CohortTimeSlot(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+class CohortTimeSlot(TimeSlot):
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
+
+
+class CertificateTimeSlot(TimeSlot):
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)

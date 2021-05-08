@@ -13,7 +13,7 @@ from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
 from .serializers import (
-    AcademySerializer, CohortSerializer, CohortTimeSlotSerializer, GETCohortTimeSlotSerializer, GetCohortSerializer,
+    AcademySerializer, CertificateTimeSlotSerializer, CohortSerializer, CohortTimeSlotSerializer, GETCertificateTimeSlotSerializer, GETCohortTimeSlotSerializer, GetCohortSerializer,
     SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer,
     CohortUserSerializer, GETCohortUserSerializer, CohortUserPUTSerializer,
     CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
@@ -21,7 +21,7 @@ from .serializers import (
     SyllabusSmallSerializer, GetBigAcademySerializer
 )
 from .models import (
-    Academy, AcademyCertificate, CohortTimeSlot, CohortUser, Certificate, Cohort, Country,
+    Academy, AcademyCertificate, CertificateTimeSlot, CohortTimeSlot, CohortUser, Certificate, Cohort, Country,
     STUDENT, DELETED, Syllabus
 )
 from breathecode.authenticate.models import ProfileAcademy
@@ -477,6 +477,151 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         item.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
+    @capable_of('read_certificate')
+    def get(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
+        if timeslot_id:
+            item = CertificateTimeSlot.objects.filter(
+                academy__id=academy_id,
+                certificate__id=certificate_id,
+                id=timeslot_id).first()
+
+            if item is None:
+                raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
+
+            serializer = GETCertificateTimeSlotSerializer(item, many=False)
+            return Response(serializer.data)
+
+        items = CertificateTimeSlot.objects.filter(
+            academy__id=academy_id,
+            certificate__id=certificate_id
+        )
+
+        serializer = GETCertificateTimeSlotSerializer(items, many=True)
+        return Response(serializer.data)
+
+    @capable_of('crud_certificate')
+    def post(self, request, certificate_id=None, academy_id=None):
+        if 'certificate' in request.data or 'certificate_id' in request.data:
+            raise ValidationException("Certificate can't be passed is the body", 400, slug='certificate-in-body')
+
+        academy_certificate = AcademyCertificate.objects.filter(
+            certificate__id=certificate_id,
+            academy__id=academy_id).first()
+
+        if certificate_id and not academy_certificate:
+            raise ValidationException("Certificate not found", 404, slug='certificate-not-found')
+
+        certificate = academy_certificate.certificate
+
+        data = {
+            **request.data,
+            'academy': academy_id,
+            'certificate': certificate.id,
+        }
+
+        serializer = CertificateTimeSlotSerializer(data=data, many=False)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_certificate')
+    def put(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
+        if 'certificate' in request.data or 'certificate_id' in request.data:
+            raise ValidationException("Certificate can't be passed is the body", 400)
+
+        academy_certificate = AcademyCertificate.objects.filter(
+            certificate__id=certificate_id,
+            academy__id=academy_id).first()
+
+        if certificate_id and not academy_certificate:
+            raise ValidationException("Certificate not found", 404, slug='certificate-not-found')
+
+        certificate = academy_certificate.certificate
+
+        item = CertificateTimeSlot.objects.filter(
+            academy__id=academy_id,
+            certificate__id=certificate_id,
+            id=timeslot_id).first()
+
+        if not item:
+            raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
+
+        data = {
+            **request.data,
+            'id': timeslot_id,
+            'academy': academy_id,
+            'certificate': certificate.id,
+        }
+
+        serializer = CertificateTimeSlotSerializer(item, data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_certificate')
+    def delete(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
+        item = CertificateTimeSlot.objects.filter(
+            academy__id=academy_id,
+            certificate__id=certificate_id,
+            id=timeslot_id).first()
+
+        if not item:
+            raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
+
+        item.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademyImportCohortTimeSlotView(APIView, GenerateLookupsMixin):
+    @capable_of('crud_certificate')
+    def post(self, request, certificate_id=None, academy_id=None, cohort_id=None):
+        exists_academy_certificate = AcademyCertificate.objects.filter(
+            certificate__id=certificate_id,
+            academy__id=academy_id).exists()
+
+        if certificate_id and not exists_academy_certificate:
+            raise ValidationException("Certificate not found", 404, slug='certificate-not-found')
+
+        if not Cohort.objects.filter(id=cohort_id).exists():
+            raise ValidationException("Cohort not found", 404, slug='cohort-not-found')
+
+        certificate_time_slots = CertificateTimeSlot.objects.filter(
+            academy__id=academy_id,
+            certificate__id=certificate_id)
+
+        if not len(certificate_time_slots):
+            raise ValidationException(
+                'Certificate time slots not exists',
+                slug='certificate-time-slots-not-exists')
+
+        exists_cohort_time_slots = CohortTimeSlot.objects.filter(
+            cohort__academy__id=academy_id,
+            cohort__id=cohort_id).exists()
+
+        if exists_cohort_time_slots:
+            raise ValidationException(
+                'Certificate time slots is already imported',
+                slug='certificate-time-slots-is-already-imported')
+
+        data = [{
+            'starting_at': x.starting_at,
+            'ending_at': x.ending_at,
+            'recurrent': x.recurrent,
+            'recurrency_type': x.recurrency_type,
+            'cohort': cohort_id,
+        } for x in certificate_time_slots]
+
+        serializer = CohortTimeSlotSerializer(data=data, many=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):

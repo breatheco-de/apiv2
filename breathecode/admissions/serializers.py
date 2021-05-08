@@ -6,7 +6,7 @@ from breathecode.utils import ValidationException, localize_query
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
-from .models import Academy, Cohort, Certificate, CohortTimeSlot, CohortUser, Syllabus
+from .models import Academy, CertificateTimeSlot, Cohort, Certificate, CohortTimeSlot, CohortUser, Syllabus
 
 logger = logging.getLogger(__name__)
 
@@ -203,6 +203,25 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
 
     def get_cohort(self, obj):
         return obj.cohort.id
+
+
+class GETCertificateTimeSlotSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    id = serpy.Field()
+    academy = serpy.MethodField()
+    certificate = serpy.MethodField()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    recurrent = serpy.Field()
+    recurrency_type = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_academy(self, obj):
+        return obj.academy.id
+
+    def get_certificate(self, obj):
+        return obj.certificate.id
 
 
 class GETCohortUserSmallSerializer(serpy.Serializer):
@@ -553,6 +572,13 @@ class CohortTimeSlotSerializer(serializers.ModelSerializer):
     class Meta:
         model = CohortTimeSlot
         fields = ['id', 'cohort', 'starting_at', 'ending_at', 'recurrent',
+            'recurrency_type']
+
+
+class CertificateTimeSlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CertificateTimeSlot
+        fields = ['id', 'academy', 'certificate', 'starting_at', 'ending_at', 'recurrent',
             'recurrency_type']
 
 
