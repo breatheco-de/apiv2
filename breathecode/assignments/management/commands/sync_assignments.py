@@ -64,6 +64,7 @@ class Command(BaseCommand):
                 sync_student_tasks(user)
         else:
             users = CohortUser.objects.filter(role='STUDENT').values('user').annotate(dcount=Count('user'))
+            self.stdout.write(self.style.NOTICE(f"Analyzing {users.count()} cohort users"))
             for u in users:
                 if limit and limit > 0 and total > limit:
                     self.stdout.write(self.style.SUCCESS(f"Stopped at {total} because there was a limit on the command arguments"))

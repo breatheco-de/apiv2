@@ -87,8 +87,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.put(url, data)
         json = response.json()
-
-        expected = {'non_field_errors': ['Cohort not have one ending date or ever_ends=true']}
+        expected = {
+            'detail': 'cohort-without-ending-date-and-never-ends',
+            'status_code': 400,
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -112,7 +114,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
 
-        expected = {'non_field_errors': ['One cohort that never ends cannot have one ending date']}
+        expected = {
+            'detail': 'cohort-with-ending-date-and-never-ends',
+            'status_code': 400,
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -174,8 +179,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'non_field_errors': ['Syllabus field marformed(`${certificate.slug}'
-                '.v{syllabus.version}`)']
+            'detail': 'syllabus-field-marformed',
+            'status_code': 400,
         }
 
         self.assertEqual(json, expected)
@@ -203,7 +208,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'non_field_errors': ["Syllabus doesn't exist"]
+            'detail': 'syllabus-doesnt-exist',
+            'status_code': 400,
         }
 
         self.assertEqual(json, expected)
@@ -231,7 +237,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'non_field_errors': ["Syllabus doesn't exist"]
+            'detail': 'syllabus-doesnt-exist',
+            'status_code': 400,
         }
 
         self.assertEqual(json, expected)
@@ -259,7 +266,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'non_field_errors': ["Syllabus doesn't exist"]
+            'detail': 'syllabus-doesnt-exist',
+            'status_code': 400,
         }
 
         self.assertEqual(json, expected)

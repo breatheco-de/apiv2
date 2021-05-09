@@ -165,6 +165,23 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
+class UserInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
+    @capable_of('read_invite')
+    def get(self, request, academy_id, user_id):
+
+        profile = ProfileAcademy.objects.filter(
+            academy__id=academy_id, user__id=user_id).first()
+        if profile is None:
+            raise ValidationException("Profile not found", 404)
+
+        invite = UserInvite.objects.filter(
+            academy__id=academy_id, email=profile.email, status='PENDING').first()
+        if invite is None:
+            raise ValidationException("No pending invite was found", 404)
+
+        serializer = UserInviteSerializer(invite, many=False)
+        return Response(serializer.data)
 
 class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 

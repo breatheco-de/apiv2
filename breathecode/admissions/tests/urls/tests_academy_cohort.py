@@ -141,9 +141,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {
-            'non_field_errors': [
-                'Cohort not have one ending date or ever_ends=true'
-            ]
+            'detail': 'cohort-without-ending-date-and-never-ends',
+            'status_code': 400,
         }
 
         self.assertEqual(json, expected)
@@ -171,9 +170,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {
-            'non_field_errors': [
-                'One cohort that never ends cannot have one ending date'
-            ]
+            'detail': 'cohort-with-ending-date-and-never-ends',
+            'status_code': 400,
         }
 
         self.assertEqual(json, expected)
@@ -200,9 +198,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {
-            'non_field_errors': [
-                'Cohort not have one ending date or ever_ends=true'
-            ]
+            'detail': 'cohort-without-ending-date-and-never-ends',
+            'status_code': 400,
         }
 
         self.assertEqual(json, expected)
@@ -333,6 +330,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             models = [self.generate_models(authenticate=True, cohort=True, profile_academy=True,
                 capability='read_cohort', role='potato', syllabus=True)]
 
+        models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
+
         url = reverse_lazy('admissions:academy_cohort')
         response = self.client.get(url)
         json = response.json()
@@ -372,9 +371,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), [{
-            **self.model_to_dict(model, 'cohort')
-        } for model in models])
+        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
+            x.cohort for x in models
+        ]))
         return models
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -654,7 +653,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         del base['cohort']
 
         models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 9)]
-        models_dict = self.all_cohort_dict()
+        models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
+
         self.client.force_authenticate(user=models[0]['user'])
         base_url = reverse_lazy('admissions:academy_cohort')
         params = ','.join([model['academy'].slug for model in models])
@@ -696,7 +696,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
+            x.cohort for x in models
+        ]))
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -836,8 +838,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         del base['cohort']
 
         models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 9)]
+        models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
 
-        models_dict = self.all_cohort_dict()
         self.client.force_authenticate(user=models[0]['user'])
         base_url = reverse_lazy('admissions:academy_cohort')
         params = ','.join([model['academy'].slug for model in models])
@@ -879,7 +881,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
+            x.cohort for x in models
+        ]))
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -895,8 +899,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         del base['cohort']
 
         models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 105)]
+        models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
 
-        models_dict = self.all_cohort_dict()
         self.client.force_authenticate(user=models[0]['user'])
         base_url = reverse_lazy('admissions:academy_cohort')
         params = ','.join([model['academy'].slug for model in models])
@@ -934,11 +938,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model['cohort'].academy.logo_url,
             },
-        } for model in models if model['cohort'].id < 101]
+        } for model in models[:100]]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
+            x.cohort for x in models
+        ]))
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -954,8 +960,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         del base['cohort']
 
         models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 9)]
+        models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
 
-        models_dict = self.all_cohort_dict()
         self.client.force_authenticate(user=models[0]['user'])
         base_url = reverse_lazy('admissions:academy_cohort')
         params = ','.join([model['academy'].slug for model in models])
@@ -1001,12 +1007,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     },
                     'logo_url': model['cohort'].academy.logo_url,
                 },
-            } for model in models if model['cohort'].id < 6],
+            } for model in models[:5]],
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
+            x.cohort for x in models
+        ]))
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1022,8 +1030,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         del base['cohort']
 
         models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 9)]
+        models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
 
-        models_dict = self.all_cohort_dict()
         self.client.force_authenticate(user=models[0]['user'])
         base_url = reverse_lazy('admissions:academy_cohort')
         params = ','.join([model['academy'].slug for model in models])
@@ -1069,12 +1077,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     },
                     'logo_url': model['cohort'].academy.logo_url,
                 },
-            } for model in models if model['cohort'].id > 5],
+            } for model in models[5:]],
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
+            x.cohort for x in models
+        ]))
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
