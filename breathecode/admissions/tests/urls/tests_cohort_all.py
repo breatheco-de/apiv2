@@ -99,6 +99,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'language': model.cohort.language,
+            'current_day': model.cohort.current_day,
             'syllabus': {
                 'version': model.cohort.syllabus.version,
                 'certificate': {
@@ -167,6 +168,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'language': model.cohort.language,
+            'current_day': model.cohort.current_day,
             'syllabus': {
                 'version': model.cohort.syllabus.version,
                 'certificate': {
@@ -217,6 +219,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'language': model.cohort.language,
+            'current_day': model.cohort.current_day,
             'syllabus': {
                 'version': model.cohort.syllabus.version,
                 'certificate': {
@@ -267,6 +270,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'language': model.cohort.language,
+            'current_day': model.cohort.current_day,
             'syllabus': {
                 'version': model.cohort.syllabus.version,
                 'certificate': {
@@ -335,6 +339,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'language': model.cohort.language,
+            'current_day': model.cohort.current_day,
             'syllabus': {
                 'version': model.cohort.syllabus.version,
                 'certificate': {
@@ -384,6 +389,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'language': model.cohort.language,
+            'current_day': model.cohort.current_day,
             'syllabus': {
                 'version': model.cohort.syllabus.version,
                 'certificate': {

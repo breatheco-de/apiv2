@@ -153,7 +153,9 @@ class GetCohortSerializer(serpy.Serializer):
     stage = serpy.Field()
     syllabus = SyllabusSmallSerializer(required=False)
     academy = GetAcademySerializer()
-
+    current_day = serpy.Field()
+    
+    # issue para añadir current day al serializador ###########################
 
 class GetSmallCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
