@@ -951,10 +951,10 @@ def render_invite(request, token, member_id=None):
 
     if request.method == 'GET':
 
-        invite = UserInvite.objects.filter(token=token).first()
+        invite = UserInvite.objects.filter(token=token, status='PENDING').first()
         if invite is None:
             return render(request, 'message.html', {
-                'message': 'Invitation not found with this token'
+                'message': 'Invitation not found with this token or it was already accepted'
             })
         form = InviteForm({
             **_dict,
@@ -997,9 +997,6 @@ def render_invite(request, token, member_id=None):
             user.set_password(password1)
             user.save()
 
-        invite.status = 'ACCEPTED'
-        invite.save()
-
         if invite.academy is not None:
             profile = ProfileAcademy.objects.filter(
                 email=invite.email, academy=invite.academy).first()
@@ -1018,6 +1015,9 @@ def render_invite(request, token, member_id=None):
                 role = invite.role.slug.upper()
             cu = CohortUser(user=user, cohort=invite.cohort, role=role)
             cu.save()
+
+        invite.status = 'ACCEPTED'
+        invite.save()
 
         callback = str(request.POST.get("callback", None))
         if callback is not None and callback != "" and callback != "['']":
