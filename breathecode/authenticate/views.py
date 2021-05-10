@@ -951,10 +951,10 @@ def render_invite(request, token, member_id=None):
 
     if request.method == 'GET':
 
-        invite = UserInvite.objects.filter(token=token).first()
+        invite = UserInvite.objects.filter(token=token, status='PENDING').first()
         if invite is None:
             return render(request, 'message.html', {
-                'message': 'Invitation not found with this token'
+                'message': 'Invitation not found with this token or it was already accepted'
             })
         form = InviteForm({
             **_dict,
