@@ -954,7 +954,7 @@ def render_invite(request, token, member_id=None):
         invite = UserInvite.objects.filter(token=token, status='PENDING').first()
         if invite is None:
             return render(request, 'message.html', {
-                'message': 'Invitation not found with this token or it was already accepted'
+                'message': 'Invitation noot found with this token or it was already accepted'
             })
         form = InviteForm({
             **_dict,
@@ -978,10 +978,10 @@ def render_invite(request, token, member_id=None):
                 'form': form,
             })
 
-        invite = UserInvite.objects.filter(token=str(token)).first()
+        invite = UserInvite.objects.filter(token=str(token), status='PENDING').first()
         if invite is None:
             messages.error(
-                request, 'Invalid or expired invitation: '+str(token))
+                request, 'Invalid or expired invitation'+str(token))
             return render(request, 'form_invite.html', {
                 'form': form
             })
@@ -1013,8 +1013,10 @@ def render_invite(request, token, member_id=None):
             role = 'student'
             if invite.role is not None and invite.role.slug != 'student':
                 role = invite.role.slug.upper()
-            cu = CohortUser(user=user, cohort=invite.cohort, role=role)
-            cu.save()
+            cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
+            if cu is None:
+                cu = CohortUser(user=user, cohort=invite.cohort, role=role)
+                cu.save()
 
         invite.status = 'ACCEPTED'
         invite.save()
