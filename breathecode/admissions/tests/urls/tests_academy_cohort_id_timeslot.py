@@ -164,5 +164,4 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'recurrency_type': 'WEEKLY',
             'recurrent': True,
             'starting_at': starting_at,
-            'timeslot_ptr_id': 1,
         }])

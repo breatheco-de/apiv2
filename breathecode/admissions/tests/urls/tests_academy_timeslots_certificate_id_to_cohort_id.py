@@ -133,7 +133,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = [{
-            'id': 2,
+            'id': 1,
             'cohort': 1,
             'starting_at': self.datetime_to_iso(model.certificate_time_slot.starting_at),
             'ending_at': self.datetime_to_iso(model.certificate_time_slot.ending_at),
@@ -146,8 +146,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         cohort_time_slot = {
             **self.model_to_dict(model, 'certificate_time_slot'),
-            'id': 2,
-            'timeslot_ptr_id': 2,
+            'id': 1,
             'cohort_id': 1
         }
 
