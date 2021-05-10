@@ -997,9 +997,6 @@ def render_invite(request, token, member_id=None):
             user.set_password(password1)
             user.save()
 
-        invite.status = 'ACCEPTED'
-        invite.save()
-
         if invite.academy is not None:
             profile = ProfileAcademy.objects.filter(
                 email=invite.email, academy=invite.academy).first()
@@ -1018,6 +1015,9 @@ def render_invite(request, token, member_id=None):
                 role = invite.role.slug.upper()
             cu = CohortUser(user=user, cohort=invite.cohort, role=role)
             cu.save()
+
+        invite.status = 'ACCEPTED'
+        invite.save()
 
         callback = str(request.POST.get("callback", None))
         if callback is not None and callback != "" and callback != "['']":
