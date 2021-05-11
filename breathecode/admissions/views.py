@@ -370,8 +370,6 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
             many_fields=['id']
         )
 
-        print(cohort_id, user_id)
-
         if lookups and (user_id or cohort_id):
             raise ValidationException('user_id or cohort_id was provided in url '
                                       'in bulk mode request, use querystring style instead', code=400)
