@@ -165,6 +165,23 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
+class UserInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+
+    @capable_of('read_invite')
+    def get(self, request, academy_id, user_id):
+
+        profile = ProfileAcademy.objects.filter(
+            academy__id=academy_id, user__id=user_id).first()
+        if profile is None:
+            raise ValidationException("Profile not found", 404)
+
+        invite = UserInvite.objects.filter(
+            academy__id=academy_id, email=profile.email, status='PENDING').first()
+        if invite is None:
+            raise ValidationException("No pending invite was found", 404)
+
+        serializer = UserInviteSerializer(invite, many=False)
+        return Response(serializer.data)
 
 class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
@@ -934,10 +951,10 @@ def render_invite(request, token, member_id=None):
 
     if request.method == 'GET':
 
-        invite = UserInvite.objects.filter(token=token).first()
+        invite = UserInvite.objects.filter(token=token, status='PENDING').first()
         if invite is None:
             return render(request, 'message.html', {
-                'message': 'Invitation not found with this token'
+                'message': 'Invitation noot found with this token or it was already accepted'
             })
         form = InviteForm({
             **_dict,
@@ -961,10 +978,10 @@ def render_invite(request, token, member_id=None):
                 'form': form,
             })
 
-        invite = UserInvite.objects.filter(token=str(token)).first()
+        invite = UserInvite.objects.filter(token=str(token), status='PENDING').first()
         if invite is None:
             messages.error(
-                request, 'Invalid or expired invitation: '+str(token))
+                request, 'Invalid or expired invitation'+str(token))
             return render(request, 'form_invite.html', {
                 'form': form
             })
@@ -979,9 +996,6 @@ def render_invite(request, token, member_id=None):
             user.save()
             user.set_password(password1)
             user.save()
-
-        invite.status = 'ACCEPTED'
-        invite.save()
 
         if invite.academy is not None:
             profile = ProfileAcademy.objects.filter(
@@ -999,8 +1013,13 @@ def render_invite(request, token, member_id=None):
             role = 'student'
             if invite.role is not None and invite.role.slug != 'student':
                 role = invite.role.slug.upper()
-            cu = CohortUser(user=user, cohort=invite.cohort, role=role)
-            cu.save()
+            cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
+            if cu is None:
+                cu = CohortUser(user=user, cohort=invite.cohort, role=role)
+                cu.save()
+
+        invite.status = 'ACCEPTED'
+        invite.save()
 
         callback = str(request.POST.get("callback", None))
         if callback is not None and callback != "" and callback != "['']":

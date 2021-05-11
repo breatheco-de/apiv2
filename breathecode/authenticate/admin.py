@@ -50,16 +50,16 @@ class TokenAdmin(admin.ModelAdmin):
         return ['key']
 
 @admin.register(UserInvite)
-
-
 class UserInviteAdmin(admin.ModelAdmin):
+    search_fields = ['email', 'first_name', 'last_name']
+    list_filter = ['academy', 'cohort', 'role']
     list_display = ('email', 'first_name', 'last_name', 'status', 'academy', 'token', 'created_at', 'invite_url')
+    
     def invite_url(self,obj):
         params = { "callback": "https://learn.breatheco.de" }
         querystr = urllib.parse.urlencode(params)
         url = os.getenv('API_URL') + "/v1/auth/member/invite/" + str(obj.token) + "?" + querystr
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>")
-
 
 def clear_user_password(modeladmin, request, queryset):
     for u in queryset:

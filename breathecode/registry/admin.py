@@ -18,6 +18,10 @@ def remove_gitpod(modeladmin, request, queryset):
     assets = queryset.update(gitpod=False)
 remove_gitpod.short_description = "Remove GITPOD"
 
+def clean_url(modeladmin, request, queryset):
+    assets = queryset.update(url=None)
+clean_url.short_description = "Clean url (will make it a local resource)"
+
 def sync_github(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
