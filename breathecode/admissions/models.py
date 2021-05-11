@@ -273,10 +273,11 @@ class TimeSlot(models.Model):
         abstract = True
 
 
-class CohortTimeSlot(TimeSlot):
-    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
-
-
 class CertificateTimeSlot(TimeSlot):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)
+
+
+class CohortTimeSlot(TimeSlot):
+    parent = models.ForeignKey(CertificateTimeSlot, on_delete=models.CASCADE)
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)

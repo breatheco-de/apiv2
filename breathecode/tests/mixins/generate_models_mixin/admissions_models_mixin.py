@@ -141,16 +141,6 @@ class AdmissionsModelsMixin(ModelsMixin):
             models['time_slot'] = mixer.blend(
                 'admissions.TimeSlot', **kargs)
 
-        if not 'cohort_time_slot' in models and cohort_time_slot:
-            kargs = {}
-
-            if 'cohort' in models:
-                kargs['cohort'] = models['cohort']
-
-            kargs = {**kargs, **cohort_time_slot_kwargs}
-            models['cohort_time_slot'] = mixer.blend(
-                'admissions.CohortTimeSlot', **kargs)
-
         if not 'certificate_time_slot' in models and certificate_time_slot:
             kargs = {}
 
@@ -163,5 +153,18 @@ class AdmissionsModelsMixin(ModelsMixin):
             kargs = {**kargs, **certificate_time_slot_kwargs}
             models['certificate_time_slot'] = mixer.blend(
                 'admissions.CertificateTimeSlot', **kargs)
+
+        if not 'cohort_time_slot' in models and cohort_time_slot:
+            kargs = {}
+
+            if 'certificate_time_slot' in models:
+                kargs['parent'] = models['certificate_time_slot']
+
+            if 'cohort' in models:
+                kargs['cohort'] = models['cohort']
+
+            kargs = {**kargs, **cohort_time_slot_kwargs}
+            models['cohort_time_slot'] = mixer.blend(
+                'admissions.CohortTimeSlot', **kargs)
 
         return models
