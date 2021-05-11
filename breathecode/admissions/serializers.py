@@ -194,6 +194,7 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
     cohort = serpy.MethodField()
+    parent = serpy.MethodField()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
     recurrent = serpy.Field()
@@ -203,6 +204,10 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
 
     def get_cohort(self, obj):
         return obj.cohort.id
+
+    def get_parent(self, obj):
+        if obj.parent:
+            return obj.parent.id
 
 
 class GETCertificateTimeSlotSerializer(serpy.Serializer):

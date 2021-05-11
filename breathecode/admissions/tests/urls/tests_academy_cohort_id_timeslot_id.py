@@ -92,6 +92,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             'id': model.cohort_time_slot.id,
+            'parent': None,
             'cohort': model.cohort_time_slot.cohort.id,
             'starting_at': self.datetime_to_iso(model.cohort_time_slot.starting_at),
             'ending_at': self.datetime_to_iso(model.cohort_time_slot.ending_at),

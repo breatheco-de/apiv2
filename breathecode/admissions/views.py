@@ -578,52 +578,6 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class AcademyImportCohortTimeSlotView(APIView, GenerateLookupsMixin):
-    @capable_of('crud_certificate')
-    def post(self, request, certificate_id=None, academy_id=None, cohort_id=None):
-        exists_academy_certificate = AcademyCertificate.objects.filter(
-            certificate__id=certificate_id,
-            academy__id=academy_id).exists()
-
-        if certificate_id and not exists_academy_certificate:
-            raise ValidationException("Certificate not found", 404, slug='certificate-not-found')
-
-        if not Cohort.objects.filter(id=cohort_id).exists():
-            raise ValidationException("Cohort not found", 404, slug='cohort-not-found')
-
-        certificate_time_slots = CertificateTimeSlot.objects.filter(
-            academy__id=academy_id,
-            certificate__id=certificate_id)
-
-        if not len(certificate_time_slots):
-            raise ValidationException(
-                'Certificate time slots not exists',
-                slug='certificate-time-slots-not-exists')
-
-        exists_cohort_time_slots = CohortTimeSlot.objects.filter(
-            cohort__academy__id=academy_id,
-            cohort__id=cohort_id).exists()
-
-        if exists_cohort_time_slots:
-            raise ValidationException(
-                'Certificate time slots is already imported',
-                slug='certificate-time-slots-is-already-imported')
-
-        data = [{
-            'starting_at': x.starting_at,
-            'ending_at': x.ending_at,
-            'recurrent': x.recurrent,
-            'recurrency_type': x.recurrency_type,
-            'cohort': cohort_id,
-        } for x in certificate_time_slots]
-
-        serializer = CohortTimeSlotSerializer(data=data, many=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
 class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
