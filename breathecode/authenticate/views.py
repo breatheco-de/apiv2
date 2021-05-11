@@ -168,10 +168,10 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 class UserInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('read_invite')
-    def get(self, request, academy_id, user_id):
+    def get(self, request, academy_id, profileacademy_id):
 
         profile = ProfileAcademy.objects.filter(
-            academy__id=academy_id, user__id=user_id).first()
+            academy__id=academy_id, id=profileacademy_id).first()
         if profile is None:
             raise ValidationException("Profile not found", 404)
 
