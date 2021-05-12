@@ -343,14 +343,6 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
             data['syllabus'] = syllabus
 
-        if (self.instance and self.instance.syllabus and 'stage' in data and
-                (data['stage'] == 'PREWORK' or data['stage'] == 'STARTED') and
-                not CertificateTimeSlot.objects.filter(certificate__id=self.instance.syllabus.certificate.id).exists()):
-            raise ValidationException(
-                'A cohort don\'t have stage PREWORK or STARTED if the certificate not have time slots',
-                slug='certificate-not-have-time-slots'
-            )
-
         if "slug" in data:
             cohort = Cohort.objects.filter(slug=data["slug"]).first()
             if cohort is not None and self.instance.slug != data["slug"]:
