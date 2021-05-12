@@ -456,6 +456,12 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if not item:
             raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
 
+        if item.parent:
+            raise ValidationException(
+                "This timeslot is readonly because is manage by a certificate time slot",
+                400,
+                slug='cohort-time-slot-is-readonly')
+
         data = {**request.data, 'id': timeslot_id, 'cohort': cohort.id}
 
         serializer = CohortTimeSlotSerializer(item, data=data)
