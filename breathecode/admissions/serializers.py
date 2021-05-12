@@ -337,7 +337,7 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
             if not CertificateTimeSlot.objects.filter(certificate__id=syllabus.certificate.id).exists():
                 raise ValidationException(
-                    'We can\'t use a Syllabus if the certificate not have time slots',
+                    'We can\’t use a Syllabus if the certificate does not have time slots',
                     slug='certificate-not-have-time-slots'
                 )
 
