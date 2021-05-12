@@ -335,7 +335,21 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                     slug='syllabus-doesnt-exist'
                 )
 
+            if not CertificateTimeSlot.objects.filter(certificate__id=syllabus.certificate.id).exists():
+                raise ValidationException(
+                    'We can\'t use a Syllabus if the certificate not have time slots',
+                    slug='certificate-not-have-time-slots'
+                )
+
             data['syllabus'] = syllabus
+
+        if (self.instance and self.instance.syllabus and 'stage' in data and
+                (data['stage'] == 'PREWORK' or data['stage'] == 'STARTED') and
+                not CertificateTimeSlot.objects.filter(certificate__id=self.instance.syllabus.certificate.id).exists()):
+            raise ValidationException(
+                'A cohort don\'t have stage PREWORK or STARTED if the certificate not have time slots',
+                slug='certificate-not-have-time-slots'
+            )
 
         if "slug" in data:
             cohort = Cohort.objects.filter(slug=data["slug"]).first()
@@ -358,7 +372,7 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
         if never_ends and ending_date:
             raise ValidationException(
-                'A cohort that never ends cannot have one ending date',
+                'A cohort that never ends cannot have a ending date',
                 slug='cohort-with-ending-date-and-never-ends'
             )
 

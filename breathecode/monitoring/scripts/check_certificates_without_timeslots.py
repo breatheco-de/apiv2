@@ -94,7 +94,7 @@ for index in range(0, slugs_length):
 
 if certificates_slugs_without_timeslots:
     raise ScriptNotification(
-        f"This certificates: {certificates_slugs_without_timeslots} not have timeslots",
+        f"This certificates: {certificates_slugs_without_timeslots} don't have timeslots",
         slug='certificates-without-timeslots')
 
 print('Done!')
