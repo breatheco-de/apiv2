@@ -340,6 +340,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
             'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
@@ -408,6 +410,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
             'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
@@ -479,6 +483,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
@@ -550,6 +556,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
@@ -601,6 +609,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
@@ -660,6 +670,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
             'language': model['cohort'].language,
             'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -693,6 +705,65 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
             x.cohort for x in models
         ]))
+
+    """
+    🔽🔽🔽 Sort in querystring
+    """
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort__with_data__with_sort(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_cohort', role='potato', skip_cohort=True)
+
+        models = [self.generate_models(cohort=True, syllabus=True, models=base)
+            for _ in range(0, 2)]
+        ordened_models = sorted(models, key=lambda x: x['cohort'].slug, reverse=True)
+
+        url = reverse_lazy('admissions:academy_cohort') + '?sort=-slug'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'id': model['cohort'].id,
+            'slug': model['cohort'].slug,
+            'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
+            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
+            'ending_date': model['cohort'].ending_date,
+            'stage': model['cohort'].stage,
+            'language': model['cohort'].language,
+            'syllabus': {
+                'certificate': {
+                    'id': model['cohort'].syllabus.certificate.id,
+                    'slug': model['cohort'].syllabus.certificate.slug,
+                    'name': model['cohort'].syllabus.certificate.name,
+                    'duration_in_days': model['cohort'].syllabus.certificate.duration_in_days,
+                },
+                'version': model['cohort'].syllabus.version,
+            },
+            'academy': {
+                'id': model['cohort'].academy.id,
+                'slug': model['cohort'].academy.slug,
+                'name': model['cohort'].academy.name,
+                'country': {
+                    'code': model['cohort'].academy.country.code,
+                    'name': model['cohort'].academy.country.name,
+                },
+                'city': {
+                    'name': model['cohort'].academy.city.name,
+                },
+                'logo_url': model['cohort'].academy.logo_url,
+            },
+        } for model in ordened_models]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_cohort_dict(), [{
+            **self.model_to_dict(model, 'cohort')
+        } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -732,6 +803,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
@@ -783,6 +856,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
@@ -842,6 +917,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
             'language': model['cohort'].language,
             'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -902,6 +979,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
             'language': model['cohort'].language,
             'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -970,6 +1049,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].id,
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
+                'never_ends': model['cohort'].never_ends,
+                'private': model['cohort'].private,
                 'language': model['cohort'].language,
                 'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
                 'ending_date': model['cohort'].ending_date,
@@ -1039,6 +1120,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].id,
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
+                'never_ends': model['cohort'].never_ends,
+                'private': model['cohort'].private,
                 'language': model['cohort'].language,
                 'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
                 'ending_date': model['cohort'].ending_date,
