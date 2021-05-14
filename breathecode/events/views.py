@@ -364,7 +364,7 @@ class ICalStudentView(APIView):
             for x in cohort_users if x.cohort.syllabus]
 
         for academy_id, certificate_id in ids:
-            sync_cohort_timeslots.delay(academy_id=academy_id, certificate_id=certificate_id)
+            sync_cohort_timeslots(academy_id=academy_id, certificate_id=certificate_id)
 
         items = CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).order_by('id')
         items = items
