@@ -1,3 +1,4 @@
+from breathecode.admissions.tasks import sync_cohort_timeslots
 from breathecode.admissions.caches import CohortCache
 import logging
 import re
@@ -853,6 +854,16 @@ class SyllabusView(APIView):
             raise ValidationException(
                 f"Invalid certificates slug {certificate_slug}", code=404)
 
+        if not CertificateTimeSlot.objects.filter(
+                academy__id=academy_id,
+                certificate__slug=certificate_slug).exists():
+            raise ValidationException(
+                'We can\’t use a Certificate if it does not have time slots',
+                slug='certificate-not-have-time-slots'
+            )
+
+        sync_cohort_timeslots.delay(academy_id=academy_id, certificate_slug=certificate_slug)
+
         item = Syllabus.objects.filter(
             certificate__slug=certificate_slug, academy_owner__id=academy_id).order_by('version').first()
         if item is not None:
@@ -878,6 +889,16 @@ class SyllabusView(APIView):
         if item is None:
             raise ValidationException(
                 "Syllabus version not found for this academy", code=404)
+
+        if not CertificateTimeSlot.objects.filter(
+                academy__id=academy_id,
+                certificate__slug=certificate_slug).exists():
+            raise ValidationException(
+                'We can\’t use a Certificate if it does not have time slots',
+                slug='certificate-not-have-time-slots'
+            )
+
+        sync_cohort_timeslots.delay(academy_id=academy_id, certificate_slug=certificate_slug)
 
         serializer = SyllabusSerializer(item, data=request.data, many=False)
         if serializer.is_valid():

@@ -1,3 +1,4 @@
+from breathecode.admissions.tasks import sync_cohort_timeslots
 import os
 
 from django.contrib.auth.models import User
@@ -353,11 +354,19 @@ class ICalStudentView(APIView):
         if not User.objects.filter(id=user_id).count():
             raise ValidationException("Student not exist", 404, slug='student-not-exist')
 
-        ids = (CohortUser.objects.filter(user_id=user_id)
-            .exclude(cohort__stage='DELETED')
-            .values_list('cohort_id', flat=True))
+        cohort_users = (CohortUser.objects.filter(user_id=user_id)
+            .exclude(cohort__stage='DELETED'))
 
-        items = CohortTimeSlot.objects.filter(cohort__id__in=ids).order_by('id')
+        cohort_ids = [x.cohort.id for x in cohort_users]
+        ids = [(
+            x.cohort.academy.id,
+            x.cohort.syllabus.certificate.id)
+            for x in cohort_users if x.cohort.syllabus]
+
+        for academy_id, certificate_id in ids:
+            sync_cohort_timeslots.delay(academy_id=academy_id, certificate_id=certificate_id)
+
+        items = CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).order_by('id')
         items = items
 
         upcoming = request.GET.get('upcoming')
