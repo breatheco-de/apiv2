@@ -17,6 +17,7 @@ from breathecode.media.serializers import (
     GetCategorySerializer,
     CategorySerializer
 )
+from slugify import slugify
 
 
 BUCKET_NAME = "media-breathecode"
@@ -71,7 +72,23 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if like:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
-        items = items.order_by('id')
+        sort_by = request.GET.get('sort_by')
+        if sort_by is not None:
+            for item in sort_by:
+                if item[0] == "-":
+                    items = items.order_by('-created_at')
+                else:
+                    items = items.order_by('created_at')
+        else: 
+            items = items.order_by('id')
+
+        sort_by = request.GET.get('sort_by')
+        if sort_by is not None and sort_by == "oldest":
+            items = items.order_by('-created_at')
+        elif sort_by is not None and sort_by == "recently":
+            items = items.order_by('created_at')
+        else:
+            items = items.order_by('id') 
 
         page = self.paginate_queryset(items, request)
         serializer = GetMediaSerializer(page, many=True)
@@ -197,6 +214,7 @@ class UploadView(APIView):
         }
 
         file = request.data.get('file')
+
         if not file:
             raise ValidationException('Missing file in request', code=400)
 
@@ -215,7 +233,7 @@ class UploadView(APIView):
             name = names[index] if len(names) else file.name
             file_bytes = file.read()
             hash = hashlib.sha256(file_bytes).hexdigest()
-            slug = name.split('.')[0]
+            slug = slugify(name)
 
             if Media.objects.filter(slug=slug).exclude(hash=hash).count():
                 raise ValidationException('slug already exists', code=400)
