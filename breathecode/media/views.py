@@ -71,7 +71,8 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if like:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
-        items = items.order_by('id')
+        sort = request.GET.get('sort', '-created_at')
+        items = items.order_by(sort)
 
         page = self.paginate_queryset(items, request)
         serializer = GetMediaSerializer(page, many=True)
