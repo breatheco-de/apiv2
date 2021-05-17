@@ -113,6 +113,7 @@ class CertificateCohortView(APIView):
         return Response(all_certs, status=status.HTTP_201_CREATED)
 
 
+
 class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
@@ -134,7 +135,16 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
+        
+class Test(APIView):
 
+    @capable_of('crud_certificate')
+    def post(self, request, academy_id=None):
+        
+        pruebas = request.data
+
+        for prueba in pruebas:
+            print("@@@@@@@@@@@@2", prueba)
 
 # class SyllabusView(APIView):
 #     """
