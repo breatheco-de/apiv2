@@ -63,7 +63,7 @@ class GetAssetView(APIView):
             serializer = AssetBigSerializer(asset)
             return Response(serializer.data)
 
-        items = Asset.objects.filter(visibility='PUBLIC')
+        items = Asset.objects.all()
         lookup = {}
 
         if 'author' in self.request.GET:
@@ -85,6 +85,8 @@ class GetAssetView(APIView):
         if 'visibility' in self.request.GET:
             param = self.request.GET.get('visibility')
             lookup['visibility__in'] = [p.upper() for p in param.split(",")]
+        else:
+            lookup['visibility'] = "PUBLIC"
 
         if 'technologies' in self.request.GET:
             param = self.request.GET.get('technologies')
