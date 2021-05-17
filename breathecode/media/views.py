@@ -72,23 +72,8 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if like:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
-        sort_by = request.GET.get('sort_by')
-        if sort_by is not None:
-            for item in sort_by:
-                if item[0] == "-":
-                    items = items.order_by('-created_at')
-                else:
-                    items = items.order_by('created_at')
-        else: 
-            items = items.order_by('id')
-
-        sort_by = request.GET.get('sort_by')
-        if sort_by is not None and sort_by == "oldest":
-            items = items.order_by('-created_at')
-        elif sort_by is not None and sort_by == "recently":
-            items = items.order_by('created_at')
-        else:
-            items = items.order_by('id') 
+        sort = request.GET.get('sort', '-created_at')
+        items = items.order_by(sort)
 
         page = self.paginate_queryset(items, request)
         serializer = GetMediaSerializer(page, many=True)
