@@ -735,6 +735,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'current_day': model.cohort.current_day,
             'never_ends': model['cohort'].never_ends,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
