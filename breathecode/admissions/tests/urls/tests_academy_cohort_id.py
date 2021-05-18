@@ -349,6 +349,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'certificate': {
                     'id': model['cohort'].syllabus.certificate.id,
@@ -414,6 +415,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'language': model['cohort'].language,
             'stage': model['cohort'].stage,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'certificate': {
                     'id': model['cohort'].syllabus.certificate.id,
