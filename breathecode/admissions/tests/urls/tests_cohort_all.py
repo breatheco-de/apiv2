@@ -82,6 +82,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'id': model.cohort.id,
             'slug': model.cohort.slug,
             'name': model.cohort.name,
+            'current_day': model.cohort.current_day,
             'never_ends': model['cohort'].never_ends,
             'private': model['cohort'].private,
             'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
