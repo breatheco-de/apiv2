@@ -456,7 +456,10 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             items = items.filter(Q(name__icontains=like) |
                                  Q(slug__icontains=like))
 
-        sort = request.GET.get('sort', '-kickoff_date')
+        sort = request.GET.get('sort', None)
+        if sort is None or sort == "":
+            sort = "-kickoff_date"
+
         items = items.order_by(sort)
 
         page = self.paginate_queryset(items, request)
