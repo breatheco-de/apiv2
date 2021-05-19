@@ -346,6 +346,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'certificate': {
                     'id': model['cohort'].syllabus.certificate.id,
@@ -416,6 +417,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'certificate': {
                     'id': model['cohort'].syllabus.certificate.id,
@@ -489,6 +491,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'certificate': {
                     'id': model['cohort'].syllabus.certificate.id,
@@ -562,6 +565,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'certificate': {
                     'id': model['cohort'].syllabus.certificate.id,
@@ -615,6 +619,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'certificate': {
                     'id': model['cohort'].syllabus.certificate.id,
@@ -676,6 +681,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'version': model['cohort'].syllabus.version,
                 'certificate': {
@@ -729,6 +735,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'current_day': model.cohort.current_day,
             'never_ends': model['cohort'].never_ends,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
@@ -809,6 +816,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'certificate': {
                     'id': model['cohort'].syllabus.certificate.id,
@@ -862,6 +870,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'certificate': {
                     'id': model['cohort'].syllabus.certificate.id,
@@ -923,6 +932,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'version': model['cohort'].syllabus.version,
                 'certificate': {
@@ -985,6 +995,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'version': model['cohort'].syllabus.version,
                 'certificate': {
@@ -1055,6 +1066,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
+                'current_day': model['cohort'].current_day,
                 'syllabus': {
                     'version': model['cohort'].syllabus.version,
                     'certificate': {
@@ -1126,6 +1138,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
+                'current_day': model['cohort'].current_day,
                 'syllabus': {
                     'version': model['cohort'].syllabus.version,
                     'certificate': {
