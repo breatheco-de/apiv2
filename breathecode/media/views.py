@@ -1,4 +1,4 @@
-import hashlib, requests
+import hashlib, requests, os
 from django.shortcuts import redirect
 from breathecode.media.models import Media, Category
 from breathecode.utils import GenerateLookupsMixin
@@ -20,7 +20,7 @@ from breathecode.media.serializers import (
 from slugify import slugify
 
 
-BUCKET_NAME = "media-breathecode"
+BUCKET_NAME = os.environ.get('MEDIA_GALLERY_BUCKET', None)
 # TODO: Mimes permitidos como una constante
 
 
