@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from .models import Specialty, Badge, UserSpecialty
 from django.db.models import Q
 from breathecode.admissions.models import CohortUser
-from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, APIException
+from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, APIException, GenerateLookupsMixin
 from .serializers import SpecialtySerializer, UserSpecialtySerializer, UserSmallSerializer
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import api_view, permission_classes
@@ -103,7 +103,8 @@ class CertificateCohortView(APIView):
         all_certs = []
 
         if cohort_users.count() == 0:
-            raise APIException("There are no users with STUDENT role in this cohort")
+            raise APIException(
+                "There are no users with STUDENT role in this cohort")
 
         for cu in cohort_users:
             cert = generate_certificate(cu.user, cu.cohort)
@@ -113,7 +114,7 @@ class CertificateCohortView(APIView):
         return Response(all_certs, status=status.HTTP_201_CREATED)
 
 
-class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
+class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
@@ -134,6 +135,39 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @ capable_of('crud_certificate')
+    def delete(self, request, cohort_id=None, user_id=None, academy_id=None):
+        lookups = self.generate_lookups(
+            request,
+            many_fields=['id']
+        )
+
+        print(lookups)
+        if lookups and (user_id or cohort_id):
+            raise ValidationException('user_id or cohort_id was provided in url '
+                                      'in bulk mode request, use querystring style instead', code=400)
+
+        if lookups:
+            items = UserSpecialty.objects.filter(
+                **lookups, academy__id=academy_id)
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        if cohort_id is None or user_id is None:
+            raise ValidationException("Missing user_id or cohort_id", code=400)
+
+        us = UserSpecialty.objects.filter(user__id=user_id, cohort__id=cohort_id,
+                                          cohort__academy__id__in=academy_id).first()
+        if us is None:
+            raise ValidationException(
+                'Specified cohort and user could not be found')
+
+        us.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 # class SyllabusView(APIView):

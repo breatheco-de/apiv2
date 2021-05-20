@@ -146,13 +146,16 @@ class GetCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    never_ends = serpy.Field()
+    private = serpy.Field()
     language = serpy.Field()
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     stage = serpy.Field()
     syllabus = SyllabusSmallSerializer(required=False)
     academy = GetAcademySerializer()
-
+    current_day = serpy.Field()
+    
 
 class GetSmallCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -349,8 +352,9 @@ class CohortPUTSerializer(CohortSerializerMixin):
     # id = serializers.IntegerField(required=True)
     slug = serializers.SlugField(required=False)
     name = serializers.CharField(required=False)
+    private = serializers.BooleanField(required=False)
     kickoff_date = serializers.DateTimeField(required=False)
-    ending_date = serializers.DateTimeField(required=False)
+    ending_date = serializers.DateTimeField(required=False, allow_null=True)
     current_day = serializers.IntegerField(required=False)
     stage = serializers.CharField(required=False)
     language = serializers.CharField(required=False)
@@ -358,7 +362,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
-            'syllabus', 'never_ends')
+            'syllabus', 'never_ends', 'private')
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):

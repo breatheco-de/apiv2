@@ -51,3 +51,7 @@ class AssetBigSerializer(AssetMidSerializer):
 
     created_at = serpy.Field()
     updated_at = serpy.Field()
+    
+class AssetTechnologySerializer(serpy.Serializer):
+    slug = serpy.Field()
+    title = serpy.Field()
