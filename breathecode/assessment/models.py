@@ -9,7 +9,7 @@ class UserProxy(User):
 
 class Assessment(models.Model):
     slug = models.SlugField(max_length=200, primary_key=True)
-    title = models.CharField(max_length=200, blank=True)
+    title = models.CharField(max_length=255, blank=True)
     lang = models.CharField(max_length=3, blank=True, default='en')
 
     score_threshold = models.IntegerField(default=None, blank=True, null=True, help_text="You can set a threshold to determine if the user score is successfull")
@@ -34,7 +34,7 @@ QUESTION_TYPE = (
     (SELECT_MULTIPLE, 'Select Multiple'),
 )
 class Question(models.Model):
-    title = models.CharField(max_length=200, blank=True)
+    title = models.TextField()
     help_text = models.CharField(max_length=255, default=None, blank=True, null=True)
     lang = models.CharField(max_length=3, blank=True, default='en')
 
@@ -47,7 +47,7 @@ class Question(models.Model):
 
 
 class Option(models.Model):
-    title = models.CharField(max_length=200, blank=True)
+    title = models.TextField()
     help_text = models.CharField(max_length=255, default=None, blank=True, null=True)
     lang = models.CharField(max_length=3, blank=True, default='en')
 
@@ -92,7 +92,7 @@ class Answer(models.Model):
     user_assesment = models.ForeignKey(UserAssessment, on_delete=models.CASCADE, default=None, blank=True, null=True)
     option = models.ForeignKey(Option, on_delete=models.CASCADE, default=None, blank=True, null=True, help_text="Will be null if open question, no options to pick")
     question = models.ForeignKey(Question, on_delete=models.CASCADE, default=None, blank=True, null=True)
-    value = models.CharField(max_length=200)
+    value = models.TextField()
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

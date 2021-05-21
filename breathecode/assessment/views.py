@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.http import HttpResponse
 from breathecode.utils import ValidationException
-from .models import Assessment, UserAssessment, GetAssessmentView
+from .models import Assessment, UserAssessment
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -34,15 +34,15 @@ class GetAssessmentView(APIView):
     List all snippets, or create a new snippet.
     """
     permission_classes = [AllowAny]
-    def get(self, request, assessment_id=None):
+    def get(self, request, assessment_slug=None):
 
-        if assessment_id is not None:
-            item = Assessment.objects.filter(id=assessment_id).first()
+        if assessment_slug is not None:
+            item = Assessment.objects.filter(slug=assessment_slug).first()
             if item is None:
                 raise ValidationException("Assessment not found", 404)
 
             serializer = GetAssessmentBigSerializer(item, many=False)
-            return serializer.data
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         
         items = Assessment.objects.all()
@@ -63,4 +63,4 @@ class GetAssessmentView(APIView):
         items = items.filter(**lookup).order_by('-created_at')
         
         serializer = GetAssessmentSerializer(items, many=True)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)

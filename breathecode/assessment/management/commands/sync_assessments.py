@@ -39,6 +39,16 @@ class Command(BaseCommand):
         quizzes = response.json()
 
         for quiz in quizzes:
+            if "slug" not in quiz['info']:
+                self.stdout.write(self.style.ERROR(f"Ignoring quiz because it does not have a slug"))
+                continue
+
+            name = 'No name yet'
+            if "name" not in quiz['info']:
+                self.stdout.write(self.style.ERROR(f"Quiz f{quiz['info']['slug']} needs a name"))
+            else:
+                name = quiz['info']["name"]
+
             a = Assessment.objects.filter(slug=quiz['info']['slug']).first()
             if a is not None:
                 continue
@@ -46,24 +56,25 @@ class Command(BaseCommand):
             a = Assessment(
                 slug=quiz['info']['slug'],
                 lang=quiz['info']['lang'],
-                title=quiz['info']['name'],
+                title=name,
                 comment=quiz['info']['main'],
             )
             a.save()
 
-            for question in a["questions"]:
+            for question in quiz["questions"]:
                 q = Question(
                     title=question["q"],
-                    lang=quiz['lang'],
+                    lang=quiz['info']['lang'],
                     assessment=a,
                     question_type='SELECT',
                 )
                 q.save()
-                for option in q["a"]:
+                for option in question["a"]:
                     o = Option(
                         title=option["option"],
                         score= int(option['correct']),
+                        question=q,
                     )
                     o.save()
 
-            self.stdout.write(self.style.SUCCESS(f"Created assesment {quiz['name']}"))
+            self.stdout.write(self.style.SUCCESS(f"Created assesment {quiz['info']['slug']}"))

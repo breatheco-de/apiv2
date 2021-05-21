@@ -9,21 +9,33 @@ class UserSerializer(serpy.Serializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
 
+
+class GetOptionSerializer(serpy.Serializer):
+    id = serpy.Field()
+    title = serpy.Field()
+    help_text = serpy.Field()
+    score = serpy.Field()
+
 class GetQuestionSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
     help_text = serpy.Field()
     question_type = serpy.Field()
 
+    options = serpy.MethodField()
+
+    def get_options(self, obj):
+        return GetOptionSerializer(obj.option_set.all(), many=True).data
+
 class GetAssessmentSerializer(serpy.Serializer):
-    id = serpy.Field()
+    slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
     score_threshold = serpy.Field()
     private = serpy.Field()
 
 class GetAssessmentBigSerializer(serpy.Serializer):
-    id = serpy.Field()
+    slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
     score_threshold = serpy.Field()
@@ -31,5 +43,5 @@ class GetAssessmentBigSerializer(serpy.Serializer):
     questions = serpy.MethodField()
 
     def get_questions(self, obj):
-        return GetQuestionSerializer(obj.question_set, many=True).data
+        return GetQuestionSerializer(obj.question_set.all(), many=True).data
         
