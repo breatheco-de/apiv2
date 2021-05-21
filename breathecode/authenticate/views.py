@@ -63,6 +63,23 @@ class TemporalTokenView(ObtainAuthToken):
 class AcademyTokenView(ObtainAuthToken):
     permission_classes = [IsAuthenticated]
 
+    @capable_of('get_academy_token')
+    def get(self, request, academy_id):
+        academy = Academy.objects.get(id=academy_id)
+        academy_user = User.objects.filter(username=academy.slug).first()
+        if academy_user is None:
+            raise ValidationError("No academy token has been generated yet")
+
+        token = Token.objects.filter(user=academy_user, token_type='permanent').first()
+        if token is None:
+            raise ValidationError("No academy token has been generated yet")
+
+        return Response({
+            'token': token.key,
+            'token_type': token.token_type,
+            'expires_at': token.expires_at,
+        })
+
     @capable_of('generate_academy_token')
     def post(self, request, academy_id):
 

@@ -45,6 +45,7 @@ class Command(BaseCommand):
             { "slug": "crud_media", "description": "Create, update or delete academy medias" },
             { "slug": "read_cohort_activity", "description": "Read low level activity in a cohort (attendancy, etc.)" },
             { "slug": "generate_academy_token", "description": "Create a new token only to be used by the academy" },
+            { "slug": "get_academy_token", "description": "Read the academy token" },
         ]
 
         for c in caps:
@@ -59,7 +60,7 @@ class Command(BaseCommand):
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
             { "slug": "academy_token", "name": "Academy Token", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite"] },
-            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite" ] },
+            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "get_academy_token" ] },
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort", "read_my_academy"] },
         ]
 
@@ -73,7 +74,7 @@ class Command(BaseCommand):
         roles.append({ "slug": "homework_reviewer", "name": "Homework Reviewer", "caps": extend(roles, ["assistant"]) })
         roles.append({ "slug": "teacher", "name": "Teacher", "caps": extend(roles, ["assistant"]) })
         roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": extend(roles, ["teacher"]) + ["crud_syllabus", "crud_cohort", "crud_student", "crud_survey"] })
-        roles.append({ "slug": "country_manager", "name": "Country Manager", "caps": extend(roles,["academy_coordinator", "student", "career_support", "growth_manager", "admissions_developer", "syllabus_coordinator"]) + ["crud_member", "crud_my_academy"] })
+        roles.append({ "slug": "country_manager", "name": "Country Manager", "caps": extend(roles,["academy_coordinator", "student", "career_support", "growth_manager", "admissions_developer", "syllabus_coordinator"]) + ["crud_member", "crud_my_academy", "generate_academy_token"] })
 
         for r in roles:
             _r = Role.objects.filter(slug=r["slug"]).first()
