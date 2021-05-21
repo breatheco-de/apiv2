@@ -1,4 +1,4 @@
-import hashlib, requests
+import hashlib, requests, os
 from django.shortcuts import redirect
 from breathecode.media.models import Media, Category
 from breathecode.utils import GenerateLookupsMixin
@@ -17,9 +17,10 @@ from breathecode.media.serializers import (
     GetCategorySerializer,
     CategorySerializer
 )
+from slugify import slugify
 
 
-BUCKET_NAME = "media-breathecode"
+BUCKET_NAME = os.environ.get('MEDIA_GALLERY_BUCKET', None)
 # TODO: Mimes permitidos como una constante
 
 
@@ -198,6 +199,7 @@ class UploadView(APIView):
         }
 
         file = request.data.get('file')
+
         if not file:
             raise ValidationException('Missing file in request', code=400)
 
@@ -216,7 +218,7 @@ class UploadView(APIView):
             name = names[index] if len(names) else file.name
             file_bytes = file.read()
             hash = hashlib.sha256(file_bytes).hexdigest()
-            slug = name.split('.')[0]
+            slug = slugify(name)
 
             if Media.objects.filter(slug=slug).exclude(hash=hash).count():
                 raise ValidationException('slug already exists', code=400)

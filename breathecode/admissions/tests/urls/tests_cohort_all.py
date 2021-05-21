@@ -82,6 +82,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'id': model.cohort.id,
             'slug': model.cohort.slug,
             'name': model.cohort.name,
+            'current_day': model.cohort.current_day,
             'never_ends': model['cohort'].never_ends,
             'private': model['cohort'].private,
             'kickoff_date': re.sub(r'\+00:00$', 'Z', model.cohort.kickoff_date.isoformat()),
@@ -158,6 +159,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'language': model.cohort.language,
+            'current_day': model.cohort.current_day,
             'syllabus': {
                 'version': model.cohort.syllabus.version,
                 'certificate': {
@@ -228,6 +230,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'language': model.cohort.language,
+            'current_day': model.cohort.current_day,
             'syllabus': {
                 'version': model.cohort.syllabus.version,
                 'certificate': {
@@ -280,6 +283,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'language': model.cohort.language,
+            'current_day': model.cohort.current_day,
             'syllabus': {
                 'version': model.cohort.syllabus.version,
                 'certificate': {
@@ -332,6 +336,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'language': model.cohort.language,
+            'current_day': model.cohort.current_day,
             'syllabus': {
                 'version': model.cohort.syllabus.version,
                 'certificate': {
@@ -402,6 +407,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'language': model.cohort.language,
+            'current_day': model.cohort.current_day,
             'syllabus': {
                 'version': model.cohort.syllabus.version,
                 'certificate': {
@@ -453,6 +459,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'ending_date': model.cohort.ending_date,
             'stage': model.cohort.stage,
             'language': model.cohort.language,
+            'current_day': model.cohort.current_day,
             'syllabus': {
                 'version': model.cohort.syllabus.version,
                 'certificate': {

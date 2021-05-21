@@ -78,7 +78,10 @@ def get_cohorts(request, id=None):
     if location is not None:
         items = items.filter(academy__slug__in=location.split(","))
 
-    sort = request.GET.get('sort', 'kickoff_date')
+    sort = request.GET.get('sort', None)
+    if sort is None or sort == "":
+        sort = "-kickoff_date"
+
     items = items.order_by(sort)
 
     serializer = GetCohortSerializer(items, many=True)
@@ -456,7 +459,10 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             items = items.filter(Q(name__icontains=like) |
                                  Q(slug__icontains=like))
 
-        sort = request.GET.get('sort', '-kickoff_date')
+        sort = request.GET.get('sort', None)
+        if sort is None or sort == "":
+            sort = "-kickoff_date"
+
         items = items.order_by(sort)
 
         page = self.paginate_queryset(items, request)
