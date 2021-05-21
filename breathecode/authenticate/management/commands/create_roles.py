@@ -67,7 +67,7 @@ class Command(BaseCommand):
         roles.append({ "slug": "career_support", "name": "Career Support Specialist", "caps": extend(roles, ["staff"]) + ["read_certificate", "crud_certificate"] })
         roles.append({ "slug": "admissions_developer", "name": "Admissions Developer", "caps": extend(roles, ["staff"]) + ["crud_lead","crud_student","crud_cohort", "read_cohort","read_lead", "read_event", "read_eventcheckin"] })
         roles.append({ "slug": "syllabus_coordinator", "name": "Syllabus Coordinator", "caps": extend(roles, ["staff"]) + ["crud_syllabus", "crud_media"] })
-        roles.append({ "slug": "culture_and_recruitment", "name": "Culture and Recruitment", "caps": extend(roles, ["staff"]) + "crud_member"] })
+        roles.append({ "slug": "culture_and_recruitment", "name": "Culture and Recruitment", "caps": extend(roles, ["staff"]) + ["crud_member"] })
         roles.append({ "slug": "community_manager", "name": "Manage Syllabus, Exercises and all academy content", "caps": extend(roles, ["staff"]) + ["crud_lead","read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead", "read_cohort", "crud_media"] })
         roles.append({ "slug": "growth_manager", "name": "Growth Manager", "caps": extend(roles, ["staff", "community_manager"]) + ["crud_media"] })
         roles.append({ "slug": "homework_reviewer", "name": "Homework Reviewer", "caps": extend(roles, ["assistant"]) })
