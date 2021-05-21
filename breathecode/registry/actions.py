@@ -43,6 +43,8 @@ def create_asset(data, asset_type):
         a.difficulty = data['difficulty']
     if "graded" in data:
         a.graded = data['graded']
+    if "video-id" in data:
+        a.solution_video_url = "https://www.youtube.com/watch?v="+str(data['video-id'])
     if "preview" in data:
         a.preview = data['preview']
     if "video-solutions" in data:
@@ -113,12 +115,17 @@ def sync_with_github(asset_slug, author_id):
             else:
                 raise Exception(f"Missing preview URL")
 
+            if "video-id" in config:
+                asset.solution_video_url = "https://www.youtube.com/watch?v="+str(config['video-id'])
+                asset.with_video = True
+
             if "duration" in config:
                 asset.duration =  config["duration"]
             if "difficulty" in config:
                 asset.difficulty =  config["difficulty"]
             if "solution" in config:
                 asset.solution =  config["solution"]
+                asset.with_solutions = True
             
             if "language" in config:
                 asset.lang =  config["language"]
