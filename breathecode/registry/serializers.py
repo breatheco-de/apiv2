@@ -19,6 +19,8 @@ class AssetSerializer(serpy.Serializer):
     gitpod = serpy.Field()
     preview = serpy.Field()
     readme_url = serpy.Field()
+    solution_video_url = serpy.Field()
+    intro_video_url = serpy.Field()
 
     translations = serpy.MethodField()
     technologies = serpy.MethodField()
