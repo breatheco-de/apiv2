@@ -44,8 +44,6 @@ class AssetMidSerializer(AssetSerializer):
 class AssetBigSerializer(AssetMidSerializer):
 
     description = serpy.Field()
-    intro_video_url = serpy.Field()
-    solution_video_url = serpy.Field()
 
     status_text = serpy.Field()
 
