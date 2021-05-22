@@ -1,4 +1,4 @@
-from breathecode.admissions.tasks import sync_cohort_timeslots
+from breathecode.admissions.actions import sync_cohort_timeslots
 from breathecode.admissions.caches import CohortCache
 import logging
 import re
@@ -457,12 +457,6 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if not item:
             raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
 
-        if item.parent:
-            raise ValidationException(
-                "This timeslot is readonly because is manage by a certificate time slot",
-                400,
-                slug='cohort-time-slot-is-readonly')
-
         data = {**request.data, 'id': timeslot_id, 'cohort': cohort.id}
 
         serializer = CohortTimeSlotSerializer(item, data=data)
@@ -484,6 +478,47 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         item.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
+    @capable_of('crud_certificate')
+    def post(self, request, academy_id=None):
+        cohort_ids = request.GET.get('cohort', '')
+        if not cohort_ids:
+            raise ValidationException("Missing cohort in querystring", 400, slug='missing-cohort-in-querystring')
+
+        cohort_ids = cohort_ids.split(',')
+        cohorts = Cohort.objects.filter(id__in=cohort_ids)
+
+        if len(cohorts) != len(cohort_ids):
+            raise ValidationException("Cohort not found", 404, slug='cohort-not-found')
+
+        if len([x for x in cohorts if x.syllabus]) != len(cohort_ids):
+            raise ValidationException("Cohort doesn't have any syllabus", 400, slug='cohort-without-certificate')
+
+        CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).delete()
+
+        data = []
+        for cohort in cohorts:
+            certificate_id = cohort.syllabus.certificate.id
+            certificate_timeslots = CertificateTimeSlot.objects.filter(
+                academy__id=academy_id,
+                certificate__id=certificate_id)
+
+            for certificate_timeslot in certificate_timeslots:
+                data.append({
+                    'cohort': cohort.id,
+                    'starting_at': certificate_timeslot.starting_at,
+                    'ending_at': certificate_timeslot.ending_at,
+                    'recurrent': certificate_timeslot.recurrent,
+                    'recurrency_type': certificate_timeslot.recurrency_type,
+                })
+
+        serializer = CohortTimeSlotSerializer(data=data, many=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
@@ -862,8 +897,6 @@ class SyllabusView(APIView):
                 slug='certificate-not-have-time-slots'
             )
 
-        sync_cohort_timeslots.delay(academy_id=academy_id, certificate_slug=certificate_slug)
-
         item = Syllabus.objects.filter(
             certificate__slug=certificate_slug, academy_owner__id=academy_id).order_by('version').first()
         if item is not None:
@@ -897,8 +930,6 @@ class SyllabusView(APIView):
                 'We can\’t use a Certificate if it does not have time slots',
                 slug='certificate-not-have-time-slots'
             )
-
-        sync_cohort_timeslots.delay(academy_id=academy_id, certificate_slug=certificate_slug)
 
         serializer = SyllabusSerializer(item, data=request.data, many=False)
         if serializer.is_valid():

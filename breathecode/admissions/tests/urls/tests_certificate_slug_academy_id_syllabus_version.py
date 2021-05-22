@@ -350,16 +350,6 @@ class CertificateTestSuite(AdmissionsTestCase):
             'version': model['syllabus'].version
         }])
 
-        self.assertEqual(self.all_cohort_time_slot_dict(), [{
-            'cohort_id': 1,
-            'ending_at': model.certificate_time_slot.ending_at,
-            'id': model.certificate_time_slot.id,
-            'parent_id': 1,
-            'recurrency_type': model.certificate_time_slot.recurrency_type,
-            'recurrent': model.certificate_time_slot.recurrent,
-            'starting_at': model.certificate_time_slot.starting_at,
-        }])
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -404,14 +394,4 @@ class CertificateTestSuite(AdmissionsTestCase):
             'json': data['json'],
             'private': model['syllabus'].private,
             'version': model['syllabus'].version
-        }])
-
-        self.assertEqual(self.all_cohort_time_slot_dict(), [{
-            'cohort_id': 1,
-            'ending_at': model.certificate_time_slot.ending_at,
-            'id': model.certificate_time_slot.id,
-            'parent_id': 1,
-            'recurrency_type': model.certificate_time_slot.recurrency_type,
-            'recurrent': model.certificate_time_slot.recurrent,
-            'starting_at': model.certificate_time_slot.starting_at,
         }])

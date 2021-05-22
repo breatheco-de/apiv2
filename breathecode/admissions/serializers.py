@@ -1,3 +1,4 @@
+from breathecode.admissions.actions import sync_cohort_timeslots
 import logging
 import serpy
 from django.db.models import Q
@@ -194,7 +195,6 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
     cohort = serpy.MethodField()
-    parent = serpy.MethodField()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
     recurrent = serpy.Field()
@@ -204,10 +204,6 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
 
     def get_cohort(self, obj):
         return obj.cohort.id
-
-    def get_parent(self, obj):
-        if obj.parent:
-            return obj.parent.id
 
 
 class GETCertificateTimeSlotSerializer(serpy.Serializer):
@@ -387,7 +383,9 @@ class CohortSerializer(CohortSerializerMixin):
 
     def create(self, validated_data):
         del self.context['request']
-        return Cohort.objects.create(**validated_data, **self.context)
+        cohort = Cohort.objects.create(**validated_data, **self.context)
+        sync_cohort_timeslots(cohort.id)
+        return cohort
 
 
 class CohortPUTSerializer(CohortSerializerMixin):

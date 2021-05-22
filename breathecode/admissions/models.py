@@ -279,5 +279,4 @@ class CertificateTimeSlot(TimeSlot):
 
 
 class CohortTimeSlot(TimeSlot):
-    parent = models.ForeignKey(CertificateTimeSlot, on_delete=models.CASCADE, default=None, null=True)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)

@@ -354,17 +354,8 @@ class ICalStudentView(APIView):
         if not User.objects.filter(id=user_id).count():
             raise ValidationException("Student not exist", 404, slug='student-not-exist')
 
-        cohort_users = (CohortUser.objects.filter(user_id=user_id)
+        cohort_ids = (CohortUser.objects.filter(user_id=user_id).values_list('cohort_id', flat=True)
             .exclude(cohort__stage='DELETED'))
-
-        cohort_ids = [x.cohort.id for x in cohort_users]
-        ids = [(
-            x.cohort.academy.id,
-            x.cohort.syllabus.certificate.id)
-            for x in cohort_users if x.cohort.syllabus]
-
-        for academy_id, certificate_id in ids:
-            sync_cohort_timeslots(academy_id=academy_id, certificate_id=certificate_id)
 
         items = CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).order_by('id')
         items = items

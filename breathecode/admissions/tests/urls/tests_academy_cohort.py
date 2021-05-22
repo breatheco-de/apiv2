@@ -41,6 +41,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -59,6 +60,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'status_code': 403
         })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     """
     🔽🔽🔽 Post
@@ -82,6 +84,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -105,6 +108,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -128,6 +132,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     """
     🔽🔽🔽 Post without certificate timeslots
@@ -157,6 +162,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -165,8 +171,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, user=True, profile_academy=True,
-            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True,
-            certificate_time_slot=True)
+            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True)
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
@@ -184,6 +189,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -192,8 +198,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, user=True, profile_academy=True,
-            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True,
-            certificate_time_slot=True)
+            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True)
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
@@ -214,6 +219,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -222,8 +228,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, user=True, profile_academy=True,
-            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True,
-            certificate_time_slot=True)
+            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True)
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
@@ -243,11 +248,70 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort__post(self):
+        """Test /academy/cohort without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, user=True, profile_academy=True,
+            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True)
+        models_dict = self.all_cohort_dict()
+        url = reverse_lazy('admissions:academy_cohort')
+        data = {
+            'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
+            'slug':  'they-killed-kenny',
+            'name':  'They killed kenny',
+            'kickoff_date':  datetime.today().isoformat(),
+            'never_ends': True,
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        cohort = self.get_cohort(1)
+        expected = {
+            'id': cohort.id,
+            'slug': cohort.slug,
+            'name': cohort.name,
+            'never_ends': True,
+            'kickoff_date': self.datetime_to_iso(cohort.kickoff_date),
+            'current_day': cohort.current_day,
+            'academy': {
+                'id': cohort.academy.id,
+                'slug': cohort.academy.slug,
+                'name': cohort.academy.name,
+                'street_address': cohort.academy.street_address,
+                'country': cohort.academy.country.code,
+                'city': cohort.academy.city.id,
+            },
+            'syllabus': model['certificate'].slug + '.v' + str(model['syllabus'].version),
+            'ending_date': cohort.ending_date,
+            'stage': cohort.stage,
+            'language': cohort.language,
+            'created_at': self.datetime_to_iso(cohort.created_at),
+            'updated_at': self.datetime_to_iso(cohort.updated_at),
+        }
+
+        del data['kickoff_date']
+        cohort_two = cohort.__dict__.copy()
+        cohort_two.update(data)
+        del cohort_two['syllabus']
+
+        models_dict.append(self.remove_dinamics_fields({**cohort_two, 'syllabus_id': 1}))
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+
+    """
+    🔽🔽🔽 Generate cohort timeslot when we created a cohort
+    """
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort__post__with_certificate_timeslot(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, user=True, profile_academy=True,
@@ -298,6 +362,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [{
+            'id': 1,
+            'cohort_id': model.cohort.id,
+            'starting_at': model.certificate_time_slot.starting_at,
+            'ending_at': model.certificate_time_slot.ending_at,
+            'recurrent': model.certificate_time_slot.recurrent,
+            'recurrency_type': model.certificate_time_slot.recurrency_type,
+        }])
 
     # # """
 
@@ -324,6 +396,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'status_code': status.HTTP_401_UNAUTHORIZED
         })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -343,6 +416,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.count_cohort_user(), 0)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     """
     🔽🔽🔽 Without data
@@ -363,6 +437,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort_user(), 0)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     """
     🔽🔽🔽 With data
@@ -421,6 +496,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
             x.cohort for x in models
         ]))
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
         return models
 
     """
@@ -441,6 +517,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, {'detail': 'Missing cohort_id', 'status_code': 400})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     """
     🔽🔽🔽 Get
@@ -494,6 +571,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -514,6 +592,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -565,6 +644,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -585,6 +665,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -636,6 +717,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -687,6 +769,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -747,6 +830,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
             x.cohort for x in models
         ]))
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -767,6 +851,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -818,6 +903,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -869,6 +955,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -929,6 +1016,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
             x.cohort for x in models
         ]))
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -989,6 +1077,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
             x.cohort for x in models
         ]))
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1058,6 +1147,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
             x.cohort for x in models
         ]))
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1127,6 +1217,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([
             x.cohort for x in models
         ]))
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1164,6 +1255,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1181,6 +1273,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1199,6 +1292,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1218,6 +1312,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1240,6 +1335,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), [{
             **self.model_to_dict(model, 'cohort'),
         }])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1271,6 +1367,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1314,6 +1411,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1332,6 +1430,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.test_academy_cohort__with_data(old_models)
         self.assertEqual(self.cache.keys(), cache_keys)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1358,7 +1457,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         del base['user']
 
         model = self.generate_models(authenticate=True, profile_academy=True,
-            certificate_time_slot=True, capability='crud_cohort', role='potato2',
+            capability='crud_cohort', role='potato2',
             models=base)
 
         url = reverse_lazy('admissions:academy_cohort')
@@ -1409,3 +1508,4 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.test_academy_cohort__with_data(base)
         self.assertEqual(self.cache.keys(), cache_keys)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])

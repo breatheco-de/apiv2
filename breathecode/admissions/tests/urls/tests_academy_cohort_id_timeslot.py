@@ -90,7 +90,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = [{
             'id': model.cohort_time_slot.id,
-            'parent': None,
             'cohort': model.cohort_time_slot.cohort.id,
             'starting_at': self.datetime_to_iso(model.cohort_time_slot.starting_at),
             'ending_at': self.datetime_to_iso(model.cohort_time_slot.ending_at),
@@ -162,7 +161,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort_id': 1,
             'ending_at': ending_at,
             'id': 1,
-            'parent_id': None,
             'recurrency_type': 'WEEKLY',
             'recurrent': True,
             'starting_at': starting_at,
