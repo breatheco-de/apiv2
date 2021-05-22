@@ -160,6 +160,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': True,
+            'private': False,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'current_day': model['cohort'].current_day,
@@ -376,6 +377,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': data['slug'],
             'name': data['name'],
             'never_ends': False,
+            'private': False,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
             'current_day': data['current_day'],
@@ -422,10 +424,13 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'certificate': {
                     'id': model['cohort'].syllabus.certificate.id,
@@ -491,10 +496,13 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
+            'never_ends': model['cohort'].never_ends,
+            'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'language': model['cohort'].language,
             'stage': model['cohort'].stage,
+            'current_day': model['cohort'].current_day,
             'syllabus': {
                 'certificate': {
                     'id': model['cohort'].syllabus.certificate.id,
