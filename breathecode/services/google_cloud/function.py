@@ -1,4 +1,4 @@
-import logging
+import logging, json, requests
 from urllib.request import Request, urlopen
 from google.auth.transport.requests import Request as GCRequest
 from google.oauth2.id_token import fetch_id_token
@@ -17,16 +17,13 @@ class Function:
         self.service_url = service_url
 
     def call(self, data=None):
-        req = Request(self.service_url)
-
         auth_req = GCRequest()
         id_token = fetch_id_token(auth_req, self.service_url)
 
-        req.add_header("Authorization", f"Bearer {id_token}")
+        headers = {"Authorization": f"Bearer {id_token}"}
 
         if data:
-            req.add_header("Content-Type", 'application/json')
+            headers['Content-Type'] = 'application/json'
 
-        response = urlopen(req, data)
-
-        return response.read()
+        request = requests.post(self.service_url, data=data, headers=headers)
+        return (request.content, request.status_code)

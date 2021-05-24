@@ -320,7 +320,7 @@ class MaskingUrlView(APIView):
 
         if width and height and not resolution:
             func = Function('https://us-central1-breathecode-197918.cloudfunctions.net/resize-image')
-            func.call({
+            res = func.call({
                 'width': width,
                 'height': height,
                 'filename': media.hash,
