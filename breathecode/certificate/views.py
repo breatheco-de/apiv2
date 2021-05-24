@@ -74,6 +74,7 @@ class CertificateView(APIView):
 
         cu = CohortUser.objects.filter(
             cohort__id=cohort_id, user__id=student_id, role="STUDENT", cohort__academy__id=academy_id).first()
+        
         if cu is None:
             raise serializers.ValidationError(
                 f"Student not found for this cohort", code=404)
@@ -135,16 +136,26 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
-        
-class Test(APIView):
-
+    
     @capable_of('crud_certificate')
     def post(self, request, academy_id=None):
         
-        pruebas = request.data
+        data = request.data
+        all_certs = []
+        
+        for items in data: 
+            cohort__id = items.get("cohort_id")
+            student__id = items.get("student_id")
+            cohort_user =  CohortUser.objects.filter(cohort__id=cohort__id, 
+                    user_id=student__id, role='STUDENT', cohort__academy__id=academy_id).first()
+            cert = generate_certificate(cohort_user.user, cohort_user.cohort)
+            serializer = UserSpecialtySerializer(cert, many=False)
+            all_certs.append(serializer.data)
+        
+        return Response(all_certs, status=status.HTTP_201_CREATED)
 
-        for prueba in pruebas:
-            print("@@@@@@@@@@@@2", prueba)
+
+           
 
 # class SyllabusView(APIView):
 #     """
