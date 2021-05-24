@@ -303,6 +303,12 @@ class MaskingUrlView(APIView):
 
         url = media.url
 
+        if width and height and not media.mime.startswith('image/'):
+            raise ValidationException(
+                'cannot resize this resource',
+                code=400,
+                slug='cannot-resize-media')
+
         # register click
         media.hits = media.hits + 1
         media.save()
