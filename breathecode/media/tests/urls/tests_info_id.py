@@ -107,6 +107,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail': None,
             'url': model['media'].url
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -139,6 +140,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail': None,
             'url': model['media'].url
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -241,6 +243,7 @@ class MediaTestSuite(MediaTestCase):
             'id': model['media'].id,
             'mime': model['media'].mime,
             'name': model['media'].name,
+            'thumbnail': None,
             'url': model['media'].url,
             'created_at': self.datetime_to_iso(model['media'].created_at),
             'updated_at': self.datetime_to_iso(media.updated_at),

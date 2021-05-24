@@ -27,6 +27,7 @@ class GetMediaSerializer(serpy.Serializer):
     name = serpy.Field()
     mime = serpy.Field()
     url = serpy.Field()
+    thumbnail = serpy.Field()
     hash = serpy.Field()
     hits = serpy.Field()
     categories = serpy.MethodField()
@@ -74,6 +75,7 @@ class MediaListSerializer(serializers.ListSerializer):
 class MediaPUTSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
     url = serializers.CharField(required=False)
+    thumbnail = serializers.CharField(required=False)
     hash = serializers.CharField()
     slug = serializers.SlugField()
     mime = serializers.CharField()
@@ -81,7 +83,7 @@ class MediaPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Media
-        fields = ('id', 'url', 'hash', 'hits', 'slug', 'mime', 'name',
+        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime', 'name',
             'categories', 'academy')
         exclude = ()
         list_serializer_class = MediaListSerializer

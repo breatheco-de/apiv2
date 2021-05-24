@@ -94,6 +94,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail': None,
             'url': model['media'].url
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -112,8 +113,6 @@ class MediaTestSuite(MediaTestCase):
         url = reverse_lazy('media:info_name', kwargs={'media_name': model['media'].name})
         response = self.client.get(url)
         json = response.json()
-        self.print_model(model, 'media')
-        self.print_model(model, 'category')
 
         self.assertEqual(json, {
             'categories': [{
@@ -128,6 +127,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail': None,
             'url': model['media'].url
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)

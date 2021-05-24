@@ -151,6 +151,7 @@ class MediaTestSuite(MediaTestCase):
                 'mime': 'image/png',
                 'name': 'filename.jpg',
                 'slug': 'filename-jpg',
+                'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }]
 
@@ -164,6 +165,7 @@ class MediaTestSuite(MediaTestCase):
                 'mime': 'image/png',
                 'name': 'filename.jpg',
                 'slug': 'filename-jpg',
+                'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }])
 
@@ -207,6 +209,7 @@ class MediaTestSuite(MediaTestCase):
                 'mime': 'image/png',
                 'name': 'filename.jpg',
                 'slug': 'filename-jpg',
+                'thumbnail': None,
                 'url': model['media'].url,
             }]
 
@@ -294,6 +297,7 @@ class MediaTestSuite(MediaTestCase):
                 'mime': 'image/png',
                 'name': 'filename.jpg',
                 'slug': 'filename-jpg',
+                'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }]
 
@@ -307,6 +311,7 @@ class MediaTestSuite(MediaTestCase):
                 'mime': 'image/png',
                 'name': 'filename.jpg',
                 'slug': 'filename-jpg',
+                'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }])
 
@@ -353,6 +358,7 @@ class MediaTestSuite(MediaTestCase):
                 'mime': 'image/png',
                 'name': 'filename.jpg',
                 'slug': 'filename-jpg',
+                'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }]
 
@@ -366,6 +372,7 @@ class MediaTestSuite(MediaTestCase):
                 'mime': 'image/png',
                 'name': 'filename.jpg',
                 'slug': 'filename-jpg',
+                'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }])
 
@@ -423,6 +430,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': 'image/png',
             'name': 'filename1.jpg',
             'slug': 'filename1-jpg',
+            'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
             'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         }, {
             'academy': 1,
@@ -433,6 +441,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': 'image/png',
             'name': 'filename2.jpg',
             'slug': 'filename2-jpg',
+            'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
             'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         }]
 
@@ -446,6 +455,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': 'image/png',
             'name': 'filename1.jpg',
             'slug': 'filename1-jpg',
+            'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
             'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         }, {
             'academy_id': 1,
@@ -455,6 +465,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': 'image/png',
             'name': 'filename2.jpg',
             'slug': 'filename2-jpg',
+            'thumbnail': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url-thumbnail',
             'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         }])
 

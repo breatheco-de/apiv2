@@ -12,6 +12,9 @@ urlpatterns = [
     path('file/<int:media_id>', MaskingUrlView.as_view(), name='file_id'),
     path('file/<slug:media_slug>', MaskingUrlView.as_view(), name='file_slug'),
 
+    path('file/<int:media_id>-<int:width>x<int:height>', MaskingUrlView.as_view(), name='file_id_width_x_height'),
+    path('file/<slug:media_slug>-<int:width>x<int:height>', MaskingUrlView.as_view(), name='file_slug_width_x_height'),
+
     path('upload', UploadView.as_view(), name='upload'),
 
     path('category', CategoryView.as_view(), name='category'),

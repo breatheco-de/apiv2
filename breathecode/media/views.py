@@ -1,6 +1,7 @@
+from breathecode.services.google_cloud.function import Function
 import hashlib, requests
 from django.shortcuts import redirect
-from breathecode.media.models import Media, Category
+from breathecode.media.models import Media, Category, MediaResolution
 from breathecode.utils import GenerateLookupsMixin
 from rest_framework.views import APIView
 from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
@@ -257,6 +258,7 @@ class UploadView(APIView):
                     cloud_file = storage.file(BUCKET_NAME, hash)
                     cloud_file.upload(file_bytes)
                     data['url'] = cloud_file.url()
+                    data['thumbnail'] = data['url'] + '-thumbnail'
 
             result['data'].append(data)
 
@@ -288,7 +290,7 @@ class MaskingUrlView(APIView):
     parser_classes = [FileUploadParser]
     permission_classes = [AllowAny]
 
-    def get(self, request, media_id=None, media_slug=None):
+    def get(self, request, media_id=None, media_slug=None, width=None, height=None):
         lookups = {}
         if media_id:
             lookups['id'] = media_id
@@ -304,6 +306,30 @@ class MaskingUrlView(APIView):
         # register click
         media.hits = media.hits + 1
         media.save()
+
+        resolution = MediaResolution.objects.filter(
+            width=width,
+            height=height,
+            hash=media.hash).first()
+
+        if width and height and not resolution:
+            func = Function('https://us-central1-breathecode-197918.cloudfunctions.net/resize-image')
+            func.call({
+                'width': width,
+                'height': height,
+                'filename': media.hash,
+                'bucket': BUCKET_NAME,
+            })
+            resolution = MediaResolution(
+                width=width,
+                height=height,
+                hash=media.hash)
+            resolution.save()
+
+        if width and height:
+            url = f'{url}-{width}x{height}'
+            resolution.hits = resolution.hits + 1
+            resolution.save()
 
         if request.GET.get('mask') != 'true':
             return redirect(url, permanent=True)
