@@ -33,7 +33,7 @@ def mark_as(queryset, status, request):
             if i.bill is not None and i.bill.status != 'DUE':
                 raise Exception(f"Github {i.github_number} cannot be updated because it was already approved for payment")
             freelancers[i.freelancer.id] = i.freelancer
-            i.status = 'DONE'
+            i.status = status
             i.save()
 
         for freelancer_id in freelancers:
