@@ -31,7 +31,11 @@ class GetMediaSerializer(serpy.Serializer):
     hash = serpy.Field()
     hits = serpy.Field()
     categories = serpy.MethodField()
+    thumbnail_url = serpy.MethodField()
     owner = GetUserSerializer(required=False)
+    
+    def get_thumbnail_url(self, obj):
+        return obj.url + "-thumb"
 
     def get_categories(self, obj):
         return [GetCategorySerializer(x).data for x in obj.categories.all()]
