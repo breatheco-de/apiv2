@@ -1,5 +1,6 @@
 from breathecode.admissions.models import Academy
 from .models import Media, Category
+from slugify import slugify
 from rest_framework import serializers
 import serpy
 
@@ -95,6 +96,14 @@ class MediaPUTSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    slug = serializers.SlugField(required=False)
+    name = serializers.CharField()
     class Meta:
         model = Category
-        exclude = ()
+        fields = ('name', 'slug')
+        
+    def create(self, validated_data):
+
+        _slug = slugify(validated_data["name"])
+        result = super().create({ **validated_data, "slug": _slug })
+        return result
