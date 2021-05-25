@@ -25,19 +25,13 @@ strings = {
 }
 
 def generate_certificate(user, cohort=None):
-    
-    print(user, cohort)
 
     query = {
         'user__id': user.id
     }
 
-    print(query)
-
     if cohort:
         query['cohort__id'] = cohort.id
-
-    print(cohort)
 
     cohort_user = CohortUser.objects.filter(**query).first()
 

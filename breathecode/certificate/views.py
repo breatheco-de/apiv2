@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework import status, serializers
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
-from .tasks import take_screenshot
+from .tasks import take_screenshot, generate_one_certificate
 from .actions import generate_certificate
 
 logger = logging.getLogger(__name__)
@@ -139,20 +139,24 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
     
     @capable_of('crud_certificate')
     def post(self, request, academy_id=None):
-        
+        is_many = isinstance(request.data, list)
         data = request.data
-        all_certs = []
+        cohort_users = []
+      
+        if is_many:
+            for items in data:
+                cohort__id = items.get("cohort_id")
+                student__id = items.get("student_id")
+                if CohortUser.objects.filter(cohort__id=cohort__id, user_id=student__id).exists():
+                    cohort_user =  CohortUser.objects.filter(cohort__id=cohort__id, 
+                            user_id=student__id, role='STUDENT', cohort__academy__id=academy_id).first()
+                    cohort_users.append(cohort_user)
+                else:
+                    raise ValidationException(f'Cohort user with cohort_id:{str(cohort__id)} and student_id:{str(student__id)} not found', 404)
         
-        for items in data: 
-            cohort__id = items.get("cohort_id")
-            student__id = items.get("student_id")
-            cohort_user =  CohortUser.objects.filter(cohort__id=cohort__id, 
-                    user_id=student__id, role='STUDENT', cohort__academy__id=academy_id).first()
-            cert = generate_certificate(cohort_user.user, cohort_user.cohort)
-            serializer = UserSpecialtySerializer(cert, many=False)
-            all_certs.append(serializer.data)
-        
-        return Response(all_certs, status=status.HTTP_201_CREATED)
+        for cu in cohort_users:
+            generate_one_certificate.delay(cu.cohort_id, cu.user_id)
+        return Response({'detail': "The certificates have been scheduled for generation"})
 
 
            
