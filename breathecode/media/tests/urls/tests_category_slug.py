@@ -201,10 +201,11 @@ class MediaTestSuite(MediaTestCase):
 
         category = self.get_category(1)
 
+        self.assertDatetime(json['created_at'])
+        del json['created_at']
+
         self.assertEqual(json, {
             'id': 1,
-            'created_at': self.datetime_to_iso(model['category'].created_at),
-            'updated_at': self.datetime_to_iso(category.updated_at),
             **data,
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
