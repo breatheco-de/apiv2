@@ -25,7 +25,6 @@ strings = {
 }
 
 def generate_certificate(user, cohort=None):
-
     query = {
         'user__id': user.id
     }
