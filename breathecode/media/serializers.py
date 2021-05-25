@@ -100,11 +100,14 @@ class MediaPUTSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
     slug = serializers.SlugField(required=False)
     name = serializers.CharField()
+    created_at = serializers.DateTimeField(read_only=True)
+    
     class Meta:
         model = Category
-        fields = ('name', 'slug')
+        fields = ('name', 'slug','created_at', 'id')
         
     def create(self, validated_data):
 
