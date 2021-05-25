@@ -279,7 +279,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of('crud_student')
+    @capable_of('crud_member')
     def delete(self, request, academy_id=None, user_id=None):
         lookups = self.generate_lookups(
             request,
