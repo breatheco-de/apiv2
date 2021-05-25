@@ -161,8 +161,13 @@ class MediaTestSuite(MediaTestCase):
                 'hits': 0,
                 'id': 1,
                 'mime': 'image/png',
+<<<<<<< HEAD
                 'name': 'filename.png',
                 'slug': 'filename-png',
+=======
+                'name': 'filename.jpg',
+                'slug': 'filename-jpg',
+>>>>>>> 35cf58cc80283711a61c786a8d8e347f38e4dfa0
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }]
 
@@ -174,10 +179,15 @@ class MediaTestSuite(MediaTestCase):
                 'hits': 0,
                 'id': 1,
                 'mime': 'image/png',
+<<<<<<< HEAD
                 'name': 'filename.png',
                 'slug': 'filename',
                 'name': 'filename.png',
                 'slug': 'filename-png',
+=======
+                'name': 'filename.jpg',
+                'slug': 'filename-jpg',
+>>>>>>> 35cf58cc80283711a61c786a8d8e347f38e4dfa0
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }])
 
@@ -253,7 +263,11 @@ class MediaTestSuite(MediaTestCase):
         with open(file.name, 'rb') as data:
             hash = hashlib.sha256(data.read()).hexdigest()
 
+<<<<<<< HEAD
         media_kwargs = {'slug': 'filename-jpg'}
+=======
+        media_kwargs={'slug': 'filename-jpg'}
+>>>>>>> 35cf58cc80283711a61c786a8d8e347f38e4dfa0
         model = self.generate_models(authenticate=True, profile_academy=True,
                                      capability='crud_media', role='potato', media=True,
                                      media_kwargs=media_kwargs)
