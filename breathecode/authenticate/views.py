@@ -171,7 +171,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
-    def get(self, request, user_id):
+    def get(self, request):
 
         if request.user is None:
             raise ValidationException("User not found", 404)

@@ -175,8 +175,6 @@ class MediaTestSuite(MediaTestCase):
                 'id': 1,
                 'mime': 'image/png',
                 'name': 'filename.png',
-                'slug': 'filename',
-                'name': 'filename.png',
                 'slug': 'filename-png',
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }])
