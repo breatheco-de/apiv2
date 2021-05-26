@@ -143,7 +143,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
             many_fields=['id']
         )
 
-        print(lookups)
+        ids = lookups['id__in']
         if lookups and (user_id or cohort_id):
             raise ValidationException('user_id or cohort_id was provided in url '
                                       'in bulk mode request, use querystring style instead', code=400)
@@ -152,23 +152,15 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
             items = UserSpecialty.objects.filter(
                 **lookups, academy__id=academy_id)
 
+            print(items)
+            if len(items) == 0:
+                raise ValidationException(
+                    f"No user specialties for deletion were found with following id: {','.join(ids)}", code=400)
+
             for item in items:
                 item.delete()
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
-
-        if cohort_id is None or user_id is None:
-            raise ValidationException("Missing user_id or cohort_id", code=400)
-
-        us = UserSpecialty.objects.filter(user__id=user_id, cohort__id=cohort_id,
-                                          cohort__academy__id__in=academy_id).first()
-        if us is None:
-            raise ValidationException(
-                'Specified cohort and user could not be found')
-
-        us.delete()
-        return Response(None, status=status.HTTP_204_NO_CONTENT)
-
 
 # class SyllabusView(APIView):
 #     """
