@@ -219,7 +219,7 @@ class MediaTestSuite(MediaTestCase):
                 'id': model['media'].id,
                 'mime': 'image/png',
                 'name': 'filename.jpg',
-                'slug': 'filename',
+                'slug': 'filename-jpg',
                 'url': model['media'].url,
             }]
 
@@ -230,7 +230,7 @@ class MediaTestSuite(MediaTestCase):
                 'hash': hash,
                 'mime': 'image/png',
                 'name': 'filename.jpg',
-                'slug': 'filename',
+                'slug': 'filename-jpg',
             }])
 
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
@@ -307,7 +307,7 @@ class MediaTestSuite(MediaTestCase):
                 'id': 1,
                 'mime': 'image/png',
                 'name': 'filename.jpg',
-                'slug': 'filename',
+                'slug': 'filename-jpg',
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }]
 
@@ -320,7 +320,7 @@ class MediaTestSuite(MediaTestCase):
                 'id': 1,
                 'mime': 'image/png',
                 'name': 'filename.jpg',
-                'slug': 'filename',
+                'slug': 'filename-jpg',
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }])
 
@@ -366,7 +366,7 @@ class MediaTestSuite(MediaTestCase):
                 'id': 1,
                 'mime': 'image/png',
                 'name': 'filename.jpg',
-                'slug': 'filename',
+                'slug': 'filename-jpg',
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }]
 
@@ -379,7 +379,7 @@ class MediaTestSuite(MediaTestCase):
                 'id': 1,
                 'mime': 'image/png',
                 'name': 'filename.jpg',
-                'slug': 'filename',
+                'slug': 'filename-jpg',
                 'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
             }])
 
@@ -438,7 +438,7 @@ class MediaTestSuite(MediaTestCase):
             'id': 1,
             'mime': 'image/png',
             'name': 'filename1.jpg',
-            'slug': 'filename1',
+            'slug': 'filename1-jpg',
             'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         }, {
             'academy': 1,
@@ -448,7 +448,7 @@ class MediaTestSuite(MediaTestCase):
             'id': 2,
             'mime': 'image/png',
             'name': 'filename2.jpg',
-            'slug': 'filename2',
+            'slug': 'filename2-jpg',
             'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         }]
 
@@ -461,7 +461,7 @@ class MediaTestSuite(MediaTestCase):
             'id': 1,
             'mime': 'image/png',
             'name': 'filename1.jpg',
-            'slug': 'filename1',
+            'slug': 'filename1-jpg',
             'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         }, {
             'academy_id': 1,
@@ -470,7 +470,7 @@ class MediaTestSuite(MediaTestCase):
             'id': 2,
             'mime': 'image/png',
             'name': 'filename2.jpg',
-            'slug': 'filename2',
+            'slug': 'filename2-jpg',
             'url': 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         }])
 

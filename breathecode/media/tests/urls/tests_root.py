@@ -103,6 +103,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -135,6 +136,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -189,6 +191,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -211,6 +214,8 @@ class MediaTestSuite(MediaTestCase):
         models = [self.generate_models(academy=True, media=True, category=True, models=base)
             for _ in range(0, 2)]
 
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
+
         url = (reverse_lazy('media:root') + '?academy=' +
             str(models[0]['media'].academy.id) + ',' + str(models[1]['media'].academy.id))
         response = self.client.get(url)
@@ -228,8 +233,9 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
-        } for model in models])
+        } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{
@@ -283,6 +289,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -303,6 +310,8 @@ class MediaTestSuite(MediaTestCase):
         models = [self.generate_models(media=True, category=True, models=base)
             for _ in range(0, 2)]
 
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
+
         url = reverse_lazy('media:root') + '?mime=' + models[0]['media'].mime + ',' + models[1]['media'].mime
         response = self.client.get(url)
         json = response.json()
@@ -319,8 +328,9 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
-        } for model in models])
+        } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{
@@ -374,6 +384,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -394,6 +405,8 @@ class MediaTestSuite(MediaTestCase):
         models = [self.generate_models(media=True, category=True, models=base)
             for _ in range(0, 2)]
 
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
+
         url = (reverse_lazy('media:root') + '?name=' + models[0]['media'].name +
             ',' + models[1]['media'].name)
         response = self.client.get(url)
@@ -411,8 +424,9 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
-        } for model in models])
+        } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{
@@ -466,6 +480,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -486,6 +501,8 @@ class MediaTestSuite(MediaTestCase):
         models = [self.generate_models(media=True, category=True, models=base)
             for _ in range(0, 2)]
 
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
+
         url = (reverse_lazy('media:root') + '?slug=' + models[0]['media'].slug +
             ',' + models[1]['media'].slug)
         response = self.client.get(url)
@@ -503,8 +520,9 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
-        } for model in models])
+        } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{
@@ -558,6 +576,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -578,6 +597,8 @@ class MediaTestSuite(MediaTestCase):
         models = [self.generate_models(media=True, category=True, models=base)
             for _ in range(0, 2)]
 
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
+
         url = (reverse_lazy('media:root') + '?id=' + str(models[0]['media'].id) +
             ',' + str(models[1]['media'].id))
         response = self.client.get(url)
@@ -595,8 +616,9 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
-        } for model in models])
+        } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{
@@ -650,6 +672,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -670,6 +693,8 @@ class MediaTestSuite(MediaTestCase):
         models = [self.generate_models(media=True, category=True, models=base)
             for _ in range(0, 2)]
 
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
+
         url = (reverse_lazy('media:root') + '?categories=1,2')
         response = self.client.get(url)
         json = response.json()
@@ -686,8 +711,9 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
-        } for model in models])
+        } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{
@@ -743,6 +769,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -753,7 +780,6 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Like in querystring
     """
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -799,6 +825,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -833,6 +860,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -841,9 +869,51 @@ class MediaTestSuite(MediaTestCase):
         }])
 
     """
+    🔽🔽🔽 Sort in querystring
+    """
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_root__with_category__with_sort_in_querystring(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        media_kwargs = {'name': 'Freyja'}
+        base = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_media', role='potato')
+
+        models = [self.generate_models(media=True, category=True, models=base,
+            media_kwargs=media_kwargs) for _ in range(2)]
+
+        ordened_models = sorted(models, key=lambda x: x['media'].id, reverse=True)
+
+        url = reverse_lazy('media:root') + '?sort=-id'
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [{
+            'categories': [{
+                'id': model['category'].id,
+                'medias': 1,
+                'name': model['category'].name,
+                'slug': model['category'].slug,
+            }],
+            'hash': model['media'].hash,
+            'hits': model['media'].hits,
+            'id': model['media'].id,
+            'mime': model['media'].mime,
+            'name': model['media'].name,
+            'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
+            'url': model['media'].url
+        } for model in ordened_models])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media')
+        } for model in models])
+
+    """
     🔽🔽🔽 Pagination tests
     """
-
     def test_root__pagination__with_105(self):
         """Test /academy/student"""
         self.headers(academy=1)
@@ -853,6 +923,9 @@ class MediaTestSuite(MediaTestCase):
 
         models = [self.generate_models(media=True, models=base)
             for _ in range(0, 105)]
+
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
+
         url = reverse_lazy('media:root')
         response = self.client.get(url)
         json = response.json()
@@ -864,8 +937,9 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
-        } for model in models if model['media'].id < 101]
+        } for model in ordened_models[:100]]
 
         self.assertEqual(json, expected)
         self.assertEqual(self.all_media_dict(), [{
@@ -881,6 +955,9 @@ class MediaTestSuite(MediaTestCase):
 
         models = [self.generate_models(media=True, models=base)
             for _ in range(0, 10)]
+
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
+
         url = reverse_lazy('media:root') + '?limit=5&offset=0'
         response = self.client.get(url)
         json = response.json()
@@ -898,8 +975,9 @@ class MediaTestSuite(MediaTestCase):
                 'mime': model['media'].mime,
                 'name': model['media'].name,
                 'slug': model['media'].slug,
+                'thumbnail_url': f'{model.media.url}-thumbnail',
                 'url': model['media'].url
-            } for model in models if model['media'].id < 6]
+            } for model in ordened_models[:5]]
         }
 
         self.assertEqual(json, expected)
@@ -916,6 +994,9 @@ class MediaTestSuite(MediaTestCase):
 
         models = [self.generate_models(media=True, models=base)
             for _ in range(0, 10)]
+
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
+
         url = reverse_lazy('media:root') + '?limit=5&offset=5'
         response = self.client.get(url)
         json = response.json()
@@ -933,8 +1014,9 @@ class MediaTestSuite(MediaTestCase):
                 'mime': model['media'].mime,
                 'name': model['media'].name,
                 'slug': model['media'].slug,
+                'thumbnail_url': f'{model.media.url}-thumbnail',
                 'url': model['media'].url
-            } for model in models if model['media'].id > 5]
+            } for model in ordened_models[5:]]
         }
 
         self.assertEqual(json, expected)

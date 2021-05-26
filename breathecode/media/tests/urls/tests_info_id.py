@@ -107,6 +107,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -139,6 +140,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail_url': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -1,5 +1,6 @@
 from breathecode.admissions.models import Academy
 from .models import Media, Category
+from slugify import slugify
 from rest_framework import serializers
 import serpy
 
@@ -30,7 +31,11 @@ class GetMediaSerializer(serpy.Serializer):
     hash = serpy.Field()
     hits = serpy.Field()
     categories = serpy.MethodField()
+    thumbnail_url = serpy.MethodField()
     owner = GetUserSerializer(required=False)
+
+    def get_thumbnail_url(self, obj):
+        return obj.url + "-thumbnail"
 
     def get_categories(self, obj):
         return [GetCategorySerializer(x).data for x in obj.categories.all()]
@@ -95,6 +100,17 @@ class MediaPUTSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+    slug = serializers.SlugField(required=False)
+    name = serializers.CharField()
+    created_at = serializers.DateTimeField(read_only=True)
+
     class Meta:
         model = Category
-        exclude = ()
+        fields = ('name', 'slug','created_at', 'id')
+
+    def create(self, validated_data):
+
+        _slug = slugify(validated_data["name"])
+        result = super().create({ **validated_data, "slug": _slug })
+        return result
