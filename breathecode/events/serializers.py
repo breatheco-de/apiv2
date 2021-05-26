@@ -2,13 +2,16 @@ from .models import Event
 from rest_framework import serializers
 import serpy
 
+
 class CitySerializer(serpy.Serializer):
     name = serpy.Field()
+
 
 class UserSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+
 
 class AcademySerializer(serpy.Serializer):
     id = serpy.Field()
@@ -16,16 +19,19 @@ class AcademySerializer(serpy.Serializer):
     name = serpy.Field()
     city = CitySerializer(required=False)
 
+
 class EventTypeSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+
 
 class EventTypeSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
     academy = AcademySerializer(required=False)
+
 
 class VenueSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -35,12 +41,14 @@ class VenueSerializer(serpy.Serializer):
     zip_code = serpy.Field()
     state = serpy.Field()
 
+
 class EventTinySerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
     event_type = EventTypeSmallSerializer(required=False)
+
 
 class EventSmallSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -74,12 +82,16 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     online_event = serpy.Field()
     venue = VenueSerializer(required=False)
 
+
 class EventCheckinSerializer(serpy.Serializer):
     id = serpy.Field()
     email = serpy.Field()
     status = serpy.Field()
+    created_at = serpy.Field()
+    attended_at = serpy.Field()
     attendee = UserSerializer(required=False)
     event = EventTinySerializer()
+
 
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
