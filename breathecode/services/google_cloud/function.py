@@ -14,16 +14,15 @@ class Function:
 
     def __init__(self, service_url):
         resolve_credentials()
-        self.service_url = service_url
+        self.service_url = service_url.replace('https://', '').replace('http://', '')
 
     def call(self, data=None):
         auth_req = GCRequest()
         id_token = fetch_id_token(auth_req, self.service_url)
-
-        headers = {"Authorization": f"Bearer {id_token}"}
+        headers = {"Authorization": f"bearer {id_token}"}
 
         if data:
             headers['Content-Type'] = 'application/json'
 
-        request = requests.post(self.service_url, data=data, headers=headers)
+        request = requests.post('https://' + self.service_url, data=data, headers=headers)
         return (request.content, request.status_code)

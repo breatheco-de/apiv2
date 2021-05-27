@@ -1,5 +1,5 @@
+import os, hashlib, requests, logging
 from breathecode.services.google_cloud.function import Function
-import hashlib, requests
 from django.shortcuts import redirect
 from breathecode.media.models import Media, Category, MediaResolution
 from breathecode.utils import GenerateLookupsMixin
@@ -21,8 +21,12 @@ from breathecode.media.serializers import (
 from slugify import slugify
 
 
-BUCKET_NAME = "media-breathecode"
-# TODO: Mimes permitidos como una constante
+logger = logging.getLogger(__name__)
+
+
+BUCKET_NAME = os.getenv('MEDIA_GALLERY_BUCKET')
+if not BUCKET_NAME:
+    logger.error('MEDIA_GALLERY_BUCKET is not in your environment')
 
 
 class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
