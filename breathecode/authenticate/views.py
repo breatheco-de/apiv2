@@ -34,7 +34,7 @@ from breathecode.utils import localize_query, capable_of, ValidationException, H
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
-    RoleSmallSerializer, UserMeSerializer, UserInviteSerializer
+    RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, ProfileAcademySmallSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -183,6 +183,46 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
+
+    def put(self, request):
+        lookups = self.generate_lookups(
+            request,
+            many_fields=['id']
+        )
+
+        if lookups:
+            items = UserInvite.objects.filter(**lookups)
+
+            for item in items:
+
+                item.status = 'ACCEPTED'
+                item.save()
+
+                profile_academy = ProfileAcademy.objects.filter(
+                    email=item.email)
+
+                if len(profile_academy) == 0:
+
+                    profile_academy = {
+                        'cohort': item.cohort.id,
+                        'invite': True,
+                        'status': item.status,
+                        'email': item.email,
+                        'role': 'STUDENT',
+                        'first_name': item.first_name,
+                        'last_name': item.last_name,
+                    }
+                    serializer = StudentPOSTSerializer(data=profile_academy, context={
+                        'academy_id': item.academy.id,
+                        "request": request
+                    })
+
+                    if serializer.is_valid():
+                        serializer.save()
+                        return Response(serializer.data, status=status.HTTP_201_CREATED)
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response(None, status=status.HTTP_200_OK)
 
 
 class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
