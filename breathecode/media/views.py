@@ -64,10 +64,18 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         lookups = self.generate_lookups(
             request,
             many_fields=['mime', 'name', 'slug', 'id'],
-            many_relationships=['academy', 'categories']
+            many_relationships=['academy']
         )
 
         items = Media.objects.filter(**lookups)
+
+        # filter media by all categories, if one request have category 1 and 2,
+        # if just get the media is in all the categories passed
+        categories = request.GET.get('categories')
+        if categories:
+            categories = categories.split(',')
+            for category in categories:
+                items = items.filter(categories__pk=category)
 
         tp = request.GET.get('type')
         if tp:

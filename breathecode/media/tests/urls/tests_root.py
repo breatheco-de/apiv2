@@ -683,7 +683,7 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_root__with_category__with_two_categories_in_querystring(self):
+    def test_root__with_category__with_two_categories_in_querystring__return_nothing(self):
         """Test /answer without auth"""
         self.headers(academy=1)
 
@@ -693,6 +693,37 @@ class MediaTestSuite(MediaTestCase):
         models = [self.generate_models(media=True, category=True, models=base)
             for _ in range(0, 2)]
 
+        url = (reverse_lazy('media:root') + '?categories=1,2')
+        response = self.client.get(url)
+        json = response.json()
+        self.assertEqual(json, [])
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media')
+        } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_root__with_category__with_two_categories_in_querystring(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+
+        base = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_media', role='potato')
+
+        categories = [self.generate_models(category=True).category
+            for _ in range(0, 2)]
+
+        category1 = categories[0]
+        category2 = categories[1]
+
+        media_kwargs = {'categories': [x.id for x in categories]}
+
+        models = [self.generate_models(media=True, models=base,
+            media_kwargs=media_kwargs) for _ in range(0, 2)]
+
         ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
         url = (reverse_lazy('media:root') + '?categories=1,2')
@@ -700,10 +731,15 @@ class MediaTestSuite(MediaTestCase):
         json = response.json()
         self.assertEqual(json, [{
             'categories': [{
-                'id': model['category'].id,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
+                'id': category1.id,
+                'medias': 2,
+                'name': category1.name,
+                'slug': category1.slug,
+            }, {
+                'id': category2.id,
+                'medias': 2,
+                'name': category2.name,
+                'slug': category2.slug,
             }],
             'hash': model['media'].hash,
             'hits': model['media'].hits,
