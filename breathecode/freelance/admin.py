@@ -66,9 +66,8 @@ class FreelancerAdmin(admin.ModelAdmin):
 
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
-    search_fields = ['title']
+    search_fields = ['title', 'freelancer__user__email', 'freelancer__user__first_name', 'freelancer__user__last_name']
     list_display = ('id', 'github_number', 'freelancer', 'title', 'status', 'duration_in_hours', 'bill_id', 'github_url')
-    list_filter = ['status', 'bill__status']
     list_filter = ['status', 'bill__status']
     actions = [mask_as_todo, mask_as_done, mask_as_ignored]
     def github_url(self,obj):
