@@ -249,9 +249,7 @@ class MediaTestSuite(MediaTestCase):
         }
 
         self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
         del json['created_at']
-        del json['updated_at']
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

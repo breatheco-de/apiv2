@@ -103,7 +103,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -136,7 +136,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -191,7 +191,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -233,7 +233,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         } for model in ordened_models])
 
@@ -289,7 +289,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -328,7 +328,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         } for model in ordened_models])
 
@@ -384,7 +384,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -424,8 +424,8 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
-            'url': model['media'].url,
+            'thumbnail': f'{model.media.url}-thumbnail',
+            'url': model['media'].url
         } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -480,7 +480,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -520,7 +520,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         } for model in ordened_models])
 
@@ -576,7 +576,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -616,7 +616,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         } for model in ordened_models])
 
@@ -672,7 +672,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -747,7 +747,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         } for model in ordened_models])
 
@@ -805,7 +805,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -861,7 +861,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -896,7 +896,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -939,7 +939,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         } for model in ordened_models])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -973,7 +973,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
-            'thumbnail': model['media'].thumbnail,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         } for model in ordened_models[:100]]
 
@@ -1011,7 +1011,7 @@ class MediaTestSuite(MediaTestCase):
                 'mime': model['media'].mime,
                 'name': model['media'].name,
                 'slug': model['media'].slug,
-                'thumbnail': model['media'].thumbnail,
+                'thumbnail': f'{model.media.url}-thumbnail',
                 'url': model['media'].url
             } for model in ordened_models[:5]]
         }
@@ -1050,7 +1050,7 @@ class MediaTestSuite(MediaTestCase):
                 'mime': model['media'].mime,
                 'name': model['media'].name,
                 'slug': model['media'].slug,
-                'thumbnail': model['media'].thumbnail,
+                'thumbnail': f'{model.media.url}-thumbnail',
                 'url': model['media'].url
             } for model in ordened_models[5:]]
         }
