@@ -232,6 +232,31 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
 
+    @capable_of('crud_invite')
+    def delete(self, request):
+        lookups = self.generate_lookups(
+            request,
+            many_fields=['id']
+        )
+
+        if lookups:
+            items = UserInvite.objects.filter(**lookups)
+
+            for item in items:
+
+                profile_academy = ProfileAcademy.objects.filter(
+                    email=item.email, academy__id=item.academy.id)
+
+                if len(profile_academy) > 0:
+                    profile_academy.delete()
+                    item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        else:
+            raise ValidationException(
+                "Invite ids were not provided", 404, slug="missing_ids")
+
 
 class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
