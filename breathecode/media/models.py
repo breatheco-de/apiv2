@@ -1,6 +1,8 @@
+import re
 from breathecode.admissions.models import Academy
 from django.contrib.auth.models import User
 from django.db import models
+from slugify import slugify
 
 
 class Category(models.Model):

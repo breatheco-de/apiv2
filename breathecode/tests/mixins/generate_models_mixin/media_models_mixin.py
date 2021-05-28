@@ -25,7 +25,6 @@ class MediaModelsMixin(ModelsMixin):
                 kargs['academy'] = models['academy']
 
             kargs = {**kargs, **media_kwargs}
-            print('aaaa', media_kwargs)
             models['media'] = mixer.blend('media.Media', **kargs)
 
         return models
