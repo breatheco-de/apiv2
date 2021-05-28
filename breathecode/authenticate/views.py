@@ -192,6 +192,8 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             many_fields=['id']
         )
 
+        print("printing items", lookups)
+
         if lookups and user_id:
             raise ValidationException('user_id or cohort_id was provided in url '
                                       'in bulk mode request, use querystring style instead', code=400)
@@ -201,6 +203,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                                   academy__id=academy_id).exclude(role__slug="student")
 
             for item in items:
+
                 item.delete()
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -211,6 +214,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             raise ValidationException("Member not found", 404)
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
 
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
@@ -244,6 +248,7 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
+
 
 class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
@@ -336,6 +341,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                 **lookups, academy__id=academy_id, role__slug='student')
 
             for item in items:
+
                 item.delete()
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -543,13 +549,15 @@ def save_github_token(request):
 
             # TODO: if user_id: User.objects.filter(id=user_id).first()
 
-            user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(email__iexact=github_user['email'])).first()
+            user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(
+                email__iexact=github_user['email'])).first()
             if user is None:
                 user = User(
                     username=github_user['email'], email=github_user['email'])
                 user.save()
 
-            CredentialsGithub.objects.filter(github_id=github_user['id']).delete()
+            CredentialsGithub.objects.filter(
+                github_id=github_user['id']).delete()
             github_credentials = CredentialsGithub(
                 github_id=github_user['id'],
                 user=user,
@@ -981,7 +989,7 @@ class AcademyInviteView(APIView):
     def put(self, request, pa_id=None, academy_id=None):
         if pa_id is not None:
             profile_academy = ProfileAcademy.objects.filter(
-                 id=pa_id).first()
+                id=pa_id).first()
 
             if profile_academy is None:
                 raise ValidationException("Member not found", 400)
@@ -1013,7 +1021,8 @@ def render_invite(request, token, member_id=None):
 
     if request.method == 'GET':
 
-        invite = UserInvite.objects.filter(token=token, status='PENDING').first()
+        invite = UserInvite.objects.filter(
+            token=token, status='PENDING').first()
         if invite is None:
             return render(request, 'message.html', {
                 'message': 'Invitation noot found with this token or it was already accepted'
@@ -1040,7 +1049,8 @@ def render_invite(request, token, member_id=None):
                 'form': form,
             })
 
-        invite = UserInvite.objects.filter(token=str(token), status='PENDING').first()
+        invite = UserInvite.objects.filter(
+            token=str(token), status='PENDING').first()
         if invite is None:
             messages.error(
                 request, 'Invalid or expired invitation'+str(token))
@@ -1075,7 +1085,8 @@ def render_invite(request, token, member_id=None):
             role = 'student'
             if invite.role is not None and invite.role.slug != 'student':
                 role = invite.role.slug.upper()
-            cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
+            cu = CohortUser.objects.filter(
+                user=user, cohort=invite.cohort).first()
             if cu is None:
                 cu = CohortUser(user=user, cohort=invite.cohort, role=role)
                 cu.save()

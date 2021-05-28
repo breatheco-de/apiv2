@@ -18,6 +18,7 @@ from breathecode.tests.mocks import (
 )
 from ..mixins import EventTestCase
 
+
 class EventbriteWebhookTestSuite(EventTestCase):
     """Test /eventbrite/webhook"""
 
@@ -27,8 +28,10 @@ class EventbriteWebhookTestSuite(EventTestCase):
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     def test_eventbrite_webhook_without_data(self):
         """Test /eventbrite/webhook without auth"""
-        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
-        response = self.client.post(url, {}, headers=self.headers(), format='json')
+        url = reverse_lazy('events:eventbrite_webhook_id',
+                           kwargs={'organization_id': 1})
+        response = self.client.post(
+            url, {}, headers=self.headers(), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
@@ -43,9 +46,10 @@ class EventbriteWebhookTestSuite(EventTestCase):
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     def test_eventbrite_webhook_without_organization(self):
         """Test /eventbrite/webhook without auth"""
-        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+        url = reverse_lazy('events:eventbrite_webhook_id',
+                           kwargs={'organization_id': 1})
         response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('order.placed'), format='json')
+                                    headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
@@ -71,9 +75,10 @@ class EventbriteWebhookTestSuite(EventTestCase):
     def test_eventbrite_webhook_without_academy(self):
         """Test /eventbrite/webhook without auth"""
         model = self.generate_models(organization=True)
-        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+        url = reverse_lazy('events:eventbrite_webhook_id',
+                           kwargs={'organization_id': 1})
         response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('order.placed'), format='json')
+                                    headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
@@ -99,9 +104,10 @@ class EventbriteWebhookTestSuite(EventTestCase):
     def test_eventbrite_webhook_without_event(self):
         """Test /eventbrite/webhook without auth"""
         model = self.generate_models(organization=True, academy=True)
-        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+        url = reverse_lazy('events:eventbrite_webhook_id',
+                           kwargs={'organization_id': 1})
         response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('order.placed'), format='json')
+                                    headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
@@ -126,10 +132,12 @@ class EventbriteWebhookTestSuite(EventTestCase):
     @patch(EVENTBRITE_PATH['get'], apply_eventbrite_requests_post_mock())
     def test_eventbrite_webhook_with_event_without_eventbrite_id(self):
         """Test /eventbrite/webhook without auth"""
-        model = self.generate_models(organization=True, academy=True, event=True)
-        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+        model = self.generate_models(
+            organization=True, academy=True, event=True)
+        url = reverse_lazy('events:eventbrite_webhook_id',
+                           kwargs={'organization_id': 1})
         response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('order.placed'), format='json')
+                                    headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
@@ -155,10 +163,11 @@ class EventbriteWebhookTestSuite(EventTestCase):
     def test_eventbrite_webhook_without_active_campaign_academy(self):
         """Test /eventbrite/webhook without auth"""
         model = self.generate_models(organization=True, academy=True, event=True,
-            event_kwargs={'eventbrite_id': 1}, attendee=True)
-        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+                                     event_kwargs={'eventbrite_id': 1}, attendee=True)
+        url = reverse_lazy('events:eventbrite_webhook_id',
+                           kwargs={'organization_id': 1})
         response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('order.placed'), format='json')
+                                    headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
@@ -181,7 +190,8 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
-            'status': 'PENDING'
+            'status': 'PENDING',
+            'attended_at': None
         }])
         self.check_old_breathecode_calls(model, [])
 
@@ -193,10 +203,11 @@ class EventbriteWebhookTestSuite(EventTestCase):
     def test_eventbrite_webhook_without_automation(self):
         """Test /eventbrite/webhook without auth"""
         model = self.generate_models(organization=True, event=True, event_kwargs={'eventbrite_id': 1},
-            active_campaign_academy=True, academy=True)
-        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+                                     active_campaign_academy=True, academy=True)
+        url = reverse_lazy('events:eventbrite_webhook_id',
+                           kwargs={'organization_id': 1})
         response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('order.placed'), format='json')
+                                    headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
@@ -218,7 +229,8 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
-            'status': 'PENDING'
+            'status': 'PENDING',
+            'attended_at': None
         }])
         self.check_old_breathecode_calls(model, [])
 
@@ -230,12 +242,14 @@ class EventbriteWebhookTestSuite(EventTestCase):
     def test_eventbrite_webhook_without_lang(self):
         """Test /eventbrite/webhook without auth"""
         model = self.generate_models(organization=True, event=True, event_kwargs={'eventbrite_id': 1},
-            active_campaign_academy=True, automation=True, user=True, academy=True,
-            active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'},
-            user_kwargs={'email': 'john.smith@example.com', 'first_name': 'John', 'last_name': 'Smith'})
-        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+                                     active_campaign_academy=True, automation=True, user=True, academy=True,
+                                     active_campaign_academy_kwargs={
+                                         'ac_url': 'https://old.hardcoded.breathecode.url'},
+                                     user_kwargs={'email': 'john.smith@example.com', 'first_name': 'John', 'last_name': 'Smith'})
+        url = reverse_lazy('events:eventbrite_webhook_id',
+                           kwargs={'organization_id': 1})
         response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('order.placed'), format='json')
+                                    headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
@@ -258,10 +272,12 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
-            'status': 'PENDING'
+            'status': 'PENDING',
+            'attended_at': None
         }])
 
-        self.check_old_breathecode_calls(model, ['create_contact', 'contact_automations'])
+        self.check_old_breathecode_calls(
+            model, ['create_contact', 'contact_automations'])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -271,12 +287,14 @@ class EventbriteWebhookTestSuite(EventTestCase):
     def test_eventbrite_webhook(self):
         """Test /eventbrite/webhook without auth"""
         model = self.generate_models(organization=True, event=True, event_kwargs={'eventbrite_id': 1,
-            'lang': 'en'}, active_campaign_academy=True, automation=True, user=True, academy=True,
-            active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'},
-            user_kwargs={'email': 'john.smith@example.com', 'first_name': 'John', 'last_name': 'Smith'})
-        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+                                                                                  'lang': 'en'}, active_campaign_academy=True, automation=True, user=True, academy=True,
+                                     active_campaign_academy_kwargs={
+                                         'ac_url': 'https://old.hardcoded.breathecode.url'},
+                                     user_kwargs={'email': 'john.smith@example.com', 'first_name': 'John', 'last_name': 'Smith'})
+        url = reverse_lazy('events:eventbrite_webhook_id',
+                           kwargs={'organization_id': 1})
         response = self.client.post(url, self.data('order.placed', EVENTBRITE_ORDER_URL),
-            headers=self.headers('order.placed'), format='json')
+                                    headers=self.headers('order.placed'), format='json')
         content = response.content
 
         self.assertEqual(content, b'ok')
@@ -299,7 +317,9 @@ class EventbriteWebhookTestSuite(EventTestCase):
             'email': 'john.smith@example.com',
             'event_id': 1,
             'id': 1,
-            'status': 'PENDING'
+            'status': 'PENDING',
+            'attended_at': None
         }])
 
-        self.check_old_breathecode_calls(model, ['create_contact', 'contact_automations'])
+        self.check_old_breathecode_calls(
+            model, ['create_contact', 'contact_automations'])
