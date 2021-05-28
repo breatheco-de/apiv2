@@ -198,31 +198,20 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                 item.status = 'ACCEPTED'
                 item.save()
 
-                profile_academy = ProfileAcademy.objects.filter(
-                    email=item.email)
+                exists = ProfileAcademy.objects.filter(
+                    email=item.email, academy__id=item.academy.id)
 
-                if len(profile_academy) == 0:
+                if len(exists) == 0:
+                    profile_academy = ProfileAcademy(
+                        academy=item.academy, role=item.role, status="ACTIVE",
+                        email=item.email, first_name=item.first_name, last_name=item.last_name)
+                    profile_academy.save()
 
-                    profile_academy = {
-                        'cohort': item.cohort.id,
-                        'invite': True,
-                        'status': item.status,
-                        'email': item.email,
-                        'role': 'STUDENT',
-                        'first_name': item.first_name,
-                        'last_name': item.last_name,
-                    }
-                    serializer = StudentPOSTSerializer(data=profile_academy, context={
-                        'academy_id': item.academy.id,
-                        "request": request
-                    })
+            return Response("Invitation(s) status changed to Accepted and profile(s) academy created", status=status.HTTP_201_CREATED)
 
-                    if serializer.is_valid():
-                        serializer.save()
-                        return Response(serializer.data, status=status.HTTP_201_CREATED)
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-            return Response(None, status=status.HTTP_200_OK)
+        else:
+            raise ValidationException(
+                "Invite ids were not provided", 404, slug="missing_ids")
 
 
 class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
