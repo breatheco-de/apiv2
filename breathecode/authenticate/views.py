@@ -240,15 +240,16 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         )
 
         if lookups:
-            items = UserInvite.objects.filter(**lookups)
+
+            items = ProfileAcademy.objects.filter(**lookups)
 
             for item in items:
 
-                profile_academy = ProfileAcademy.objects.filter(
+                user_invite = UserInvite.objects.filter(
                     email=item.email, academy__id=item.academy.id)
 
-                if len(profile_academy) > 0:
-                    profile_academy.delete()
+                if len(user_invite) > 0:
+                    user_invite.delete()
                     item.delete()
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
