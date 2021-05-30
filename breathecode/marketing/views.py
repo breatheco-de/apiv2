@@ -25,6 +25,7 @@ from .actions import register_new_lead, sync_tags, sync_automations, get_faceboo
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
 from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation
 from breathecode.admissions.models import Academy
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 
 logger = logging.getLogger(__name__)
@@ -304,6 +305,10 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             lookup['location'] = param
 
         items = items.filter(**lookup).order_by('-created_at')
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = query_like_by_full_name(like, items)
 
         page = self.paginate_queryset(items, request)
         serializer = FormEntrySmallSerializer(page, many=True)

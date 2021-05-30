@@ -15,6 +15,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import status
 from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 from PIL import Image
 
 @api_view(['GET'])
@@ -94,6 +95,10 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
             lookup['status'] = param
 
         items = items.filter(**lookup).order_by('-created_at')
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = query_like_by_full_name(like, items)
 
         page = self.paginate_queryset(items, request)
         serializer = AnswerSerializer(page, many=True)

@@ -27,10 +27,11 @@ from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
 from .models import Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook, UserInvite
-from .actions import reset_password, resend_invite
+from .actions import reset_password, resend_invite 
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
-from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
+from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin 
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
@@ -96,6 +97,10 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         status = request.GET.get('status', None)
         if is_many and status is not None:
             items = items.filter(status__iexact=status)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = query_like_by_full_name(like, items)
 
         if not is_many:
             items = items.first()
@@ -187,7 +192,6 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('read_student')
     def get(self, request, academy_id=None, user_id=None):
-
         if user_id is not None:
             profile = ProfileAcademy.objects.filter(
                 academy__id=academy_id, user__id=user_id).first()
@@ -199,11 +203,10 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         items = ProfileAcademy.objects.filter(
             role__slug='student', academy__id=academy_id)
-
+             
         like = request.GET.get('like', None)
         if like is not None:
-            items = items.filter(Q(first_name__icontains=like) | Q(
-                last_name__icontains=like) | Q(email__icontains=like))
+            items = query_like_by_full_name(like, items)
 
         status = request.GET.get('status', None)
         if status is not None:

@@ -124,9 +124,10 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
 
         like = request.GET.get('like', None)
         if like is not None and like != "":
-            items = items.filter(Q(user__profileacademy__first_name__icontains=like) | Q(
-                user__profileacademy__last_name__icontains=like) | Q(user__first_name__icontains=like) | Q(
-                user__last_name__icontains=like) | Q(user__profileacademy__email__icontains=like) | Q(user__email__icontains=like))
+            for query in like.split():
+                items = items.filter(Q(user__profileacademy__first_name__icontains=query) | Q(
+                    user__profileacademy__last_name__icontains=query) | Q(user__first_name__icontains=query) | Q(
+                    user__last_name__icontains=query) | Q(user__profileacademy__email__icontains=query) | Q(user__email__icontains=query))
 
         page = self.paginate_queryset(items, request)
         serializer = UserSpecialtySerializer(items, many=True)
