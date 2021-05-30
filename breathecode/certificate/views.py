@@ -101,11 +101,30 @@ class CertificateCohortView(APIView):
         cohort_users = CohortUser.objects.filter(
             cohort__id=cohort_id, role='STUDENT', cohort__academy__id=academy_id)
         all_certs = []
+        cohort__users = []
 
         if cohort_users.count() == 0:
             raise APIException("There are no users with STUDENT role in this cohort")
 
-        for cu in cohort_users:
+        for cohort_user in cohort_users:
+            cohort = cohort_user.cohort
+            if cohort_user is None:
+                raise APIException("Impossible to obtain the student cohort, maybe it's none assigned")
+            elif cohort.stage != "ENDED" and cohort.never_ends != False:
+                raise APIException("Cohort stage must be ENDED or never ends")
+            elif cohort.syllabus is None: 
+                raise APIException(f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}')
+            elif cohort.syllabus.certificate is None:
+                raise APIException(f'The cohort has no certificate assigned, please set a '
+                f'certificate for cohort: {cohort.name}')
+            elif (not hasattr(cohort.syllabus.certificate, 'specialty') or not
+                cohort.syllabus.certificate.specialty):
+                raise APIException('Specialty has no certificate assigned, please set a '
+                f'certificate on the Specialty model: {cohort.syllabus.certificate.name}')
+            else:
+                cohort__users.append(cohort_user)
+
+        for cu in cohort__users:
             cert = generate_certificate(cu.user, cu.cohort)
             serializer = UserSpecialtySerializer(cert, many=False)
             all_certs.append(serializer.data)
