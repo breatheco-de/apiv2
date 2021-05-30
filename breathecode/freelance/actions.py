@@ -50,13 +50,15 @@ def change_status(issue, status):
 
 def generate_freelancer_bill(freelancer):
 
+    Issue.objects.filter(status='TODO', bill__isnull=False).update(bill=None)
+    
     open_bill = Bill.objects.filter(freelancer__id=freelancer.id, status='DUE').first()
     if open_bill is None:
         open_bill = Bill(
             freelancer=freelancer,
         )
         open_bill.save()
-    
+
     done_issues = Issue.objects.filter(status='DONE', bill__isnull=True)
     total = { 
         "minutes": open_bill.total_duration_in_minutes, 
