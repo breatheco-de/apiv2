@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
 from breathecode.authenticate.actions import server_id
 from breathecode.events.caches import EventCache
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import re
 
@@ -509,15 +509,31 @@ class ICalCohortsView(APIView):
 
         for item in items:
             event = iEvent()
+            event_first_day = iEvent()
+            event_last_day = iEvent()
+            has_last_day = False
 
             event.add('summary', item.name)
             event.add('uid', f'breathecode_cohort_{item.id}_{key}')
             event.add('dtstart', item.kickoff_date)
 
+            event_first_day.add('summary', f'{item.name} - First day')
+            event_first_day.add('uid', f'breathecode_cohort_{item.id}_first_{key}')
+            event_first_day.add('dtstart', item.kickoff_date)
+            event_first_day.add('dtend', item.kickoff_date + timedelta(days=1))
+
             if item.ending_date:
+                has_last_day = True
                 event.add('dtend', item.ending_date)
 
+                event_last_day.add('summary', f'{item.name} - Last day')
+                event_last_day.add('uid', f'breathecode_cohort_{item.id}_last_{key}')
+                event_last_day.add('dtstart', item.ending_date - timedelta(days=1))
+                event_last_day.add('dtend', item.ending_date)
+                event_last_day.add('dtstamp', item.created_at)
+
             event.add('dtstamp', item.created_at)
+            event_first_day.add('dtstamp', item.created_at)
 
             teacher = CohortUser.objects.filter(
                 role='TEACHER', cohort__id=item.id).first()
@@ -535,14 +551,27 @@ class ICalCohortsView(APIView):
 
                 organizer.params['role'] = vText('OWNER')
                 event['organizer'] = organizer
+                event_first_day['organizer'] = organizer
+
+                if has_last_day:
+                    event_last_day['organizer'] = organizer
 
             location = item.academy.name
 
             if item.academy.website_url:
                 location = f'{location} ({item.academy.website_url})'
-            event['location'] = vText(item.academy.name)
 
+            event['location'] = vText(item.academy.name)
+            event_first_day['location'] = vText(item.academy.name)
+
+            if has_last_day:
+                event_last_day['location'] = vText(item.academy.name)
+
+            calendar.add_component(event_first_day)
             calendar.add_component(event)
+
+            if has_last_day:
+                calendar.add_component(event_last_day)
 
         calendar_text = calendar.to_ical()
 

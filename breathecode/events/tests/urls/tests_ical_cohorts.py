@@ -97,7 +97,19 @@ class AcademyCohortTestSuite(EventTestCase):
             'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Cohorts',
-            # event
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
+            f'UID:breathecode_cohort_{cohort.id}_first_{key}',
+            f'LOCATION:{academy.name}',
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
@@ -105,6 +117,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort.id}_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
+
             'END:VCALENDAR',
             '',
         ])
@@ -161,7 +174,19 @@ class AcademyCohortTestSuite(EventTestCase):
             'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Cohorts',
-            # event
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
+            f'UID:breathecode_cohort_{cohort.id}_first_{key}',
+            f'LOCATION:{academy.name}',
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
@@ -169,6 +194,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort.id}_{key}',
             f'LOCATION:{academy.name}',
             'END:VEVENT',
+
             'END:VCALENDAR',
             '',
         ])
@@ -201,7 +227,20 @@ class AcademyCohortTestSuite(EventTestCase):
             'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Cohorts',
-            # event
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
+            f'UID:breathecode_cohort_{cohort.id}_first_{key}',
+            f'LOCATION:{academy.name}',
+            self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.kickoff_date)}',
@@ -211,6 +250,18 @@ class AcademyCohortTestSuite(EventTestCase):
             f'LOCATION:{academy.name}',
             self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort.name} - Last day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.ending_date - timedelta(days=1))}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.ending_date)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort.created_at)}',
+            f'UID:breathecode_cohort_{cohort.id}_last_{key}',
+            f'LOCATION:{academy.name}',
+            self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
+            'END:VEVENT',
+
             'END:VCALENDAR',
             '',
         ])
@@ -246,7 +297,19 @@ class AcademyCohortTestSuite(EventTestCase):
             'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Cohorts',
-            # event
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
+            f'UID:breathecode_cohort_{cohort1.id}_first_{key}',
+            f'LOCATION:{academy1.name}',
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
@@ -254,6 +317,19 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy1.name}',
             'END:VEVENT',
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
+            f'UID:breathecode_cohort_{cohort2.id}_first_{key}',
+            f'LOCATION:{academy2.name}',
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
@@ -261,6 +337,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy2.name}',
             'END:VEVENT',
+
             'END:VCALENDAR',
             '',
         ])
@@ -303,7 +380,20 @@ class AcademyCohortTestSuite(EventTestCase):
             'URL:http://localhost:8000/v1/events/ical/cohorts?academy=1',
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Cohorts',
-            # event
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
+            f'UID:breathecode_cohort_{cohort1.id}_first_{key}',
+            f'LOCATION:{academy1.name}',
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
@@ -313,6 +403,31 @@ class AcademyCohortTestSuite(EventTestCase):
             f'LOCATION:{academy1.name}',
             self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - Last day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date - timedelta(days=1))}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
+            f'UID:breathecode_cohort_{cohort1.id}_last_{key}',
+            f'LOCATION:{academy1.name}',
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            'END:VEVENT',
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
+            f'UID:breathecode_cohort_{cohort2.id}_first_{key}',
+            f'LOCATION:{academy2.name}',
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
@@ -322,6 +437,18 @@ class AcademyCohortTestSuite(EventTestCase):
             f'LOCATION:{academy2.name}',
             self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - Last day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.ending_date - timedelta(days=1))}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.ending_date)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
+            f'UID:breathecode_cohort_{cohort2.id}_last_{key}',
+            f'LOCATION:{academy2.name}',
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            'END:VEVENT',
+
             'END:VCALENDAR',
             '',
         ])
@@ -382,7 +509,20 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'URL:http://localhost:8000{url}'),
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Cohorts',
-            # event
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
+            f'UID:breathecode_cohort_{cohort1.id}_first_{key}',
+            f'LOCATION:{academy1.name}',
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
@@ -392,6 +532,31 @@ class AcademyCohortTestSuite(EventTestCase):
             f'LOCATION:{academy1.name}',
             self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - Last day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date - timedelta(days=1))}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
+            f'UID:breathecode_cohort_{cohort1.id}_last_{key}',
+            f'LOCATION:{academy1.name}',
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            'END:VEVENT',
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
+            f'UID:breathecode_cohort_{cohort2.id}_first_{key}',
+            f'LOCATION:{academy2.name}',
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
@@ -401,6 +566,31 @@ class AcademyCohortTestSuite(EventTestCase):
             f'LOCATION:{academy2.name}',
             self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - Last day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.ending_date - timedelta(days=1))}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.ending_date)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
+            f'UID:breathecode_cohort_{cohort2.id}_last_{key}',
+            f'LOCATION:{academy2.name}',
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            'END:VEVENT',
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort3.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.created_at)}',
+            f'UID:breathecode_cohort_{cohort3.id}_first_{key}',
+            f'LOCATION:{academy3.name}',
+            self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort3.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.kickoff_date)}',
@@ -410,12 +600,48 @@ class AcademyCohortTestSuite(EventTestCase):
             f'LOCATION:{academy3.name}',
             self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
             'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort3.name} - Last day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.ending_date - timedelta(days=1))}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.ending_date)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.created_at)}',
+            f'UID:breathecode_cohort_{cohort3.id}_last_{key}',
+            f'LOCATION:{academy3.name}',
+            self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
+            'END:VEVENT',
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort4.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.created_at)}',
+            f'UID:breathecode_cohort_{cohort4.id}_first_{key}',
+            f'LOCATION:{academy4.name}',
+            self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort4.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.kickoff_date)}',
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.ending_date)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.created_at)}',
             f'UID:breathecode_cohort_{cohort4.id}_{key}',
+            f'LOCATION:{academy4.name}',
+            self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
+            'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort4.name} - Last day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.ending_date - timedelta(days=1))}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.ending_date)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.created_at)}',
+            f'UID:breathecode_cohort_{cohort4.id}_last_{key}',
             f'LOCATION:{academy4.name}',
             self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
             'END:VEVENT',
@@ -481,7 +707,20 @@ class AcademyCohortTestSuite(EventTestCase):
             self.line_limit(f'URL:http://localhost:8000{url}'),
             'X-WR-CALDESC:',
             f'X-WR-CALNAME:Academy - Cohorts',
-            # event
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
+            f'UID:breathecode_cohort_{cohort1.id}_first_{key}',
+            f'LOCATION:{academy1.name}',
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort1.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.kickoff_date)}',
@@ -491,6 +730,31 @@ class AcademyCohortTestSuite(EventTestCase):
             f'LOCATION:{academy1.name}',
             self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort1.name} - Last day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date - timedelta(days=1))}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.ending_date)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort1.created_at)}',
+            f'UID:breathecode_cohort_{cohort1.id}_last_{key}',
+            f'LOCATION:{academy1.name}',
+            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            'END:VEVENT',
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
+            f'UID:breathecode_cohort_{cohort2.id}_first_{key}',
+            f'LOCATION:{academy2.name}',
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort2.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.kickoff_date)}',
@@ -500,6 +764,31 @@ class AcademyCohortTestSuite(EventTestCase):
             f'LOCATION:{academy2.name}',
             self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort2.name} - Last day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.ending_date - timedelta(days=1))}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.ending_date)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort2.created_at)}',
+            f'UID:breathecode_cohort_{cohort2.id}_last_{key}',
+            f'LOCATION:{academy2.name}',
+            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            'END:VEVENT',
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort3.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.created_at)}',
+            f'UID:breathecode_cohort_{cohort3.id}_first_{key}',
+            f'LOCATION:{academy3.name}',
+            self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort3.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.kickoff_date)}',
@@ -509,12 +798,48 @@ class AcademyCohortTestSuite(EventTestCase):
             f'LOCATION:{academy3.name}',
             self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
             'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort3.name} - Last day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.ending_date - timedelta(days=1))}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.ending_date)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort3.created_at)}',
+            f'UID:breathecode_cohort_{cohort3.id}_last_{key}',
+            f'LOCATION:{academy3.name}',
+            self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
+            'END:VEVENT',
+
+            # =================================================================
+            # First event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort4.name} - First day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.kickoff_date)}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.kickoff_date + timedelta(days=1))}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.created_at)}',
+            f'UID:breathecode_cohort_{cohort4.id}_first_{key}',
+            f'LOCATION:{academy4.name}',
+            self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
+            'END:VEVENT',
+
+            # Event
             'BEGIN:VEVENT',
             f'SUMMARY:{cohort4.name}',
             f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.kickoff_date)}',
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.ending_date)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.created_at)}',
             f'UID:breathecode_cohort_{cohort4.id}_{key}',
+            f'LOCATION:{academy4.name}',
+            self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
+            'END:VEVENT',
+
+            # Last event
+            'BEGIN:VEVENT',
+            f'SUMMARY:{cohort4.name} - Last day',
+            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.ending_date - timedelta(days=1))}',
+            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.ending_date)}',
+            f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(cohort4.created_at)}',
+            f'UID:breathecode_cohort_{cohort4.id}_last_{key}',
             f'LOCATION:{academy4.name}',
             self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
             'END:VEVENT',
