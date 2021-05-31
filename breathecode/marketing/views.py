@@ -260,10 +260,9 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    @capable_of('crud_lead')
+    @capable_of('read_lead')
     def get(self, request, format=None, academy_id=None):
 
-        print("academy_id", academy_id)
         tags = Automation.objects.filter(ac_academy__academy__id=academy_id)
 
         serializer = AutomationSmallSerializer(tags, many=True)

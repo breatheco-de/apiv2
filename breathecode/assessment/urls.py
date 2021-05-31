@@ -1,11 +1,14 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import AnswerView, GetAnswerView, track_survey_open
+from .views import track_assesment_open, GetAssessmentView
 
-app_name='feedback'
+app_name='assessment'
 urlpatterns = [
-    path('answer', GetAnswerView.as_view()),
-    path('answer/<int:answer_id>/tracker.png', track_survey_open),
-    path('answer/<int:answer_id>', AnswerView.as_view()),
+    # user assessments
+    path('user/assesment/<int:user_assessment_id>/tracker.png', track_assesment_open),
+    
+    path('', GetAssessmentView.as_view()),
+    path('<str:assessment_slug>', GetAssessmentView.as_view()),
+
 ]
 

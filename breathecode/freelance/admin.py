@@ -33,7 +33,7 @@ def mark_as(queryset, status, request):
             if i.bill is not None and i.bill.status != 'DUE':
                 raise Exception(f"Github {i.github_number} cannot be updated because it was already approved for payment")
             freelancers[i.freelancer.id] = i.freelancer
-            i.status = 'DONE'
+            i.status = status
             i.save()
 
         for freelancer_id in freelancers:
@@ -66,9 +66,8 @@ class FreelancerAdmin(admin.ModelAdmin):
 
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
-    search_fields = ['title']
+    search_fields = ['title', 'freelancer__user__email', 'freelancer__user__first_name', 'freelancer__user__last_name']
     list_display = ('id', 'github_number', 'freelancer', 'title', 'status', 'duration_in_hours', 'bill_id', 'github_url')
-    list_filter = ['status', 'bill__status']
     list_filter = ['status', 'bill__status']
     actions = [mask_as_todo, mask_as_done, mask_as_ignored]
     def github_url(self,obj):

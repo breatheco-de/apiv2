@@ -1,7 +1,8 @@
-import hashlib, requests
+import os, hashlib, requests, logging
+from breathecode.services.google_cloud.function import Function
 from django.shortcuts import redirect
-from breathecode.media.models import Media, Category
-from breathecode.utils import GenerateLookupsMixin
+from breathecode.media.models import Media, Category, MediaResolution
+from breathecode.utils import GenerateLookupsMixin, num_to_roman
 from rest_framework.views import APIView
 from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
 from rest_framework.response import Response
@@ -20,8 +21,15 @@ from breathecode.media.serializers import (
 from slugify import slugify
 
 
-BUCKET_NAME = "media-breathecode"
-# TODO: Mimes permitidos como una constante
+logger = logging.getLogger(__name__)
+
+
+BUCKET_NAME = os.getenv('MEDIA_GALLERY_BUCKET')
+if not BUCKET_NAME:
+    logger.error('MEDIA_GALLERY_BUCKET is not in your environment')
+
+MIME_ALLOW = ["image/png", "image/svg+xml",
+              "image/jpeg", "image/gif", "video/quicktime", "video/mp4", "audio/mpeg", "application/pdf", "image/jpg"]
 
 
 class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -59,10 +67,18 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         lookups = self.generate_lookups(
             request,
             many_fields=['mime', 'name', 'slug', 'id'],
-            many_relationships=['academy', 'categories']
+            many_relationships=['academy']
         )
 
         items = Media.objects.filter(**lookups)
+
+        # filter media by all categories, if one request have category 1 and 2,
+        # if just get the media is in all the categories passed
+        categories = request.GET.get('categories')
+        if categories:
+            categories = categories.split(',')
+            for category in categories:
+                items = items.filter(categories__pk=category)
 
         tp = request.GET.get('type')
         if tp:
@@ -70,7 +86,8 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         like = request.GET.get('like')
         if like:
-            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+            items = items.filter(Q(name__icontains=like) |
+                                 Q(slug__icontains=like))
 
         sort = request.GET.get('sort', '-created_at')
         items = items.order_by(sort)
@@ -99,7 +116,8 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def delete(self, request, media_id=None, academy_id=None):
         from ..services.google_cloud import Storage
 
-        data = Media.objects.filter(id=media_id, academy__id=academy_id).first()
+        data = Media.objects.filter(
+            id=media_id, academy__id=academy_id).first()
         if not data:
             raise ValidationException('Media not found', code=404)
 
@@ -199,6 +217,7 @@ class UploadView(APIView):
         }
 
         file = request.data.get('file')
+        slugs = []
 
         if not file:
             raise ValidationException('Missing file in request', code=400)
@@ -213,6 +232,13 @@ class UploadView(APIView):
         elif len(files) != len(names):
             raise ValidationException('numbers of files and names not match')
 
+        # files validation below
+        for index in range(0, len(files)):
+            file = files[index]
+            if file.content_type not in MIME_ALLOW:
+                raise ValidationException(
+                    f'You can upload only files on the following formats: {",".join(MIME_ALLOW)}')
+
         for index in range(0, len(files)):
             file = files[index]
             name = names[index] if len(names) else file.name
@@ -220,9 +246,16 @@ class UploadView(APIView):
             hash = hashlib.sha256(file_bytes).hexdigest()
             slug = slugify(name)
 
-            if Media.objects.filter(slug=slug).exclude(hash=hash).count():
-                raise ValidationException('slug already exists', code=400)
+            slug_number = Media.objects.filter(slug__startswith=slug).exclude(hash=hash).count() + 1
+            if slug_number > 1:
+                while True:
+                    roman_number = num_to_roman(slug_number, lower=True)
+                    slug = f'{slug}-{roman_number}'
+                    if not slug in slugs:
+                        break
+                    slug_number = slug_number + 1
 
+            slugs.append(slug)
             data = {
                 'hash': hash,
                 'slug': slug,
@@ -238,16 +271,19 @@ class UploadView(APIView):
             elif 'Categories' in request.headers:
                 data['categories'] = request.headers['Categories'].split(',')
 
-            media = Media.objects.filter(hash=hash, academy__id=academy_id).first()
+            media = Media.objects.filter(
+                hash=hash, academy__id=academy_id).first()
             if media:
                 data['id'] = media.id
 
-                url = Media.objects.filter(hash=hash).values_list('url', flat=True).first()
+                url = Media.objects.filter(hash=hash).values_list(
+                    'url', flat=True).first()
                 if url:
                     data['url'] = url
 
             else:
-                url = Media.objects.filter(hash=hash).values_list('url', flat=True).first()
+                url = Media.objects.filter(hash=hash).values_list(
+                    'url', flat=True).first()
                 if url:
                     data['url'] = url
 
@@ -257,6 +293,7 @@ class UploadView(APIView):
                     cloud_file = storage.file(BUCKET_NAME, hash)
                     cloud_file.upload(file_bytes)
                     data['url'] = cloud_file.url()
+                    data['thumbnail'] = data['url'] + '-thumbnail'
 
             result['data'].append(data)
 
@@ -277,18 +314,20 @@ class UploadView(APIView):
     @capable_of('crud_media')
     def put(self, request, academy_id=None):
         upload = self.upload(request, academy_id, update=True)
-        serializer = MediaPUTSerializer(upload['instance'], data=upload['data'], context=upload['data'], many=True)
+        serializer = MediaPUTSerializer(
+            upload['instance'], data=upload['data'], context=upload['data'], many=True)
 
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class MaskingUrlView(APIView):
     parser_classes = [FileUploadParser]
     permission_classes = [AllowAny]
 
-    def get(self, request, media_id=None, media_slug=None):
+    def get(self, request, media_id=None, media_slug=None, width=None, height=None):
         lookups = {}
         if media_id:
             lookups['id'] = media_id
@@ -301,9 +340,39 @@ class MaskingUrlView(APIView):
 
         url = media.url
 
+        # if width and height and not media.mime.startswith('image/'):
+        #     raise ValidationException(
+        #         'cannot resize this resource',
+        #         code=400,
+        #         slug='cannot-resize-media')
+
         # register click
         media.hits = media.hits + 1
         media.save()
+
+        # resolution = MediaResolution.objects.filter(
+        #     width=width,
+        #     height=height,
+        #     hash=media.hash).first()
+
+        # if width and height and not resolution:
+        #     func = Function('https://us-central1-breathecode-197918.cloudfunctions.net/resize-image')
+        #     res = func.call({
+        #         'width': width,
+        #         'height': height,
+        #         'filename': media.hash,
+        #         'bucket': BUCKET_NAME,
+        #     })
+        #     resolution = MediaResolution(
+        #         width=width,
+        #         height=height,
+        #         hash=media.hash)
+        #     resolution.save()
+
+        # if width and height:
+        #     url = f'{url}-{width}x{height}'
+        #     resolution.hits = resolution.hits + 1
+        #     resolution.save()
 
         if request.GET.get('mask') != 'true':
             return redirect(url, permanent=True)
@@ -316,8 +385,8 @@ class MaskingUrlView(APIView):
         )
 
         header_keys = [x for x in response.headers.keys() if x !=
-            'Transfer-Encoding' and x != 'Content-Encoding' and x !=
-            'Keep-Alive' and x != 'Connection']
+                       'Transfer-Encoding' and x != 'Content-Encoding' and x !=
+                       'Keep-Alive' and x != 'Connection']
 
         for header in header_keys:
             resource[header] = response.headers[header]

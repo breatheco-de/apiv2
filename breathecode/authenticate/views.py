@@ -22,11 +22,13 @@ from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
 from django.utils import timezone
 from datetime import datetime
-from .models import Profile, ProfileAcademy, Role, UserInvite
 from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
-from .models import Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook, UserInvite
+from .models import (
+    Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook, UserInvite,
+    Role, ProfileAcademy,
+)
 from .actions import reset_password, resend_invite
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
@@ -55,6 +57,51 @@ class TemporalTokenView(ObtainAuthToken):
             'expires_at': token.expires_at,
             'user_id': user.pk,
             'email': user.email
+        })
+
+
+class AcademyTokenView(ObtainAuthToken):
+    permission_classes = [IsAuthenticated]
+
+    @capable_of('get_academy_token')
+    def get(self, request, academy_id):
+        academy = Academy.objects.get(id=academy_id)
+        academy_user = User.objects.filter(username=academy.slug).first()
+        if academy_user is None:
+            raise ValidationError("No academy token has been generated yet")
+
+        token = Token.objects.filter(user=academy_user, token_type='permanent').first()
+        if token is None:
+            raise ValidationError("No academy token has been generated yet")
+
+        return Response({
+            'token': token.key,
+            'token_type': token.token_type,
+            'expires_at': token.expires_at,
+        })
+
+    @capable_of('generate_academy_token')
+    def post(self, request, academy_id):
+
+        academy = Academy.objects.get(id=academy_id)
+        academy_user = User.objects.filter(username=academy.slug).first()
+        if academy_user is None:
+            academy_user = User(username=academy.slug, email=f"{academy.slug}@token.com")
+            academy_user.save()
+
+            role = Role.objects.get(slug="academy_token")
+            # this profile is for tokens, that is why we need no  email validation status=ACTIVE, rol must be academy_token
+            # and the email is empty
+            profile_academy = ProfileAcademy(user=academy_user, academy=academy, role=role, status="ACTIVE")
+            profile_academy.save()
+
+        Token.objects.filter(user=academy_user).delete()
+        token = Token.objects.create(user=academy_user, token_type='permanent')
+        token.save()
+        return Response({
+            'token': token.key,
+            'token_type': token.token_type,
+            'expires_at': token.expires_at,
         })
 
 
@@ -145,6 +192,8 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             many_fields=['id']
         )
 
+        print("printing items", lookups)
+
         if lookups and user_id:
             raise ValidationException('user_id or cohort_id was provided in url '
                                       'in bulk mode request, use querystring style instead', code=400)
@@ -154,6 +203,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                                   academy__id=academy_id).exclude(role__slug="student")
 
             for item in items:
+
                 item.delete()
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -165,9 +215,10 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
+
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
-    def get(self, request, user_id):
+    def get(self, request):
 
         if request.user is None:
             raise ValidationException("User not found", 404)
@@ -197,6 +248,7 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
+
 
 class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
@@ -289,6 +341,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                 **lookups, academy__id=academy_id, role__slug='student')
 
             for item in items:
+
                 item.delete()
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -496,13 +549,15 @@ def save_github_token(request):
 
             # TODO: if user_id: User.objects.filter(id=user_id).first()
 
-            user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(email__iexact=github_user['email'])).first()
+            user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(
+                email__iexact=github_user['email'])).first()
             if user is None:
                 user = User(
                     username=github_user['email'], email=github_user['email'])
                 user.save()
 
-            CredentialsGithub.objects.filter(github_id=github_user['id']).delete()
+            CredentialsGithub.objects.filter(
+                github_id=github_user['id']).delete()
             github_credentials = CredentialsGithub(
                 github_id=github_user['id'],
                 user=user,
@@ -934,7 +989,7 @@ class AcademyInviteView(APIView):
     def put(self, request, pa_id=None, academy_id=None):
         if pa_id is not None:
             profile_academy = ProfileAcademy.objects.filter(
-                 id=pa_id).first()
+                id=pa_id).first()
 
             if profile_academy is None:
                 raise ValidationException("Member not found", 400)
@@ -966,7 +1021,8 @@ def render_invite(request, token, member_id=None):
 
     if request.method == 'GET':
 
-        invite = UserInvite.objects.filter(token=token, status='PENDING').first()
+        invite = UserInvite.objects.filter(
+            token=token, status='PENDING').first()
         if invite is None:
             return render(request, 'message.html', {
                 'message': 'Invitation noot found with this token or it was already accepted'
@@ -993,7 +1049,8 @@ def render_invite(request, token, member_id=None):
                 'form': form,
             })
 
-        invite = UserInvite.objects.filter(token=str(token), status='PENDING').first()
+        invite = UserInvite.objects.filter(
+            token=str(token), status='PENDING').first()
         if invite is None:
             messages.error(
                 request, 'Invalid or expired invitation'+str(token))
@@ -1028,7 +1085,8 @@ def render_invite(request, token, member_id=None):
             role = 'student'
             if invite.role is not None and invite.role.slug != 'student':
                 role = invite.role.slug.upper()
-            cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
+            cu = CohortUser.objects.filter(
+                user=user, cohort=invite.cohort).first()
             if cu is None:
                 cu = CohortUser(user=user, cohort=invite.cohort, role=role)
                 cu.save()

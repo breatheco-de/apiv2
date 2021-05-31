@@ -210,7 +210,8 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('crud_event')
     def put(self, request, academy_id=None, event_id=None):
-        already = Event.objects.filter(id=event_id,academy__id=academy_id).first()
+        already = Event.objects.filter(
+            id=event_id, academy__id=academy_id).first()
         if already is None:
             raise ValidationException(
                 f"Event not found for this academy {academy_id}")
@@ -266,7 +267,7 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
                                  Q(attendee__last_name_icontains=like) |
                                  Q(attendee__email_icontains=like) |
                                  Q(email_icontains=like)
-                                )
+                                 )
 
         start = request.GET.get('start', None)
         if start is not None:
@@ -331,10 +332,13 @@ def ical_academies_repr(slugs=None, ids=None):
         slugs = []
 
     if ids:
-        ret = ret + list(Academy.objects.filter(id__in=ids).values_list('id', flat=True))
+        ret = ret + \
+            list(Academy.objects.filter(id__in=ids).values_list('id', flat=True))
 
     if slugs:
-        ret = ret + list(Academy.objects.filter(slug__in=slugs).values_list('id', flat=True))
+        ret = ret + \
+            list(Academy.objects.filter(
+                slug__in=slugs).values_list('id', flat=True))
 
     ret = sorted(list(dict.fromkeys(ret)))
     ret = ','.join([str(id) for id in ret])
@@ -453,13 +457,15 @@ class ICalCohortsView(APIView):
             items = Cohort.objects.filter(academy__id__in=ids).order_by('id')
 
         elif slugs:
-            items = Cohort.objects.filter(academy__slug__in=slugs).order_by('id')
+            items = Cohort.objects.filter(
+                academy__slug__in=slugs).order_by('id')
 
         else:
             items = []
 
         if not ids and not slugs:
-            raise ValidationException("You need to specify at least one academy or academy_slug (comma separated) in the querystring")
+            raise ValidationException(
+                "You need to specify at least one academy or academy_slug (comma separated) in the querystring")
 
         if (Academy.objects.filter(id__in=ids).count() != len(ids) or
                 Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
@@ -476,7 +482,8 @@ class ICalCohortsView(APIView):
         key = server_id()
 
         calendar = iCalendar()
-        calendar.add('prodid', f'-//BreatheCode//Academy Cohorts{academies_repr} {key}//EN')
+        calendar.add(
+            'prodid', f'-//BreatheCode//Academy Cohorts{academies_repr} {key}//EN')
         calendar.add('X-WR-CALNAME', f'Academy - Cohorts')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
@@ -512,14 +519,15 @@ class ICalCohortsView(APIView):
 
             event.add('dtstamp', item.created_at)
 
-            teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.id).first()
+            teacher = CohortUser.objects.filter(
+                role='TEACHER', cohort__id=item.id).first()
 
             if teacher:
                 organizer = vCalAddress(f'MAILTO:{teacher.user.email}')
 
                 if teacher.user.first_name and teacher.user.last_name:
                     organizer.params['cn'] = vText(f'{teacher.user.first_name} '
-                        f'{teacher.user.last_name}')
+                                                   f'{teacher.user.last_name}')
                 elif teacher.user.first_name:
                     organizer.params['cn'] = vText(teacher.user.first_name)
                 elif teacher.user.last_name:
@@ -556,16 +564,19 @@ class ICalEventView(APIView):
         slugs = slugs.split(",") if slugs else []
 
         if ids:
-            items = Event.objects.filter(academy__id__in=ids, status='ACTIVE').order_by('id')
+            items = Event.objects.filter(
+                academy__id__in=ids, status='ACTIVE').order_by('id')
 
         elif slugs:
-            items = Event.objects.filter(academy__slug__in=slugs, status='ACTIVE').order_by('id')
+            items = Event.objects.filter(
+                academy__slug__in=slugs, status='ACTIVE').order_by('id')
 
         else:
             items = []
 
         if not ids and not slugs:
-            raise ValidationException("You need to specify at least one academy or academy_slug (comma separated) in the querystring")
+            raise ValidationException(
+                "You need to specify at least one academy or academy_slug (comma separated) in the querystring")
 
         if (Academy.objects.filter(id__in=ids).count() != len(ids) or
                 Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
@@ -580,7 +591,8 @@ class ICalEventView(APIView):
         key = server_id()
 
         calendar = iCalendar()
-        calendar.add('prodid', f'-//BreatheCode//Academy Events{academies_repr} {key}//EN')
+        calendar.add(
+            'prodid', f'-//BreatheCode//Academy Events{academies_repr} {key}//EN')
         calendar.add('X-WR-CALNAME', f'Academy - Events')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
@@ -636,7 +648,7 @@ class ICalEventView(APIView):
 
                 if item.author.first_name and item.author.last_name:
                     organizer.params['cn'] = vText(f'{item.author.first_name} '
-                        f'{item.author.last_name}')
+                                                   f'{item.author.last_name}')
                 elif item.author.first_name:
                     organizer.params['cn'] = vText(item.author.first_name)
                 elif item.author.last_name:
@@ -646,7 +658,7 @@ class ICalEventView(APIView):
                 event['organizer'] = organizer
 
             if item.venue and (item.venue.country or item.venue.state or
-                    item.venue.city or item.venue.street_address):
+                               item.venue.city or item.venue.street_address):
                 value = ''
 
                 if item.venue.street_address:
