@@ -12,3 +12,13 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
 
     def tearDown(self):
         self.clear_cache()
+
+    def fill_cohort_timeslot(self, id, cohort_id, certificate_timeslot):
+        return {
+            'id': id,
+            'cohort_id': cohort_id,
+            'starting_at': certificate_timeslot.starting_at,
+            'ending_at': certificate_timeslot.ending_at,
+            'recurrent': certificate_timeslot.recurrent,
+            'recurrency_type': certificate_timeslot.recurrency_type,
+        }

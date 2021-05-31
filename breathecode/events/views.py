@@ -1,4 +1,3 @@
-from breathecode.admissions.tasks import sync_cohort_timeslots
 import os
 
 from django.contrib.auth.models import User
