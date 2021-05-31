@@ -22,11 +22,13 @@ from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
 from django.utils import timezone
 from datetime import datetime
-from .models import Profile, ProfileAcademy, Role, UserInvite
 from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
-from .models import Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook, UserInvite
+from .models import (
+    Profile, CredentialsGithub, Token, CredentialsSlack, CredentialsFacebook, UserInvite,
+    Role, ProfileAcademy,
+)
 from .actions import reset_password, resend_invite
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
@@ -55,6 +57,51 @@ class TemporalTokenView(ObtainAuthToken):
             'expires_at': token.expires_at,
             'user_id': user.pk,
             'email': user.email
+        })
+
+
+class AcademyTokenView(ObtainAuthToken):
+    permission_classes = [IsAuthenticated]
+
+    @capable_of('get_academy_token')
+    def get(self, request, academy_id):
+        academy = Academy.objects.get(id=academy_id)
+        academy_user = User.objects.filter(username=academy.slug).first()
+        if academy_user is None:
+            raise ValidationError("No academy token has been generated yet")
+
+        token = Token.objects.filter(user=academy_user, token_type='permanent').first()
+        if token is None:
+            raise ValidationError("No academy token has been generated yet")
+
+        return Response({
+            'token': token.key,
+            'token_type': token.token_type,
+            'expires_at': token.expires_at,
+        })
+
+    @capable_of('generate_academy_token')
+    def post(self, request, academy_id):
+
+        academy = Academy.objects.get(id=academy_id)
+        academy_user = User.objects.filter(username=academy.slug).first()
+        if academy_user is None:
+            academy_user = User(username=academy.slug, email=f"{academy.slug}@token.com")
+            academy_user.save()
+
+            role = Role.objects.get(slug="academy_token")
+            # this profile is for tokens, that is why we need no  email validation status=ACTIVE, rol must be academy_token
+            # and the email is empty
+            profile_academy = ProfileAcademy(user=academy_user, academy=academy, role=role, status="ACTIVE")
+            profile_academy.save()
+
+        Token.objects.filter(user=academy_user).delete()
+        token = Token.objects.create(user=academy_user, token_type='permanent')
+        token.save()
+        return Response({
+            'token': token.key,
+            'token_type': token.token_type,
+            'expires_at': token.expires_at,
         })
 
 
