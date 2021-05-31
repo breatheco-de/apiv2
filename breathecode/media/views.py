@@ -327,12 +327,15 @@ class MaskingUrlView(APIView):
     parser_classes = [FileUploadParser]
     permission_classes = [AllowAny]
 
-    def get(self, request, media_id=None, media_slug=None, width=None, height=None):
+    def get(self, request, media_id=None, media_slug=None):
         lookups = {}
         if media_id:
             lookups['id'] = media_id
         elif media_slug:
             lookups['slug'] = media_slug
+
+        width = request.GET.get('width')
+        height = request.GET.get('height')
 
         media = Media.objects.filter(**lookups).first()
         if not media:
@@ -340,39 +343,66 @@ class MaskingUrlView(APIView):
 
         url = media.url
 
-        # if width and height and not media.mime.startswith('image/'):
-        #     raise ValidationException(
-        #         'cannot resize this resource',
-        #         code=400,
-        #         slug='cannot-resize-media')
+        if width and height:
+            raise ValidationException(
+                'Pass a width with a height in the URL is not allowed',
+                code=400,
+                slug='width-and-height-in-querystring')
+
+        if (width or height) and not media.mime.startswith('image/'):
+            raise ValidationException(
+                'cannot resize this resource',
+                code=400,
+                slug='cannot-resize-media')
 
         # register click
         media.hits = media.hits + 1
         media.save()
 
-        # resolution = MediaResolution.objects.filter(
-        #     width=width,
-        #     height=height,
-        #     hash=media.hash).first()
+        resolution = MediaResolution.objects.filter(
+            Q(width=width) | Q(height=height),
+            hash=media.hash).first()
 
-        # if width and height and not resolution:
-        #     func = Function('https://us-central1-breathecode-197918.cloudfunctions.net/resize-image')
-        #     res = func.call({
-        #         'width': width,
-        #         'height': height,
-        #         'filename': media.hash,
-        #         'bucket': BUCKET_NAME,
-        #     })
-        #     resolution = MediaResolution(
-        #         width=width,
-        #         height=height,
-        #         hash=media.hash)
-        #     resolution.save()
+        if (width or height) and not resolution:
+            func = Function(
+                region='us-central1',
+                project_id='breathecode-197918',
+                name='resize-image')
 
-        # if width and height:
-        #     url = f'{url}-{width}x{height}'
-        #     resolution.hits = resolution.hits + 1
-        #     resolution.save()
+            res = func.call({
+                'width': width,
+                'height': height,
+                'filename': media.hash,
+                'bucket': BUCKET_NAME,
+            })
+
+            if not res['status_code'] == 200 or not res['message'] == 'Ok':
+                if 'message' in res:
+                    raise ValidationException(
+                        res['message'],
+                        code=500,
+                        slug='cloud-function-bad-input')
+
+                raise ValidationException(
+                    'Unhandled request from cloud functions',
+                    code=500,
+                    slug='unhandled-cloud-function')
+
+            width = res['width']
+            height = res['height']
+            resolution = MediaResolution(
+                width=width,
+                height=height,
+                hash=media.hash)
+            resolution.save()
+
+        if (width or height):
+            width = resolution.width
+            height = resolution.height
+
+            url = f'{url}-{width}x{height}'
+            resolution.hits = resolution.hits + 1
+            resolution.save()
 
         if request.GET.get('mask') != 'true':
             return redirect(url, permanent=True)

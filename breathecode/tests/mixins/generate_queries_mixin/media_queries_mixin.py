@@ -7,5 +7,5 @@ class MediaQueriesMixin():
         """Generate queries"""
         return {
             'module': 'media',
-            'models': ['Category', 'Media']
+            'models': ['Category', 'Media', 'MediaResolution']
         }
