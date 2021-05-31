@@ -434,7 +434,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
     @capable_of('crud_cohort')
     def post(self, request, cohort_id=None, academy_id=None):
         if 'cohort' in request.data or 'cohort_id' in request.data:
-            raise ValidationException("Cohort can't be passed is the body", 400, slug='cohort-in-body')
+            raise ValidationException("Cohort can't be passed in the body", 400, slug='cohort-in-body')
 
         cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id).first()
 
@@ -452,7 +452,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
     @capable_of('crud_cohort')
     def put(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
         if 'cohort' in request.data or 'cohort_id' in request.data:
-            raise ValidationException("Cohort can't be passed is the body", 400)
+            raise ValidationException("Cohort can't be passed in the body", 400)
 
         cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id).first()
 

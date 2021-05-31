@@ -156,7 +156,7 @@ class GetCohortSerializer(serpy.Serializer):
     syllabus = SyllabusSmallSerializer(required=False)
     academy = GetAcademySerializer()
     current_day = serpy.Field()
-    
+
 
 class GetSmallCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -336,7 +336,7 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
             if not CertificateTimeSlot.objects.filter(certificate__id=syllabus.certificate.id).exists():
                 raise ValidationException(
-                    'We can\’t use a Syllabus if the certificate does not have time slots',
+                    'We can\’t use a Syllabus if its certificate does not have any time slots',
                     slug='certificate-not-have-time-slots'
                 )
 
@@ -363,7 +363,7 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
         if never_ends and ending_date:
             raise ValidationException(
-                'A cohort that never ends cannot have a ending date',
+                'A cohort that never ends cannot have ending date',
                 slug='cohort-with-ending-date-and-never-ends'
             )
 
