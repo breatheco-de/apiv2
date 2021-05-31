@@ -34,7 +34,7 @@ def resized_response(width=1000, height=1000):
     data = {'message': 'Ok', 'status_code': 200, 'width': width, 'height': height}
     return (200, RESIZE_IMAGE_URL, data)
 
-
+# MEDIA_GALLERY_BUCKET
 @patch.dict('os.environ', {'GOOGLE_CLOUD_TOKEN': 'blablabla'})
 class MediaTestSuite(MediaTestCase):
     """Test /answer"""
@@ -151,7 +151,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(mock.call_args_list, [call(
             'https://us-central1-breathecode-197918.cloudfunctions.net/resize-image',
-            data='{"width": "1000", "height": null, "filename": "harcoded", "bucket": "media-breathecode-dev"}',
+            data='{"width": "1000", "height": null, "filename": "harcoded", "bucket": "bucket-name"}',
             headers={
                 'Authorization': 'Bearer blablabla',
                 'Content-Type': 'application/json',
@@ -226,7 +226,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(mock.call_args_list, [call(
             'https://us-central1-breathecode-197918.cloudfunctions.net/resize-image',
-            data='{"width": "1000", "height": null, "filename": "harcoded", "bucket": "media-breathecode-dev"}',
+            data='{"width": "1000", "height": null, "filename": "harcoded", "bucket": "bucket-name"}',
             headers={
                 'Authorization': 'Bearer blablabla',
                 'Content-Type': 'application/json',
@@ -267,7 +267,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(mock.call_args_list, [call(
             'https://us-central1-breathecode-197918.cloudfunctions.net/resize-image',
-            data='{"width": "1000", "height": null, "filename": "harcoded", "bucket": "media-breathecode-dev"}',
+            data='{"width": "1000", "height": null, "filename": "harcoded", "bucket": "bucket-name"}',
             headers={
                 'Authorization': 'Bearer blablabla',
                 'Content-Type': 'application/json',
@@ -323,7 +323,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(mock.call_args_list, [call(
             'https://us-central1-breathecode-197918.cloudfunctions.net/resize-image',
-            data='{"width": null, "height": "1000", "filename": "harcoded", "bucket": "media-breathecode-dev"}',
+            data='{"width": null, "height": "1000", "filename": "harcoded", "bucket": "bucket-name"}',
             headers={
                 'Authorization': 'Bearer blablabla',
                 'Content-Type': 'application/json',
@@ -397,7 +397,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(mock.call_args_list, [call(
             'https://us-central1-breathecode-197918.cloudfunctions.net/resize-image',
-            data='{"width": null, "height": "1000", "filename": "harcoded", "bucket": "media-breathecode-dev"}',
+            data='{"width": null, "height": "1000", "filename": "harcoded", "bucket": "bucket-name"}',
             headers={
                 'Authorization': 'Bearer blablabla',
                 'Content-Type': 'application/json',
@@ -438,7 +438,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(mock.call_args_list, [call(
             'https://us-central1-breathecode-197918.cloudfunctions.net/resize-image',
-            data='{"width": null, "height": "1000", "filename": "harcoded", "bucket": "media-breathecode-dev"}',
+            data='{"width": null, "height": "1000", "filename": "harcoded", "bucket": "bucket-name"}',
             headers={
                 'Authorization': 'Bearer blablabla',
                 'Content-Type': 'application/json',

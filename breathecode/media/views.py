@@ -22,14 +22,12 @@ from slugify import slugify
 
 
 logger = logging.getLogger(__name__)
-
-
-BUCKET_NAME = os.getenv('MEDIA_GALLERY_BUCKET')
-if not BUCKET_NAME:
-    logger.error('MEDIA_GALLERY_BUCKET is not in your environment')
-
 MIME_ALLOW = ["image/png", "image/svg+xml",
               "image/jpeg", "image/gif", "video/quicktime", "video/mp4", "audio/mpeg", "application/pdf", "image/jpg"]
+
+
+def media_gallery_bucket():
+    return os.getenv('MEDIA_GALLERY_BUCKET')
 
 
 class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -127,7 +125,7 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if not Media.objects.filter(hash=hash).count():
             storage = Storage()
-            file = storage.file(BUCKET_NAME, url)
+            file = storage.file(media_gallery_bucket(), url)
             file.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -290,7 +288,7 @@ class UploadView(APIView):
                 else:
                     # upload file section
                     storage = Storage()
-                    cloud_file = storage.file(BUCKET_NAME, hash)
+                    cloud_file = storage.file(media_gallery_bucket(), hash)
                     cloud_file.upload(file_bytes)
                     data['url'] = cloud_file.url()
                     data['thumbnail'] = data['url'] + '-thumbnail'
@@ -373,7 +371,7 @@ class MaskingUrlView(APIView):
                 'width': width,
                 'height': height,
                 'filename': media.hash,
-                'bucket': BUCKET_NAME,
+                'bucket': media_gallery_bucket(),
             })
 
             if not res['status_code'] == 200 or not res['message'] == 'Ok':
