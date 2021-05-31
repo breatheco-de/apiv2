@@ -534,3 +534,56 @@ class AuthenticateTestSuite(AuthTestCase):
 
             for model in ProfileAcademy.objects.all():
                 model.delete()
+
+    def test_academy_student_query_like_full_name(self):
+        """Test /academy/student"""
+        self.headers(academy=1)
+        role = 'student'
+        model = self.generate_models(authenticate=True, role=role,
+            capability='read_student', profile_academy=True)
+        base_url = reverse_lazy('authenticate:academy_student')
+        print("rr", model)
+        url = f'{base_url}?like={model.user.first_name} {model.user.last_name}'
+        print("wWWWWWWWWWWWw", url)
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'academy': {
+                'id': model['profile_academy'].academy.id,
+                'name': model['profile_academy'].academy.name,
+                'slug': model['profile_academy'].academy.slug
+            },
+            'address': model['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
+            'email': model['profile_academy'].email,
+            'first_name': model['profile_academy'].first_name,
+            'id': model['profile_academy'].id,
+            'last_name': model['profile_academy'].last_name,
+            'phone': model['profile_academy'].phone,
+            'role': {
+                'name': 'student',
+                'slug': 'student'
+            },
+            'status': 'INVITED',
+            'user': {
+                'email': model['profile_academy'].user.email,
+                'first_name': model['profile_academy'].user.first_name,
+                'github': None,
+                'id': model['profile_academy'].user.id,
+                'last_name': model['profile_academy'].user.last_name
+            }
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            'academy_id': 1,
+            'address': None,
+            'email': None,
+            'first_name': None,
+            'id': 1,
+            'last_name': None,
+            'phone': '',
+            'role_id': 'student',
+            'status': 'INVITED',
+            'user_id': 1
+        }])
