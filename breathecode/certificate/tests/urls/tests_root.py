@@ -1,5 +1,5 @@
 """
-Test /cohort/user
+Test /certificate
 """
 import re
 from random import choice
@@ -14,8 +14,8 @@ from breathecode.tests.mocks import (
 )
 from ..mixins.new_certificate_test_case import CertificateTestCase
 
-class CohortUserTestSuite(CertificateTestCase):
-    """Test /cohort/user"""
+class CertificateTestSuite(CertificateTestCase):
+    """Test /certificate"""
 
     """
     🔽🔽🔽 Auth
