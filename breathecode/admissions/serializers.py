@@ -155,7 +155,7 @@ class GetCohortSerializer(serpy.Serializer):
     syllabus = SyllabusSmallSerializer(required=False)
     academy = GetAcademySerializer()
     current_day = serpy.Field()
-    
+
 
 class GetSmallCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -447,7 +447,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
                 'That user already exists in this cohort')
 
         if ('role' in request_item and request_item['role'] == 'TEACHER' and
-                not ProfileAcademy.objects.filter(user_id=user_id,role__slug='staff').count()):
+                not ProfileAcademy.objects.filter(user_id=user_id).exclude(role__slug='student').exists()):
             raise ValidationException(
                 'The user must be staff member to this academy before it can be a teacher')
 
