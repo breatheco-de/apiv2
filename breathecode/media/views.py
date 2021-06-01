@@ -343,7 +343,7 @@ class MaskingUrlView(APIView):
 
         if width and height:
             raise ValidationException(
-                'Pass a width with a height in the URL is not allowed',
+                'You need to pass either width or height, not both, in order to avoid losing aspect ratio',
                 code=400,
                 slug='width-and-height-in-querystring')
 
