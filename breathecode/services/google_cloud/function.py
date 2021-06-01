@@ -18,9 +18,8 @@ class Function:
         from google.oauth2.id_token import fetch_id_token
 
         auth_req = GCRequest()
-        id_token = fetch_id_token(auth_req, self.service_url)
+        id_token = fetch_id_token(auth_req, 'https://' + self.service_url)
         headers = {"Authorization": f"Bearer {id_token}"}
-        # headers = {"Authorization": f"Bearer {os.getenv('GOOGLE_CLOUD_TOKEN')}"}
 
         if data:
             headers['Content-Type'] = 'application/json'
@@ -28,5 +27,9 @@ class Function:
             data = json.dumps(data)
 
         request = requests.post('https://' + self.service_url, data=data, headers=headers)
+
+        logger.info(f'Cloud function {self.service_url}')
+        logger.info(request.content.decode('utf-8'))
+
         res = request.json()
         return res

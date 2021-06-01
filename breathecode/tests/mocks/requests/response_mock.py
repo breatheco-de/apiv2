@@ -23,7 +23,7 @@ class ResponseMock():
             self.content = data
             self.text = data
         else:
-            content = json.dumps(data)
+            content = json.dumps(data).encode('utf-8')
 
             self.data = data
             self.content = content
