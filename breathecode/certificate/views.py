@@ -119,7 +119,6 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
     """
     @capable_of('read_certificate')
     def get(self, request, academy_id=None):
-        # print(request.headers['Academy'])
         items = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
 
         like = request.GET.get('like', None)
@@ -131,6 +130,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
 
         page = self.paginate_queryset(items, request)
         serializer = UserSpecialtySerializer(items, many=True)
+        print(serializer.data)
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
         else:
