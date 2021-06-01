@@ -19,10 +19,12 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    cohort_user_educational_status='', city=False, country=False,
                                    skip_cohort=False, specialty=False, cohort_finished=False,
                                    cohort_stage='', language='', cohort_user_role='', syllabus=False,
-                                   academy_certificate=False, country_kwargs={}, city_kwargs={},
-                                   academy_kwargs={}, certificate_kwargs={},
-                                   academy_certificate_kwargs={}, syllabus_kwargs={}, cohort_kwargs={},
-                                   cohort_user_kwargs={}, models={}, **kwargs):
+                                   academy_certificate=False, cohort_time_slot=False, time_slot=False,
+                                   certificate_time_slot=False, country_kwargs={}, time_slot_kwargs={},
+                                   city_kwargs={}, cohort_time_slot_kwargs={}, academy_kwargs={},
+                                   certificate_kwargs={}, academy_certificate_kwargs={},
+                                   syllabus_kwargs={}, cohort_kwargs={}, cohort_user_kwargs={},
+                                   certificate_time_slot_kwargs={}, models={}, **kwargs):
         models = models.copy()
 
         if not 'country' in models and country:
@@ -131,5 +133,35 @@ class AdmissionsModelsMixin(ModelsMixin):
             kargs = {**kargs, **cohort_user_kwargs}
             models['cohort_user'] = mixer.blend(
                 'admissions.CohortUser', **kargs)
+
+        if not 'time_slot' in models and time_slot:
+            kargs = {}
+
+            kargs = {**kargs, **time_slot_kwargs}
+            models['time_slot'] = mixer.blend(
+                'admissions.TimeSlot', **kargs)
+
+        if not 'certificate_time_slot' in models and certificate_time_slot:
+            kargs = {}
+
+            if 'certificate' in models:
+                kargs['certificate'] = models['certificate']
+
+            if 'academy' in models:
+                kargs['academy'] = models['academy']
+
+            kargs = {**kargs, **certificate_time_slot_kwargs}
+            models['certificate_time_slot'] = mixer.blend(
+                'admissions.CertificateTimeSlot', **kargs)
+
+        if not 'cohort_time_slot' in models and cohort_time_slot:
+            kargs = {}
+
+            if 'cohort' in models:
+                kargs['cohort'] = models['cohort']
+
+            kargs = {**kargs, **cohort_time_slot_kwargs}
+            models['cohort_time_slot'] = mixer.blend(
+                'admissions.CohortTimeSlot', **kargs)
 
         return models

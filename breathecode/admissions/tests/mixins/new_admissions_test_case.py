@@ -16,6 +16,16 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
     def tearDown(self):
         self.clear_cache()
 
+    def fill_cohort_timeslot(self, id, cohort_id, certificate_timeslot):
+        return {
+            'id': id,
+            'cohort_id': cohort_id,
+            'starting_at': certificate_timeslot.starting_at,
+            'ending_at': certificate_timeslot.ending_at,
+            'recurrent': certificate_timeslot.recurrent,
+            'recurrency_type': certificate_timeslot.recurrency_type,
+        }
+
     def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, update=False):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -107,3 +117,4 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
                 'role': 'TEACHER',
                 'user_id': 1
             }])
+
