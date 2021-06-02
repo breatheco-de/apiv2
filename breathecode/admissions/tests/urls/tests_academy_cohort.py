@@ -1449,3 +1449,33 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.test_academy_cohort_with_data(base)
         self.assertEqual(self.cache.keys(), cache_keys)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_id__delete__cohort_with_students(self):
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True, 
+            capability='crud_cohort', role='potato' ,cohort_user=True)
+        url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 1})
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {
+            'detail': 'cohort-has-students',
+            'status_code': 400,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_id__delete(self):
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True, 
+            capability='crud_cohort', role='potato' , cohort_user=False)
+        url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 1})
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)

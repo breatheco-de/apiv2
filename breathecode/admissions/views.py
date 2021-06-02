@@ -572,7 +572,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         # Check if cohort has students before deleting
         if cohort_users.count() > 0:
-            raise ValidationException("Please remove all students before trying to delete cohort", code=400)
+            raise ValidationException("Please remove all students before trying to delete cohort", slug='cohort-has-students')
 
         cohort.stage = DELETED
         cohort.save()
