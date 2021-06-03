@@ -31,7 +31,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.all_user_invite_dict(), [])
 
-    def test_invite_delete_without_ids(self):
+    def test_invite_delete_without_passing_ids(self):
         """Test /academy/user/invite without ids"""
         self.headers(academy=1)
 
@@ -42,7 +42,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(
             academy=True, capability='read_invite', authenticate=True, role='potato', invite_kwargs=invite_kwargs, profile_academy=True)
 
-        url = (reverse_lazy('authenticate:user_invite') + "")
+        url = (reverse_lazy('authenticate:user_invite'))
 
         response = self.client.delete(url)
 
@@ -60,14 +60,14 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(
             academy=True, capability='read_invite', authenticate=True, role='potato', invite_kwargs=invite_kwargs, profile_academy=True)
 
-        url = (reverse_lazy('authenticate:user_me_invite') + "")
+        url = (reverse_lazy('authenticate:user_me_invite'))
 
         response = self.client.put(url)
 
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_user_invite_dict(), [])
 
-    def test_invite_change_status(self):
+    def test_invite_change_status_to_accepted(self):
         """Test academy/user/me/invite"""
         self.headers(academy=1)
 

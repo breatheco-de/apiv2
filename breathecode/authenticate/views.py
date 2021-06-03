@@ -243,21 +243,23 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if lookups:
             items = UserInvite.objects.filter(**lookups)
 
-            for item in items:
+            valid_items = [i for i in items if i.email == request.user.email]
 
+            for item in valid_items:
                 item.status = 'ACCEPTED'
                 item.save()
 
                 exists = ProfileAcademy.objects.filter(
                     email=item.email, academy__id=item.academy.id)
 
-                if len(exists) == 0:
+                if exists.count() == 0:
                     profile_academy = ProfileAcademy(
                         academy=item.academy, role=item.role, status="ACTIVE",
                         email=item.email, first_name=item.first_name, last_name=item.last_name)
                     profile_academy.save()
 
-            return Response("Invitation(s) status changed to Accepted and profile(s) academy created", status=status.HTTP_201_CREATED)
+            serializer = UserInviteSerializer(valid_items, many=True)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         else:
             raise ValidationException(
