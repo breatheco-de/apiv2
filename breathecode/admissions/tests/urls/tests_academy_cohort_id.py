@@ -563,7 +563,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
-            capability='crud_cohort', role='potato', syllabus=True, cohort_user=False)
+            capability='crud_cohort', role='potato', syllabus=True)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         self.assertEqual(self.count_cohort_stage(model['cohort'].id), 'INACTIVE')
         response = self.client.delete(url)
@@ -686,11 +686,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'detail': 'cohort-has-students',
             'status_code': 400,
         }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         
-        self.assertEqual(self.count_cohort_user(), 1)
-        self.assertEqual(self.count_cohort_stage(model['cohort'].id), 'INACTIVE')
         self.assertEqual(self.all_cohort_dict(), [{
             **self.model_to_dict(model, 'cohort')
         }])
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

@@ -779,11 +779,14 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 role=STUDENT,
                 cohort__id=item.id
                 )
-
+                
                 if item_users.count() > 0:
                     raise ValidationException("Please remove all students before trying to delete cohort", slug='cohort-has-students')
 
-                item.delete()
+
+            for item in items:
+                item.stage = DELETED
+                item.save()
 
             self.cache.clear()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
