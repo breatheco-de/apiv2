@@ -1468,10 +1468,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             if response.status_code != 204:
                 print(response.json())
 
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.count_cohort_user(), 0)
             self.assertEqual(self.count_cohort_stage(model['cohort'].id), 'DELETED')
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1513,11 +1513,12 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             if response.status_code != 204:
                 print(response.json())
 
+
             self.assertEqual(self.count_cohort_user(), 0)
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            
             self.assertEqual(self.count_cohort_stage(model1['cohort'].id), 'DELETED')
             self.assertEqual(self.count_cohort_stage(model2['cohort'].id), 'DELETED')
-
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
