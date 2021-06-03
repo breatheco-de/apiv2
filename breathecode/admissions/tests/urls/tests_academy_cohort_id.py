@@ -689,6 +689,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         
         self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.count_cohort_stage(model['cohort'].id), 'INACTIVE')
-
+        self.assertEqual(self.all_cohort_dict(), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

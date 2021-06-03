@@ -775,6 +775,14 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             items = Cohort.objects.filter(**lookups, academy__id=academy_id)
 
             for item in items:
+                item_users = CohortUser.objects.filter(
+                role=STUDENT,
+                cohort__id=item.id
+                )
+
+                if item_users.count() > 0:
+                    raise ValidationException("Please remove all students before trying to delete cohort", slug='cohort-has-students')
+
                 item.delete()
 
             self.cache.clear()
