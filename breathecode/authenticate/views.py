@@ -246,6 +246,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             valid_items = [i for i in items if i.email == request.user.email]
 
             for item in valid_items:
+
                 item.status = 'ACCEPTED'
                 item.save()
 
@@ -259,7 +260,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     profile_academy.save()
 
             serializer = UserInviteSerializer(valid_items, many=True)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
         else:
             raise ValidationException(
