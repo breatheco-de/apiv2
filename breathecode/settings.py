@@ -106,7 +106,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
-    # ⬇ Rollber is always last please!
+    # ⬇ Rollbar is always last please!
     # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',
 ]
 

@@ -13,7 +13,6 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins import MediaTestCase
-from mixer.backend.django import mixer
 
 class FileMock():
     def delete(*args, **kwargs):
@@ -272,25 +271,6 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, {'detail': 'Media not found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_media_dict(), [])
-
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # def test_info_id_delete_with_different_academy(self):
-    #     """Test /answer with different academy"""
-    #     self.headers(academy=1)
-    #     media_kwargs = {'academy_id' : '1'}
-    #     model = self.generate_models(authenticate=True, profile_academy=True,
-    #         capability='crud_media', role='potato', media=True, media_kwargs=media_kwargs)
-    #     url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
-    #     response = self.client.delete(url)
-    #     json = response.json()
-    #     expected = {
-    #         'detail': "academy-different-than-media-academy",
-    #         'status_code': 400
-    #     }
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

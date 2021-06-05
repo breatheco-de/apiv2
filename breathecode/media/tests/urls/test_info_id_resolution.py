@@ -12,36 +12,34 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins import MediaTestCase
-
+class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_info_id_without_auth(self):
+    def test_info_id_resolution_without_auth(self):
         """Test /answer without auth"""
-        url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
+        url = reverse_lazy('media:info_id_resolution', kwargs={'media_id': 1})
         response = self.client.get(url)
-        json = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_info_id_wrong_academy(self):
+    def test_info_id_resolution_wrong_academy(self):
         """Test /answer without auth"""
-        url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
+        url = reverse_lazy('media:info_id_resolution', kwargs={'media_id': 1})
         response = self.client.get(url, **{'HTTP_Academy': 1 })
-        json = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_info_id_without_capability(self):
+    def test_info_id_resolution_without_capability(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
+        url = reverse_lazy('media:info_id_resolution', kwargs={'media_id': 1})
         self.generate_models(authenticate=True)
         response = self.client.get(url)
         json = response.json()
@@ -58,14 +56,14 @@ from ..mixins import MediaTestCase
     def test_info_id_without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True, profile_academy=True,
+        model = self.generate_models(authenticate=True, profile_academy=True,
             capability='read_media', role='potato')
-        url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
+        url = reverse_lazy('media:info_id_resolution', kwargs={'media_id': 1})
         response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(json, {
-            'detail': 'Media not found',
+            'detail': 'media-resolutions-not-found',
             'status_code': 404
         })
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -74,60 +72,25 @@ from ..mixins import MediaTestCase
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_root(self):
-        """Test /answer without auth"""
+    def test_info_id_resolution_get_with_id(self):
+        """Test /info/media:id/resolution"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_media', role='potato', media=True)
-        url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
+        model = self.generate_models(authenticate=True, media_resolution=True, media=True,
+            capability='read_media', role='potato', profile_academy=True)
+        model_dict = self.remove_dinamics_fields(model['media_resolution'].__dict__)
+        url = reverse_lazy('media:info_id_resolution', kwargs={'media_id': model['media'].id})
         response = self.client.get(url)
         json = response.json()
+        expected = [{
+            'id': model['media_resolution'].id,
+            'hash': model['media_resolution'].hash,
+            'width': model['media_resolution'].width,
+            'height': model['media_resolution'].height,
+            'hits': model['media_resolution'].hits,
+            'media': model['media_resolution'].media.id
+        }]
 
-        self.assertEqual(json, {
-            'categories': [],
-            'hash': model['media'].hash,
-            'hits': model['media'].hits,
-            'id': model['media'].id,
-            'mime': model['media'].mime,
-            'name': model['media'].name,
-            'slug': model['media'].slug,
-            'thumbnail': f'{model.media.url}-thumbnail',
-            'url': model['media'].url
-        })
+        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_info_id_with_category(self):
-        """Test /answer without auth"""
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_media', role='potato', media=True, category=True)
-        url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(json, {
-            'categories': [{
-                'id': 1,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            }],
-            'hash': model['media'].hash,
-            'hits': model['media'].hits,
-            'id': model['media'].id,
-            'mime': model['media'].mime,
-            'name': model['media'].name,
-            'slug': model['media'].slug,
-            'thumbnail': f'{model.media.url}-thumbnail',
-            'url': model['media'].url
-        })
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.count_media_resolution(), 1)
+        self.assertEqual(self.get_media_resolution_dict(1), model_dict)
