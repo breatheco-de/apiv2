@@ -297,6 +297,22 @@ class CertificateTestSuite(CertificateTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_user_specialty_dict(), [{
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': model['user_specialty'].preview_url,
+            'signed_by': teacher_model['user'].first_name + " " +
+                teacher_model['user'].last_name,
+            'signed_by_role': 'Director',
+            'specialty_id': 1,
+            'status': 'ERROR',
+            'status_text':'The student must have finantial status FULLY_PAID or UP_TO_DATE',
+            'user_id': 1,
+            'token': "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+        }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -373,6 +389,22 @@ class CertificateTestSuite(CertificateTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_user_specialty_dict(), [{
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': model['user_specialty'].preview_url,
+            'signed_by': teacher_model['user'].first_name + " " +
+                teacher_model['user'].last_name,
+            'signed_by_role': 'Director',
+            'specialty_id': 1,
+            'status': 'ERROR',
+            'status_text':'The student must have educational status GRADUATED',
+            'user_id': 1,
+            'token': "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+        }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -450,6 +482,22 @@ class CertificateTestSuite(CertificateTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_user_specialty_dict(), [{
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': model['user_specialty'].preview_url,
+            'signed_by': teacher_model['user'].first_name + " " +
+                teacher_model['user'].last_name,
+            'signed_by_role': 'Director',
+            'specialty_id': 1,
+            'status': 'ERROR',
+            'status_text':'Cohort current day should be ' + str(model['cohort'].syllabus.certificate.duration_in_days),
+            'user_id': 1,
+            'token': "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+        }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -527,3 +575,19 @@ class CertificateTestSuite(CertificateTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_user_specialty_dict(), [{
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': model['user_specialty'].preview_url,
+            'signed_by': teacher_model['user'].first_name + " " +
+                teacher_model['user'].last_name,
+            'signed_by_role': 'Director',
+            'specialty_id': 1,
+            'status': 'PERSISTED',
+            'status_text':'Certificate successfully queued for PDF generation',
+            'user_id': 1,
+            'token': "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+        }])
