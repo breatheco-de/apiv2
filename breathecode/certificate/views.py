@@ -104,23 +104,34 @@ class CertificateCohortView(APIView):
         cohort__users = []
 
         if cohort_users.count() == 0:
-            raise APIException("There are no users with STUDENT role in this cohort")
+            raise ValidationException("There are no users with STUDENT role in this cohort", code=400, 
+            slug="no-user-with-student-role")
 
         for cohort_user in cohort_users:
             cohort = cohort_user.cohort
             if cohort_user is None:
-                raise APIException("Impossible to obtain the student cohort, maybe it's none assigned")
-            elif cohort.stage != "ENDED" and cohort.never_ends != False:
-                raise APIException("Cohort stage must be ENDED or never ends")
-            elif cohort.syllabus is None: 
-                raise APIException(f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}')
-            elif cohort.syllabus.certificate is None:
-                raise APIException(f'The cohort has no certificate assigned, please set a '
-                f'certificate for cohort: {cohort.name}')
-            elif (not hasattr(cohort.syllabus.certificate, 'specialty') or not
+                raise ValidationException("Impossible to obtain the student cohort, maybe it's none assigned", code=400, 
+                slug="no-cohort-user-assigned")
+
+            if cohort.stage != "ENDED" or cohort.never_ends != False:
+                raise ValidationException("Cohort stage must be ENDED or never ends", code=400, 
+                slug="cohort-stage-must-be-ended")
+            
+            if cohort.syllabus is None: 
+                raise ValidationException(f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}', code=400, 
+                slug="cohort-has-no-syllabus-assigned")
+            
+            if cohort.syllabus.certificate is None:
+                raise ValidationException(f'The cohort has no certificate assigned, please set a '
+                f'certificate for cohort: {cohort.name}', code=400, 
+                slug="cohort-has-no-certificate-assigned")
+            
+            if (not hasattr(cohort.syllabus.certificate, 'specialty') or not
                 cohort.syllabus.certificate.specialty):
-                raise APIException('Specialty has no certificate assigned, please set a '
-                f'certificate on the Specialty model: {cohort.syllabus.certificate.name}')
+                raise ValidationException('Specialty has no certificate assigned, please set a '
+                f'certificate on the Specialty model: {cohort.syllabus.certificate.name}', code=400, 
+                slug="specialty-has-no-certificate-assigned")
+
             else:
                 cohort__users.append(cohort_user)
 
