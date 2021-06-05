@@ -246,6 +246,9 @@ class CertificateTestSuite(CertificateTestCase):
         response = self.client.post(url, format='json')
         json = response.json()
 
+        self.assertDatetime(json[0]['updated_at'])
+        del json[0]['updated_at']
+
         expected = [{
             'academy': {
                 'id': 1,
@@ -285,7 +288,6 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'status': 'ERROR',
             'status_text':'The student must have finantial status FULLY_PAID or UP_TO_DATE',
-            'updated_at': self.datetime_to_iso(model['user_specialty'].updated_at),
             'user': {
                 'first_name': model['user'].first_name, 
                 'id': 1, 
@@ -294,8 +296,7 @@ class CertificateTestSuite(CertificateTestCase):
         }]
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_user_specialty_dict(), [])
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -320,6 +321,9 @@ class CertificateTestSuite(CertificateTestCase):
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
+
+        self.assertDatetime(json[0]['updated_at'])
+        del json[0]['updated_at']
 
         expected = [{
             'academy': {
@@ -360,7 +364,6 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'status': 'ERROR',
             'status_text':'The student must have educational status GRADUATED',
-            'updated_at': self.datetime_to_iso(model['user_specialty'].updated_at),
             'user': {
                 'first_name': model['user'].first_name, 
                 'id': 1, 
@@ -369,8 +372,7 @@ class CertificateTestSuite(CertificateTestCase):
         }]
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_user_specialty_dict(), [])
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -396,6 +398,9 @@ class CertificateTestSuite(CertificateTestCase):
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
+
+        self.assertDatetime(json[0]['updated_at'])
+        del json[0]['updated_at']
 
         expected = [{
            'academy': {
@@ -436,7 +441,6 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'status': 'ERROR',
             'status_text': 'Cohort current day should be ' + str(model['cohort'].syllabus.certificate.duration_in_days),
-            'updated_at': self.datetime_to_iso(model['user_specialty'].updated_at),
             'user': {
                 'first_name': model['user'].first_name, 
                 'id': 1, 
@@ -445,8 +449,7 @@ class CertificateTestSuite(CertificateTestCase):
         }]
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_user_specialty_dict(), [])
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -472,6 +475,9 @@ class CertificateTestSuite(CertificateTestCase):
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
+
+        self.assertDatetime(json[0]['updated_at'])
+        del json[0]['updated_at']
 
         expected = [{
             'academy': {
@@ -512,7 +518,6 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'status': 'PERSISTED',
             'status_text':'Certificate successfully queued for PDF generation',
-            'updated_at': self.datetime_to_iso(model['user_specialty'].updated_at),
             'user': {
                 'first_name': model['user'].first_name, 
                 'id': 1, 
@@ -522,4 +527,3 @@ class CertificateTestSuite(CertificateTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_user_specialty_dict(), [])
