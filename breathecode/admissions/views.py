@@ -787,6 +787,9 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             cohort = Cohort.objects.get(id=cohort_id, academy__id=academy_id)
         except Cohort.DoesNotExist:
             raise ValidationException("Cohort doesn't exist", code=400)
+            
+        cohort.stage = DELETED
+        cohort.save()
 
         # Student
         cohort_users = CohortUser.objects.filter(
@@ -794,12 +797,9 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             cohort__id=cohort_id
         )
 
-        # Check if cohort has students before deleting
-        if cohort_users.count() > 0:
-            raise ValidationException("Please remove all students before trying to delete cohort", slug='cohort-has-students')
-
-        cohort.stage = DELETED
-        cohort.save()
+        # TODO: this in one future maybe will be removed
+        for cohort_user in cohort_users:
+            cohort_user.delete()
         
         self.cache.clear()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
