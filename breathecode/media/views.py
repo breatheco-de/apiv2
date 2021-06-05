@@ -16,7 +16,8 @@ from breathecode.media.serializers import (
     MediaSerializer,
     MediaPUTSerializer,
     GetCategorySerializer,
-    CategorySerializer
+    CategorySerializer,
+    GetResolutionSerializer
 )
 from slugify import slugify
 
@@ -114,10 +115,13 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def delete(self, request, media_id=None, academy_id=None):
         from ..services.google_cloud import Storage
 
-        data = Media.objects.filter(
-            id=media_id, academy__id=academy_id).first()
+        data = Media.objects.filter(id=media_id).first()
         if not data:
             raise ValidationException('Media not found', code=404)
+        
+        media_academy = data.academy.id
+        if int(media_academy) != int(academy_id):
+            raise ValidationException('You may not delete media that belongs to a different academy', slug='academy-different-than-media-academy')
 
         url = data.url
         hash = data.hash
@@ -420,3 +424,50 @@ class MaskingUrlView(APIView):
             resource[header] = response.headers[header]
 
         return resource
+
+class ResolutionView(APIView):
+    @capable_of('read_media')
+    def get(self, request, media_id=None, academy_id=None):
+
+        if media_id:
+            items = CategorySerializer.objects.filter(media_id=media_id)
+
+            if not items:
+                raise ValidationException('Resolutions for this media were not found', code=404)
+
+        items = CategorySerializer.objects.filter(media_id=media_id)
+        sort = request.GET.get('sort')
+        if sort:
+            items = items.order_by(sort)
+
+        page = self.paginate_queryset(items, request)
+        serializer = GetCategorySerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
+    @capable_of('crud_media')
+    def delete(self, request, resolution_id=None, academy_id=None):
+        from ..services.google_cloud import Storage
+
+        data = MediaResolution.objects.filter(id=resolution_id).first()
+        if not data:
+            raise ValidationException('Resolution was not found', code=404)
+
+        # media = Media.objects.filter(media_id=data.media.id)
+        
+        # media_academy = media.academy.id
+        # if int(media_academy) == int(academy_id):
+        #     raise ValidationException('You may not delete resolutions from media that belongs to a different academy', slug='academy-different-than-media-resolution-academy')
+
+        hash = data.hash
+        data.delete()
+
+        if not MediaResolution.objects.filter(hash=hash).count():
+            storage = Storage()
+            file = storage.file(media_gallery_bucket())
+            file.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)

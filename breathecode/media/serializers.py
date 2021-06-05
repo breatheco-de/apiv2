@@ -41,6 +41,15 @@ class GetMediaSerializer(serpy.Serializer):
         return [GetCategorySerializer(x).data for x in obj.categories.all()]
 
 
+class GetResolutionSerializer(serializers.ModelSerializer):
+    id = serpy.Field()
+    hash = serpy.Field()
+    width = serpy.Field()
+    height = serpy.Field()
+    hits = serpy.Field()
+    media = GetMediaSerializer()
+
+
 class MediaSerializer(serializers.ModelSerializer):
     url = serializers.CharField(read_only=True, required=False)
     name = serializers.CharField(read_only=True, required=False)
@@ -115,3 +124,5 @@ class CategorySerializer(serializers.ModelSerializer):
         _slug = slugify(validated_data["name"])
         result = super().create({ **validated_data, "slug": _slug })
         return result
+
+
