@@ -1,6 +1,7 @@
 import logging, time
 from celery import shared_task, Task
 from breathecode.admissions.models import CohortUser
+from breathecode.authenticate.models import ProfileAcademy
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -63,13 +64,11 @@ def generate_one_certificate(self, cohort_id, user_id):
     cohort_user =  CohortUser.objects.filter(cohort__id=cohort_id, 
             user_id=user_id, role='STUDENT').first()
 
-    print("@@@@@@@@@@@@@", cohort_user)
     if not cohort_user:
         logger.error(f'Cant generate certificate with {user_id}')
         return
-    
 
-    logger.debug(f"Generating gertificate for {str(cohort_user)} students that GRADUATED")
+    logger.debug(f"Generating gertificate for {str(cohort_user.user)} student that GRADUATED")
     try:
         generate_certificate(cohort_user.user, cohort_user.cohort)
     except Exception:

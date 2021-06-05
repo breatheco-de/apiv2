@@ -115,14 +115,12 @@ class CertificateCohortView(APIView):
         return Response(all_certs, status=status.HTTP_201_CREATED)
 
 
-
 class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
     @capable_of('read_certificate')
     def get(self, request, academy_id=None):
-        # print(request.headers['Academy'])
         items = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
 
         like = request.GET.get('like', None)
@@ -140,30 +138,31 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
     
     @capable_of('crud_certificate')
     def post(self, request, academy_id=None):
-        is_many = isinstance(request.data, list)
-        data = request.data
+        if isinstance(request.data, list):
+            data = request.data
+        else: 
+            data = [request.data]
+
         cohort_users = []
-      
-        if is_many:
-            for items in data:
-                cohort__slug = items.get("cohort_slug")
-                user__id = items.get("user_id")
-                cohort_user =  CohortUser.objects.filter(cohort__slug=cohort__slug, 
-                        user_id=user__id, role='STUDENT', cohort__academy__id=academy_id).first()
-                if cohort_user is not None :
-                    cohort_users.append(cohort_user)
-                else:
-                    student = ProfileAcademy.objects.filter(user_id=user__id).first()
-                    if student is None:
-                        raise ValidationException(f'User with id {str(user__id)} not found', 404)
-                    raise ValidationException(f'No student with id {str(student.first_name)} {str(student.last_name)} was found for cohort {str(cohort__slug)}', 404)
+
+        for items in data:
+            cohort__slug = items.get("cohort_slug")
+            user__id = items.get("user_id")
+            cohort_user =  CohortUser.objects.filter(cohort__slug=cohort__slug, 
+                    user_id=user__id, role='STUDENT', cohort__academy__id=academy_id).first()
+
+            if cohort_user is not None :
+                cohort_users.append(cohort_user)
+            else:
+                student = ProfileAcademy.objects.filter(user_id=user__id).first()
+                if student is None:
+                    raise ValidationException(f'User with id {str(user__id)} not found', 404)
+                raise ValidationException(f'No student with id {str(student.first_name)} {str(student.last_name)} was found for cohort {str(cohort__slug)}', 404)
 
         for cu in cohort_users:
-            generate_one_certificate.delay(cu.cohort_id, cu.user_id)
+            generate_one_certificate(cu.cohort_id, cu.user_id)
         return Response({'detail': "The certificates have been scheduled for generation"})
-
-
-           
+          
 
 # class SyllabusView(APIView):
 #     """
