@@ -44,7 +44,7 @@ urlpatterns = [
 
     path('academy/student', StudentView.as_view(), name="academy_student"),
     path('academy/student/<int:user_id>', StudentView.as_view()),
-    path('academy/user/<int:profileacademy_id>/invite', UserInviteView.as_view()),
+    path('academy/user/<int:profileacademy_id>/invite', UserInviteView.as_view(), name="user_invite"),
     # path('group/', get_groups, name="group"),
 
     path('view/login', login_html_view, name="login_view"),  # html login form

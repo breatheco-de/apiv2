@@ -182,8 +182,13 @@ class UserInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin)
 
         invite = UserInvite.objects.filter(
             academy__id=academy_id, email=profile.email, status='PENDING').first()
+        
         if invite is None:
             raise ValidationException("No pending invite was found", 404)
+
+        # like = request.GET.get('like', None)
+        # if like is not None:
+        #     invite = query_like_by_full_name(like, invite)
 
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
