@@ -22,14 +22,12 @@ from slugify import slugify
 
 
 logger = logging.getLogger(__name__)
-
-
-BUCKET_NAME = os.getenv('MEDIA_GALLERY_BUCKET')
-if not BUCKET_NAME:
-    logger.error('MEDIA_GALLERY_BUCKET is not in your environment')
-
 MIME_ALLOW = ["image/png", "image/svg+xml",
               "image/jpeg", "image/gif", "video/quicktime", "video/mp4", "audio/mpeg", "application/pdf", "image/jpg"]
+
+
+def media_gallery_bucket():
+    return os.getenv('MEDIA_GALLERY_BUCKET')
 
 
 class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -127,7 +125,7 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if not Media.objects.filter(hash=hash).count():
             storage = Storage()
-            file = storage.file(BUCKET_NAME, url)
+            file = storage.file(media_gallery_bucket(), url)
             file.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -290,7 +288,7 @@ class UploadView(APIView):
                 else:
                     # upload file section
                     storage = Storage()
-                    cloud_file = storage.file(BUCKET_NAME, hash)
+                    cloud_file = storage.file(media_gallery_bucket(), hash)
                     cloud_file.upload(file_bytes)
                     data['url'] = cloud_file.url()
                     data['thumbnail'] = data['url'] + '-thumbnail'
@@ -327,12 +325,15 @@ class MaskingUrlView(APIView):
     parser_classes = [FileUploadParser]
     permission_classes = [AllowAny]
 
-    def get(self, request, media_id=None, media_slug=None, width=None, height=None):
+    def get(self, request, media_id=None, media_slug=None):
         lookups = {}
         if media_id:
             lookups['id'] = media_id
         elif media_slug:
             lookups['slug'] = media_slug
+
+        width = request.GET.get('width')
+        height = request.GET.get('height')
 
         media = Media.objects.filter(**lookups).first()
         if not media:
@@ -340,39 +341,66 @@ class MaskingUrlView(APIView):
 
         url = media.url
 
-        # if width and height and not media.mime.startswith('image/'):
-        #     raise ValidationException(
-        #         'cannot resize this resource',
-        #         code=400,
-        #         slug='cannot-resize-media')
+        if width and height:
+            raise ValidationException(
+                'You need to pass either width or height, not both, in order to avoid losing aspect ratio',
+                code=400,
+                slug='width-and-height-in-querystring')
+
+        if (width or height) and not media.mime.startswith('image/'):
+            raise ValidationException(
+                'cannot resize this resource',
+                code=400,
+                slug='cannot-resize-media')
 
         # register click
         media.hits = media.hits + 1
         media.save()
 
-        # resolution = MediaResolution.objects.filter(
-        #     width=width,
-        #     height=height,
-        #     hash=media.hash).first()
+        resolution = MediaResolution.objects.filter(
+            Q(width=width) | Q(height=height),
+            hash=media.hash).first()
 
-        # if width and height and not resolution:
-        #     func = Function('https://us-central1-breathecode-197918.cloudfunctions.net/resize-image')
-        #     res = func.call({
-        #         'width': width,
-        #         'height': height,
-        #         'filename': media.hash,
-        #         'bucket': BUCKET_NAME,
-        #     })
-        #     resolution = MediaResolution(
-        #         width=width,
-        #         height=height,
-        #         hash=media.hash)
-        #     resolution.save()
+        if (width or height) and not resolution:
+            func = Function(
+                region='us-central1',
+                project_id='breathecode-197918',
+                name='resize-image')
 
-        # if width and height:
-        #     url = f'{url}-{width}x{height}'
-        #     resolution.hits = resolution.hits + 1
-        #     resolution.save()
+            res = func.call({
+                'width': width,
+                'height': height,
+                'filename': media.hash,
+                'bucket': media_gallery_bucket(),
+            })
+
+            if not res['status_code'] == 200 or not res['message'] == 'Ok':
+                if 'message' in res:
+                    raise ValidationException(
+                        res['message'],
+                        code=500,
+                        slug='cloud-function-bad-input')
+
+                raise ValidationException(
+                    'Unhandled request from cloud functions',
+                    code=500,
+                    slug='unhandled-cloud-function')
+
+            width = res['width']
+            height = res['height']
+            resolution = MediaResolution(
+                width=width,
+                height=height,
+                hash=media.hash)
+            resolution.save()
+
+        if (width or height):
+            width = resolution.width
+            height = resolution.height
+
+            url = f'{url}-{width}x{height}'
+            resolution.hits = resolution.hits + 1
+            resolution.save()
 
         if request.GET.get('mask') != 'true':
             return redirect(url, permanent=True)

@@ -26,8 +26,8 @@ class ResponseMock():
             content = json.dumps(data)
 
             self.data = data
-            self.content = content
             self.text = content
+            self.content = content.encode('utf-8')
 
     def json(self) -> dict:
         """Convert Response to JSON"""
