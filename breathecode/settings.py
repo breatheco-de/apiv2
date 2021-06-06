@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'breathecode.certificate',
     'breathecode.monitoring',
     'breathecode.media',
+    'breathecode.assessment',
     'breathecode.registry',
 ]
 

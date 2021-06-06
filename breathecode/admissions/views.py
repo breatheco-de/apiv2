@@ -1,3 +1,4 @@
+from breathecode.admissions.actions import sync_cohort_timeslots
 from breathecode.admissions.caches import CohortCache
 import logging
 import re
@@ -13,7 +14,7 @@ from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
 from .serializers import (
-    AcademySerializer, CohortSerializer, GetCohortSerializer,
+    AcademySerializer, CertificateTimeSlotSerializer, CohortSerializer, CohortTimeSlotSerializer, GETCertificateTimeSlotSerializer, GETCohortTimeSlotSerializer, GetCohortSerializer,
     SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer,
     CohortUserSerializer, GETCohortUserSerializer, CohortUserPUTSerializer,
     CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
@@ -21,7 +22,7 @@ from .serializers import (
     SyllabusSmallSerializer, GetBigAcademySerializer
 )
 from .models import (
-    Academy, AcademyCertificate, CohortUser, Certificate, Cohort, Country,
+    Academy, AcademyCertificate, CertificateTimeSlot, CohortTimeSlot, CohortUser, Certificate, Cohort, Country,
     STUDENT, DELETED, Syllabus
 )
 from breathecode.authenticate.models import ProfileAcademy
@@ -78,7 +79,10 @@ def get_cohorts(request, id=None):
     if location is not None:
         items = items.filter(academy__slug__in=location.split(","))
 
-    sort = request.GET.get('sort', 'kickoff_date')
+    sort = request.GET.get('sort', None)
+    if sort is None or sort == "":
+        sort = "-kickoff_date"
+
     items = items.order_by(sort)
 
     serializer = GetCohortSerializer(items, many=True)
@@ -265,13 +269,12 @@ class CohortUserView(APIView, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class AcademyCohortUserView(APIView, GenerateLookupsMixin):
+class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
     @ capable_of('read_cohort')
     def get(self, request, format=None, cohort_id=None, user_id=None, academy_id=None):
-
         if user_id is not None:
             item = CohortUser.objects.filter(
                 cohort__academy__id=academy_id, user__id=user_id, cohort__id=cohort_id).first()
@@ -304,11 +307,17 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
             users = request.GET.get('users', None)
             if users is not None:
                 items = items.filter(user__id__in=users.split(","))
+
         except Exception as e:
             raise ValidationException(str(e), 400)
 
-        serializer = GETCohortUserSerializer(items, many=True)
-        return Response(serializer.data)
+        page = self.paginate_queryset(items, request)
+        serializer = GETCohortUserSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
     @ capable_of('crud_cohort')
     def post(self, request, cohort_id=None, academy_id=None, user_id=None):
@@ -398,6 +407,229 @@ class AcademyCohortUserView(APIView, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
+class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
+    @capable_of('read_cohort')
+    def get(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
+
+        if timeslot_id is not None:
+            item = CohortTimeSlot.objects.filter(
+                cohort__academy__id=academy_id,
+                cohort__id=cohort_id,
+                id=timeslot_id).first()
+
+            if item is None:
+                raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
+
+            serializer = GETCohortTimeSlotSerializer(item, many=False)
+            return Response(serializer.data)
+
+        items = CohortTimeSlot.objects.filter(
+            cohort__academy__id=academy_id,
+            cohort__id=cohort_id
+        )
+
+        serializer = GETCohortTimeSlotSerializer(items, many=True)
+        return Response(serializer.data)
+
+    @capable_of('crud_cohort')
+    def post(self, request, cohort_id=None, academy_id=None):
+        if 'cohort' in request.data or 'cohort_id' in request.data:
+            raise ValidationException("Cohort can't be passed in the body", 400, slug='cohort-in-body')
+
+        cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id).first()
+
+        if cohort_id and not cohort:
+            raise ValidationException("Cohort not found", 404, slug='cohort-not-found')
+
+        request.data['cohort'] = cohort.id
+
+        serializer = CohortTimeSlotSerializer(data=request.data, many=False)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_cohort')
+    def put(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
+        if 'cohort' in request.data or 'cohort_id' in request.data:
+            raise ValidationException("Cohort can't be passed in the body", 400)
+
+        cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id).first()
+
+        if cohort_id and not cohort:
+            raise ValidationException("Cohort not found", 404, slug='cohort-not-found')
+
+        item = CohortTimeSlot.objects.filter(
+            cohort__academy__id=academy_id,
+            cohort__id=cohort_id,
+            id=timeslot_id).first()
+
+        if not item:
+            raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
+
+        data = {**request.data, 'id': timeslot_id, 'cohort': cohort.id}
+
+        serializer = CohortTimeSlotSerializer(item, data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_cohort')
+    def delete(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
+        item = CohortTimeSlot.objects.filter(
+            cohort__academy__id=academy_id,
+            cohort__id=cohort_id,
+            id=timeslot_id).first()
+
+        if not item:
+            raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
+
+        item.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
+    @capable_of('crud_certificate')
+    def post(self, request, academy_id=None):
+        cohort_ids = request.GET.get('cohort', '')
+        if not cohort_ids:
+            raise ValidationException("Missing cohort in querystring", 400, slug='missing-cohort-in-querystring')
+
+        cohort_ids = cohort_ids.split(',')
+        cohorts = Cohort.objects.filter(id__in=cohort_ids)
+
+        if len(cohorts) != len(cohort_ids):
+            raise ValidationException("Cohort not found", 404, slug='cohort-not-found')
+
+        if len([x for x in cohorts if x.syllabus]) != len(cohort_ids):
+            raise ValidationException("Cohort doesn't have any syllabus", 400, slug='cohort-without-certificate')
+
+        CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).delete()
+
+        data = []
+        for cohort in cohorts:
+            certificate_id = cohort.syllabus.certificate.id
+            certificate_timeslots = CertificateTimeSlot.objects.filter(
+                academy__id=academy_id,
+                certificate__id=certificate_id)
+
+            for certificate_timeslot in certificate_timeslots:
+                data.append({
+                    'cohort': cohort.id,
+                    'starting_at': certificate_timeslot.starting_at,
+                    'ending_at': certificate_timeslot.ending_at,
+                    'recurrent': certificate_timeslot.recurrent,
+                    'recurrency_type': certificate_timeslot.recurrency_type,
+                })
+
+        serializer = CohortTimeSlotSerializer(data=data, many=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
+    @capable_of('read_certificate')
+    def get(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
+        if timeslot_id:
+            item = CertificateTimeSlot.objects.filter(
+                academy__id=academy_id,
+                certificate__id=certificate_id,
+                id=timeslot_id).first()
+
+            if item is None:
+                raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
+
+            serializer = GETCertificateTimeSlotSerializer(item, many=False)
+            return Response(serializer.data)
+
+        items = CertificateTimeSlot.objects.filter(
+            academy__id=academy_id,
+            certificate__id=certificate_id
+        )
+
+        serializer = GETCertificateTimeSlotSerializer(items, many=True)
+        return Response(serializer.data)
+
+    @capable_of('crud_certificate')
+    def post(self, request, certificate_id=None, academy_id=None):
+        if 'certificate' in request.data or 'certificate_id' in request.data:
+            raise ValidationException("Certificate can't be passed is the body", 400, slug='certificate-in-body')
+
+        academy_certificate = AcademyCertificate.objects.filter(
+            certificate__id=certificate_id,
+            academy__id=academy_id).first()
+
+        if certificate_id and not academy_certificate:
+            raise ValidationException("Certificate not found", 404, slug='certificate-not-found')
+
+        certificate = academy_certificate.certificate
+
+        data = {
+            **request.data,
+            'academy': academy_id,
+            'certificate': certificate.id,
+        }
+
+        serializer = CertificateTimeSlotSerializer(data=data, many=False)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_certificate')
+    def put(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
+        if 'certificate' in request.data or 'certificate_id' in request.data:
+            raise ValidationException("Certificate can't be passed is the body", 400)
+
+        academy_certificate = AcademyCertificate.objects.filter(
+            certificate__id=certificate_id,
+            academy__id=academy_id).first()
+
+        if certificate_id and not academy_certificate:
+            raise ValidationException("Certificate not found", 404, slug='certificate-not-found')
+
+        certificate = academy_certificate.certificate
+
+        item = CertificateTimeSlot.objects.filter(
+            academy__id=academy_id,
+            certificate__id=certificate_id,
+            id=timeslot_id).first()
+
+        if not item:
+            raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
+
+        data = {
+            **request.data,
+            'id': timeslot_id,
+            'academy': academy_id,
+            'certificate': certificate.id,
+        }
+
+        serializer = CertificateTimeSlotSerializer(item, data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_certificate')
+    def delete(self, request, certificate_id=None, timeslot_id=None, academy_id=None):
+        item = CertificateTimeSlot.objects.filter(
+            academy__id=academy_id,
+            certificate__id=certificate_id,
+            id=timeslot_id).first()
+
+        if not item:
+            raise ValidationException("Time slot not found", 404, slug='time-slot-not-found')
+
+        item.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
 class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -456,7 +688,10 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             items = items.filter(Q(name__icontains=like) |
                                  Q(slug__icontains=like))
 
-        sort = request.GET.get('sort', '-kickoff_date')
+        sort = request.GET.get('sort', None)
+        if sort is None or sort == "":
+            sort = "-kickoff_date"
+
         items = items.order_by(sort)
 
         page = self.paginate_queryset(items, request)
@@ -669,6 +904,14 @@ class SyllabusView(APIView):
             raise ValidationException(
                 f"Invalid certificates slug {certificate_slug}", code=404)
 
+        if not CertificateTimeSlot.objects.filter(
+                academy__id=academy_id,
+                certificate__slug=certificate_slug).exists():
+            raise ValidationException(
+                'We can\’t use a Certificate if it does not have time slots',
+                slug='certificate-not-have-time-slots'
+            )
+
         item = Syllabus.objects.filter(
             certificate__slug=certificate_slug, academy_owner__id=academy_id).order_by('version').first()
         if item is not None:
@@ -694,6 +937,14 @@ class SyllabusView(APIView):
         if item is None:
             raise ValidationException(
                 "Syllabus version not found for this academy", code=404)
+
+        if not CertificateTimeSlot.objects.filter(
+                academy__id=academy_id,
+                certificate__slug=certificate_slug).exists():
+            raise ValidationException(
+                'We can\’t use a Certificate if it does not have time slots',
+                slug='certificate-not-have-time-slots'
+            )
 
         serializer = SyllabusSerializer(item, data=request.data, many=False)
         if serializer.is_valid():

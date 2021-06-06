@@ -19,6 +19,8 @@ class AssetSerializer(serpy.Serializer):
     gitpod = serpy.Field()
     preview = serpy.Field()
     readme_url = serpy.Field()
+    solution_video_url = serpy.Field()
+    intro_video_url = serpy.Field()
 
     translations = serpy.MethodField()
     technologies = serpy.MethodField()
@@ -42,8 +44,6 @@ class AssetMidSerializer(AssetSerializer):
 class AssetBigSerializer(AssetMidSerializer):
 
     description = serpy.Field()
-    intro_video_url = serpy.Field()
-    solution_video_url = serpy.Field()
 
     status_text = serpy.Field()
 
@@ -51,3 +51,7 @@ class AssetBigSerializer(AssetMidSerializer):
 
     created_at = serpy.Field()
     updated_at = serpy.Field()
+    
+class AssetTechnologySerializer(serpy.Serializer):
+    slug = serpy.Field()
+    title = serpy.Field()

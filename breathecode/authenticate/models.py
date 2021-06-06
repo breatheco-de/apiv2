@@ -198,6 +198,8 @@ class Token(rest_framework.authtoken.models.Token):
             utc_now = timezone.now()
             if self.token_type == 'login':
                 self.expires_at = utc_now + timezone.timedelta(days=1)
+            elif self.token_type == 'permanent':
+                self.expires_at = None
             else:
                 self.expires_at = utc_now + timezone.timedelta(minutes=10)
         super().save(*args, **kwargs)

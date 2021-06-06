@@ -29,10 +29,12 @@ VISIBILITY = (
 PROJECT='PROJECT'
 EXERCISE='EXERCISE'
 LESSON='LESSON'
+QUIZ='QUIZ'
 VIDEO='VIDEO'
 TYPE = (
     (PROJECT, 'Project'),
     (EXERCISE, 'Exercise'),
+    (QUIZ, 'Quiz'),
     (LESSON, 'Lesson'),
     (LESSON, 'Video'),
 )
@@ -64,7 +66,7 @@ class Asset(models.Model):
 
     url = models.URLField()
     solution_url = models.URLField(null=True, blank=True, default=None)
-    preview = models.URLField()
+    preview = models.URLField(null=True, blank=True, default=None)
     description = models.TextField()
     readme_url = models.URLField(null=True, blank=True, default=None)
     intro_video_url = models.URLField(null=True, blank=True, default=None)
@@ -72,6 +74,8 @@ class Asset(models.Model):
     readme = models.TextField(null=True, blank=True, default=None)
     
     config = models.JSONField(null=True, blank=True, default=None)
+
+    external = models.BooleanField(default=False, help_text="External assets will open in a new window, they are not built using breathecode or learnpack tecnology")
 
     interactive = models.BooleanField(default=False)
     with_solutions = models.BooleanField(default=False)

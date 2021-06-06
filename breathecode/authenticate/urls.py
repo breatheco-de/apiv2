@@ -21,7 +21,7 @@ from .views import (
     save_github_token, get_slack_token, save_slack_token, pick_password, change_password,
     get_token_info, get_facebook_token, save_facebook_token, MemberView, reset_password_view,
     login_html_view, StudentView, get_roles, render_invite, AcademyInviteView,
-    UserInviteView
+    ProfileInviteView, MeInviteView, AcademyTokenView
 )
 
 app_name = 'authenticate'
@@ -44,7 +44,8 @@ urlpatterns = [
 
     path('academy/student', StudentView.as_view(), name="academy_student"),
     path('academy/student/<int:user_id>', StudentView.as_view()),
-    path('academy/user/<int:profileacademy_id>/invite', UserInviteView.as_view(), name="user_invite"),
+    path('academy/user/me/invite', MeInviteView.as_view()),
+    path('academy/user/<int:profileacademy_id>/invite', ProfileInviteView.as_view()),
     # path('group/', get_groups, name="group"),
 
     path('view/login', login_html_view, name="login_view"),  # html login form
@@ -52,6 +53,7 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name="login"),
     path('logout/', LogoutView.as_view(), name="logout"),
     # get a another token (temporal), from a logged in user
+    path('academy/token/', AcademyTokenView.as_view(), name="academy_token"),
     path('token/', TemporalTokenView.as_view(), name="token"),
     path('token/<str:token>', get_token_info,
          name="token"),  # get token information

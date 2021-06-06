@@ -244,3 +244,39 @@ class CohortUser(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+DAILY = 'DAILY'
+WEEKLY = 'WEEKLY'
+MONTHLY = 'MONTHLY'
+# YEARLY = 'YEARLY'
+RECURRENCY_TYPE = (
+    (DAILY, 'Daily'),
+    (WEEKLY, 'Weekly'),
+    (MONTHLY, 'Monthly'),
+    # (YEARLY, 'Yearly'),
+)
+class TimeSlot(models.Model):
+    starting_at = models.DateTimeField()
+    ending_at = models.DateTimeField()
+
+    recurrent = models.BooleanField(default=True)
+    recurrency_type = models.CharField(
+        max_length=10,
+        choices=RECURRENCY_TYPE,
+        default=WEEKLY)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        abstract = True
+
+
+class CertificateTimeSlot(TimeSlot):
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)
+
+
+class CohortTimeSlot(TimeSlot):
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)

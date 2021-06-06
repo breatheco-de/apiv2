@@ -1,5 +1,6 @@
 from breathecode.admissions.models import Academy
 from .models import Media, Category
+from slugify import slugify
 from rest_framework import serializers
 import serpy
 
@@ -27,10 +28,14 @@ class GetMediaSerializer(serpy.Serializer):
     name = serpy.Field()
     mime = serpy.Field()
     url = serpy.Field()
+    thumbnail = serpy.MethodField()
     hash = serpy.Field()
     hits = serpy.Field()
     categories = serpy.MethodField()
     owner = GetUserSerializer(required=False)
+
+    def get_thumbnail(self, obj):
+        return obj.url + "-thumbnail"
 
     def get_categories(self, obj):
         return [GetCategorySerializer(x).data for x in obj.categories.all()]
@@ -74,6 +79,7 @@ class MediaListSerializer(serializers.ListSerializer):
 class MediaPUTSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
     url = serializers.CharField(required=False)
+    thumbnail = serializers.CharField(required=False)
     hash = serializers.CharField()
     slug = serializers.SlugField()
     mime = serializers.CharField()
@@ -81,7 +87,7 @@ class MediaPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Media
-        fields = ('id', 'url', 'hash', 'hits', 'slug', 'mime', 'name',
+        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime', 'name',
             'categories', 'academy')
         exclude = ()
         list_serializer_class = MediaListSerializer
@@ -95,6 +101,17 @@ class MediaPUTSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+    slug = serializers.SlugField(required=False)
+    name = serializers.CharField()
+    created_at = serializers.DateTimeField(read_only=True)
+
     class Meta:
         model = Category
-        exclude = ()
+        fields = ('name', 'slug','created_at', 'id')
+
+    def create(self, validated_data):
+
+        _slug = slugify(validated_data["name"])
+        result = super().create({ **validated_data, "slug": _slug })
+        return result

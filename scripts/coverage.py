@@ -5,7 +5,7 @@ import sys
 import shutil
 import webbrowser
 from pathlib import Path
-from utils.environment import test_environment
+from .utils.environment import test_environment
 
 
 def python_module_to_dir(module: str) -> str:
