@@ -98,7 +98,6 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
 
         like = request.GET.get('like', None)
         if like is not None:
-            print("€€€€€€€€€", like)
             items = query_like_by_full_name(like, items)
 
         page = self.paginate_queryset(items, request)

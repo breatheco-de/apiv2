@@ -512,7 +512,7 @@ class AuthenticateTestSuite(AuthTestCase):
             for model in ProfileAcademy.objects.all():
                 model.delete()
 
-    def test_academy_member_query_like_full_name(self):
+    def test_academy_member_query_like_full_name_status_active(self):
         """Test /academy/member"""
         self.headers(academy=1)
         role = 'hitman'
@@ -520,8 +520,252 @@ class AuthenticateTestSuite(AuthTestCase):
                 'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
                 'first_name': choice(['Rene', 'Albert', 'Immanuel']),
                 'last_name': choice(['Descartes', 'Camus', 'Kant']),
-                'address': choice(['asd', 'qwe', 'zxc']),
-                'phone': choice(['123', '456', '789']),
+                'status': "ACTIVE"
+            }
+        model = self.generate_models(authenticate=True, role=role,
+            capability='read_member', profile_academy=True, 
+            profile_academy_kwargs=profile_academy_kwargs)
+
+        base_url = reverse_lazy('authenticate:academy_member')
+        firt_name = profile_academy_kwargs.get('first_name')
+        last_name = profile_academy_kwargs.get('last_name')
+        url = f'{base_url}?like={firt_name} {last_name}'
+        
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'academy': {
+                'id': model['profile_academy'].academy.id,
+                'name': model['profile_academy'].academy.name,
+                'slug': model['profile_academy'].academy.slug
+            },
+            'address': model['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
+            'email': model['profile_academy'].email,
+            'first_name': model['profile_academy'].first_name,
+            'id': model['profile_academy'].id,
+            'last_name': model['profile_academy'].last_name,
+            'phone': model['profile_academy'].phone,
+            'role': {
+                'name': 'hitman',
+                'slug': 'hitman'
+            },
+            'status': 'ACTIVE',
+            'user': {
+                'email': model['profile_academy'].user.email,
+                'first_name': model['profile_academy'].user.first_name,
+                'github': None,
+                'id': model['profile_academy'].user.id,
+                'last_name': model['profile_academy'].user.last_name
+            }
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            'academy_id': 1,
+            'address': model['profile_academy'].address,
+            'email': model['profile_academy'].email,
+            'first_name': model['profile_academy'].first_name,
+            'id': 1,
+            'last_name': model['profile_academy'].last_name,
+            'phone': model['profile_academy'].phone,
+            'role_id': 'hitman',
+            'status': 'ACTIVE',
+            'user_id': 1
+        }])
+    
+    def test_academy_member_query_like_first_name_status_active(self):
+        """Test /academy/member"""
+        self.headers(academy=1)
+        role = 'hitman'
+        profile_academy_kwargs = {
+                'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
+                'first_name': choice(['Rene', 'Albert', 'Immanuel']),
+                'last_name': choice(['Descartes', 'Camus', 'Kant']),
+                'status': "ACTIVE"
+            }
+        model = self.generate_models(authenticate=True, role=role,
+            capability='read_member', profile_academy=True, 
+            profile_academy_kwargs=profile_academy_kwargs)
+
+        base_url = reverse_lazy('authenticate:academy_member')
+        firt_name = profile_academy_kwargs.get('first_name')
+        url = f'{base_url}?like={firt_name}'
+        
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'academy': {
+                'id': model['profile_academy'].academy.id,
+                'name': model['profile_academy'].academy.name,
+                'slug': model['profile_academy'].academy.slug
+            },
+            'address': model['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
+            'email': model['profile_academy'].email,
+            'first_name': model['profile_academy'].first_name,
+            'id': model['profile_academy'].id,
+            'last_name': model['profile_academy'].last_name,
+            'phone': model['profile_academy'].phone,
+            'role': {
+                'name': 'hitman',
+                'slug': 'hitman'
+            },
+            'status': 'ACTIVE',
+            'user': {
+                'email': model['profile_academy'].user.email,
+                'first_name': model['profile_academy'].user.first_name,
+                'github': None,
+                'id': model['profile_academy'].user.id,
+                'last_name': model['profile_academy'].user.last_name
+            }
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            'academy_id': 1,
+            'address': model['profile_academy'].address,
+            'email': model['profile_academy'].email,
+            'first_name': model['profile_academy'].first_name,
+            'id': 1,
+            'last_name': model['profile_academy'].last_name,
+            'phone': model['profile_academy'].phone,
+            'role_id': 'hitman',
+            'status': 'ACTIVE',
+            'user_id': 1
+        }])
+
+    def test_academy_member_query_like_last_name_status_active(self):
+        """Test /academy/member"""
+        self.headers(academy=1)
+        role = 'hitman'
+        profile_academy_kwargs = {
+                'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
+                'first_name': choice(['Rene', 'Albert', 'Immanuel']),
+                'last_name': choice(['Descartes', 'Camus', 'Kant']),
+                'status': "ACTIVE"
+            }
+        model = self.generate_models(authenticate=True, role=role,
+            capability='read_member', profile_academy=True, 
+            profile_academy_kwargs=profile_academy_kwargs)
+
+        base_url = reverse_lazy('authenticate:academy_member')
+        last_name = profile_academy_kwargs.get('last_name')
+        url = f'{base_url}?like={last_name}'
+        
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'academy': {
+                'id': model['profile_academy'].academy.id,
+                'name': model['profile_academy'].academy.name,
+                'slug': model['profile_academy'].academy.slug
+            },
+            'address': model['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
+            'email': model['profile_academy'].email,
+            'first_name': model['profile_academy'].first_name,
+            'id': model['profile_academy'].id,
+            'last_name': model['profile_academy'].last_name,
+            'phone': model['profile_academy'].phone,
+            'role': {
+                'name': 'hitman',
+                'slug': 'hitman'
+            },
+            'status': 'ACTIVE',
+            'user': {
+                'email': model['profile_academy'].user.email,
+                'first_name': model['profile_academy'].user.first_name,
+                'github': None,
+                'id': model['profile_academy'].user.id,
+                'last_name': model['profile_academy'].user.last_name
+            }
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            'academy_id': 1,
+            'address': model['profile_academy'].address,
+            'email': model['profile_academy'].email,
+            'first_name': model['profile_academy'].first_name,
+            'id': 1,
+            'last_name': model['profile_academy'].last_name,
+            'phone': model['profile_academy'].phone,
+            'role_id': 'hitman',
+            'status': 'ACTIVE',
+            'user_id': 1
+        }])
+
+    def test_academy_member_query_like_email_status_active(self):
+        """Test /academy/member"""
+        self.headers(academy=1)
+        role = 'hitman'
+        profile_academy_kwargs = {
+                'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
+                'first_name': choice(['Rene', 'Albert', 'Immanuel']),
+                'last_name': choice(['Descartes', 'Camus', 'Kant']),
+                'status': "ACTIVE"
+            }
+        model = self.generate_models(authenticate=True, role=role,
+            capability='read_member', profile_academy=True, 
+            profile_academy_kwargs=profile_academy_kwargs)
+
+        base_url = reverse_lazy('authenticate:academy_member')
+        email = profile_academy_kwargs.get('email')
+        url = f'{base_url}?like={email}'
+        
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'academy': {
+                'id': model['profile_academy'].academy.id,
+                'name': model['profile_academy'].academy.name,
+                'slug': model['profile_academy'].academy.slug
+            },
+            'address': model['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
+            'email': model['profile_academy'].email,
+            'first_name': model['profile_academy'].first_name,
+            'id': model['profile_academy'].id,
+            'last_name': model['profile_academy'].last_name,
+            'phone': model['profile_academy'].phone,
+            'role': {
+                'name': 'hitman',
+                'slug': 'hitman'
+            },
+            'status': 'ACTIVE',
+            'user': {
+                'email': model['profile_academy'].user.email,
+                'first_name': model['profile_academy'].user.first_name,
+                'github': None,
+                'id': model['profile_academy'].user.id,
+                'last_name': model['profile_academy'].user.last_name
+            }
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            'academy_id': 1,
+            'address': model['profile_academy'].address,
+            'email': model['profile_academy'].email,
+            'first_name': model['profile_academy'].first_name,
+            'id': 1,
+            'last_name': model['profile_academy'].last_name,
+            'phone': model['profile_academy'].phone,
+            'role_id': 'hitman',
+            'status': 'ACTIVE',
+            'user_id': 1
+        }])
+
+    def test_academy_member_query_like_full_name_status_invited(self):
+        """Test /academy/member"""
+        self.headers(academy=1)
+        role = 'hitman'
+        profile_academy_kwargs = {
+                'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
+                'first_name': choice(['Rene', 'Albert', 'Immanuel']),
+                'last_name': choice(['Descartes', 'Camus', 'Kant']),
+                'status': "INVITED"
             }
         model = self.generate_models(authenticate=True, role=role,
             capability='read_member', profile_academy=True, 
@@ -575,7 +819,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user_id': 1
         }])
     
-    def test_academy_member_query_like_first_name(self):
+    def test_academy_member_query_like_first_name_status_invited(self):
         """Test /academy/member"""
         self.headers(academy=1)
         role = 'hitman'
@@ -583,8 +827,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
                 'first_name': choice(['Rene', 'Albert', 'Immanuel']),
                 'last_name': choice(['Descartes', 'Camus', 'Kant']),
-                'address': choice(['asd', 'qwe', 'zxc']),
-                'phone': choice(['123', '456', '789']),
+                'status': "INVITED"
             }
         model = self.generate_models(authenticate=True, role=role,
             capability='read_member', profile_academy=True, 
@@ -637,7 +880,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user_id': 1
         }])
 
-    def test_academy_member_query_like_last_name(self):
+    def test_academy_member_query_like_last_name_status_invited(self):
         """Test /academy/member"""
         self.headers(academy=1)
         role = 'hitman'
@@ -645,8 +888,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
                 'first_name': choice(['Rene', 'Albert', 'Immanuel']),
                 'last_name': choice(['Descartes', 'Camus', 'Kant']),
-                'address': choice(['asd', 'qwe', 'zxc']),
-                'phone': choice(['123', '456', '789']),
+                'status': "INVITED"
             }
         model = self.generate_models(authenticate=True, role=role,
             capability='read_member', profile_academy=True, 
@@ -699,7 +941,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user_id': 1
         }])
 
-    def test_academy_member_query_like_email(self):
+    def test_academy_member_query_like_email_status_invited(self):
         """Test /academy/member"""
         self.headers(academy=1)
         role = 'hitman'
@@ -707,8 +949,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
                 'first_name': choice(['Rene', 'Albert', 'Immanuel']),
                 'last_name': choice(['Descartes', 'Camus', 'Kant']),
-                'address': choice(['asd', 'qwe', 'zxc']),
-                'phone': choice(['123', '456', '789']),
+                'status': "INVITED"
             }
         model = self.generate_models(authenticate=True, role=role,
             capability='read_member', profile_academy=True, 
