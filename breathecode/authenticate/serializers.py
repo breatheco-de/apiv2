@@ -399,6 +399,16 @@ class MemberPUTSerializer(serializers.ModelSerializer):
 
         return data
 
+    def update(self, instance, validated_data):
+
+        if instance.user.first_name is None or instance.user.first_name == "":
+            instance.user.first_name = instance.first_name
+        if instance.user.last_name is None or instance.user.last_name == "":
+            instance.user.last_name = instance.last_name
+        instance.user.save()
+
+        return super().update(instance, validated_data)
+
 
 class AuthSerializer(serializers.Serializer):
     email = serializers.EmailField(label="Email")
