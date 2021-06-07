@@ -29,7 +29,7 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_info_delete_without_args_in_url_or_bulk(self):
+    def test_info_put_without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
@@ -52,7 +52,7 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_info_delete_in_bulk_with_one(self):
+    def test_info_put_in_bulk_with_one(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         many_fields=['id']
@@ -82,7 +82,7 @@ class MediaTestSuite(MediaTestCase):
             if response.status_code != 200:
                 print(response.json())
 
-        self.assertEqual(json, {
+        self.assertEqual(json, [{
             'categories': [],
             'academy': 1,
             'hash': model['media'].hash,
@@ -95,7 +95,7 @@ class MediaTestSuite(MediaTestCase):
             'created_at': self.datetime_to_iso(model['media'].created_at),
             'updated_at': self.datetime_to_iso(media.updated_at),
             **data,
-        })
+        }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{
             **self.model_to_dict(model, 'media'),
@@ -105,7 +105,7 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_info_delete_in_bulk_with_two(self):
+    def test_info_put_in_bulk_with_two(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         many_fields=['id']
