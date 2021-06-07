@@ -222,10 +222,10 @@ class MediaTestSuite(MediaTestCase):
         url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
         data = {
             'slug': 'they-killed-kenny',
+            'name': 'they-killed-kenny.exe',
         }
         ignored_data = {
             'url': 'https://www.google.com/',
-            'name': 'they-killed-kenny.exe',
             'mime': 'application/hitman',
             'hits': 9999,
             'mime': '1234567890123456789012345678901234567890123456',
