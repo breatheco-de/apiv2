@@ -100,6 +100,37 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('crud_media')
     def put(self, request, media_id=None, academy_id=None):
+        lookups = self.generate_lookups(
+            request,
+            many_fields=['id']
+        )
+
+        if lookups and media_id:
+            raise ValidationException('media_id was provided in url '
+                'in bulk mode request, use querystring style instead', slug='media-id-in-bulk-mode')
+                                
+        if lookups:
+            items = Media.objects.filter(**lookups, academy__id=academy_id)
+            data = {}
+            data['data'] = []
+
+            for item in items:
+                serializer = MediaSerializer(item, data=request.data, many=False)
+                if serializer.is_valid():
+                    data['data'].append(serializer.data)
+                else:
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            for item in items:
+                serializer = MediaSerializer(item, data=request.data, many=False)
+                if serializer.is_valid():
+                    serializer.save()
+
+            return Response(data, status=status.HTTP_200_OK)
+
+        if media_id is None:
+            raise ValidationException("Please input media_id", slug='no-media-id')
+
         data = Media.objects.filter(id=media_id).first()
         if not data:
             raise ValidationException('Media not found', code=404)
