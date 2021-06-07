@@ -27,6 +27,16 @@ class ActiveCampaignAcademy(models.Model):
     def __str__(self):
         return f"{self.academy.name}"
 
+"""
+The academy alias is great to accept several utm_location or location slug for the same academy in active campaign or breathecode
+when a new lead applies to the academy it will look for matching alias to find the lead academy.
+"""
+class AcademyAlias(models.Model):
+    slug = models.SlugField(primary_key=True)
+    active_campaign_slug = models.SlugField()
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+    ac_academy = models.OneToOneField(ActiveCampaignAcademy, on_delete=models.CASCADE)
+
 
 ACTIVE = '1'
 INNACTIVE = '2'
