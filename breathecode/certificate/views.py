@@ -103,8 +103,8 @@ class CertificateCohortView(APIView):
         all_certs = []
 
         if cohort_users.count() == 0:
-            raise APIException(
-                "There are no users with STUDENT role in this cohort")
+            raise ValidationException(
+                "There are no users with STUDENT role in this cohort", 404, slug="no_student")
 
         for cu in cohort_users:
             cert = generate_certificate(cu.user, cu.cohort)
