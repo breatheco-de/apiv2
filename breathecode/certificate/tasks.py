@@ -61,17 +61,17 @@ def generate_one_certificate(self, cohort_id, user_id):
     logger.debug("Starting generate_cohort_certificates")
     from .actions import generate_certificate
 
-    cohort_user =  CohortUser.objects.filter(cohort__id=cohort_id, 
-            user_id=user_id, role='STUDENT').first()
+    cohort__user =  CohortUser.objects.filter(cohort__id=cohort_id, 
+            user__id=user_id, role='STUDENT').first()
 
-    if not cohort_user:
+    if not cohort__user:
         logger.error(f'Cant generate certificate with {user_id}')
         return
 
-    logger.debug(f"Generating gertificate for {str(cohort_user.user)} student that GRADUATED")
+    logger.debug(f"Generating gertificate for {str(cohort__user.user)} student that GRADUATED")
     try:
-        generate_certificate(cohort_user.user, cohort_user.cohort)
+        generate_certificate(cohort__user.user, cohort__user.cohort)
     except Exception:
-        logger.exception(f"Error generating certificate for {str(cohort_user.user.id)}, cohort {str(cohort_user.cohort.id)}")
+        logger.exception(f"Error generating certificate for {str(cohort__user.user.id)}, cohort {str(cohort__user.cohort.id)}")
 
 
