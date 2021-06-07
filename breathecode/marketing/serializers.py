@@ -1,5 +1,5 @@
 import serpy
-from .models import FormEntry
+from .models import FormEntry, AcademyAlias
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 

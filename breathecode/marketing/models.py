@@ -35,7 +35,6 @@ class AcademyAlias(models.Model):
     slug = models.SlugField(primary_key=True)
     active_campaign_slug = models.SlugField()
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
-    ac_academy = models.OneToOneField(ActiveCampaignAcademy, on_delete=models.CASCADE)
 
 
 ACTIVE = '1'
@@ -190,7 +189,6 @@ class FormEntry(models.Model):
     sentiment = models.CharField(max_length=15, choices=DEAL_SENTIMENT, default=None, null=True, blank=True)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
-    ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

@@ -1,7 +1,7 @@
 import logging
 from django.contrib import admin, messages
 from django import forms 
-from .models import FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook
+from .models import FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook, AcademyAlias
 from .actions import (
     register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
     sync_tags, sync_automations,
@@ -64,6 +64,11 @@ class ACAcademyAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_filter = ['academy__slug','sync_status']
     actions = [test_ac, sync_ac_tags, sync_ac_automations]
 
+@admin.register(AcademyAlias)
+class AcademyAliasAdmin(admin.ModelAdmin):
+    search_fields = ['slug', 'active_campaign_slug', 'academy__slug', 'academy__title']
+    list_display = ('slug', 'active_campaign_slug', 'academy')
+
 def send_to_ac(modeladmin, request, queryset):
     entries = queryset.all()
     for entry in entries:
@@ -104,7 +109,7 @@ class PPCFilter(SimpleListFilter):
 @admin.register(FormEntry)
 class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['email', 'first_name', 'last_name', 'phone']
-    list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
+    list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course', 'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
     list_filter = ['storage_status', 'location', 'course', 'deal_status', PPCFilter, 'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium']
     actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, "export_as_csv"]
 
