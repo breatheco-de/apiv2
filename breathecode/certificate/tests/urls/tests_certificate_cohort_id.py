@@ -66,9 +66,9 @@ class CertificateTestSuite(CertificateTestCase):
         """ No main teacher in cohort """
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, user=True,
-        profile_academy=True, capability='crud_certificate', role='STUDENT', 
-        cohort_user=True, syllabus=True, specialty=True, layout_design=True,
-        cohort_stage="ENDED")
+            profile_academy=True, capability='crud_certificate', role='STUDENT', 
+            cohort_user=True, syllabus=True, specialty=True, layout_design=True,
+            cohort_stage="ENDED")
 
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
@@ -90,8 +90,8 @@ class CertificateTestSuite(CertificateTestCase):
         """ No cohort user"""
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, user=True,
-        profile_academy=True, capability='crud_certificate', role="STUDENT",
-        cohort_stage="ENDED")
+            profile_academy=True, capability='crud_certificate', role="STUDENT",
+            cohort_stage="ENDED")
 
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
@@ -113,8 +113,8 @@ class CertificateTestSuite(CertificateTestCase):
         """ No syllabus """
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, user=True,
-        profile_academy=True, capability='crud_certificate', role='STUDENT', 
-        cohort_user=True, cohort_stage="ENDED")
+            profile_academy=True, capability='crud_certificate', role='STUDENT', 
+            cohort_user=True, cohort_stage="ENDED")
 
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
@@ -136,8 +136,8 @@ class CertificateTestSuite(CertificateTestCase):
         """ No specialty """
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, user=True,
-        profile_academy=True, capability='crud_certificate', role='STUDENT', 
-        cohort_user=True, syllabus=True, cohort_stage="ENDED")
+            profile_academy=True, capability='crud_certificate', role='STUDENT', 
+            cohort_user=True, syllabus=True, cohort_stage="ENDED")
 
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
@@ -159,8 +159,8 @@ class CertificateTestSuite(CertificateTestCase):
         """ No specialty """
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, user=True,
-        profile_academy=True, capability='crud_certificate', role='STUDENT', 
-        cohort_user=True, syllabus=True, cohort_stage="ENDED")
+            profile_academy=True, capability='crud_certificate', role='STUDENT', 
+            cohort_user=True, syllabus=True, cohort_stage="ENDED")
 
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
@@ -182,8 +182,8 @@ class CertificateTestSuite(CertificateTestCase):
         """ No specialty """
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, user=True,
-        profile_academy=True, capability='crud_certificate', role='STUDENT', 
-        cohort_user=True, syllabus=True, specialty=True, cohort_stage="ENDED")
+            profile_academy=True, capability='crud_certificate', role='STUDENT', 
+            cohort_user=True, syllabus=True, specialty=True, cohort_stage="ENDED")
 
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
@@ -205,10 +205,9 @@ class CertificateTestSuite(CertificateTestCase):
         """Test /certificate/cohort/id """
         """ No specialty """
         self.headers(academy=1)
-        self.generate_models(authenticate=True, cohort=True, user=True,
-        profile_academy=True, capability='crud_certificate', role='STUDENT', 
-        cohort_user=True, syllabus=True, specialty=True,
-        layout_design=True)
+        self.generate_models(authenticate=True, cohort=True, user=True, 
+            profile_academy=True, capability='crud_certificate', role='STUDENT', 
+            cohort_user=True, syllabus=True, specialty=True, layout_design=True)
 
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
@@ -230,17 +229,17 @@ class CertificateTestSuite(CertificateTestCase):
         """Test /certificate/cohort/id """
         """ BAD_REQUEST """
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort=True, user=True,
-        profile_academy=True, capability='crud_certificate', role='STUDENT', 
-        cohort_user=True, syllabus=True, specialty=True, cohort_stage="ENDED",
-        user_specialty=True, layout_design=True,)
+        model = self.generate_models(authenticate=True, cohort=True, user=True, 
+            profile_academy=True,cohort_user=True, capability='crud_certificate', role='STUDENT', 
+            syllabus=True, specialty=True, cohort_stage="ENDED", user_specialty=True, 
+            layout_design=True,)
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
-        teacher_model = self.generate_models(user=True, cohort_user=True,
-        cohort_user_role='TEACHER', models=base)
+        teacher_model = self.generate_models(user=True, cohort_user=True, 
+            cohort_user_role='TEACHER', models=base)
 
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
@@ -321,18 +320,17 @@ class CertificateTestSuite(CertificateTestCase):
         """Test /certificate/cohort/id """
         """ BAD_REQUEST """
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort=True, user=True,
-        profile_academy=True, capability='crud_certificate', role='STUDENT', 
-        cohort_user=True, syllabus=True, specialty=True, cohort_stage="ENDED",
-        user_specialty=True, layout_design=True,
-        cohort_user_finantial_status='UP_TO_DATE')
+        model = self.generate_models(authenticate=True, cohort=True, user=True, 
+            profile_academy=True, cohort_user=True, capability='crud_certificate', role='STUDENT', 
+            syllabus=True, specialty=True, cohort_stage="ENDED",user_specialty=True, 
+            layout_design=True, cohort_user_finantial_status='UP_TO_DATE')
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
-        teacher_model = self.generate_models(user=True, cohort_user=True,
-        cohort_user_role='TEACHER', models=base)
+        teacher_model = self.generate_models(user=True, cohort_user=True, 
+            cohort_user_role='TEACHER', models=base)
 
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
@@ -413,19 +411,17 @@ class CertificateTestSuite(CertificateTestCase):
         """Test /certificate/cohort/id """
         """ BAD_REQUEST """
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort=True, user=True,
-        profile_academy=True, capability='crud_certificate', role='STUDENT', 
-        cohort_user=True, syllabus=True, specialty=True, cohort_stage="ENDED",
-        user_specialty=True, layout_design=True,
-        cohort_user_finantial_status='UP_TO_DATE',
-        cohort_user_educational_status='GRADUATED')
+        model = self.generate_models(authenticate=True, cohort=True, user=True, 
+            profile_academy=True, cohort_user=True, syllabus=True,capability='crud_certificate', 
+            role='STUDENT', specialty=True, cohort_stage="ENDED", user_specialty=True, layout_design=True, 
+            cohort_user_finantial_status='UP_TO_DATE', cohort_user_educational_status='GRADUATED')
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
-        teacher_model = self.generate_models(user=True, cohort_user=True,
-        cohort_user_role='TEACHER', models=base)
+        teacher_model = self.generate_models(user=True, cohort_user=True, 
+            cohort_user_role='TEACHER', models=base)
 
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
@@ -506,19 +502,18 @@ class CertificateTestSuite(CertificateTestCase):
         """Test /certificate/cohort/id """
         """ status: 201 """
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort=True, user=True,
-        profile_academy=True, capability='crud_certificate', role='STUDENT', 
-        cohort_user=True, syllabus=True, specialty=True, cohort_stage="ENDED",
-        user_specialty=True, cohort_user_educational_status='GRADUATED',
-        cohort_user_finantial_status='UP_TO_DATE', layout_design=True,
-        cohort_finished=True)
+        model = self.generate_models(authenticate=True, cohort=True, user=True, 
+            profile_academy=True, syllabus=True,capability='crud_certificate', role='STUDENT', 
+            cohort_user=True, specialty=True, cohort_stage="ENDED", user_specialty=True,
+            cohort_user_educational_status='GRADUATED', cohort_user_finantial_status='UP_TO_DATE', 
+            layout_design=True, cohort_finished=True)
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
-        teacher_model = self.generate_models(user=True, cohort_user=True,
-        cohort_user_role='TEACHER', models=base)
+        teacher_model = self.generate_models(user=True, cohort_user=True, 
+            cohort_user_role='TEACHER', models=base)
 
         url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')

@@ -105,32 +105,31 @@ class CertificateCohortView(APIView):
 
         if cohort_users.count() == 0:
             raise ValidationException("There are no users with STUDENT role in this cohort", code=400, 
-            slug="no-user-with-student-role")
+                slug="no-user-with-student-role")
 
         for cohort_user in cohort_users:
             cohort = cohort_user.cohort
             if cohort_user is None:
                 raise ValidationException("Impossible to obtain the student cohort, maybe it's none assigned", code=400, 
-                slug="no-cohort-user-assigned")
+                    slug="no-cohort-user-assigned")
 
             if cohort.stage != "ENDED" or cohort.never_ends != False:
                 raise ValidationException("Cohort stage must be ENDED or never ends", code=400, 
-                slug="cohort-stage-must-be-ended")
+                    slug="cohort-stage-must-be-ended")
             
             if cohort.syllabus is None: 
                 raise ValidationException(f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}', code=400, 
-                slug="cohort-has-no-syllabus-assigned")
+                    slug="cohort-has-no-syllabus-assigned")
             
             if cohort.syllabus.certificate is None:
-                raise ValidationException(f'The cohort has no certificate assigned, please set a '
-                f'certificate for cohort: {cohort.name}', code=400, 
-                slug="cohort-has-no-certificate-assigned")
+                raise ValidationException(f'The cohort has no certificate assigned, please set a certificate for cohort: {cohort.name}',
+                    code=400, slug="cohort-has-no-certificate-assigned")
             
             if (not hasattr(cohort.syllabus.certificate, 'specialty') or not
                 cohort.syllabus.certificate.specialty):
                 raise ValidationException('Specialty has no certificate assigned, please set a '
-                f'certificate on the Specialty model: {cohort.syllabus.certificate.name}', code=400, 
-                slug="specialty-has-no-certificate-assigned")
+                    f'certificate on the Specialty model: {cohort.syllabus.certificate.name}', code=400, 
+                    slug="specialty-has-no-certificate-assigned")
 
             else:
                 cohort__users.append(cohort_user)
