@@ -63,7 +63,7 @@ class MediaTestSuite(MediaTestCase):
         json = response.json()
 
         self.assertEqual(json, {
-            'detail': 'media-resolutions-not-found',
+            'detail': 'media-not-found',
             'status_code': 404
         })
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
