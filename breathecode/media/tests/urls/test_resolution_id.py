@@ -66,7 +66,23 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(json, {'detail': 'resolution-not-found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.all_media_dict(), [])
+        self.assertEqual(self.all_media_resolution_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_resolution_id_delete_without_media(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='crud_media', role='potato', media_resolution=True)
+        url = reverse_lazy('media:resolution_id', kwargs={'resolution_id': 1})
+        response = self.client.delete(url)
+        json = response.json()
+
+        self.assertEqual(json, {'detail': 'resolution-media-not-found', 'status_code': 404})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.all_media_resolution_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -75,10 +91,10 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_media', role='potato', media_resolution=True)
+            capability='crud_media', role='potato', media_resolution=True, media=True)
         url = reverse_lazy('media:resolution_id', kwargs={'resolution_id': 1})
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(self.all_media_dict(), [])
+        self.assertEqual(self.all_media_resolution_dict(), [])
 

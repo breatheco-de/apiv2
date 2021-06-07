@@ -430,26 +430,75 @@ class ResolutionView(APIView):
     def get(self, request, media_id=None, academy_id=None):
 
         if media_id:
-            items = MediaResolution.objects.filter(media_id=media_id)
+            media = Media.objects.filter(id=media_id).first()
 
-            if not items:
-                raise ValidationException('Resolutions for this media were not found', code=404, slug='media-resolutions-not-found')
+            if not media:
+                raise ValidationException('Media not found', code=404)
 
-        items = MediaResolution.objects.filter(media_id=media_id)
-        sort = request.GET.get('sort')
-        if sort:
-            items = items.order_by(sort)
+        resolution = MediaResolution.objects.filter(media_id=media_id)
 
-        serializer = GetResolutionSerializer(items, many=True)
+        if media and not resolution:
+            func = Function(
+                region='us-central1',
+                project_id='breathecode-197918',
+                name='resize-image')
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            res = func.call({
+                'filename': media.hash,
+                'bucket': media_gallery_bucket(),
+            })
+
+            if not res['status_code'] == 200 or not res['message'] == 'Ok':
+                if 'message' in res:
+                    raise ValidationException(
+                        res['message'],
+                        code=500,
+                        slug='cloud-function-bad-input')
+
+                raise ValidationException(
+                    'Unhandled request from cloud functions',
+                    code=500,
+                    slug='unhandled-cloud-function')
+
+
+            url = f'{url}'
+            resolution.hits = resolution.hits + 1
+            resolution.save()
+
+        if request.GET.get('mask') != 'true':
+            return redirect(url, permanent=True)
+
+        response = requests.get(url, stream=True)
+        resource = StreamingHttpResponse(
+            response.raw,
+            status=response.status_code,
+            reason=response.reason,
+        )
+
+        header_keys = [x for x in response.headers.keys() if x !=
+                       'Transfer-Encoding' and x != 'Content-Encoding' and x !=
+                       'Keep-Alive' and x != 'Connection']
+
+        for header in header_keys:
+            resource[header] = response.headers[header]
+
+        return resource
+        
             
     @capable_of('crud_media')
     def delete(self, request, resolution_id=None, academy_id=None):
 
         data = MediaResolution.objects.filter(id=resolution_id).first()
+
         if not data:
             raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
+
+        if not data.media:
+            data.delete()
+            raise ValidationException('Resolution was not found', code=404, slug='resolution-media-not-found')
+
+        if int(data.media.academy_id) != int(academy_id):
+            raise ValidationException('The resolution belongs to a different academy', slug='resolution-delete-academy-id')
 
         data.delete()
 

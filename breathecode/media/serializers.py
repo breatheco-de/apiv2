@@ -128,5 +128,3 @@ class CategorySerializer(serializers.ModelSerializer):
         _slug = slugify(validated_data["name"])
         result = super().create({ **validated_data, "slug": _slug })
         return result
-
-
