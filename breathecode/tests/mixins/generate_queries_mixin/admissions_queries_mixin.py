@@ -8,5 +8,6 @@ class AdmissionsQueriesMixin():
         return {
             'module': 'admissions',
             'models': ['Country', 'City', 'Academy', 'Certificate',
-                'AcademyCertificate', 'Syllabus', 'Cohort', 'CohortUser']
+                'AcademyCertificate', 'Syllabus', 'Cohort', 'CohortUser',
+                'TimeSlot', 'CohortTimeSlot', 'CertificateTimeSlot']
         }

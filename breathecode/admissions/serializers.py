@@ -1,3 +1,4 @@
+from breathecode.admissions.actions import sync_cohort_timeslots
 import logging
 import serpy
 from django.db.models import Q
@@ -6,7 +7,7 @@ from breathecode.utils import ValidationException, localize_query
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
-from .models import Academy, Cohort, Certificate, CohortUser, Syllabus
+from .models import Academy, CertificateTimeSlot, Cohort, Certificate, CohortTimeSlot, CohortUser, Syllabus
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +156,7 @@ class GetCohortSerializer(serpy.Serializer):
     syllabus = SyllabusSmallSerializer(required=False)
     academy = GetAcademySerializer()
     current_day = serpy.Field()
-    
+
 
 class GetSmallCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -191,6 +192,40 @@ class GETCohortUserSerializer(serpy.Serializer):
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
     created_at = serpy.Field()
+
+
+class GETCohortTimeSlotSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    id = serpy.Field()
+    cohort = serpy.MethodField()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    recurrent = serpy.Field()
+    recurrency_type = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_cohort(self, obj):
+        return obj.cohort.id
+
+
+class GETCertificateTimeSlotSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    id = serpy.Field()
+    academy = serpy.MethodField()
+    certificate = serpy.MethodField()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    recurrent = serpy.Field()
+    recurrency_type = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_academy(self, obj):
+        return obj.academy.id
+
+    def get_certificate(self, obj):
+        return obj.certificate.id
 
 
 class GETCohortUserSmallSerializer(serpy.Serializer):
@@ -299,6 +334,12 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                     slug='syllabus-doesnt-exist'
                 )
 
+            if not CertificateTimeSlot.objects.filter(certificate__id=syllabus.certificate.id).exists():
+                raise ValidationException(
+                    'We can\’t use a Syllabus if its certificate does not have any time slots',
+                    slug='certificate-not-have-time-slots'
+                )
+
             data['syllabus'] = syllabus
 
         if "slug" in data:
@@ -322,7 +363,7 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
         if never_ends and ending_date:
             raise ValidationException(
-                'A cohort that never ends cannot have one ending date',
+                'A cohort that never ends cannot have ending date',
                 slug='cohort-with-ending-date-and-never-ends'
             )
 
@@ -345,7 +386,9 @@ class CohortSerializer(CohortSerializerMixin):
 
     def create(self, validated_data):
         del self.context['request']
-        return Cohort.objects.create(**validated_data, **self.context)
+        cohort = Cohort.objects.create(**validated_data, **self.context)
+        sync_cohort_timeslots(cohort.id)
+        return cohort
 
 
 class CohortPUTSerializer(CohortSerializerMixin):
@@ -446,8 +489,11 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             raise ValidationException(
                 'That user already exists in this cohort')
 
-        if ('role' in request_item and request_item['role'] == 'TEACHER' and
-                not ProfileAcademy.objects.filter(user_id=user_id,role__slug='staff').count()):
+        if ('role' in request_item and request_item['role'] != 'STUDENT' and
+                not ProfileAcademy.objects.filter(
+                    user_id=user_id,
+                    academy__id=cohort.academy.id).exclude(role__slug='student')
+                        .exists()):
             raise ValidationException(
                 'The user must be staff member to this academy before it can be a teacher')
 
@@ -537,12 +583,19 @@ class CohortUserSerializer(CohortUserSerializerMixin):
         fields = ['id', 'user', 'cohort', 'role']
         list_serializer_class = CohortUserListSerializer
 
-    # def create(self, validated_data):
-    #     # relationships, thank you amazing and incredible serializer!
-    #     cohort = self.context.get('cohort')
-    #     user = self.context.get('user')
 
-    #     return CohortUser.objects.create(**validated_data, cohort_id=cohort, user_id=user)
+class CohortTimeSlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CohortTimeSlot
+        fields = ['id', 'cohort', 'starting_at', 'ending_at', 'recurrent',
+            'recurrency_type']
+
+
+class CertificateTimeSlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CertificateTimeSlot
+        fields = ['id', 'academy', 'certificate', 'starting_at', 'ending_at', 'recurrent',
+            'recurrency_type']
 
 
 class CohortUserPOSTSerializer(serpy.Serializer):

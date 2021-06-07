@@ -1,8 +1,11 @@
 import os
+
+from django.contrib.auth.models import User
+from django.db.models.query_utils import Q
 from breathecode.authenticate.actions import server_id
 from breathecode.events.caches import EventCache
+from datetime import datetime, timedelta
 import logging
-import datetime
 import re
 
 from django.http.response import HttpResponse
@@ -12,7 +15,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from .models import Event, EventType, EventCheckin, Venue
-from breathecode.admissions.models import Academy, Cohort, CohortUser
+from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (
     EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
@@ -257,6 +260,7 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
             value = self.request.GET.get('event')
             lookup['event__id'] = value
 
+        like = self.request.GET.get('like')
         if 'like' in self.request.GET:
             items = items.filter(Q(attendee__first_name__icontains=like) |
                                  Q(attendee__last_name_icontains=like) |
@@ -266,12 +270,12 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
 
         start = request.GET.get('start', None)
         if start is not None:
-            start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
+            start_date = datetime.strptime(start, "%Y-%m-%d").date()
             items = items.filter(created_at__gte=start_date)
 
         end = request.GET.get('end', None)
         if end is not None:
-            end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end, "%Y-%m-%d").date()
             items = items.filter(created_at__lte=end_date)
 
         items = items.filter(**lookup).order_by('-created_at')
@@ -344,6 +348,98 @@ def ical_academies_repr(slugs=None, ids=None):
     return ret
 
 
+class ICalStudentView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, user_id):
+        items = Cohort.objects.all()
+
+        if not User.objects.filter(id=user_id).count():
+            raise ValidationException("Student not exist", 404, slug='student-not-exist')
+
+        cohort_ids = (CohortUser.objects.filter(user_id=user_id).values_list('cohort_id', flat=True)
+            .exclude(cohort__stage='DELETED'))
+
+        items = CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).order_by('id')
+        items = items
+
+        upcoming = request.GET.get('upcoming')
+        if upcoming == 'true':
+            now = timezone.now()
+            items = items.filter(cohort__kickoff_date__gte=now)
+
+        key = server_id()
+
+        calendar = iCalendar()
+        calendar.add('prodid', f'-//BreatheCode//Student Schedule ({user_id}) {key}//EN')
+        calendar.add('X-WR-CALNAME', f'Academy - Schedule')
+        calendar.add('X-WR-CALDESC', '')
+        calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
+
+        url = os.getenv('API_URL')
+        if url:
+            url = re.sub(r'/$', '', url) + '/v1/events/ical/student/' + str(user_id)
+            calendar.add('url', url)
+
+        calendar.add('version', '2.0')
+
+        for item in items:
+            event = iEvent()
+
+            event.add('summary', item.cohort.name)
+            event.add('uid', f'breathecode_cohort_time_slot_{item.id}_{key}')
+
+            event.add('dtstart', item.starting_at)
+            event.add('dtstamp', item.starting_at)
+
+            until_date = item.cohort.ending_date
+
+            if not until_date:
+                until_date = timezone.make_aware(datetime(
+                    year=2100,
+                    month=12,
+                    day=31,
+                    hour=12,
+                    minute=00,
+                    second=00
+                ))
+
+            if item.recurrent:
+                event.add('rrule', {'freq': item.recurrency_type, 'until': until_date})
+
+            event.add('dtend', item.ending_at)
+
+            teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.cohort.id).first()
+
+            if teacher:
+                organizer = vCalAddress(f'MAILTO:{teacher.user.email}')
+
+                if teacher.user.first_name and teacher.user.last_name:
+                    organizer.params['cn'] = vText(f'{teacher.user.first_name} '
+                        f'{teacher.user.last_name}')
+                elif teacher.user.first_name:
+                    organizer.params['cn'] = vText(teacher.user.first_name)
+                elif teacher.user.last_name:
+                    organizer.params['cn'] = vText(teacher.user.last_name)
+
+                organizer.params['role'] = vText('OWNER')
+                event['organizer'] = organizer
+
+            location = item.cohort.academy.name
+
+            if item.cohort.academy.website_url:
+                location = f'{location} ({item.cohort.academy.website_url})'
+            event['location'] = vText(item.cohort.academy.name)
+
+            calendar.add_component(event)
+
+        calendar_text = calendar.to_ical()
+
+        response = HttpResponse(calendar_text, content_type='text/calendar')
+        response['Content-Disposition'] = 'attachment; filename="calendar.ics"'
+        return response
+
+
 class ICalCohortsView(APIView):
     permission_classes = [AllowAny]
 
@@ -412,15 +508,31 @@ class ICalCohortsView(APIView):
 
         for item in items:
             event = iEvent()
+            event_first_day = iEvent()
+            event_last_day = iEvent()
+            has_last_day = False
 
             event.add('summary', item.name)
             event.add('uid', f'breathecode_cohort_{item.id}_{key}')
             event.add('dtstart', item.kickoff_date)
 
+            event_first_day.add('summary', f'{item.name} - First day')
+            event_first_day.add('uid', f'breathecode_cohort_{item.id}_first_{key}')
+            event_first_day.add('dtstart', item.kickoff_date)
+            event_first_day.add('dtend', item.kickoff_date + timedelta(days=1))
+
             if item.ending_date:
+                has_last_day = True
                 event.add('dtend', item.ending_date)
 
+                event_last_day.add('summary', f'{item.name} - Last day')
+                event_last_day.add('uid', f'breathecode_cohort_{item.id}_last_{key}')
+                event_last_day.add('dtstart', item.ending_date - timedelta(days=1))
+                event_last_day.add('dtend', item.ending_date)
+                event_last_day.add('dtstamp', item.created_at)
+
             event.add('dtstamp', item.created_at)
+            event_first_day.add('dtstamp', item.created_at)
 
             teacher = CohortUser.objects.filter(
                 role='TEACHER', cohort__id=item.id).first()
@@ -438,14 +550,27 @@ class ICalCohortsView(APIView):
 
                 organizer.params['role'] = vText('OWNER')
                 event['organizer'] = organizer
+                event_first_day['organizer'] = organizer
+
+                if has_last_day:
+                    event_last_day['organizer'] = organizer
 
             location = item.academy.name
 
             if item.academy.website_url:
                 location = f'{location} ({item.academy.website_url})'
-            event['location'] = vText(item.academy.name)
 
+            event['location'] = vText(item.academy.name)
+            event_first_day['location'] = vText(item.academy.name)
+
+            if has_last_day:
+                event_last_day['location'] = vText(item.academy.name)
+
+            calendar.add_component(event_first_day)
             calendar.add_component(event)
+
+            if has_last_day:
+                calendar.add_component(event_last_day)
 
         calendar_text = calendar.to_ical()
 

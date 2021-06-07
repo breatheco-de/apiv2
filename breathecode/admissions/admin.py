@@ -5,7 +5,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
-from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions, Syllabus, AcademyCertificate
+from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions, Syllabus, AcademyCertificate, CohortTimeSlot
 from breathecode.assignments.actions import sync_student_tasks
 
 logger = logging.getLogger(__name__)
@@ -174,3 +174,8 @@ sync_with_github.short_description = "Sync from Github"
 class SyllabusAdmin(admin.ModelAdmin):
     list_display = ('slug', 'certificate', 'academy_owner', 'version')
     actions = [sync_with_github]
+
+@admin.register(CohortTimeSlot)
+class CohortTimeSlotAdmin(admin.ModelAdmin):
+    list_display = ('cohort', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type')
+    list_filter = ['cohort__slug', 'recurrent', 'recurrency_type']
