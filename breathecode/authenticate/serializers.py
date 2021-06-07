@@ -217,7 +217,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 user=data['user'], academy=self.context['academy_id']).first()
             if already:
                 raise ValidationException(
-                    'This user is already a member of this academy staff')
+                    'This user is already a member of this academy')
 
         if "role" not in data:
             raise ValidationException("Missing role")

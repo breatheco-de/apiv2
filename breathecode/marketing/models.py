@@ -27,6 +27,15 @@ class ActiveCampaignAcademy(models.Model):
     def __str__(self):
         return f"{self.academy.name}"
 
+"""
+The academy alias is great to accept several utm_location or location slug for the same academy in active campaign or breathecode
+when a new lead applies to the academy it will look for matching alias to find the lead academy.
+"""
+class AcademyAlias(models.Model):
+    slug = models.SlugField(primary_key=True)
+    active_campaign_slug = models.SlugField()
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+
 
 ACTIVE = '1'
 INNACTIVE = '2'
@@ -180,7 +189,6 @@ class FormEntry(models.Model):
     sentiment = models.CharField(max_length=15, choices=DEAL_SENTIMENT, default=None, null=True, blank=True)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
-    ac_academy = models.ForeignKey(ActiveCampaignAcademy, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
