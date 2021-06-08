@@ -154,15 +154,15 @@ class FormEntry(models.Model):
     phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
     phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True, default=None) # validators should be a list
 
-    course = models.CharField(max_length=30, null=True, default=None)
+    course = models.CharField(max_length=70, null=True, default=None)
     client_comments = models.CharField(max_length=250, blank=True, null=True, default=None)
-    location = models.CharField(max_length=20, blank=True, null=True, default=None)
+    location = models.CharField(max_length=70, blank=True, null=True, default=None)
     language = models.CharField(max_length=2, default='en')
     utm_url = models.CharField(max_length=250, null=True, default=None, blank=True)
-    utm_medium = models.CharField(max_length=50, blank=True, null=True, default=None)
-    utm_campaign = models.CharField(max_length=50, blank=True, null=True, default=None)
-    utm_source = models.CharField(max_length=50, blank=True, null=True, default=None)
-    referral_key = models.CharField(max_length=50, blank=True, null=True, default=None)
+    utm_medium = models.CharField(max_length=70, blank=True, null=True, default=None)
+    utm_campaign = models.CharField(max_length=70, blank=True, null=True, default=None)
+    utm_source = models.CharField(max_length=70, blank=True, null=True, default=None)
+    referral_key = models.CharField(max_length=70, blank=True, null=True, default=None)
 
     gclid = models.CharField(max_length=255, blank=True, null=True, default=None)
 
