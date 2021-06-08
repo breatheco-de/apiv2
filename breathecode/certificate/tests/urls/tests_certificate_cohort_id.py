@@ -150,30 +150,7 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_user_specialty_dict(), [])
-    
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_(self):
-        """Test /certificate/cohort/id """
-        """ No specialty """
-        self.headers(academy=1)
-        self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, capability='crud_certificate', role='STUDENT', 
-            cohort_user=True, syllabus=True, cohort_stage="ENDED")
-
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
-        response = self.client.post(url, format='json')
-        json = response.json()
-        expected = {
-            'detail': "specialty-has-no-certificate-assigned",
-            'status_code': 400
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_user_specialty_dict(), [])
-    
+        
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -232,7 +209,7 @@ class CertificateTestSuite(CertificateTestCase):
         model = self.generate_models(authenticate=True, cohort=True, user=True, 
             profile_academy=True,cohort_user=True, capability='crud_certificate', role='STUDENT', 
             syllabus=True, specialty=True, cohort_stage="ENDED", user_specialty=True, 
-            layout_design=True,)
+            layout_design=True)
 
         base = model.copy()
         del base['user']
