@@ -83,11 +83,10 @@ class MediaTestSuite(MediaTestCase):
         json = response.json()
         expected = [{
             'id': model['media_resolution'].id,
-            'hash': model['media_resolution'].hash,
+            'hash': model['media'].hash,
             'width': model['media_resolution'].width,
             'height': model['media_resolution'].height,
             'hits': model['media_resolution'].hits,
-            'media': model['media_resolution'].media.id
         }]
 
         self.assertEqual(json, expected)

@@ -41,8 +41,6 @@ class MediaResolution(models.Model):
     height = models.IntegerField()
     hits = models.IntegerField(default=0)
     
-    media = models.ForeignKey(Media, on_delete=models.CASCADE, blank=True, null=True)
-
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

@@ -3,7 +3,6 @@ Collections of mixins used to login in authorize microservice
 """
 import os
 from rest_framework.test import APITestCase
-from ...models import Media, MediaResolution, Category
 from breathecode.tests.mixins import (
     GenerateModelsMixin,
     CacheMixin,

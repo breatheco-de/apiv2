@@ -272,6 +272,22 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_media_dict(), [])
 
+    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    # def test_info_id_delete_from_different_academy(self):
+    #     """Test /answer without auth"""
+    #     self.headers(academy=2)
+    #     model = self.generate_models(authenticate=True, profile_academy=True,
+    #         capability='crud_media', role='potato', media=True)
+    #     url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
+    #     response = self.client.delete(url)
+    #     json = response.json()
+
+    #     self.assertEqual(json, {'detail': 'academy-different-than-media-academy', 'status_code': 400})
+    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    #     self.assertEqual(self.all_media_dict(), [{ **self.model_to_dict(model, 'media')}])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())

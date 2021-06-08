@@ -121,7 +121,8 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         
         media_academy = data.academy.id
         if int(media_academy) != int(academy_id):
-            raise ValidationException('You may not delete media that belongs to a different academy', slug='academy-different-than-media-academy')
+            raise ValidationException('You may not delete media that belongs to a different academy', 
+                slug='academy-different-than-media-academy')
 
         url = data.url
         hash = data.hash
@@ -427,19 +428,37 @@ class MaskingUrlView(APIView):
 
 class ResolutionView(APIView):
     @capable_of('read_media')
-    def get(self, request, media_id=None, academy_id=None):
+    def get(self, request, media_id=None, academy_id=None, resolution_id=None):
+        if media_id:
 
-        media = Media.objects.filter(id=media_id, academy__id=academy_id).first()
+            media = Media.objects.filter(id=media_id, academy__id=academy_id).first()
 
-        if not media:
-            raise ValidationException('Media not found', code=404, slug='media-not-found')
+            if not media:
+                raise ValidationException('Media not found', code=404, slug='media-not-found')
 
-        resolutions = MediaResolution.objects.filter(media__hash=media.hash, media__academy__id=academy_id)
+            resolutions = MediaResolution.objects.filter(hash=media.hash)
 
-        if not resolutions:
-            raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
+            if not resolutions:
+                raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
 
-        serializer = GetResolutionSerializer(resolutions, many=True)
+            serializer = GetResolutionSerializer(resolutions, many=True)
+
+        elif resolution_id:
+            
+            resolutions = MediaResolution.objects.filter(id=resolution_id).first()
+
+            if not resolutions:
+                raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
+
+            media = Media.objects.filter(hash=resolutions.hash, academy__id=academy_id).first()
+        
+            if not media:
+                resolutions.delete()
+                raise ValidationException('Resolution was deleted for not having parent element', 
+                    slug='resolution-media-not-found', code=404)
+
+            serializer = GetResolutionSerializer(resolutions)
+
         return Response(serializer.data, status=status.HTTP_200_OK)
 
         
@@ -448,16 +467,24 @@ class ResolutionView(APIView):
     def delete(self, request, resolution_id=None, academy_id=None):
         from ..services.google_cloud import Storage
 
-        data = MediaResolution.objects.filter(id=resolution_id, media__academy__id=academy_id).first()
+        resolution = MediaResolution.objects.filter(id=resolution_id).first()
 
-        if not data:
-            raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
+        if not resolution:
+             raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
 
-        hash = data.hash
-        url = data.media.url
-        url = f'{url}-{data.width}x{data.height}'
+        media = Media.objects.filter(hash=resolution.hash, academy__id=academy_id).first()
+        
+        if not media:
+            resolution.delete()
+            raise ValidationException('Resolution was deleted for not having parent element', 
+                slug='resolution-media-not-found', code=404)
 
-        data.delete()
+
+        hash = resolution.hash
+        url = media.url
+        url = f'{url}-{resolution.width}x{resolution.height}'
+
+        resolution.delete()
 
         if not MediaResolution.objects.filter(hash=hash).count():
             storage = Storage()

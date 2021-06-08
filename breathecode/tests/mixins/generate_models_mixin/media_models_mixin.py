@@ -29,9 +29,8 @@ class MediaModelsMixin(ModelsMixin):
 
         if not 'media_resolution' in models and media_resolution:
             kargs = {}
-
             if 'media' in models:
-                kargs['media'] = models['media']
+               kargs['hash'] = models['media'].hash
 
             kargs = {**kargs, **media_resolution_kwargs}
             models['media_resolution'] = mixer.blend('media.MediaResolution', **kargs)

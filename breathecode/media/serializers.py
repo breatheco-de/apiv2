@@ -47,11 +47,10 @@ class GetResolutionSerializer(serializers.ModelSerializer):
     width = serpy.Field()
     height = serpy.Field()
     hits = serpy.Field()
-    media = GetMediaSerializer()
 
     class Meta:
         model = MediaResolution
-        fields = ('id','hash', 'width', 'height', 'hits', 'media')
+        fields = ('id','hash', 'width', 'height', 'hits')
 
 
 class MediaSerializer(serializers.ModelSerializer):
