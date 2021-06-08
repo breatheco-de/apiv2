@@ -42,7 +42,7 @@ class AuthenticateTestSuite(AuthTestCase):
         slug = "missing_ids"
 
         model = self.generate_models(
-            academy=True, capability='read_invite', authenticate=True, role='potato', invite_kwargs=invite_kwargs, profile_academy=True)
+            academy=True, capability='read_invite', authenticate=True, role='potato', user_invite_kwargs=invite_kwargs, profile_academy=True)
 
         url = reverse_lazy('authenticate:user_invite')
 
