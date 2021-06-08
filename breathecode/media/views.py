@@ -108,24 +108,22 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         }
 
         if not many:
-            current = Media.objects.filter(academy__id=academy_id).first()
+            current = Media.objects.filter(id=media_id,
+                academy__id=academy_id).first()
         else:
             current = []
             index = -1
             for x in request.data:
                 index = index + 1
 
-                if 'id' in x:
-                    current.append(
-                        Media.objects.filter(id=x['id']).first())
+                if not 'id' in x:
+                    raise ValidationException('Please input id in body for bulk mode',
+                        slug='id-not-in-bulk')
 
-                elif 'academy' in x:
-                    current.append(Media.objects.filter(academy__id=x['academy']
-                        ).first())
-
-                else:
-                    raise ValidationException('Cannot determine Media in '
-                                              f'index {index}')
+                media = Media.objects.filter(id=x['id'], academy__id=academy_id).first()
+                if not media:
+                    raise ValidationException('Media not found', code=404) 
+                current.append(media)
 
         serializer = MediaPUTSerializer(current, data=request.data,
                                              context=context, many=many)

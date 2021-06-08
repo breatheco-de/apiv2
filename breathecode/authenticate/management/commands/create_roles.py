@@ -60,7 +60,7 @@ class Command(BaseCommand):
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
             { "slug": "academy_token", "name": "Academy Token", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite"] },
-            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "get_academy_token" ] },
+            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "get_academy_token", "crud_media_resolutions" ] },
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort", "read_my_academy"] },
         ]
 
