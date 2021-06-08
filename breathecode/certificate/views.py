@@ -152,7 +152,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
                 cohort_user =  CohortUser.objects.filter(cohort__slug=cohort__slug, 
                         user_id=user__id, role='STUDENT', cohort__academy__id=academy_id).first()
 
-                if cohort_user is not None :
+                if cohort_user is not None:
                     cohort_users.append(cohort_user)
                 else:
                     student = ProfileAcademy.objects.filter(user_id=user__id).first()

@@ -10,7 +10,6 @@ from breathecode.utils import ValidationException, APIException
 from ...actions import generate_certificate, strings
 from ..mixins.new_certificate_test_case import CertificateTestCase
 from ....admissions.models import FULLY_PAID, UP_TO_DATE, LATE
-from ...tasks import generate_one_certificate
 # from .mocks import CertificateBreathecodeMock
 from ..mocks import (
     GOOGLE_CLOUD_PATH,
