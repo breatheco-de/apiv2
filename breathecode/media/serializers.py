@@ -55,7 +55,7 @@ class GetResolutionSerializer(serializers.ModelSerializer):
 
 class MediaSerializer(serializers.ModelSerializer):
     url = serializers.CharField(read_only=True, required=False)
-    name = serializers.CharField(read_only=True, required=False)
+    name = serializers.CharField(required=False)
     mime = serializers.CharField(read_only=True, required=False)
     hits = serializers.IntegerField(read_only=True, required=False)
     hash = serializers.CharField(read_only=True, required=False)

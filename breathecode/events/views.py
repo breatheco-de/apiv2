@@ -1,3 +1,4 @@
+from breathecode.events.actions import fix_datetime_weekday
 import os
 
 from django.contrib.auth.models import User
@@ -35,6 +36,13 @@ from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 
 
 logger = logging.getLogger(__name__)
+MONDAY = 0
+TUESDAY = 1
+WEDNESDAY = 2
+THURSDAY = 3
+FRIDAY = 4
+SATURDAY = 5
+SUNDAY = 6
 
 
 @api_view(['GET'])
@@ -516,23 +524,45 @@ class ICalCohortsView(APIView):
             event.add('uid', f'breathecode_cohort_{item.id}_{key}')
             event.add('dtstart', item.kickoff_date)
 
-            event_first_day.add('summary', f'{item.name} - First day')
-            event_first_day.add('uid', f'breathecode_cohort_{item.id}_first_{key}')
-            event_first_day.add('dtstart', item.kickoff_date)
-            event_first_day.add('dtend', item.kickoff_date + timedelta(days=1))
+            timeslots = CohortTimeSlot.objects.filter(cohort__id=item.id)
+            first_timeslot = timeslots.order_by('starting_at').first()
+
+            if first_timeslot:
+                event_first_day.add('summary', f'{item.name} - First day')
+                event_first_day.add('uid', f'breathecode_cohort_{item.id}_first_{key}')
+                event_first_day.add('dtstart', first_timeslot.starting_at)
+                event_first_day.add('dtend', first_timeslot.ending_at)
+                event_first_day.add('dtstamp', first_timeslot.created_at)
 
             if item.ending_date:
-                has_last_day = True
                 event.add('dtend', item.ending_date)
+                timeslots_datetime = []
 
-                event_last_day.add('summary', f'{item.name} - Last day')
-                event_last_day.add('uid', f'breathecode_cohort_{item.id}_last_{key}')
-                event_last_day.add('dtstart', item.ending_date - timedelta(days=1))
-                event_last_day.add('dtend', item.ending_date)
-                event_last_day.add('dtstamp', item.created_at)
+                for timeslot in timeslots:
+                    starting_at = timeslot.starting_at
+                    ending_at = timeslot.ending_at
+                    diff = ending_at - starting_at
+
+                    if timeslot.recurrent:
+                        ending_at = fix_datetime_weekday(item.ending_date, ending_at, prev=True)
+                        starting_at = ending_at - diff
+
+                    timeslots_datetime.append((starting_at, ending_at))
+
+                last_timeslot = None
+
+                if timeslots_datetime:
+                    timeslots_datetime.sort(key=lambda x: x[1], reverse=True)
+                    last_timeslot = timeslots_datetime[0]
+                    has_last_day = True
+
+                    event_last_day.add('summary', f'{item.name} - Last day')
+                    event_last_day.add('uid', f'breathecode_cohort_{item.id}_last_{key}')
+                    event_last_day.add('dtstart', last_timeslot[0])
+                    event_last_day.add('dtend', last_timeslot[1])
+                    event_last_day.add('dtstamp', item.created_at)
 
             event.add('dtstamp', item.created_at)
-            event_first_day.add('dtstamp', item.created_at)
 
             teacher = CohortUser.objects.filter(
                 role='TEACHER', cohort__id=item.id).first()
@@ -550,7 +580,9 @@ class ICalCohortsView(APIView):
 
                 organizer.params['role'] = vText('OWNER')
                 event['organizer'] = organizer
-                event_first_day['organizer'] = organizer
+
+                if first_timeslot:
+                    event_first_day['organizer'] = organizer
 
                 if has_last_day:
                     event_last_day['organizer'] = organizer
@@ -561,12 +593,15 @@ class ICalCohortsView(APIView):
                 location = f'{location} ({item.academy.website_url})'
 
             event['location'] = vText(item.academy.name)
-            event_first_day['location'] = vText(item.academy.name)
+
+            if first_timeslot:
+                event_first_day['location'] = vText(item.academy.name)
 
             if has_last_day:
                 event_last_day['location'] = vText(item.academy.name)
 
-            calendar.add_component(event_first_day)
+            if first_timeslot:
+                calendar.add_component(event_first_day)
             calendar.add_component(event)
 
             if has_last_day:
