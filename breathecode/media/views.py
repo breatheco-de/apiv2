@@ -425,11 +425,11 @@ class MaskingUrlView(APIView):
         return resource
 
 class ResolutionView(APIView):
-    @capable_of('read_media')
+    @capable_of('read_media_resolutions')
     def get(self, request, media_id=None, academy_id=None, resolution_id=None):
         if media_id:
 
-            media = Media.objects.filter(id=media_id, academy__id=academy_id).first()
+            media = Media.objects.filter(id=media_id).first()
 
             if not media:
                 raise ValidationException('Media not found', code=404, slug='media-not-found')
@@ -448,7 +448,7 @@ class ResolutionView(APIView):
             if not resolutions:
                 raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
 
-            media = Media.objects.filter(hash=resolutions.hash, academy__id=academy_id).first()
+            media = Media.objects.filter(hash=resolutions.hash).first()
         
             if not media:
                 resolutions.delete()
@@ -461,7 +461,7 @@ class ResolutionView(APIView):
 
         
             
-    @capable_of('crud_media')
+    @capable_of('crud_media_resolutions')
     def delete(self, request, resolution_id=None, academy_id=None):
         from ..services.google_cloud import Storage
 
@@ -470,7 +470,7 @@ class ResolutionView(APIView):
         if not resolution:
              raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
 
-        media = Media.objects.filter(hash=resolution.hash, academy__id=academy_id).first()
+        media = Media.objects.filter(hash=resolution.hash).first()
         
         if not media:
             resolution.delete()

@@ -40,7 +40,7 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
         models = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_media', role='potato')
+            capability='read_media_resolutions', role='potato')
         url = reverse_lazy('media:resolution_id', kwargs={'resolution_id': 1})
         response = self.client.get(url)
         json = response.json()
@@ -65,7 +65,7 @@ class MediaTestSuite(MediaTestCase):
         json = response.json()
 
         self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: crud_media for academy 1",
+            'detail': "You (user: 1) don't have this capability: crud_media_resolutions for academy 1",
             'status_code': 403
         })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -77,7 +77,7 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_media', role='potato', media_resolution=True)
+            capability='read_media_resolutions', role='potato', media_resolution=True)
         url = reverse_lazy('media:resolution_id', kwargs={'resolution_id': 1})
         response = self.client.get(url)
         json = response.json()
@@ -93,7 +93,7 @@ class MediaTestSuite(MediaTestCase):
         """Test /info/media:id/resolution"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, media_resolution=True, media=True,
-            capability='read_media', role='potato', profile_academy=True)
+            capability='read_media_resolutions', role='potato', profile_academy=True)
         model_dict = self.remove_dinamics_fields(model['media_resolution'].__dict__)
         url = reverse_lazy('media:resolution_id', kwargs={'resolution_id': 1})
         response = self.client.get(url)
@@ -118,13 +118,13 @@ class MediaTestSuite(MediaTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=2)
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_media', role='potato', media_resolution=True, media=True)
+            capability='crud_media_resolutions', role='potato', media_resolution=True, media=True)
         url = reverse_lazy('media:resolution_id', kwargs={'resolution_id': 1})
         response = self.client.delete(url)
         json = response.json()
 
         self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: crud_media for academy 2",
+            'detail': "You (user: 1) don't have this capability: crud_media_resolutions for academy 2",
             'status_code': 403
         })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -137,7 +137,7 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_media', role='potato')
+            capability='crud_media_resolutions', role='potato')
         url = reverse_lazy('media:resolution_id', kwargs={'resolution_id': 1})
         response = self.client.delete(url)
         json = response.json()
@@ -153,7 +153,7 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_media', role='potato', media_resolution=True)
+            capability='crud_media_resolutions', role='potato', media_resolution=True)
         url = reverse_lazy('media:resolution_id', kwargs={'resolution_id': 1})
         response = self.client.delete(url)
         json = response.json()
@@ -169,7 +169,7 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_media', role='potato', media_resolution=True, media=True)
+            capability='crud_media_resolutions', role='potato', media_resolution=True, media=True)
         url = reverse_lazy('media:resolution_id', kwargs={'resolution_id': 1})
         response = self.client.delete(url)
         
