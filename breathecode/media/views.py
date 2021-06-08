@@ -119,15 +119,13 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if not data:
             raise ValidationException('Media not found', code=404)
         
-        media_academy = data.academy.id
-        if int(media_academy) != int(academy_id):
+        if not data.academy or data.academy.id != int(academy_id):
             raise ValidationException('You may not delete media that belongs to a different academy', 
                 slug='academy-different-than-media-academy')
-
+        
         url = data.url
         hash = data.hash
         data.delete()
-
         if not Media.objects.filter(hash=hash).count():
             storage = Storage()
             file = storage.file(media_gallery_bucket(), url)
