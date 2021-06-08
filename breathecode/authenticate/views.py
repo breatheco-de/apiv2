@@ -241,14 +241,9 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         )
 
         if lookups:
-            items = UserInvite.objects.filter(**lookups)
-            print(items)
+            items = UserInvite.objects.filter(**lookups, email=request.user.email)
 
-            valid_items = [i for i in items if i.email == request.user.email]
-            print(request.user.email)
-            print(valid_items)
-
-            for item in valid_items:
+            for item in items:
 
                 item.status = 'ACCEPTED'
                 item.save()
@@ -262,7 +257,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                         email=item.email, first_name=item.first_name, last_name=item.last_name)
                     profile_academy.save()
 
-            serializer = UserInviteSerializer(valid_items, many=True)
+            serializer = UserInviteSerializer(items, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         else:
