@@ -538,64 +538,88 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_academy_student_query_like_full_name(self):
         """Test /academy/student"""
         self.headers(academy=1)
+        base = self.generate_models(authenticate=True, role='student',
+            capability='read_student')
+
         profile_academy_kwargs = {
                 'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
-                'first_name': choice(['Rene', 'Albert', 'Immanuel']),
-                'last_name': choice(['Descartes', 'Camus', 'Kant']),
+                'first_name': 'Rene',
+                'last_name': 'Descartes',
                 'address': choice(['asd', 'qwe', 'zxc']),
                 'phone': choice(['123', '456', '789']),
             }
-        model = self.generate_models(authenticate=True, role='student',
-            capability='read_student', profile_academy=True, 
-            profile_academy_kwargs=profile_academy_kwargs)
+        profile_academy_kwargs_2 = {
+                'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
+                'first_name': 'Rene',
+                'last_name': 'Lopez',
+                'address': choice(['asd', 'qwe', 'zxc']),
+                'phone': choice(['123', '456', '789']),
+            }
+        model_1 = self.generate_models(profile_academy=True, 
+            profile_academy_kwargs=profile_academy_kwargs, models=base)
+        
+        model_2 = self.generate_models(profile_academy=True, 
+            profile_academy_kwargs=profile_academy_kwargs_2, models=base)
 
         base_url = reverse_lazy('authenticate:academy_student')
-        firt_name = profile_academy_kwargs.get('first_name')
-        last_name = profile_academy_kwargs.get('last_name')
-        url = f'{base_url}?like={firt_name} {last_name}'
+        url = f'{base_url}?like=Rene Descartes'
         
         response = self.client.get(url)
         json = response.json()
         expected = [{
             'academy': {
-                'id': model['profile_academy'].academy.id,
-                'name': model['profile_academy'].academy.name,
-                'slug': model['profile_academy'].academy.slug
+                'id': model_1['profile_academy'].academy.id,
+                'name': model_1['profile_academy'].academy.name,
+                'slug': model_1['profile_academy'].academy.slug
             },
-            'address': model['profile_academy'].address,
-            'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
-            'email': model['profile_academy'].email,
-            'first_name': model['profile_academy'].first_name,
-            'id': model['profile_academy'].id,
-            'last_name': model['profile_academy'].last_name,
-            'phone': model['profile_academy'].phone,
+            'address': model_1['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model_1['profile_academy'].created_at),
+            'email': model_1['profile_academy'].email,
+            'first_name': model_1['profile_academy'].first_name,
+            'id': model_1['profile_academy'].id,
+            'last_name': model_1['profile_academy'].last_name,
+            'phone': model_1['profile_academy'].phone,
             'role': {
                 'name': 'student',
                 'slug': 'student'
             },
             'status': 'INVITED',
             'user': {
-                'email': model['profile_academy'].user.email,
-                'first_name': model['profile_academy'].user.first_name,
+                'email': model_1['profile_academy'].user.email,
+                'first_name': model_1['profile_academy'].user.first_name,
                 'github': None,
-                'id': model['profile_academy'].user.id,
-                'last_name': model['profile_academy'].user.last_name
+                'id': model_1['profile_academy'].user.id,
+                'last_name': model_1['profile_academy'].user.last_name
             }
         }]
 
         self.assertEqual(json, expected)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': model['profile_academy'].address,
-            'email': model['profile_academy'].email,
-            'first_name': model['profile_academy'].first_name,
-            'id': 1,
-            'last_name': model['profile_academy'].last_name,
-            'phone': model['profile_academy'].phone,
-            'role_id': 'student',
-            'status': 'INVITED',
-            'user_id': 1
-        }])
+        self.assertEqual(self.all_profile_academy_dict(), [
+            {
+                'academy_id': 1,
+                'address': model_1['profile_academy'].address,
+                'email': model_1['profile_academy'].email,
+                'first_name': model_1['profile_academy'].first_name,
+                'id': 1,
+                'last_name': model_1['profile_academy'].last_name,
+                'phone': model_1['profile_academy'].phone,
+                'role_id': 'student',
+                'status': 'INVITED',
+                'user_id': 1
+            },
+            {
+                'academy_id': 2,
+                'address': model_2['profile_academy'].address,
+                'email': model_2['profile_academy'].email,
+                'first_name': model_2['profile_academy'].first_name,
+                'id': 2,
+                'last_name': model_2['profile_academy'].last_name,
+                'phone': model_2['profile_academy'].phone,
+                'role_id': 'student',
+                'status': 'INVITED',
+                'user_id': 1
+            }
+        ])
 
     def test_academy_student_query_like_first_name(self):
         """Test /academy/student"""
