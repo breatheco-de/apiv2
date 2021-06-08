@@ -100,42 +100,35 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('crud_media')
     def put(self, request, media_id=None, academy_id=None):
-        lookups = self.generate_lookups(
-            request,
-            many_fields=['id']
-        )
+        many = isinstance(request.data, list)
+        context = {
+            'request': request,
+            'media_id': media_id,
+            'many': many,
+        }
 
-        if lookups and media_id:
-            raise ValidationException('media_id was provided in url '
-                'in bulk mode request, use querystring style instead', slug='media-id-in-bulk-mode')
-                                
-        if lookups:
-            items = Media.objects.filter(**lookups, academy__id=academy_id)
-            data = {}
-            data['data'] = []
+        if not many:
+            current = Media.objects.filter(academy__id=academy_id).first()
+        else:
+            current = []
+            index = -1
+            for x in request.data:
+                index = index + 1
 
-            for item in items:
-                serializer = MediaSerializer(item, data=request.data, many=False)
-                if serializer.is_valid():
-                    data['data'].append(serializer.data)
+                if 'id' in x:
+                    current.append(
+                        Media.objects.filter(id=x['id']).first())
+
+                elif 'academy' in x:
+                    current.append(Media.objects.filter(academy__id=x['academy']
+                        ).first())
+
                 else:
-                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                    raise ValidationException('Cannot determine Media in '
+                                              f'index {index}')
 
-            for item in items:
-                serializer = MediaSerializer(item, data=request.data, many=False)
-                if serializer.is_valid():
-                    serializer.save()
-
-            return Response(data, status=status.HTTP_200_OK)
-
-        if media_id is None:
-            raise ValidationException("Please input media_id", slug='no-media-id')
-
-        data = Media.objects.filter(id=media_id).first()
-        if not data:
-            raise ValidationException('Media not found', code=404)
-
-        serializer = MediaSerializer(data, data=request.data, many=False)
+        serializer = MediaPUTSerializer(current, data=request.data,
+                                             context=context, many=many)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

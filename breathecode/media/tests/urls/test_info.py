@@ -30,10 +30,9 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_info_put_without_args_in_url_or_bulk(self):
-        """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_media', role='potato')
+            capability='crud_media',media=True, role='potato')
         url = reverse_lazy('media:info')
         response = self.client.put(url)
         json = response.json()
@@ -47,13 +46,11 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(self.all_media_dict(), [{
             **self.model_to_dict(model, 'media'),
         }])
-        self.assertEqual(self.all_media_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_info_put_in_bulk_with_one(self):
-        """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         many_fields=['id']
 
@@ -72,15 +69,17 @@ class MediaTestSuite(MediaTestCase):
             model = self.generate_models(authenticate=True, profile_academy=True, 
                 media=True, models=base)
 
-            value = getattr(model['cohort'], field)
-            media = self.get_media(1)
+            value = getattr(model['media'], field)
             url = (reverse_lazy('media:info') + f'?{field}=' +
                 str(value))
-            response = self.client.put(url, {**data, **ignored_data})
+            response = self.client.put(url, {**data, **ignored_data}, format='json')
             json = response.json()
 
             if response.status_code != 200:
                 print(response.json())
+
+        self.assertDatetime(json[0]['updated_at'])
+        del json[0]['updated_at']
 
         self.assertEqual(json, [{
             'categories': [],
@@ -93,7 +92,6 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail': None,
             'url': model['media'].url,
             'created_at': self.datetime_to_iso(model['media'].created_at),
-            'updated_at': self.datetime_to_iso(media.updated_at),
             **data,
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -106,31 +104,103 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_info_put_in_bulk_with_two(self):
-        """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         many_fields=['id']
 
-        base = self.generate_models(capability='crud_media', role='potato')
+        base = self.generate_models(authenticate=True, profile_academy=True,
+            capability='crud_media', role='potato')
+        del base['user']
 
-        for field in many_fields:
-            model1 = self.generate_models(authenticate=True, profile_academy=True, 
-                media=True, models=base)
+        models = [self.generate_models(media=True, models=base) for _ in range(0, 2)]
+        url = reverse_lazy('media:info')
+        data = [{
+            'slug': 'they-killed-kenny',
+        } for model in models]
+        response = self.client.post(url, data, format='json')
+        json = response.json()
 
-            model2 = self.generate_models(authenticate=True, profile_academy=True, 
-                media=True, models=base)
+        print(json)
+        self.assertDatetime(json['updated_at'])
+        del json['updated_at']
 
-            value1 = getattr(model1['cohort'], field)
-            value1 = self.datetime_to_iso(value1) if isinstance(value1, datetime) else value1
+        self.assertEqual(json, [{
+            'categories': [],
+            'academy': 1,
+            'hash': model1['media'].hash,
+            'hits': model1['media'].hits,
+            'id': model1['media'].id,
+            'mime': model1['media'].mime,
+            'name': model1['media'].name,
+            'thumbnail': None,
+            'url': model1['media'].url,
+            'created_at': self.datetime_to_iso(model1['media'].created_at),
+            **data,
+        }])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model1, 'media'),
+            **data,
+        }])
+        del base['user']
 
-            value2 = getattr(model2['cohort'], field)
-            value2 = self.datetime_to_iso(value2) if isinstance(value2, datetime) else value2
+        models = [self.generate_models(user=True, models=base) for _ in range(0, 2)]
+        url = reverse_lazy('admissions:academy_cohort_user')
+        data = [{
+            'user':  model['user'].id,
+            'cohort':  models[0]['cohort'].id,
+        } for model in models]
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = [{
+            'id': model['user'].id - 1,
+            'role': 'STUDENT',
+            'user': {
+                'id': model['user'].id,
+                'first_name': model['user'].first_name,
+                'last_name': model['user'].last_name,
+                'email': model['user'].email,
+            },
+            'cohort': {
+                'id': model['cohort'].id,
+                'slug': model['cohort'].slug,
+                'name': model['cohort'].name,
+                'never_ends': False,
+                'kickoff_date': re.sub(
+                    r'\+00:00$', 'Z',
+                    model['cohort'].kickoff_date.isoformat()
+                ),
+                'current_day': model['cohort'].current_day,
+                'academy': {
+                    'id': model['cohort'].academy.id,
+                    'name': model['cohort'].academy.name,
+                    'slug': model['cohort'].academy.slug,
+                    'country': model['cohort'].academy.country.code,
+                    'city': model['cohort'].academy.city.id,
+                    'street_address': model['cohort'].academy.street_address,
+                },
+                'syllabus': None,
+                'ending_date': model['cohort'].ending_date,
+                'stage': model['cohort'].stage,
+                'language': model['cohort'].language,
+                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
+                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
+            },
+        } for model in models]
 
-            url = (reverse_lazy('media:info') + f'?{field}=' +
-                str(value1) + ',' + str(value2))
-            response = self.client.put(url)
-
-            if response.status_code != 204:
-                print(response.json())
-
-            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_media_dict(), [])
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_cohort_user_dict(), [{
+            'cohort_id': 1,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 1,
+            'role': 'STUDENT',
+            'user_id': 2,
+        }, {
+            'cohort_id': 1,
+            'educational_status': None,
+            'finantial_status': None,
+            'id': 2,
+            'role': 'STUDENT',
+            'user_id': 3,
+        }])
