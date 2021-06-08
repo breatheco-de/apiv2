@@ -6,6 +6,8 @@ from django.urls.base import reverse_lazy
 from rest_framework import status
 from random import choice
 from ..mixins.new_auth_test_case import AuthTestCase
+from datetime import timedelta, datetime
+from django.utils import timezone
 
 
 class AuthenticateTestSuite(AuthTestCase):
@@ -72,6 +74,37 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()['detail'], slug)
         self.assertEqual(self.all_user_invite_dict(), [])
+
+    def test_invite_change_status_to_accepted_in_bulk_with_ids(self):
+        """Test academy/user/me/invite"""
+        self.headers(academy=1)
+        base = self.generate_models(
+            academy=True, capability='read_invite', authenticate=True, role='potato',
+            user_kwargs={'email': 'a@a.com'})
+
+        invite_kwargs = {
+            'status': "ACCEPTED",
+            'email': 'a@a.com',
+            "id": 1,
+        }
+
+        model1 = self.generate_models(authenticate=True, profile_academy=True, user_invite=True,
+                                      user_invite_kwargs=invite_kwargs, models=base)
+
+        url = reverse_lazy('authenticate:user_me_invite') + '?id=1,2'
+        response = self.client.put(url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        del response.json()[0]['created_at']
+        print(response.json())
+        self.assertEqual(response.json(), [{
+            'email': 'a@a.com',
+            'first_name': None,
+            'invite_url': f"http://localhost:8000/v1/auth/member/invite/{model1['user_invite'].token}",
+            'last_name': None,
+            'sent_at': None,
+            'status': 'ACCEPTED',
+            'token': model1['user_invite'].token}])
 
     def test_invite_change_status_to_accepted_invitation_no_match_user(self):
         """Test academy/user/me/invite"""

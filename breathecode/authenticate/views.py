@@ -242,8 +242,11 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if lookups:
             items = UserInvite.objects.filter(**lookups)
+            print(items)
 
             valid_items = [i for i in items if i.email == request.user.email]
+            print(request.user.email)
+            print(valid_items)
 
             for item in valid_items:
 
