@@ -21,7 +21,7 @@ from .views import (
     save_github_token, get_slack_token, save_slack_token, pick_password, change_password,
     get_token_info, get_facebook_token, save_facebook_token, MemberView, reset_password_view,
     login_html_view, StudentView, get_roles, render_invite, AcademyInviteView,
-    ProfileInviteView, MeInviteView, AcademyTokenView
+    ProfileInviteView, MeInviteView, AcademyTokenView, PasswordResetView
 )
 
 app_name = 'authenticate'
@@ -59,6 +59,7 @@ urlpatterns = [
          name="token"),  # get token information
 
     path('password/reset', reset_password_view, name="password_reset"),
+    path('member/<int:profileacademy_id>/password/reset', PasswordResetView.as_view(), name="member_password_reset"),
     path('password/<str:token>', pick_password, name="password_token"),
 
     path('github/', get_github_token, name="github"),

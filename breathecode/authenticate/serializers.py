@@ -13,6 +13,21 @@ from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
+class UserTinySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    email = serpy.Field()
+
+class TokenSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    user = UserTinySerializer()
+    key = serpy.Field()
+    reset_password_url = serpy.MethodField()
+
+    def get_reset_password_url(self, obj):
+        return os.getenv('API_URL') + "/v1/auth/password/" + str(obj.key)
 
 class RoleSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""

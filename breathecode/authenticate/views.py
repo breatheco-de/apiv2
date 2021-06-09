@@ -36,7 +36,7 @@ from breathecode.utils import localize_query, capable_of, ValidationException, H
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
-    RoleSmallSerializer, UserMeSerializer, UserInviteSerializer
+    RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -978,6 +978,20 @@ def pick_password(request, token):
         'form': form
     })
 
+class PasswordResetView(APIView):
+    @capable_of('send_reset_password')
+    def post(self, request, profileacademy_id=None, academy_id=None):
+
+            profile_academy = ProfileAcademy.objects.filter(id=profileacademy_id).first()
+            if profile_academy is None:
+                raise ValidationException("Member not found", 400)
+
+            if reset_password([profile_academy.user]):
+                token = Token.objects.filter(user=profile_academy.user, token_type="temporal").first()
+                serializer = TokenSmallSerializer(token)
+                return Response(serializer.data)
+            else:
+                raise ValidationException("Reset password token could not be sent")
 
 class AcademyInviteView(APIView):
     @capable_of('crud_member')
