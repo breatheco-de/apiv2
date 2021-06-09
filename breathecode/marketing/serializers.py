@@ -1,5 +1,5 @@
 import serpy
-from .models import FormEntry
+from .models import FormEntry, AcademyAlias
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 
@@ -69,7 +69,11 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
 
         academy = None
         if "location" in validated_data:
-            academy = Academy.objects.filter(active_campaign_slug=validated_data['location']).first()
-        
+            alias = AcademyAlias.objects.filter(active_campaign_slug=validated_data['location']).first()
+            if alias is not None:
+                academy = alias.academy
+            else:
+                academy = Academy.objects.filter(active_campaign_slug=validated_data['location']).first()
+
         result = super().create({ **validated_data, "academy": academy })
         return result

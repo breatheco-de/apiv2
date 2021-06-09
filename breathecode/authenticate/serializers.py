@@ -217,7 +217,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 user=data['user'], academy=self.context['academy_id']).first()
             if already:
                 raise ValidationException(
-                    'This user is already a member of this academy staff')
+                    'This user is already a member of this academy')
 
         if "role" not in data:
             raise ValidationException("Missing role")
@@ -398,6 +398,16 @@ class MemberPUTSerializer(serializers.ModelSerializer):
             raise ValidationError('User not found on this particular academy')
 
         return data
+
+    def update(self, instance, validated_data):
+
+        if instance.user.first_name is None or instance.user.first_name == "":
+            instance.user.first_name = instance.first_name
+        if instance.user.last_name is None or instance.user.last_name == "":
+            instance.user.last_name = instance.last_name
+        instance.user.save()
+
+        return super().update(instance, validated_data)
 
 
 class AuthSerializer(serializers.Serializer):
