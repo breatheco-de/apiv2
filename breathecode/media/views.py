@@ -430,21 +430,17 @@ class ResolutionView(APIView):
         if media_id:
 
             media = Media.objects.filter(id=media_id).first()
-
             if not media:
                 raise ValidationException('Media not found', code=404, slug='media-not-found')
 
             resolutions = MediaResolution.objects.filter(hash=media.hash)
-
             if not resolutions:
                 raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
 
             serializer = GetResolutionSerializer(resolutions, many=True)
 
         elif resolution_id:
-            
             resolutions = MediaResolution.objects.filter(id=resolution_id).first()
-
             if not resolutions:
                 raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
 
@@ -456,7 +452,6 @@ class ResolutionView(APIView):
                     slug='resolution-media-not-found', code=404)
 
             serializer = GetResolutionSerializer(resolutions)
-
         return Response(serializer.data, status=status.HTTP_200_OK)
 
         
@@ -466,12 +461,10 @@ class ResolutionView(APIView):
         from ..services.google_cloud import Storage
 
         resolution = MediaResolution.objects.filter(id=resolution_id).first()
-
         if not resolution:
              raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
 
         media = Media.objects.filter(hash=resolution.hash).first()
-        
         if not media:
             resolution.delete()
             raise ValidationException('Resolution was deleted for not having parent element', 
