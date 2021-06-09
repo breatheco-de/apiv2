@@ -47,6 +47,7 @@ class GithubSmallSerializer(serpy.Serializer):
 class UserInviteSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     status = serpy.Field()
     email = serpy.Field()
     sent_at = serpy.Field()
@@ -229,7 +230,13 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
 
         elif "user" in data:
             already = ProfileAcademy.objects.filter(
-                user=data['user'], academy=self.context['academy_id']).first()
+                user=data['user'], academy=self.context['academy_id'], role='STUDENT').first()
+            if already:
+                raise ValidationException(
+                    'This user is a student from this academy, look for the student details and update its role instead')
+
+            already = ProfileAcademy.objects.filter(
+                user=data['user'], academy=self.context['academy_id']).exclude(role='STUDENT').first()
             if already:
                 raise ValidationException(
                     'This user is already a member of this academy')
@@ -456,3 +463,16 @@ class AuthSerializer(serializers.Serializer):
 
         attrs['user'] = user
         return attrs
+
+
+class UserInvitePUTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserInvite
+        fields = ('status', 'id')
+
+    def validate(self, data):
+
+        if "status" not in data:
+            raise ValidationException("Missing status on invite")
+
+        return data

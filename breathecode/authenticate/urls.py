@@ -28,7 +28,7 @@ app_name = 'authenticate'
 urlpatterns = [
     path('user/', get_users, name="user"),
     path('role', get_roles, name="role"),
-    path('user/me', UserMeView.as_view(), name="user_me"),
+    
 
     path('member/invite/resend/<int:pa_id>',
          AcademyInviteView.as_view(), name="academy_resent_invite"),
@@ -44,7 +44,6 @@ urlpatterns = [
 
     path('academy/student', StudentView.as_view(), name="academy_student"),
     path('academy/student/<int:user_id>', StudentView.as_view(), name="academy_student_id"),
-    path('academy/user/me/invite', MeInviteView.as_view()),
     path('academy/user/<int:profileacademy_id>/invite', ProfileInviteView.as_view()),
     # path('group/', get_groups, name="group"),
 
@@ -70,4 +69,9 @@ urlpatterns = [
 
     path('facebook/', get_facebook_token, name="facebook"),
     path('facebook/callback/', save_facebook_token, name="facebook_callback"),
+    
+    
+    
+    path('user/me', UserMeView.as_view(), name="user_me"),
+    path('user/me/invite', MeInviteView.as_view()),
 ]
