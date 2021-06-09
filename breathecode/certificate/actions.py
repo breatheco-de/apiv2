@@ -37,7 +37,7 @@ def generate_certificate(user, cohort=None):
     if not cohort_user:
         message = ("Impossible to obtain the student cohort, maybe it's none assigned")
         logger.error(message)
-        raise APIException(message)
+        raise ValidationException(message)
 
     if not cohort:
         cohort = cohort_user.cohort
@@ -45,27 +45,27 @@ def generate_certificate(user, cohort=None):
     if cohort.syllabus is None:
         message = f"The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}"
         logger.error(message)
-        raise APIException(message)
+        raise ValidationException(message)
 
     if cohort.syllabus.certificate is None:
         message = ('The cohort has no certificate assigned, please set a '
             f'certificate for cohort: {cohort.name}')
         logger.error(message)
-        raise APIException(message)
+        raise ValidationException(message)
 
     if (not hasattr(cohort.syllabus.certificate, 'specialty') or not
             cohort.syllabus.certificate.specialty):
         message = ('Specialty has no certificate assigned, please set a '
             f'certificate on the Specialty model: {cohort.syllabus.certificate.name}')
         logger.error(message)
-        raise APIException(message)
+        raise ValidationException(message)
 
     uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
     
     if (uspe is not None and uspe.status == 'PERSISTED' and uspe.preview_url):
         message = "This user already has a certificate created"
         logger.error(message)
-        raise APIException(message)
+        raise ValidationException(message)
     
     if uspe is None:
         utc_now = timezone.now()
@@ -83,7 +83,7 @@ def generate_certificate(user, cohort=None):
     if layout is None:
         message = "Missing a default layout"
         logger.error(message)
-        raise APIException(message)
+        raise ValidationException(message)
 
     uspe.layout = layout
 
@@ -92,7 +92,7 @@ def generate_certificate(user, cohort=None):
     if main_teacher is None or main_teacher.user is None:
         message = "This cohort does not have a main teacher, please assign it first"
         logger.error(message)
-        raise APIException(message)
+        raise ValidationException(message)
 
     main_teacher = main_teacher.user
     uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
@@ -103,20 +103,20 @@ def generate_certificate(user, cohort=None):
         tasks_count_pending = sum(task.task_status == 'PENDING' for task in tasks)
 
         if tasks_count_pending:
-            raise APIException(f'The student has {tasks_count_pending} '
+            raise ValidationException(f'The student has {tasks_count_pending} '
                 'pending tasks')
 
         if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status ==
                 UP_TO_DATE):
-            raise APIException('The student must have finantial status '
+            raise ValidationException('The student must have finantial status '
                 'FULLY_PAID or UP_TO_DATE')
 
         if cohort_user.educational_status != 'GRADUATED':
-            raise APIException('The student must have educational '
+            raise ValidationException('The student must have educational '
                 'status GRADUATED')
 
         if cohort.current_day != cohort.syllabus.certificate.duration_in_days:
-            raise APIException('Cohort current day should be '
+            raise ValidationException('Cohort current day should be '
                 f'{cohort.syllabus.certificate.duration_in_days}')
 
         uspe.status = PERSISTED
