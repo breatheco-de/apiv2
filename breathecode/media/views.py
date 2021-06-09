@@ -424,6 +424,7 @@ class MaskingUrlView(APIView):
 
         return resource
 
+    
 class ResolutionView(APIView):
     @capable_of('read_media_resolutions')
     def get(self, request, media_id=None, academy_id=None, resolution_id=None):
@@ -453,8 +454,6 @@ class ResolutionView(APIView):
 
             serializer = GetResolutionSerializer(resolutions)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
-        
             
     @capable_of('crud_media_resolutions')
     def delete(self, request, resolution_id=None, academy_id=None):
@@ -469,7 +468,6 @@ class ResolutionView(APIView):
             resolution.delete()
             raise ValidationException('Resolution was deleted for not having parent element', 
                 slug='resolution-media-not-found', code=404)
-
 
         hash = resolution.hash
         url = media.url
