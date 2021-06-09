@@ -112,15 +112,13 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                 academy__id=academy_id).first()
         else:
             current = []
-            index = -1
             for x in request.data:
-                index = index + 1
 
                 if not 'id' in x:
                     raise ValidationException('Please input id in body for bulk mode',
                         slug='id-not-in-bulk')
-
-                media = Media.objects.filter(id=x['id'], academy__id=academy_id).first()
+                print(x)
+                media = Media.objects.filter(id=x['id']).first()
                 if not media:
                     raise ValidationException('Media not found', code=404) 
                 current.append(media)

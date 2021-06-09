@@ -121,9 +121,11 @@ class MediaTestSuite(MediaTestCase):
         base = model[0].copy()
         del base['user']
         del base['profile_academy']
+        del base['media']
 
         model = model + [self.generate_models(media=True, profile_academy=True,
             models=base)]
+
         data = [{
             'id': 1,
             'hash': model[0]['media'].hash,
@@ -131,6 +133,7 @@ class MediaTestSuite(MediaTestCase):
             'name': model[0]['media'].name,
             'mime': model[0]['media'].mime
         }, {
+            'id': 2,
             'hash': model[1]['media'].hash,
             'slug': 'you-bastards',
             'name': model[1]['media'].name,
