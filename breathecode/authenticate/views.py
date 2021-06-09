@@ -318,12 +318,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            # TODO: StaffPOSTSerializer is not defined
-            serializer = StaffPOSTSerializer(data=request_data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            raise ValidationException("The user is not a student in this academy")
 
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id=None):
@@ -1053,13 +1048,18 @@ def render_invite(request, token, member_id=None):
             token=str(token), status='PENDING').first()
         if invite is None:
             messages.error(
-                request, 'Invalid or expired invitation'+str(token))
+                request, 'Invalid or expired invitation '+str(token))
             return render(request, 'form_invite.html', {
                 'form': form
             })
 
         first_name = request.POST.get("first_name", None)
         last_name = request.POST.get("last_name", None)
+        if first_name is None or first_name == "" or last_name is None or last_name == "":
+            messages.error(request, 'Invalid first or last name')
+            return render(request, 'form_invite.html', {
+                'form': form,
+            })
 
         user = User.objects.filter(email=invite.email).first()
         if user is None:
@@ -1074,8 +1074,12 @@ def render_invite(request, token, member_id=None):
                 email=invite.email, academy=invite.academy).first()
             if profile is None:
                 role = invite.role.slug
-                profile = ProfileAcademy(
-                    email=invite.email, academy=invite.academy, role=invite.role)
+                profile = ProfileAcademy(email=invite.email, academy=invite.academy, role=invite.role, first_name=first_name, last_name=last_name)
+                if invite.first_name is not None and invite.first_name != "":
+                    profile.first_name = invite.first_name
+                if invite.last_name is not None and invite.last_name != "":
+                    profile.last_name = invite.last_name
+                
 
             profile.user = user
             profile.status = 'ACTIVE'
