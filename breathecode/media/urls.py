@@ -9,9 +9,6 @@ urlpatterns = [
     path('info/<slug:media_slug>', MediaView.as_view(), name='info_slug'),
     path('info/<str:media_name>', MediaView.as_view(), name='info_name'),
 
-    path('file/<int:media_id>-<int:width>x<int:height>', MaskingUrlView.as_view(), name='file_id_width_x_height'),
-    path('file/<slug:media_slug>-<int:width>x<int:height>', MaskingUrlView.as_view(), name='file_slug_width_x_height'),
-
     path('file/<int:media_id>', MaskingUrlView.as_view(), name='file_id'),
     path('file/<slug:media_slug>', MaskingUrlView.as_view(), name='file_slug'),
 

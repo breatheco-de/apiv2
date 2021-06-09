@@ -1,5 +1,5 @@
-import os, requests
-from rest_framework.exceptions import ValidationError
+from datetime import datetime, timedelta
+from breathecode.admissions.models import CohortTimeSlot
 from .models import Organization, Venue, Event, Organizer
 from .utils import Eventbrite
 from django.utils import timezone
@@ -85,7 +85,7 @@ def sync_org_events(org):
 
     client = Eventbrite(org.eventbrite_key)
     result = client.get_organization_events(org.eventbrite_id)
-        
+
     try:
         for data in result['events']:
             update_or_create_event(data, org)
@@ -103,7 +103,7 @@ def sync_org_events(org):
     return True
 
 def update_or_create_event(data, org):
-        
+
     if data is None: #skip if no data
         print("Ignored event")
         return False
@@ -112,7 +112,7 @@ def update_or_create_event(data, org):
 
     if data['status'] not in status_map:
         raise Exception("Uknown eventbrite status "+data['status'])
-    
+
     event = Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).first()
     try:
         venue = None
@@ -155,7 +155,7 @@ def update_or_create_event(data, org):
             event.eventbrite_status=data['status']
             # event.organizer=organizer
             event.venue=venue
-        
+
         if "published" in data:
             event.published_at=data['published']
         if "logo" in data and data['logo'] is not None:
@@ -180,5 +180,33 @@ def update_or_create_event(data, org):
             event.sync_status = 'ERROR'
             event.save()
         raise e
-    
+
     return event
+
+def fix_datetime_weekday(current, timeslot, prev=False, next=False):
+    if not prev and not next:
+        raise Exception('You should provide a prev or next argument')
+
+    days = 0
+    weekday = timeslot.weekday()
+    postulate = datetime(
+        year=current.year,
+        month=current.month,
+        day=current.day,
+        hour=timeslot.hour,
+        minute=timeslot.minute,
+        second=timeslot.second,
+        tzinfo=current.tzinfo)
+
+    while True:
+        if prev:
+            res = postulate - timedelta(days=days)
+            if weekday == res.weekday():
+                return res
+
+        if next:
+            res = postulate + timedelta(days=days)
+            if weekday == res.weekday():
+                return res
+
+        days = days + 1
