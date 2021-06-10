@@ -26,10 +26,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_user(self):
+    def test_generate_certificate_with_user_without_cohort(self):
         """
         Step 1
-        Tests generate_certificate with User
+        Tests generate_certificate with a User that has no cohort
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True)
@@ -45,10 +45,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_cohort(self):
+    def test_generate_certificate_without_cohort_user(self):
         """
         Step 2
-        Tests generate_certificate with Cohort
+        Tests generate_certificate with Cohort but without CohortUser
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True)
@@ -65,7 +65,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_cohort_user(self):
+    def test_generate_certificate_without_syllabus(self):
         """
         Step 3
         Tests generate_certificate with CohortUser
@@ -85,10 +85,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_syllabus(self):
+    def test_generate_certificate_without_certificate(self):
         """
         Step 4
-        Tests generate_certificate with Syllabus
+        Tests generate_certificate with Syllabus but Without Certificate
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
@@ -107,10 +107,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_specialty(self):
+    def test_generate_certificate_without_specialty_layout(self):
         """
         Step 5
-        Tests generate_certificate with Specialty
+        Tests generate_certificate with Specialty btu missing a default layout
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
@@ -126,10 +126,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_layout_design(self):
+    def test_generate_certificate_without_teacher(self):
         """
         Step 6
-        Tests generate_certificate with LayoutDesign
+        Tests generate_certificate without Teacher
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
@@ -146,10 +146,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_user_with_role_teacher(self):
+    def test_generate_certificate_with_bad_student_finantial_status(self):
         """
         Step 7
-        Tests generate_certificate with User with role teacher
+        Tests generate_certificate with bad student finantial status
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
@@ -191,10 +191,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_task(self):
+    def test_generate_certificate_with_student_that_didnt_finish_tasks(self):
         """
         Step 8
-        Tests generate_certificate with Task type PROJECT
+        Tests generate_certificate with students that are missing to deliver all the tasks
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
@@ -235,10 +235,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_cohort_user_with_finantial_status_eq_fully_paid(self):
+    def test_generate_certificate_without_proper_educational_status(self):
         """
         Step 9
-        Tests generate_certificate with CohortUser eq FULLY_PAID
+        Tests generate_certificate without CohortUser educational status GRADUATED
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
