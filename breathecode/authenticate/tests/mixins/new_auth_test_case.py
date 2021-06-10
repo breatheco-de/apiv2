@@ -1,8 +1,6 @@
 import os
 from rest_framework.test import APITestCase
 from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin, DatetimeMixin, TokenMixin
-import os
-# from breathecode.admissions.tests.mixins.new_admissions_test_case import AdmissionsTestCase
 
 
 class AuthTestCase(APITestCase, GenerateModelsMixin, CacheMixin,

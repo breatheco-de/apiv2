@@ -3,7 +3,9 @@ from .views import (
     AcademyView, CohortUserView, AcademyCohortView,
     get_timezones, UserView, UserMeView, AcademyCohortUserView,
     get_single_course, SyllabusView, CertificateView,
-    CertificateAllView, get_all_academies, get_cohorts
+    CertificateAllView, get_all_academies, get_cohorts,
+    AcademyCohortTimeSlotView, AcademyCertificateTimeSlotView,
+    AcademySyncCohortTimeSlotView
 )
 
 app_name = 'admissions'
@@ -25,6 +27,19 @@ urlpatterns = [
          AcademyCohortUserView.as_view(), name='academy_cohort_id_user_id'),
     path('academy/cohort/<int:cohort_id>/user',
          AcademyCohortUserView.as_view()),
+
+    path('academy/cohort/<int:cohort_id>/timeslot',
+         AcademyCohortTimeSlotView.as_view(), name='academy_cohort_id_timeslot'),
+    path('academy/cohort/<int:cohort_id>/timeslot/<int:timeslot_id>',
+         AcademyCohortTimeSlotView.as_view(), name='academy_cohort_id_timeslot_id'),
+
+    path('academy/cohort/sync/timeslot',
+         AcademySyncCohortTimeSlotView.as_view(), name='academy_cohort_sync_timeslot'),
+
+    path('academy/certificate/<int:certificate_id>/timeslot',
+         AcademyCertificateTimeSlotView.as_view(), name='academy_certificate_id_timeslot'),
+    path('academy/certificate/<int:certificate_id>/timeslot/<int:timeslot_id>',
+         AcademyCertificateTimeSlotView.as_view(), name='academy_certificate_id_timeslot_id'),
 
     path('academy/', get_all_academies, name="academy"),
     path('academy/me', AcademyView.as_view(), name="academy_me"),
