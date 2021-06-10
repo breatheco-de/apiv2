@@ -78,12 +78,12 @@ class MediaListSerializer(serializers.ListSerializer):
 
 class MediaPUTSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
-    url = serializers.CharField(required=False)
-    thumbnail = serializers.CharField(required=False)
-    hash = serializers.CharField(required=False)
+    url = serializers.CharField(read_only=True, required=False)
+    hash = serializers.CharField(read_only=True, required=False)
+    hits = serializers.IntegerField(read_only=True, required=False)
     slug = serializers.SlugField(required=False)
-    mime = serializers.CharField(required=False)
-    name = serializers.CharField(required=False)
+    mime = serializers.CharField(read_only=True, required=False)
+    name = serializers.CharField(read_only=True, required=False)
 
     class Meta:
         model = Media

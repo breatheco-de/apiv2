@@ -233,8 +233,6 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.put(url, {**data, **ignored_data})
         json = response.json()
 
-        media = self.get_media(1)
-
         self.assertEqual(json, {
             'categories': [],
             'academy': 1,
@@ -245,8 +243,6 @@ class MediaTestSuite(MediaTestCase):
             'name': model['media'].name,
             'thumbnail': None,
             'url': model['media'].url,
-            'created_at': self.datetime_to_iso(model['media'].created_at),
-            'updated_at': self.datetime_to_iso(media.updated_at),
             **data,
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
