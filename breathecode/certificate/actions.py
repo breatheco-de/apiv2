@@ -56,17 +56,18 @@ def generate_certificate(user, cohort=None):
     if (not hasattr(cohort.syllabus.certificate, 'specialty') or not
             cohort.syllabus.certificate.specialty):
         message = ('Specialty has no certificate assigned, please set a '
-            f'certificate on the Specialty model: {cohort.syllabus.certificate.name}')
+                   'certificate on the Specialty model: '
+                   f'{cohort.syllabus.certificate.name}')
         logger.error(message)
         raise ValidationException(message)
 
     uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
-    
+
     if (uspe is not None and uspe.status == 'PERSISTED' and uspe.preview_url):
         message = "This user already has a certificate created"
         logger.error(message)
         raise ValidationException(message)
-    
+
     if uspe is None:
         utc_now = timezone.now()
         uspe = UserSpecialty(
