@@ -8,7 +8,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (
-    AnswerPUTSerializer, AnswerSerializer, SurveySerializer, SurveyPUTSerializer,
+    AnswerPUTSerializer, AnswerSerializer, SurveySerializer, SurveyPUTSerializer, BigAnswerSerializer
 )
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -130,7 +130,7 @@ class AnswerMeView(APIView):
         if answer is None:
             raise NotFound('This survey does not exist for this user')
 
-        serializer = AnswerSerializer(answer)
+        serializer = BigAnswerSerializer(answer)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -145,7 +145,7 @@ class AcademyAnswerView(APIView):
         if answer is None:
             raise ValidationException('This survey does not exist for this academy')
 
-        serializer = AnswerSerializer(answer)
+        serializer = BigAnswerSerializer(answer)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class SurveyView(APIView, HeaderLimitOffsetPagination):
