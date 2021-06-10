@@ -47,6 +47,11 @@ def generate_certificate(user, cohort=None):
         logger.error(message)
         raise ValidationException(message)
 
+    if cohort.stage != 'ENDED':
+        message = f"The student cohort stage has to be 'finished' before you can issue any certificates"
+        logger.error(message)
+        raise ValidationException(message)
+
     if cohort.syllabus.certificate is None:
         message = ('The cohort has no certificate assigned, please set a '
             f'certificate for cohort: {cohort.name}')
