@@ -71,7 +71,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         Tests generate_certificate with CohortUser
         Status: BAD_REQUEST
         """
-        model = self.generate_models(user=True, cohort=True, cohort_user=True)
+        model = self.generate_models(user=True, cohort=True, cohort_user=True, cohort_stage='ENDED')
         try:
             self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
@@ -92,7 +92,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
-            syllabus=True)
+            syllabus=True, cohort_stage='ENDED')
         try:
             self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
@@ -114,7 +114,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
-            specialty=True, syllabus=True)
+            specialty=True, syllabus=True, cohort_stage='ENDED')
         try:
             self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
@@ -133,7 +133,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
-            specialty=True, layout_design=True, syllabus=True)
+            specialty=True, layout_design=True, syllabus=True, cohort_stage='ENDED')
         try:
             self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
@@ -153,7 +153,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
-            specialty=True, layout_design=True, syllabus=True)
+            specialty=True, layout_design=True, syllabus=True, cohort_stage='ENDED')
 
         base = model.copy()
         del base['user']
@@ -199,7 +199,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
             specialty=True, layout_design=True, task=True, task_type='PROJECT',
-            syllabus=True)
+            syllabus=True, cohort_stage='ENDED')
 
         base = model.copy()
         del base['user']
@@ -243,7 +243,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
             specialty=True, layout_design=True, cohort_user_finantial_status='FULLY_PAID',
-            syllabus=True)
+            syllabus=True, cohort_stage='ENDED')
 
         base = model.copy()
         del base['user']
@@ -287,7 +287,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
             specialty=True, layout_design=True, cohort_user_finantial_status='UP_TO_DATE',
-            syllabus=True)
+            syllabus=True, cohort_stage='ENDED')
 
         base = model.copy()
         del base['user']
@@ -333,7 +333,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
             specialty=True, layout_design=True, syllabus=True,
             cohort_user_finantial_status='UP_TO_DATE',
-            cohort_user_educational_status='DROPPED')
+            cohort_user_educational_status='DROPPED', cohort_stage='ENDED')
 
         base = model.copy()
         del base['user']
@@ -402,10 +402,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
             'specialty_id': 1,
             'status': 'ERROR',
-            'status_text': "The student cohort stage has to be 'finished' "
+            'status_text': "The student cohort stage has to be 'ENDED' "
                 'before you can issue any certificates',
             'user_id': 1,
-            'is_cleaned': True,
         }
 
         self.assertToken(result['token'])
@@ -413,7 +412,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         del result['token']
 
         self.assertEqual(result, expected)
-        del expected['is_cleaned']
 
         self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
             [{**expected, 'token': token}])
