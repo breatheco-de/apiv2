@@ -36,7 +36,7 @@ from breathecode.utils import localize_query, capable_of, ValidationException, H
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
-    RoleSmallSerializer, UserMeSerializer, UserInviteSerializer
+    RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer, UserInvitePUTSerializer
 )
 
 logger = logging.getLogger(__name__)
@@ -223,13 +223,37 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if request.user is None:
             raise ValidationException("User not found", 404)
 
-        invite = UserInvite.objects.filter(email=request.user.email, status='PENDING').first()
-        if invite is None:
-            raise ValidationException("No pending invite was found", 404)
-
-        serializer = UserInviteSerializer(invite, many=False)
+        invites = UserInvite.objects.filter(email=request.user.email, status='PENDING')
+        serializer = UserInviteSerializer(invites, many=True)
         return Response(serializer.data)
-    
+
+    def put(self, request):
+
+        if request.user is None:
+            raise ValidationException("User not found", 404)
+
+        all_invites = request.data
+
+        if not isinstance(all_invites, list):
+            raise ValidationException(f"You must pass a list of invites with id and new status", 400)
+        
+        valid = []
+        for new_invite in all_invites:
+            invite = UserInvite.objects.filter(id=new_invite['id']).first()
+            if invite is None:
+                raise ValidationException(f"No invite {new_invite['id']} was found", 404)
+            
+            serializer = UserInvitePUTSerializer(invite, data=new_invite)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            valid.append(serializer)
+                
+        result = []
+        for serializer in valid:
+            serializer.save()
+            result.append(serializer.data)
+
+        return Response(result, status=status.HTTP_200_OK)
 
 class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
@@ -978,6 +1002,20 @@ def pick_password(request, token):
         'form': form
     })
 
+class PasswordResetView(APIView):
+    @capable_of('send_reset_password')
+    def post(self, request, profileacademy_id=None, academy_id=None):
+
+            profile_academy = ProfileAcademy.objects.filter(id=profileacademy_id).first()
+            if profile_academy is None:
+                raise ValidationException("Member not found", 400)
+
+            if reset_password([profile_academy.user]):
+                token = Token.objects.filter(user=profile_academy.user, token_type="temporal").first()
+                serializer = TokenSmallSerializer(token)
+                return Response(serializer.data)
+            else:
+                raise ValidationException("Reset password token could not be sent")
 
 class AcademyInviteView(APIView):
     @capable_of('crud_member')
