@@ -59,6 +59,8 @@ def generate_form_entry_kwargs():
         'sentiment': choice(['GOOD', 'BAD']),
     }
 
+
+
 class CohortUserTestSuite(MarketingTestCase):
     """Test /academy/lead"""
 
@@ -745,12 +747,17 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_academy_lead__with_full_name_in_querystring(self):
         """Test /academy/lead """
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True,
-            form_entry_kwargs=generate_form_entry_kwargs())
+        base = self.generate_models(authenticate=True, profile_academy=True,
+            capability='read_lead', role='potato', form_entry=True)
+
+        model_1 = self.generate_models(form_entry=True,
+            form_entry_kwargs=generate_form_entry_kwargs(), models=base)      
+        model_2 = self.generate_models(form_entry=True,
+            form_entry_kwargs=generate_form_entry_kwargs(), models=base)
 
         base_url = reverse_lazy('marketing:academy_lead')
-        url = f'{base_url}?like={model.form_entry.first_name} {model.form_entry.last_name}'
+        url = f'{base_url}?like={model_1.form_entry.first_name} {model_1.form_entry.last_name}'
+
         response = self.client.get(url)
         json = response.json()
 
@@ -758,28 +765,28 @@ class CohortUserTestSuite(MarketingTestCase):
         del json[0]['created_at']
 
         expected = [{
-            'country': model.form_entry.country,
-            'course': model.form_entry.course,
-            'email': model.form_entry.email,
-            'first_name': model.form_entry.first_name,
-            'gclid': model.form_entry.gclid,
-            'id': model.form_entry.id,
-            'language': model.form_entry.language,
-            'last_name': model.form_entry.last_name,
-            'lead_type': model.form_entry.lead_type,
-            'location': model.form_entry.location,
-            'storage_status': model.form_entry.storage_status,
-            'tags': model.form_entry.tags,
-            'utm_campaign': model.form_entry.utm_campaign,
-            'utm_medium': model.form_entry.utm_medium,
-            'utm_source': model.form_entry.utm_source,
-            'utm_url': model.form_entry.utm_url,
+            'country': model_1.form_entry.country,
+            'course': model_1.form_entry.course,
+            'email': model_1.form_entry.email,
+            'first_name': model_1.form_entry.first_name,
+            'gclid': model_1.form_entry.gclid,
+            'id': model_1.form_entry.id,
+            'language': model_1.form_entry.language,
+            'last_name': model_1.form_entry.last_name,
+            'lead_type': model_1.form_entry.lead_type,
+            'location': model_1.form_entry.location,
+            'storage_status': model_1.form_entry.storage_status,
+            'tags': model_1.form_entry.tags,
+            'utm_campaign': model_1.form_entry.utm_campaign,
+            'utm_medium': model_1.form_entry.utm_medium,
+            'utm_source': model_1.form_entry.utm_source,
+            'utm_url': model_1.form_entry.utm_url,
         }]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
+            **self.model_to_dict(model_1, 'form_entry')
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())

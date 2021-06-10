@@ -834,19 +834,30 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_query_like_full_name(self):
         """Test /answer with like full name"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, cohort=True, answer=True, profile_academy=True,
+        base = self.generate_models(authenticate=True, 
             capability='read_nps_answers', role='potato')
+        profile_academy_kwargs = {
+                'email':  'b@b.com',
+                'first_name': 'Rene',
+                'last_name': 'Descartes',
+                'status': "INVITED"
+            }
+        model = self.generate_models(user=True, cohort=True, answer=True, profile_academy=True, user_kwargs=profile_academy_kwargs, 
+            models=base)
         db = self.model_to_dict(model, 'answer')
         
         first_name = model['user'].first_name
         last_name = model['user'].last_name
         base_url = reverse_lazy('feedback:answer')
-        url = f'{base_url}?{first_name} {last_name}'
+        url = f'{base_url}?like=Rene Descartes'
 
         response = self.client.get(url)
         json = response.json()
 
         json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+
+        print("WWWWWWWWWw", json)
+        print("WWWWWWWWWw", url)
 
         self.assertEqual(json, [{
             'created_at': None,
@@ -871,9 +882,9 @@ class AnswerTestSuite(FeedbackTestCase):
                 'id':  model['answer'].mentor.id,
                 'last_name':  model['answer'].mentor.last_name,
             },
-            'score': model['answer'].score,
-            'status': model['answer'].status,
-            'title': model['answer'].title,
+            # 'score': model['answer'].score,
+            # 'status': model['answer'].status,
+            # 'title': model['answer'].title,
             'user': {
                 'first_name': model['user'].first_name,
                 'id': model['user'].id,
