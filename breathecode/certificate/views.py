@@ -147,14 +147,17 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
 
         if len(data) > 0:
             for items in data:
+                print("dddddddddd", items)
                 cohort__slug = items.get("cohort_slug")
                 user__id = items.get("user_id")
                 cohort_user =  CohortUser.objects.filter(cohort__slug=cohort__slug, 
                         user_id=user__id, role='STUDENT', cohort__academy__id=academy_id).first()
 
                 if cohort_user is not None:
+                    print("DDDDDdd", cohort_user)
                     cohort_users.append(cohort_user)
                 else:
+                    print("hello world")
                     student = ProfileAcademy.objects.filter(user_id=user__id).first()
                     if student is None:
                         raise ValidationException(f'User with id {str(user__id)} not found', 404)
@@ -162,9 +165,28 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
         else:
             raise ValidationException("You did not send anything to reatemps")
 
+        certs = []
         for cu in cohort_users:
+            print("@@@@@@@2", cu)
+            cert = UserSpecialty.objects.filter(cohort__id=cu.cohort_id, cohort__academy__id=academy_id).first()
+            print("€€€€€€€€€", cert)
+            if cert is not None:
+                # cert.status = "PENDING"
+                # print(cert.status)
+                # print(cert)
+                # cert.save()
+                certs.append(cert)
             generate_one_certificate.delay(cu.cohort_id, cu.user_id)
-        return Response({'detail': "The certificates have been scheduled for generation"})
+        
+        for cert in certs:
+            cert.status = "PENDING"
+            cert.save()       
+
+        print(certs[0].status)
+        serializer = UserSpecialtySerializer(certs, many=True)
+
+        print("DDDDDDDdd", serializer)
+        return Response(serializer.data)
           
 
 # class SyllabusView(APIView):

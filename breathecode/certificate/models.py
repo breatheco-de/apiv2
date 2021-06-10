@@ -91,6 +91,7 @@ class UserSpecialty(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def clean(self):
+        print(self.status)
         if self.status == ERROR:
             return
 
@@ -112,7 +113,7 @@ class UserSpecialty(models.Model):
         self.is_cleaned = True
 
     def save(self, *args, **kwargs):
-
+        print("hello world")
         if not self.is_cleaned:
             self.clean()
 

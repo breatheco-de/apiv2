@@ -62,32 +62,6 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_certificate_re_attemps_with_role_student(self):
-        """Test /root with auth"""
-        """ Good Request """
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, capability='crud_certificate', role='STUDENT', 
-            cohort_user=True, syllabus=True, specialty=True, layout_design=True)
-
-        url = reverse_lazy('certificate:root')
-        data = [{
-            'cohort_slug':  model['cohort'].slug,
-            'user_id':  model['user'].id,
-        }]
-        response = self.client.post(url, data, format='json')
-        json = response.json()
-        expected = {
-            'detail': 'The certificates have been scheduled for generation'
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_user_specialty_dict(), [])
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_re_attemps_without_cohort_user_and_capability(self):
         """Test /root with auth"""
         """ No capability for the request"""
@@ -111,4 +85,38 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(self.all_user_specialty_dict(), [])
     
-    
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_certificate_re_attemps_with_role_student(self):
+        """Test /root with auth"""
+        """ Good Request """
+        self.headers(academy=1)
+        
+        model = self.generate_models(authenticate=True, cohort=True, user=True,
+            profile_academy=True, capability='crud_certificate', role='STUDENT', 
+            cohort_user=True, syllabus=True, specialty=True, layout_design=True, 
+            cohort_stage="ENDED", cohort_user_finantial_status='UP_TO_DATE', 
+            cohort_user_educational_status='GRADUATED')
+
+        base = model.copy()
+        del base['user']
+        del base['cohort_user']
+
+        teacher_model = self.generate_models(user=True, cohort_user=True, 
+            cohort_user_role='TEACHER', models=base)
+
+        url = reverse_lazy('certificate:root')
+        data = [{
+            'cohort_slug':  model['cohort'].slug,
+            'user_id':  model['user'].id,
+        }]
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {
+           
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_user_specialty_dict(), [])
