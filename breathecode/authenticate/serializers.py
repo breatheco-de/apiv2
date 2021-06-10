@@ -229,17 +229,13 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     'There is a member already in this academy with this email, or with invitation to this email pending')
 
         elif "user" in data:
-            already = ProfileAcademy.objects.filter(
-                user=data['user'], academy=self.context['academy_id'], role='STUDENT').first()
-            if already:
-                raise ValidationException(
-                    'This user is a student from this academy, look for the student details and update its role instead')
+            student_role = Role.objects.filter(slug='student').first()
 
             already = ProfileAcademy.objects.filter(
-                user=data['user'], academy=self.context['academy_id']).exclude(role='STUDENT').first()
+                user=data['user'], academy=self.context['academy_id']).exclude(role=student_role).first()
             if already:
                 raise ValidationException(
-                    'This user is already a member of this academy')
+                    f'This user is already a member of this academy as {str(already.role)}')
 
         if "role" not in data:
             raise ValidationException("Missing role")
@@ -264,6 +260,11 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                 raise ValidationException("User not found")
             email = user.email
             status = "ACTIVE"
+
+            student_role = Role.objects.filter(slug='student').first()
+            already_as_student = ProfileAcademy.objects.filter(user=user, academy=academy.id, role=student_role).first()
+            if already_as_student is not None:
+                return super().update(already_as_student, {**validated_data, "email": email, "user": user, "academy": academy, "role": role, "status": status})
 
         if "user" not in validated_data:
             validated_data.pop('invite')

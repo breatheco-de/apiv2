@@ -49,7 +49,7 @@ def get_certificate(request, token):
 
 @receiver(post_save, sender=UserSpecialty)
 def post_save_course_dosomething(sender, instance, **kwargs):
-    if instance.preview_url is None or instance.preview_url == "":
+    if instance.preview_url is None or instance.preview_url == "" and instance.status == 'PERSISTED':
         take_screenshot.delay(instance.id)
 
 
