@@ -80,10 +80,10 @@ class MediaPUTSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
     url = serializers.CharField(required=False)
     thumbnail = serializers.CharField(required=False)
-    hash = serializers.CharField()
-    slug = serializers.SlugField()
-    mime = serializers.CharField()
-    name = serializers.CharField()
+    hash = serializers.CharField(required=False)
+    slug = serializers.SlugField(required=False)
+    mime = serializers.CharField(required=False)
+    name = serializers.CharField(required=False)
 
     class Meta:
         model = Media

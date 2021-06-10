@@ -107,24 +107,38 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             'many': many,
         }
 
-        if not many:
-            current = Media.objects.filter(id=media_id,
-                academy__id=academy_id).first()
+        if media_id and not many:
+            current = Media.objects.filter(id=media_id).first()
+            
+            if not current:
+                raise ValidationException('Media not found', code=404, slug='media-not-found') 
+        
         else:
+
+            if not 'Categories' in request.headers:
+                raise ValidationException(
+                    'For bulk mode, please input a category in the header',
+                        slug='categories-not-in-bulk')  
+        
             current = []
             for x in request.data:
+                x['categories'] = [request.headers['Categories']]
 
-                if not 'id' in x:
+                if len(x) > 2:
+                    raise ValidationException('Bulk mode its only to edit categories, '
+                     + 'please change to single put for more', slug='extra-args-bulk-mode')
+
+                if not 'id' in x: 
                     raise ValidationException('Please input id in body for bulk mode',
                         slug='id-not-in-bulk')
-                print(x)
+
                 media = Media.objects.filter(id=x['id']).first()
                 if not media:
-                    raise ValidationException('Media not found', code=404) 
+                    raise ValidationException('Media not found', code=404, slug='media-not-found') 
                 current.append(media)
 
         serializer = MediaPUTSerializer(current, data=request.data,
-                                             context=context, many=many)
+                                   context=context, many=many)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
