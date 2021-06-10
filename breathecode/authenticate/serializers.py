@@ -264,7 +264,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             student_role = Role.objects.filter(slug='student').first()
             already_as_student = ProfileAcademy.objects.filter(user=user, academy=academy.id, role=student_role).first()
             if already_as_student is not None:
-                return super().update({**validated_data, "email": email, "user": user, "academy": academy, "role": role, "status": status})
+                return super().update(already_as_student, {**validated_data, "email": email, "user": user, "academy": academy, "role": role, "status": status})
 
         if "user" not in validated_data:
             validated_data.pop('invite')
