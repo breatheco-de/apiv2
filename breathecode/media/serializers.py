@@ -83,7 +83,7 @@ class MediaPUTSerializer(serializers.ModelSerializer):
     hits = serializers.IntegerField(read_only=True, required=False)
     slug = serializers.SlugField(required=False)
     mime = serializers.CharField(read_only=True, required=False)
-    name = serializers.CharField(read_only=True, required=False)
+    name = serializers.CharField(required=False)
 
     class Meta:
         model = Media
