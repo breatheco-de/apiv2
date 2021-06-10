@@ -134,62 +134,62 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    """
-    🔽🔽🔽 Post without certificate timeslots
-    """
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort__post__without_certificate_timeslots(self):
-        """Test /academy/cohort without auth"""
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, profile_academy=True,
-            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True)
-        url = reverse_lazy('admissions:academy_cohort')
-        data = {
-            'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
-            'slug':  'they-killed-kenny',
-            'name':  'They killed kenny',
-            'kickoff_date':  datetime.today().isoformat(),
-        }
-        response = self.client.post(url, data)
-        json = response.json()
-        expected = {
-            'detail': 'certificate-not-have-time-slots',
-            'status_code': 400,
-        }
+    # """
+    # 🔽🔽🔽 Post without certificate timeslots
+    # """
+    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    # def test_academy_cohort__post__without_certificate_timeslots(self):
+    #     """Test /academy/cohort without auth"""
+    #     self.headers(academy=1)
+    #     model = self.generate_models(authenticate=True, user=True, profile_academy=True,
+    #         capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True)
+    #     url = reverse_lazy('admissions:academy_cohort')
+    #     data = {
+    #         'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
+    #         'slug':  'they-killed-kenny',
+    #         'name':  'They killed kenny',
+    #         'kickoff_date':  datetime.today().isoformat(),
+    #     }
+    #     response = self.client.post(url, data)
+    #     json = response.json()
+    #     expected = {
+    #         'detail': 'certificate-not-have-time-slots',
+    #         'status_code': 400,
+    #     }
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    #     self.assertEqual(self.all_cohort_dict(), [])
+    #     self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort__post__without_certificate_timeslots(self):
-        """Test /academy/cohort without auth"""
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, profile_academy=True,
-            capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True)
-        url = reverse_lazy('admissions:academy_cohort')
-        data = {
-            'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
-            'slug':  'they-killed-kenny',
-            'name':  'They killed kenny',
-            'kickoff_date':  datetime.today().isoformat(),
-        }
-        response = self.client.post(url, data)
-        json = response.json()
-        expected = {
-            'detail': 'certificate-not-have-time-slots',
-            'status_code': 400,
-        }
+    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    # def test_academy_cohort__post__without_certificate_timeslots(self):
+    #     """Test /academy/cohort without auth"""
+    #     self.headers(academy=1)
+    #     model = self.generate_models(authenticate=True, user=True, profile_academy=True,
+    #         capability='crud_cohort', role='potato', syllabus=True, skip_cohort=True)
+    #     url = reverse_lazy('admissions:academy_cohort')
+    #     data = {
+    #         'syllabus':  model['certificate'].slug + '.v' + str(model['syllabus'].version),
+    #         'slug':  'they-killed-kenny',
+    #         'name':  'They killed kenny',
+    #         'kickoff_date':  datetime.today().isoformat(),
+    #     }
+    #     response = self.client.post(url, data)
+    #     json = response.json()
+    #     expected = {
+    #         'detail': 'certificate-not-have-time-slots',
+    #         'status_code': 400,
+    #     }
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    #     self.assertEqual(self.all_cohort_dict(), [])
+    #     self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

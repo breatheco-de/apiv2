@@ -120,6 +120,11 @@ def generate_certificate(user, cohort=None):
             raise ValidationException('Cohort current day should be '
                 f'{cohort.syllabus.certificate.duration_in_days}')
 
+        if cohort.stage != 'ENDED':
+            message = f"The student cohort stage has to be 'ENDED' before you can issue any certificates"
+            logger.error(message)
+            raise ValidationException(message)
+
         uspe.status = PERSISTED
         uspe.status_text = "Certificate successfully queued for PDF generation"
         uspe.save()

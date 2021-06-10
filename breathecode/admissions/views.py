@@ -915,13 +915,13 @@ class SyllabusView(APIView):
             raise ValidationException(
                 f"Invalid certificates slug {certificate_slug}", code=404)
 
-        if not CertificateTimeSlot.objects.filter(
-                academy__id=academy_id,
-                certificate__slug=certificate_slug).exists():
-            raise ValidationException(
-                'We can\’t use a Certificate if it does not have time slots',
-                slug='certificate-not-have-time-slots'
-            )
+        # if not CertificateTimeSlot.objects.filter(
+        #         academy__id=academy_id,
+        #         certificate__slug=certificate_slug).exists():
+        #     raise ValidationException(
+        #         'We can\’t use a Certificate if it does not have time slots',
+        #         slug='certificate-not-have-time-slots'
+        #     )
 
         item = Syllabus.objects.filter(
             certificate__slug=certificate_slug, academy_owner__id=academy_id).order_by('version').first()
@@ -949,13 +949,13 @@ class SyllabusView(APIView):
             raise ValidationException(
                 "Syllabus version not found for this academy", code=404)
 
-        if not CertificateTimeSlot.objects.filter(
-                academy__id=academy_id,
-                certificate__slug=certificate_slug).exists():
-            raise ValidationException(
-                'We can\’t use a Certificate if it does not have time slots',
-                slug='certificate-not-have-time-slots'
-            )
+        # if not CertificateTimeSlot.objects.filter(
+        #         academy__id=academy_id,
+        #         certificate__slug=certificate_slug).exists():
+        #     raise ValidationException(
+        #         'We can\’t use a Certificate if it does not have time slots',
+        #         slug='certificate-not-have-time-slots'
+        #     )
 
         serializer = SyllabusSerializer(item, data=request.data, many=False)
         if serializer.is_valid():
