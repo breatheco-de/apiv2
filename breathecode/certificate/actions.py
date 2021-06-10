@@ -97,11 +97,6 @@ def generate_certificate(user, cohort=None):
     main_teacher = main_teacher.user
     uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
 
-    if cohort.stage != 'ENDED':
-        message = f"The student cohort stage has to be 'finished' before you can issue any certificates"
-        logger.error(message)
-        raise ValidationException(message)
-
     try:
         uspe.academy = cohort.academy
         tasks = Task.objects.filter(user__id=user.id, task_type='PROJECT')
@@ -123,6 +118,11 @@ def generate_certificate(user, cohort=None):
         if cohort.current_day != cohort.syllabus.certificate.duration_in_days:
             raise ValidationException('Cohort current day should be '
                 f'{cohort.syllabus.certificate.duration_in_days}')
+
+        if cohort.stage != 'ENDED':
+            message = f"The student cohort stage has to be 'ENDED' before you can issue any certificates"
+            logger.error(message)
+            raise ValidationException(message)
 
         uspe.status = PERSISTED
         uspe.status_text = "Certificate successfully queued for PDF generation"
