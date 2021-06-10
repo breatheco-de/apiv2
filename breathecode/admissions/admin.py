@@ -5,7 +5,8 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
-from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions, Syllabus, AcademyCertificate
+from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions, Syllabus, AcademyCertificate, CohortTimeSlot, CertificateTimeSlot
+from .actions import sync_cohort_timeslots
 from breathecode.assignments.actions import sync_student_tasks
 
 logger = logging.getLogger(__name__)
@@ -117,6 +118,19 @@ def mark_as_innactive(modeladmin, request, queryset):
     issues = queryset.update(stage='INACTIVE')
 mark_as_innactive.short_description = "Mark as INACTIVE"
 
+def sync_timeslots(modeladmin, request, queryset):
+    cohorts = queryset.all()
+    count = 0
+    for c in cohorts:
+        ids = sync_cohort_timeslots(c.id)
+        logger.info(f"{len(ids)} timeslots created for cohort {str(c.slug)}")
+        if len(ids) > 0:
+            count += 1
+
+    messages.add_message(request, messages.INFO, f'{count} of {cohorts.count()} cohorts timeslots were updated')
+
+sync_timeslots.short_description = "Sync Timeslots With Certificate ⏱ "
+
 class CohortForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
        super(CohortForm, self).__init__(*args, **kwargs)
@@ -129,7 +143,7 @@ class CohortAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'name', 'academy__city__name']
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus')
     list_filter = ['stage', 'academy__slug','syllabus__certificate__slug']
-    actions = [sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive]
+    actions = [sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots]
 
     def academy_name(self, obj):
         return obj.academy.name
@@ -174,3 +188,35 @@ sync_with_github.short_description = "Sync from Github"
 class SyllabusAdmin(admin.ModelAdmin):
     list_display = ('slug', 'certificate', 'academy_owner', 'version')
     actions = [sync_with_github]
+
+@admin.register(CohortTimeSlot)
+class CohortTimeSlotAdmin(admin.ModelAdmin):
+    list_display = ('cohort', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type')
+    list_filter = ['cohort__academy__slug', 'recurrent', 'recurrency_type']
+    search_fields = ['cohort__slug', 'cohort__name', 'cohort__academy__city__name']
+
+def replicate_in_all(modeladmin, request, queryset):
+    cert_timeslot = queryset.all()
+    academies = Academy.objects.all()
+    for a in academies:
+        to_filter = {}
+        for c in cert_timeslot:
+            # delete all timeslots for that academy and certificate ONLY the first time
+            if c.certificate.slug not in to_filter:
+                CertificateTimeSlot.objects.filter(certificate=c.certificate, academy=a).delete()
+                to_filter[c.certificate.slug] = True
+            # and then re add the timeslots one by one
+            new_timeslot = CertificateTimeSlot(recurrent=c.recurrent, starting_at=c.starting_at, ending_at=c.ending_at, certificate=c.certificate, academy=a)
+            new_timeslot.save()
+
+        logger.info(f"All academies in sync with those timeslots")
+
+    messages.add_message(request, messages.INFO, f'All academies in sync with those timeslots')
+
+replicate_in_all.short_description = "Replicate same timeslots in all academies"
+@admin.register(CertificateTimeSlot)
+class CertificateTimeSlotAdmin(admin.ModelAdmin):
+    list_display = ('id','certificate', 'starting_at', 'ending_at', 'academy', 'recurrent', 'recurrency_type')
+    list_filter = ['certificate__slug', 'academy__slug','recurrent', 'recurrency_type']
+    search_fields = ['certificate__slug', 'certificate__name', 'academy__slug', 'academy__name']
+    actions=[replicate_in_all]

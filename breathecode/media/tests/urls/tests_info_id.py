@@ -107,6 +107,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -139,6 +140,7 @@ class MediaTestSuite(MediaTestCase):
             'mime': model['media'].mime,
             'name': model['media'].name,
             'slug': model['media'].slug,
+            'thumbnail': f'{model.media.url}-thumbnail',
             'url': model['media'].url
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -220,10 +222,10 @@ class MediaTestSuite(MediaTestCase):
         url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
         data = {
             'slug': 'they-killed-kenny',
+            'name': 'they-killed-kenny.exe',
         }
         ignored_data = {
             'url': 'https://www.google.com/',
-            'name': 'they-killed-kenny.exe',
             'mime': 'application/hitman',
             'hits': 9999,
             'mime': '1234567890123456789012345678901234567890123456',
@@ -241,6 +243,7 @@ class MediaTestSuite(MediaTestCase):
             'id': model['media'].id,
             'mime': model['media'].mime,
             'name': model['media'].name,
+            'thumbnail': None,
             'url': model['media'].url,
             'created_at': self.datetime_to_iso(model['media'].created_at),
             'updated_at': self.datetime_to_iso(media.updated_at),

@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'breathecode.certificate',
     'breathecode.monitoring',
     'breathecode.media',
+    'breathecode.assessment',
     'breathecode.registry',
 ]
 
@@ -104,6 +105,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
+    'breathecode.utils.admin_timezone.TimezoneMiddleware',
 
     # ⬇ Rollber is always last please!
     # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',

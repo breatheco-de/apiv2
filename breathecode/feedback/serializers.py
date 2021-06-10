@@ -6,7 +6,7 @@ from .models import Answer, Survey
 from .actions import send_survey_group
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-import serpy
+import serpy, re
 from django.utils import timezone
 
 class GetAcademySerializer(serpy.Serializer):
@@ -86,6 +86,10 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
 
 class SurveySerializer(serializers.ModelSerializer):
     send_now = serializers.BooleanField(required=False, write_only=True)
+    public_url = serializers.SerializerMethodField()
+
+    def get_public_url(self, obj):
+        return "https://nps.breatheco.de/survey/" + str(obj.id)
 
     class Meta:
         model = Survey
@@ -98,6 +102,10 @@ class SurveySerializer(serializers.ModelSerializer):
 
         if data["cohort"].academy.id != int(self.context['academy_id']):
             raise ValidationException(f'You don\'t have rights for this cohort academy {self.context["academy_id"]}')
+
+        reg = re.compile('^[0-9]{0,3}\s[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}$')
+        if "duration" in data and data["duration"] < timezone.timedelta(hours=1):
+            raise ValidationException(f'Minimum duration for suveys is one hour')
 
         cohort_teacher = CohortUser.objects.filter(cohort=data["cohort"], role="TEACHER")
         if cohort_teacher.count() == 0:

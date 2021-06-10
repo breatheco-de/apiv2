@@ -48,6 +48,7 @@ urlpatterns = [
     path('v1/activity/', include('breathecode.activity.urls', namespace='activity')),
     path('v1/feedback/', include('breathecode.feedback.urls', namespace='feedback')),
     path('v1/messaging/', include('breathecode.notify.urls', namespace='notify')),
+    path('v1/assessment/', include('breathecode.assessment.urls', namespace='assessment')),
     path('v1/certificate/', include('breathecode.certificate.urls', namespace='certificate')),
     path('v1/media/', include('breathecode.media.urls', namespace='media')),
 

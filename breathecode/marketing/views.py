@@ -101,7 +101,6 @@ def receive_facebook_lead(request):
         else:
             return Response(int(challenge), status=status.HTTP_400_BAD_REQUEST)
     else:
-        print(request.data)
         if "object" in request.data:
             if request.data["object"] == "page":
                 for entry in request.data["entry"]:
@@ -260,10 +259,9 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    @capable_of('crud_lead')
+    @capable_of('read_lead')
     def get(self, request, format=None, academy_id=None):
 
-        print("academy_id", academy_id)
         tags = Automation.objects.filter(ac_academy__academy__id=academy_id)
 
         serializer = AutomationSmallSerializer(tags, many=True)

@@ -21,14 +21,14 @@ from .views import (
     save_github_token, get_slack_token, save_slack_token, pick_password, change_password,
     get_token_info, get_facebook_token, save_facebook_token, MemberView, reset_password_view,
     login_html_view, StudentView, get_roles, render_invite, AcademyInviteView,
-    UserInviteView
+    ProfileInviteView, MeInviteView, AcademyTokenView, PasswordResetView
 )
 
 app_name = 'authenticate'
 urlpatterns = [
     path('user/', get_users, name="user"),
     path('role', get_roles, name="role"),
-    path('user/me', UserMeView.as_view(), name="user_me"),
+    
 
     path('member/invite/resend/<int:pa_id>',
          AcademyInviteView.as_view(), name="academy_resent_invite"),
@@ -43,8 +43,8 @@ urlpatterns = [
          MemberView.as_view(), name="academy_id_member_id"),
 
     path('academy/student', StudentView.as_view(), name="academy_student"),
-    path('academy/student/<int:user_id>', StudentView.as_view()),
-    path('academy/user/<int:profileacademy_id>/invite', UserInviteView.as_view()),
+    path('academy/student/<int:user_id>', StudentView.as_view(), name="academy_student_id"),
+    path('academy/user/<int:profileacademy_id>/invite', ProfileInviteView.as_view()),
     # path('group/', get_groups, name="group"),
 
     path('view/login', login_html_view, name="login_view"),  # html login form
@@ -52,11 +52,13 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name="login"),
     path('logout/', LogoutView.as_view(), name="logout"),
     # get a another token (temporal), from a logged in user
+    path('academy/token/', AcademyTokenView.as_view(), name="academy_token"),
     path('token/', TemporalTokenView.as_view(), name="token"),
     path('token/<str:token>', get_token_info,
          name="token"),  # get token information
 
     path('password/reset', reset_password_view, name="password_reset"),
+    path('member/<int:profileacademy_id>/password/reset', PasswordResetView.as_view(), name="member_password_reset"),
     path('password/<str:token>', pick_password, name="password_token"),
 
     path('github/', get_github_token, name="github"),
@@ -67,4 +69,9 @@ urlpatterns = [
 
     path('facebook/', get_facebook_token, name="facebook"),
     path('facebook/callback/', save_facebook_token, name="facebook_callback"),
+    
+    
+    
+    path('user/me', UserMeView.as_view(), name="user_me"),
+    path('user/me/invite', MeInviteView.as_view()),
 ]

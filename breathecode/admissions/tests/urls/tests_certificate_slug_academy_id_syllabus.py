@@ -160,6 +160,28 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_syllabus_dict(), [])
 
+    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    # def test_certificate_slug_academy_id_syllabus__post__without_time_slot(self):
+    #     """Test /certificate without auth"""
+    #     self.headers(academy=1)
+    #     model = self.generate_models(authenticate=True, profile_academy=True,
+    #         capability='crud_syllabus', role='potato', certificate=True)
+    #     url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus', kwargs={
+    #         'certificate_slug': model['certificate'].slug, 'academy_id': 1})
+    #     data = {}
+    #     response = self.client.post(url, data)
+    #     json = response.json()
+    #     expected = {
+    #         'detail': 'certificate-not-have-time-slots',
+    #         'status_code': 400,
+    #     }
+
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    #     self.assertEqual(self.all_syllabus_dict(), [])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -167,7 +189,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_syllabus', role='potato', certificate=True)
+            capability='crud_syllabus', role='potato', certificate=True,
+            certificate_time_slot=True)
         url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus', kwargs={
             'certificate_slug': model['certificate'].slug, 'academy_id': 1})
         data = {}
@@ -188,7 +211,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_syllabus', role='potato', certificate=True)
+            capability='crud_syllabus', role='potato', certificate=True,
+            certificate_time_slot=True)
         url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus', kwargs={
             'certificate_slug': model['certificate'].slug, 'academy_id': 1})
         data = {
@@ -223,4 +247,51 @@ class CertificateTestSuite(AdmissionsTestCase):
             'json': {'slug': 'they-killed-kenny'},
             'private': False,
             'version': 1,
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_certificate_slug_academy_id_syllabus__post__with_cohort_and_syllabus(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='crud_syllabus', role='potato', certificate=True,
+            certificate_time_slot=True, cohort=True, syllabus=True)
+        url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus', kwargs={
+            'certificate_slug': model['certificate'].slug, 'academy_id': 1})
+        data = {
+            'certificate': model['certificate'].id,
+            'json': {'slug': 'they-killed-kenny'}
+        }
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+
+        self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
+        del json['created_at']
+        del json['updated_at']
+
+        expected = {
+            'academy_owner': 1,
+            'certificate': 1,
+            'github_url': None,
+            'id': 2,
+            'json': data['json'],
+            'private': False,
+            'version': model.syllabus.version + 1,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_syllabus_dict(), [{
+            **self.model_to_dict(model, 'syllabus')
+        } , {
+            'academy_owner_id': 1,
+            'certificate_id': 1,
+            'github_url': None,
+            'id': 2,
+            'json': {'slug': 'they-killed-kenny'},
+            'private': False,
+            'version': model.syllabus.version + 1,
         }])
