@@ -102,7 +102,9 @@ class EventSerializer(serializers.ModelSerializer):
         # hard-code the organizer to the academy organizer
         try:
             validated_data['organizer'] = validated_data['academy'].organizer
-        except:
+        except KeyError:
+            pass
+        except AttributeError:
             pass
 
         return super().create(validated_data)
@@ -112,7 +114,9 @@ class EventSerializer(serializers.ModelSerializer):
         # hard-code the organizer to the academy organizer
         try:
             validated_data['organizer'] = validated_data['academy'].organizer
-        except:
+        except KeyError:
+            pass
+        except AttributeError:
             pass
 
         return super().update(instance, validated_data)

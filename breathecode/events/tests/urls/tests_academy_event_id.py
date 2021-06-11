@@ -1,40 +1,53 @@
-from breathecode.events.caches import EventCache
-from django.urls.base import reverse_lazy
-from breathecode.utils import Cache
 from unittest.mock import patch
-from ..mixins.new_events_tests_case import EventTestCase
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
+
+from django.urls.base import reverse_lazy
+
+from breathecode.events.caches import EventCache
 from breathecode.services import datetime_to_iso_format
-from breathecode.tests.mixins.cache_mixin import CacheMixin
+from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH,
+                                     apply_google_cloud_blob_mock,
+                                     apply_google_cloud_bucket_mock,
+                                     apply_google_cloud_client_mock)
+
+from ..mixins.new_events_tests_case import EventTestCase
 from .tests_academy_event import AcademyEventTestSuite
+
 
 class AcademyEventsTestSuite(EventTestCase):
     cache = EventCache()
 
     def test_academy_single_event_no_auth(self):
         self.headers(academy=1)
-        url = reverse_lazy('events:academy_single_event', kwargs={"event_id":1})
+        url = reverse_lazy(
+            'events:academy_single_event',
+            kwargs={"event_id": 1})
 
         response = self.client.get(url)
         json = response.json()
-        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
+        expected = {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': 401,
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 401)
 
     def test_all_academy_events_without_capability(self):
         self.headers(academy=1)
-        url = reverse_lazy('events:academy_single_event', kwargs={"event_id":1})
+        url = reverse_lazy(
+            'events:academy_single_event',
+            kwargs={"event_id": 1})
+
         self.generate_models(authenticate=True)
 
         response = self.client.get(url)
         json = response.json()
-        expected = {'detail': "You (user: 1) don't have this capability: read_event for academy 1", 'status_code': 403}
+        expected = {
+            'detail': (
+                "You (user: 1) don't have this capability: read_event "
+                "for academy 1"),
+            'status_code': 403,
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 403)
@@ -44,9 +57,13 @@ class AcademyEventsTestSuite(EventTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_single_event_invalid_id(self):
         self.headers(academy=1)
-        url = reverse_lazy('events:academy_single_event', kwargs={"event_id":1})
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_event', role='potato', syllabus=True)
+        url = reverse_lazy(
+            'events:academy_single_event',
+            kwargs={"event_id": 1})
+
+        self.generate_models(
+            authenticate=True, profile_academy=True, capability='read_event',
+            role='potato', syllabus=True)
 
         response = self.client.get(url)
         json = response.json()
@@ -60,9 +77,13 @@ class AcademyEventsTestSuite(EventTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_single_event_valid_id(self):
         self.headers(academy=1)
-        url = reverse_lazy('events:academy_single_event', kwargs={"event_id":1})
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_event', role='potato', syllabus=True, event= True)
+        url = reverse_lazy(
+            'events:academy_single_event',
+            kwargs={"event_id": 1})
+
+        model = self.generate_models(
+            authenticate=True, profile_academy=True, capability='read_event',
+            role='potato', syllabus=True, event=True)
 
         response = self.client.get(url)
         json = response.json()
@@ -81,10 +102,14 @@ class AcademyEventsTestSuite(EventTestCase):
             'event_type': model['event'].event_type,
             'online_event': model['event'].online_event,
             'venue': model['event'].venue,
-            'academy':{'id': 1,
-            'slug': model['academy'].slug,
-            'name': model['academy'].name,
-            'city': {'name': model['event'].academy.city.name}}
+            'academy': {
+                'id': 1,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+                'city': {
+                    'name': model['event'].academy.city.name,
+                },
+            },
         }
 
         self.assertEqual(json, expected)
@@ -97,11 +122,14 @@ class AcademyEventsTestSuite(EventTestCase):
         """Test /cohort without auth"""
         self.headers(academy=1)
 
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_event', role='potato2', event=True)
+        model = self.generate_models(
+            authenticate=True, profile_academy=True, capability='crud_event',
+            role='potato2', event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
-        current_date = self.datetime_now()
+        url = reverse_lazy(
+            'events:academy_single_event',
+            kwargs={'event_id': 1})
+
         data = {
             'id': 1,
         }
@@ -119,9 +147,11 @@ class AcademyEventsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(self.all_event_dict(), [{
-            **self.model_to_dict(model, 'event'),
-        }])
+        self.assertEqual(self.all_event_dict(), [
+            {
+                **self.model_to_dict(model, 'event'),
+            },
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -130,10 +160,14 @@ class AcademyEventsTestSuite(EventTestCase):
         """Test /cohort without auth"""
         self.headers(academy=1)
 
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_event', role='potato2', event=True)
+        model = self.generate_models(
+            authenticate=True, profile_academy=True, capability='crud_event',
+            role='potato2', event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy(
+            'events:academy_single_event',
+            kwargs={'event_id': 1})
+
         current_date = self.datetime_now()
         data = {
             'id': 1,
@@ -179,12 +213,14 @@ class AcademyEventsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(self.all_event_dict(), [{
-            **self.model_to_dict(model, 'event'),
-            **data,
-            'starting_at': current_date,
-            'ending_at': current_date,
-        }])
+        self.assertEqual(self.all_event_dict(), [
+            {
+                **self.model_to_dict(model, 'event'),
+                **data,
+                'starting_at': current_date,
+                'ending_at': current_date,
+            },
+        ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -192,8 +228,9 @@ class AcademyEventsTestSuite(EventTestCase):
     def test_academy_cohort_with_data_testing_cache_and_remove_in_put(self):
         """Test /cohort without auth"""
         cache_keys = [
-            'Event__academy_id=1&event_id=None&city=None&'
-                'country=None&zip_code=None&upcoming=None&past=None&limit=None&offset=None'
+            ('Event__academy_id=1&event_id=None&city=None&'
+                'country=None&zip_code=None&upcoming=None&past=None&'
+                'limit=None&offset=None')
         ]
 
         self.assertEqual(self.cache.keys(), [])
@@ -210,10 +247,14 @@ class AcademyEventsTestSuite(EventTestCase):
         del base['role']
         del base['user']
 
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_event', role='potato2', models=base)
+        model = self.generate_models(
+            authenticate=True, profile_academy=True, capability='crud_event',
+            role='potato2', models=base)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy(
+            'events:academy_single_event',
+            kwargs={'event_id': 1})
+
         current_date = self.datetime_now()
         data = {
             'id': 1,
@@ -259,12 +300,14 @@ class AcademyEventsTestSuite(EventTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(self.all_event_dict(), [{
-            **self.model_to_dict(model, 'event'),
-            **data,
-            'starting_at': current_date,
-            'ending_at': current_date,
-        }])
+        self.assertEqual(self.all_event_dict(), [
+            {
+                **self.model_to_dict(model, 'event'),
+                **data,
+                'starting_at': current_date,
+                'ending_at': current_date,
+            },
+        ])
         self.assertEqual(self.cache.keys(), [])
         event = old_model[0]['event']
 
