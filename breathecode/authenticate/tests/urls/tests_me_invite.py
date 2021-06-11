@@ -56,6 +56,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.json(), [{
             'email': 'a@a.com',
             'first_name': None,
+            'id': 1,
             'invite_url': f"http://localhost:8000/v1/auth/member/invite/{model1['user_invite'].token}",
             'last_name': None,
             'sent_at': None,
