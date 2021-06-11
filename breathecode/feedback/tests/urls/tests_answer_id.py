@@ -84,6 +84,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
+        del json["user"]
         self.assertEqual(json, {
             'id': model['answer'].id,
             'title': model['answer'].title,
@@ -97,11 +98,9 @@ class AnswerIdTestSuite(FeedbackTestCase):
             'created_at': datetime_to_iso_format(model['answer'].created_at),
             'updated_at': datetime_to_iso_format(model['answer'].updated_at),
             'cohort': model['answer'].cohort,
-            'survey': None,
             'academy': model['answer'].academy,
             'mentor': model['answer'].mentor,
             'event': model['answer'].event,
-            'user': model['answer'].user.id,
         })
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

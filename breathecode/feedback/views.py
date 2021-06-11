@@ -8,7 +8,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (
-    AnswerPUTSerializer, AnswerSerializer, SurveySerializer, SurveyPUTSerializer,
+    AnswerPUTSerializer, AnswerSerializer, SurveySerializer, SurveyPUTSerializer, BigAnswerSerializer
 )
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -104,7 +104,7 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class AnswerView(APIView):
+class AnswerMeView(APIView):
     """
     List all snippets, or create a new snippet.
     """
@@ -130,7 +130,22 @@ class AnswerView(APIView):
         if answer is None:
             raise NotFound('This survey does not exist for this user')
 
-        serializer = AnswerPUTSerializer(answer)
+        serializer = BigAnswerSerializer(answer)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AcademyAnswerView(APIView):
+
+    @capable_of('read_nps_answers')
+    def get(self, request, academy_id=None, answer_id=None):
+        if answer_id is None:
+            raise ValidationException("Missing answer_id", code=404)
+
+        answer = Answer.objects.filter(academy__id=academy_id,id=answer_id).first()
+        if answer is None:
+            raise ValidationException('This survey does not exist for this academy')
+
+        serializer = BigAnswerSerializer(answer)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class SurveyView(APIView, HeaderLimitOffsetPagination):
