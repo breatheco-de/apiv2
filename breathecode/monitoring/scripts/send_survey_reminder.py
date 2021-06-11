@@ -34,7 +34,7 @@ for cohort in cohorts:
     else:
         sent_at = cohort.kickoff_date.date()
         if lastest_survey.sent_at is not None:
-            lastest_survey.sent_at.date()
+            sent_at = lastest_survey.sent_at.date()
 
         num_weeks = calculate_weeks(sent_at, datetime.now().date())
         if num_weeks > 4:
