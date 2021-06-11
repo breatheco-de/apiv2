@@ -153,7 +153,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
-            specialty=True, layout_design=True, syllabus=True)
+            specialty=True, layout_design=True, syllabus=True, cohort_stage='ENDED')
 
         base = model.copy()
         del base['user']
@@ -412,7 +412,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         del result['token']
 
         self.assertEqual(result, expected)
-        
+
         self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
             [{**expected, 'token': token}])
 
