@@ -110,7 +110,7 @@ class PPCFilter(SimpleListFilter):
 class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['email', 'first_name', 'last_name', 'phone']
     list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course', 'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
-    list_filter = ['storage_status', 'location', 'course', 'deal_status', PPCFilter, 'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium']
+    list_filter = ['storage_status', 'location', 'course', 'deal_status', PPCFilter, 'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium', 'country']
     actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, "export_as_csv"]
 
 

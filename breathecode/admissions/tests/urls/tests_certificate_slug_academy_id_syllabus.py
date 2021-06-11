@@ -160,27 +160,27 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_syllabus_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_certificate_slug_academy_id_syllabus__post__without_time_slot(self):
-        """Test /certificate without auth"""
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_syllabus', role='potato', certificate=True)
-        url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus', kwargs={
-            'certificate_slug': model['certificate'].slug, 'academy_id': 1})
-        data = {}
-        response = self.client.post(url, data)
-        json = response.json()
-        expected = {
-            'detail': 'certificate-not-have-time-slots',
-            'status_code': 400,
-        }
+    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    # def test_certificate_slug_academy_id_syllabus__post__without_time_slot(self):
+    #     """Test /certificate without auth"""
+    #     self.headers(academy=1)
+    #     model = self.generate_models(authenticate=True, profile_academy=True,
+    #         capability='crud_syllabus', role='potato', certificate=True)
+    #     url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus', kwargs={
+    #         'certificate_slug': model['certificate'].slug, 'academy_id': 1})
+    #     data = {}
+    #     response = self.client.post(url, data)
+    #     json = response.json()
+    #     expected = {
+    #         'detail': 'certificate-not-have-time-slots',
+    #         'status_code': 400,
+    #     }
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_syllabus_dict(), [])
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    #     self.assertEqual(self.all_syllabus_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
