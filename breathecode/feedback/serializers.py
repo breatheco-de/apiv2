@@ -49,6 +49,26 @@ class AnswerSerializer(serpy.Serializer):
     mentor = UserSerializer(required=False)
     event = EventTypeSmallSerializer(required=False)
 
+class BigAnswerSerializer(serpy.Serializer):
+    id = serpy.Field()
+    title = serpy.Field()
+    lowest = serpy.Field()
+    highest = serpy.Field()
+    lang = serpy.Field()
+    comment = serpy.Field()
+    score = serpy.Field()
+    status = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    opened_at = serpy.Field()
+    user = UserSerializer(required=False)
+
+    score = serpy.Field()
+    academy = GetAcademySerializer(required=False)
+    cohort = GetCohortSerializer(required=False)
+    mentor = UserSerializer(required=False)
+    event = EventTypeSmallSerializer(required=False)
+
 class AnswerPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer

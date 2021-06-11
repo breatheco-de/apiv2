@@ -28,7 +28,7 @@ def capable_of(capability=None):
                     academy_id = request.headers['academy']
 
             if not str(academy_id).isdigit():
-                raise ValidationException(f"Academy ID needs to be an integer: {str(academy_id)}")
+                raise ValidationException(f"Academy ID needs to be an integer: {str(academy_id)}", slug="invalid-academy-id")
 
             if isinstance(request.user, AnonymousUser):
                 raise PermissionDenied("Invalid user")
