@@ -1,6 +1,7 @@
 from django.utils import timezone
 import pytz, os
 
+ENV = os.getenv("ENV", None)
 class TimezoneMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
