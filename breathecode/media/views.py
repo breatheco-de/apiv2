@@ -137,7 +137,7 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     raise ValidationException('Media not found', code=404, slug='media-not-found') 
                 current.append(media)
 
-        serializer = MediaPUTSerializer(current, data=request.data,
+        serializer = MediaSerializer(current, data=request.data,
                                    context=context, many=many)
         if serializer.is_valid():
             serializer.save()
