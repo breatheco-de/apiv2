@@ -45,7 +45,7 @@ class MediaTestSuite(MediaTestCase):
         json = response.json()
 
         self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: read_media_resolutions for academy 1",
+            'detail': "You (user: 1) don't have this capability: read_media_resolution for academy 1",
             'status_code': 403
         })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -57,7 +57,7 @@ class MediaTestSuite(MediaTestCase):
         """Test /answer without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_media_resolutions', role='potato')
+            capability='read_media_resolution', role='potato')
         url = reverse_lazy('media:info_id_resolution', kwargs={'media_id': 1})
         response = self.client.get(url)
         json = response.json()
@@ -76,7 +76,8 @@ class MediaTestSuite(MediaTestCase):
         """Test /info/media:id/resolution"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, media_resolution=True, media=True,
-            capability='read_media_resolutions', role='potato', profile_academy=True)
+            capability='read_media_resolution', role='potato', profile_academy=True, 
+            media_kwargs={'hash': 'abc'}, media_resolution_kwargs={'hash' : 'abc'})
         model_dict = self.remove_dinamics_fields(model['media_resolution'].__dict__)
         url = reverse_lazy('media:info_id_resolution', kwargs={'media_id': model['media'].id})
         response = self.client.get(url)

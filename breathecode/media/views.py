@@ -131,6 +131,18 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             file = storage.file(media_gallery_bucket(), url)
             file.delete()
 
+
+            resolution = MediaResolution.objects.filter(hash=hash).first()
+            if resolution:
+                resolution_url = f'{url}-{resolution.width}x{resolution.height}'
+                resolution_file = storage.file(media_gallery_bucket(), resolution_url)
+                resolution_file.delete()
+
+                resolutions = MediaResolution.objects.filter(hash=hash)
+                for resolution in resolutions:
+                    resolution.delete()
+                    
+
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
@@ -426,7 +438,7 @@ class MaskingUrlView(APIView):
 
     
 class ResolutionView(APIView):
-    @capable_of('read_media_resolutions')
+    @capable_of('read_media_resolution')
     def get(self, request, media_id=None, academy_id=None, resolution_id=None):
         if media_id:
 
@@ -455,7 +467,7 @@ class ResolutionView(APIView):
             serializer = GetResolutionSerializer(resolutions)
         return Response(serializer.data, status=status.HTTP_200_OK)
             
-    @capable_of('crud_media_resolutions')
+    @capable_of('crud_media_resolution')
     def delete(self, request, resolution_id=None, academy_id=None):
         from ..services.google_cloud import Storage
 
