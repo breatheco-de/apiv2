@@ -2,11 +2,7 @@ import logging
 import datetime
 import hashlib
 import requests
-import json
-import re
-import os
-import subprocess
-import sys
+import json,re,os,subprocess,sys
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
 from .models import Endpoint
@@ -14,6 +10,9 @@ from breathecode.services.slack.actions.monitoring import render_snooze_text_end
 
 
 logger = logging.getLogger(__name__)
+
+
+
 USER_AGENT = "BreathecodeMonitoring/1.0"
 SCRIPT_HEADER = """
 # from django.conf import settings
@@ -28,7 +27,6 @@ SCRIPT_HEADER = """
 
 def get_website_text(endp):
     """Make a request to get the content of the given URL."""
-    import requests
 
     headers = {
         'User-Agent': USER_AGENT
@@ -153,20 +151,15 @@ def run_app_diagnostic(app, report=False):
     else:
         results["status"] = 'MINOR'
 
-    # results["url"] = endpoint.url
-    results["text"] = json.dumps(results, indent=4)
-
-    app.status = results["status"]
 
     results["slack_payload"] = render_snooze_text_endpoint(
         failed_endpoints)  # converting to json to send to slack
 
-    if results["details"] != "":
-        app.response_text = results["details"]
-    else:
-        results["details"] = results["text"]
-        app.response_text = results["text"]
+    # JSON Details to be shown on the error report
+    results["details"] = json.dumps(results, indent=4)
 
+    app.status = results["status"]
+    app.response_text = results["text"]
     app.save()
 
     return results
@@ -176,7 +169,8 @@ def run_endpoint_diagnostic(endpoint_id):
     endpoint = Endpoint.objects.get(id=endpoint_id)
     results = {
         "severity_level": 0,
-        "details": ""
+        "details": "",
+        "log": ""
     }
 
     logger.debug(f"Testing endpoint {endpoint.url}")
@@ -188,14 +182,14 @@ def run_endpoint_diagnostic(endpoint_id):
             f"Ignoring {endpoint.url} because frequency hast not been met")
         endpoint.status_text = "Ignored because its paused"
         endpoint.save()
-        return
+        return False
 
     if endpoint.paused_until and endpoint.paused_until > now:
         logger.debug(
             f"Ignoring endpoint:{endpoint.url} monitor because its paused")
         endpoint.status_text = "Ignored because its paused"
         endpoint.save()
-        return
+        return False
 
     # Starting the test
     logger.debug(f"Testing endpoint: {endpoint.url}")
@@ -203,7 +197,7 @@ def run_endpoint_diagnostic(endpoint_id):
     endpoint.save()
 
     e = get_website_text(endpoint)
-    results['details'] = e.response_text
+    results['text'] = e.response_text
     if e.status != 'OPERATIONAL':
         if e.severity_level > results["severity_level"]:
             results["severity_level"] = e.severity_level
@@ -220,15 +214,11 @@ def run_endpoint_diagnostic(endpoint_id):
     else:
         results["status"] = 'MINOR'
 
-    results["text"] = json.dumps(results, indent=4)
     results["slack_payload"] = render_snooze_text_endpoint(
         [endpoint])  # converting to json to send to slack
 
-    if results["details"] != "":
-        endpoint.response_text = results["details"]
-    else:
-        results["details"] = results["text"]
-        endpoint.response_text = results["text"]
+    results["details"] = json.dumps(results, indent=4)
+    endpoint.response_text = results["text"]
 
     endpoint.save()
     return results

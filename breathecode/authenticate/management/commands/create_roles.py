@@ -18,6 +18,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         caps = [
+            { "slug": "leer_mi_perfil", "description": "Read your academy information" },
             { "slug": "read_my_academy", "description": "Read your academy information" },
             { "slug": "crud_my_academy", "description": "Read, or update your academy information (very high level, almost the academy admin)" },
             { "slug": "crud_member", "description": "Create, update or delete academy members (very high level, almost the academy admin)" },
