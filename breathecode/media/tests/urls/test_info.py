@@ -98,7 +98,7 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_media__put__in_bulk__without_categories(self):
+    def test_info__put__in_bulk__without_categories(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('media:info')
@@ -127,7 +127,7 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_media__put__in_bulk__with_more_arguments(self):
+    def test_info__put__in_bulk__with_more_arguments(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1, categories=1)
         url = reverse_lazy('media:info')
@@ -152,7 +152,28 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_media__put__in_bulk__with_one_item(self):
+    def test_info_put_in_bulk_from_different_academy(self):
+        """Test /answer without auth"""
+        self.headers(academy=1, categories=1)
+        model = self.generate_models(authenticate=True, profile_academy=True,
+            capability='crud_media', role='potato', media=True)
+        model2 = self.generate_models(media=True)
+        data = [{
+            'id': model2['media'].id,
+        }]
+        url = reverse_lazy('media:info_id')
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        self.assertEqual(json, {'detail': 'different-academy-media-put', 'status_code': 400})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_media_dict(), [{ **self.model_to_dict(model, 'media')},
+             { **self.model_to_dict(model2, 'media')}])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_info__put__in_bulk__with_one_item(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1, categories=1)
         url = reverse_lazy('media:info')
@@ -184,7 +205,7 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_media__put__in_bulk__with_two_item(self):
+    def test_info__put__in_bulk__with_two_item(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1, categories=2)
         url = reverse_lazy('media:info')

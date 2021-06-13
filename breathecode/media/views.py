@@ -109,17 +109,21 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if media_id and not many:
             current = Media.objects.filter(id=media_id).first()
-            
+
             if not current:
-                raise ValidationException('Media not found', code=404, slug='media-not-found') 
-        
+                raise ValidationException('Media not found', code=404, slug='media-not-found')
+
+            if current.academy_id != int(academy_id):
+                raise ValidationException("You can't edit media belonging to other academies",
+                    slug="different-academy-media-put")
+
         else:
 
             if not 'Categories' in request.headers:
                 raise ValidationException(
                     'For bulk mode, please input a category in the header',
-                        slug='categories-not-in-bulk')  
-        
+                        slug='categories-not-in-bulk')
+
             current = []
             for x in request.data:
                 x['categories'] = [request.headers['Categories']]
@@ -128,13 +132,18 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     raise ValidationException('Bulk mode its only to edit categories, '
                      + 'please change to single put for more', slug='extra-args-bulk-mode')
 
-                if not 'id' in x: 
+                if not 'id' in x:
                     raise ValidationException('Please input id in body for bulk mode',
                         slug='id-not-in-bulk')
 
                 media = Media.objects.filter(id=x['id']).first()
                 if not media:
-                    raise ValidationException('Media not found', code=404, slug='media-not-found') 
+                    raise ValidationException('Media not found', code=404, slug='media-not-found')
+
+                if media.academy_id != int(academy_id):
+                    raise ValidationException("You can't edit media belonging to other academies",
+                    slug="different-academy-media-put")
+
                 current.append(media)
 
         serializer = MediaSerializer(current, data=request.data,
