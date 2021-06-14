@@ -217,7 +217,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
         if "user" not in data:
             if "invite" not in data or data["invite"] != True:
                 raise ValidationException(
-                    "User does not exists, do you want to invite it?")
+                    "User does not exists, do you want to invite it?", slug="user-not-found")
             elif "email" not in data:
                 raise ValidationException(
                     "Please specify user id or member email")

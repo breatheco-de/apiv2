@@ -478,7 +478,10 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id':1})
         data = {}
         response = self.client.post(url, data)
+        json = response.json()
+        expected = {'role': ['This field is required.']}
 
+        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_profile_academy_dict(), [{
             'academy_id': 1,
@@ -502,8 +505,7 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {'role': role}
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'detail': "User does not exists, do you want to invite it?",
-            'status_code' : 400}
+        expected = {'detail': "user-not-found", 'status_code' : 400}
         profile_academy = self.get_profile_academy(1)
 
         self.assertEqual(json, expected)
