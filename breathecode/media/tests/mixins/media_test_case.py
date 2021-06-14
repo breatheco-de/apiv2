@@ -28,5 +28,4 @@ class MediaTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
     def full_media_dict(self):
         all_media = Media.objects.all()
         all_media_dict = GetMediaSerializer(all_media, many=True)
-        print(all_media_dict.data)
         return  all_media_dict.data
