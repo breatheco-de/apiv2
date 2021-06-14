@@ -49,7 +49,7 @@ def get_certificate(request, token):
 
 @receiver(post_save, sender=UserSpecialty)
 def post_save_course_dosomething(sender, instance, **kwargs):
-    if instance.preview_url is None or instance.preview_url == "":
+    if instance.preview_url is None or instance.preview_url == "" and instance.status == 'PERSISTED':
         take_screenshot.delay(instance.id)
 
 
@@ -101,11 +101,40 @@ class CertificateCohortView(APIView):
         cohort_users = CohortUser.objects.filter(
             cohort__id=cohort_id, role='STUDENT', cohort__academy__id=academy_id)
         all_certs = []
+        cohort__users = []
 
         if cohort_users.count() == 0:
-            raise APIException("There are no users with STUDENT role in this cohort")
+            raise ValidationException("There are no users with STUDENT role in this cohort", code=400, 
+                slug="no-user-with-student-role")
 
-        for cu in cohort_users:
+        for cohort_user in cohort_users:
+            cohort = cohort_user.cohort
+            if cohort_user is None:
+                raise ValidationException("Impossible to obtain the student cohort, maybe it's none assigned", code=400, 
+                    slug="no-cohort-user-assigned")
+
+            if cohort.stage != "ENDED" or cohort.never_ends != False:
+                raise ValidationException("Cohort stage must be ENDED or never ends", code=400, 
+                    slug="cohort-stage-must-be-ended")
+            
+            if cohort.syllabus is None: 
+                raise ValidationException(f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}', code=400, 
+                    slug="cohort-has-no-syllabus-assigned")
+            
+            if cohort.syllabus.certificate is None:
+                raise ValidationException(f'The cohort has no certificate assigned, please set a certificate for cohort: {cohort.name}',
+                    code=400, slug="cohort-has-no-certificate-assigned")
+            
+            if (not hasattr(cohort.syllabus.certificate, 'specialty') or not
+                cohort.syllabus.certificate.specialty):
+                raise ValidationException('Specialty has no certificate assigned, please set a '
+                    f'certificate on the Specialty model: {cohort.syllabus.certificate.name}', code=400, 
+                    slug="specialty-has-no-certificate-assigned")
+
+            else:
+                cohort__users.append(cohort_user)
+
+        for cu in cohort__users:
             cert = generate_certificate(cu.user, cu.cohort)
             serializer = UserSpecialtySerializer(cert, many=False)
             all_certs.append(serializer.data)

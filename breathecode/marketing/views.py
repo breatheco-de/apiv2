@@ -101,7 +101,6 @@ def receive_facebook_lead(request):
         else:
             return Response(int(challenge), status=status.HTTP_400_BAD_REQUEST)
     else:
-        print(request.data)
         if "object" in request.data:
             if request.data["object"] == "page":
                 for entry in request.data["entry"]:

@@ -18,6 +18,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         caps = [
+            { "slug": "leer_mi_perfil", "description": "Read your academy information" },
             { "slug": "read_my_academy", "description": "Read your academy information" },
             { "slug": "crud_my_academy", "description": "Read, or update your academy information (very high level, almost the academy admin)" },
             { "slug": "crud_member", "description": "Create, update or delete academy members (very high level, almost the academy admin)" },
@@ -46,6 +47,7 @@ class Command(BaseCommand):
             { "slug": "read_cohort_activity", "description": "Read low level activity in a cohort (attendancy, etc.)" },
             { "slug": "generate_academy_token", "description": "Create a new token only to be used by the academy" },
             { "slug": "get_academy_token", "description": "Read the academy token" },
+            { "slug": "send_reset_password", "description": "Generate a temporal token and resend forgot password link" },
         ]
 
         for c in caps:
@@ -74,7 +76,7 @@ class Command(BaseCommand):
         roles.append({ "slug": "homework_reviewer", "name": "Homework Reviewer", "caps": extend(roles, ["assistant"]) })
         roles.append({ "slug": "teacher", "name": "Teacher", "caps": extend(roles, ["assistant"]) })
         roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": extend(roles, ["teacher"]) + ["crud_syllabus", "crud_cohort", "crud_student", "crud_survey"] })
-        roles.append({ "slug": "country_manager", "name": "Country Manager", "caps": extend(roles,["academy_coordinator", "student", "career_support", "growth_manager", "admissions_developer", "syllabus_coordinator"]) + ["crud_member", "crud_my_academy", "generate_academy_token"] })
+        roles.append({ "slug": "country_manager", "name": "Country Manager", "caps": extend(roles,["academy_coordinator", "student", "career_support", "growth_manager", "admissions_developer", "syllabus_coordinator"]) + ["crud_member", "crud_my_academy", "generate_academy_token", "send_reset_password"] })
 
         for r in roles:
             _r = Role.objects.filter(slug=r["slug"]).first()

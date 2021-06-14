@@ -93,8 +93,7 @@ def sync_cohort_timeslots(cohort_id):
     from breathecode.admissions.models import CertificateTimeSlot, CohortTimeSlot, Cohort
     CohortTimeSlot.objects.filter(cohort__id=cohort_id).delete()
 
-    cohort_values = Cohort.objects.filter(id=cohort_id)\
-        .values('academy__id', 'syllabus__certificate__id').first()
+    cohort_values = Cohort.objects.filter(id=cohort_id).values('academy__id', 'syllabus__certificate__id').first()
 
     certificate_timeslots = CertificateTimeSlot.objects.filter(
         academy__id=cohort_values['academy__id'],

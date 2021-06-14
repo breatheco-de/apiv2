@@ -304,50 +304,50 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'cohort')
         }])
 
-    """
-    🔽🔽🔽 Put without certificate timeslots
-    """
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_cohort_id__put__with_id__without_certificate_timeslots(self):
-        """Test /cohort/:id without auth"""
-        self.headers(academy=1)
-        cohort_kwargs = {'ending_date': timezone.now()}
-        model = self.generate_models(authenticate=True, cohort=True, profile_academy=True,
-            capability='crud_cohort', role='potato', syllabus=True, cohort_kwargs=cohort_kwargs)
-        url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
-        data = {
-            'syllabus': model['certificate'].slug + '.v' + str(model['syllabus'].version),
-            'slug': 'they-killed-kenny',
-            'name': 'They killed kenny',
-            'current_day': model['cohort'].current_day + 1,
-            'language': 'es',
-        }
-        response = self.client.put(url, data)
-        json = response.json()
-        expected = {
-            'detail': 'certificate-not-have-time-slots',
-            'status_code': 400,
-        }
+    # """
+    # 🔽🔽🔽 Put without certificate timeslots
+    # """
+    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    # def test_cohort_id__put__with_id__without_certificate_timeslots(self):
+    #     """Test /cohort/:id without auth"""
+    #     self.headers(academy=1)
+    #     cohort_kwargs = {'ending_date': timezone.now()}
+    #     model = self.generate_models(authenticate=True, cohort=True, profile_academy=True,
+    #         capability='crud_cohort', role='potato', syllabus=True, cohort_kwargs=cohort_kwargs)
+    #     url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
+    #     data = {
+    #         'syllabus': model['certificate'].slug + '.v' + str(model['syllabus'].version),
+    #         'slug': 'they-killed-kenny',
+    #         'name': 'They killed kenny',
+    #         'current_day': model['cohort'].current_day + 1,
+    #         'language': 'es',
+    #     }
+    #     response = self.client.put(url, data)
+    #     json = response.json()
+    #     expected = {
+    #         'detail': 'certificate-not-have-time-slots',
+    #         'status_code': 400,
+    #     }
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [{
-            'academy_id': 1,
-            'current_day': model['cohort'].current_day,
-            'ending_date': model['cohort'].ending_date,
-            'id': model['cohort'].id,
-            'kickoff_date': model['cohort'].kickoff_date,
-            'language': model['cohort'].language,
-            'name': model['cohort'].name,
-            'never_ends': False,
-            'private': False,
-            'slug': model['cohort'].slug,
-            'stage': model['cohort'].stage,
-            'syllabus_id': model['cohort'].syllabus.id,
-            'timezone': None,
-        }])
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    #     self.assertEqual(self.all_cohort_dict(), [{
+    #         'academy_id': 1,
+    #         'current_day': model['cohort'].current_day,
+    #         'ending_date': model['cohort'].ending_date,
+    #         'id': model['cohort'].id,
+    #         'kickoff_date': model['cohort'].kickoff_date,
+    #         'language': model['cohort'].language,
+    #         'name': model['cohort'].name,
+    #         'never_ends': False,
+    #         'private': False,
+    #         'slug': model['cohort'].slug,
+    #         'stage': model['cohort'].stage,
+    #         'syllabus_id': model['cohort'].syllabus.id,
+    #         'timezone': None,
+    #     }])
 
     """
     🔽🔽🔽 Put with some data
@@ -563,9 +563,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
-            capability='crud_cohort', role='potato', syllabus=True, cohort_user=True)
+            capability='crud_cohort', role='potato', syllabus=True)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
-        self.assertEqual(self.count_cohort_user(), 1)
         self.assertEqual(self.count_cohort_stage(model['cohort'].id), 'INACTIVE')
         response = self.client.delete(url)
 
@@ -672,3 +671,25 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         AcademyCohortTestSuite.test_academy_cohort__with_data(self, base)
         self.assertEqual(self.cache.keys(), cache_keys)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_id__delete__cohort_with_students(self):
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, profile_academy=True, 
+            capability='crud_cohort', role='potato' ,cohort_user=True)
+        url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 1})
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {
+            'detail': 'cohort-has-students',
+            'status_code': 400,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        self.assertEqual(self.all_cohort_dict(), [{
+            **self.model_to_dict(model, 'cohort')
+        }])

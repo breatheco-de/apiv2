@@ -107,7 +107,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertToken(json['token'])
         del json['token']
         del json['invite_url']
-        expected = {'status': 'PENDING', 'email': None,
+        expected = {'id': 1, 'status': 'PENDING', 'email': None,
                     'first_name': None, 'last_name': None}
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
