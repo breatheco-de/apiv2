@@ -187,8 +187,19 @@ class MediaTestSuite(MediaTestCase):
             'url': model['media'].url,
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media'),
+        self.assertEqual(self.full_media_dict(), [{
+            'categories': [{'id': model['category'].id,
+                            'medias': 1,
+                            'name': model['category'].name,
+                            'slug': model['category'].slug}],
+            'hash': model['media'].hash,
+            'hits': model['media'].hits,
+            'id': 1,
+            'slug': model['media'].slug,
+            'mime': model['media'].mime,
+            'name': model['media'].name,
+            'thumbnail': f"{model['media'].url}-thumbnail",
+            'url': model['media'].url,
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -243,8 +254,38 @@ class MediaTestSuite(MediaTestCase):
             'url': model[1]['media'].url,
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model[0], 'media'),
+        self.assertEqual(self.full_media_dict(), [{
+            'categories': [{'id': model[0]['category'].id,
+                            'medias': 2,
+                            'name': model[0]['category'].name,
+                            'slug': model[0]['category'].slug},
+                            {'id': model[1]['category'].id,
+                            'medias': 2,
+                            'name': model[1]['category'].name,
+                            'slug': model[1]['category'].slug}],
+            'hash': model[0]['media'].hash,
+            'hits': model[0]['media'].hits,
+            'id': 1,
+            'slug': model[0]['media'].slug,
+            'mime': model[0]['media'].mime,
+            'name': model[0]['media'].name,
+            'thumbnail': f"{model[0]['media'].url}-thumbnail",
+            'url': model[0]['media'].url,
         }, {
-            **self.model_to_dict(model[1], 'media'),
+            'categories': [{'id': model[0]['category'].id,
+                            'medias': 2,
+                            'name': model[0]['category'].name,
+                            'slug': model[0]['category'].slug},
+                            {'id': model[1]['category'].id,
+                            'medias': 2,
+                            'name': model[1]['category'].name,
+                            'slug': model[1]['category'].slug}],
+            'hash': model[1]['media'].hash,
+            'hits': model[1]['media'].hits,
+            'id': 2,
+            'slug': model[1]['media'].slug,
+            'mime': model[1]['media'].mime,
+            'name': model[1]['media'].name,
+            'thumbnail': f"{model[1]['media'].url}-thumbnail",
+            'url': model[1]['media'].url,
         }])
