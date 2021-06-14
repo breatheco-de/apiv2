@@ -131,9 +131,6 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     'For bulk mode, please input category in the request',
                         slug='categories-not-in-bulk')
 
-                if 'categories' in x:
-                    x['categories'] = x['categories'].split(',')
-
                 if len(x) > 2:
                     raise ValidationException('Bulk mode its only to edit categories, '
                      + 'please change to single put for more', slug='extra-args-bulk-mode')

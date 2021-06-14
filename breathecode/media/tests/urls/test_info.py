@@ -1,11 +1,8 @@
-import re, urllib
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-import datetime
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
-    GOOGLE_CLOUD_INSTANCES,
     apply_google_cloud_client_mock,
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
@@ -69,7 +66,7 @@ class MediaTestSuite(MediaTestCase):
             profile_academy=True, capability='crud_media', role='potato', category=True)
         data = [{
             'slug': 'they-killed-kenny',
-            'categories': '1'
+            'categories': [1]
         }]
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -124,7 +121,7 @@ class MediaTestSuite(MediaTestCase):
             profile_academy=True, capability='crud_media', role='potato', category=True)
         data = [{
             'id': model['media'].id,
-            'categories' : '1,2',
+            'categories' : [1,2],
             'hash': model['media'].hash,
         }]
         response = self.client.put(url, data, format='json')
@@ -150,7 +147,7 @@ class MediaTestSuite(MediaTestCase):
         model2 = self.generate_models(media=True)
         data = [{
             'id': 2,
-            'categories' : '1'
+            'categories' : [1]
         }]
         url = reverse_lazy('media:info')
         response = self.client.put(url, data, format='json')
@@ -172,7 +169,7 @@ class MediaTestSuite(MediaTestCase):
             profile_academy=True, capability='crud_media', role='potato', category=True)
         data = [{
             'id': model['media'].id,
-            'categories' : '1'
+            'categories' : [1]
         }]
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -214,10 +211,10 @@ class MediaTestSuite(MediaTestCase):
 
         data = [{
             'id': 1,
-            'categories': '1, 2'
+            'categories': [1, 2]
         }, {
             'id': 2,
-            'categories': '1, 2'
+            'categories': [1, 2]
         }]
         response = self.client.put(url, data, format='json')
         json = response.json()
