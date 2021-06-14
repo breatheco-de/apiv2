@@ -12,18 +12,6 @@ from breathecode.tests.mocks import (
 )
 from ..mixins import MediaTestCase
 
-class FileMock():
-    def delete(*args, **kwargs):
-        pass
-
-file_mock = Mock(side_effect=FileMock)
-
-class StorageMock():
-    def file(*args, **kwargs):
-        return file_mock
-
-storage_mock = Mock(side_effect=StorageMock)
-
 class MediaTestSuite(MediaTestCase):
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
