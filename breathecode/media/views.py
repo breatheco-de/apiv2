@@ -118,15 +118,21 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     slug="different-academy-media-put")
 
         else:
+            current = []
 
-            if not 'Categories' in request.headers:
+            if not request.data:
                 raise ValidationException(
-                    'For bulk mode, please input a category in the header',
+                    'Please input data to use request', slug='no-args')
+
+            for x in request.data:
+
+                if not 'categories' in x:
+                    raise ValidationException(
+                    'For bulk mode, please input category in the request',
                         slug='categories-not-in-bulk')
 
-            current = []
-            for x in request.data:
-                x['categories'] = [request.headers['Categories']]
+                if 'categories' in x:
+                    x['categories'] = x['categories'].split(',')
 
                 if len(x) > 2:
                     raise ValidationException('Bulk mode its only to edit categories, '

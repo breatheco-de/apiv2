@@ -25,7 +25,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.put(url)
         json = response.json()
         expected = {
-            'detail': 'categories-not-in-bulk',
+            'detail': 'no-args',
             'status_code': 400
         }
 
@@ -63,12 +63,13 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_info_put_without_id_in_url_or_bulk(self):
-        self.headers(academy=1, categories=1)
+        self.headers(academy=1)
         url = reverse_lazy('media:info')
         model = self.generate_models(authenticate=True, media=True,
             profile_academy=True, capability='crud_media', role='potato', category=True)
         data = [{
-            'slug': 'they-killed-kenny'
+            'slug': 'they-killed-kenny',
+            'categories': '1'
         }]
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -117,12 +118,13 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_info__put__in_bulk__with_more_arguments(self):
         """Test /cohort/user without auth"""
-        self.headers(academy=1, categories=1)
+        self.headers(academy=1)
         url = reverse_lazy('media:info')
         model = self.generate_models(authenticate=True, media=True,
             profile_academy=True, capability='crud_media', role='potato', category=True)
         data = [{
             'id': model['media'].id,
+            'categories' : '1,2',
             'hash': model['media'].hash,
         }]
         response = self.client.put(url, data, format='json')
@@ -142,14 +144,15 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_info_put_in_bulk_from_different_academy(self):
         """Test /answer without auth"""
-        self.headers(academy=1, categories=1)
+        self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True,
             capability='crud_media', role='potato', media=True)
         model2 = self.generate_models(media=True)
         data = [{
-            'id': model2['media'].id,
+            'id': 2,
+            'categories' : '1'
         }]
-        url = reverse_lazy('media:info_id')
+        url = reverse_lazy('media:info')
         response = self.client.put(url, data, format='json')
         json = response.json()
 
@@ -163,12 +166,13 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_info__put__in_bulk__with_one_item(self):
         """Test /cohort/user without auth"""
-        self.headers(academy=1, categories=1)
+        self.headers(academy=1)
         url = reverse_lazy('media:info')
         model = self.generate_models(authenticate=True, media=True,
             profile_academy=True, capability='crud_media', role='potato', category=True)
         data = [{
             'id': model['media'].id,
+            'categories' : '1'
         }]
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -195,7 +199,7 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_info__put__in_bulk__with_two_item(self):
         """Test /cohort/user without auth"""
-        self.headers(academy=1, categories=2)
+        self.headers(academy=1)
         url = reverse_lazy('media:info')
         model = [self.generate_models(authenticate=True, media=True,
             profile_academy=True, capability='crud_media', role='potato', category=True)]
@@ -210,14 +214,16 @@ class MediaTestSuite(MediaTestCase):
 
         data = [{
             'id': 1,
+            'categories': '1, 2'
         }, {
             'id': 2,
+            'categories': '1, 2'
         }]
         response = self.client.put(url, data, format='json')
         json = response.json()
 
         self.assertEqual(json, [{
-            'categories': [2],
+            'categories': [1, 2],
             'academy': 1,
             'hash': model[0]['media'].hash,
             'hits': model[0]['media'].hits,
@@ -228,7 +234,7 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail': None,
             'url': model[0]['media'].url,
         }, {
-            'categories': [2],
+            'categories': [1, 2],
             'academy': 1,
             'hash': model[1]['media'].hash,
             'hits': model[1]['media'].hits,
