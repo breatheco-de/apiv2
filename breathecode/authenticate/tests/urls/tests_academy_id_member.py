@@ -532,7 +532,7 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {'role': role, 'invite': True}
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'detail': "Please specify user id or member email",
+        expected = {'detail': "no-email-or-id",
             'status_code' : 400}
         profile_academy = self.get_profile_academy(1)
 
@@ -560,8 +560,8 @@ class AuthenticateTestSuite(AuthTestCase):
         data = { 'role': role , 'user' : model['user'].id, 'first_name': 'Kenny', 'last_name': 'McKornick'}
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'detail': f'This user is already a member of this academy as {role} ({role})',
-            'status_code' : 400}
+        expected = {'detail': 'user-already-exists','status_code' : 400}
+
         profile_academy = self.get_profile_academy(1)
 
         self.assertEqual(json, expected)
