@@ -192,9 +192,10 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
                     student = ProfileAcademy.objects.filter(user_id=user__id).first()
                     if student is None:
                         raise ValidationException(f'User with id {str(user__id)} not found', 404)
-                    raise ValidationException(f'No student with id {str(student.first_name)} {str(student.last_name)} was found for cohort {str(cohort__slug)}', 404)
+                    raise ValidationException(f'No student with id {str(student.first_name)} {str(student.last_name)} was found for cohort {str(cohort__slug)}', 
+                        code = 404, slug="student-not-found-in-cohort")
         else:
-            raise ValidationException("You did not send anything to reatemps")
+            raise ValidationException("You did not send anything to reattemps")
 
         certs = []
         for cu in cohort_users:
@@ -204,6 +205,9 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
                 cert.status = "PENDING"
                 cert.save()
                 certs.append(cert)
+            else:
+                raise ValidationException('There is no user specialty for this cohort', code=404, 
+                    slug="no-user-specialty")
             generate_one_certificate.delay(cu.cohort_id, cu.user_id)
    
         serializer = UserSpecialtySerializer(certs, many=True)
