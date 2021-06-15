@@ -62,7 +62,7 @@ class Command(BaseCommand):
         # These are the MAIN roles, they cannot be deleted by anyone at the academy.
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
-            { "slug": "academy_token", "name": "Academy Token", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite"] },
+            { "slug": "academy_token", "name": "Academy Token", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "read_lead"] },
             { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "get_academy_token" ] },
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort", "read_my_academy"] },
         ]
