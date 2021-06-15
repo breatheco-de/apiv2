@@ -13,7 +13,7 @@ class AcademyCohortTestSuite(MarketingTestCase):
         response = self.client.get(url)
 
         expected = '\r\n'.join([
-            'Google Click ID,Conversion Name,Conversion Time\r\n'
+            'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\r\n'
         ])
 
         self.assertEqual(response.content.decode('utf-8'), expected)
@@ -28,7 +28,7 @@ class AcademyCohortTestSuite(MarketingTestCase):
         url = reverse_lazy('marketing:googleads_csv')
         response = self.client.get(url)
         expected = '\r\n'.join([
-            'Google Click ID,Conversion Name,Conversion Time\r\n'
+            'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\r\n'
         ])
 
         self.assertEqual(response.content.decode('utf-8'), expected)
@@ -43,7 +43,7 @@ class AcademyCohortTestSuite(MarketingTestCase):
         url = reverse_lazy('marketing:googleads_csv')
         response = self.client.get(url)
         expected = '\r\n'.join([
-            'Google Click ID,Conversion Name,Conversion Time\r\n'
+            'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\r\n'
         ])
 
         self.assertEqual(response.content.decode('utf-8'), expected)
@@ -56,7 +56,7 @@ class AcademyCohortTestSuite(MarketingTestCase):
         url = reverse_lazy('marketing:googleads_csv')
         response = self.client.get(url)
         expected = '\r\n'.join([
-            'Google Click ID,Conversion Name,Conversion Time\r\n'
+            'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\r\n'
         ])
 
         self.assertEqual(response.content.decode('utf-8'), expected)
@@ -72,7 +72,7 @@ class AcademyCohortTestSuite(MarketingTestCase):
         response = self.client.get(url)
         print(model['form_entry'].gclid)
         expected = '\r\n'.join([
-            'Google Click ID,Conversion Name,Conversion Time\r\n'
+            'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\r\n'
         ])
 
         self.assertEqual(response.content.decode('utf-8'), expected)
@@ -90,8 +90,8 @@ class AcademyCohortTestSuite(MarketingTestCase):
         conversion_time = model['form_entry'].created_at.strftime("%Y-%m-%d %H-%M-%S%z")
 
         expected = '\r\n'.join([
-            'Google Click ID,Conversion Name,Conversion Time',
-            f"{gclid},,{conversion_time}\r\n"
+            'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
+            f"{gclid},,{conversion_time},,\r\n"
         ])
 
         self.assertEqual(response.content.decode('utf-8'), expected)
@@ -113,9 +113,9 @@ class AcademyCohortTestSuite(MarketingTestCase):
         conversion_time2 = model2['form_entry'].created_at.strftime("%Y-%m-%d %H-%M-%S%z")
 
         expected = '\r\n'.join([
-            'Google Click ID,Conversion Name,Conversion Time',
-            f"{model['form_entry'].gclid},,{conversion_time}",
-            f"{model2['form_entry'].gclid},,{conversion_time2}\r\n"
+            'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
+            f"{model['form_entry'].gclid},,{conversion_time},,",
+            f"{model2['form_entry'].gclid},,{conversion_time2},,\r\n"
 
         ])
 
@@ -142,9 +142,9 @@ class AcademyCohortTestSuite(MarketingTestCase):
         conversion_time2 = model3['form_entry'].created_at.strftime("%Y-%m-%d %H-%M-%S%z")
 
         expected = '\r\n'.join([
-            'Google Click ID,Conversion Name,Conversion Time',
-            f"{model['form_entry'].gclid},,{conversion_time}",
-            f"{model3['form_entry'].gclid},,{conversion_time2}\r\n"
+            'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
+            f"{model['form_entry'].gclid},,{conversion_time},,",
+            f"{model3['form_entry'].gclid},,{conversion_time2},,\r\n"
 
         ])
 

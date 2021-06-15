@@ -347,10 +347,11 @@ def googleads_csv(request):
                 gclid = entry.gclid
                 convertion_name = entry.tags
                 convertion_time = entry.created_at.strftime("%Y-%m-%d %H-%M-%S%z")
-                data.append([gclid, convertion_name, convertion_time])
+                data.append([gclid, convertion_name, convertion_time,None, None])
 
     writer = csv.writer(response)
-    writer.writerow(['Google Click ID','Conversion Name','Conversion Time'])
+    writer.writerow(['Google Click ID','Conversion Name','Conversion Time',
+     'Conversion Value', 'Conversion Currency'])
 
     for d in data:
         writer.writerow(d)
