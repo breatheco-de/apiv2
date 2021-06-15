@@ -331,12 +331,32 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 def googleads_csv(request):
+
+    ids = request.GET.get('academy', '')
+    slugs = request.GET.get('academy_slug', '')
+
+    ids = ids.split(",") if ids else []
+    slugs = slugs.split(",") if slugs else []
+
+    if ids:
+        form_entries = FormEntry.objects.filter(academy__id__in=ids).order_by('id')
+
+    elif slugs:
+        form_entries = FormEntry.objects.filter(
+                academy__slug__in=slugs).order_by('id')
+
+    else:
+        form_entries = FormEntry.objects.all()
+
+    if (Academy.objects.filter(id__in=ids).count() != len(ids) or
+                Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
+            raise ValidationException("Some academy not exist", slug='academy-not-found')
+
     data = []
     response = HttpResponse(
         content_type='text/csv',
         headers={'Content-Disposition': 'attachment; filename="googleads.csv"'},
     )
-    form_entries = FormEntry.objects.all()
 
     for entry in form_entries:
 
