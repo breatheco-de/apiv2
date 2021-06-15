@@ -72,4 +72,6 @@ class CertificateTestSuite(CertificateTestCase):
             print(response.json())
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {
+                         'detail': 'specialties_not_found', 'status_code': 400})
         self.assertEqual(self.all_user_invite_dict(), [])
