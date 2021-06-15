@@ -16,7 +16,8 @@ from breathecode.media.serializers import (
     MediaSerializer,
     MediaPUTSerializer,
     GetCategorySerializer,
-    CategorySerializer
+    CategorySerializer,
+    GetResolutionSerializer
 )
 from slugify import slugify
 
@@ -160,19 +161,33 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def delete(self, request, media_id=None, academy_id=None):
         from ..services.google_cloud import Storage
 
-        data = Media.objects.filter(
-            id=media_id, academy__id=academy_id).first()
+        data = Media.objects.filter(id=media_id).first()
         if not data:
             raise ValidationException('Media not found', code=404)
-
+        
+        if not data.academy or data.academy.id != int(academy_id):
+            raise ValidationException('You may not delete media that belongs to a different academy', 
+                slug='academy-different-than-media-academy')
+        
         url = data.url
         hash = data.hash
         data.delete()
-
         if not Media.objects.filter(hash=hash).count():
             storage = Storage()
             file = storage.file(media_gallery_bucket(), url)
             file.delete()
+
+
+            resolution = MediaResolution.objects.filter(hash=hash).first()
+            if resolution:
+                resolution_url = f'{url}-{resolution.width}x{resolution.height}'
+                resolution_file = storage.file(media_gallery_bucket(), resolution_url)
+                resolution_file.delete()
+
+                resolutions = MediaResolution.objects.filter(hash=hash)
+                for resolution in resolutions:
+                    resolution.delete()
+                    
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
@@ -466,3 +481,61 @@ class MaskingUrlView(APIView):
             resource[header] = response.headers[header]
 
         return resource
+
+    
+class ResolutionView(APIView):
+    @capable_of('read_media_resolution')
+    def get(self, request, media_id=None, academy_id=None, resolution_id=None):
+        if media_id:
+
+            media = Media.objects.filter(id=media_id).first()
+            if not media:
+                raise ValidationException('Media not found', code=404, slug='media-not-found')
+
+            resolutions = MediaResolution.objects.filter(hash=media.hash)
+            if not resolutions:
+                raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
+
+            serializer = GetResolutionSerializer(resolutions, many=True)
+
+        elif resolution_id:
+            resolutions = MediaResolution.objects.filter(id=resolution_id).first()
+            if not resolutions:
+                raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
+
+            media = Media.objects.filter(hash=resolutions.hash).first()
+        
+            if not media:
+                resolutions.delete()
+                raise ValidationException('Resolution was deleted for not having parent element', 
+                    slug='resolution-media-not-found', code=404)
+
+            serializer = GetResolutionSerializer(resolutions)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+            
+    @capable_of('crud_media_resolution')
+    def delete(self, request, resolution_id=None, academy_id=None):
+        from ..services.google_cloud import Storage
+
+        resolution = MediaResolution.objects.filter(id=resolution_id).first()
+        if not resolution:
+             raise ValidationException('Resolution was not found', code=404, slug='resolution-not-found')
+
+        media = Media.objects.filter(hash=resolution.hash).first()
+        if not media:
+            resolution.delete()
+            raise ValidationException('Resolution was deleted for not having parent element', 
+                slug='resolution-media-not-found', code=404)
+
+        hash = resolution.hash
+        url = media.url
+        url = f'{url}-{resolution.width}x{resolution.height}'
+
+        resolution.delete()
+
+        if not MediaResolution.objects.filter(hash=hash).count():
+            storage = Storage()
+            file = storage.file(media_gallery_bucket(), url)
+            file.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)

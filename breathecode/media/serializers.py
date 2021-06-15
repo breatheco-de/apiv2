@@ -1,5 +1,5 @@
 from breathecode.admissions.models import Academy
-from .models import Media, Category
+from .models import Media, Category, MediaResolution
 from slugify import slugify
 from rest_framework import serializers
 import serpy
@@ -39,6 +39,30 @@ class GetMediaSerializer(serpy.Serializer):
 
     def get_categories(self, obj):
         return [GetCategorySerializer(x).data for x in obj.categories.all()]
+
+
+class GetResolutionSerializer(serializers.ModelSerializer):
+    id = serpy.Field()
+    hash = serpy.Field()
+    width = serpy.Field()
+    height = serpy.Field()
+    hits = serpy.Field()
+
+    class Meta:
+        model = MediaResolution
+        fields = ('id','hash', 'width', 'height', 'hits')
+
+
+class MediaSerializer(serializers.ModelSerializer):
+    url = serializers.CharField(read_only=True, required=False)
+    name = serializers.CharField(required=False)
+    mime = serializers.CharField(read_only=True, required=False)
+    hits = serializers.IntegerField(read_only=True, required=False)
+    hash = serializers.CharField(read_only=True, required=False)
+
+    class Meta:
+        model = Media
+        exclude = ()
 
 
 class MediaListSerializer(serializers.ListSerializer):

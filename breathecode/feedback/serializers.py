@@ -125,7 +125,7 @@ class SurveySerializer(serializers.ModelSerializer):
 
         reg = re.compile('^[0-9]{0,3}\s[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}$')
         if "duration" in data and data["duration"] < timezone.timedelta(hours=1):
-            raise ValidationException(f'Minimum duration for suveys is one hour')
+            raise ValidationException(f'Minimum duration for surveys is one hour')
 
         cohort_teacher = CohortUser.objects.filter(cohort=data["cohort"], role="TEACHER")
         if cohort_teacher.count() == 0:

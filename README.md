@@ -1,7 +1,7 @@
 # Setup & Installation
 
-1. Install redis, postgress, python 3.8+, node 14+ and pipenv (not pip but rather pipenv)
-2. Create enviroment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
+1. Install redis, postgress, python 3.8+ and node 14+
+2. Create environment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
 3. Make sure to get inside the environment: `pipenv shell`
 4. Install the dependencies including development packages: `pipenv install --dev`
 5. Run the migrations into your database `pipenv run migrate`
@@ -11,11 +11,11 @@
 # Setup & Installation with Docker
 
 1. Generate the Breathecode Docker image `pipenv run docker_build`
-2. Create enviroment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
+2. Create environment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
 3. Run containers with `docker-compose up -d`
 4. Make sure you can login into the django admin, you can create a login user with `docker-compose exec breathecode python manage.py createsuperuser`
 
-# Dumentation for BreatheCode API
+# Documentation for BreatheCode API
 
 [Read the docs](https://documenter.getpostman.com/view/2432393/T1LPC6ef)
 
