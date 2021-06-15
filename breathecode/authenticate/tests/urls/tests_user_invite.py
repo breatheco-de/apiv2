@@ -20,10 +20,10 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
         }
         model1 = self.generate_models(authenticate=True, profile_academy=True,
-                                      invite_kwargs=invite_kwargs, models=base)
+                                      user_invite_kwargs=invite_kwargs, models=base)
 
         model2 = self.generate_models(authenticate=True, profile_academy=True,
-                                      invite_kwargs=invite_kwargs, models=base)
+                                      user_invite_kwargs=invite_kwargs, models=base)
 
         url = reverse_lazy('authenticate:user_invite') + '?id=1,2'
         response = self.client.delete(url)

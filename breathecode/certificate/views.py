@@ -164,7 +164,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-    @ capable_of('crud_certificate')
+    @capable_of('crud_certificate')
     def delete(self, request, cohort_id=None, user_id=None, academy_id=None):
         lookups = self.generate_lookups(
             request,
@@ -180,10 +180,9 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
             items = UserSpecialty.objects.filter(
                 **lookups, academy__id=academy_id)
 
-            print(items)
             if len(items) == 0:
                 raise ValidationException(
-                    f"No user specialties for deletion were found with following id: {','.join(ids)}", code=400)
+                    f"No user specialties for deletion were found with following id: {','.join(ids)}", code=400, slug="specialties_not_found")
 
             for item in items:
                 item.delete()
