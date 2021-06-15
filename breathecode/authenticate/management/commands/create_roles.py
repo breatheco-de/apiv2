@@ -44,6 +44,8 @@ class Command(BaseCommand):
             { "slug": "crud_lead", "description": "Create, update or delete academy leads" },
             { "slug": "read_media", "description": "List all the medias" },
             { "slug": "crud_media", "description": "Create, update or delete academy medias" },
+            { "slug": "read_media_resolution", "description": "List all the medias resolutions" },
+            { "slug": "crud_media_resolution", "description": "Create, update or delete academy media resolutions" },
             { "slug": "read_cohort_activity", "description": "Read low level activity in a cohort (attendancy, etc.)" },
             { "slug": "generate_academy_token", "description": "Create a new token only to be used by the academy" },
             { "slug": "get_academy_token", "description": "Read the academy token" },
@@ -62,7 +64,7 @@ class Command(BaseCommand):
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
             { "slug": "academy_token", "name": "Academy Token", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite"] },
-            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "get_academy_token" ] },
+            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media","read_media_resolution", "read_my_academy", "read_invite", "get_academy_token" ] },
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort", "read_my_academy"] },
         ]
 
