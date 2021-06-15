@@ -206,7 +206,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
                 cert.save()
                 certs.append(cert)
             else:
-                raise ValidationException('There is no user specialty for this cohort', code=404, 
+                raise ValidationException('There is no certificate for this student and cohor', code=404, 
                     slug="no-user-specialty")
             generate_one_certificate.delay(cu.cohort_id, cu.user_id)
    

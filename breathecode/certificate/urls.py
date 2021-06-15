@@ -11,7 +11,6 @@ urlpatterns = [
     path('specialty', get_specialties),
     path('badge', get_badges),
     path('token/<str:token>/', get_certificate),
-    
     path('cohort/<int:cohort_id>/student/<int:student_id>', CertificateView.as_view()),
     path('cohort/<int:cohort_id>', CertificateCohortView.as_view(),  name="certificate_cohort"),
     path('', CertificateAcademyView.as_view(), name="root"),
