@@ -34,6 +34,34 @@ class AcademyCohortTestSuite(MarketingTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_googleads_data__with_entry_empty_gclid(self):
+        """Test /academy/cohort without auth"""
+        form_entry_kwargs = { 'deal_status': 'WON'}
+        model = self.generate_models(academy=True, form_entry=True,
+            form_entry_kwargs=form_entry_kwargs)
+
+        url = reverse_lazy('marketing:googleads_csv')
+        response = self.client.get(url)
+        expected = '\r\n'.join([
+            'Google Click ID,Conversion Name,Conversion Time\r\n'
+        ])
+
+        self.assertEqual(response.content.decode('utf-8'), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_googleads_data__with_entry_empty_values(self):
+        """Test /academy/cohort without auth"""
+        model = self.generate_models(academy=True, form_entry=True)
+
+        url = reverse_lazy('marketing:googleads_csv')
+        response = self.client.get(url)
+        expected = '\r\n'.join([
+            'Google Click ID,Conversion Name,Conversion Time\r\n'
+        ])
+
+        self.assertEqual(response.content.decode('utf-8'), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_googleads_data__with_entry_bad_deal_status(self):
         """Test /academy/cohort without auth"""
         form_entry_kwargs = {'gclid': 'D_BwE', 'deal_status': 'LOST'}

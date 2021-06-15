@@ -337,14 +337,17 @@ def googleads_csv(request):
         headers={'Content-Disposition': 'attachment; filename="googleads.csv"'},
     )
     form_entries = FormEntry.objects.all()
-    for entry in form_entries:
-        entry_gclid = entry.gclid[-3:]
 
-        if(entry_gclid == 'BwE' and entry.deal_status == "WON"):
-            gclid = entry.gclid
-            convertion_name = entry.tags
-            convertion_time = entry.created_at.strftime("%Y-%m-%d %H-%M-%S%z")
-            data.append([gclid, convertion_name, convertion_time])
+    for entry in form_entries:
+
+        if entry.gclid:
+            entry_gclid = entry.gclid[-3:]
+
+            if(entry_gclid == 'BwE' and entry.deal_status == "WON"):
+                gclid = entry.gclid
+                convertion_name = entry.tags
+                convertion_time = entry.created_at.strftime("%Y-%m-%d %H-%M-%S%z")
+                data.append([gclid, convertion_name, convertion_time])
 
     writer = csv.writer(response)
     writer.writerow(['Google Click ID','Conversion Name','Conversion Time'])
