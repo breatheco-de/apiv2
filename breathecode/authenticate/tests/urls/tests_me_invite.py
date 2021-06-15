@@ -10,6 +10,20 @@ from ..mixins.new_auth_test_case import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
 
+    def test_invite_change_status_without_auth(self):
+        """Test /academy/user/invite without auth"""
+        self.headers(academy=1)
+        url = reverse_lazy('authenticate:user_invite')
+
+        response = self.client.delete(url)
+        json = response.json()
+
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_invite_change_status_without_passing_ids(self):
         """Test academy/user/me/invite"""
         self.headers(academy=1)
@@ -52,7 +66,6 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         del response.json()[0]['created_at']
-        print(response.json())
         self.assertEqual(response.json(), [{
             'email': 'a@a.com',
             'first_name': None,
