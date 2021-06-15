@@ -1,4 +1,4 @@
-import os, datetime, logging
+import os, datetime, logging, csv
 from urllib import parse
 from rest_framework_csv.renderers import CSVRenderer
 from breathecode.renderers import PlainTextRenderer
@@ -56,7 +56,7 @@ def activecampaign_webhook(request, ac_academy_id=None, academy_slug=None):
         webhook = ActiveCampaign.add_webhook_to_log(request.data, academy_slug)
     else:
         raise APIException("Please specify a valid academy slug or id")
-        
+
     if webhook:
         async_activecampaign_webhook.delay(webhook.id)
     else:
@@ -329,3 +329,33 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             item.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+def googleads_csv(request):
+    data = []
+    response = HttpResponse(
+        content_type='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="googleads.csv"'},
+    )
+    form_entries = FormEntry.objects.all()
+
+    for entry in form_entries:
+
+        if entry.gclid:
+            entry_gclid = entry.gclid[-4:]
+
+            if(entry_gclid == '_BwE' and entry.deal_status == "WON"):
+                gclid = entry.gclid
+                convertion_name = entry.tags
+                convertion_time = entry.created_at.strftime("%Y-%m-%d %H-%M-%S%z")
+                data.append([gclid, convertion_name, convertion_time,None, None])
+
+    writer = csv.writer(response)
+    writer.writerow(['Google Click ID','Conversion Name','Conversion Time',
+     'Conversion Value', 'Conversion Currency'])
+
+    for d in data:
+        writer.writerow(d)
+
+    return response
+
+
