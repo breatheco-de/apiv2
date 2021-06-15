@@ -341,9 +341,9 @@ def googleads_csv(request):
     for entry in form_entries:
 
         if entry.gclid:
-            entry_gclid = entry.gclid[-3:]
+            entry_gclid = entry.gclid[-4:]
 
-            if(entry_gclid == 'BwE' and entry.deal_status == "WON"):
+            if(entry_gclid == '_BwE' and entry.deal_status == "WON"):
                 gclid = entry.gclid
                 convertion_name = entry.tags
                 convertion_time = entry.created_at.strftime("%Y-%m-%d %H-%M-%S%z")
