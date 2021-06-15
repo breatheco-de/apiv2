@@ -4,7 +4,7 @@ from .views import MediaView, CategoryView, UploadView, MaskingUrlView, Resoluti
 app_name='media'
 urlpatterns = [
     path('', MediaView.as_view(), name='root'),
-
+    path('info', MediaView.as_view(), name="info"),
     path('info/<int:media_id>', MediaView.as_view(), name='info_id'),
     path('info/<int:media_id>/resolution', ResolutionView.as_view(), name='info_id_resolution'),
     path('info/<slug:media_slug>', MediaView.as_view(), name='info_slug'),

@@ -101,11 +101,57 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('crud_media')
     def put(self, request, media_id=None, academy_id=None):
-        data = Media.objects.filter(id=media_id).first()
-        if not data:
-            raise ValidationException('Media not found', code=404)
+        many = isinstance(request.data, list)
+        context = {
+            'request': request,
+            'media_id': media_id,
+            'many': many,
+        }
 
-        serializer = MediaSerializer(data, data=request.data, many=False)
+        if media_id and not many:
+            current = Media.objects.filter(id=media_id).first()
+
+            if not current:
+                raise ValidationException('Media not found', code=404, slug='media-not-found')
+
+            if current.academy_id != int(academy_id):
+                raise ValidationException("You can't edit media belonging to other academies",
+                    slug="different-academy-media-put")
+
+        else:
+            current = []
+
+            if not request.data:
+                raise ValidationException(
+                    'Please input data to use request', slug='no-args')
+
+            for x in request.data:
+
+                if not 'categories' in x:
+                    raise ValidationException(
+                    'For bulk mode, please input category in the request',
+                        slug='categories-not-in-bulk')
+
+                if len(x) > 2:
+                    raise ValidationException('Bulk mode its only to edit categories, '
+                     + 'please change to single put for more', slug='extra-args-bulk-mode')
+
+                if not 'id' in x:
+                    raise ValidationException('Please input id in body for bulk mode',
+                        slug='id-not-in-bulk')
+
+                media = Media.objects.filter(id=x['id']).first()
+                if not media:
+                    raise ValidationException('Media not found', code=404, slug='media-not-found')
+
+                if media.academy_id != int(academy_id):
+                    raise ValidationException("You can't edit media belonging to other academies",
+                    slug="different-academy-media-put")
+
+                current.append(media)
+
+        serializer = MediaSerializer(current, data=request.data,
+                                   context=context, many=many)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
