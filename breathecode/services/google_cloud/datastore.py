@@ -1,5 +1,7 @@
 import logging
+
 from google.cloud import datastore
+
 from .credentials import resolve_credentials
 
 logger = logging.getLogger(__name__)
@@ -13,7 +15,7 @@ class Datastore:
         resolve_credentials()
         self.client = datastore.Client()
 
-    def fetch(self, **kwargs):
+    def fetch(self, order_by=None, **kwargs):
         """Get Fetch object
 
         Args:
@@ -22,7 +24,12 @@ class Datastore:
         Returns:
             Fetch: Fetch object
         """
-        return self.client.query(**kwargs).fetch()
+        query = self.client.query(**kwargs)
+
+        if order_by:
+            query.order = order_by
+
+        return query.fetch()
 
     def update(self, key: str, data: dict):
         """Get Fetch object
@@ -35,3 +42,4 @@ class Datastore:
         """
         entity = datastore.Entity(self.client.key(key))
         entity.update(data)
+        self.client.put(entity)

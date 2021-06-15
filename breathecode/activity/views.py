@@ -1,13 +1,18 @@
-from .utils import resolve_google_credentials, check_params
+from django.contrib.auth.models import User
+from django.db.models import Q
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from google.cloud import datastore
-from rest_framework import status
-from django.db.models import Q
+
 from breathecode.admissions.models import Cohort
-from breathecode.utils import capable_of, ValidationException
-from breathecode.services.google_cloud.datastore import Datastore
-from breathecode.services.google_cloud import Datastore
+from breathecode.utils import ValidationException, capable_of
+
+from .utils import (generate_created_at, validate_activity_fields,
+                    validate_activity_have_correct_data_field,
+                    validate_if_activity_need_field_cohort,
+                    validate_if_activity_need_field_data,
+                    validate_require_activity_fields)
+
 # Create your views here.
 
 # DOCUMENTATION RESOURCES
@@ -15,114 +20,138 @@ from breathecode.services.google_cloud import Datastore
 # https://cloud.google.com/datastore/docs/concepts/entities
 # https://googleapis.dev/python/datastore/latest/index.html
 
+ACTIVITIES = {
+    "breathecode_login": 'Every time it logs in',
+    "online_platform_registration": 'First day using breathecode',
+    "public_event_attendance": 'Attendy on an eventbrite event',
+    "classroom_attendance": 'When the student attent to class',
+    "classroom_unattendance": 'When the student miss class',
+    "lesson_opened": 'When a lessons is opened on the platform',
+    "office_attendance": 'When the office raspberry pi detects the student',
+    "nps_survey_answered": 'When a nps survey is answered by the student',
+    "exercise_success": 'When student successfuly tests exercise',
+    "academy_registration": 'When student successfuly join to academy',
+}
+
+ACTIVITY_PUBLIC_SLUGS = [
+    'breathecode_login',
+    'online_platform_registration',
+]
+
+
+class ActivityTypeView(APIView):
+    def get_activity_object(self, slug):
+        return {'slug': slug, 'description': ACTIVITIES[slug]}
+
+    @capable_of('read_activity')
+    def get(self, request, activity_slug=None, academy_id=None):
+        if activity_slug:
+            if activity_slug not in ACTIVITIES:
+                raise ValidationException(
+                    'Activity type not found',
+                    slug='activity_not_found')
+
+            res = self.get_activity_object(activity_slug)
+            return Response(res)
+
+        res = [self.get_activity_object(slug) for slug in ACTIVITIES.keys()]
+        return Response(res)
+
 
 class ActivityView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
+    @capable_of('read_activity')
+    def get(self, request, academy_id=None):
+        from breathecode.services.google_cloud import Datastore
 
-    def get(self, request, format=None):
-        # datastore = Datastore()
-        # return datastore.fetch(kind='nps_answer')
+        kwargs = {'kind': 'student_activity'}
 
-        resolve_google_credentials()
-        client = datastore.Client()
-        query = client.query(kind='nps_answer')
-        query_iter = query.fetch()
+        slug = request.GET.get('slug')
+        if slug:
+            kwargs['slug'] = slug
 
-        return Response(query_iter)
+        if slug and slug not in ACTIVITIES:
+            raise ValidationException(
+                'Activity type not found',
+                slug='activity-not-found')
 
-    def post(self, request, format=None):
-        resolve_google_credentials()
+        cohort = request.GET.get('cohort')
+        if cohort:
+            kwargs['cohort'] = cohort
 
-        answer_dict = request.data
+        if (cohort and not Cohort.objects.filter(
+                slug=cohort,
+                academy__id=academy_id).exists()):
+            raise ValidationException(
+                'Cohort not found',
+                slug='cohort-not-found')
 
-        check_params(answer_dict, 'comment', 'score', 'user_id')
+        user_id = request.GET.get('user_id')
+        if user_id:
+            try:
+                kwargs['user_id'] = int(user_id)
+            except ValueError:
+                raise ValidationException(
+                    'user_id is not a interger',
+                    slug='bad-user-id')
 
-        client = datastore.Client()
-        entity = datastore.Entity(client.key('nps_answer'))
-        entity.update({
-            'comment': 'Personal',
-            'score': False,
-            'user_id': 4,
-            'certificate': answer_dict['certificate'] if 'certificate' in answer_dict else None,
-            'academy': answer_dict['academy'] if 'academy' in answer_dict else None,
-            'cohort': answer_dict['cohort'] if 'cohort' in answer_dict else None,
-            'mentor': answer_dict['mentor'] if 'mentor' in answer_dict else None
-        })
-        client.put(entity)
+        email = request.GET.get('email')
+        if email:
+            kwargs['email'] = email
 
-        return Response(answer_dict, status=status.HTTP_201_CREATED)
-
-        # answer_dict=request.data
-        # check_params(answer_dict, 'comment', 'score', 'user_id')
-
-        # datastore = Datastore()
-        # datastore.update('nps_answer', {
-        #     'comment': 'Personal',
-        #     'score': False,
-        #     'user_id': 4,
-        #     'certificate': answer_dict['certificate'] if 'certificate' in answer_dict else None,
-        #     'academy': answer_dict['academy'] if 'academy' in answer_dict else None,
-        #     'cohort': answer_dict['cohort'] if 'cohort' in answer_dict else None,
-        #     'mentor': answer_dict['mentor'] if 'mentor' in answer_dict else None
-        # })
-
-        # return Response(answer_dict, status=status.HTTP_201_CREATED)
-
-
-class CohortActivityView(APIView):
-    """
-    List all snippets, or create a new snippet.
-    """
-
-    @capable_of('read_cohort_activity')
-    def get(self, request, cohort_slug=None, academy_id=None, format=None):
-
-        cohort = Cohort.objects.filter(
-            Q(slug=cohort_slug) | Q(id=cohort_slug)).first()
-        if cohort is None:
-            raise ValidationException("Cohort slug or id not found")
+        user = User.objects.filter(Q(id=user_id) | Q(email=email))
+        if (user_id or email) and not user:
+            raise ValidationException(
+                'User not exists',
+                slug='user-not-exists')
 
         datastore = Datastore()
-        query_iter = datastore.fetch(kind='student_activity')
+        academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
+        public_iter = datastore.fetch(**kwargs, academy_id=0)
+
+        query_iter = academy_iter + public_iter
+        query_iter.sort(key=lambda x: x['created_at'], reverse=True)
 
         return Response(query_iter)
 
-    def post(self, request, format=None):
-        resolve_google_credentials()
 
-        answer_dict = request.data
+class UserActivityView(APIView):
+    @capable_of('crud_activity')
+    def post(self, request, user_id=None, email=None, academy_id=None):
+        from breathecode.services import Datastore
 
-        check_params(answer_dict, 'comment', 'score', 'user_id')
+        data = request.data
 
-        client = datastore.Client()
-        entity = datastore.Entity(client.key('nps_answer'))
-        entity.update({
-            'comment': 'Personal',
-            'score': False,
-            'user_id': 4,
-            'certificate': answer_dict['certificate'] if 'certificate' in answer_dict else None,
-            'academy': answer_dict['academy'] if 'academy' in answer_dict else None,
-            'cohort': answer_dict['cohort'] if 'cohort' in answer_dict else None,
-            'mentor': answer_dict['mentor'] if 'mentor' in answer_dict else None
-        })
-        client.put(entity)
+        validate_activity_fields(data)
+        validate_require_activity_fields(data)
 
-        return Response(answer_dict, status=status.HTTP_201_CREATED)
+        slug = data['slug']
+        academy_id = academy_id if slug not in ACTIVITY_PUBLIC_SLUGS else 0
 
-        # answer_dict=request.data
-        # check_params(answer_dict, 'comment', 'score', 'user_id')
+        if slug not in ACTIVITIES:
+            raise ValidationException(
+                'Activity type not found',
+                slug='activity-not-found')
 
-        # datastore = Datastore()
-        # datastore.update('nps_answer', {
-        #     'comment': 'Personal',
-        #     'score': False,
-        #     'user_id': 4,
-        #     'certificate': answer_dict['certificate'] if 'certificate' in answer_dict else None,
-        #     'academy': answer_dict['academy'] if 'academy' in answer_dict else None,
-        #     'cohort': answer_dict['cohort'] if 'cohort' in answer_dict else None,
-        #     'mentor': answer_dict['mentor'] if 'mentor' in answer_dict else None
-        # })
+        validate_if_activity_need_field_cohort(data)
+        validate_if_activity_need_field_data(data)
+        validate_activity_have_correct_data_field(data)
 
-        # return Response(answer_dict, status=status.HTTP_201_CREATED)
+        user = User.objects.filter(Q(id=user_id) | Q(email=email)).first()
+        if not user:
+            raise ValidationException(
+                'User not exists',
+                slug='user-not-exists')
+
+        fields = {
+            **data,
+            'created_at': generate_created_at(),
+            'slug': slug,
+            'user_id': user.id,
+            'email': user.email,
+            'academy_id': academy_id,
+        }
+
+        datastore = Datastore()
+        datastore.update('student_activity', fields)
+
+        return Response(fields, status=status.HTTP_201_CREATED)

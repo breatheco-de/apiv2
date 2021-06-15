@@ -1,10 +1,11 @@
-from django.contrib import admin
-from django.urls import path, include
-from .views import ActivityView, CohortActivityView
+from django.urls import path
 
-app_name='activity'
+from .views import ActivityTypeView, ActivityView, UserActivityView
+
+app_name = 'activity'
 urlpatterns = [
-    path('activity/', ActivityView.as_view()),
-    path('cohort/<str:cohort_slug>', CohortActivityView.as_view()),
+    path('', ActivityView.as_view(), name='root'),
+    path('type/', ActivityTypeView.as_view(), name='type'),
+    path('user/<int:user_id>', UserActivityView.as_view(), name='user_id'),
+    path('user/<str:email>', UserActivityView.as_view(), name='user_email'),
 ]
-
