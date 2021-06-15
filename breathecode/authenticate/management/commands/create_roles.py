@@ -19,6 +19,7 @@ class Command(BaseCommand):
 
         # Here is a list of all the current capabilities in the system
         caps = [
+            { "slug": "leer_mi_perfil", "description": "Read your academy information" },
             { "slug": "read_my_academy", "description": "Read your academy information" },
             { "slug": "crud_my_academy", "description": "Read, or update your academy information (very high level, almost the academy admin)" },
             { "slug": "crud_member", "description": "Create, update or delete academy members (very high level, almost the academy admin)" },
@@ -44,6 +45,8 @@ class Command(BaseCommand):
             { "slug": "crud_lead", "description": "Create, update or delete academy leads" },
             { "slug": "read_media", "description": "List all the medias" },
             { "slug": "crud_media", "description": "Create, update or delete academy medias" },
+            { "slug": "read_media_resolution", "description": "List all the medias resolutions" },
+            { "slug": "crud_media_resolution", "description": "Create, update or delete academy media resolutions" },
             { "slug": "read_cohort_activity", "description": "Read low level activity in a cohort (attendancy, etc.)" },
             { "slug": "generate_academy_token", "description": "Create a new token only to be used by the academy" },
             { "slug": "get_academy_token", "description": "Read the academy token" },
