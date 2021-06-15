@@ -41,18 +41,6 @@ class GetMediaSerializer(serpy.Serializer):
         return [GetCategorySerializer(x).data for x in obj.categories.all()]
 
 
-class MediaSerializer(serializers.ModelSerializer):
-    url = serializers.CharField(read_only=True, required=False)
-    name = serializers.CharField(required=False)
-    mime = serializers.CharField(read_only=True, required=False)
-    hits = serializers.IntegerField(read_only=True, required=False)
-    hash = serializers.CharField(read_only=True, required=False)
-
-    class Meta:
-        model = Media
-        exclude = ()
-
-
 class MediaListSerializer(serializers.ListSerializer):
     def update(self, instance, validated_data):
         ret = []
@@ -74,6 +62,22 @@ class MediaListSerializer(serializers.ListSerializer):
                 ret.append(self.child.create(data))
 
         return ret
+
+class MediaSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+    url = serializers.CharField(read_only=True, required=False)
+    name = serializers.CharField(required=False)
+    mime = serializers.CharField(read_only=True, required=False)
+    hits = serializers.IntegerField(read_only=True, required=False)
+    hash = serializers.CharField(read_only=True, required=False)
+    slug = serializers.SlugField(required=False)
+
+    class Meta:
+        model = Media
+        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime', 'name',
+            'categories', 'academy')
+        exclude = ()
+        list_serializer_class = MediaListSerializer
 
 
 class MediaPUTSerializer(serializers.ModelSerializer):
