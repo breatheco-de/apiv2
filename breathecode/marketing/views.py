@@ -330,27 +330,28 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-class GoogleAdsCsvView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+def googleads_csv(request):
+    data = []
+    response = HttpResponse(
+        content_type='text/csv',
+        headers={'Content-Disposition': 'attachment; filename="googleads.csv"'},
+    )
+    form_entries = FormEntry.objects.all()
+    for entry in form_entries:
+        entry_gclid = entry.gclid[-3:]
 
-    @capable_of('read_lead')
-    def get(self, request):
-        data = []
-        form_entries = FormEntry.objects.all()
-        for entry in form_entries:
-            entry_gclid = entry.gclid[-3:]
+        if(entry_gclid == 'BwE' and entry.deal_status == "WON"):
+            gclid = entry.gclid
+            convertion_name = entry.tags
+            convertion_time = entry.created_at.strftime("%Y-%m-%d %H-%M-%S%z")
+            data.append([gclid, convertion_name, convertion_time])
 
-            if(entry_gclid == 'BwE' and entry.deal_status == "WON"):
-                gclid = entry.gclid
-                convertion_name = entry.tags
-                convertion_time = entry.created_at
-                data.append([gclid, convertion_name, convertion_time])
+    writer = csv.writer(response)
+    writer.writerow(['Google Click ID','Conversion Name','Conversion Time'])
 
-        returns_path = "breathecode\marketing\googleads.csv"
-        file = open(returns_path, 'w')
-        writer = csv.writer(file)
-        writer.writerow(['Google Click ID','Conversion Name','Conversion Time'])
+    for d in data:
+        writer.writerow(d)
 
-        for d in data:
-            writer.writerow(d)
+    return response
 
 
