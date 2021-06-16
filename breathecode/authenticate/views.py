@@ -144,6 +144,8 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if is_many and status is not None:
             items = items.filter(status__iexact=status)
 
+        items = items.exclude(user__email__contains="@token.com")
+
         if not is_many:
             items = items.first()
 
@@ -463,6 +465,8 @@ def get_users(request):
         query = query.filter(Q(first_name__icontains=like) | Q(
             last_name__icontains=like) | Q(email__icontains=like))
 
+
+    query = query.exclude(email__contains="@token.com")
     query = query.order_by('-date_joined')
     users = UserSmallSerializer(query, many=True)
     return Response(users.data)
