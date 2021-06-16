@@ -1,4 +1,4 @@
-import os, datetime, logging, csv
+import os, datetime, logging, csv, pytz
 from urllib import parse
 from rest_framework_csv.renderers import CSVRenderer
 from breathecode.renderers import PlainTextRenderer
@@ -366,7 +366,11 @@ def googleads_csv(request):
             if(entry_gclid == '_BwE' and entry.deal_status == "WON"):
                 gclid = entry.gclid
                 convertion_name = entry.tags
-                convertion_time = entry.created_at.strftime("%Y-%m-%d %H-%M-%S%z")
+
+                timezone = pytz.timezone("US/Eastern")
+                convertion_time = entry.created_at.astimezone(timezone)
+                convertion_time = convertion_time.strftime("%Y-%m-%d %H-%M-%S%z")
+
                 data.append([gclid, convertion_name, convertion_time,None, None])
 
     writer = csv.writer(response)
