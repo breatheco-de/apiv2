@@ -18,6 +18,36 @@ from ..mixins.new_certificate_test_case import CertificateTestCase
 class CertificateTestSuite(CertificateTestCase):
     """Test '' """
 
+    def test_delete_certificate_in_bulk_without_auth(self):
+        url = reverse_lazy('certificate:certificate_academy') + '?id=1,2'
+        response = self.client.delete(url)
+        json = response.json()
+
+        self.assertEqual(json, {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': status.HTTP_401_UNAUTHORIZED
+        })
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_certificate_in_bulk_wrong_academy(self):
+        self.headers(academy=1)
+        url = reverse_lazy('certificate:certificate_academy') + '?id=1,2'
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_certificate_in_bulk_without_capability(self):
+        self.headers(academy=1)
+        base = self.generate_models(
+            authenticate=True, )
+        url = reverse_lazy('certificate:certificate_academy') + '?id=1,2'
+        response = self.client.delete(url)
+        json = response.json()
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: crud_certificate for academy 1",
+            'status_code': 403,
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())

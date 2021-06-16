@@ -11,9 +11,7 @@ from ..mixins.new_auth_test_case import AuthTestCase
 class AuthenticateTestSuite(AuthTestCase):
     def test_invite_delete_in_bulk_without_auth(self):
         """Test /academy/user/invite without auth"""
-        self.headers(academy=1)
         url = reverse_lazy('authenticate:user_invite')
-
         response = self.client.delete(url)
         json = response.json()
 
@@ -22,6 +20,25 @@ class AuthenticateTestSuite(AuthTestCase):
             'status_code': status.HTTP_401_UNAUTHORIZED
         })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_invite_delete_in_bulk_wrong_academy(self):
+        self.headers(academy=1)
+        url = reverse_lazy('authenticate:user_invite')
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_invite_delete_in_bulk_without_capability(self):
+        self.headers(academy=1)
+        base = self.generate_models(
+            authenticate=True, )
+        url = reverse_lazy('authenticate:user_invite')
+        response = self.client.delete(url)
+        json = response.json()
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: crud_invite for academy 1",
+            'status_code': 403,
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_invite_delete_in_bulk_with_two_invites(self):
         """Test /academy/user/invite with two invites"""
