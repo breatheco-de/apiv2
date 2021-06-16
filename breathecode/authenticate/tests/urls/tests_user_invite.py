@@ -28,7 +28,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.headers(academy=1)
 
         base = self.generate_models(
-            academy=True, capability='read_invite', authenticate=True, role='potato')
+            academy=True, capability='crud_invite', authenticate=True, role='potato')
 
         invite_kwargs = {
             'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
@@ -56,7 +56,7 @@ class AuthenticateTestSuite(AuthTestCase):
         slug = "missing_ids"
 
         model = self.generate_models(
-            academy=True, capability='read_invite', authenticate=True, role='potato', user_invite_kwargs=invite_kwargs, profile_academy=True)
+            academy=True, capability='crud_invite', authenticate=True, role='potato', user_invite_kwargs=invite_kwargs, profile_academy=True)
 
         url = reverse_lazy('authenticate:user_invite')
 

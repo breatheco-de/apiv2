@@ -35,7 +35,7 @@ class AuthenticateTestSuite(AuthTestCase):
         slug = "missing_ids"
 
         model = self.generate_models(
-            academy=True, capability='read_invite', authenticate=True, role='potato', invite_kwargs=invite_kwargs, profile_academy=True)
+            academy=True, capability='crud_invite', authenticate=True, role='potato', invite_kwargs=invite_kwargs, profile_academy=True)
 
         url = reverse_lazy('authenticate:user_me_invite')
 
@@ -49,7 +49,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test academy/user/me/invite"""
         self.headers(academy=1)
         base = self.generate_models(
-            academy=True, capability='read_invite', authenticate=True, role='potato',
+            academy=True, capability='crud_invite', authenticate=True, role='potato',
             user_kwargs={'email': 'a@a.com'})
 
         invite_kwargs = {
@@ -65,8 +65,8 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.put(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        del response.json()[0]['created_at']
         self.assertEqual(response.json(), [{
+            'created_at': self.datetime_to_iso(model1['user_invite'].created_at),
             'email': 'a@a.com',
             'first_name': None,
             'id': 1,
@@ -75,13 +75,26 @@ class AuthenticateTestSuite(AuthTestCase):
             'sent_at': None,
             'status': 'ACCEPTED',
             'token': model1['user_invite'].token}])
+        self.assertEqual(self.all_user_invite_dict(), [{
+            'academy_id': 1,
+            'author_id': 1,
+            'cohort_id': 1,
+            'email': 'a@a.com',
+            'first_name': None,
+            'id': 1,
+            'last_name': None,
+            'phone': '',
+            'role_id': 'potato',
+            'sent_at': None,
+            'status': 'ACCEPTED',
+            'token': model1['user_invite'].token}])
 
-    def test_invite_change_status_to_accepted_invitation_no_match_user(self):
+    def test_invite_change_status_to_accepted_invitations_not_matched(self):
         """Test academy/user/me/invite"""
         self.headers(academy=1)
 
         base = self.generate_models(
-            academy=True, capability='read_invite', authenticate=True, role='potato', user_kwards={'email': 'a@a.com'})
+            academy=True, capability='crud_invite', authenticate=True, role='potato', user_kwards={'email': 'a@a.com'})
 
         invite_kwargs = {
             'status': "ACCEPTED",

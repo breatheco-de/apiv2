@@ -171,12 +171,17 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
             many_fields=['id']
         )
 
-        ids = lookups['id__in']
+        try:
+            ids = lookups['id__in']
+        except:
+            raise ValidationException(
+                "User specialties ids were not provided", 404, slug="missing_ids")
+
         if lookups and (user_id or cohort_id):
             raise ValidationException('user_id or cohort_id was provided in url '
                                       'in bulk mode request, use querystring style instead', code=400)
 
-        if lookups:
+        elif lookups:
             items = UserSpecialty.objects.filter(
                 **lookups, academy__id=academy_id)
 

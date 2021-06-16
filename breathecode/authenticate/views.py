@@ -234,6 +234,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
 
+    # @capable_of('crud_invite')
     def put(self, request):
         lookups = self.generate_lookups(
             request,
@@ -284,7 +285,7 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
 
-    @capable_of('read_invite')
+    @capable_of('crud_invite')
     def delete(self, request, academy_id=None):
         lookups = self.generate_lookups(
             request,
