@@ -37,14 +37,24 @@ class GetAssessmentView(APIView):
     def get(self, request, assessment_slug=None):
 
         if assessment_slug is not None:
+            lang = None
+            if 'lang' in self.request.GET:
+                lang = self.request.GET.get('lang')
+
             item = Assessment.objects.filter(slug=assessment_slug).first()
             if item is None:
                 raise ValidationException("Assessment not found", 404)
+
+            if lang is not None and item.lang != lang:
+                item = item.translations.filter(lang=lang).first()
+                if item is None:
+                    raise ValidationException(f"Language '{lang}' not found for assesment {assessment_slug}", 404)
 
             serializer = GetAssessmentBigSerializer(item, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         
+        # get original all assessments (assessments that have no parent)
         items = Assessment.objects.all()
         lookup = {}
 
@@ -55,6 +65,8 @@ class GetAssessmentView(APIView):
         if 'lang' in self.request.GET:
             param = self.request.GET.get('lang')
             lookup['lang'] = param
+        else:
+            items = items.filter(original=None)
 
         if 'author' in self.request.GET:
             param = self.request.GET.get('author')
