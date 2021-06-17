@@ -108,7 +108,7 @@ MIDDLEWARE = [
     
     'breathecode.utils.admin_timezone.TimezoneMiddleware',
 
-    # ⬇ Rollber is always last please!
+    # ⬇ Rollbar is always last please!
     # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',
 ]
 
