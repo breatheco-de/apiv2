@@ -8,6 +8,8 @@ from breathecode.notify.actions import get_template_content
 from rest_framework.test import APITestCase
 from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin, DatetimeMixin
 from breathecode.feedback.actions import strings
+from breathecode.marketing.serializers import FormEntrySerializer
+from breathecode.marketing.models import FormEntry
 
 class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         TokenMixin, GenerateQueriesMixin, DatetimeMixin):
@@ -96,3 +98,8 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
                 }
             )
         ])
+
+    def full_form_entry_dict(self):
+        all_form_entry = FormEntry.objects.all()
+        all_form_entry_dict = FormEntrySerializer(all_form_entry, many=True)
+        return  all_form_entry_dict.data
