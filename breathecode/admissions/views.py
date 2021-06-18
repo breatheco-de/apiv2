@@ -811,7 +811,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         cohort.stage = DELETED
         cohort.save()
-        
+
         self.cache.clear()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 

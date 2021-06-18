@@ -17,7 +17,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
+        # Here is a list of all the current capabilities in the system
         caps = [
+            { "slug": "leer_mi_perfil", "description": "Read your academy information" },
             { "slug": "read_my_academy", "description": "Read your academy information" },
             { "slug": "crud_my_academy", "description": "Read, or update your academy information (very high level, almost the academy admin)" },
             { "slug": "crud_member", "description": "Create, update or delete academy members (very high level, almost the academy admin)" },
@@ -43,6 +45,8 @@ class Command(BaseCommand):
             { "slug": "crud_lead", "description": "Create, update or delete academy leads" },
             { "slug": "read_media", "description": "List all the medias" },
             { "slug": "crud_media", "description": "Create, update or delete academy medias" },
+            { "slug": "read_media_resolution", "description": "List all the medias resolutions" },
+            { "slug": "crud_media_resolution", "description": "Create, update or delete academy media resolutions" },
             { "slug": "read_cohort_activity", "description": "Read low level activity in a cohort (attendancy, etc.)" },
             { "slug": "generate_academy_token", "description": "Create a new token only to be used by the academy" },
             { "slug": "get_academy_token", "description": "Read the academy token" },
@@ -58,13 +62,16 @@ class Command(BaseCommand):
                 _cap.description = c["description"]
                 _cap.save()
 
+        # These are the MAIN roles, they cannot be deleted by anyone at the academy.
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
-            { "slug": "academy_token", "name": "Academy Token", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite"] },
+            { "slug": "academy_token", "name": "Academy Token", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "read_lead", "crud_lead"] },
             { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "get_academy_token" ] },
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort", "read_my_academy"] },
         ]
 
+        # These are additional roles that extend from the base roles above, 
+        # you can exend from more than one role but also add additional capabilitis at the end
         roles.append({ "slug": "assistant", "name": "Teacher Assistant", "caps": extend(roles, ["staff"]) + ["read_assigment", "crud_assignment", "read_cohort_activity", "read_nps_answers"] })
         roles.append({ "slug": "career_support", "name": "Career Support Specialist", "caps": extend(roles, ["staff"]) + ["read_certificate", "crud_certificate"] })
         roles.append({ "slug": "admissions_developer", "name": "Admissions Developer", "caps": extend(roles, ["staff"]) + ["crud_lead","crud_student","crud_cohort", "read_cohort","read_lead", "read_event", "read_eventcheckin"] })

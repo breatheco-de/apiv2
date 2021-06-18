@@ -17,4 +17,9 @@ urlpatterns = [
     path('cohort/<int:cohort_id>', CertificateCohortView.as_view(),
          name="certificate_cohort"),
     path('', CertificateAcademyView.as_view(), name='certificate_academy'),
+    path('cohort/<int:cohort_id>/student/<int:student_id>',
+         CertificateView.as_view()),
+    path('cohort/<int:cohort_id>', CertificateCohortView.as_view(),
+         name="certificate_cohort"),
+    path('', CertificateAcademyView.as_view(), name="root"),
 ]

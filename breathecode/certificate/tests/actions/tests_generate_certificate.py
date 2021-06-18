@@ -146,10 +146,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_bad_student_finantial_status(self):
+    def test_generate_certificate_with_bad_student_financial_status(self):
         """
         Step 7
-        Tests generate_certificate with bad student finantial status
+        Tests generate_certificate with bad student financial status
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
