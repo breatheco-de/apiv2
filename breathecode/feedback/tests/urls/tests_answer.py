@@ -834,66 +834,67 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_query_like_full_name(self):
         """Test /answer with like full name"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, 
+        base = self.generate_models(authenticate=True, profile_academy=True, 
             capability='read_nps_answers', role='potato')
-        profile_academy_kwargs = {
+        del base['user']
+        user_kwargs = {
                 'email':  'b@b.com',
                 'first_name': 'Rene',
                 'last_name': 'Descartes',
-                'status': "INVITED"
             }
-        model = self.generate_models(user=True, cohort=True, answer=True, profile_academy=True, user_kwargs=profile_academy_kwargs, 
-            models=base)
-        db = self.model_to_dict(model, 'answer')
-        
-        first_name = model['user'].first_name
-        last_name = model['user'].last_name
+        user_kwargs_2 = {
+                'email': 'a@a.com',
+                'first_name': 'Reinaldo',
+                'last_name': 'Descarado',
+            }
+        models = [
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs, models=base),
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs_2, models=base),
+        ]
+
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?like=Rene Descartes'
 
         response = self.client.get(url)
         json = response.json()
 
-        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+        expected = [
+            {
+                'created_at': self.datetime_to_iso(models[0].answer.created_at),
+                'academy': {
+                    'id': models[0].answer.academy.id,
+                    'name': models[0].answer.academy.name,
+                    'slug': models[0].answer.academy.slug,
+                },
+                'cohort': {
+                    'id': models[0].cohort.id,
+                    'name': models[0].cohort.name,
+                    'slug': models[0].cohort.slug,
+                },
+                'comment': models[0].answer.comment,
+                'event': models[0].answer.event,
+                'highest': models[0].answer.highest,
+                'id': models[0].answer.id,
+                'lang': models[0].answer.lang,
+                'lowest': models[0].answer.lowest,
+                'mentor': {
+                    'first_name':  models[0].answer.mentor.first_name,
+                    'id':  models[0].answer.mentor.id,
+                    'last_name':  models[0].answer.mentor.last_name,
+                },
+                'score': models[0].answer.score,
+                'status': models[0].answer.status,
+                'title': models[0].answer.title,
+                'user': {
+                    'first_name': 'Rene',
+                    'id': 2,
+                    'last_name': 'Descartes',
+                },
+            }
+        ]
 
-        print("WWWWWWWWWw", json)
-        print("WWWWWWWWWw", url)
-
-        self.assertEqual(json, [{
-            'created_at': None,
-            'academy': {
-                'id': model['answer'].academy.id,
-                'name': model['answer'].academy.name,
-                'slug': model['answer'].academy.slug,
-            },
-            'cohort': {
-                'id': model['cohort'].id,
-                'name': model['cohort'].name,
-                'slug': model['cohort'].slug,
-            },
-            'comment': model['answer'].comment,
-            'event': model['answer'].event,
-            'highest': model['answer'].highest,
-            'id': model['answer'].id,
-            'lang': model['answer'].lang,
-            'lowest': model['answer'].lowest,
-            'mentor': {
-                'first_name':  model['answer'].mentor.first_name,
-                'id':  model['answer'].mentor.id,
-                'last_name':  model['answer'].mentor.last_name,
-            },
-            # 'score': model['answer'].score,
-            # 'status': model['answer'].status,
-            # 'title': model['answer'].title,
-            'user': {
-                'first_name': model['user'].first_name,
-                'id': model['user'].id,
-                'last_name': model['user'].last_name,
-            },
-        }])
-
+        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -901,54 +902,66 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_query_like_first_name(self):
         """Test /answer with like first name"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, cohort=True, answer=True, profile_academy=True,
+        base = self.generate_models(authenticate=True, profile_academy=True, 
             capability='read_nps_answers', role='potato')
-        db = self.model_to_dict(model, 'answer')
-        
-        first_name = model['user'].first_name
+        del base['user']
+        user_kwargs = {
+                'email':  'b@b.com',
+                'first_name': 'Rene',
+                'last_name': 'Descartes',
+            }
+        user_kwargs_2 = {
+                'email': 'a@a.com',
+                'first_name': 'Reinaldo',
+                'last_name': 'Descarado',
+            }
+        models = [
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs, models=base),
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs_2, models=base),
+        ]
         base_url = reverse_lazy('feedback:answer')
-        url = f'{base_url}?{first_name}'
-        
+        url = f'{base_url}?like=Rene'
+
         response = self.client.get(url)
         json = response.json()
 
-        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+        expected = [
+            {
+                'created_at': self.datetime_to_iso(models[0].answer.created_at),
+                'academy': {
+                    'id': models[0].answer.academy.id,
+                    'name': models[0].answer.academy.name,
+                    'slug': models[0].answer.academy.slug,
+                },
+                'cohort': {
+                    'id': models[0].cohort.id,
+                    'name': models[0].cohort.name,
+                    'slug': models[0].cohort.slug,
+                },
+                'comment': models[0].answer.comment,
+                'event': models[0].answer.event,
+                'highest': models[0].answer.highest,
+                'id': models[0].answer.id,
+                'lang': models[0].answer.lang,
+                'lowest': models[0].answer.lowest,
+                'mentor': {
+                    'first_name':  models[0].answer.mentor.first_name,
+                    'id':  models[0].answer.mentor.id,
+                    'last_name':  models[0].answer.mentor.last_name,
+                },
+                'score': models[0].answer.score,
+                'status': models[0].answer.status,
+                'title': models[0].answer.title,
+                'user': {
+                    'first_name': 'Rene',
+                    'id': 2,
+                    'last_name': 'Descartes',
+                },
+            }
+        ]
 
-        self.assertEqual(json, [{
-            'created_at': None,
-            'academy': {
-                'id': model['answer'].academy.id,
-                'name': model['answer'].academy.name,
-                'slug': model['answer'].academy.slug,
-            },
-            'cohort': {
-                'id': model['cohort'].id,
-                'name': model['cohort'].name,
-                'slug': model['cohort'].slug,
-            },
-            'comment': model['answer'].comment,
-            'event': model['answer'].event,
-            'highest': model['answer'].highest,
-            'id': model['answer'].id,
-            'lang': model['answer'].lang,
-            'lowest': model['answer'].lowest,
-            'mentor': {
-                'first_name':  model['answer'].mentor.first_name,
-                'id':  model['answer'].mentor.id,
-                'last_name':  model['answer'].mentor.last_name,
-            },
-            'score': model['answer'].score,
-            'status': model['answer'].status,
-            'title': model['answer'].title,
-            'user': {
-                'first_name': model['user'].first_name,
-                'id': model['user'].id,
-                'last_name': model['user'].last_name,
-            },
-        }])
-
+        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -956,54 +969,66 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_query_like_last_name(self):
         """Test /answer with like last name"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, cohort=True, answer=True, profile_academy=True,
+        base = self.generate_models(authenticate=True, profile_academy=True, 
             capability='read_nps_answers', role='potato')
-        db = self.model_to_dict(model, 'answer')
-        
-        last_name = model['user'].last_name
+        del base['user']
+        user_kwargs = {
+                'email':  'b@b.com',
+                'first_name': 'Rene',
+                'last_name': 'Descartes',
+            }
+        user_kwargs_2 = {
+                'email': 'a@a.com',
+                'first_name': 'Reinaldo',
+                'last_name': 'Descarado',
+            }
+        models = [
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs, models=base),
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs_2, models=base),
+        ]
         base_url = reverse_lazy('feedback:answer')
-        url = f'{base_url}?{last_name}'
-        
+        url = f'{base_url}?like=Descartes'
+
         response = self.client.get(url)
         json = response.json()
 
-        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+        expected = [
+            {
+                'created_at': self.datetime_to_iso(models[0].answer.created_at),
+                'academy': {
+                    'id': models[0].answer.academy.id,
+                    'name': models[0].answer.academy.name,
+                    'slug': models[0].answer.academy.slug,
+                },
+                'cohort': {
+                    'id': models[0].cohort.id,
+                    'name': models[0].cohort.name,
+                    'slug': models[0].cohort.slug,
+                },
+                'comment': models[0].answer.comment,
+                'event': models[0].answer.event,
+                'highest': models[0].answer.highest,
+                'id': models[0].answer.id,
+                'lang': models[0].answer.lang,
+                'lowest': models[0].answer.lowest,
+                'mentor': {
+                    'first_name':  models[0].answer.mentor.first_name,
+                    'id':  models[0].answer.mentor.id,
+                    'last_name':  models[0].answer.mentor.last_name,
+                },
+                'score': models[0].answer.score,
+                'status': models[0].answer.status,
+                'title': models[0].answer.title,
+                'user': {
+                    'first_name': 'Rene',
+                    'id': 2,
+                    'last_name': 'Descartes',
+                },
+            }
+        ]
 
-        self.assertEqual(json, [{
-            'created_at': None,
-            'academy': {
-                'id': model['answer'].academy.id,
-                'name': model['answer'].academy.name,
-                'slug': model['answer'].academy.slug,
-            },
-            'cohort': {
-                'id': model['cohort'].id,
-                'name': model['cohort'].name,
-                'slug': model['cohort'].slug,
-            },
-            'comment': model['answer'].comment,
-            'event': model['answer'].event,
-            'highest': model['answer'].highest,
-            'id': model['answer'].id,
-            'lang': model['answer'].lang,
-            'lowest': model['answer'].lowest,
-            'mentor': {
-                'first_name':  model['answer'].mentor.first_name,
-                'id':  model['answer'].mentor.id,
-                'last_name':  model['answer'].mentor.last_name,
-            },
-            'score': model['answer'].score,
-            'status': model['answer'].status,
-            'title': model['answer'].title,
-            'user': {
-                'first_name': model['user'].first_name,
-                'id': model['user'].id,
-                'last_name': model['user'].last_name,
-            },
-        }])
-
+        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1011,51 +1036,63 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_query_like_email(self):
         """Test /answer with like email"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, cohort=True, answer=True, profile_academy=True,
+        base = self.generate_models(authenticate=True, profile_academy=True, 
             capability='read_nps_answers', role='potato')
-        db = self.model_to_dict(model, 'answer')
-        
-        email = model['user'].email
+        del base['user']
+        user_kwargs = {
+                'email':  'b@b.com',
+                'first_name': 'Rene',
+                'last_name': 'Descartes',
+            }
+        user_kwargs_2 = {
+                'email': 'a@a.com',
+                'first_name': 'Reinaldo',
+                'last_name': 'Descarado',
+            }
+        models = [
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs, models=base),
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs_2, models=base),
+        ]
         base_url = reverse_lazy('feedback:answer')
-        url = f'{base_url}?{email}'
-        
+        url = f'{base_url}?like=b@b.com'
+
         response = self.client.get(url)
         json = response.json()
 
-        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+        expected = [
+            {
+                'created_at': self.datetime_to_iso(models[0].answer.created_at),
+                'academy': {
+                    'id': models[0].answer.academy.id,
+                    'name': models[0].answer.academy.name,
+                    'slug': models[0].answer.academy.slug,
+                },
+                'cohort': {
+                    'id': models[0].cohort.id,
+                    'name': models[0].cohort.name,
+                    'slug': models[0].cohort.slug,
+                },
+                'comment': models[0].answer.comment,
+                'event': models[0].answer.event,
+                'highest': models[0].answer.highest,
+                'id': models[0].answer.id,
+                'lang': models[0].answer.lang,
+                'lowest': models[0].answer.lowest,
+                'mentor': {
+                    'first_name':  models[0].answer.mentor.first_name,
+                    'id':  models[0].answer.mentor.id,
+                    'last_name':  models[0].answer.mentor.last_name,
+                },
+                'score': models[0].answer.score,
+                'status': models[0].answer.status,
+                'title': models[0].answer.title,
+                'user': {
+                    'first_name': 'Rene',
+                    'id': 2,
+                    'last_name': 'Descartes',
+                },
+            }
+        ]
 
-        self.assertEqual(json, [{
-            'created_at': None,
-            'academy': {
-                'id': model['answer'].academy.id,
-                'name': model['answer'].academy.name,
-                'slug': model['answer'].academy.slug,
-            },
-            'cohort': {
-                'id': model['cohort'].id,
-                'name': model['cohort'].name,
-                'slug': model['cohort'].slug,
-            },
-            'comment': model['answer'].comment,
-            'event': model['answer'].event,
-            'highest': model['answer'].highest,
-            'id': model['answer'].id,
-            'lang': model['answer'].lang,
-            'lowest': model['answer'].lowest,
-            'mentor': {
-                'first_name':  model['answer'].mentor.first_name,
-                'id':  model['answer'].mentor.id,
-                'last_name':  model['answer'].mentor.last_name,
-            },
-            'score': model['answer'].score,
-            'status': model['answer'].status,
-            'title': model['answer'].title,
-            'user': {
-                'first_name': model['user'].first_name,
-                'id': model['user'].id,
-                'last_name': model['user'].last_name,
-            },
-        }])
-
+        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])

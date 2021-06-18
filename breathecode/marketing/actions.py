@@ -1,7 +1,7 @@
 import os, re, requests, logging
 from itertools import chain
 from django.utils import timezone
-from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy
+from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy, AcademyAlias
 from schema import Schema, And, Use, Optional, SchemaError
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from activecampaign.client import Client
@@ -138,7 +138,12 @@ def register_new_lead(form_entry=None):
     if 'location' not in form_entry or form_entry['location'] is None:
         raise Exception('Missing location information')
 
-    ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry['location']).first()
+    ac_academy = None
+    alias = AcademyAlias.objects.filter(active_campaign_slug=form_entry['location']).first()
+    if alias is not None and alias.academy.activecampaignacademy is not None:
+        ac_academy = alias.academy.activecampaignacademy
+    else:
+        ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry['location']).first()
     if ac_academy is None:
         raise Exception(f"No academy found with slug {form_entry['location']}")
 

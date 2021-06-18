@@ -32,8 +32,11 @@ for cohort in cohorts:
     if lastest_survey is None:
         cohorts_with_pending_surveys.append(cohort.name)
     else:
-        num_weeks = calculate_weeks(
-            lastest_survey.sent_at.date(), datetime.now().date())
+        sent_at = cohort.kickoff_date.date()
+        if lastest_survey.sent_at is not None:
+            sent_at = lastest_survey.sent_at.date()
+
+        num_weeks = calculate_weeks(sent_at, datetime.now().date())
         if num_weeks > 4:
             cohorts_with_pending_surveys.append(cohort.name)
 

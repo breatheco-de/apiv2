@@ -27,28 +27,37 @@ class CertificateTestSuite(CertificateTestCase):
     def test_certificate__with_full_name_in_querystring(self):
         """Test /academy/lead """
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, role='STUDENT',
-            capability='read_certificate', user_specialty=True,)
 
-        profile_academy_kwargs = {
-                'email':  'b@b.com',
-                'first_name': 'Rene',
-                'last_name': 'Descartes',
-                'status': "INVITED"
-            }
-        profile_academy_kwargs_2 = {
-                'email': 'a@a.com',
-                'first_name': 'Michael',
-                'last_name': 'Jordan',
-                'status': "INVITED"
-            }
+        base = self.generate_models(authenticate=True, cohort=True, cohort_finished=True,
+            capability='read_certificate', role='potato', academy=True, profile_academy=True,
+            specialty=True)
+        
+        del base['user']
 
-        model_1 = self.generate_models(cohort=True, user=True, profile_academy=True, 
-            cohort_user=True, specialty=True, 
-            profile_academy_kwargs=profile_academy_kwargs, models=base)
-        model_2 = self.generate_models(cohort=True, user=True, profile_academy=True, 
-             cohort_user=True, specialty=True, 
-            profile_academy_kwargs=profile_academy_kwargs_2, models=base)
+        user_kwargs = {
+            'email':  'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+        }
+        user_kwargs_2 = {
+            'email': 'a@a.com',
+            'first_name': 'Michael',
+            'last_name': 'Jordan',
+        }
+        user_specialty_kwargs_1 = {
+            "token": "123dfefef1123rerf346g"
+        }
+        user_specialty_kwargs_2 = {
+            "token": "jojfsdknjbs1123rerf346g"
+        }
+        models = [
+            self.generate_models(user=True, user_specialty=True, cohort_user=True, 
+                user_kwargs=user_kwargs, user_specialty_kwargs=user_specialty_kwargs_1, 
+                models=base),
+            self.generate_models(user=True, user_specialty=True, cohort_user=True,  
+                user_kwargs=user_kwargs_2, user_specialty_kwargs=user_specialty_kwargs_2,
+                models=base)
+        ]       
 
         base_url = reverse_lazy('certificate:root')
         url = f'{base_url}?like=Rene Descartes'
@@ -59,39 +68,39 @@ class CertificateTestSuite(CertificateTestCase):
         expected = [{
             'academy': {
                 'id': 1,
-                'logo_url': model_1['academy'].logo_url,
-                'name': model_1['academy'].name,
-                'slug': model_1['academy'].slug,
+                'logo_url': models[0].academy.logo_url,
+                'name': models[0].academy.name,
+                'slug': models[0].academy.slug,
                 'website_url': None
             },
             'cohort': {
                 'id': 1,
-                'name': model_1['cohort'].name,
-                'slug': model_1['cohort'].slug,
+                'name': models[0].cohort.name,
+                'slug': models[0].cohort.slug,
                 'syllabus': {}
             },
-            'created_at': self.datetime_to_iso( model_1['user_specialty'].created_at),
-            'expires_at': model_1['user_specialty'].expires_at,
+            'created_at': self.datetime_to_iso( models[0].user_specialty.created_at),
+            'expires_at': models[0].user_specialty.expires_at,
             'id': 1,
             'layout': None,
-            'preview_url': model_1['user_specialty'].preview_url,
-            'signed_by': model_1['user_specialty'].signed_by,
+            'preview_url': models[0].user_specialty.preview_url,
+            'signed_by': models[0].user_specialty.signed_by,
             'signed_by_role': 'Director',
             'specialty': {
-                'created_at': self.datetime_to_iso(model_1['specialty'].created_at),
+                'created_at': self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
                 'logo_url': None,
-                'name': model_1['specialty'].name,
-                'slug': model_1['specialty'].slug,
-                'updated_at': self.datetime_to_iso(model_1['specialty'].updated_at),
+                'name': models[0].specialty.name,
+                'slug': models[0].specialty.slug,
+                'updated_at': self.datetime_to_iso(models[0].specialty.updated_at),
             },
-            'status': 'ERROR',
-            'status_text': "The student cohort stage has to be 'finished' before you can issue any certificates",
-            'updated_at': self.datetime_to_iso(model_1['user_specialty'].updated_at),
+            'status': 'PENDING',
+            'status_text': None,
+            'updated_at': self.datetime_to_iso(models[0].user_specialty.updated_at),
             'user': {
-                'first_name': model_1['user'].first_name, 
-                'id': 1, 
-                'last_name': model_1['user'].last_name
+                'first_name': models[0].user.first_name, 
+                'id': 2, 
+                'last_name': models[0].user.last_name
             }
         }]
 
@@ -105,14 +114,39 @@ class CertificateTestSuite(CertificateTestCase):
     def test_certificate__with_first_name_in_querystring(self):
         """Test /academy/lead """
         self.headers(academy=1)
+        base = self.generate_models(authenticate=True, cohort=True, cohort_finished=True,
+            capability='read_certificate', role='potato', academy=True, profile_academy=True,
+            specialty=True)
+        
+        del base['user']
 
-        model = self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, user_specialty=True, capability='read_certificate', 
-            role="potato", cohort_user=True, specialty=True)
+        user_kwargs = {
+            'email':  'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+        }
+        user_kwargs_2 = {
+            'email': 'a@a.com',
+            'first_name': 'Michael',
+            'last_name': 'Jordan',
+        }
+        user_specialty_kwargs_1 = {
+            "token": "123dfefef1123rerf346g"
+        }
+        user_specialty_kwargs_2 = {
+            "token": "jojfsdknjbs1123rerf346g"
+        }
+        models = [
+            self.generate_models(user=True, user_specialty=True, cohort_user=True, 
+                user_kwargs=user_kwargs, user_specialty_kwargs=user_specialty_kwargs_1, 
+                models=base),
+            self.generate_models(user=True, user_specialty=True, cohort_user=True,  
+                user_kwargs=user_kwargs_2, user_specialty_kwargs=user_specialty_kwargs_2,
+                models=base)
+        ] 
 
         base_url = reverse_lazy('certificate:root')
-        first_name = model['user'].first_name
-        url = f'{base_url}?like={first_name}'
+        url = f'{base_url}?like=Rene'
 
         response = self.client.get(url)
         json = response.json()
@@ -120,39 +154,39 @@ class CertificateTestSuite(CertificateTestCase):
         expected = [{
             'academy': {
                 'id': 1,
-                'logo_url': model['academy'].logo_url,
-                'name': model['academy'].name,
-                'slug': model['academy'].slug,
+                'logo_url': models[0].academy.logo_url,
+                'name': models[0].academy.name,
+                'slug': models[0].academy.slug,
                 'website_url': None
             },
             'cohort': {
                 'id': 1,
-                'name': model['cohort'].name,
-                'slug': model['cohort'].slug,
+                'name': models[0].cohort.name,
+                'slug': models[0].cohort.slug,
                 'syllabus': {}
             },
-            'created_at': self.datetime_to_iso( model['user_specialty'].created_at),
-            'expires_at': model['user_specialty'].expires_at,
+            'created_at': self.datetime_to_iso( models[0].user_specialty.created_at),
+            'expires_at': models[0].user_specialty.expires_at,
             'id': 1,
             'layout': None,
-            'preview_url': model['user_specialty'].preview_url,
-            'signed_by': model['user_specialty'].signed_by,
+            'preview_url': models[0].user_specialty.preview_url,
+            'signed_by': models[0].user_specialty.signed_by,
             'signed_by_role': 'Director',
             'specialty': {
-                'created_at': self.datetime_to_iso(model['specialty'].created_at),
+                'created_at': self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
                 'logo_url': None,
-                'name': model['specialty'].name,
-                'slug': model['specialty'].slug,
-                'updated_at': self.datetime_to_iso(model['specialty'].updated_at),
+                'name': models[0].specialty.name,
+                'slug': models[0].specialty.slug,
+                'updated_at': self.datetime_to_iso(models[0].specialty.updated_at),
             },
-            'status': 'ERROR',
-            'status_text': "The student cohort stage has to be 'finished' before you can issue any certificates",
-            'updated_at': self.datetime_to_iso(model['user_specialty'].updated_at),
+            'status': 'PENDING',
+            'status_text': None,
+            'updated_at': self.datetime_to_iso(models[0].user_specialty.updated_at),
             'user': {
-                'first_name': model['user'].first_name, 
-                'id': 1, 
-                'last_name': model['user'].last_name
+                'first_name': models[0].user.first_name, 
+                'id': 2, 
+                'last_name': models[0].user.last_name
             }
         }]
 
@@ -166,14 +200,39 @@ class CertificateTestSuite(CertificateTestCase):
     def test_certificate__with_last_name_in_querystring(self):
         """Test /academy/lead """
         self.headers(academy=1)
+        base = self.generate_models(authenticate=True, cohort=True, cohort_finished=True,
+            capability='read_certificate', role='potato', academy=True, profile_academy=True,
+            specialty=True)
+        
+        del base['user']
 
-        model = self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, user_specialty=True, capability='read_certificate', 
-            role="potato", cohort_user=True, specialty=True)
+        user_kwargs = {
+            'email':  'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+        }
+        user_kwargs_2 = {
+            'email': 'a@a.com',
+            'first_name': 'Michael',
+            'last_name': 'Jordan',
+        }
+        user_specialty_kwargs_1 = {
+            "token": "123dfefef1123rerf346g"
+        }
+        user_specialty_kwargs_2 = {
+            "token": "jojfsdknjbs1123rerf346g"
+        }
+        models = [
+            self.generate_models(user=True, user_specialty=True, cohort_user=True, 
+                user_kwargs=user_kwargs, user_specialty_kwargs=user_specialty_kwargs_1, 
+                models=base),
+            self.generate_models(user=True, user_specialty=True, cohort_user=True,  
+                user_kwargs=user_kwargs_2, user_specialty_kwargs=user_specialty_kwargs_2,
+                models=base)
+        ] 
 
         base_url = reverse_lazy('certificate:root')
-        last_name = model['user'].last_name
-        url = f'{base_url}?like={last_name}'
+        url = f'{base_url}?like=Descartes'
 
         response = self.client.get(url)
         json = response.json()
@@ -181,39 +240,39 @@ class CertificateTestSuite(CertificateTestCase):
         expected = [{
             'academy': {
                 'id': 1,
-                'logo_url': model['academy'].logo_url,
-                'name': model['academy'].name,
-                'slug': model['academy'].slug,
+                'logo_url': models[0].academy.logo_url,
+                'name': models[0].academy.name,
+                'slug': models[0].academy.slug,
                 'website_url': None
             },
             'cohort': {
                 'id': 1,
-                'name': model['cohort'].name,
-                'slug': model['cohort'].slug,
+                'name': models[0].cohort.name,
+                'slug': models[0].cohort.slug,
                 'syllabus': {}
             },
-            'created_at': self.datetime_to_iso( model['user_specialty'].created_at),
-            'expires_at': model['user_specialty'].expires_at,
+            'created_at': self.datetime_to_iso( models[0].user_specialty.created_at),
+            'expires_at': models[0].user_specialty.expires_at,
             'id': 1,
             'layout': None,
-            'preview_url': model['user_specialty'].preview_url,
-            'signed_by': model['user_specialty'].signed_by,
+            'preview_url': models[0].user_specialty.preview_url,
+            'signed_by': models[0].user_specialty.signed_by,
             'signed_by_role': 'Director',
             'specialty': {
-                'created_at': self.datetime_to_iso(model['specialty'].created_at),
+                'created_at': self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
                 'logo_url': None,
-                'name': model['specialty'].name,
-                'slug': model['specialty'].slug,
-                'updated_at': self.datetime_to_iso(model['specialty'].updated_at),
+                'name': models[0].specialty.name,
+                'slug': models[0].specialty.slug,
+                'updated_at': self.datetime_to_iso(models[0].specialty.updated_at),
             },
-            'status': 'ERROR',
-            'status_text': "The student cohort stage has to be 'finished' before you can issue any certificates",
-            'updated_at': self.datetime_to_iso(model['user_specialty'].updated_at),
+            'status': 'PENDING',
+            'status_text': None,
+            'updated_at': self.datetime_to_iso(models[0].user_specialty.updated_at),
             'user': {
-                'first_name': model['user'].first_name, 
-                'id': 1, 
-                'last_name': model['user'].last_name
+                'first_name': models[0].user.first_name, 
+                'id': 2, 
+                'last_name': models[0].user.last_name
             }
         }]
 
@@ -227,14 +286,39 @@ class CertificateTestSuite(CertificateTestCase):
     def test_certificate__with_email_in_querystring(self):
         """Test /academy/lead """
         self.headers(academy=1)
+        base = self.generate_models(authenticate=True, cohort=True, cohort_finished=True,
+            capability='read_certificate', role='potato', academy=True, profile_academy=True,
+            specialty=True)
+        
+        del base['user']
 
-        model = self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, user_specialty=True, capability='read_certificate', 
-            role="potato", cohort_user=True, specialty=True)
+        user_kwargs = {
+            'email':  'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+        }
+        user_kwargs_2 = {
+            'email': 'a@a.com',
+            'first_name': 'Michael',
+            'last_name': 'Jordan',
+        }
+        user_specialty_kwargs_1 = {
+            "token": "123dfefef1123rerf346g"
+        }
+        user_specialty_kwargs_2 = {
+            "token": "jojfsdknjbs1123rerf346g"
+        }
+        models = [
+            self.generate_models(user=True, user_specialty=True, cohort_user=True, 
+                user_kwargs=user_kwargs, user_specialty_kwargs=user_specialty_kwargs_1, 
+                models=base),
+            self.generate_models(user=True, user_specialty=True, cohort_user=True,  
+                user_kwargs=user_kwargs_2, user_specialty_kwargs=user_specialty_kwargs_2,
+                models=base)
+        ] 
 
         base_url = reverse_lazy('certificate:root')
-        email = model['user'].email
-        url = f'{base_url}?like={email}'
+        url = f'{base_url}?like=b@b.com'
 
         response = self.client.get(url)
         json = response.json()
@@ -242,39 +326,39 @@ class CertificateTestSuite(CertificateTestCase):
         expected = [{
             'academy': {
                 'id': 1,
-                'logo_url': model['academy'].logo_url,
-                'name': model['academy'].name,
-                'slug': model['academy'].slug,
+                'logo_url': models[0].academy.logo_url,
+                'name': models[0].academy.name,
+                'slug': models[0].academy.slug,
                 'website_url': None
             },
             'cohort': {
                 'id': 1,
-                'name': model['cohort'].name,
-                'slug': model['cohort'].slug,
+                'name': models[0].cohort.name,
+                'slug': models[0].cohort.slug,
                 'syllabus': {}
             },
-            'created_at': self.datetime_to_iso( model['user_specialty'].created_at),
-            'expires_at': model['user_specialty'].expires_at,
+            'created_at': self.datetime_to_iso( models[0].user_specialty.created_at),
+            'expires_at': models[0].user_specialty.expires_at,
             'id': 1,
             'layout': None,
-            'preview_url': model['user_specialty'].preview_url,
-            'signed_by': model['user_specialty'].signed_by,
+            'preview_url': models[0].user_specialty.preview_url,
+            'signed_by': models[0].user_specialty.signed_by,
             'signed_by_role': 'Director',
             'specialty': {
-                'created_at': self.datetime_to_iso(model['specialty'].created_at),
+                'created_at': self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
                 'logo_url': None,
-                'name': model['specialty'].name,
-                'slug': model['specialty'].slug,
-                'updated_at': self.datetime_to_iso(model['specialty'].updated_at),
+                'name': models[0].specialty.name,
+                'slug': models[0].specialty.slug,
+                'updated_at': self.datetime_to_iso(models[0].specialty.updated_at),
             },
-            'status': 'ERROR',
-            'status_text': "The student cohort stage has to be 'finished' before you can issue any certificates",
-            'updated_at': self.datetime_to_iso(model['user_specialty'].updated_at),
+            'status': 'PENDING',
+            'status_text': None,
+            'updated_at': self.datetime_to_iso(models[0].user_specialty.updated_at),
             'user': {
-                'first_name': model['user'].first_name, 
-                'id': 1, 
-                'last_name': model['user'].last_name
+                'first_name': models[0].user.first_name, 
+                'id': 2, 
+                'last_name': models[0].user.last_name
             }
         }]
 

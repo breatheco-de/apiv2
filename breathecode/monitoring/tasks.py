@@ -61,10 +61,14 @@ def test_endpoint(self, endpoint_id):
 
     logger.debug(f"Running diagnostic for: {endpoint.url} ")
     result = run_endpoint_diagnostic(endpoint.id)
+    if not result:
+        # the endpoint diganostic did not run.
+        return False 
+        
     if result["status"] != "OPERATIONAL":
         if endpoint.application.notify_email:
             send_email_message("diagnostic", endpoint.application.notify_email, {
-                "subject": f"Errors have been found on {endpoint.application.title} diagnostic",
+                "subject": f"Errors found on app {endpoint.application.title} endpoint {endpoint.url}",
                 "details": result["details"]
             })
 
@@ -75,7 +79,7 @@ def test_endpoint(self, endpoint_id):
                 "diagnostic",
                 endpoint.application.academy.slackteam.owner.credentialsslack.token,
                 endpoint.application.notify_slack_channel.slack_id, {
-                    "subject": f"Errors have been found on {endpoint.application.title} diagnostic",
+                    "subject": f"Errors have been found on diagnostig of the app: {endpoint.application.title}",
                     **result,
                 }
             )
@@ -84,7 +88,6 @@ def test_endpoint(self, endpoint_id):
 def monitor_app(self, app_id):
     logger.debug("Starting monitor_app")
     endpoints = Endpoint.objects.filter(application__id=app_id).values_list('id', flat=True)
-
     for endpoint_id in endpoints:
         test_endpoint.delay(endpoint_id)
 

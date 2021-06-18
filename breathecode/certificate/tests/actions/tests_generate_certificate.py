@@ -26,10 +26,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_user(self):
+    def test_generate_certificate_with_user_without_cohort(self):
         """
         Step 1
-        Tests generate_certificate with User
+        Tests generate_certificate with a User that has no cohort
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True)
@@ -45,10 +45,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_cohort(self):
+    def test_generate_certificate_without_cohort_user(self):
         """
         Step 2
-        Tests generate_certificate with Cohort
+        Tests generate_certificate with Cohort but without CohortUser
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True)
@@ -65,13 +65,13 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_cohort_user(self):
+    def test_generate_certificate_without_syllabus(self):
         """
         Step 3
         Tests generate_certificate with CohortUser
         Status: BAD_REQUEST
         """
-        model = self.generate_models(user=True, cohort=True, cohort_user=True)
+        model = self.generate_models(user=True, cohort=True, cohort_user=True, cohort_stage='ENDED')
         try:
             self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
@@ -85,14 +85,14 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_syllabus(self):
+    def test_generate_certificate_without_certificate(self):
         """
         Step 4
-        Tests generate_certificate with Syllabus
+        Tests generate_certificate with Syllabus but Without Certificate
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
-            syllabus=True)
+            syllabus=True, cohort_stage='ENDED')
         try:
             self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
@@ -107,14 +107,14 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_specialty(self):
+    def test_generate_certificate_without_specialty_layout(self):
         """
         Step 5
-        Tests generate_certificate with Specialty
+        Tests generate_certificate with Specialty btu missing a default layout
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
-            specialty=True, syllabus=True)
+            specialty=True, syllabus=True, cohort_stage='ENDED')
         try:
             self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
@@ -126,14 +126,14 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_layout_design(self):
+    def test_generate_certificate_without_teacher(self):
         """
         Step 6
-        Tests generate_certificate with LayoutDesign
+        Tests generate_certificate without Teacher
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
-            specialty=True, layout_design=True, syllabus=True)
+            specialty=True, layout_design=True, syllabus=True, cohort_stage='ENDED')
         try:
             self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
@@ -146,14 +146,14 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_user_with_role_teacher(self):
+    def test_generate_certificate_with_bad_student_financial_status(self):
         """
         Step 7
-        Tests generate_certificate with User with role teacher
+        Tests generate_certificate with bad student financial status
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
-            specialty=True, layout_design=True, syllabus=True)
+            specialty=True, layout_design=True, syllabus=True, cohort_stage='ENDED')
 
         base = model.copy()
         del base['user']
@@ -191,15 +191,15 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_task(self):
+    def test_generate_certificate_with_student_that_didnt_finish_tasks(self):
         """
         Step 8
-        Tests generate_certificate with Task type PROJECT
+        Tests generate_certificate with students that are missing to deliver all the tasks
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
             specialty=True, layout_design=True, task=True, task_type='PROJECT',
-            syllabus=True)
+            syllabus=True, cohort_stage='ENDED')
 
         base = model.copy()
         del base['user']
@@ -235,15 +235,15 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_cohort_user_with_finantial_status_eq_fully_paid(self):
+    def test_generate_certificate_without_proper_educational_status(self):
         """
         Step 9
-        Tests generate_certificate with CohortUser eq FULLY_PAID
+        Tests generate_certificate without CohortUser educational status GRADUATED
         Status: BAD_REQUEST
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
             specialty=True, layout_design=True, cohort_user_finantial_status='FULLY_PAID',
-            syllabus=True)
+            syllabus=True, cohort_stage='ENDED')
 
         base = model.copy()
         del base['user']
@@ -287,7 +287,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         """
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
             specialty=True, layout_design=True, cohort_user_finantial_status='UP_TO_DATE',
-            syllabus=True)
+            syllabus=True, cohort_stage='ENDED')
 
         base = model.copy()
         del base['user']
@@ -333,7 +333,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         model = self.generate_models(user=True, cohort=True, cohort_user=True,
             specialty=True, layout_design=True, syllabus=True,
             cohort_user_finantial_status='UP_TO_DATE',
-            cohort_user_educational_status='DROPPED')
+            cohort_user_educational_status='DROPPED', cohort_stage='ENDED')
 
         base = model.copy()
         del base['user']
@@ -402,10 +402,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
             'specialty_id': 1,
             'status': 'ERROR',
-            'status_text': "The student cohort stage has to be 'finished' "
+            'status_text': "The student cohort stage has to be 'ENDED' "
                 'before you can issue any certificates',
             'user_id': 1,
-            'is_cleaned': True,
         }
 
         self.assertToken(result['token'])
@@ -413,7 +412,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         del result['token']
 
         self.assertEqual(result, expected)
-        del expected['is_cleaned']
 
         self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()),
             [{**expected, 'token': token}])
