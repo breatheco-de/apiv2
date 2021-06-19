@@ -238,18 +238,18 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if not isinstance(all_invites, list):
             raise ValidationException(f"You must pass a list of invites with id and new status", 400)
-        
+
         valid = []
         for new_invite in all_invites:
             invite = UserInvite.objects.filter(id=new_invite['id']).first()
             if invite is None:
                 raise ValidationException(f"No invite {new_invite['id']} was found", 404)
-            
+
             serializer = UserInvitePUTSerializer(invite, data=new_invite)
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             valid.append(serializer)
-                
+
         result = []
         for serializer in valid:
             serializer.save()
@@ -517,6 +517,8 @@ def get_github_token(request):
 @permission_classes([AllowAny])
 def save_github_token(request):
 
+    user_id = request.GET.get('user', '')
+
     logger.debug("Github callback just landed")
     logger.debug(request.query_params)
 
@@ -555,6 +557,7 @@ def save_github_token(request):
         if resp.status_code == 200:
             github_user = resp.json()
             logger.debug(github_user)
+
             if github_user['email'] is None:
                 resp = requests.get('https://api.github.com/user/emails',
                                     headers={'Authorization': 'token ' + github_token})
@@ -568,11 +571,17 @@ def save_github_token(request):
                         github_user['email'] = emails[0]["email"]
 
             if github_user['email'] is None:
-                raise ValidationError("Imposible to retrieve user email")
+                raise ValidationError("Impossible to retrieve user email")
 
-            # TODO: if user_id: User.objects.filter(id=user_id).first()
+            if user_id:
+                print(user_id)
+                user = User.objects.filter(id=user_id).first()
+                if not user:
+                    raise ValidationException('User was not found, please input different user',
+                        code=404, slug='user-not-found')
 
-            user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(
+            else:
+                user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(
                 email__iexact=github_user['email'])).first()
             if user is None:
                 user = User(
@@ -1121,7 +1130,7 @@ def render_invite(request, token, member_id=None):
                     profile.first_name = invite.first_name
                 if invite.last_name is not None and invite.last_name != "":
                     profile.last_name = invite.last_name
-                
+
 
             profile.user = user
             profile.status = 'ACTIVE'
