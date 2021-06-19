@@ -574,7 +574,6 @@ def save_github_token(request):
                 raise ValidationError("Impossible to retrieve user email")
 
             if user_id:
-                print(user_id)
                 user = User.objects.filter(id=user_id).first()
                 if not user:
                     raise ValidationException('User was not found, please input different user',
