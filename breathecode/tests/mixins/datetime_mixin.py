@@ -21,12 +21,16 @@ class DatetimeMixin():
     def datetime_now(*args, **kwargs):
         return timezone.now()
 
-
     def datetime_to_iso(self, date=datetime.utcnow()) -> str:
         return re.sub(
             r'\+00:00$', 'Z',
             date.replace(tzinfo=UTC).isoformat()
         )
+
+    def iso_to_datetime(self, iso: str):
+        string = re.sub(r'Z$', '', iso)
+        date = datetime.fromisoformat(string)
+        return timezone.make_aware(date)
 
     def datetime_to_ical(self, date=datetime.utcnow()) -> str:
         return '{:4d}{:02d}{:02d}T{:02d}{:02d}{:02d}Z'.format(
@@ -45,10 +49,3 @@ class DatetimeMixin():
             return True
         except Exception:
             self.assertTrue(False)
-
-    # def iso_to_datetime(self, string):
-    #     string = re.sub(r'Z$', '', string)
-    #     date = datetime.fromisoformat(string)
-    #     date = date.astimezone(tz=UTC)
-
-    #     return date

@@ -19,7 +19,7 @@ DATASTORE_SHARED_SEED = [
         'data': None,
         'day': 13,
         'email': 'konan@naruto.io',
-        'slug': 'breathecode_login',
+        'slug': 'breathecode-login',
         'user_agent': 'bc/test',
         'user_id': 1,
     },
@@ -32,7 +32,7 @@ DATASTORE_PRIVATE_SEED = [
         'data': '{"cohort": "miami-downtown-pt-xx", "day": "13"}',
         'day': 13,
         'email': 'konan@naruto.io',
-        'slug': 'classroom_attendance',
+        'slug': 'classroom-attendance',
         'user_agent': 'bc/test',
         'user_id': 1,
     },
@@ -154,7 +154,7 @@ class MediaTestSuite(MediaTestCase):
                 'data': None,
                 'day': 13,
                 'email': 'konan@naruto.io',
-                'slug': 'breathecode_login',
+                'slug': 'breathecode-login',
                 'user_agent':
                 'bc/test',
                 'user_id': 1,
@@ -194,10 +194,10 @@ class MediaTestSuite(MediaTestCase):
                 'academy_id': 1,
                 'cohort': 'miami-downtown-pt-xx',
                 'created_at': DATASTORE_PRIVATE_SEED[0]['created_at'],
-                'data': '{ "cohort": "miami-downtown-pt-xx", "day": "13"}',
+                'data': '{"cohort": "miami-downtown-pt-xx", "day": "13"}',
                 'day': 13,
                 'email': 'konan@naruto.io',
-                'slug': 'classroom_attendance',
+                'slug': 'classroom-attendance',
                 'user_agent': 'bc/test',
                 'user_id': 1,
             },
@@ -236,10 +236,10 @@ class MediaTestSuite(MediaTestCase):
                 'academy_id': 1,
                 'cohort': 'miami-downtown-pt-xx',
                 'created_at': DATASTORE_PRIVATE_SEED[0]['created_at'],
-                'data': '{ "cohort": "miami-downtown-pt-xx", "day": "13"}',
+                'data': '{"cohort": "miami-downtown-pt-xx", "day": "13"}',
                 'day': 13,
                 'email': 'konan@naruto.io',
-                'slug': 'classroom_attendance',
+                'slug': 'classroom-attendance',
                 'user_agent': 'bc/test',
                 'user_id': 1,
             },
@@ -250,7 +250,7 @@ class MediaTestSuite(MediaTestCase):
                 'data': None,
                 'day': 13,
                 'email': 'konan@naruto.io',
-                'slug': 'breathecode_login',
+                'slug': 'breathecode-login',
                 'user_agent':
                 'bc/test',
                 'user_id': 1,
@@ -310,7 +310,7 @@ class MediaTestSuite(MediaTestCase):
             authenticate=True, profile_academy=True,
             capability='read_activity', role='potato')
 
-        url = reverse_lazy('activity:root') + '?slug=lesson_opened'
+        url = reverse_lazy('activity:root') + '?slug=lesson-opened'
         response = self.client.get(url)
 
         json = response.json()
@@ -321,11 +321,11 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [
             call(
                 kind='student_activity',
-                slug='lesson_opened',
+                slug='lesson-opened',
                 academy_id=1),
             call(
                 kind='student_activity',
-                slug='lesson_opened',
+                slug='lesson-opened',
                 academy_id=0),
         ])
 
@@ -342,7 +342,7 @@ class MediaTestSuite(MediaTestCase):
             authenticate=True, profile_academy=True,
             capability='read_activity', role='potato')
 
-        url = reverse_lazy('activity:root') + '?slug=breathecode_login'
+        url = reverse_lazy('activity:root') + '?slug=breathecode-login'
         response = self.client.get(url)
 
         json = response.json()
@@ -354,7 +354,7 @@ class MediaTestSuite(MediaTestCase):
                 'data': None,
                 'day': 13,
                 'email': 'konan@naruto.io',
-                'slug': 'breathecode_login',
+                'slug': 'breathecode-login',
                 'user_agent':
                 'bc/test',
                 'user_id': 1,
@@ -366,11 +366,11 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [
             call(
                 kind='student_activity',
-                slug='breathecode_login',
+                slug='breathecode-login',
                 academy_id=1),
             call(
                 kind='student_activity',
-                slug='breathecode_login',
+                slug='breathecode-login',
                 academy_id=0),
         ])
 
@@ -461,10 +461,10 @@ class MediaTestSuite(MediaTestCase):
                 'academy_id': 1,
                 'cohort': 'miami-downtown-pt-xx',
                 'created_at': DATASTORE_PRIVATE_SEED[0]['created_at'],
-                'data': '{ "cohort": "miami-downtown-pt-xx", "day": "13"}',
+                'data': '{"cohort": "miami-downtown-pt-xx", "day": "13"}',
                 'day': 13,
                 'email': 'konan@naruto.io',
-                'slug': 'classroom_attendance',
+                'slug': 'classroom-attendance',
                 'user_agent': 'bc/test',
                 'user_id': 1,
             },
@@ -596,10 +596,10 @@ class MediaTestSuite(MediaTestCase):
                 'academy_id': 1,
                 'cohort': 'miami-downtown-pt-xx',
                 'created_at': DATASTORE_PRIVATE_SEED[0]['created_at'],
-                'data': '{ "cohort": "miami-downtown-pt-xx", "day": "13"}',
+                'data': '{"cohort": "miami-downtown-pt-xx", "day": "13"}',
                 'day': 13,
                 'email': 'konan@naruto.io',
-                'slug': 'classroom_attendance',
+                'slug': 'classroom-attendance',
                 'user_agent': 'bc/test',
                 'user_id': 1,
             },
@@ -707,10 +707,10 @@ class MediaTestSuite(MediaTestCase):
                 'academy_id': 1,
                 'cohort': 'miami-downtown-pt-xx',
                 'created_at': DATASTORE_PRIVATE_SEED[0]['created_at'],
-                'data': '{ "cohort": "miami-downtown-pt-xx", "day": "13"}',
+                'data': '{"cohort": "miami-downtown-pt-xx", "day": "13"}',
                 'day': 13,
                 'email': 'konan@naruto.io',
-                'slug': 'classroom_attendance',
+                'slug': 'classroom-attendance',
                 'user_agent': 'bc/test',
                 'user_id': 1,
             },

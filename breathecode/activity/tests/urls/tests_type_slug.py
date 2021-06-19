@@ -23,9 +23,9 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_type__without_auth(self):
+    def test_type_slug__without_auth(self):
         """Test /answer without auth"""
-        url = reverse_lazy('activity:type')
+        url = reverse_lazy('activity:type_slug', kwargs={'activity_slug': 'they-killed-kenny'})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -33,10 +33,10 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_type__wrong_academy(self):
+    def test_type_slug__wrong_academy(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('activity:type')
+        url = reverse_lazy('activity:type_slug', kwargs={'activity_slug': 'they-killed-kenny'})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -44,10 +44,10 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_type__without_capability(self):
+    def test_type_slug__without_capability(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('activity:type')
+        url = reverse_lazy('activity:type_slug', kwargs={'activity_slug': 'they-killed-kenny'})
         self.generate_models(authenticate=True)
         response = self.client.get(url)
         json = response.json()
@@ -59,65 +59,46 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     """
-    🔽🔽🔽 Get
+    🔽🔽🔽 Bad slug
     """
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_type(self):
+    def test_type_slug__without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
         self.generate_models(
             authenticate=True, profile_academy=True,
             capability='read_activity', role='potato')
 
-        url = reverse_lazy('activity:type')
+        url = reverse_lazy('activity:type_slug', kwargs={'activity_slug': 'they-killed-kenny'})
         response = self.client.get(url)
         json = response.json()
-        expected = [
-            {
-                'description': 'Every time it logs in',
-                'slug': 'breathecode-login',
-            },
-            {
-                'description': 'First day using breathecode',
-                'slug': 'online-platform-registration',
-            },
-            {
-                'description': 'Attendy on an eventbrite event',
-                'slug': 'public-event-attendance',
-            },
-            {
-                'description': 'When the student attent to class',
-                'slug': 'classroom-attendance',
-            },
-            {
-                'description': 'When the student miss class',
-                'slug': 'classroom-unattendance',
-            },
-            {
-                'description': 'When a lessons is opened on the platform',
-                'slug': 'lesson-opened',
-            },
-            {
-                'description': (
-                    'When the office raspberry pi detects the student'
-                ),
-                'slug': 'office-attendance',
-            },
-            {
-                'description': 'When a nps survey is answered by the student',
-                'slug': 'nps-survey-answered',
-            },
-            {
-                'description': 'When student successfuly tests exercise',
-                'slug': 'exercise-success',
-            },
-            {
-                'description': 'When student successfuly join to academy',
-                'slug': 'academy-registration',
-            },
-        ]
+        expected = {'detail': 'activity-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    """
+    🔽🔽🔽 Get
+    """
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_type_slug(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        self.generate_models(
+            authenticate=True, profile_academy=True,
+            capability='read_activity', role='potato')
+
+        url = reverse_lazy('activity:type_slug', kwargs={'activity_slug': 'academy-registration'})
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'description': 'When student successfuly join to academy',
+            'slug': 'academy-registration',
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

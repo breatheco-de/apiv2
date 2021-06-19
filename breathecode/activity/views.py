@@ -21,21 +21,21 @@ from .utils import (generate_created_at, validate_activity_fields,
 # https://googleapis.dev/python/datastore/latest/index.html
 
 ACTIVITIES = {
-    "breathecode_login": 'Every time it logs in',
-    "online_platform_registration": 'First day using breathecode',
-    "public_event_attendance": 'Attendy on an eventbrite event',
-    "classroom_attendance": 'When the student attent to class',
-    "classroom_unattendance": 'When the student miss class',
-    "lesson_opened": 'When a lessons is opened on the platform',
-    "office_attendance": 'When the office raspberry pi detects the student',
-    "nps_survey_answered": 'When a nps survey is answered by the student',
-    "exercise_success": 'When student successfuly tests exercise',
-    "academy_registration": 'When student successfuly join to academy',
+    "breathecode-login": 'Every time it logs in',
+    "online-platform-registration": 'First day using breathecode',
+    "public-event-attendance": 'Attendy on an eventbrite event',
+    "classroom-attendance": 'When the student attent to class',
+    "classroom-unattendance": 'When the student miss class',
+    "lesson-opened": 'When a lessons is opened on the platform',
+    "office-attendance": 'When the office raspberry pi detects the student',
+    "nps-survey-answered": 'When a nps survey is answered by the student',
+    "exercise-success": 'When student successfuly tests exercise',
+    "academy-registration": 'When student successfuly join to academy',
 }
 
 ACTIVITY_PUBLIC_SLUGS = [
-    'breathecode_login',
-    'online_platform_registration',
+    'breathecode-login',
+    'online-platform-registration',
 ]
 
 
@@ -49,7 +49,7 @@ class ActivityTypeView(APIView):
             if activity_slug not in ACTIVITIES:
                 raise ValidationException(
                     'Activity type not found',
-                    slug='activity_not_found')
+                    slug='activity-not-found')
 
             res = self.get_activity_object(activity_slug)
             return Response(res)
@@ -116,10 +116,11 @@ class ActivityView(APIView):
 
 class UserActivityView(APIView):
     @capable_of('crud_activity')
-    def post(self, request, user_id=None, email=None, academy_id=None):
+    def post(self, request, academy_id=None):
         from breathecode.services import Datastore
 
         data = request.data
+        user = request.user
 
         validate_activity_fields(data)
         validate_require_activity_fields(data)
@@ -136,11 +137,12 @@ class UserActivityView(APIView):
         validate_if_activity_need_field_data(data)
         validate_activity_have_correct_data_field(data)
 
-        user = User.objects.filter(Q(id=user_id) | Q(email=email)).first()
-        if not user:
+        if 'cohort' in data and not Cohort.objects.filter(
+                slug=data['cohort'],
+                academy__id=academy_id).exists():
             raise ValidationException(
-                'User not exists',
-                slug='user-not-exists')
+                'Cohort not exists',
+                slug='cohort-not-exists')
 
         fields = {
             **data,
@@ -148,7 +150,7 @@ class UserActivityView(APIView):
             'slug': slug,
             'user_id': user.id,
             'email': user.email,
-            'academy_id': academy_id,
+            'academy_id': int(academy_id),
         }
 
         datastore = Datastore()

@@ -21,45 +21,32 @@ ACTIVITY_REQUIRED_FIELDS = [
 ]
 
 ACTIVITY_TYPE_DONT_NEED_A_COHORT = [
-    'breathecode_login',
-    'online_platform_registration',
+    'breathecode-login',
+    'online-platform-registration',
 ]
+
 ACTIVITY_TYPE_DONT_NEED_A_DATA = [
-    'breathecode_login',
-    'online_platform_registration',
+    'breathecode-login',
+    'online-platform-registration',
 ]
-
-
-def check_params(body, *args):
-    msg = ''
-    if body is None:
-        msg = 'request body as a json object, '
-    else:
-        for prop in args:
-            if prop not in body:
-                msg += f'{prop}, '
-    if msg:
-        msg = re.sub(r'(.*),', r'\1 and', msg[:-2])
-        raise ValidationError('You must specify the ' + msg, 400)
-    return body
 
 
 def validate_activity_fields(data):
     for field in data:
         if field not in ACTIVITY_FIELDS:
-            field = field.replace('_', '-')
+            slug = field.replace('_', '-')
             raise ValidationException(
                 f'Field {field} is not allowed in the request',
-                slug=f'f{field}-not-allowed')
+                slug=f'{slug}-not-allowed')
 
 
 def validate_require_activity_fields(data):
     for field in ACTIVITY_REQUIRED_FIELDS:
         if field not in data:
-            field = field.replace('_', '-')
+            slug = field.replace('_', '-')
             raise ValidationException(
                 f'Missing {field} in the request',
-                slug=f'missing-{field}')
+                slug=f'missing-{slug}')
 
 
 def validate_if_activity_need_field_cohort(data):
@@ -81,17 +68,12 @@ def validate_if_activity_need_field_data(data):
 def validate_activity_have_correct_data_field(data):
     if 'data' in data:
         try:
-            data = json.loads(data)
+            json.loads(data['data'])
 
-        except TypeError:
+        except Exception as e:
             raise ValidationException(
-                'Data can\'t be null',
-                slug='data-field-is-null')
-
-        except json.decoder.JSONDecodeError:
-            raise ValidationException(
-                'Data field is not a json',
-                slug='is-not-a-json')
+                'Data is not a JSON',
+                slug='data-is-not-a-json')
 
 
 def generate_created_at():
