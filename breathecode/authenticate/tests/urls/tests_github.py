@@ -41,3 +41,35 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(response.url, redirect)
+
+    def test_github_with_args_no_user(self):
+        """Test /github"""
+        original_url_callback = 'https://google.co.ve'
+        url = reverse_lazy('authenticate:github')
+        params = {'url': 'https://google.co.ve'}
+        args ={'user': "2"}
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}&{urllib.parse.urlencode(args)}')
+        json = response.json()
+        expected = {
+            'detail': 'user-not-found',
+            'status_code': 404
+        }
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_github_with_args(self):
+        """Test /github"""
+        original_url_callback = 'https://google.co.ve'
+        url = reverse_lazy('authenticate:github')
+        params = {'url': 'https://google.co.ve'}
+        args ={'user': "1"}
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}&{urllib.parse.urlencode(args)}')
+        params = {
+            "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
+            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+"?url="+original_url_callback,
+            "scope": 'user repo read:org',
+        }
+
+        redirect = f'https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}&{urllib.parse.urlencode(args)}'
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertEqual(response.url, redirect)

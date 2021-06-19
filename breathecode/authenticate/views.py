@@ -484,16 +484,13 @@ def get_roles(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_github_token(request):
-    # TODO: user_id
-    # url = request.query_params.get('url', None)
-    # if url == None:
-    #     raise ValidationError("No callback URL specified")
+
+    user_id = request.GET.get('user', '')
 
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationError("No callback URL specified")
 
-    # url = base64.b64decode(url).decode("utf-8")
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
         "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+"?url="+url,
@@ -502,8 +499,16 @@ def get_github_token(request):
 
     logger.debug("Redirecting to github")
     logger.debug(params)
-
-    redirect = f'https://github.com/login/oauth/authorize?{urlencode(params)}'
+    if user_id:
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            raise ValidationException('User was not found, please input different user',
+                code=404, slug='user-not-found')
+        print(user)
+        arg = {'user' : user_id}
+        redirect = f'https://github.com/login/oauth/authorize?{urlencode(params)}&{urlencode(arg)}'
+    else:
+        redirect = f'https://github.com/login/oauth/authorize?{urlencode(params)}'
 
     if settings.DEBUG:
         return HttpResponse(f"Redirect to: <a href='{redirect}'>{redirect}</a>")
@@ -574,7 +579,6 @@ def save_github_token(request):
                 raise ValidationError("Impossible to retrieve user email")
 
             if user_id:
-                print(user_id)
                 user = User.objects.filter(id=user_id).first()
                 if not user:
                     raise ValidationException('User was not found, please input different user',
