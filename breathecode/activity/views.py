@@ -113,8 +113,6 @@ class ActivityView(APIView):
 
         return Response(query_iter)
 
-
-class UserActivityView(APIView):
     @capable_of('crud_activity')
     def post(self, request, academy_id=None):
         from breathecode.services import Datastore
