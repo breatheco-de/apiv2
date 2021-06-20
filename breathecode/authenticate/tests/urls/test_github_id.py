@@ -28,7 +28,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_github_id_with_args_no_user(self):
         """Test /github"""
         url = reverse_lazy('authenticate:github_id', kwargs={'user_id':2})
-        params = {'url': 'https://google.co.ve?user=2'}
+        params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         json = response.json()
         expected = {
@@ -40,13 +40,13 @@ class AuthenticateTestSuite(AuthTestCase):
 
     def test_github_with_args(self):
         """Test /github"""
-        original_url_callback = 'https://google.co.ve?user=1'
+        original_url_callback = 'https://google.co.ve'
         url = reverse_lazy('authenticate:github_id', kwargs={'user_id':1})
         params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         params = {
             "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
-            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+"?url="+original_url_callback,
+            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+f"?url={original_url_callback}&user=1",
             "scope": 'user repo read:org',
         }
 
