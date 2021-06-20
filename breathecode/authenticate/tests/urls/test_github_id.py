@@ -11,9 +11,9 @@ from ..mixins import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
-    def test_github_without_url(self):
+    def test_github_id_without_url(self):
         """Test /github without auth"""
-        url = reverse_lazy('authenticate:github')
+        url = reverse_lazy('authenticate:github_id', kwargs={'user_id':1})
         response = self.client.get(url)
 
         data = response.data
@@ -25,10 +25,23 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_github(self):
+    def test_github_id_with_args_no_user(self):
         """Test /github"""
-        original_url_callback = 'https://google.co.ve'
-        url = reverse_lazy('authenticate:github')
+        url = reverse_lazy('authenticate:github_id', kwargs={'user_id':2})
+        params = {'url': 'https://google.co.ve?user=2'}
+        response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
+        json = response.json()
+        expected = {
+            'detail': 'user-not-found',
+            'status_code': 404
+        }
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_github_with_args(self):
+        """Test /github"""
+        original_url_callback = 'https://google.co.ve?user=1'
+        url = reverse_lazy('authenticate:github_id', kwargs={'user_id':1})
         params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         params = {
@@ -38,6 +51,5 @@ class AuthenticateTestSuite(AuthTestCase):
         }
 
         redirect = f'https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}'
-
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(response.url, redirect)

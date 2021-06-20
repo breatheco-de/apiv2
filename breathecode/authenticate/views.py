@@ -479,36 +479,29 @@ def get_roles(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def get_github_token(request):
-
-    # user_id = request.query_params.get('user', None)
+def get_github_token(request, user_id=None):
 
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationError("No callback URL specified")
 
-    user_id = url.split('?user=', 1)
-    if len(user_id) > 1:
-        user_id = user_id[1]
-    else:
-        user_id = user_id[0]
+    if user_id and not User.objects.filter(id=user_id).exists():
+        logger.debug(f'user {user_id} not found')
+        raise ValidationException('User was not found, please input different user',
+                code=404, slug='user-not-found')
+
+    if user_id:
+        url = url + f'?user={user_id}'
 
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
-        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+"?url="+url,
+        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+f"?url={url}",
         "scope": 'user repo read:org',
     }
 
     logger.debug("Redirecting to github")
     logger.debug(params)
 
-    # if user_id and not User.objects.filter(id=user_id).exists():
-    if user_id.isdigit() and not User.objects.filter(id=user_id).exists():
-        logger.debug(f'user {user_id} not found')
-        raise ValidationException('User was not found, please input different user',
-                code=404, slug='user-not-found')
-    # if user_id:
-    #     params['user'] = user_id
     redirect = f'https://github.com/login/oauth/authorize?{urlencode(params)}'
 
     if settings.DEBUG:

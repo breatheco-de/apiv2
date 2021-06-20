@@ -28,7 +28,7 @@ app_name = 'authenticate'
 urlpatterns = [
     path('user/', get_users, name="user"),
     path('role', get_roles, name="role"),
-    
+
 
     path('member/invite/resend/<int:pa_id>',
          AcademyInviteView.as_view(), name="academy_resent_invite"),
@@ -62,6 +62,7 @@ urlpatterns = [
     path('password/<str:token>', pick_password, name="password_token"),
 
     path('github/', get_github_token, name="github"),
+    path('github/<int:user_id>', get_github_token, name="github_id"),
     path('github/callback/', save_github_token, name="github_callback"),
 
     path('slack/', get_slack_token, name="slack"),
@@ -69,9 +70,9 @@ urlpatterns = [
 
     path('facebook/', get_facebook_token, name="facebook"),
     path('facebook/callback/', save_facebook_token, name="facebook_callback"),
-    
-    
-    
+
+
+
     path('user/me', UserMeView.as_view(), name="user_me"),
     path('user/me/invite', MeInviteView.as_view()),
 ]
