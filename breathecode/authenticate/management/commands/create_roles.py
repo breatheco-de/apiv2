@@ -47,6 +47,8 @@ class Command(BaseCommand):
             { "slug": "generate_academy_token", "description": "Create a new token only to be used by the academy" },
             { "slug": "get_academy_token", "description": "Read the academy token" },
             { "slug": "send_reset_password", "description": "Generate a temporal token and resend forgot password link" },
+            { "slug": "read_activity", "description": "List all the user activities" },
+            { "slug": "crud_activity", "description": "Create, updatre or delete a user activities" },
         ]
 
         for c in caps:
@@ -61,8 +63,8 @@ class Command(BaseCommand):
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
             { "slug": "academy_token", "name": "Academy Token", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite"] },
-            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "get_academy_token" ] },
-            { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort", "read_my_academy"] },
+            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "get_academy_token", "crud_activity"] },
+            { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort", "read_my_academy", "crud_activity"] },
         ]
 
         roles.append({ "slug": "assistant", "name": "Teacher Assistant", "caps": extend(roles, ["staff"]) + ["read_assigment", "crud_assignment", "read_cohort_activity", "read_nps_answers"] })
@@ -71,7 +73,7 @@ class Command(BaseCommand):
         roles.append({ "slug": "syllabus_coordinator", "name": "Syllabus Coordinator", "caps": extend(roles, ["staff"]) + ["crud_syllabus", "crud_media"] })
         roles.append({ "slug": "culture_and_recruitment", "name": "Culture and Recruitment", "caps": extend(roles, ["staff"]) + ["crud_member"] })
         roles.append({ "slug": "community_manager", "name": "Manage Syllabus, Exercises and all academy content", "caps": extend(roles, ["staff"]) + ["crud_lead","read_event", "crud_event", "read_eventcheckin", "read_nps_answers", "read_lead", "read_cohort", "crud_media"] })
-        roles.append({ "slug": "growth_manager", "name": "Growth Manager", "caps": extend(roles, ["staff", "community_manager"]) + ["crud_media"] })
+        roles.append({ "slug": "growth_manager", "name": "Growth Manager", "caps": extend(roles, ["staff", "community_manager"]) + ["crud_media", "read_activity"] })
         roles.append({ "slug": "homework_reviewer", "name": "Homework Reviewer", "caps": extend(roles, ["assistant"]) })
         roles.append({ "slug": "teacher", "name": "Teacher", "caps": extend(roles, ["assistant"]) })
         roles.append({ "slug": "academy_coordinator", "name": "Mentor in residence", "caps": extend(roles, ["teacher"]) + ["crud_syllabus", "crud_cohort", "crud_student", "crud_survey"] })

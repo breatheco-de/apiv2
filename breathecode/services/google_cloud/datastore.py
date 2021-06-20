@@ -24,12 +24,16 @@ class Datastore:
         Returns:
             Fetch: Fetch object
         """
-        query = self.client.query(**kwargs)
+        kind = kwargs.pop('kind')
+        query = self.client.query(kind=kind)
+
+        for key in kwargs:
+            query.add_filter(key, '=', kwargs[key])
 
         if order_by:
             query.order = order_by
 
-        return query.fetch()
+        return list(query.fetch())
 
     def update(self, key: str, data: dict):
         """Get Fetch object
