@@ -491,7 +491,7 @@ def get_github_token(request, user_id=None):
                 code=404, slug='user-not-found')
 
     if user_id:
-        url = url + f'?user={user_id}'
+        url = url + f'&user={user_id}'
 
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
