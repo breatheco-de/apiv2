@@ -108,7 +108,6 @@ class UserSpecialty(models.Model):
         self.is_cleaned = True
 
     def save(self, *args, **kwargs):
-
         if not self.is_cleaned:
             self.clean()
 

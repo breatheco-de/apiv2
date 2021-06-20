@@ -1,3 +1,4 @@
+from breathecode.authenticate.models import ProfileAcademy
 import logging
 from django.shortcuts import render
 from django.db.models.signals import post_save
@@ -14,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework import status, serializers
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
-from .tasks import take_screenshot
+from .tasks import take_screenshot, generate_one_certificate
 from .actions import generate_certificate
 
 logger = logging.getLogger(__name__)
@@ -74,6 +75,7 @@ class CertificateView(APIView):
 
         cu = CohortUser.objects.filter(
             cohort__id=cohort_id, user__id=student_id, role="STUDENT", cohort__academy__id=academy_id).first()
+        
         if cu is None:
             raise serializers.ValidationError(
                 f"Student not found for this cohort", code=404)
@@ -157,13 +159,62 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
                     user__profileacademy__last_name__icontains=query) | Q(user__first_name__icontains=query) | Q(
                     user__last_name__icontains=query) | Q(user__profileacademy__email__icontains=query) | Q(user__email__icontains=query))
 
+        sort = request.GET.get('sort', None)
+        if sort is None or sort == "":
+            sort = "-created_at"
+
+        items = items.order_by(sort)
         page = self.paginate_queryset(items, request)
         serializer = UserSpecialtySerializer(page, many=True)
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    @capable_of('crud_certificate')
+    def post(self, request, academy_id=None):
+        if isinstance(request.data, list):
+            data = request.data
+        else: 
+            data = [request.data]
 
+        cohort_users = []
+
+        if len(data) > 0:
+            for items in data:
+                cohort__slug = items.get("cohort_slug")
+                user__id = items.get("user_id")
+                cohort_user =  CohortUser.objects.filter(cohort__slug=cohort__slug, 
+                        user_id=user__id, role='STUDENT', cohort__academy__id=academy_id).first()
+
+                if cohort_user is not None:
+                    cohort_users.append(cohort_user)
+                else:
+                    student = ProfileAcademy.objects.filter(user_id=user__id).first()
+                    if student is None:
+                        raise ValidationException(f'User with id {str(user__id)} not found', 404)
+                    raise ValidationException(f'No student with id {str(student.first_name)} {str(student.last_name)} was found for cohort {str(cohort__slug)}', 
+                        code = 404, slug="student-not-found-in-cohort")
+        else:
+            raise ValidationException("You did not send anything to reattemps")
+
+        certs = []
+        for cu in cohort_users:
+            cert = UserSpecialty.objects.filter(cohort__id=cu.cohort_id, 
+                user__id=cu.user_id, cohort__academy__id=academy_id).first()
+            if cert is not None:
+                cert.status = "PENDING"
+                cert.save()
+                certs.append(cert)
+            else:
+                raise ValidationException('There is no certificate for this student and cohor', code=404, 
+                    slug="no-user-specialty")
+            generate_one_certificate.delay(cu.cohort_id, cu.user_id)
+   
+        serializer = UserSpecialtySerializer(certs, many=True)
+
+        return Response(serializer.data)
+          
 
 # class SyllabusView(APIView):
 #     """

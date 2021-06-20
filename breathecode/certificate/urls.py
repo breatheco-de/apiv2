@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from .views import ( 
     get_specialties, get_badges, get_certificate, CertificateView, CertificateCohortView,
-    CertificateAcademyView
+    CertificateAcademyView 
 )
 from rest_framework.authtoken import views
 
