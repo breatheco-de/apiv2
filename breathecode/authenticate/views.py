@@ -481,17 +481,17 @@ def get_roles(request):
 @permission_classes([AllowAny])
 def get_github_token(request):
 
-    user_id = request.query_params.get('user', None)
+    # user_id = request.query_params.get('user', None)
 
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationError("No callback URL specified")
 
-    # user_id = url.split('?user=', 1)
-    # if len(user_id) > 1:
-    #     user_id = user_id[1]
-    # else:
-    #     user_id = user_id[0]
+    user_id = url.split('?user=', 1)
+    if len(user_id) > 1:
+        user_id = user_id[1]
+    else:
+        user_id = user_id[0]
 
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
@@ -501,13 +501,14 @@ def get_github_token(request):
 
     logger.debug("Redirecting to github")
     logger.debug(params)
-    # if user_id.isdigit() and not User.objects.filter(id=user_id).exists():
-    if user_id and not User.objects.filter(id=user_id).exists():
+
+    # if user_id and not User.objects.filter(id=user_id).exists():
+    if user_id.isdigit() and not User.objects.filter(id=user_id).exists():
         logger.debug(f'user {user_id} not found')
         raise ValidationException('User was not found, please input different user',
                 code=404, slug='user-not-found')
-    if user_id:
-        params['user'] = user_id
+    # if user_id:
+    #     params['user'] = user_id
     redirect = f'https://github.com/login/oauth/authorize?{urlencode(params)}'
 
     if settings.DEBUG:
@@ -521,8 +522,6 @@ def get_github_token(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def save_github_token(request):
-
-    user_id = request.GET.get('user', '')
 
     logger.debug("Github callback just landed")
     logger.debug(request.query_params)
@@ -538,7 +537,13 @@ def save_github_token(request):
     code = request.query_params.get('code', None)
     if code == None:
         raise ValidationError("No github code specified")
-    print(url)
+
+    user_id = url.split('?user=', 1)
+    if len(user_id) > 1:
+        user_id = user_id[1]
+    else:
+        user_id = user_id[0]
+
     payload = {
         'client_id': os.getenv('GITHUB_CLIENT_ID', ""),
         'client_secret': os.getenv('GITHUB_SECRET', ""),
@@ -578,12 +583,10 @@ def save_github_token(request):
             if github_user['email'] is None:
                 raise ValidationError("Impossible to retrieve user email")
 
-            if user_id:
-                user = User.objects.filter(id=user_id).first()
-                if not user:
-                    logger.info(f'User {user_id} was not found')
-                    raise ValidationException('User was not found, please input different user',
-                        code=404, slug='user-not-found')
+            if user_id.isdigit() and not User.objects.filter(id=user_id).exists():
+                logger.debug(f'user {user_id} not found')
+                raise ValidationException('User was not found, please input different user',
+                    code=404, slug='user-not-found')
 
             else:
                 user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(
@@ -639,8 +642,10 @@ def save_github_token(request):
 
             token, created = Token.objects.get_or_create(
                 user=user, token_type='login')
-
-            return HttpResponseRedirect(redirect_to=url+'?token='+token.key)
+            if user_id.isdigit():
+                return HttpResponseRedirect(redirect_to=url+'&token='+token.key)
+            else:
+                return HttpResponseRedirect(redirect_to=url+'?token='+token.key)
         else:
             # print("Github error: ", resp.status_code)
             # print("Error: ", resp.json())
