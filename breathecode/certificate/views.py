@@ -158,8 +158,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
                     user__last_name__icontains=query) | Q(user__profileacademy__email__icontains=query) | Q(user__email__icontains=query))
 
         page = self.paginate_queryset(items, request)
-        serializer = UserSpecialtySerializer(items, many=True)
-        print(serializer.data)
+        serializer = UserSpecialtySerializer(page, many=True)
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
         else:

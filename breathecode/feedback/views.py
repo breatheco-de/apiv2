@@ -15,7 +15,6 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import status
 from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination
-from breathecode.utils.find_by_full_name import query_like_by_full_name
 from PIL import Image
 from django.db.models import Q
 
@@ -68,18 +67,12 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
     @capable_of('read_nps_answers')
     def get(self, request, format=None, academy_id=None):
 
-        print("€€€€€€€€e", request)
         items = Answer.objects.filter(academy__id=academy_id)
         lookup = {}
 
         if 'user' in self.request.GET:
             param = self.request.GET.get('user')
             lookup['user__id'] = param
-
-            like = request.GET.get('like', None)
-            if like is not None:
-                print("aaaaaaaaaaaa", like)
-                items = query_like_by_full_name(like, param)
 
         if 'cohort' in self.request.GET:
             param = self.request.GET.get('cohort')
@@ -104,9 +97,10 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
         items = items.filter(**lookup).order_by('-created_at')
 
         like = request.GET.get('like', None)
-        if like is not None:
-            prefix = 'user'
-            items = query_like_by_full_name(like, items, prefix)
+        if like is not None:            
+            for query in like.split():
+                items = items.filter(Q(user__first_name__icontains=query) |
+                    Q(user__last_name__icontains=query) | Q(user__email__icontains=query))
 
         page = self.paginate_queryset(items, request)
         serializer = AnswerSerializer(page, many=True)

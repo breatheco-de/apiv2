@@ -147,8 +147,8 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         like = request.GET.get('like', None)
         if like is not None:
-            prefix = None
-            items = query_like_by_full_name(like, items, prefix)
+            items = query_like_by_full_name(like=like, items=items)
+
         items = items.exclude(user__email__contains="@token.com")
 
         if not is_many:
@@ -300,8 +300,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
              
         like = request.GET.get('like', None)
         if like is not None:
-            prefix = None
-            items = query_like_by_full_name(like, items, prefix)
+            items = query_like_by_full_name(like=like, items=items)
 
         status = request.GET.get('status', None)
         if status is not None:

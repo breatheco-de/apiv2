@@ -306,7 +306,7 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 
         like = request.GET.get('like', None)
         if like is not None:
-            items = query_like_by_full_name(like, items, "")
+            items = query_like_by_full_name(like=like, items=items)
 
         page = self.paginate_queryset(items, request)
         serializer = FormEntrySmallSerializer(page, many=True)
