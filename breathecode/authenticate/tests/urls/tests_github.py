@@ -96,6 +96,7 @@ class AuthenticateTestSuite(AuthTestCase):
             "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
             "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+"?url="+original_url_callback,
             "scope": 'user repo read:org',
+            'user': '1'
         }
 
         redirect = f'https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}'
