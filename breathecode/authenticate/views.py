@@ -12,7 +12,7 @@ from rest_framework import status, serializers
 from django.contrib.auth.models import User, Group, AnonymousUser
 from django.contrib import messages
 from rest_framework.authtoken.views import ObtainAuthToken
-from urllib.parse import urlencode, parse_qs
+from urllib.parse import urlencode, parse_qs, urlparse, parse_qsl
 from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
@@ -531,11 +531,11 @@ def save_github_token(request):
     if code == None:
         raise ValidationError("No github code specified")
 
-    user_id = url.split('?user=', 1)
-    if len(user_id) > 1:
-        user_id = user_id[1]
-    else:
-        user_id = user_id[0]
+    user_id = urlparse(url)
+    user_id = parse_qsl(user_id.query)
+    if len(user_id) > 0:
+        user_id = user_id[0][1]
+
 
     payload = {
         'client_id': os.getenv('GITHUB_CLIENT_ID', ""),
@@ -576,14 +576,18 @@ def save_github_token(request):
             if github_user['email'] is None:
                 raise ValidationError("Impossible to retrieve user email")
 
-            if user_id.isdigit() and not User.objects.filter(id=user_id).exists():
+            if user_id and not User.objects.filter(id=user_id).exists():
                 logger.debug(f'user {user_id} not found')
                 raise ValidationException('User was not found, please input different user',
                     code=404, slug='user-not-found')
 
+            if user_id:
+                user = User.objects.filter(id=user_id).first()
+
             else:
                 user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(
                 email__iexact=github_user['email'])).first()
+
             if user is None:
                 user = User(
                     username=github_user['email'], email=github_user['email'])
@@ -635,7 +639,7 @@ def save_github_token(request):
 
             token, created = Token.objects.get_or_create(
                 user=user, token_type='login')
-            if user_id.isdigit():
+            if user_id:
                 return HttpResponseRedirect(redirect_to=url+'&token='+token.key)
             else:
                 return HttpResponseRedirect(redirect_to=url+'?token='+token.key)

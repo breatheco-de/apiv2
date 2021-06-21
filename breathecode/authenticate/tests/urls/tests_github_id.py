@@ -14,20 +14,20 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_github_id_without_url(self):
         """Test /github without auth"""
         url = reverse_lazy('authenticate:github_id', kwargs={'user_id':1})
+        url = urllib.parse.quote(url.encode("utf-8"))
         response = self.client.get(url)
 
         data = response.data
         details = data['details']
-        status_code = data['status_code']
 
         self.assertEqual(2, len(data))
         self.assertEqual(details, 'No callback URL specified')
-        self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_github_id_with_args_no_user(self):
         """Test /github"""
         url = reverse_lazy('authenticate:github_id', kwargs={'user_id':2})
+        url = urllib.parse.quote(url.encode("utf-8"))
         params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         json = response.json()
@@ -42,6 +42,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /github"""
         original_url_callback = 'https://google.co.ve'
         url = reverse_lazy('authenticate:github_id', kwargs={'user_id':1})
+        url = urllib.parse.quote(url.encode("utf-8"))
         params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         params = {
