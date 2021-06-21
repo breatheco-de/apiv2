@@ -17,6 +17,7 @@ from rest_framework import status
 from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination
 from PIL import Image
 from django.db.models import Q
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -97,10 +98,8 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
         items = items.filter(**lookup).order_by('-created_at')
 
         like = request.GET.get('like', None)
-        if like is not None:            
-            for query in like.split():
-                items = items.filter(Q(user__first_name__icontains=query) |
-                    Q(user__last_name__icontains=query) | Q(user__email__icontains=query))
+        if like is not None:      
+            items = query_like_by_full_name(like=like, items=items, prefix='user__')      
 
         page = self.paginate_queryset(items, request)
         serializer = AnswerSerializer(page, many=True)

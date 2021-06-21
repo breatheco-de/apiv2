@@ -1,7 +1,10 @@
 from django.db.models import Q
 
-def query_like_by_full_name(**kwargs):
+def query_like_by_full_name(prefix='', **kwargs):
+    first_name_kwargs = prefix + 'first_name__icontains'
+    last_name_kwargs = prefix + 'last_name__icontains'
+    email_kwargs = prefix + 'email__icontains'
     for query in kwargs['like'].split():
-        items = kwargs['items'].filter(Q(first_name__icontains=query) 
-            | Q(last_name__icontains=query) | Q(email__icontains=query))
+        items = kwargs['items'].filter(Q(**{first_name_kwargs:query}) 
+            | Q(**{last_name_kwargs:query}) | Q(**{email_kwargs:query}))
     return items
