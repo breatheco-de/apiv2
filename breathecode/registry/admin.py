@@ -35,7 +35,7 @@ sync_github.short_description = "Sync With Github"
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
-    search_fields = ['title', 'slug', 'user__email', 'url']
+    search_fields = ['title', 'slug', 'author__email', 'url']
     list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'url_path')
     list_filter = ['asset_type', 'lang']
     actions = [add_gitpod, remove_gitpod, sync_github]

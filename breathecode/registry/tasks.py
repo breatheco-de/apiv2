@@ -11,6 +11,6 @@ class BaseTaskWithRetry(Task):
     retry_backoff = True
 
 @shared_task
-def async_sync_with_github(asset_slug, user_id):
+def async_sync_with_github(asset_slug, user_id=None):
     logger.debug("Synching asset {asset_slug} with data found on github")
-    return sync_with_github(asset_slug, user_id)
+    return sync_with_github(asset_slug)

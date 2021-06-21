@@ -1,6 +1,8 @@
 import os, requests, logging
 from django.core.management.base import BaseCommand, CommandError
-from ...actions import create_asset
+from ...actions import create_asset, sync_with_github
+from ...tasks import async_sync_with_github
+from ...models import Asset
 
 logger = logging.getLogger(__name__)
 
@@ -32,17 +34,7 @@ class Command(BaseCommand):
             print(f'Sync method for {options["entity"]} no Found!')
         func(options)
 
-    def exercises(self, *args, **options):
-        response = requests.get(f"{HOST_ASSETS}/registry/all")
-        items = response.json()
-        for slug in items:
-            data = items[slug]
-            create_asset(data, asset_type="EXERCISE")
-
-
     def projects(self, *args, **options):
-        response = requests.get(f"{HOST_ASSETS}/project/registry/all")
-        items = response.json()
-        for slug in items:
-            data = items[slug]
-            create_asset(data, asset_type="PROJECT")
+        projects = Asset.objects.filter(asset_type='PROJECT')
+        for p in projects:
+            async_sync_with_github.delay(p.slug)
