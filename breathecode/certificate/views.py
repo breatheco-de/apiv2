@@ -193,7 +193,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
 
             if len(items) == 0:
                 raise ValidationException(
-                    f"No user specialties for deletion were found with following id: {','.join(ids)}", code=400, slug="specialties_not_found")
+                    f"No user specialties for deletion were found with following id: {','.join(ids)}", code=404, slug="specialties_not_found")
 
             for item in items:
                 item.delete()

@@ -89,10 +89,10 @@ class CertificateTestSuite(CertificateTestCase):
                                     )
         del base['user']
 
-        model1 = self.generate_models(user=True, profile_academy=True, user_specialty=True,
+        model1 = self.generate_models(user=True, user_specialty=True,
                                       user_specialty_kwargs={'token': "hitman3000"}, models=base)
 
-        model2 = self.generate_models(user=True, profile_academy=True, user_specialty=True,
+        model2 = self.generate_models(user=True, user_specialty=True,
                                       user_specialty_kwargs={'token': "batman2000"}, models=base)
 
         url = reverse_lazy('certificate:certificate_academy') + '?id=3,4'
@@ -101,9 +101,9 @@ class CertificateTestSuite(CertificateTestCase):
         if response.status_code != 204:
             print(response.json())
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json(), {
-                         'detail': 'specialties_not_found', 'status_code': 400})
+                         'detail': 'specialties_not_found', 'status_code': 404})
         self.assertEqual(self.all_user_invite_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -119,10 +119,10 @@ class CertificateTestSuite(CertificateTestCase):
                                     )
         del base['user']
 
-        model1 = self.generate_models(user=True, profile_academy=True, user_specialty=True,
+        model1 = self.generate_models(user=True, user_specialty=True,
                                       user_specialty_kwargs={'token': "hitman3000"}, models=base)
 
-        model2 = self.generate_models(user=True, profile_academy=True, user_specialty=True,
+        model2 = self.generate_models(user=True, user_specialty=True,
                                       user_specialty_kwargs={'token': "batman2000"}, models=base)
 
         url = reverse_lazy('certificate:certificate_academy')

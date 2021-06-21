@@ -78,34 +78,66 @@ class AuthenticateTestSuite(AuthTestCase):
 
         model1 = self.generate_models(authenticate=True, profile_academy=True, user_invite=True,
                                       user_invite_kwargs=invite_kwargs, models=base)
+        invite_kwargs["id"] = 2
+
+        model2 = self.generate_models(authenticate=True, profile_academy=True, user_invite=True,
+                                      user_invite_kwargs=invite_kwargs, models=base)
 
         url = reverse_lazy('authenticate:user_me_invite') + '?id=1,2'
         response = self.client.put(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), [{
-            'created_at': self.datetime_to_iso(model1['user_invite'].created_at),
-            'email': 'a@a.com',
-            'first_name': None,
-            'id': 1,
-            'invite_url': f"http://localhost:8000/v1/auth/member/invite/{model1['user_invite'].token}",
-            'last_name': None,
-            'sent_at': None,
-            'status': 'ACCEPTED',
-            'token': model1['user_invite'].token}])
-        self.assertEqual(self.all_user_invite_dict(), [{
-            'academy_id': 1,
-            'author_id': 1,
-            'cohort_id': 1,
-            'email': 'a@a.com',
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': 'potato',
-            'sent_at': None,
-            'status': 'ACCEPTED',
-            'token': model1['user_invite'].token}])
+        self.assertEqual(response.json(), [
+            {
+                'created_at': self.datetime_to_iso(model1['user_invite'].created_at),
+                'email': 'a@a.com',
+                'first_name': None,
+                'id': 1,
+                'invite_url': f"http://localhost:8000/v1/auth/member/invite/{model1['user_invite'].token}",
+                'last_name': None,
+                'sent_at': None,
+                'status': 'ACCEPTED',
+                'token': model1['user_invite'].token
+            },
+            {'created_at': self.datetime_to_iso(model2['user_invite'].created_at),
+             'email': 'a@a.com',
+             'first_name': None,
+             'id': 2,
+             'invite_url': f"http://localhost:8000/v1/auth/member/invite/{model2['user_invite'].token}",
+             'last_name': None,
+             'sent_at': None,
+             'status': 'ACCEPTED',
+             'token': model2['user_invite'].token
+             }])
+        self.assertEqual(self.all_user_invite_dict(), [
+            {
+                'academy_id': 1,
+                'author_id': 1,
+                'cohort_id': 1,
+                'email': 'a@a.com',
+                'first_name': None,
+                'id': 1,
+                'last_name': None,
+                'phone': '',
+                'role_id': 'potato',
+                'sent_at': None,
+                'status': 'ACCEPTED',
+                'token': model1['user_invite'].token
+            },
+            {
+                'academy_id': 1,
+                'author_id': 1,
+                'cohort_id': 2,
+                'email': 'a@a.com',
+                'first_name': None,
+                'id': 2,
+                'last_name': None,
+                'phone': '',
+                'role_id': 'potato',
+                'sent_at': None,
+                'status': 'ACCEPTED',
+                'token': model2['user_invite'].token
+            }])
 
     def test_invite_change_status_to_accepted_invitations_not_matched(self):
         """Test academy/user/me/invite"""
