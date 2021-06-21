@@ -705,33 +705,3 @@ class CohortUserTestSuite(MarketingTestCase):
         self.assertEqual(self.all_form_entry_dict(), [{
             **self.model_to_dict(model, 'form_entry')
         } for model in models])
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_after_last_five(self):
-        """Test /cohort without auth"""
-        self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato')
-
-        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
-
-        url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=10'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/marketing/academy/lead?limit=5',
-            'next': None,
-            'previous': 'http://testserver/v1/marketing/academy/lead?limit=5&'
-                f'offset=5',
-            'last': None,
-            'results': [],
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        } for model in models])

@@ -17,7 +17,7 @@ class AuthenticateTestSuite(AuthTestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_academy_token_without_capability(self):
+    def test_academy_token_post_without_capability(self):
         """Test /academy/:id/member/:id without auth"""
         self.headers(academy=1)
         self.generate_models(authenticate=True)
@@ -32,7 +32,7 @@ class AuthenticateTestSuite(AuthTestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_academy_token(self):
+    def test_academy_token_post(self):
         """Test /academy/:id/member/:id without auth"""
         role = 'academy_token'
         self.headers(academy=1)
@@ -42,9 +42,13 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url)
         json = response.json()
         token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
+
         token = self.get_token(1)
+        user = self.get_user(2)
+
         self.assertEqual(bool(token_pattern.match(json['token'])), True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
         self.assertEqual(self.all_token_dict(), [{
             'created' : token.created,
             'expires_at': json['expires_at'],
@@ -53,26 +57,103 @@ class AuthenticateTestSuite(AuthTestCase):
             'token_type' : json['token_type'],
             'user_id' : 2
         }])
+        self.assertEqual(self.all_user_dict(), [{
+            **self.model_to_dict(model, 'user'),
+        }, {
+            'date_joined': user.date_joined,
+            'username': model['academy'].slug,
+            'email': f"{model['academy'].slug}@token.com",
+            'first_name': '',
+            'id': 2,
+            'is_staff': False,
+            'is_superuser': False,
+            'last_login': None,
+            'last_name': '',
+            'password': '',
+            'is_active': True
+        }])
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            **self.model_to_dict(model, 'profile_academy'),
+        }, {
+            'academy_id': model['academy'].id,
+            'address': None,
+            'email': None,
+            'first_name': None,
+            'last_name': None,
+            'id': 2,
+            'phone': '',
+            'role_id': role,
+            'status': 'ACTIVE',
+            'user_id' : 2
+        }])
+        self.assertEqual(self.all_role_dict(), [{
+            **self.model_to_dict(model, 'role'),
+        }])
 
 
-    def test_academy_token_refresh_token(self):
+
+    def test_academy_token_post_refresh_token(self):
         """Test /academy/:id/member/:id without auth"""
         role = 'academy_token'
         self.headers(academy=1)
+        academy_kwargs = { 'slug' : 'academy-a' }
+        user_kwargs = { 'username' : 'academy-a' }
         model = self.generate_models(authenticate=True, role=role, user=True,
-            capability='generate_academy_token', profile_academy=True, token=True)
+            academy_kwargs=academy_kwargs, capability='generate_academy_token',
+            profile_academy=True, token=True, user_kwargs=user_kwargs,)
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.post(url)
         json = response.json()
         token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
 
+        token = self.get_token(2)
+
         self.assertEqual(bool(token_pattern.match(json['token'])), True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_token_dict(), [{
-            'created' : model['token'].key,
+            'created' : token.created,
             'expires_at': json['expires_at'],
-            'id': 1,
+            'id': 2,
             'key': json['token'],
             'token_type' : json['token_type'],
-            'user_id' : 2
+            'user_id' : model['user'].id
         }])
+        self.assertEqual(self.all_user_dict(), [{
+            **self.model_to_dict(model, 'user'),
+        }])
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            **self.model_to_dict(model, 'profile_academy'),
+        }])
+
+    def test_academy_token_post_refresh_token(self):
+        """Test /academy/:id/member/:id without auth"""
+        role = 'academy_token'
+        self.headers(academy=1)
+        academy_kwargs = { 'slug' : 'academy-a' }
+        user_kwargs = { 'username' : 'academy-a' }
+        model = self.generate_models(authenticate=True, role=role, user=True,
+            academy_kwargs=academy_kwargs, capability='generate_academy_token',
+            profile_academy=True, token=True, user_kwargs=user_kwargs,)
+        url = reverse_lazy('authenticate:academy_token')
+        response = self.client.post(url)
+        json = response.json()
+        token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
+
+        token = self.get_token(2)
+
+        self.assertEqual(bool(token_pattern.match(json['token'])), True)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_token_dict(), [{
+            'created' : token.created,
+            'expires_at': json['expires_at'],
+            'id': 2,
+            'key': json['token'],
+            'token_type' : json['token_type'],
+            'user_id' : model['user'].id
+        }])
+
+
+
+
+
+
