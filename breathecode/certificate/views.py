@@ -17,6 +17,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from .tasks import take_screenshot, generate_one_certificate
 from .actions import generate_certificate
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 logger = logging.getLogger(__name__)
 
@@ -154,9 +155,10 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
 
         like = request.GET.get('like', None)
         if like is not None and like != "":
-            items = items.filter(Q(user__profileacademy__first_name__icontains=like) | Q(
-                user__profileacademy__last_name__icontains=like) | Q(user__first_name__icontains=like) | Q(
-                user__last_name__icontains=like) | Q(user__profileacademy__email__icontains=like) | Q(user__email__icontains=like))
+            items = query_like_by_full_name(like=like, items=items, prefix='user__')
+            if items.count() == 0:
+                items = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
+                items = query_like_by_full_name(like=like, items=items, prefix='user__profileacademy__')
 
         sort = request.GET.get('sort', None)
         if sort is None or sort == "":
