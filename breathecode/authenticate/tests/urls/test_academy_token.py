@@ -90,8 +90,6 @@ class AuthenticateTestSuite(AuthTestCase):
             **self.model_to_dict(model, 'role'),
         }])
 
-
-
     def test_academy_token_post_refresh_token(self):
         """Test /academy/:id/member/:id without auth"""
         role = 'academy_token'
@@ -125,35 +123,59 @@ class AuthenticateTestSuite(AuthTestCase):
             **self.model_to_dict(model, 'profile_academy'),
         }])
 
-    def test_academy_token_post_refresh_token(self):
+    def test_academy_token_with_other_endpoints(self):
         """Test /academy/:id/member/:id without auth"""
         role = 'academy_token'
         self.headers(academy=1)
-        academy_kwargs = { 'slug' : 'academy-a' }
-        user_kwargs = { 'username' : 'academy-a' }
-        model = self.generate_models(authenticate=True, role=role, user=True,
-            academy_kwargs=academy_kwargs, capability='generate_academy_token',
-            profile_academy=True, token=True, user_kwargs=user_kwargs,)
+        model = self.generate_models(authenticate=True, role=role, academy=True,
+            capability='generate_academy_token', profile_academy=True, form_entry=True)
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.post(url)
         json = response.json()
         token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
 
-        token = self.get_token(2)
-
         self.assertEqual(bool(token_pattern.match(json['token'])), True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_token_dict(), [{
-            'created' : token.created,
-            'expires_at': json['expires_at'],
-            'id': 2,
-            'key': json['token'],
-            'token_type' : json['token_type'],
-            'user_id' : model['user'].id
+
+        self.client.logout()
+        self.client.credentials(HTTP_AUTHORIZATION='Token ' + json['token'])
+
+        url = reverse_lazy('marketing:lead_all')
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertDatetime(json[0]['created_at'])
+        del json[0]['created_at']
+
+        expected = [{
+            'academy': {
+                'id':  model.form_entry.academy.id,
+                'name': model.form_entry.academy.name,
+                'slug': model.form_entry.academy.slug
+            },
+            'country': model.form_entry.country,
+            'course': model.form_entry.course,
+            'email': model.form_entry.email,
+            'first_name': model.form_entry.first_name,
+            'gclid': model.form_entry.gclid,
+            'id': model.form_entry.id,
+            'language': model.form_entry.language,
+            'last_name': model.form_entry.last_name,
+            'lead_type': model.form_entry.lead_type,
+            'location': model.form_entry.location,
+            'storage_status': model.form_entry.storage_status,
+            'tags': model.form_entry.tags,
+            'utm_campaign': model.form_entry.utm_campaign,
+            'utm_medium': model.form_entry.utm_medium,
+            'utm_source': model.form_entry.utm_source,
+            'utm_url': model.form_entry.utm_url,
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
         }])
-
-
-
 
 
 

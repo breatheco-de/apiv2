@@ -174,9 +174,8 @@ def redirect_link(request, link_slug):
 def get_leads(request, id=None):
 
     items = FormEntry.objects.all()
-
     if isinstance(request.user, AnonymousUser) == False:
-        # filter only to the local academy
+        print(request.user)
         items = localize_query(items, request)
 
     academy = request.GET.get('academy', None)
@@ -195,6 +194,7 @@ def get_leads(request, id=None):
 
     items = items.order_by('created_at')
     serializer = FormEntrySerializer(items, many=True)
+    print(serializer.data)
     return Response(serializer.data)
 
 

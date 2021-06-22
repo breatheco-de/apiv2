@@ -85,7 +85,6 @@ class AcademyTokenView(ObtainAuthToken):
 
         academy = Academy.objects.get(id=academy_id)
         academy_user = User.objects.filter(username=academy.slug).first()
-        print(academy_user)
         if academy_user is None:
             academy_user = User(username=academy.slug, email=f"{academy.slug}@token.com")
             academy_user.save()
