@@ -68,6 +68,9 @@ INSTALLED_APPS = [
     'breathecode.registry',
 ]
 
+if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
+    INSTALLED_APPS.append('breathecode.cypress')
+
 REST_FRAMEWORK = {
     'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',
     'DEFAULT_PAGINATION_CLASS': 'breathecode.utils.HeaderLimitOffsetPagination',
@@ -105,7 +108,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
+
     'breathecode.utils.admin_timezone.TimezoneMiddleware',
 
     # ⬇ Rollbar is always last please!

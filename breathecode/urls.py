@@ -13,13 +13,14 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
-from django.urls import path, include
+import os
+
 from django.conf.urls import url
-from rest_framework import routers
-from rest_framework import permissions
-from drf_yasg.views import get_schema_view
+from django.contrib import admin
+from django.urls import include, path
 from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
+from rest_framework import permissions
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -55,3 +56,9 @@ urlpatterns = [
     path('v1/marketing/', include('breathecode.marketing.urls', namespace='marketing')),
     path('s/', include('breathecode.marketing.urls_shortner', namespace='shortner')),
 ]
+
+if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or os.environ.get('ENV') == 'test':
+    urlpatterns.append(
+        path(
+            'v1/cypress/',
+            include('breathecode.cypress.urls', namespace='cypress')))

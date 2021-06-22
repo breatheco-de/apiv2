@@ -19,7 +19,6 @@ class Command(BaseCommand):
 
         # Here is a list of all the current capabilities in the system
         caps = [
-            { "slug": "leer_mi_perfil", "description": "Read your academy information" },
             { "slug": "read_my_academy", "description": "Read your academy information" },
             { "slug": "crud_my_academy", "description": "Read, or update your academy information (very high level, almost the academy admin)" },
             { "slug": "crud_member", "description": "Create, update or delete academy members (very high level, almost the academy admin)" },
@@ -70,7 +69,7 @@ class Command(BaseCommand):
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort", "read_my_academy"] },
         ]
 
-        # These are additional roles that extend from the base roles above, 
+        # These are additional roles that extend from the base roles above,
         # you can exend from more than one role but also add additional capabilitis at the end
         roles.append({ "slug": "assistant", "name": "Teacher Assistant", "caps": extend(roles, ["staff"]) + ["read_assigment", "crud_assignment", "read_cohort_activity", "read_nps_answers"] })
         roles.append({ "slug": "career_support", "name": "Career Support Specialist", "caps": extend(roles, ["staff"]) + ["read_certificate", "crud_certificate"] })
