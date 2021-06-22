@@ -4,6 +4,11 @@ from rest_framework.exceptions import ValidationError
 import serpy
 from django.utils import timezone
 
+class UserSerializer(serpy.Serializer):
+    id = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+
 class AssetSerializer(serpy.Serializer):
     slug = serpy.Field()
     title = serpy.Field()
@@ -47,7 +52,7 @@ class AssetBigSerializer(AssetMidSerializer):
 
     status_text = serpy.Field()
 
-    author = serpy.Field()
+    author = UserSerializer(required=False)
 
     created_at = serpy.Field()
     updated_at = serpy.Field()

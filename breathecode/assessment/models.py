@@ -17,6 +17,9 @@ class Assessment(models.Model):
     author = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, blank=True, null=True)
 
     private = models.BooleanField(default=False)
+    
+    # the original translation (will only be set if the quiz is a translation of anotherone)
+    original = models.ForeignKey('Assessment', on_delete=models.CASCADE,  related_name="translations", default=None, blank=True, null=True, help_text="The original translation (will only be set if the quiz is a translation of anotherone)")
 
     comment = models.CharField(max_length=255, default=None, blank=True, null=True)
 
