@@ -17,6 +17,58 @@ class AuthenticateTestSuite(AuthTestCase):
         })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    def test_academy_token_get_without_capability(self):
+        """Test /academy/:id/member/:id without auth"""
+        self.headers(academy=1)
+        self.generate_models(authenticate=True)
+        url = reverse_lazy('authenticate:academy_token')
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: get_academy_token "
+                "for academy 1",
+            'status_code': 403
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_academy_token_get_without_user(self):
+        """Test /academy/:id/member/:id without auth"""
+        role="konan"
+        self.headers(academy=1)
+        self.generate_models(authenticate=True, role=role,
+            capability='get_academy_token', profile_academy=True)
+        url = reverse_lazy('authenticate:academy_token')
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'detail': "academy-token-not-found" ,
+            'status_code': 400
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_academy_token_get_without_token(self):
+        """Test /academy/:id/member/:id without auth"""
+        role="konan"
+        self.headers(academy=1)
+        user_kwargs = {'username' : 'kenny'}
+        academy_kwargs = {'slug' : 'kenny'}
+        self.generate_models(authenticate=True, role=role, user=True,
+            capability='get_academy_token', profile_academy=True,
+            user_kwargs=user_kwargs, academy_kwargs=academy_kwargs)
+        url = reverse_lazy('authenticate:academy_token')
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'detail': "academy-token-not-found",
+            'status_code': 400
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_academy_token_post_without_capability(self):
         """Test /academy/:id/member/:id without auth"""
         self.headers(academy=1)

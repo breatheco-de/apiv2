@@ -68,11 +68,13 @@ class AcademyTokenView(ObtainAuthToken):
         academy = Academy.objects.get(id=academy_id)
         academy_user = User.objects.filter(username=academy.slug).first()
         if academy_user is None:
-            raise ValidationError("No academy token has been generated yet")
+            raise ValidationException("No academy token has been generated yet",
+                slug="academy-token-not-found")
 
         token = Token.objects.filter(user=academy_user, token_type='permanent').first()
         if token is None:
-            raise ValidationError("No academy token has been generated yet")
+            raise ValidationException("No academy token has been generated yet",
+                slug="academy-token-not-found")
 
         return Response({
             'token': token.key,
