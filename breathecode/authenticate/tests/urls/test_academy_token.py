@@ -177,5 +177,29 @@ class AuthenticateTestSuite(AuthTestCase):
             **self.model_to_dict(model, 'form_entry')
         }])
 
+    def test_academy_token_showing_on_other_endpoints(self):
+        """Test /academy/:id/member/:id without auth"""
+        role = 'academy_token'
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, role=role,
+            capability='generate_academy_token', profile_academy=True)
+        url = reverse_lazy('authenticate:academy_token')
+        response = self.client.post(url)
+        json = response.json()
+        token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
 
+        self.assertEqual(bool(token_pattern.match(json['token'])), True)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        url = reverse_lazy('authenticate:user')
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [{
+            'id': model['user'].id,
+            'email': model['user'].email,
+            'first_name': model['user'].first_name,
+            'last_name': model['user'].last_name,
+            'github': None,
+        }])
 
