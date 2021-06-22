@@ -98,9 +98,6 @@ class CertificateTestSuite(CertificateTestCase):
         url = reverse_lazy('certificate:certificate_academy') + '?id=3,4'
         response = self.client.delete(url)
 
-        if response.status_code != 204:
-            print(response.json())
-
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json(), {
                          'detail': 'specialties_not_found', 'status_code': 404})
