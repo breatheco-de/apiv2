@@ -1,3 +1,7 @@
+# Enable linter in Visual Studio Code
+
+Press `ctrl` + `,`, you write `flake8 enable`, click in the checkbox and restart Visual Studio Code
+
 # Setup & Installation
 
 1. Install redis, postgress, python 3.8+ and node 14+

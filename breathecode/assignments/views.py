@@ -125,6 +125,7 @@ class TaskMeView(APIView):
             user_id = request.user.id
 
         payload = request.data
+
         if isinstance(request.data, list) == False:
             payload = [request.data]
 
