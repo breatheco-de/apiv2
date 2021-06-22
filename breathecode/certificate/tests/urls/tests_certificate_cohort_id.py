@@ -443,8 +443,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'slug': model['layout_design'].slug
             },
             'preview_url': model['user_specialty'].preview_url,
-            'signed_by': teacher_model['user'].first_name + " " +
-            teacher_model['user'].last_name,
+            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
