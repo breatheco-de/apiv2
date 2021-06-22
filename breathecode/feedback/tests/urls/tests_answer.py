@@ -823,3 +823,276 @@ class AnswerTestSuite(FeedbackTestCase):
         self.assertEqual(self.all_answer_dict(), [{
             **self.model_to_dict(model, 'answer'),
         } for model in models])
+
+    """
+    🔽🔽🔽 With full like querystring
+    """
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_answer_with_query_like_full_name(self):
+        """Test /answer with like full name"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True, 
+            capability='read_nps_answers', role='potato')
+        del base['user']
+        user_kwargs = {
+                'email':  'b@b.com',
+                'first_name': 'Rene',
+                'last_name': 'Descartes',
+            }
+        user_kwargs_2 = {
+                'email': 'a@a.com',
+                'first_name': 'Reinaldo',
+                'last_name': 'Descarado',
+            }
+        models = [
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs, models=base),
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs_2, models=base),
+        ]
+
+        base_url = reverse_lazy('feedback:answer')
+        url = f'{base_url}?like=Rene Descartes'
+
+        response = self.client.get(url)
+        json = response.json()
+
+        expected = [
+            {
+                'created_at': self.datetime_to_iso(models[0].answer.created_at),
+                'academy': {
+                    'id': models[0].answer.academy.id,
+                    'name': models[0].answer.academy.name,
+                    'slug': models[0].answer.academy.slug,
+                },
+                'cohort': {
+                    'id': models[0].cohort.id,
+                    'name': models[0].cohort.name,
+                    'slug': models[0].cohort.slug,
+                },
+                'comment': models[0].answer.comment,
+                'event': models[0].answer.event,
+                'highest': models[0].answer.highest,
+                'id': models[0].answer.id,
+                'lang': models[0].answer.lang,
+                'lowest': models[0].answer.lowest,
+                'mentor': {
+                    'first_name':  models[0].answer.mentor.first_name,
+                    'id':  models[0].answer.mentor.id,
+                    'last_name':  models[0].answer.mentor.last_name,
+                },
+                'score': models[0].answer.score,
+                'status': models[0].answer.status,
+                'title': models[0].answer.title,
+                'user': {
+                    'first_name': 'Rene',
+                    'id': 2,
+                    'last_name': 'Descartes',
+                },
+            }
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_answer_with_query_like_first_name(self):
+        """Test /answer with like first name"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True, 
+            capability='read_nps_answers', role='potato')
+        del base['user']
+        user_kwargs = {
+                'email':  'b@b.com',
+                'first_name': 'Rene',
+                'last_name': 'Descartes',
+            }
+        user_kwargs_2 = {
+                'email': 'a@a.com',
+                'first_name': 'Reinaldo',
+                'last_name': 'Descarado',
+            }
+        models = [
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs, models=base),
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs_2, models=base),
+        ]
+        base_url = reverse_lazy('feedback:answer')
+        url = f'{base_url}?like=Rene'
+
+        response = self.client.get(url)
+        json = response.json()
+
+        expected = [
+            {
+                'created_at': self.datetime_to_iso(models[0].answer.created_at),
+                'academy': {
+                    'id': models[0].answer.academy.id,
+                    'name': models[0].answer.academy.name,
+                    'slug': models[0].answer.academy.slug,
+                },
+                'cohort': {
+                    'id': models[0].cohort.id,
+                    'name': models[0].cohort.name,
+                    'slug': models[0].cohort.slug,
+                },
+                'comment': models[0].answer.comment,
+                'event': models[0].answer.event,
+                'highest': models[0].answer.highest,
+                'id': models[0].answer.id,
+                'lang': models[0].answer.lang,
+                'lowest': models[0].answer.lowest,
+                'mentor': {
+                    'first_name':  models[0].answer.mentor.first_name,
+                    'id':  models[0].answer.mentor.id,
+                    'last_name':  models[0].answer.mentor.last_name,
+                },
+                'score': models[0].answer.score,
+                'status': models[0].answer.status,
+                'title': models[0].answer.title,
+                'user': {
+                    'first_name': 'Rene',
+                    'id': 2,
+                    'last_name': 'Descartes',
+                },
+            }
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_answer_with_query_like_last_name(self):
+        """Test /answer with like last name"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True, 
+            capability='read_nps_answers', role='potato')
+        del base['user']
+        user_kwargs = {
+                'email':  'b@b.com',
+                'first_name': 'Rene',
+                'last_name': 'Descartes',
+            }
+        user_kwargs_2 = {
+                'email': 'a@a.com',
+                'first_name': 'Reinaldo',
+                'last_name': 'Descarado',
+            }
+        models = [
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs, models=base),
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs_2, models=base),
+        ]
+        base_url = reverse_lazy('feedback:answer')
+        url = f'{base_url}?like=Descartes'
+
+        response = self.client.get(url)
+        json = response.json()
+
+        expected = [
+            {
+                'created_at': self.datetime_to_iso(models[0].answer.created_at),
+                'academy': {
+                    'id': models[0].answer.academy.id,
+                    'name': models[0].answer.academy.name,
+                    'slug': models[0].answer.academy.slug,
+                },
+                'cohort': {
+                    'id': models[0].cohort.id,
+                    'name': models[0].cohort.name,
+                    'slug': models[0].cohort.slug,
+                },
+                'comment': models[0].answer.comment,
+                'event': models[0].answer.event,
+                'highest': models[0].answer.highest,
+                'id': models[0].answer.id,
+                'lang': models[0].answer.lang,
+                'lowest': models[0].answer.lowest,
+                'mentor': {
+                    'first_name':  models[0].answer.mentor.first_name,
+                    'id':  models[0].answer.mentor.id,
+                    'last_name':  models[0].answer.mentor.last_name,
+                },
+                'score': models[0].answer.score,
+                'status': models[0].answer.status,
+                'title': models[0].answer.title,
+                'user': {
+                    'first_name': 'Rene',
+                    'id': 2,
+                    'last_name': 'Descartes',
+                },
+            }
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_answer_with_query_like_email(self):
+        """Test /answer with like email"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True, 
+            capability='read_nps_answers', role='potato')
+        del base['user']
+        user_kwargs = {
+                'email':  'b@b.com',
+                'first_name': 'Rene',
+                'last_name': 'Descartes',
+            }
+        user_kwargs_2 = {
+                'email': 'a@a.com',
+                'first_name': 'Reinaldo',
+                'last_name': 'Descarado',
+            }
+        models = [
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs, models=base),
+            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs_2, models=base),
+        ]
+        base_url = reverse_lazy('feedback:answer')
+        url = f'{base_url}?like=b@b.com'
+
+        response = self.client.get(url)
+        json = response.json()
+
+        expected = [
+            {
+                'created_at': self.datetime_to_iso(models[0].answer.created_at),
+                'academy': {
+                    'id': models[0].answer.academy.id,
+                    'name': models[0].answer.academy.name,
+                    'slug': models[0].answer.academy.slug,
+                },
+                'cohort': {
+                    'id': models[0].cohort.id,
+                    'name': models[0].cohort.name,
+                    'slug': models[0].cohort.slug,
+                },
+                'comment': models[0].answer.comment,
+                'event': models[0].answer.event,
+                'highest': models[0].answer.highest,
+                'id': models[0].answer.id,
+                'lang': models[0].answer.lang,
+                'lowest': models[0].answer.lowest,
+                'mentor': {
+                    'first_name':  models[0].answer.mentor.first_name,
+                    'id':  models[0].answer.mentor.id,
+                    'last_name':  models[0].answer.mentor.last_name,
+                },
+                'score': models[0].answer.score,
+                'status': models[0].answer.status,
+                'title': models[0].answer.title,
+                'user': {
+                    'first_name': 'Rene',
+                    'id': 2,
+                    'last_name': 'Descartes',
+                },
+            }
+        ]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
