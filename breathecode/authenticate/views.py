@@ -483,7 +483,7 @@ def get_github_token(request, user_id=None):
 
     url = request.query_params.get('url', None)
     if url == None:
-        raise ValidationError("No callback URL specified")
+        raise ValidationException("No callback URL specified", slug="no-callback-url")
 
     if user_id and not User.objects.filter(id=user_id).exists():
         logger.debug(f'user {user_id} not found')
@@ -526,10 +526,10 @@ def save_github_token(request):
 
     url = request.query_params.get('url', None)
     if url == None:
-        raise ValidationError("No callback URL specified")
+        raise ValidationException("No callback URL specified", slug="no-callback-url")
     code = request.query_params.get('code', None)
     if code == None:
-        raise ValidationError("No github code specified")
+        raise ValidationException("No github code specified", slug="no-code")
 
     user_id = urlparse(url)
     user_id = parse_qsl(user_id.query)

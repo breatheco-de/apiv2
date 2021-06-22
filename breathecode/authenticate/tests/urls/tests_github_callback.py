@@ -20,10 +20,13 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
 
         data = response.data
-        details = data['details']
+        expected = {
+            'detail' : 'no-code',
+            'status_code' : 400
+        }
 
         self.assertEqual(2, len(data))
-        self.assertEqual(details, 'No github code specified')
+        self.assertEqual(data, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())

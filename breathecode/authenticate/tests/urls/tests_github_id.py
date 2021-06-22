@@ -18,12 +18,16 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         data = response.data
-        details = data['details']
+
+        expected = {
+            'detail' : 'no-callback-url',
+            'status_code' : 400
+        }
 
         self.assertEqual(2, len(data))
-        self.assertEqual(details, 'No callback URL specified')
+        self.assertEqual(data, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
+        
     def test_github_id_with_args_no_user(self):
         """Test /github"""
         url = reverse_lazy('authenticate:github_id', kwargs={'user_id':2})
