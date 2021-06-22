@@ -94,12 +94,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url)
         json = response.json()
         token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
+        expected = {'token_type': 'permanent', 'expires_at': None}
 
         token = self.get_token(1)
         user = self.get_user(2)
-
-        self.assertEqual(bool(token_pattern.match(json['token'])), True)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(self.all_token_dict(), [{
             'created' : token.created,
@@ -109,6 +107,11 @@ class AuthenticateTestSuite(AuthTestCase):
             'token_type' : json['token_type'],
             'user_id' : 2
         }])
+        self.assertEqual(bool(token_pattern.match(json['token'])), True)
+        del json['token']
+        self.assertEqual(json, expected)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_user_dict(), [{
             **self.model_to_dict(model, 'user'),
         }, {
@@ -153,13 +156,12 @@ class AuthenticateTestSuite(AuthTestCase):
             profile_academy=True, token=True, user_kwargs=user_kwargs,)
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.post(url)
+        expected = {'token_type': 'permanent', 'expires_at': None}
         json = response.json()
         token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
 
         token = self.get_token(2)
 
-        self.assertEqual(bool(token_pattern.match(json['token'])), True)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_token_dict(), [{
             'created' : token.created,
             'expires_at': json['expires_at'],
@@ -168,6 +170,11 @@ class AuthenticateTestSuite(AuthTestCase):
             'token_type' : json['token_type'],
             'user_id' : model['user'].id
         }])
+        self.assertEqual(bool(token_pattern.match(json['token'])), True)
+        del json['token']
+        self.assertEqual(json, expected)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_user_dict(), [{
             **self.model_to_dict(model, 'user'),
         }])
