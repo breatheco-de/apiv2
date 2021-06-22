@@ -1,6 +1,7 @@
 """
 Test /academy/lead
 """
+from logging import error
 from django.utils import timezone
 from datetime import timedelta
 import string
@@ -58,6 +59,8 @@ def generate_form_entry_kwargs():
         'deal_status': choice(['WON', 'LOST']),
         'sentiment': choice(['GOOD', 'BAD']),
     }
+
+
 
 class CohortUserTestSuite(MarketingTestCase):
     """Test /academy/lead"""
@@ -730,6 +733,221 @@ class CohortUserTestSuite(MarketingTestCase):
             'results': [],
         }
 
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
+
+    """
+    🔽🔽🔽 With full like in querystring
+    """
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_lead__with_full_name_in_querystring(self):
+        """Test /academy/lead """
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True, academy=True,
+            capability='read_lead', role='potato')
+
+        form_entry_kwargs_1=generate_form_entry_kwargs();
+        form_entry_kwargs_2=generate_form_entry_kwargs();
+
+        form_entry_kwargs_1['first_name'] = 'Michael'
+        form_entry_kwargs_1['last_name'] = 'Jordan'
+
+        models = [
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_1, form_entry=True, models=base),
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_2, form_entry=True, models=base)
+        ]
+
+        base_url = reverse_lazy('marketing:academy_lead')
+        url = f'{base_url}?like={models[0].form_entry.first_name} {models[0].form_entry.last_name}'
+
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertDatetime(json[0]['created_at'])
+        del json[0]['created_at']
+
+        expected = [{
+            'country': models[0].form_entry.country,
+            'course': models[0].form_entry.course,
+            'email': models[0].form_entry.email,
+            'first_name': models[0].form_entry.first_name,
+            'gclid': models[0].form_entry.gclid,
+            'id': models[0].form_entry.id,
+            'language': models[0].form_entry.language,
+            'last_name': models[0].form_entry.last_name,
+            'lead_type': models[0].form_entry.lead_type,
+            'location': models[0].form_entry.location,
+            'storage_status': models[0].form_entry.storage_status,
+            'tags': models[0].form_entry.tags,
+            'utm_campaign': models[0].form_entry.utm_campaign,
+            'utm_medium': models[0].form_entry.utm_medium,
+            'utm_source': models[0].form_entry.utm_source,
+            'utm_url': models[0].form_entry.utm_url,
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_lead__with_first_name_in_querystring(self):
+        """Test /academy/lead """
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True, academy=True,
+            capability='read_lead', role='potato')
+
+        form_entry_kwargs_1=generate_form_entry_kwargs();
+        form_entry_kwargs_2=generate_form_entry_kwargs();
+
+        form_entry_kwargs_1['first_name'] = 'Michael'
+        form_entry_kwargs_1['last_name'] = 'Jordan'
+
+        models = [
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_1, form_entry=True, models=base),
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_2, form_entry=True, models=base)
+        ]
+        base_url = reverse_lazy('marketing:academy_lead')
+        url = f'{base_url}?like={models[0].form_entry.first_name}'
+
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertDatetime(json[0]['created_at'])
+        del json[0]['created_at']
+
+        expected = [{
+            'country': models[0].form_entry.country,
+            'course': models[0].form_entry.course,
+            'email': models[0].form_entry.email,
+            'first_name': models[0].form_entry.first_name,
+            'gclid': models[0].form_entry.gclid,
+            'id': models[0].form_entry.id,
+            'language': models[0].form_entry.language,
+            'last_name': models[0].form_entry.last_name,
+            'lead_type': models[0].form_entry.lead_type,
+            'location': models[0].form_entry.location,
+            'storage_status': models[0].form_entry.storage_status,
+            'tags': models[0].form_entry.tags,
+            'utm_campaign': models[0].form_entry.utm_campaign,
+            'utm_medium': models[0].form_entry.utm_medium,
+            'utm_source': models[0].form_entry.utm_source,
+            'utm_url': models[0].form_entry.utm_url,
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_lead__with_last_name_in_querystring(self):
+        """Test /academy/lead """
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True, academy=True,
+            capability='read_lead', role='potato')
+
+        form_entry_kwargs_1=generate_form_entry_kwargs();
+        form_entry_kwargs_2=generate_form_entry_kwargs();
+
+        form_entry_kwargs_1['first_name'] = 'Michael'
+        form_entry_kwargs_1['last_name'] = 'Jordan'
+
+        models = [
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_1, form_entry=True, models=base),
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_2, form_entry=True, models=base)
+        ]
+
+        base_url = reverse_lazy('marketing:academy_lead')
+        url = f'{base_url}?like={models[0].form_entry.last_name}'
+
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertDatetime(json[0]['created_at'])
+        del json[0]['created_at']
+
+        expected = [{
+            'country': models[0].form_entry.country,
+            'course': models[0].form_entry.course,
+            'email': models[0].form_entry.email,
+            'first_name': models[0].form_entry.first_name,
+            'gclid': models[0].form_entry.gclid,
+            'id': models[0].form_entry.id,
+            'language': models[0].form_entry.language,
+            'last_name': models[0].form_entry.last_name,
+            'lead_type': models[0].form_entry.lead_type,
+            'location': models[0].form_entry.location,
+            'storage_status': models[0].form_entry.storage_status,
+            'tags': models[0].form_entry.tags,
+            'utm_campaign': models[0].form_entry.utm_campaign,
+            'utm_medium': models[0].form_entry.utm_medium,
+            'utm_source': models[0].form_entry.utm_source,
+            'utm_url': models[0].form_entry.utm_url,
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_lead__with_email_in_querystring(self):
+        """Test /academy/lead """
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, profile_academy=True, academy=True,
+            capability='read_lead', role='potato')
+
+        form_entry_kwargs_1=generate_form_entry_kwargs();
+        form_entry_kwargs_2=generate_form_entry_kwargs();
+
+        form_entry_kwargs_1['email'] = 'michael@jordan.com'
+        models = [
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_1, form_entry=True, models=base),
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_2, form_entry=True, models=base)
+        ]
+
+        base_url = reverse_lazy('marketing:academy_lead')
+        url = f'{base_url}?like={models[0].form_entry.email}'
+
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertDatetime(json[0]['created_at'])
+        del json[0]['created_at']
+
+        expected = [{
+            'country': models[0].form_entry.country,
+            'course': models[0].form_entry.course,
+            'email': models[0].form_entry.email,
+            'first_name': models[0].form_entry.first_name,
+            'gclid': models[0].form_entry.gclid,
+            'id': models[0].form_entry.id,
+            'language': models[0].form_entry.language,
+            'last_name': models[0].form_entry.last_name,
+            'lead_type': models[0].form_entry.lead_type,
+            'location': models[0].form_entry.location,
+            'storage_status': models[0].form_entry.storage_status,
+            'tags': models[0].form_entry.tags,
+            'utm_campaign': models[0].form_entry.utm_campaign,
+            'utm_medium': models[0].form_entry.utm_medium,
+            'utm_source': models[0].form_entry.utm_source,
+            'utm_url': models[0].form_entry.utm_url,
+        }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_form_entry_dict(), [{
