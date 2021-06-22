@@ -236,6 +236,35 @@ class AuthenticateTestSuite(AuthTestCase):
             **self.model_to_dict(model, 'form_entry')
         }])
 
+    def test_academy_no_token_with_other_endpoints(self):
+        """Test /academy/:id/member/:id without auth"""
+        role = 'academy_token'
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True, role=role, academy=True,
+            capability='generate_academy_token', profile_academy=True, form_entry=True)
+        url = reverse_lazy('authenticate:academy_token')
+        response = self.client.post(url)
+        json = response.json()
+        token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
+
+        self.assertEqual(bool(token_pattern.match(json['token'])), True)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.client.logout()
+
+        url = reverse_lazy('marketing:lead_all')
+        response = self.client.get(url)
+        json = response.json()
+
+        expected = {'detail': 'Authentication credentials were not provided.',
+            'status_code': 401}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        }])
+
     def test_academy_token_showing_on_other_endpoints(self):
         """Test /academy/:id/member/:id without auth"""
         role = 'academy_token'
