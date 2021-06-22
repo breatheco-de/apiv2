@@ -1,3 +1,4 @@
+import requests
 from django.shortcuts import render
 from django.utils import timezone
 from django.http import HttpResponse
@@ -46,6 +47,22 @@ def get_readme(request, asset_slug):
         raise ValidationException("Asset alias not found", status.HTTP_404_NOT_FOUND)
 
     return Response(asset.readme)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_config(request, asset_slug):
+    asset = Asset.objects.filter(slug=asset_slug).first()
+    if asset is None:
+        raise ValidationException("Asset alias not found", status.HTTP_404_NOT_FOUND)
+
+    response = requests.get(asset.url + "/blob/master/learn.json?raw=true")
+    if response.status_code == 404:
+        response = requests.get(asset.url + "/blob/master/bc.json?raw=true")
+        if response.status_code == 404:
+            raise ValidationException("Config file not found", code=404, slug='config_not_found')
+
+
+    return Response(response.json())
 
 # Create your views here.
 class GetAssetView(APIView):

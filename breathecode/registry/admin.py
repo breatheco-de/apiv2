@@ -32,13 +32,21 @@ def sync_github(modeladmin, request, queryset):
         async_sync_with_github.delay(a.slug, request.user.id)
         # sync_with_github(a.slug, request.user.id)
 sync_github.short_description = "Sync With Github"
+
+def author_aalejo(modeladmin, request, queryset):
+    assets = queryset.all()
+    for a in assets:
+        a.author = request.user
+        a.save()
+        # sync_with_github(a.slug, request.user.id)
+author_aalejo.short_description = "Make myself the author of these assets"
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
-    search_fields = ['title', 'slug', 'user__email', 'url']
+    search_fields = ['title', 'slug', 'author__email', 'url']
     list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'url_path')
     list_filter = ['asset_type', 'lang']
-    actions = [add_gitpod, remove_gitpod, sync_github]
+    actions = [add_gitpod, remove_gitpod, sync_github, author_aalejo]
     def url_path(self,obj):
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{obj.url}'>open</a>")
 
