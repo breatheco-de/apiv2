@@ -32,7 +32,7 @@ from .models import (
 from .actions import reset_password, resend_invite
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
-from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin 
+from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
@@ -69,12 +69,14 @@ class AcademyTokenView(ObtainAuthToken):
         academy = Academy.objects.get(id=academy_id)
         academy_user = User.objects.filter(username=academy.slug).first()
         if academy_user is None:
-            raise ValidationError("No academy token has been generated yet")
+            raise ValidationException("No academy token has been generated yet",
+                                      slug="academy-token-not-found")
 
         token = Token.objects.filter(
             user=academy_user, token_type='permanent').first()
         if token is None:
-            raise ValidationError("No academy token has been generated yet")
+            raise ValidationException("No academy token has been generated yet",
+                                      slug="academy-token-not-found")
 
         return Response({
             'token': token.key,
@@ -93,7 +95,7 @@ class AcademyTokenView(ObtainAuthToken):
             academy_user.save()
 
             role = Role.objects.get(slug="academy_token")
-            # this profile is for tokens, that is why we need no  email validation status=ACTIVE, rol must be academy_token
+            # this profile is for tokens, that is why we need no  email validation status=ACTIVE, role must be academy_token
             # and the email is empty
             profile_academy = ProfileAcademy(
                 user=academy_user, academy=academy, role=role, status="ACTIVE")
@@ -285,7 +287,7 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         invite = UserInvite.objects.filter(
             academy__id=academy_id, email=profile.email, status='PENDING').first()
-        
+
         if invite is None:
             raise ValidationException("No pending invite was found", 404)
 
@@ -325,7 +327,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         items = ProfileAcademy.objects.filter(
             role__slug='student', academy__id=academy_id)
-             
+
         like = request.GET.get('like', None)
         if like is not None:
             items = query_like_by_full_name(like=like, items=items)
@@ -497,7 +499,6 @@ def get_users(request):
     if like is not None:
         query = query.filter(Q(first_name__icontains=like) | Q(
             last_name__icontains=like) | Q(email__icontains=like))
-
 
     query = query.exclude(email__contains="@token.com")
     query = query.order_by('-date_joined')

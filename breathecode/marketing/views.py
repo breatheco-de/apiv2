@@ -191,9 +191,7 @@ def redirect_link(request, link_slug):
 def get_leads(request, id=None):
 
     items = FormEntry.objects.all()
-
     if isinstance(request.user, AnonymousUser) == False:
-        # filter only to the local academy
         items = localize_query(items, request)
 
     academy = request.GET.get('academy', None)
@@ -294,8 +292,7 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
     def get(self, request, format=None, academy_id=None):
 
         academy = Academy.objects.get(id=academy_id)
-        items = FormEntry.objects.filter(
-            Q(location=academy.slug) | Q(academy__id=academy.id))
+        items = FormEntry.objects.filter(academy__id=academy.id)
         lookup = {}
 
         start = request.GET.get('start', None)

@@ -49,6 +49,20 @@ class AnswerSerializer(serpy.Serializer):
     mentor = UserSerializer(required=False)
     event = EventTypeSmallSerializer(required=False)
 
+class SurveySmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    lang = serpy.Field()
+    cohort = GetCohortSerializer()
+    avg_score = serpy.Field()
+    status = serpy.Field()
+    duration = serpy.Field()
+    created_at = serpy.Field()
+    sent_at = serpy.Field()
+    public_url = serpy.MethodField()
+
+    def get_public_url(self, obj):
+        return "https://nps.breatheco.de/survey/" + str(obj.id)
+
 class BigAnswerSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()

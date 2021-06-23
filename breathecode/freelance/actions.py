@@ -8,6 +8,10 @@ from github import Github
 
 
 def sync_user_issues(freelancer):
+
+    if freelancer.github_user is None:
+        raise ValueError(f"Freelancer has not github user")
+
     github_id = freelancer.github_user.github_id
     credentials = CredentialsGithub.objects.filter(github_id=github_id).first()
     if credentials is None:

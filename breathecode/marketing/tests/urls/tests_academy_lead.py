@@ -794,7 +794,7 @@ class CohortUserTestSuite(MarketingTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_form_entry_dict(), [{
             **self.model_to_dict(model, 'form_entry')
-        } for model in models])     
+        } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
