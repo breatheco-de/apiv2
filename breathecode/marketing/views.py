@@ -25,6 +25,7 @@ from .actions import register_new_lead, sync_tags, sync_automations, get_faceboo
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
 from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation
 from breathecode.admissions.models import Academy
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 
 logger = logging.getLogger(__name__)
@@ -174,9 +175,7 @@ def redirect_link(request, link_slug):
 def get_leads(request, id=None):
 
     items = FormEntry.objects.all()
-
     if isinstance(request.user, AnonymousUser) == False:
-        # filter only to the local academy
         items = localize_query(items, request)
 
     academy = request.GET.get('academy', None)
@@ -276,7 +275,8 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
     def get(self, request, format=None, academy_id=None):
 
         academy = Academy.objects.get(id=academy_id)
-        items = FormEntry.objects.filter(Q(location=academy.slug) | Q(academy__id=academy.id))
+        #items = FormEntry.objects.filter(Q(location=academy.slug) | Q(academy__id=academy.id))
+        items = FormEntry.objects.filter(academy__id=academy.id)
         lookup = {}
 
         start = request.GET.get('start', None)
@@ -302,6 +302,10 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             lookup['location'] = param
 
         items = items.filter(**lookup).order_by('-created_at')
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = query_like_by_full_name(like=like, items=items)
 
         page = self.paginate_queryset(items, request)
         serializer = FormEntrySmallSerializer(page, many=True)

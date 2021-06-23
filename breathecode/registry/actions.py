@@ -66,7 +66,7 @@ def create_asset(data, asset_type):
     aa = AssetAlias(slug=slug, asset=a)
     aa.save()
 
-def sync_with_github(asset_slug, author_id):
+def sync_with_github(asset_slug, author_id=None):
 
     try:
 
@@ -74,11 +74,17 @@ def sync_with_github(asset_slug, author_id):
         if asset is None:
             raise Exception(f"Asset with slug {asset_slug} not found when attempting to sync with github")
 
+        if asset.author is not None:
+            author_id = asset.author.id
+
+        if author_id is None:
+            raise Exception(f"System does not know what github credentials to use to retrive asset info for: {asset_slug}")
+
         org_name, repo_name = get_url_info(asset.url)
 
         credentials = CredentialsGithub.objects.filter(user__id=author_id).first()
         if credentials is None:
-            raise Exception(f"Github credentials for this user {author_id} not found")
+            raise Exception(f"Github credentials for this user {author_id} not found when sync asset {asset_slug}")
 
 
         g = Github(credentials.token)
@@ -157,6 +163,7 @@ def sync_with_github(asset_slug, author_id):
         asset.save()
         logger.error(f"Error updating {asset.slug} from github: "+str(e))
 
+    logger.debug(f"Successfully re-synched asset {asset_slug} with github")
     return asset.status
 
 def get_url_info(url: str):
