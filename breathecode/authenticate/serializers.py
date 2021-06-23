@@ -1,4 +1,7 @@
-import serpy, logging, random, os
+import serpy
+import logging
+import random
+import os
 import urllib.parse
 from django.contrib.auth.models import User, Group
 from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile

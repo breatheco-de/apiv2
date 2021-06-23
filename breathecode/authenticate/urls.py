@@ -28,13 +28,14 @@ app_name = 'authenticate'
 urlpatterns = [
     path('user/', get_users, name="user"),
     path('role', get_roles, name="role"),
-    
+
 
     path('member/invite/resend/<int:pa_id>',
          AcademyInviteView.as_view(), name="academy_resent_invite"),
     path('member/invite/<str:token>', render_invite, name="academy_invite"),
 
     path('academy/member', MemberView.as_view(), name="academy_member"),
+
     path('academy/<int:academy_id>/member',
          MemberView.as_view(), name="academy_id_member"),
     path('academy/member/<int:user_id>',
@@ -43,8 +44,12 @@ urlpatterns = [
          MemberView.as_view(), name="academy_id_member_id"),
 
     path('academy/student', StudentView.as_view(), name="academy_student"),
-    path('academy/student/<int:user_id>', StudentView.as_view(), name="academy_student_id"),
-    path('academy/user/<int:profileacademy_id>/invite', ProfileInviteView.as_view()),
+    path('academy/student/<int:user_id>', StudentView.as_view()),
+    path('academy/user/me/invite', MeInviteView.as_view(), name="user_me_invite"),
+    path('academy/user/<int:profileacademy_id>/invite',
+         ProfileInviteView.as_view()),
+    path('academy/user/invite',
+         ProfileInviteView.as_view(), name="user_invite"),
     # path('group/', get_groups, name="group"),
 
     path('view/login', login_html_view, name="login_view"),  # html login form
@@ -58,7 +63,8 @@ urlpatterns = [
          name="token"),  # get token information
 
     path('password/reset', reset_password_view, name="password_reset"),
-    path('member/<int:profileacademy_id>/password/reset', PasswordResetView.as_view(), name="member_password_reset"),
+    path('member/<int:profileacademy_id>/password/reset',
+         PasswordResetView.as_view(), name="member_password_reset"),
     path('password/<str:token>', pick_password, name="password_token"),
 
     path('github/', get_github_token, name="github"),
@@ -69,9 +75,9 @@ urlpatterns = [
 
     path('facebook/', get_facebook_token, name="facebook"),
     path('facebook/callback/', save_facebook_token, name="facebook_callback"),
-    
-    
-    
+
+
+
     path('user/me', UserMeView.as_view(), name="user_me"),
     path('user/me/invite', MeInviteView.as_view()),
 ]

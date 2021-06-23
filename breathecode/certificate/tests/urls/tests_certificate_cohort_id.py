@@ -14,6 +14,7 @@ from breathecode.tests.mocks import (
 )
 from ..mixins.new_certificate_test_case import CertificateTestCase
 
+
 class CertificateTestSuite(CertificateTestCase):
     """Test /certificate/cohort/id"""
 
@@ -26,7 +27,8 @@ class CertificateTestSuite(CertificateTestCase):
     def test_certificate_cohort_user__without_auth(self):
         """Test /certificate/cohort/id without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
+        url = reverse_lazy('certificate:certificate_cohort',
+                           kwargs={'cohort_id': 1})
         response = self.client.post(url, {})
         json = response.json()
 
@@ -43,7 +45,8 @@ class CertificateTestSuite(CertificateTestCase):
         """Test /certificate/cohort/id with auth without permissions"""
         self.headers(academy=1)
         self.generate_models(authenticate=True)
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
+        url = reverse_lazy('certificate:certificate_cohort',
+                           kwargs={'cohort_id': 1})
         response = self.client.post(url, {})
         json = response.json()
 
@@ -66,11 +69,12 @@ class CertificateTestSuite(CertificateTestCase):
         """ No main teacher in cohort """
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, capability='crud_certificate', role='STUDENT',
-            cohort_user=True, syllabus=True, specialty=True, layout_design=True,
-            cohort_stage="ENDED")
+                             profile_academy=True, capability='crud_certificate', role='STUDENT',
+                             cohort_user=True, syllabus=True, specialty=True, layout_design=True,
+                             cohort_stage="ENDED")
 
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
+        url = reverse_lazy('certificate:certificate_cohort',
+                           kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
         expected = {
@@ -90,10 +94,11 @@ class CertificateTestSuite(CertificateTestCase):
         """ No cohort user"""
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, capability='crud_certificate', role="STUDENT",
-            cohort_stage="ENDED")
+                             profile_academy=True, capability='crud_certificate', role="STUDENT",
+                             cohort_stage="ENDED")
 
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
+        url = reverse_lazy('certificate:certificate_cohort',
+                           kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
         expected = {
@@ -113,10 +118,11 @@ class CertificateTestSuite(CertificateTestCase):
         """ No syllabus """
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, capability='crud_certificate', role='STUDENT',
-            cohort_user=True, cohort_stage="ENDED")
+                             profile_academy=True, capability='crud_certificate', role='STUDENT',
+                             cohort_user=True, cohort_stage="ENDED")
 
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
+        url = reverse_lazy('certificate:certificate_cohort',
+                           kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
         expected = {
@@ -136,10 +142,11 @@ class CertificateTestSuite(CertificateTestCase):
         """ No specialty """
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, capability='crud_certificate', role='STUDENT',
-            cohort_user=True, syllabus=True, cohort_stage="ENDED")
+                             profile_academy=True, capability='crud_certificate', role='STUDENT',
+                             cohort_user=True, syllabus=True, cohort_stage="ENDED")
 
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
+        url = reverse_lazy('certificate:certificate_cohort',
+                           kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
         expected = {
@@ -159,10 +166,11 @@ class CertificateTestSuite(CertificateTestCase):
         """ No specialty """
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, capability='crud_certificate', role='STUDENT',
-            cohort_user=True, syllabus=True, specialty=True, cohort_stage="ENDED")
+                             profile_academy=True, capability='crud_certificate', role='STUDENT',
+                             cohort_user=True, syllabus=True, specialty=True, cohort_stage="ENDED")
 
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
+        url = reverse_lazy('certificate:certificate_cohort',
+                           kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
         expected = {
@@ -174,7 +182,6 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -183,10 +190,11 @@ class CertificateTestSuite(CertificateTestCase):
         """ No specialty """
         self.headers(academy=1)
         self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, capability='crud_certificate', role='STUDENT',
-            cohort_user=True, syllabus=True, specialty=True, layout_design=True)
+                             profile_academy=True, capability='crud_certificate', role='STUDENT',
+                             cohort_user=True, syllabus=True, specialty=True, layout_design=True)
 
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
+        url = reverse_lazy('certificate:certificate_cohort',
+                           kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
         expected = {
@@ -198,7 +206,6 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -207,18 +214,19 @@ class CertificateTestSuite(CertificateTestCase):
         """ BAD_REQUEST """
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True,cohort_user=True, capability='crud_certificate', role='STUDENT',
-            syllabus=True, specialty=True, cohort_stage="ENDED", user_specialty=True,
-            layout_design=True)
+                                     profile_academy=True, cohort_user=True, capability='crud_certificate', role='STUDENT',
+                                     syllabus=True, specialty=True, cohort_stage="ENDED", user_specialty=True,
+                                     layout_design=True)
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
         teacher_model = self.generate_models(user=True, cohort_user=True,
-            cohort_user_role='TEACHER', models=base)
+                                             cohort_user_role='TEACHER', models=base)
 
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
+        url = reverse_lazy('certificate:certificate_cohort',
+                           kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
 
@@ -243,7 +251,7 @@ class CertificateTestSuite(CertificateTestCase):
                     }
                 }
             },
-            'created_at': self.datetime_to_iso( model['user_specialty'].created_at),
+            'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
             'expires_at': model['user_specialty'].expires_at,
             'id': 1,
             'layout': {
@@ -252,7 +260,7 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'preview_url': model['user_specialty'].preview_url,
             'signed_by': teacher_model['user'].first_name + " " +
-                teacher_model['user'].last_name,
+            teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
@@ -281,7 +289,7 @@ class CertificateTestSuite(CertificateTestCase):
             'layout_id': 1,
             'preview_url': model['user_specialty'].preview_url,
             'signed_by': teacher_model['user'].first_name + " " +
-                teacher_model['user'].last_name,
+            teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty_id': 1,
             'status': 'ERROR',
@@ -298,18 +306,19 @@ class CertificateTestSuite(CertificateTestCase):
         """ BAD_REQUEST """
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, cohort_user=True, capability='crud_certificate', role='STUDENT',
-            syllabus=True, specialty=True, cohort_stage="ENDED",user_specialty=True,
-            layout_design=True, cohort_user_finantial_status='UP_TO_DATE')
+                                     profile_academy=True, cohort_user=True, capability='crud_certificate', role='STUDENT',
+                                     syllabus=True, specialty=True, cohort_stage="ENDED", user_specialty=True,
+                                     layout_design=True, cohort_user_finantial_status='UP_TO_DATE')
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
         teacher_model = self.generate_models(user=True, cohort_user=True,
-            cohort_user_role='TEACHER', models=base)
+                                             cohort_user_role='TEACHER', models=base)
 
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
+        url = reverse_lazy('certificate:certificate_cohort',
+                           kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
 
@@ -334,7 +343,7 @@ class CertificateTestSuite(CertificateTestCase):
                     }
                 }
             },
-            'created_at': self.datetime_to_iso( model['user_specialty'].created_at),
+            'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
             'expires_at': model['user_specialty'].expires_at,
             'id': 1,
             'layout': {
@@ -343,7 +352,7 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'preview_url': model['user_specialty'].preview_url,
             'signed_by': teacher_model['user'].first_name + " " +
-                teacher_model['user'].last_name,
+            teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
@@ -372,7 +381,7 @@ class CertificateTestSuite(CertificateTestCase):
             'layout_id': 1,
             'preview_url': model['user_specialty'].preview_url,
             'signed_by': teacher_model['user'].first_name + " " +
-                teacher_model['user'].last_name,
+            teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty_id': 1,
             'status': 'ERROR',
@@ -389,18 +398,19 @@ class CertificateTestSuite(CertificateTestCase):
         """ BAD_REQUEST """
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, cohort_user=True, syllabus=True,capability='crud_certificate',
-            role='STUDENT', specialty=True, cohort_stage="ENDED", user_specialty=True, layout_design=True,
-            cohort_user_finantial_status='UP_TO_DATE', cohort_user_educational_status='GRADUATED')
+                                     profile_academy=True, cohort_user=True, syllabus=True, capability='crud_certificate',
+                                     role='STUDENT', specialty=True, cohort_stage="ENDED", user_specialty=True, layout_design=True,
+                                     cohort_user_finantial_status='UP_TO_DATE', cohort_user_educational_status='GRADUATED')
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
         teacher_model = self.generate_models(user=True, cohort_user=True,
-            cohort_user_role='TEACHER', models=base)
+                                             cohort_user_role='TEACHER', models=base)
 
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
+        url = reverse_lazy('certificate:certificate_cohort',
+                           kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
 
@@ -408,7 +418,7 @@ class CertificateTestSuite(CertificateTestCase):
         del json[0]['updated_at']
 
         expected = [{
-           'academy': {
+            'academy': {
                 'id': 1,
                 'logo_url': model['academy'].logo_url,
                 'name': model['academy'].name,
@@ -425,7 +435,7 @@ class CertificateTestSuite(CertificateTestCase):
                     }
                 }
             },
-            'created_at': self.datetime_to_iso( model['user_specialty'].created_at),
+            'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
             'expires_at': model['user_specialty'].expires_at,
             'id': 1,
             'layout': {
@@ -433,8 +443,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'slug': model['layout_design'].slug
             },
             'preview_url': model['user_specialty'].preview_url,
-            'signed_by': teacher_model['user'].first_name + " " +
-                teacher_model['user'].last_name,
+            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
@@ -463,7 +472,7 @@ class CertificateTestSuite(CertificateTestCase):
             'layout_id': 1,
             'preview_url': model['user_specialty'].preview_url,
             'signed_by': teacher_model['user'].first_name + " " +
-                teacher_model['user'].last_name,
+            teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty_id': 1,
             'status': 'ERROR',
@@ -480,19 +489,20 @@ class CertificateTestSuite(CertificateTestCase):
         """ status: 201 """
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, syllabus=True,capability='crud_certificate', role='STUDENT',
-            cohort_user=True, specialty=True, cohort_stage="ENDED", user_specialty=True,
-            cohort_user_educational_status='GRADUATED', cohort_user_finantial_status='UP_TO_DATE',
-            layout_design=True, cohort_finished=True)
+                                     profile_academy=True, syllabus=True, capability='crud_certificate', role='STUDENT',
+                                     cohort_user=True, specialty=True, cohort_stage="ENDED", user_specialty=True,
+                                     cohort_user_educational_status='GRADUATED', cohort_user_finantial_status='UP_TO_DATE',
+                                     layout_design=True, cohort_finished=True)
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
         teacher_model = self.generate_models(user=True, cohort_user=True,
-            cohort_user_role='TEACHER', models=base)
+                                             cohort_user_role='TEACHER', models=base)
 
-        url = reverse_lazy('certificate:certificate_cohort', kwargs={'cohort_id': 1})
+        url = reverse_lazy('certificate:certificate_cohort',
+                           kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
 
@@ -517,7 +527,7 @@ class CertificateTestSuite(CertificateTestCase):
                     }
                 }
             },
-            'created_at': self.datetime_to_iso( model['user_specialty'].created_at),
+            'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
             'expires_at': model['user_specialty'].expires_at,
             'id': 1,
             'layout': {
@@ -526,7 +536,7 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'preview_url': model['user_specialty'].preview_url,
             'signed_by': teacher_model['user'].first_name + " " +
-                teacher_model['user'].last_name,
+            teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
@@ -555,7 +565,7 @@ class CertificateTestSuite(CertificateTestCase):
             'layout_id': 1,
             'preview_url': model['user_specialty'].preview_url,
             'signed_by': teacher_model['user'].first_name + " " +
-                teacher_model['user'].last_name,
+            teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty_id': 1,
             'status': 'PERSISTED',
