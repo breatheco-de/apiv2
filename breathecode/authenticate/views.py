@@ -32,7 +32,8 @@ from .models import (
 from .actions import reset_password, resend_invite
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
-from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
+from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin 
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 from .serializers import (
     UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer, GETProfileAcademy,
     StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
@@ -68,11 +69,13 @@ class AcademyTokenView(ObtainAuthToken):
         academy = Academy.objects.get(id=academy_id)
         academy_user = User.objects.filter(username=academy.slug).first()
         if academy_user is None:
-            raise ValidationError("No academy token has been generated yet")
+            raise ValidationException("No academy token has been generated yet",
+                slug="academy-token-not-found")
 
         token = Token.objects.filter(user=academy_user, token_type='permanent').first()
         if token is None:
-            raise ValidationError("No academy token has been generated yet")
+            raise ValidationException("No academy token has been generated yet",
+                slug="academy-token-not-found")
 
         return Response({
             'token': token.key,
@@ -90,7 +93,7 @@ class AcademyTokenView(ObtainAuthToken):
             academy_user.save()
 
             role = Role.objects.get(slug="academy_token")
-            # this profile is for tokens, that is why we need no  email validation status=ACTIVE, rol must be academy_token
+            # this profile is for tokens, that is why we need no  email validation status=ACTIVE, role must be academy_token
             # and the email is empty
             profile_academy = ProfileAcademy(user=academy_user, academy=academy, role=role, status="ACTIVE")
             profile_academy.save()
@@ -103,7 +106,6 @@ class AcademyTokenView(ObtainAuthToken):
             'token_type': token.token_type,
             'expires_at': token.expires_at,
         })
-
 
 class LogoutView(APIView):
     authentication_classes = [ExpiringTokenAuthentication]
@@ -143,6 +145,10 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         status = request.GET.get('status', None)
         if is_many and status is not None:
             items = items.filter(status__iexact=status)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = query_like_by_full_name(like=like, items=items)
 
         items = items.exclude(user__email__contains="@token.com")
 
@@ -238,18 +244,18 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if not isinstance(all_invites, list):
             raise ValidationException(f"You must pass a list of invites with id and new status", 400)
-        
+
         valid = []
         for new_invite in all_invites:
             invite = UserInvite.objects.filter(id=new_invite['id']).first()
             if invite is None:
                 raise ValidationException(f"No invite {new_invite['id']} was found", 404)
-            
+
             serializer = UserInvitePUTSerializer(invite, data=new_invite)
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             valid.append(serializer)
-                
+
         result = []
         for serializer in valid:
             serializer.save()
@@ -269,6 +275,7 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         invite = UserInvite.objects.filter(
             academy__id=academy_id, email=profile.email, status='PENDING').first()
+        
         if invite is None:
             raise ValidationException("No pending invite was found", 404)
 
@@ -280,7 +287,6 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('read_student')
     def get(self, request, academy_id=None, user_id=None):
-
         if user_id is not None:
             profile = ProfileAcademy.objects.filter(
                 academy__id=academy_id, user__id=user_id).first()
@@ -292,11 +298,10 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         items = ProfileAcademy.objects.filter(
             role__slug='student', academy__id=academy_id)
-
+             
         like = request.GET.get('like', None)
         if like is not None:
-            items = items.filter(Q(first_name__icontains=like) | Q(
-                last_name__icontains=like) | Q(email__icontains=like))
+            items = query_like_by_full_name(like=like, items=items)
 
         status = request.GET.get('status', None)
         if status is not None:
@@ -1121,7 +1126,7 @@ def render_invite(request, token, member_id=None):
                     profile.first_name = invite.first_name
                 if invite.last_name is not None and invite.last_name != "":
                     profile.last_name = invite.last_name
-                
+
 
             profile.user = user
             profile.status = 'ACTIVE'
