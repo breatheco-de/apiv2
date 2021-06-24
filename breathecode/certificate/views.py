@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from .models import Specialty, Badge, UserSpecialty
 from django.db.models import Q
 from breathecode.admissions.models import CohortUser
-from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, APIException
+from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, APIException, GenerateLookupsMixin
 from .serializers import SpecialtySerializer, UserSpecialtySerializer, UserSmallSerializer
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import api_view, permission_classes
@@ -76,7 +76,7 @@ class CertificateView(APIView):
 
         cu = CohortUser.objects.filter(
             cohort__id=cohort_id, user__id=student_id, role="STUDENT", cohort__academy__id=academy_id).first()
-        
+
         if cu is None:
             raise serializers.ValidationError(
                 f"Student not found for this cohort", code=404)
@@ -107,32 +107,32 @@ class CertificateCohortView(APIView):
         cohort__users = []
 
         if cohort_users.count() == 0:
-            raise ValidationException("There are no users with STUDENT role in this cohort", code=400, 
-                slug="no-user-with-student-role")
+            raise ValidationException("There are no users with STUDENT role in this cohort", code=400,
+                                      slug="no-user-with-student-role")
 
         for cohort_user in cohort_users:
             cohort = cohort_user.cohort
             if cohort_user is None:
-                raise ValidationException("Impossible to obtain the student cohort, maybe it's none assigned", code=400, 
-                    slug="no-cohort-user-assigned")
+                raise ValidationException("Impossible to obtain the student cohort, maybe it's none assigned", code=400,
+                                          slug="no-cohort-user-assigned")
 
             if cohort.stage != "ENDED" or cohort.never_ends != False:
-                raise ValidationException("Cohort stage must be ENDED or never ends", code=400, 
-                    slug="cohort-stage-must-be-ended")
-            
-            if cohort.syllabus is None: 
-                raise ValidationException(f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}', code=400, 
-                    slug="cohort-has-no-syllabus-assigned")
-            
+                raise ValidationException("Cohort stage must be ENDED or never ends", code=400,
+                                          slug="cohort-stage-must-be-ended")
+
+            if cohort.syllabus is None:
+                raise ValidationException(f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}', code=400,
+                                          slug="cohort-has-no-syllabus-assigned")
+
             if cohort.syllabus.certificate is None:
                 raise ValidationException(f'The cohort has no certificate assigned, please set a certificate for cohort: {cohort.name}',
-                    code=400, slug="cohort-has-no-certificate-assigned")
-            
+                                          code=400, slug="cohort-has-no-certificate-assigned")
+
             if (not hasattr(cohort.syllabus.certificate, 'specialty') or not
-                cohort.syllabus.certificate.specialty):
+                    cohort.syllabus.certificate.specialty):
                 raise ValidationException('Specialty has no certificate assigned, please set a '
-                    f'certificate on the Specialty model: {cohort.syllabus.certificate.name}', code=400, 
-                    slug="specialty-has-no-certificate-assigned")
+                                          f'certificate on the Specialty model: {cohort.syllabus.certificate.name}', code=400,
+                                          slug="specialty-has-no-certificate-assigned")
 
             else:
                 cohort__users.append(cohort_user)
@@ -145,7 +145,7 @@ class CertificateCohortView(APIView):
         return Response(all_certs, status=status.HTTP_201_CREATED)
 
 
-class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
+class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
@@ -171,12 +171,42 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
+    @capable_of('crud_certificate')
+    def delete(self, request, cohort_id=None, user_id=None, academy_id=None):
+        lookups = self.generate_lookups(
+            request,
+            many_fields=['id']
+        )
+
+        try:
+            ids = lookups['id__in']
+        except:
+            raise ValidationException(
+                "User specialties ids were not provided", 404, slug="missing_ids")
+
+        if lookups and (user_id or cohort_id):
+            raise ValidationException('user_id or cohort_id was provided in url '
+                                      'in bulk mode request, use querystring style instead', code=400)
+
+        elif lookups:
+            items = UserSpecialty.objects.filter(
+                **lookups, academy__id=academy_id)
+
+            if len(items) == 0:
+                raise ValidationException(
+                    f"No user specialties for deletion were found with following id: {','.join(ids)}", code=404, slug="specialties_not_found")
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
     @capable_of('crud_certificate')
     def post(self, request, academy_id=None):
         if isinstance(request.data, list):
             data = request.data
-        else: 
+        else:
             data = [request.data]
 
         cohort_users = []
@@ -185,37 +215,39 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination):
             for items in data:
                 cohort__slug = items.get("cohort_slug")
                 user__id = items.get("user_id")
-                cohort_user =  CohortUser.objects.filter(cohort__slug=cohort__slug, 
-                        user_id=user__id, role='STUDENT', cohort__academy__id=academy_id).first()
+                cohort_user = CohortUser.objects.filter(cohort__slug=cohort__slug,
+                                                        user_id=user__id, role='STUDENT', cohort__academy__id=academy_id).first()
 
                 if cohort_user is not None:
                     cohort_users.append(cohort_user)
                 else:
-                    student = ProfileAcademy.objects.filter(user_id=user__id).first()
+                    student = ProfileAcademy.objects.filter(
+                        user_id=user__id).first()
                     if student is None:
-                        raise ValidationException(f'User with id {str(user__id)} not found', 404)
-                    raise ValidationException(f'No student with id {str(student.first_name)} {str(student.last_name)} was found for cohort {str(cohort__slug)}', 
-                        code = 404, slug="student-not-found-in-cohort")
+                        raise ValidationException(
+                            f'User with id {str(user__id)} not found', 404)
+                    raise ValidationException(f'No student with id {str(student.first_name)} {str(student.last_name)} was found for cohort {str(cohort__slug)}',
+                                              code=404, slug="student-not-found-in-cohort")
         else:
             raise ValidationException("You did not send anything to reattemps")
 
         certs = []
         for cu in cohort_users:
-            cert = UserSpecialty.objects.filter(cohort__id=cu.cohort_id, 
-                user__id=cu.user_id, cohort__academy__id=academy_id).first()
+            cert = UserSpecialty.objects.filter(cohort__id=cu.cohort_id,
+                                                user__id=cu.user_id, cohort__academy__id=academy_id).first()
             if cert is not None:
                 cert.status = "PENDING"
                 cert.save()
                 certs.append(cert)
             else:
-                raise ValidationException('There is no certificate for this student and cohor', code=404, 
-                    slug="no-user-specialty")
+                raise ValidationException('There is no certificate for this student and cohor', code=404,
+                                          slug="no-user-specialty")
             generate_one_certificate.delay(cu.cohort_id, cu.user_id)
-   
+
         serializer = UserSpecialtySerializer(certs, many=True)
 
         return Response(serializer.data)
-          
+
 
 # class SyllabusView(APIView):
 #     """

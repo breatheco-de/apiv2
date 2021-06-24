@@ -30,7 +30,6 @@ class TaskTeacherView(APIView):
             if profile_ids is None:
                 raise APIException("The quest user must belong to at least one academy to be able to request student tasks")
             items = items.filter(Q(cohort__academy__id__in=profile_ids) | Q(cohort__isnull=True))
-            print(items)
 
         academy = request.GET.get('academy', None)
         if academy is not None:
@@ -48,7 +47,11 @@ class TaskTeacherView(APIView):
         # tasks from users that belong to these cohort
         stu_cohort = request.GET.get('stu_cohort', None)
         if stu_cohort is not None:
-            items = items.filter(user__cohortuser__cohort__id__in=stu_cohort.split(","), user__cohortuser__role="STUDENT")
+            ids = stu_cohort.split(",")
+            if ids[0].isnumeric():
+                items = items.filter(user__cohortuser__cohort__id__in=ids, user__cohortuser__role="STUDENT")
+            else:
+                items = items.filter(user__cohortuser__cohort__slug__in=ids, user__cohortuser__role="STUDENT")
 
         # tasks from users that belong to these cohort
         teacher = request.GET.get('teacher', None)

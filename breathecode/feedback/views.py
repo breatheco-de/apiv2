@@ -8,7 +8,8 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (
-    AnswerPUTSerializer, AnswerSerializer, SurveySerializer, SurveyPUTSerializer, BigAnswerSerializer
+    AnswerPUTSerializer, AnswerSerializer, SurveySerializer, SurveyPUTSerializer, 
+    BigAnswerSerializer, SurveySmallSerializer
 )
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -214,7 +215,7 @@ class SurveyView(APIView, HeaderLimitOffsetPagination):
         items = items.filter(**lookup).order_by('-created_at')
 
         page = self.paginate_queryset(items, request)
-        serializer = SurveySerializer(page, many=True)
+        serializer = SurveySmallSerializer(page, many=True)
 
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
