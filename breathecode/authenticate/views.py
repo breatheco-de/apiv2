@@ -674,8 +674,6 @@ def save_github_token(request):
             else:
                 return HttpResponseRedirect(redirect_to=url+'?token='+token.key)
         else:
-            # print("Github error: ", resp.status_code)
-            # print("Error: ", resp.json())
             raise APIException("Error from github")
 
 

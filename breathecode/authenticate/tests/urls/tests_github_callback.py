@@ -175,7 +175,7 @@ class AuthenticateTestSuite(AuthTestCase):
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
-        params = {'url': original_url_callback, 'code': code}
+        params = {'url': original_url_callback, 'code': code, 'user': 2}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         json = response.json()
         expected = {
@@ -199,15 +199,13 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(role=True, user=True, profile_academy=True,
             user_kwargs=user_kwargs, role_kwargs=role_kwargs)
 
-        original_url_callback = 'https://google.co.ve?user=1'
-        prep_callback = original_url_callback.replace('?', r'\?')
-        prep_callback = prep_callback.replace('1', '[0-9]')
-        token_pattern = re.compile("^" + prep_callback.replace('.', r'\.') +
-            r"&token=[0-9a-zA-Z]{,40}$")
+        original_url_callback = 'https://google.co.ve'
+        token_pattern = re.compile("^" + original_url_callback.replace('.', r'\.') +
+            r"\?user=[0-9]&token=[0-9a-zA-Z]{,40}$")
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
-        params = {'url': original_url_callback, 'code': code}
+        params = {'url': original_url_callback, 'code': code, 'user': 1}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
 
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
@@ -242,15 +240,13 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(role=True, user=True, profile_academy=True,
             user_kwargs=user_kwargs, role_kwargs=role_kwargs)
 
-        original_url_callback = 'https://google.co.ve?user=1'
-        prep_callback = original_url_callback.replace('?', r'\?')
-        prep_callback = prep_callback.replace('1', '[0-9]')
-        token_pattern = re.compile("^" + prep_callback.replace('.', r'\.') +
-            r"&token=[0-9a-zA-Z]{,40}$")
+        original_url_callback = 'https://google.co.ve'
+        token_pattern = re.compile("^" + original_url_callback.replace('.', r'\.') +
+            r"\?user=[0-9]&token=[0-9a-zA-Z]{,40}$")
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
-        params = {'url': original_url_callback, 'code': code}
+        params = {'url': original_url_callback, 'code': code, 'user': 1}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
 
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
