@@ -659,7 +659,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         if cohort_id is not None:
             item = None
-            if str.isnumeric(cohort_id):
+            if cohort_id.isnumeric():
                 item = Cohort.objects.filter(
                     id=int(cohort_id), academy__id=academy_id).first()
             else:
