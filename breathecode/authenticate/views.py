@@ -536,11 +536,7 @@ def save_github_token(request):
     if code == None:
         raise ValidationException("No github code specified", slug="no-code")
 
-    user_id = urlparse(url)
-    user_id = parse_qsl(user_id.query)
-    if len(user_id) > 0:
-        user_id = user_id[0][1]
-
+    user_id = request.query_params.get('user', None)
 
     payload = {
         'client_id': os.getenv('GITHUB_CLIENT_ID', ""),
@@ -645,7 +641,7 @@ def save_github_token(request):
             token, created = Token.objects.get_or_create(
                 user=user, token_type='login')
             if user_id:
-                return HttpResponseRedirect(redirect_to=url+'&token='+token.key)
+                return HttpResponseRedirect(redirect_to=url+f'?user={user_id}&token={token.key}')
             else:
                 return HttpResponseRedirect(redirect_to=url+'?token='+token.key)
         else:
