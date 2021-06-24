@@ -4,12 +4,8 @@
 name: Linter
 
 on:
-  push:
-    branches:
-      - disabled
-  pull_request:
-    branches:
-      - disabled
+  push: {}
+  pull_request: {}
 
 jobs:
   build:
@@ -27,6 +23,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pipenv
           pipenv install --system --deploy --ignore-pipfile --dev
-      - name: Test with pytest
+      - name: Linter
         run: |
           pipenv run lint .
