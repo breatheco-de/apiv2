@@ -3,10 +3,12 @@ from .models import FormEntry, AcademyAlias
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 
+
 class AcademySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+
 
 class AutomationSmallSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -14,11 +16,13 @@ class AutomationSmallSerializer(serpy.Serializer):
     name = serpy.Field()
     status = serpy.Field()
 
+
 class TagSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     tag_type = serpy.Field()
     automation = AutomationSmallSerializer(required=False)
+
 
 class FormEntrySerializer(serpy.Serializer):
     id = serpy.Field()
@@ -60,6 +64,7 @@ class FormEntrySmallSerializer(serpy.Serializer):
     lead_type = serpy.Field()
     created_at = serpy.Field()
 
+
 class PostFormEntrySerializer(serializers.ModelSerializer):
     class Meta:
         model = FormEntry
@@ -69,11 +74,13 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
 
         academy = None
         if "location" in validated_data:
-            alias = AcademyAlias.objects.filter(active_campaign_slug=validated_data['location']).first()
+            alias = AcademyAlias.objects.filter(
+                active_campaign_slug=validated_data['location']).first()
             if alias is not None:
                 academy = alias.academy
             else:
-                academy = Academy.objects.filter(active_campaign_slug=validated_data['location']).first()
+                academy = Academy.objects.filter(
+                    active_campaign_slug=validated_data['location']).first()
 
-        result = super().create({ **validated_data, "academy": academy })
+        result = super().create({**validated_data, "academy": academy})
         return result

@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 
 HOST_ASSETS = "https://assets.breatheco.de/apis"
 
+
 class Command(BaseCommand):
     help = 'Sync exercises and projects from old breathecode'
 
@@ -18,18 +19,16 @@ class Command(BaseCommand):
             action='store_true',
             help='Delete and add again',
         )
-        parser.add_argument(
-              '--limit',
-               action='store',
-               dest='limit',
-               type=int,
-               default=0,
-               help='How many to import'
-        )
+        parser.add_argument('--limit',
+                            action='store',
+                            dest='limit',
+                            type=int,
+                            default=0,
+                            help='How many to import')
 
     def handle(self, *args, **options):
         try:
-            func = getattr(self,options['entity'],'entity_not_found') 
+            func = getattr(self, options['entity'], 'entity_not_found')
         except TypeError:
             print(f'Sync method for {options["entity"]} no Found!')
         func(options)

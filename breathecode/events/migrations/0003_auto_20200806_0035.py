@@ -15,16 +15,28 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='academy',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='admissions.Academy'),
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to='admissions.Academy'),
         ),
         migrations.AddField(
             model_name='eventtype',
             name='academy',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='admissions.Academy'),
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to='admissions.Academy'),
         ),
         migrations.AddField(
             model_name='venue',
             name='academy',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='admissions.Academy'),
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to='admissions.Academy'),
         ),
     ]

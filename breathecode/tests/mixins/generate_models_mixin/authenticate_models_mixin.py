@@ -11,15 +11,30 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
     """CapacitiesTestCase with auth methods"""
     password = 'pass1234'
 
-    def generate_authenticate_models(self, profile_academy=False, capability='',
-                                     role='', profile=False, user_invite=False, credentials_github=False,
-                                     credentials_slack=False, credentials_facebook=False,
-                                     credentials_quick_books=False, token=False, device_id=False,
-                                     profile_kwargs={}, device_id_kwargs={},
-                                     capability_kwargs={}, role_kwargs={}, user_invite_kwargs={},
-                                     profile_academy_kwargs={}, credentials_github_kwargs={},
-                                     credentials_slack_kwargs={}, credentials_facebook_kwargs={},
-                                     credentials_quick_books_kwargs={}, token_kwargs={}, models={},
+    def generate_authenticate_models(self,
+                                     profile_academy=False,
+                                     capability='',
+                                     role='',
+                                     profile=False,
+                                     user_invite=False,
+                                     credentials_github=False,
+                                     credentials_slack=False,
+                                     credentials_facebook=False,
+                                     credentials_quick_books=False,
+                                     token=False,
+                                     device_id=False,
+                                     profile_kwargs={},
+                                     device_id_kwargs={},
+                                     capability_kwargs={},
+                                     role_kwargs={},
+                                     user_invite_kwargs={},
+                                     profile_academy_kwargs={},
+                                     credentials_github_kwargs={},
+                                     credentials_slack_kwargs={},
+                                     credentials_facebook_kwargs={},
+                                     credentials_quick_books_kwargs={},
+                                     token_kwargs={},
+                                     models={},
                                      **kwargs):
         models = models.copy()
 
@@ -39,8 +54,8 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             }
 
             kargs = {**kargs, **capability_kwargs}
-            models['capability'] = mixer.blend(
-                'authenticate.Capability', **kargs)
+            models['capability'] = mixer.blend('authenticate.Capability',
+                                               **kargs)
 
         if not 'role' in models and role:
             kargs = {
@@ -70,8 +85,8 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 kargs['author'] = models['user']
 
             kargs = {**kargs, **user_invite_kwargs}
-            models['user_invite'] = mixer.blend(
-                'authenticate.UserInvite', **kargs)
+            models['user_invite'] = mixer.blend('authenticate.UserInvite',
+                                                **kargs)
 
         if not 'profile_academy' in models and profile_academy:
             kargs = {}

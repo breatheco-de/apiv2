@@ -5,12 +5,23 @@ import os
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
 
+
 class AssessmentModelsMixin(ModelsMixin):
-    def generate_assessment_models(self, assessment=False, question=False,
-            academy=False, option=False, student_assessment=False, answer=False,
-            user=False, assessment_kwargs={}, question_kwargs={},
-            option_kwargs={}, student_assessment_kwargs={}, answer_kwargs={},
-            models={}, **kwargs):
+    def generate_assessment_models(self,
+                                   assessment=False,
+                                   question=False,
+                                   academy=False,
+                                   option=False,
+                                   student_assessment=False,
+                                   answer=False,
+                                   user=False,
+                                   assessment_kwargs={},
+                                   question_kwargs={},
+                                   option_kwargs={},
+                                   student_assessment_kwargs={},
+                                   answer_kwargs={},
+                                   models={},
+                                   **kwargs):
         """Generate models"""
         models = models.copy()
 
@@ -24,7 +35,8 @@ class AssessmentModelsMixin(ModelsMixin):
                 kargs['author'] = models['user']
 
             kargs = {**kargs, **assessment_kwargs}
-            models['assessment'] = mixer.blend('assessment.Assessment', **kargs)
+            models['assessment'] = mixer.blend('assessment.Assessment',
+                                               **kargs)
 
         if not 'question' in models and question:
             kargs = {}
@@ -60,7 +72,8 @@ class AssessmentModelsMixin(ModelsMixin):
                 kargs['student'] = models['user']
 
             kargs = {**kargs, **student_assessment_kwargs}
-            models['student_assessment'] = mixer.blend('assessment.StudentAssessment', **kargs)
+            models['student_assessment'] = mixer.blend(
+                'assessment.StudentAssessment', **kargs)
 
         if not 'answer' in models and answer:
             kargs = {}

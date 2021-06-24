@@ -18,6 +18,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='event',
             name='eventbrite_status',
-            field=models.CharField(blank=True, default=None, help_text='One of: draft, live, started, ended, completed and canceled', max_length=9, null=True),
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text=
+                'One of: draft, live, started, ended, completed and canceled',
+                max_length=9,
+                null=True),
         ),
     ]

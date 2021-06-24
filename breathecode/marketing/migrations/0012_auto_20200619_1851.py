@@ -13,6 +13,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='automation',
             name='status',
-            field=models.CharField(choices=[('2', 'Active'), ('1', 'Innactive'), ('0', 'Uknown')], default='0', help_text='2 = inactive, 1=active', max_length=1),
+            field=models.CharField(choices=[('2', 'Active'),
+                                            ('1', 'Innactive'),
+                                            ('0', 'Uknown')],
+                                   default='0',
+                                   help_text='2 = inactive, 1=active',
+                                   max_length=1),
         ),
     ]

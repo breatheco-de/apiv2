@@ -3,6 +3,8 @@ from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins.new_auth_test_case import AuthTestCase
 from breathecode.services import datetime_to_iso_format
+
+
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
     def test_academy_token_without_auth(self):
@@ -11,10 +13,11 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'Authentication credentials were not provided.',
-            'status_code': status.HTTP_401_UNAUTHORIZED,
-        })
+        self.assertEqual(
+            json, {
+                'detail': 'Authentication credentials were not provided.',
+                'status_code': status.HTTP_401_UNAUTHORIZED,
+            })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_academy_token_get_without_capability(self):
@@ -25,46 +28,49 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: get_academy_token "
+        self.assertEqual(
+            json, {
+                'detail':
+                "You (user: 1) don't have this capability: get_academy_token "
                 "for academy 1",
-            'status_code': 403
-        })
+                'status_code':
+                403
+            })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_academy_token_get_without_user(self):
         """Test /academy/:id/member/:id without auth"""
-        role="konan"
+        role = "konan"
         self.headers(academy=1)
-        self.generate_models(authenticate=True, role=role,
-            capability='get_academy_token', profile_academy=True)
+        self.generate_models(authenticate=True,
+                             role=role,
+                             capability='get_academy_token',
+                             profile_academy=True)
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.get(url)
         json = response.json()
-        expected = {
-            'detail': "academy-token-not-found" ,
-            'status_code': 400
-        }
+        expected = {'detail': "academy-token-not-found", 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_academy_token_get_without_token(self):
         """Test /academy/:id/member/:id without auth"""
-        role="konan"
+        role = "konan"
         self.headers(academy=1)
-        user_kwargs = {'username' : 'kenny'}
-        academy_kwargs = {'slug' : 'kenny'}
-        self.generate_models(authenticate=True, role=role, user=True,
-            capability='get_academy_token', profile_academy=True,
-            user_kwargs=user_kwargs, academy_kwargs=academy_kwargs)
+        user_kwargs = {'username': 'kenny'}
+        academy_kwargs = {'slug': 'kenny'}
+        self.generate_models(authenticate=True,
+                             role=role,
+                             user=True,
+                             capability='get_academy_token',
+                             profile_academy=True,
+                             user_kwargs=user_kwargs,
+                             academy_kwargs=academy_kwargs)
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.get(url)
         json = response.json()
-        expected = {
-            'detail': "academy-token-not-found",
-            'status_code': 400
-        }
+        expected = {'detail': "academy-token-not-found", 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -77,19 +83,24 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: generate_academy_token "
+        self.assertEqual(
+            json, {
+                'detail':
+                "You (user: 1) don't have this capability: generate_academy_token "
                 "for academy 1",
-            'status_code': 403
-        })
+                'status_code':
+                403
+            })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_academy_token_post(self):
         """Test /academy/:id/member/:id without auth"""
         role = 'academy_token'
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, role=role,
-            capability='generate_academy_token', profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='generate_academy_token',
+                                     profile_academy=True)
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.post(url)
         json = response.json()
@@ -99,14 +110,15 @@ class AuthenticateTestSuite(AuthTestCase):
         token = self.get_token(1)
         user = self.get_user(2)
 
-        self.assertEqual(self.all_token_dict(), [{
-            'created' : token.created,
-            'expires_at': json['expires_at'],
-            'id': 1,
-            'key': json['token'],
-            'token_type' : json['token_type'],
-            'user_id' : 2
-        }])
+        self.assertEqual(self.all_token_dict(),
+                         [{
+                             'created': token.created,
+                             'expires_at': json['expires_at'],
+                             'id': 1,
+                             'key': json['token'],
+                             'token_type': json['token_type'],
+                             'user_id': 2
+                         }])
         self.assertEqual(bool(token_pattern.match(json['token'])), True)
         del json['token']
         self.assertEqual(json, expected)
@@ -127,20 +139,21 @@ class AuthenticateTestSuite(AuthTestCase):
             'password': '',
             'is_active': True
         }])
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            **self.model_to_dict(model, 'profile_academy'),
-        }, {
-            'academy_id': model['academy'].id,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'last_name': None,
-            'id': 2,
-            'phone': '',
-            'role_id': role,
-            'status': 'ACTIVE',
-            'user_id' : 2
-        }])
+        self.assertEqual(self.all_profile_academy_dict(),
+                         [{
+                             **self.model_to_dict(model, 'profile_academy'),
+                         }, {
+                             'academy_id': model['academy'].id,
+                             'address': None,
+                             'email': None,
+                             'first_name': None,
+                             'last_name': None,
+                             'id': 2,
+                             'phone': '',
+                             'role_id': role,
+                             'status': 'ACTIVE',
+                             'user_id': 2
+                         }])
         self.assertEqual(self.all_role_dict(), [{
             **self.model_to_dict(model, 'role'),
         }])
@@ -149,11 +162,18 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/:id/member/:id without auth"""
         role = 'academy_token'
         self.headers(academy=1)
-        academy_kwargs = { 'slug' : 'academy-a' }
-        user_kwargs = { 'username' : 'academy-a' }
-        model = self.generate_models(authenticate=True, role=role, user=True,
-            academy_kwargs=academy_kwargs, capability='generate_academy_token',
-            profile_academy=True, token=True, user_kwargs=user_kwargs,)
+        academy_kwargs = {'slug': 'academy-a'}
+        user_kwargs = {'username': 'academy-a'}
+        model = self.generate_models(
+            authenticate=True,
+            role=role,
+            user=True,
+            academy_kwargs=academy_kwargs,
+            capability='generate_academy_token',
+            profile_academy=True,
+            token=True,
+            user_kwargs=user_kwargs,
+        )
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.post(url)
         expected = {'token_type': 'permanent', 'expires_at': None}
@@ -162,14 +182,15 @@ class AuthenticateTestSuite(AuthTestCase):
 
         token = self.get_token(2)
 
-        self.assertEqual(self.all_token_dict(), [{
-            'created' : token.created,
-            'expires_at': json['expires_at'],
-            'id': 2,
-            'key': json['token'],
-            'token_type' : json['token_type'],
-            'user_id' : model['user'].id
-        }])
+        self.assertEqual(self.all_token_dict(),
+                         [{
+                             'created': token.created,
+                             'expires_at': json['expires_at'],
+                             'id': 2,
+                             'key': json['token'],
+                             'token_type': json['token_type'],
+                             'user_id': model['user'].id
+                         }])
         self.assertEqual(bool(token_pattern.match(json['token'])), True)
         del json['token']
         self.assertEqual(json, expected)
@@ -186,8 +207,12 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/:id/member/:id without auth"""
         role = 'academy_token'
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, role=role, academy=True,
-            capability='generate_academy_token', profile_academy=True, form_entry=True)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     academy=True,
+                                     capability='generate_academy_token',
+                                     profile_academy=True,
+                                     form_entry=True)
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.post(url)
         json = response.json()
@@ -208,7 +233,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         expected = [{
             'academy': {
-                'id':  model.form_entry.academy.id,
+                'id': model.form_entry.academy.id,
                 'name': model.form_entry.academy.name,
                 'slug': model.form_entry.academy.slug
             },
@@ -240,8 +265,12 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/:id/member/:id without auth"""
         role = 'academy_token'
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, role=role, academy=True,
-            capability='generate_academy_token', profile_academy=True, form_entry=True)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     academy=True,
+                                     capability='generate_academy_token',
+                                     profile_academy=True,
+                                     form_entry=True)
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.post(url)
         json = response.json()
@@ -256,8 +285,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        expected = {'detail': 'Authentication credentials were not provided.',
-            'status_code': 401}
+        expected = {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': 401
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -269,8 +300,10 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/:id/member/:id without auth"""
         role = 'academy_token'
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, role=role,
-            capability='generate_academy_token', profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='generate_academy_token',
+                                     profile_academy=True)
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.post(url)
         json = response.json()
@@ -290,4 +323,3 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': model['user'].last_name,
             'github': None,
         }])
-

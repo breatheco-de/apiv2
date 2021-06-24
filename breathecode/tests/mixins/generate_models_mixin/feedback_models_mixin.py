@@ -7,11 +7,22 @@ from mixer.backend.django import mixer
 
 
 class FeedbackModelsMixin(ModelsMixin):
-    def generate_feedback_models(self, answer=False, event=False,
-                                 survey=False, cohort=False, mentor=False, academy=False,
-                                 token=False, user=False, language='', answer_status='',
-                                 answer_score='', survey_kwargs={}, answer_kwargs={},
-                                 models={}, **kwargs):
+    def generate_feedback_models(self,
+                                 answer=False,
+                                 event=False,
+                                 survey=False,
+                                 cohort=False,
+                                 mentor=False,
+                                 academy=False,
+                                 token=False,
+                                 user=False,
+                                 language='',
+                                 answer_status='',
+                                 answer_score='',
+                                 survey_kwargs={},
+                                 answer_kwargs={},
+                                 models={},
+                                 **kwargs):
         """Generate models"""
         os.environ['EMAIL_NOTIFICATIONS_ENABLED'] = 'TRUE'
         models = models.copy()

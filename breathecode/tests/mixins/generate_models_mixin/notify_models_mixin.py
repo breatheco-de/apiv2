@@ -6,11 +6,21 @@ from mixer.backend.django import mixer
 
 
 class NotifyModelsMixin(ModelsMixin):
-    def generate_notify_models(self, device=False, user=False, slack_team=False,
-                               academy=False, slack_user=False, slack_user_team=False,
-                               slack_channel=False, cohort=False, device_kwargs={},
-                               slack_team_kwargs={}, slack_user_kwargs={},
-                               slack_user_team_kwargs={}, slack_channel_kwargs={}, models={},
+    def generate_notify_models(self,
+                               device=False,
+                               user=False,
+                               slack_team=False,
+                               academy=False,
+                               slack_user=False,
+                               slack_user_team=False,
+                               slack_channel=False,
+                               cohort=False,
+                               device_kwargs={},
+                               slack_team_kwargs={},
+                               slack_user_kwargs={},
+                               slack_user_team_kwargs={},
+                               slack_channel_kwargs={},
+                               models={},
                                **kwargs):
         """Generate models"""
         models = models.copy()
@@ -55,8 +65,8 @@ class NotifyModelsMixin(ModelsMixin):
                 kargs['slack_team'] = models['slack_team']
 
             kargs = {**kargs, **slack_user_team_kwargs}
-            models['slack_user_team'] = mixer.blend(
-                'notify.SlackUserTeam', **kargs)
+            models['slack_user_team'] = mixer.blend('notify.SlackUserTeam',
+                                                    **kargs)
 
         if not 'slack_channel' in models and slack_channel:
             kargs = {}
@@ -68,7 +78,7 @@ class NotifyModelsMixin(ModelsMixin):
                 kargs['team'] = models['slack_team']
 
             kargs = {**kargs, **slack_channel_kwargs}
-            models['slack_channel'] = mixer.blend(
-                'notify.SlackChannel', **kargs)
+            models['slack_channel'] = mixer.blend('notify.SlackChannel',
+                                                  **kargs)
 
         return models

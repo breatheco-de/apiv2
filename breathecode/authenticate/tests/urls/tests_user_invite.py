@@ -15,10 +15,11 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.delete(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'Authentication credentials were not provided.',
-            'status_code': status.HTTP_401_UNAUTHORIZED
-        })
+        self.assertEqual(
+            json, {
+                'detail': 'Authentication credentials were not provided.',
+                'status_code': status.HTTP_401_UNAUTHORIZED
+            })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_invite_delete_in_bulk_wrong_academy(self):
@@ -29,32 +30,39 @@ class AuthenticateTestSuite(AuthTestCase):
 
     def test_invite_delete_in_bulk_without_capability(self):
         self.headers(academy=1)
-        base = self.generate_models(
-            authenticate=True, )
+        base = self.generate_models(authenticate=True, )
         url = reverse_lazy('authenticate:user_invite')
         response = self.client.delete(url)
         json = response.json()
-        self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: crud_invite for academy 1",
-            'status_code': 403,
-        })
+        self.assertEqual(
+            json, {
+                'detail':
+                "You (user: 1) don't have this capability: crud_invite for academy 1",
+                'status_code': 403,
+            })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_invite_delete_in_bulk_with_two_invites(self):
         """Test /academy/user/invite with two invites"""
         self.headers(academy=1)
 
-        base = self.generate_models(
-            academy=True, capability='crud_invite', authenticate=True, role='potato')
+        base = self.generate_models(academy=True,
+                                    capability='crud_invite',
+                                    authenticate=True,
+                                    role='potato')
 
         invite_kwargs = {
             'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
         }
-        model1 = self.generate_models(authenticate=True, profile_academy=True,
-                                      user_invite_kwargs=invite_kwargs, models=base)
+        model1 = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      user_invite_kwargs=invite_kwargs,
+                                      models=base)
 
-        model2 = self.generate_models(authenticate=True, profile_academy=True,
-                                      user_invite_kwargs=invite_kwargs, models=base)
+        model2 = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      user_invite_kwargs=invite_kwargs,
+                                      models=base)
 
         url = reverse_lazy('authenticate:user_invite') + '?id=1,2'
         response = self.client.delete(url)
@@ -72,8 +80,12 @@ class AuthenticateTestSuite(AuthTestCase):
 
         slug = "missing_ids"
 
-        model = self.generate_models(
-            academy=True, capability='crud_invite', authenticate=True, role='potato', user_invite_kwargs=invite_kwargs, profile_academy=True)
+        model = self.generate_models(academy=True,
+                                     capability='crud_invite',
+                                     authenticate=True,
+                                     role='potato',
+                                     user_invite_kwargs=invite_kwargs,
+                                     profile_academy=True)
 
         url = reverse_lazy('authenticate:user_invite')
 

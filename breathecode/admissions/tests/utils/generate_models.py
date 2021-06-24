@@ -6,6 +6,7 @@ from rest_framework.test import APITestCase
 from mixer.backend.django import mixer
 from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatterMixin
 
+
 class GenerateModels(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
     """AdmissionsTestCase wrapper to allow multiple instances"""
     # token = None
@@ -17,9 +18,17 @@ class GenerateModels(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
     profile_academy = None
     cohort_user = None
 
-    def __init__(self, user=False, authenticate=False, certificate=False, academy=False,
-            cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
-            finantial_status='', educational_status=''):
+    def __init__(self,
+                 user=False,
+                 authenticate=False,
+                 certificate=False,
+                 academy=False,
+                 cohort=False,
+                 profile_academy=False,
+                 cohort_user=False,
+                 impossible_kickoff_date=False,
+                 finantial_status='',
+                 educational_status=''):
         # super()
 
         if academy or profile_academy:
@@ -60,8 +69,10 @@ class GenerateModels(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
         #     self.cohort_user = mixer.blend('admissions.CohortUser', **kargs)
 
         if profile_academy:
-            self.profile_academy = mixer.blend('authenticate.ProfileAcademy', user=self.user,
-                certificate=self.certificate, academy=self.academy)
+            self.profile_academy = mixer.blend('authenticate.ProfileAcademy',
+                                               user=self.user,
+                                               certificate=self.certificate,
+                                               academy=self.academy)
 
     # def authenticate(self):
     #     if self.user:

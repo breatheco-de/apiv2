@@ -16,7 +16,6 @@ from ..mixins import MediaTestCase
 
 class MediaTestSuite(MediaTestCase):
     """Test /answer"""
-
     """
     🔽🔽🔽 Auth
     """
@@ -52,24 +51,28 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: read_activity for academy 1",
-            'status_code': 403,
-        })
+        self.assertEqual(
+            json, {
+                'detail':
+                "You (user: 1) don't have this capability: read_activity for academy 1",
+                'status_code': 403,
+            })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     """
     🔽🔽🔽 Get
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_type(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:type')
         response = self.client.get(url)
@@ -100,9 +103,8 @@ class MediaTestSuite(MediaTestCase):
                 'slug': 'lesson-opened',
             },
             {
-                'description': (
-                    'When the office raspberry pi detects the student'
-                ),
+                'description':
+                ('When the office raspberry pi detects the student'),
                 'slug': 'office-attendance',
             },
             {

@@ -1,5 +1,6 @@
 from django.contrib import admin, messages
 
+
 class MessagesMock():
     request = None
     message = None

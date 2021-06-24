@@ -13,9 +13,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='eventcheckin',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done')], default='PENDING', max_length=9),
+            field=models.CharField(choices=[('PENDING', 'Pending'),
+                                            ('DONE', 'Done')],
+                                   default='PENDING',
+                                   max_length=9),
         ),
-        migrations.DeleteModel(
-            name='EventTicket',
-        ),
+        migrations.DeleteModel(name='EventTicket', ),
     ]
