@@ -17,9 +17,10 @@ class Command(BaseCommand):
             counts["attempts"] += 1
             print("Location: ",l.location)
             if l.location != "":
-                academy = Academy.objects.filter(slug=l.location).first()
+                academy = Academy.objects.filter(slug=l.location.strip()).first()
                 if academy is not None:
                     l.academy = academy
+                    l.location = l.location.strip()
                     l.save()
                     counts["assigned"] += 1
         
