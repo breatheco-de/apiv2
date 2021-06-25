@@ -13,7 +13,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
     def test_github_id_without_url(self):
         """Test /github without auth"""
-        url = reverse_lazy('authenticate:github_id', kwargs={'user_id':1})
+        url = reverse_lazy('authenticate:github_me')
         url = urllib.parse.quote(url.encode("utf-8"))
         response = self.client.get(url)
 
@@ -27,10 +27,10 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(2, len(data))
         self.assertEqual(data, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        
+
     def test_github_id_with_args_no_user(self):
         """Test /github"""
-        url = reverse_lazy('authenticate:github_id', kwargs={'user_id':2})
+        url = reverse_lazy('authenticate:github_me')
         url = urllib.parse.quote(url.encode("utf-8"))
         params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
@@ -45,7 +45,8 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_github_with_args(self):
         """Test /github"""
         original_url_callback = 'https://google.co.ve'
-        url = reverse_lazy('authenticate:github_id', kwargs={'user_id':1})
+        self.client.force_authenticate(user=self.user)
+        url = reverse_lazy('authenticate:github_me')
         url = urllib.parse.quote(url.encode("utf-8"))
         params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')

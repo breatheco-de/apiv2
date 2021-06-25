@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from django.db.models import Q
 from django.http import HttpResponseRedirect, HttpResponse
 from django.conf import settings
+from django.urls import resolve
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status, serializers
@@ -553,9 +554,8 @@ def get_github_token(request, user_id=None):
         raise ValidationException('User was not found, please input different user',
                 code=404, slug='user-not-found')
 
-    if user_id:
-        url = url + f'&user={user_id}'
-
+    print(request.user == AnonymousUser)
+    print(resolve(request.path).url_name)
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
         "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+f"?url={url}",
