@@ -559,9 +559,9 @@ def get_github_token(request, user_id=None):
         except User.DoesNotExist:
             raise PermissionDenied("You don't have a user")
 
-        user = Token.objects.get_or_create(user=request.user,
+        user, created = Token.objects.get_or_create(user=request.user,
                                                          token_type='login')
-        url = url + f"&user={user}"
+        url = url + f"&user={user.key}"
 
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID', ""),

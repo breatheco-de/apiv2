@@ -53,7 +53,7 @@ class AuthenticateTestSuite(AuthTestCase):
         token = self.get_token(1)
         params = {
             "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
-            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+f"?url={original_url_callback}&user=(<Token: {token}>, True)",
+            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+f"?url={original_url_callback}&user={token}",
             "scope": 'user repo read:org',
         }
 
