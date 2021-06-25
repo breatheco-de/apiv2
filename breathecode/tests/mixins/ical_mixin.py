@@ -15,6 +15,7 @@ class ICallMixin():
             offset_in_start = 0 if is_first else 1
             start = (index * max_chars_in_line_two) + offset_in_start
             end = ((index + 1) * max_chars_in_line_two) + 1
-            parts.append(line[start:end] if is_first else ' ' + line[start:end])
+            parts.append(line[start:end] if is_first else ' ' +
+                         line[start:end])
 
         return linebreak.join(parts)

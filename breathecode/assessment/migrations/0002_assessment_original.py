@@ -14,6 +14,14 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='assessment',
             name='original',
-            field=models.ForeignKey(blank=True, default=None, help_text='If original is != None it means this particular assignment will become a translation of another (E.g: The spanish version of a quiz)', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='translations', to='assessment.assessment'),
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                help_text=
+                'If original is != None it means this particular assignment will become a translation of another (E.g: The spanish version of a quiz)',
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name='translations',
+                to='assessment.assessment'),
         ),
     ]

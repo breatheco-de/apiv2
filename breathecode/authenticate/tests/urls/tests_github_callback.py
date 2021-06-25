@@ -36,8 +36,9 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(role=True, role_kwargs=role_kwargs)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile("^" + original_url_callback.replace('.', r'\.') +
-            r"\?token=[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile("^" +
+                                   original_url_callback.replace('.', r'\.') +
+                                   r"\?token=[0-9a-zA-Z]{,40}$")
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
@@ -47,8 +48,10 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        users = [x for x in self.all_user_dict() if self.assertDatetime(
-            x['date_joined']) and x.pop('date_joined')]
+        users = [
+            x for x in self.all_user_dict()
+            if self.assertDatetime(x['date_joined']) and x.pop('date_joined')
+        ]
 
         self.assertEqual(users, [{
             'email': 'jdefreitaspinto@gmail.com',
@@ -64,19 +67,30 @@ class AuthenticateTestSuite(AuthTestCase):
         }])
 
         self.assertEqual(self.all_credentials_github_dict(), [{
-            'avatar_url': 'https://avatars2.githubusercontent.com/u/3018142?v=4',
-            'bio': 'I am an Computer engineer, Full-stack Developer\xa0and React '
-                   'Developer, I likes an API good, the clean code, the good programming '
-                   'practices',
-            'blog': 'https://www.facebook.com/chocoland.framework',
-            'company': '@chocoland ',
-            'email': 'jdefreitaspinto@gmail.com',
-            'github_id': 3018142,
-            'name': 'Jeferson De Freitas',
-            'token': 'e72e16c7e42f292c6912e7710c838347ae178b4a',
-            'twitter_username': None,
-            'user_id': 1,
-            'username': 'jefer94'
+            'avatar_url':
+            'https://avatars2.githubusercontent.com/u/3018142?v=4',
+            'bio':
+            'I am an Computer engineer, Full-stack Developer\xa0and React '
+            'Developer, I likes an API good, the clean code, the good programming '
+            'practices',
+            'blog':
+            'https://www.facebook.com/chocoland.framework',
+            'company':
+            '@chocoland ',
+            'email':
+            'jdefreitaspinto@gmail.com',
+            'github_id':
+            3018142,
+            'name':
+            'Jeferson De Freitas',
+            'token':
+            'e72e16c7e42f292c6912e7710c838347ae178b4a',
+            'twitter_username':
+            None,
+            'user_id':
+            1,
+            'username':
+            'jefer94'
         }])
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
@@ -85,12 +99,15 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
         role_kwargs = {'slug': 'student', 'name': 'Student'}
-        model = self.generate_models(role=True, user=True,
-            user_kwargs=user_kwargs, role_kwargs=role_kwargs)
+        model = self.generate_models(role=True,
+                                     user=True,
+                                     user_kwargs=user_kwargs,
+                                     role_kwargs=role_kwargs)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile("^" + original_url_callback.replace('.', r'\.') +
-            r"\?token=[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile("^" +
+                                   original_url_callback.replace('.', r'\.') +
+                                   r"\?token=[0-9a-zA-Z]{,40}$")
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
@@ -105,19 +122,30 @@ class AuthenticateTestSuite(AuthTestCase):
         }])
 
         self.assertEqual(self.all_credentials_github_dict(), [{
-            'avatar_url': 'https://avatars2.githubusercontent.com/u/3018142?v=4',
-            'bio': 'I am an Computer engineer, Full-stack Developer\xa0and React '
-                   'Developer, I likes an API good, the clean code, the good programming '
-                   'practices',
-            'blog': 'https://www.facebook.com/chocoland.framework',
-            'company': '@chocoland ',
-            'email': 'jdefreitaspinto@gmail.com',
-            'github_id': 3018142,
-            'name': 'Jeferson De Freitas',
-            'token': 'e72e16c7e42f292c6912e7710c838347ae178b4a',
-            'twitter_username': None,
-            'user_id': 1,
-            'username': 'jefer94'
+            'avatar_url':
+            'https://avatars2.githubusercontent.com/u/3018142?v=4',
+            'bio':
+            'I am an Computer engineer, Full-stack Developer\xa0and React '
+            'Developer, I likes an API good, the clean code, the good programming '
+            'practices',
+            'blog':
+            'https://www.facebook.com/chocoland.framework',
+            'company':
+            '@chocoland ',
+            'email':
+            'jdefreitaspinto@gmail.com',
+            'github_id':
+            3018142,
+            'name':
+            'Jeferson De Freitas',
+            'token':
+            'e72e16c7e42f292c6912e7710c838347ae178b4a',
+            'twitter_username':
+            None,
+            'user_id':
+            1,
+            'username':
+            'jefer94'
         }])
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
@@ -126,12 +154,15 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
         role_kwargs = {'slug': 'student', 'name': 'Student'}
-        model = self.generate_models(role=True, user=True,
-            user_kwargs=user_kwargs, role_kwargs=role_kwargs)
+        model = self.generate_models(role=True,
+                                     user=True,
+                                     user_kwargs=user_kwargs,
+                                     role_kwargs=role_kwargs)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile("^" + original_url_callback.replace('.', r'\.') +
-            r"\?token=[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile("^" +
+                                   original_url_callback.replace('.', r'\.') +
+                                   r"\?token=[0-9a-zA-Z]{,40}$")
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
@@ -146,17 +177,28 @@ class AuthenticateTestSuite(AuthTestCase):
         }])
 
         self.assertEqual(self.all_credentials_github_dict(), [{
-            'avatar_url': 'https://avatars2.githubusercontent.com/u/3018142?v=4',
-            'bio': 'I am an Computer engineer, Full-stack Developer\xa0and React '
-                   'Developer, I likes an API good, the clean code, the good programming '
-                   'practices',
-            'blog': 'https://www.facebook.com/chocoland.framework',
-            'company': '@chocoland ',
-            'email': 'jdefreitaspinto@gmail.com',
-            'github_id': 3018142,
-            'name': 'Jeferson De Freitas',
-            'token': 'e72e16c7e42f292c6912e7710c838347ae178b4a',
-            'twitter_username': None,
-            'user_id': 1,
-            'username': 'jefer94'
+            'avatar_url':
+            'https://avatars2.githubusercontent.com/u/3018142?v=4',
+            'bio':
+            'I am an Computer engineer, Full-stack Developer\xa0and React '
+            'Developer, I likes an API good, the clean code, the good programming '
+            'practices',
+            'blog':
+            'https://www.facebook.com/chocoland.framework',
+            'company':
+            '@chocoland ',
+            'email':
+            'jdefreitaspinto@gmail.com',
+            'github_id':
+            3018142,
+            'name':
+            'Jeferson De Freitas',
+            'token':
+            'e72e16c7e42f292c6912e7710c838347ae178b4a',
+            'twitter_username':
+            None,
+            'user_id':
+            1,
+            'username':
+            'jefer94'
         }])

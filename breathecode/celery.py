@@ -6,7 +6,7 @@ from celery.signals import task_failure
 
 # set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'breathecode.settings')
-REDIS_URL = os.getenv('REDIS_URL',None)
+REDIS_URL = os.getenv('REDIS_URL', None)
 
 app = Celery('celery_breathecode')
 
@@ -18,12 +18,15 @@ if os.getenv('ENV') == 'test':
 # - namespace='CELERY' means all celery-related configuration keys
 #   should have a `CELERY_` prefix.
 app.config_from_object('django.conf:settings')
-app.conf.update(BROKER_URL=REDIS_URL, CELERY_RESULT_BACKEND=REDIS_URL, namespace='CELERY')
+app.conf.update(BROKER_URL=REDIS_URL,
+                CELERY_RESULT_BACKEND=REDIS_URL,
+                namespace='CELERY')
 
 # Load task modules from all registered Django app configs.
 app.autodiscover_tasks()
 
-if bool(os.environ.get('CELERY_WORKER_RUNNING', False)) and REDIS_URL is not None:
+if bool(os.environ.get('CELERY_WORKER_RUNNING',
+                       False)) and REDIS_URL is not None:
     from django.conf import settings
     import rollbar
     rollbar.init(**settings.ROLLBAR)

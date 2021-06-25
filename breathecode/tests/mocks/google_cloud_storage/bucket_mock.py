@@ -1,5 +1,6 @@
 from .blob_mock import BlobMock
 
+
 class BucketMock():
     name = None
     bucket = None

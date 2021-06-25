@@ -23,11 +23,24 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='answer',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('SENT', 'Sent'), ('ANSWERED', 'Answered'), ('OPENED', 'Opened'), ('EXPIRED', 'Expired')], default='PENDING', max_length=15),
+            field=models.CharField(choices=[('PENDING', 'Pending'),
+                                            ('SENT', 'Sent'),
+                                            ('ANSWERED', 'Answered'),
+                                            ('OPENED', 'Opened'),
+                                            ('EXPIRED', 'Expired')],
+                                   default='PENDING',
+                                   max_length=15),
         ),
         migrations.AlterField(
             model_name='survey',
             name='avg_score',
-            field=models.CharField(blank=True, default=None, editable=False, help_text='The avg from all the answers taken under this survey', max_length=250, null=True),
+            field=models.CharField(
+                blank=True,
+                default=None,
+                editable=False,
+                help_text=
+                'The avg from all the answers taken under this survey',
+                max_length=250,
+                null=True),
         ),
     ]

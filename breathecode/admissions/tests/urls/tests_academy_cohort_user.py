@@ -14,9 +14,9 @@ from breathecode.tests.mocks import (
 )
 from ..mixins.new_admissions_test_case import AdmissionsTestCase
 
+
 class CohortUserTestSuite(AdmissionsTestCase):
     """Test /cohort/user"""
-
     """
     🔽🔽🔽 Auth
     """
@@ -30,23 +30,27 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'Authentication credentials were not provided.',
-            'status_code': status.HTTP_401_UNAUTHORIZED
-        })
+        self.assertEqual(
+            json, {
+                'detail': 'Authentication credentials were not provided.',
+                'status_code': status.HTTP_401_UNAUTHORIZED
+            })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     """
     🔽🔽🔽 Without data
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__without_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_cohort',
+                                     role='potato')
         url = reverse_lazy('admissions:academy_cohort_user')
         response = self.client.get(url)
         json = response.json()
@@ -58,33 +62,46 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 With data
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__with_data(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
-            profile_academy=True, capability='read_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     cohort_user=True,
+                                     profile_academy=True,
+                                     capability='read_cohort',
+                                     role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         url = reverse_lazy('admissions:academy_cohort_user')
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'role': model['cohort_user'].role,
-            'finantial_status': model['cohort_user'].finantial_status,
-            'educational_status': model['cohort_user'].educational_status,
-            'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'role':
+            model['cohort_user'].role,
+            'finantial_status':
+            model['cohort_user'].finantial_status,
+            'educational_status':
+            model['cohort_user'].educational_status,
+            'created_at':
+            re.sub(r'\+00:00$', 'Z',
+                   model['cohort_user'].created_at.isoformat()),
             'cohort': {
-                'id': model['cohort_user'].cohort.id,
-                'slug': model['cohort_user'].cohort.slug,
-                'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(
-                    r'\+00:00$', 'Z',
-                    model['cohort_user'].cohort.kickoff_date.isoformat()
-                ),
-                'ending_date': model['cohort_user'].cohort.ending_date,
-                'stage': model['cohort_user'].cohort.stage,
+                'id':
+                model['cohort_user'].cohort.id,
+                'slug':
+                model['cohort_user'].cohort.slug,
+                'name':
+                model['cohort_user'].cohort.name,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'ending_date':
+                model['cohort_user'].cohort.ending_date,
+                'stage':
+                model['cohort_user'].cohort.stage,
             },
             'user': {
                 'id': model['cohort_user'].user.id,
@@ -102,14 +119,18 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Roles in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__with_data__with_bad_roles(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
-            profile_academy=True, capability='read_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     cohort_user=True,
+                                     profile_academy=True,
+                                     capability='read_cohort',
+                                     role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
         url = f'{base_url}?roles=they-killed-kenny'
@@ -127,28 +148,40 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_academy_cohort_user__with_data__with_roles(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
-            profile_academy=True, capability='read_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     cohort_user=True,
+                                     profile_academy=True,
+                                     capability='read_cohort',
+                                     role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
         url = f'{base_url}?roles=' + model['cohort_user'].role
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'role': model['cohort_user'].role,
-            'finantial_status': model['cohort_user'].finantial_status,
-            'educational_status': model['cohort_user'].educational_status,
-            'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'role':
+            model['cohort_user'].role,
+            'finantial_status':
+            model['cohort_user'].finantial_status,
+            'educational_status':
+            model['cohort_user'].educational_status,
+            'created_at':
+            re.sub(r'\+00:00$', 'Z',
+                   model['cohort_user'].created_at.isoformat()),
             'cohort': {
-                'id': model['cohort_user'].cohort.id,
-                'slug': model['cohort_user'].cohort.slug,
-                'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(
-                    r'\+00:00$', 'Z',
-                    model['cohort_user'].cohort.kickoff_date.isoformat()
-                ),
-                'ending_date': model['cohort_user'].cohort.ending_date,
-                'stage': model['cohort_user'].cohort.stage,
+                'id':
+                model['cohort_user'].cohort.id,
+                'slug':
+                model['cohort_user'].cohort.slug,
+                'name':
+                model['cohort_user'].cohort.name,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'ending_date':
+                model['cohort_user'].cohort.ending_date,
+                'stage':
+                model['cohort_user'].cohort.stage,
             },
             'user': {
                 'id': model['cohort_user'].user.id,
@@ -169,11 +202,15 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_academy_cohort_user__with_data__with_roles__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
-            profile_academy=True, capability='read_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     cohort_user=True,
+                                     profile_academy=True,
+                                     capability='read_cohort',
+                                     role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
-        url = f'{base_url}?roles=' + model['cohort_user'].role + ',they-killed-kenny'
+        url = f'{base_url}?roles=' + model[
+            'cohort_user'].role + ',they-killed-kenny'
         response = self.client.get(url)
         json = response.json()
 
@@ -186,20 +223,29 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['cohort_user'].user.email,
             },
             'cohort': {
-                'id': model['cohort_user'].cohort.id,
-                'slug': model['cohort_user'].cohort.slug,
-                'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(
-                    r'\+00:00$', 'Z',
-                    model['cohort_user'].cohort.kickoff_date.isoformat()
-                ),
-                'ending_date': model['cohort_user'].cohort.ending_date,
-                'stage': model['cohort_user'].cohort.stage,
+                'id':
+                model['cohort_user'].cohort.id,
+                'slug':
+                model['cohort_user'].cohort.slug,
+                'name':
+                model['cohort_user'].cohort.name,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'ending_date':
+                model['cohort_user'].cohort.ending_date,
+                'stage':
+                model['cohort_user'].cohort.stage,
             },
-            'role': model['cohort_user'].role,
-            'finantial_status': model['cohort_user'].finantial_status,
-            'educational_status': model['cohort_user'].educational_status,
-            'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'role':
+            model['cohort_user'].role,
+            'finantial_status':
+            model['cohort_user'].finantial_status,
+            'educational_status':
+            model['cohort_user'].educational_status,
+            'created_at':
+            re.sub(r'\+00:00$', 'Z',
+                   model['cohort_user'].created_at.isoformat()),
         }]
 
         self.assertEqual(json, expected)
@@ -210,14 +256,18 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Finantial status in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__with_data__with_bad_finantial_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
-            profile_academy=True, capability='read_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     cohort_user=True,
+                                     profile_academy=True,
+                                     capability='read_cohort',
+                                     role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
         url = f'{base_url}?finantial_status=they-killed-kenny'
@@ -235,29 +285,43 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_academy_cohort_user__with_data__with_finantial_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
+        model = self.generate_models(
+            authenticate=True,
+            cohort_user=True,
             cohort_user_kwargs={'finantial_status': 'LATE'},
-            profile_academy=True, capability='read_cohort', role='potato')
+            profile_academy=True,
+            capability='read_cohort',
+            role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
-        url = f'{base_url}?finantial_status=' + model['cohort_user'].finantial_status
+        url = f'{base_url}?finantial_status=' + model[
+            'cohort_user'].finantial_status
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'role': model['cohort_user'].role,
-            'finantial_status': model['cohort_user'].finantial_status,
-            'educational_status': model['cohort_user'].educational_status,
-            'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'role':
+            model['cohort_user'].role,
+            'finantial_status':
+            model['cohort_user'].finantial_status,
+            'educational_status':
+            model['cohort_user'].educational_status,
+            'created_at':
+            re.sub(r'\+00:00$', 'Z',
+                   model['cohort_user'].created_at.isoformat()),
             'cohort': {
-                'id': model['cohort_user'].cohort.id,
-                'slug': model['cohort_user'].cohort.slug,
-                'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(
-                    r'\+00:00$', 'Z',
-                    model['cohort_user'].cohort.kickoff_date.isoformat()
-                ),
-                'ending_date': model['cohort_user'].cohort.ending_date,
-                'stage': model['cohort_user'].cohort.stage,
+                'id':
+                model['cohort_user'].cohort.id,
+                'slug':
+                model['cohort_user'].cohort.slug,
+                'name':
+                model['cohort_user'].cohort.name,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'ending_date':
+                model['cohort_user'].cohort.ending_date,
+                'stage':
+                model['cohort_user'].cohort.stage,
             },
             'user': {
                 'id': model['cohort_user'].user.id,
@@ -275,24 +339,34 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_user__with_data__with_finantial_status__with_comma(self):
+    def test_academy_cohort_user__with_data__with_finantial_status__with_comma(
+            self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
+        model = self.generate_models(
+            authenticate=True,
+            cohort_user=True,
             cohort_user_kwargs={'finantial_status': 'LATE'},
-            profile_academy=True, capability='read_cohort', role='potato')
+            profile_academy=True,
+            capability='read_cohort',
+            role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
-        url = (f'{base_url}?finantial_status=' + model['cohort_user'].finantial_status +
-            ',they-killed-kenny')
+        url = (f'{base_url}?finantial_status=' +
+               model['cohort_user'].finantial_status + ',they-killed-kenny')
         response = self.client.get(url)
         json = response.json()
         expected = [{
             # 'id': model['cohort_user'].id,
-            'role': model['cohort_user'].role,
-            'finantial_status': model['cohort_user'].finantial_status,
-            'educational_status': model['cohort_user'].educational_status,
-            'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'role':
+            model['cohort_user'].role,
+            'finantial_status':
+            model['cohort_user'].finantial_status,
+            'educational_status':
+            model['cohort_user'].educational_status,
+            'created_at':
+            re.sub(r'\+00:00$', 'Z',
+                   model['cohort_user'].created_at.isoformat()),
             'user': {
                 'id': model['cohort_user'].user.id,
                 'first_name': model['cohort_user'].user.first_name,
@@ -300,15 +374,19 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['cohort_user'].user.email,
             },
             'cohort': {
-                'id': model['cohort_user'].cohort.id,
-                'slug': model['cohort_user'].cohort.slug,
-                'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(
-                    r'\+00:00$', 'Z',
-                    model['cohort_user'].cohort.kickoff_date.isoformat()
-                ),
-                'ending_date': model['cohort_user'].cohort.ending_date,
-                'stage': model['cohort_user'].cohort.stage,
+                'id':
+                model['cohort_user'].cohort.id,
+                'slug':
+                model['cohort_user'].cohort.slug,
+                'name':
+                model['cohort_user'].cohort.name,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'ending_date':
+                model['cohort_user'].cohort.ending_date,
+                'stage':
+                model['cohort_user'].cohort.stage,
             },
         }]
 
@@ -320,14 +398,18 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Educational status in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__with_data__with_bad_educational_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
-            profile_academy=True, capability='read_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     cohort_user=True,
+                                     profile_academy=True,
+                                     capability='read_cohort',
+                                     role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
         url = f'{base_url}?educational_status=they-killed-kenny'
@@ -345,20 +427,30 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_academy_cohort_user__with_data__with_educational_status(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
+        model = self.generate_models(
+            authenticate=True,
+            cohort_user=True,
             cohort_user_kwargs={'educational_status': 'GRADUATED'},
-            profile_academy=True, capability='read_cohort', role='potato')
+            profile_academy=True,
+            capability='read_cohort',
+            role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
-        url = f'{base_url}?educational_status=' + model['cohort_user'].educational_status
+        url = f'{base_url}?educational_status=' + model[
+            'cohort_user'].educational_status
         response = self.client.get(url)
         json = response.json()
         expected = [{
             # 'id': model['cohort_user'].id,
-            'role': model['cohort_user'].role,
-            'finantial_status': model['cohort_user'].finantial_status,
-            'educational_status': model['cohort_user'].educational_status,
-            'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'role':
+            model['cohort_user'].role,
+            'finantial_status':
+            model['cohort_user'].finantial_status,
+            'educational_status':
+            model['cohort_user'].educational_status,
+            'created_at':
+            re.sub(r'\+00:00$', 'Z',
+                   model['cohort_user'].created_at.isoformat()),
             'user': {
                 'id': model['cohort_user'].user.id,
                 'first_name': model['cohort_user'].user.first_name,
@@ -366,15 +458,19 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['cohort_user'].user.email,
             },
             'cohort': {
-                'id': model['cohort_user'].cohort.id,
-                'slug': model['cohort_user'].cohort.slug,
-                'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(
-                    r'\+00:00$', 'Z',
-                    model['cohort_user'].cohort.kickoff_date.isoformat()
-                ),
-                'ending_date': model['cohort_user'].cohort.ending_date,
-                'stage': model['cohort_user'].cohort.stage,
+                'id':
+                model['cohort_user'].cohort.id,
+                'slug':
+                model['cohort_user'].cohort.slug,
+                'name':
+                model['cohort_user'].cohort.name,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'ending_date':
+                model['cohort_user'].cohort.ending_date,
+                'stage':
+                model['cohort_user'].cohort.stage,
             },
         }]
 
@@ -386,24 +482,35 @@ class CohortUserTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_user__with_data__with_educational_status__with_comma(self):
+    def test_academy_cohort_user__with_data__with_educational_status__with_comma(
+            self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
+        model = self.generate_models(
+            authenticate=True,
+            cohort_user=True,
             cohort_user_kwargs={'educational_status': 'GRADUATED'},
-            profile_academy=True, capability='read_cohort', role='potato')
+            profile_academy=True,
+            capability='read_cohort',
+            role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
-        url = (f'{base_url}?educational_status=' + model['cohort_user'].educational_status + ','
-            'they-killed-kenny')
+        url = (f'{base_url}?educational_status=' +
+               model['cohort_user'].educational_status + ','
+               'they-killed-kenny')
         response = self.client.get(url)
         json = response.json()
         expected = [{
             # 'id': model['cohort_user'].id,
-            'role': model['cohort_user'].role,
-            'finantial_status': model['cohort_user'].finantial_status,
-            'educational_status': model['cohort_user'].educational_status,
-            'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'role':
+            model['cohort_user'].role,
+            'finantial_status':
+            model['cohort_user'].finantial_status,
+            'educational_status':
+            model['cohort_user'].educational_status,
+            'created_at':
+            re.sub(r'\+00:00$', 'Z',
+                   model['cohort_user'].created_at.isoformat()),
             'user': {
                 'id': model['cohort_user'].user.id,
                 'first_name': model['cohort_user'].user.first_name,
@@ -411,15 +518,19 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['cohort_user'].user.email,
             },
             'cohort': {
-                'id': model['cohort_user'].cohort.id,
-                'slug': model['cohort_user'].cohort.slug,
-                'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(
-                    r'\+00:00$', 'Z',
-                    model['cohort_user'].cohort.kickoff_date.isoformat()
-                ),
-                'ending_date': model['cohort_user'].cohort.ending_date,
-                'stage': model['cohort_user'].cohort.stage,
+                'id':
+                model['cohort_user'].cohort.id,
+                'slug':
+                model['cohort_user'].cohort.slug,
+                'name':
+                model['cohort_user'].cohort.name,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'ending_date':
+                model['cohort_user'].cohort.ending_date,
+                'stage':
+                model['cohort_user'].cohort.stage,
             },
         }]
 
@@ -431,15 +542,20 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Academy in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__with_data__with_academy(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
+        model = self.generate_models(
+            authenticate=True,
+            cohort_user=True,
             cohort_user_kwargs={'educational_status': 'GRADUATED'},
-            profile_academy=True, capability='read_cohort', role='potato')
+            profile_academy=True,
+            capability='read_cohort',
+            role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
         url = f'{base_url}?academy=' + model['cohort_user'].cohort.academy.slug
@@ -447,10 +563,15 @@ class CohortUserTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = [{
             # 'id': model['cohort_user'].id,
-            'role': model['cohort_user'].role,
-            'finantial_status': model['cohort_user'].finantial_status,
-            'educational_status': model['cohort_user'].educational_status,
-            'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'role':
+            model['cohort_user'].role,
+            'finantial_status':
+            model['cohort_user'].finantial_status,
+            'educational_status':
+            model['cohort_user'].educational_status,
+            'created_at':
+            re.sub(r'\+00:00$', 'Z',
+                   model['cohort_user'].created_at.isoformat()),
             'user': {
                 'id': model['cohort_user'].user.id,
                 'first_name': model['cohort_user'].user.first_name,
@@ -458,15 +579,19 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['cohort_user'].user.email,
             },
             'cohort': {
-                'id': model['cohort_user'].cohort.id,
-                'slug': model['cohort_user'].cohort.slug,
-                'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(
-                    r'\+00:00$', 'Z',
-                    model['cohort_user'].cohort.kickoff_date.isoformat()
-                ),
-                'ending_date': model['cohort_user'].cohort.ending_date,
-                'stage': model['cohort_user'].cohort.stage,
+                'id':
+                model['cohort_user'].cohort.id,
+                'slug':
+                model['cohort_user'].cohort.slug,
+                'name':
+                model['cohort_user'].cohort.name,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'ending_date':
+                model['cohort_user'].cohort.ending_date,
+                'stage':
+                model['cohort_user'].cohort.stage,
             },
         }]
 
@@ -481,20 +606,30 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_academy_cohort_user__with_data__with_academy__with_comma(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
+        model = self.generate_models(
+            authenticate=True,
+            cohort_user=True,
             cohort_user_kwargs={'educational_status': 'GRADUATED'},
-            profile_academy=True, capability='read_cohort', role='potato')
+            profile_academy=True,
+            capability='read_cohort',
+            role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
-        url = f'{base_url}?academy=' + model['cohort_user'].cohort.academy.slug + ',they-killed-kenny'
+        url = f'{base_url}?academy=' + model[
+            'cohort_user'].cohort.academy.slug + ',they-killed-kenny'
         response = self.client.get(url)
         json = response.json()
         expected = [{
             # 'id': model['cohort_user'].id,
-            'role': model['cohort_user'].role,
-            'finantial_status': model['cohort_user'].finantial_status,
-            'educational_status': model['cohort_user'].educational_status,
-            'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'role':
+            model['cohort_user'].role,
+            'finantial_status':
+            model['cohort_user'].finantial_status,
+            'educational_status':
+            model['cohort_user'].educational_status,
+            'created_at':
+            re.sub(r'\+00:00$', 'Z',
+                   model['cohort_user'].created_at.isoformat()),
             'user': {
                 'id': model['cohort_user'].user.id,
                 'first_name': model['cohort_user'].user.first_name,
@@ -502,15 +637,19 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['cohort_user'].user.email,
             },
             'cohort': {
-                'id': model['cohort_user'].cohort.id,
-                'slug': model['cohort_user'].cohort.slug,
-                'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(
-                    r'\+00:00$', 'Z',
-                    model['cohort_user'].cohort.kickoff_date.isoformat()
-                ),
-                'ending_date': model['cohort_user'].cohort.ending_date,
-                'stage': model['cohort_user'].cohort.stage,
+                'id':
+                model['cohort_user'].cohort.id,
+                'slug':
+                model['cohort_user'].cohort.slug,
+                'name':
+                model['cohort_user'].cohort.name,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'ending_date':
+                model['cohort_user'].cohort.ending_date,
+                'stage':
+                model['cohort_user'].cohort.stage,
             },
         }]
 
@@ -522,14 +661,18 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Cohorts in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__with_data__with_bad_cohorts(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
-            profile_academy=True, capability='read_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     cohort_user=True,
+                                     profile_academy=True,
+                                     capability='read_cohort',
+                                     role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
         url = f'{base_url}?cohorts=they-killed-kenny'
@@ -547,9 +690,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_academy_cohort_user__with_data__with_cohorts(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort_user=True,
+        model = self.generate_models(
+            authenticate=True,
+            cohort_user=True,
             cohort_user_kwargs={'educational_status': 'GRADUATED'},
-            profile_academy=True, capability='read_cohort', role='potato')
+            profile_academy=True,
+            capability='read_cohort',
+            role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
         url = f'{base_url}?cohorts=' + model['cohort_user'].cohort.slug
@@ -557,10 +704,15 @@ class CohortUserTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = [{
             # 'id': model['cohort_user'].id,
-            'role': model['cohort_user'].role,
-            'finantial_status': model['cohort_user'].finantial_status,
-            'educational_status': model['cohort_user'].educational_status,
-            'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'role':
+            model['cohort_user'].role,
+            'finantial_status':
+            model['cohort_user'].finantial_status,
+            'educational_status':
+            model['cohort_user'].educational_status,
+            'created_at':
+            re.sub(r'\+00:00$', 'Z',
+                   model['cohort_user'].created_at.isoformat()),
             'user': {
                 'id': model['cohort_user'].user.id,
                 'first_name': model['cohort_user'].user.first_name,
@@ -568,15 +720,19 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['cohort_user'].user.email,
             },
             'cohort': {
-                'id': model['cohort_user'].cohort.id,
-                'slug': model['cohort_user'].cohort.slug,
-                'name': model['cohort_user'].cohort.name,
-                'kickoff_date': re.sub(
-                    r'\+00:00$', 'Z',
-                    model['cohort_user'].cohort.kickoff_date.isoformat()
-                ),
-                'ending_date': model['cohort_user'].cohort.ending_date,
-                'stage': model['cohort_user'].cohort.stage,
+                'id':
+                model['cohort_user'].cohort.id,
+                'slug':
+                model['cohort_user'].cohort.slug,
+                'name':
+                model['cohort_user'].cohort.name,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort_user'].cohort.kickoff_date.isoformat()),
+                'ending_date':
+                model['cohort_user'].cohort.ending_date,
+                'stage':
+                model['cohort_user'].cohort.stage,
             },
         }]
 
@@ -588,6 +744,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Put without id
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -595,19 +752,25 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato')
         data = {}
         response = self.client.put(url, data)
         json = response.json()
 
-        self.assertEqual(json, {'status_code': 400, 'detail': 'Missing cohort_id or user_id'})
+        self.assertEqual(json, {
+            'status_code': 400,
+            'detail': 'Missing cohort_id or user_id'
+        })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_user_dict(), [])
 
     """
     🔽🔽🔽 Put bulk mode
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -615,8 +778,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato')
         data = []
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -633,8 +798,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato')
         data = [{}]
         response = self.client.put(url, data, format='json')
         json = response.json()
@@ -654,11 +821,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
-        model = self.generate_models(authenticate=True, cohort_user=True,
-            profile_academy=True, capability='crud_cohort', role='potato')
-        data = [{
-            'id': model['cohort_user'].id
-        }]
+        model = self.generate_models(authenticate=True,
+                                     cohort_user=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato')
+        data = [{'id': model['cohort_user'].id}]
         response = self.client.put(url, data, format='json')
         json = response.json()
         expected = [{
@@ -670,14 +838,15 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_user_dict(), [{
-            'id': 1,
-            'user_id': 1,
-            'cohort_id': 1,
-            'role': 'STUDENT',
-            'finantial_status': None,
-            'educational_status': None
-        }])
+        self.assertEqual(self.all_cohort_user_dict(),
+                         [{
+                             'id': 1,
+                             'user_id': 1,
+                             'cohort_id': 1,
+                             'role': 'STUDENT',
+                             'finantial_status': None,
+                             'educational_status': None
+                         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -686,8 +855,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort_user')
-        model = [self.generate_models(authenticate=True, cohort_user=True,
-            profile_academy=True, capability='crud_cohort', role='potato')]
+        model = [
+            self.generate_models(authenticate=True,
+                                 cohort_user=True,
+                                 profile_academy=True,
+                                 capability='crud_cohort',
+                                 role='potato')
+        ]
 
         base = model[0].copy()
         del base['user']
@@ -695,8 +869,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         del base['cohort_user']
         del base['profile_academy']
 
-        model = model + [self.generate_models(cohort_user=True, profile_academy=True,
-            models=base)]
+        model = model + [
+            self.generate_models(
+                cohort_user=True, profile_academy=True, models=base)
+        ]
 
         data = [{
             'id': 1,
@@ -722,33 +898,38 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_user_dict(), [{
-            'id': 1,
-            'user_id': 1,
-            'cohort_id': 1,
-            'role': 'STUDENT',
-            'finantial_status': 'LATE',
-            'educational_status': None
-        }, {
-            'id': 2,
-            'user_id': 2,
-            'cohort_id': 2,
-            'role': 'STUDENT',
-            'finantial_status': None,
-            'educational_status': 'GRADUATED'
-        }])
+        self.assertEqual(self.all_cohort_user_dict(),
+                         [{
+                             'id': 1,
+                             'user_id': 1,
+                             'cohort_id': 1,
+                             'role': 'STUDENT',
+                             'finantial_status': 'LATE',
+                             'educational_status': None
+                         }, {
+                             'id': 2,
+                             'user_id': 2,
+                             'cohort_id': 2,
+                             'role': 'STUDENT',
+                             'finantial_status': None,
+                             'educational_status': 'GRADUATED'
+                         }])
 
     """
     🔽🔽🔽 Post bulk mode
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__post__in_bulk__0_items(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort=True,
-            profile_academy=True, capability='crud_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato')
         url = reverse_lazy('admissions:academy_cohort_user')
         data = []
         response = self.client.post(url, data, format='json')
@@ -765,12 +946,16 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_academy_cohort_user__post__in_bulk__1_item(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, cohort=True, user=True,
-            profile_academy=True, capability='crud_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato')
         url = reverse_lazy('admissions:academy_cohort_user')
         data = [{
-            'user':  model['user'].id,
-            'cohort':  model['cohort'].id,
+            'user': model['user'].id,
+            'cohort': model['cohort'].id,
         }]
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -784,15 +969,19 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['user'].email,
             },
             'cohort': {
-                'id': model['cohort'].id,
-                'slug': model['cohort'].slug,
-                'name': model['cohort'].name,
-                'never_ends': False,
-                'kickoff_date': re.sub(
-                    r'\+00:00$', 'Z',
-                    model['cohort'].kickoff_date.isoformat()
-                ),
-                'current_day': model['cohort'].current_day,
+                'id':
+                model['cohort'].id,
+                'slug':
+                model['cohort'].slug,
+                'name':
+                model['cohort'].name,
+                'never_ends':
+                False,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort'].kickoff_date.isoformat()),
+                'current_day':
+                model['cohort'].current_day,
                 'academy': {
                     'id': model['cohort'].academy.id,
                     'name': model['cohort'].academy.name,
@@ -801,12 +990,20 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'syllabus': None,
-                'ending_date': model['cohort'].ending_date,
-                'stage': model['cohort'].stage,
-                'language': model['cohort'].language,
-                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
-                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
+                'syllabus':
+                None,
+                'ending_date':
+                model['cohort'].ending_date,
+                'stage':
+                model['cohort'].stage,
+                'language':
+                model['cohort'].language,
+                'created_at':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort'].created_at.isoformat()),
+                'updated_at':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort'].updated_at.isoformat()),
             },
         }]
 
@@ -827,15 +1024,20 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_academy_cohort_user__post_in_bulk__2_items(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, cohort=True,
-            profile_academy=True, capability='crud_cohort', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    cohort=True,
+                                    profile_academy=True,
+                                    capability='crud_cohort',
+                                    role='potato')
         del base['user']
 
-        models = [self.generate_models(user=True, models=base) for _ in range(0, 2)]
+        models = [
+            self.generate_models(user=True, models=base) for _ in range(0, 2)
+        ]
         url = reverse_lazy('admissions:academy_cohort_user')
         data = [{
-            'user':  model['user'].id,
-            'cohort':  models[0]['cohort'].id,
+            'user': model['user'].id,
+            'cohort': models[0]['cohort'].id,
         } for model in models]
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -849,15 +1051,19 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['user'].email,
             },
             'cohort': {
-                'id': model['cohort'].id,
-                'slug': model['cohort'].slug,
-                'name': model['cohort'].name,
-                'never_ends': False,
-                'kickoff_date': re.sub(
-                    r'\+00:00$', 'Z',
-                    model['cohort'].kickoff_date.isoformat()
-                ),
-                'current_day': model['cohort'].current_day,
+                'id':
+                model['cohort'].id,
+                'slug':
+                model['cohort'].slug,
+                'name':
+                model['cohort'].name,
+                'never_ends':
+                False,
+                'kickoff_date':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort'].kickoff_date.isoformat()),
+                'current_day':
+                model['cohort'].current_day,
                 'academy': {
                     'id': model['cohort'].academy.id,
                     'name': model['cohort'].academy.name,
@@ -866,12 +1072,20 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'syllabus': None,
-                'ending_date': model['cohort'].ending_date,
-                'stage': model['cohort'].stage,
-                'language': model['cohort'].language,
-                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
-                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
+                'syllabus':
+                None,
+                'ending_date':
+                model['cohort'].ending_date,
+                'stage':
+                model['cohort'].stage,
+                'language':
+                model['cohort'].language,
+                'created_at':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort'].created_at.isoformat()),
+                'updated_at':
+                re.sub(r'\+00:00$', 'Z',
+                       model['cohort'].updated_at.isoformat()),
             },
         } for model in models]
 
@@ -896,14 +1110,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Delete in bulk
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__delete__without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_cohort', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato')
         url = reverse_lazy('admissions:academy_cohort_user')
         response = self.client.delete(url)
         json = response.json()
@@ -924,23 +1141,30 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         many_fields = ['id']
 
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_cohort', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='crud_cohort',
+                                    role='potato')
 
         del base['user']
         del base['cohort']
 
         for field in many_fields:
             cohort_user_kwargs = {
-                'role': choice(['STUDENT', 'ASSISTANT', 'TEACHER']),
-                'finantial_status': choice(['FULLY_PAID', 'UP_TO_DATE', 'LATE']),
-                'educational_status': choice(['ACTIVE', 'POSTPONED', 'SUSPENDED',
-                    'GRADUATED', 'DROPPED']),
+                'role':
+                choice(['STUDENT', 'ASSISTANT', 'TEACHER']),
+                'finantial_status':
+                choice(['FULLY_PAID', 'UP_TO_DATE', 'LATE']),
+                'educational_status':
+                choice([
+                    'ACTIVE', 'POSTPONED', 'SUSPENDED', 'GRADUATED', 'DROPPED'
+                ]),
             }
             model = self.generate_models(cohort_user=True,
-                cohort_user_kwargs=cohort_user_kwargs, models=base)
-            url = (reverse_lazy('admissions:academy_cohort_user') + f'?{field}=' +
-                str(getattr(model['cohort_user'], field)))
+                                         cohort_user_kwargs=cohort_user_kwargs,
+                                         models=base)
+            url = (reverse_lazy('admissions:academy_cohort_user') +
+                   f'?{field}=' + str(getattr(model['cohort_user'], field)))
             response = self.client.delete(url)
 
             if response.status_code != 204:
@@ -957,33 +1181,47 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         many_fields = ['id']
 
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_cohort', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='crud_cohort',
+                                    role='potato')
 
         del base['user']
         del base['cohort']
 
         for field in many_fields:
             cohort_user_kwargs = {
-                'role': choice(['STUDENT', 'ASSISTANT', 'TEACHER']),
-                'finantial_status': choice(['FULLY_PAID', 'UP_TO_DATE', 'LATE']),
-                'educational_status': choice(['ACTIVE', 'POSTPONED', 'SUSPENDED',
-                    'GRADUATED', 'DROPPED']),
+                'role':
+                choice(['STUDENT', 'ASSISTANT', 'TEACHER']),
+                'finantial_status':
+                choice(['FULLY_PAID', 'UP_TO_DATE', 'LATE']),
+                'educational_status':
+                choice([
+                    'ACTIVE', 'POSTPONED', 'SUSPENDED', 'GRADUATED', 'DROPPED'
+                ]),
             }
-            model1 = self.generate_models(cohort_user=True,
-                cohort_user_kwargs=cohort_user_kwargs, models=base)
+            model1 = self.generate_models(
+                cohort_user=True,
+                cohort_user_kwargs=cohort_user_kwargs,
+                models=base)
 
             cohort_user_kwargs = {
-                'role': choice(['STUDENT', 'ASSISTANT', 'TEACHER']),
-                'finantial_status': choice(['FULLY_PAID', 'UP_TO_DATE', 'LATE']),
-                'educational_status': choice(['ACTIVE', 'POSTPONED', 'SUSPENDED',
-                    'GRADUATED', 'DROPPED']),
+                'role':
+                choice(['STUDENT', 'ASSISTANT', 'TEACHER']),
+                'finantial_status':
+                choice(['FULLY_PAID', 'UP_TO_DATE', 'LATE']),
+                'educational_status':
+                choice([
+                    'ACTIVE', 'POSTPONED', 'SUSPENDED', 'GRADUATED', 'DROPPED'
+                ]),
             }
-            model2 = self.generate_models(cohort_user=True,
-                cohort_user_kwargs=cohort_user_kwargs, models=base)
-            url = (reverse_lazy('admissions:academy_cohort_user') + f'?{field}=' +
-                str(getattr(model1['cohort_user'], field)) + ',' +
-                str(getattr(model2['cohort_user'], field)))
+            model2 = self.generate_models(
+                cohort_user=True,
+                cohort_user_kwargs=cohort_user_kwargs,
+                models=base)
+            url = (reverse_lazy('admissions:academy_cohort_user') +
+                   f'?{field}=' + str(getattr(model1['cohort_user'], field)) +
+                   ',' + str(getattr(model2['cohort_user'], field)))
             response = self.client.delete(url)
 
             if response.status_code != 204:

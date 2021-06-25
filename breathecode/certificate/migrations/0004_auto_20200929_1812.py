@@ -16,21 +16,24 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='LayoutDesign',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(auto_created=True,
+                                  primary_key=True,
+                                  serialize=False,
+                                  verbose_name='ID')),
                 ('slug', models.SlugField(max_length=150, unique=True)),
                 ('name', models.CharField(max_length=40)),
             ],
         ),
         migrations.CreateModel(
             name='UserCertificate',
-            fields=[
-            ],
+            fields=[],
             options={
                 'proxy': True,
                 'indexes': [],
                 'constraints': [],
             },
-            bases=('auth.user',),
+            bases=('auth.user', ),
             managers=[
                 ('objects', django.contrib.auth.models.UserManager()),
             ],
@@ -38,11 +41,18 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='specialty',
             name='description',
-            field=models.CharField(blank=True, default=None, max_length=255, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   max_length=255,
+                                   null=True),
         ),
         migrations.AddField(
             model_name='userspecialty',
             name='layout',
-            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to='certificate.layoutdesign'),
+            field=models.ForeignKey(
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to='certificate.layoutdesign'),
         ),
     ]

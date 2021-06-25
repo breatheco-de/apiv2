@@ -13,12 +13,21 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='asset',
             name='external',
-            field=models.BooleanField(default=False, help_text='External assets will open in a new window, they are not built using breathecode or learnpack tecnology'),
+            field=models.BooleanField(
+                default=False,
+                help_text=
+                'External assets will open in a new window, they are not built using breathecode or learnpack tecnology'
+            ),
         ),
         migrations.AlterField(
             model_name='asset',
             name='asset_type',
-            field=models.CharField(choices=[('PROJECT', 'Project'), ('EXERCISE', 'Exercise'), ('QUIZ', 'Quiz'), ('LESSON', 'Lesson'), ('LESSON', 'Video')], max_length=20),
+            field=models.CharField(choices=[('PROJECT', 'Project'),
+                                            ('EXERCISE', 'Exercise'),
+                                            ('QUIZ', 'Quiz'),
+                                            ('LESSON', 'Lesson'),
+                                            ('LESSON', 'Video')],
+                                   max_length=20),
         ),
         migrations.AlterField(
             model_name='asset',

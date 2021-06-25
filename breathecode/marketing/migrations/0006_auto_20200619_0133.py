@@ -17,11 +17,19 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='tag',
             name='acp_id',
-            field=models.IntegerField(help_text='The id coming from active campaign'),
+            field=models.IntegerField(
+                help_text='The id coming from active campaign'),
         ),
         migrations.AlterField(
             model_name='tag',
             name='tag_type',
-            field=models.CharField(choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'), ('DISCOVERY', 'Discovery'), ('OTHER', 'Other')], default=None, help_text='This will be use to determine the type of lead (strong, soft, etc.), if a lead has a tag with type=strong it will be added to the automation for strong leads', max_length=15, null=True),
+            field=models.CharField(
+                choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'),
+                         ('DISCOVERY', 'Discovery'), ('OTHER', 'Other')],
+                default=None,
+                help_text=
+                'This will be use to determine the type of lead (strong, soft, etc.), if a lead has a tag with type=strong it will be added to the automation for strong leads',
+                max_length=15,
+                null=True),
         ),
     ]

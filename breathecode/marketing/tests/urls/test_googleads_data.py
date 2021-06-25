@@ -6,6 +6,7 @@ from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins import MarketingTestCase
 
+
 class AcademyCohortTestSuite(MarketingTestCase):
     def test_googleads_data__without_entries(self):
         """Test /academy/cohort without auth"""
@@ -23,8 +24,9 @@ class AcademyCohortTestSuite(MarketingTestCase):
     def test_googleads_data__with_entry_bad_gclid(self):
         """Test /academy/cohort without auth"""
         form_entry_kwargs = {'gclid': '532', 'deal_status': 'WON'}
-        model = self.generate_models(academy=True, form_entry=True,
-            form_entry_kwargs=form_entry_kwargs)
+        model = self.generate_models(academy=True,
+                                     form_entry=True,
+                                     form_entry_kwargs=form_entry_kwargs)
 
         url = reverse_lazy('marketing:googleads_csv')
         response = self.client.get(url)
@@ -37,9 +39,10 @@ class AcademyCohortTestSuite(MarketingTestCase):
 
     def test_googleads_data__with_entry_empty_gclid(self):
         """Test /academy/cohort without auth"""
-        form_entry_kwargs = { 'deal_status': 'WON'}
-        model = self.generate_models(academy=True, form_entry=True,
-            form_entry_kwargs=form_entry_kwargs)
+        form_entry_kwargs = {'deal_status': 'WON'}
+        model = self.generate_models(academy=True,
+                                     form_entry=True,
+                                     form_entry_kwargs=form_entry_kwargs)
 
         url = reverse_lazy('marketing:googleads_csv')
         response = self.client.get(url)
@@ -66,8 +69,9 @@ class AcademyCohortTestSuite(MarketingTestCase):
     def test_googleads_data__with_entry_bad_deal_status(self):
         """Test /academy/cohort without auth"""
         form_entry_kwargs = {'gclid': 'D_BwE', 'deal_status': 'LOST'}
-        model = self.generate_models(academy=True, form_entry=True,
-            form_entry_kwargs=form_entry_kwargs)
+        model = self.generate_models(academy=True,
+                                     form_entry=True,
+                                     form_entry_kwargs=form_entry_kwargs)
 
         url = reverse_lazy('marketing:googleads_csv')
         response = self.client.get(url)
@@ -82,8 +86,9 @@ class AcademyCohortTestSuite(MarketingTestCase):
     def test_googleads_data__with_entry(self):
         """Test /academy/cohort without auth"""
         form_entry_kwargs = {'gclid': 'D_BwE', 'deal_status': 'WON'}
-        model = self.generate_models(academy=True, form_entry=True,
-            form_entry_kwargs=form_entry_kwargs)
+        model = self.generate_models(academy=True,
+                                     form_entry=True,
+                                     form_entry_kwargs=form_entry_kwargs)
 
         url = reverse_lazy('marketing:googleads_csv')
         response = self.client.get(url)
@@ -104,11 +109,11 @@ class AcademyCohortTestSuite(MarketingTestCase):
         """Test /academy/cohort without auth"""
         form_entry_kwargs = {'gclid': 'D_BwE', 'deal_status': 'WON'}
         model = self.generate_models(form_entry=True,
-            form_entry_kwargs=form_entry_kwargs)
+                                     form_entry_kwargs=form_entry_kwargs)
 
         form_entry_kwargs = {'gclid': 'A_BwE', 'deal_status': 'WON'}
         model2 = self.generate_models(form_entry=True,
-            form_entry_kwargs=form_entry_kwargs)
+                                      form_entry_kwargs=form_entry_kwargs)
 
         url = reverse_lazy('marketing:googleads_csv')
         response = self.client.get(url)
@@ -124,7 +129,6 @@ class AcademyCohortTestSuite(MarketingTestCase):
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
             f"{model['form_entry'].gclid},,{conversion_time},,",
             f"{model2['form_entry'].gclid},,{conversion_time2},,\r\n"
-
         ])
 
         self.assertEqual(response.content.decode('utf-8'), expected)
@@ -134,15 +138,15 @@ class AcademyCohortTestSuite(MarketingTestCase):
         """Test /academy/cohort without auth"""
         form_entry_kwargs = {'gclid': 'D_BwE', 'deal_status': 'WON'}
         model = self.generate_models(form_entry=True,
-            form_entry_kwargs=form_entry_kwargs)
+                                     form_entry_kwargs=form_entry_kwargs)
 
         form_entry_kwargs = {'gclid': '123', 'deal_status': 'LOST'}
         model2 = self.generate_models(form_entry=True,
-            form_entry_kwargs=form_entry_kwargs)
+                                      form_entry_kwargs=form_entry_kwargs)
 
         form_entry_kwargs = {'gclid': 'A_BwE', 'deal_status': 'WON'}
         model3 = self.generate_models(form_entry=True,
-            form_entry_kwargs=form_entry_kwargs)
+                                      form_entry_kwargs=form_entry_kwargs)
 
         url = reverse_lazy('marketing:googleads_csv')
         response = self.client.get(url)
@@ -157,7 +161,6 @@ class AcademyCohortTestSuite(MarketingTestCase):
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
             f"{model['form_entry'].gclid},,{conversion_time},,",
             f"{model3['form_entry'].gclid},,{conversion_time2},,\r\n"
-
         ])
 
         self.assertEqual(response.content.decode('utf-8'), expected)
@@ -166,15 +169,18 @@ class AcademyCohortTestSuite(MarketingTestCase):
     def test_googleads_data__with_entries_with_academy_slug(self):
         """Test /academy/cohort without auth"""
         form_entry_kwargs = {'gclid': 'D_BwE', 'deal_status': 'WON'}
-        model = self.generate_models(form_entry=True, academy=True,
-            form_entry_kwargs=form_entry_kwargs)
+        model = self.generate_models(form_entry=True,
+                                     academy=True,
+                                     form_entry_kwargs=form_entry_kwargs)
 
         form_entry_kwargs = {'gclid': 'A_BwE', 'deal_status': 'WON'}
         model3 = self.generate_models(form_entry=True,
-            form_entry_kwargs=form_entry_kwargs)
+                                      form_entry_kwargs=form_entry_kwargs)
 
         url = reverse_lazy('marketing:googleads_csv')
-        args = {'academy_slug': ','.join(list(dict.fromkeys([model.academy.slug])))}
+        args = {
+            'academy_slug': ','.join(list(dict.fromkeys([model.academy.slug])))
+        }
         url = url + "?" + urllib.parse.urlencode(args)
         response = self.client.get(url)
 
@@ -193,15 +199,16 @@ class AcademyCohortTestSuite(MarketingTestCase):
     def test_googleads_data__with_entries_with_academy_id(self):
         """Test /academy/cohort without auth"""
         form_entry_kwargs = {'gclid': 'D_BwE', 'deal_status': 'WON'}
-        model = self.generate_models(form_entry=True, academy=True,
-            form_entry_kwargs=form_entry_kwargs)
+        model = self.generate_models(form_entry=True,
+                                     academy=True,
+                                     form_entry_kwargs=form_entry_kwargs)
 
         form_entry_kwargs = {'gclid': 'A_BwE', 'deal_status': 'WON'}
         model3 = self.generate_models(form_entry=True,
-            form_entry_kwargs=form_entry_kwargs)
+                                      form_entry_kwargs=form_entry_kwargs)
 
         url = reverse_lazy('marketing:googleads_csv')
-        args ={'academy': "1"}
+        args = {'academy': "1"}
         url = url + "?" + urllib.parse.urlencode(args)
         response = self.client.get(url)
 
@@ -220,17 +227,22 @@ class AcademyCohortTestSuite(MarketingTestCase):
     def test_googleads_data__with_entries_with_two_academy_slug(self):
         """Test /academy/cohort without auth"""
         form_entry_kwargs = {'gclid': 'D_BwE', 'deal_status': 'WON'}
-        model = self.generate_models(form_entry=True, academy=True,
-            form_entry_kwargs=form_entry_kwargs)
+        model = self.generate_models(form_entry=True,
+                                     academy=True,
+                                     form_entry_kwargs=form_entry_kwargs)
 
         form_entry_kwargs = {'gclid': 'A_BwE', 'deal_status': 'WON'}
-        model2 = self.generate_models(form_entry=True, academy=True,
-            form_entry_kwargs=form_entry_kwargs)
+        model2 = self.generate_models(form_entry=True,
+                                      academy=True,
+                                      form_entry_kwargs=form_entry_kwargs)
 
         models = [model, model2]
 
         url = reverse_lazy('marketing:googleads_csv')
-        args = {'academy_slug': ','.join(list(dict.fromkeys([x.academy.slug for x in models])))}
+        args = {
+            'academy_slug':
+            ','.join(list(dict.fromkeys([x.academy.slug for x in models])))
+        }
         url = url + "?" + urllib.parse.urlencode(args)
         response = self.client.get(url)
 
@@ -245,7 +257,6 @@ class AcademyCohortTestSuite(MarketingTestCase):
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
             f"{model['form_entry'].gclid},,{conversion_time},,",
             f"{model2['form_entry'].gclid},,{conversion_time2},,\r\n"
-
         ])
 
         self.assertEqual(response.content.decode('utf-8'), expected)
@@ -254,17 +265,19 @@ class AcademyCohortTestSuite(MarketingTestCase):
     def test_googleads_data__with_entries_with_two_academy_id(self):
         """Test /academy/cohort without auth"""
         form_entry_kwargs = {'gclid': 'D_BwE', 'deal_status': 'WON'}
-        model = self.generate_models(form_entry=True, academy=True,
-            form_entry_kwargs=form_entry_kwargs)
+        model = self.generate_models(form_entry=True,
+                                     academy=True,
+                                     form_entry_kwargs=form_entry_kwargs)
 
         form_entry_kwargs = {'gclid': 'A_BwE', 'deal_status': 'WON'}
-        model2 = self.generate_models(form_entry=True, academy=True,
-            form_entry_kwargs=form_entry_kwargs)
+        model2 = self.generate_models(form_entry=True,
+                                      academy=True,
+                                      form_entry_kwargs=form_entry_kwargs)
 
         models = [model, model2]
 
         url = reverse_lazy('marketing:googleads_csv')
-        args ={'academy': "1,2"}
+        args = {'academy': "1,2"}
         url = url + "?" + urllib.parse.urlencode(args)
         response = self.client.get(url)
 
@@ -279,7 +292,6 @@ class AcademyCohortTestSuite(MarketingTestCase):
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
             f"{model['form_entry'].gclid},,{conversion_time},,",
             f"{model2['form_entry'].gclid},,{conversion_time2},,\r\n"
-
         ])
 
         self.assertEqual(response.content.decode('utf-8'), expected)

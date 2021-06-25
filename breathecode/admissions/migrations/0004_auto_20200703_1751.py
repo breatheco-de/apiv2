@@ -13,6 +13,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='certificate',
             name='logo',
-            field=models.CharField(blank=True, default=None, max_length=250, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   max_length=250,
+                                   null=True),
         ),
     ]

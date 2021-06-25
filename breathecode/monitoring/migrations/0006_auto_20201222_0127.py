@@ -15,26 +15,48 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='application',
             name='notify_slack_channel',
-            field=models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to='notify.slackchannel'),
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to='notify.slackchannel'),
         ),
         migrations.AddField(
             model_name='application',
             name='paused_until',
-            field=models.DateTimeField(blank=True, default=None, help_text='if you want to stop checking for a period of time', null=True),
+            field=models.DateTimeField(
+                blank=True,
+                default=None,
+                help_text='if you want to stop checking for a period of time',
+                null=True),
         ),
         migrations.AddField(
             model_name='endpoint',
             name='paused_until',
-            field=models.DateTimeField(blank=True, default=None, help_text='if you want to stop checking for a period of time', null=True),
+            field=models.DateTimeField(
+                blank=True,
+                default=None,
+                help_text='if you want to stop checking for a period of time',
+                null=True),
         ),
         migrations.AddField(
             model_name='endpoint',
             name='special_status_text',
-            field=models.CharField(blank=True, default=None, help_text='Add a message for people to see when is down', max_length=255, null=True),
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text='Add a message for people to see when is down',
+                max_length=255,
+                null=True),
         ),
         migrations.AlterField(
             model_name='endpoint',
             name='status_text',
-            field=models.CharField(blank=True, default=None, editable=False, max_length=255, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   editable=False,
+                                   max_length=255,
+                                   null=True),
         ),
     ]

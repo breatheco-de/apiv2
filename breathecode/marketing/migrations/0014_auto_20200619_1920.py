@@ -13,6 +13,13 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='tag',
             name='tag_type',
-            field=models.CharField(choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'), ('DISCOVERY', 'Discovery'), ('OTHER', 'Other')], default=None, help_text="The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON", max_length=15, null=True),
+            field=models.CharField(
+                choices=[('STRONG', 'Strong'), ('SOFT', 'Soft'),
+                         ('DISCOVERY', 'Discovery'), ('OTHER', 'Other')],
+                default=None,
+                help_text=
+                "The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON",
+                max_length=15,
+                null=True),
         ),
     ]

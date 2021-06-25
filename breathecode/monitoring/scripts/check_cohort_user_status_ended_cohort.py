@@ -12,7 +12,10 @@ active_user_on_ended_cohort = CohortUser.objects.filter(
     cohort__academy__id=academy.id).exclude(cohort__never_ends=True)
 
 active_user_on_ended_cohort_list = [
-    "- " + item.user.first_name + " " + item.user.last_name + " (" +item.user.email + ") => " + item.cohort.name for item in active_user_on_ended_cohort]
+    "- " + item.user.first_name + " " + item.user.last_name + " (" +
+    item.user.email + ") => " + item.cohort.name
+    for item in active_user_on_ended_cohort
+]
 
 active_user_on_ended_cohort_list_names = (
     "\n").join(active_user_on_ended_cohort_list)

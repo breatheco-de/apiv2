@@ -7,6 +7,7 @@ from breathecode.authenticate.models import Capability, ProfileAcademy, Role, To
 from mixer.backend.django import mixer
 from breathecode.tests.mixins import DateFormatterMixin
 
+
 class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
     """CapacitiesTestCase with auth methods"""
     password = 'pass1234'
@@ -22,30 +23,43 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
 
     def get_capability_dict(self, id):
         data = Capability.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+        return self.remove_dinamics_fields(
+            data.__dict__.copy()) if data else None
 
     def get_role_dict(self, id):
         data = Role.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+        return self.remove_dinamics_fields(
+            data.__dict__.copy()) if data else None
 
     def get_profile_academy_dict(self, id):
         data = ProfileAcademy.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+        return self.remove_dinamics_fields(
+            data.__dict__.copy()) if data else None
 
     def all_capability_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Capability.objects.filter()]
+        return [
+            self.remove_dinamics_fields(data.__dict__.copy())
+            for data in Capability.objects.filter()
+        ]
 
     def all_role_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Role.objects.filter()]
+        return [
+            self.remove_dinamics_fields(data.__dict__.copy())
+            for data in Role.objects.filter()
+        ]
 
     def all_profile_academy_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            ProfileAcademy.objects.filter()]
+        return [
+            self.remove_dinamics_fields(data.__dict__.copy())
+            for data in ProfileAcademy.objects.filter()
+        ]
 
-    def generate_credentials(self, profile_academy=False, capability='', role='',
-            models={}, external_models={}):
+    def generate_credentials(self,
+                             profile_academy=False,
+                             capability='',
+                             role='',
+                             models={},
+                             external_models={}):
         self.maxDiff = None
         external_models = external_models.copy()
         models = models.copy()
@@ -69,7 +83,8 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 'description': capability,
             }
 
-            models['capability'] = mixer.blend('authenticate.Capability', **kargs)
+            models['capability'] = mixer.blend('authenticate.Capability',
+                                               **kargs)
 
         if not 'role' in models and role:
             kargs = {
@@ -94,6 +109,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if 'academy' in external_models:
                 kargs['academy'] = external_models['academy']
 
-            models['profile_academy'] = mixer.blend('authenticate.ProfileAcademy', **kargs)
+            models['profile_academy'] = mixer.blend(
+                'authenticate.ProfileAcademy', **kargs)
 
         return models
