@@ -7,7 +7,7 @@ on:
   push: {}
   pull_request: {}
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -23,4 +23,45 @@ jobs:
           pipenv install --system --deploy --ignore-pipfile
       - name: Test with pytest
         run: |
-          pipenv run test
+          pipenv run cov_ci
+
+  codecov:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: ./coverage.xml # optional
+          flags: unittests # optional
+          name: codecov-umbrella # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
+
+  codeclimate:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test & publish code coverage
+        uses: paambaati/codeclimate-action@v2.7.5
+        env:
+          CC_TEST_REPORTER_ID: ${{ secrets.CODECLIMATE_TOKEN }}
+        with:
+          # coverageCommand: npm run coverage
+          debug: true
+
+  coveralls:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls Parallel
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.github_token }}
+        flag-name: run-${{ matrix.test_number }}
+        parallel: true
+    - name: Coveralls Finished
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.COVERALLS_TOKEN }}
+        parallel-finished: true
