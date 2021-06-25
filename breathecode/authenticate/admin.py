@@ -128,4 +128,5 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone', 'github_username','avatar_url')
+    search_fields = ['user__first_name', 'user__last_name', 'user__email']
     # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
