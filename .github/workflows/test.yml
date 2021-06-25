@@ -38,32 +38,36 @@ jobs:
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
 
-  # codeclimate:
-  #   needs: test
-  #   runs-on: ubuntu-latest
-  #   steps:
-      - name: Code coverage
-        uses: paambaati/codeclimate-action@v2.7.5
-        env:
-          CC_TEST_REPORTER_ID: ${{ secrets.CODECLIMATE_TOKEN }}
-        with:
-          # coverageCommand: npm run coverage
-          debug: true
+  # # codeclimate:
+  # #   needs: test
+  # #   runs-on: ubuntu-latest
+  # #   steps:
+  #     - name: Code coverage
+  #       uses: paambaati/codeclimate-action@v2.7.5
+  #       env:
+  #         CC_TEST_REPORTER_ID: ${{ secrets.CODECLIMATE_TOKEN }}
+  #       with:
+  #         # coverageCommand: npm run coverage
+  #         debug: true
 
-  # coveralls:
-  #   needs: test
-  #   runs-on: ubuntu-latest
-  #   steps:
-      - name: Coveralls Parallel
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.COVERALLS_TOKEN }}
-          flag-name: run-${{ matrix.test_number }}
-          path-to-lcov: coverage.xml
-          parallel: true
-      - name: Coveralls Finished
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.COVERALLS_TOKEN }}
-          path-to-lcov: coverage.xml
-          parallel-finished: true
+  # # coveralls:
+  # #   needs: test
+  # #   runs-on: ubuntu-latest
+  # #   steps:
+  #     - name: Coveralls Parallel
+  #       uses: coverallsapp/github-action@master
+  #       with:
+  #         github-token: ${{ secrets.COVERALLS_TOKEN }}
+  #         flag-name: run-${{ matrix.test_number }}
+  #         path-to-lcov: coverage.xml
+  #         parallel: true
+  #     - name: Coveralls Finished
+  #       uses: coverallsapp/github-action@master
+  #       with:
+  #         github-token: ${{ secrets.COVERALLS_TOKEN }}
+  #         path-to-lcov: coverage.xml
+  #         parallel-finished: true
+      - name: Upload coverage data to coveralls.io
+        run: coveralls
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
