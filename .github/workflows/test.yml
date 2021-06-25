@@ -25,10 +25,10 @@ jobs:
         run: |
           pipenv run cov_ci
 
-  codecov:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
+  # codecov:
+  #   needs: test
+  #   runs-on: ubuntu-latest
+  #   steps:
       - uses: codecov/codecov-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
@@ -38,10 +38,10 @@ jobs:
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
 
-  codeclimate:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
+  # codeclimate:
+  #   needs: test
+  #   runs-on: ubuntu-latest
+  #   steps:
       - name: Test & publish code coverage
         uses: paambaati/codeclimate-action@v2.7.5
         env:
@@ -50,18 +50,18 @@ jobs:
           # coverageCommand: npm run coverage
           debug: true
 
-  coveralls:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-    - name: Coveralls Parallel
-      uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{ secrets.github_token }}
-        flag-name: run-${{ matrix.test_number }}
-        parallel: true
-    - name: Coveralls Finished
-      uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{ secrets.COVERALLS_TOKEN }}
-        parallel-finished: true
+  # coveralls:
+  #   needs: test
+  #   runs-on: ubuntu-latest
+  #   steps:
+      - name: Coveralls Parallel
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.github_token }}
+          flag-name: run-${{ matrix.test_number }}
+          parallel: true
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.COVERALLS_TOKEN }}
+          parallel-finished: true
