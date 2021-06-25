@@ -6,12 +6,23 @@ from mixer.backend.django import mixer
 
 
 class MarketingModelsMixin(ModelsMixin):
-    def generate_marketing_models(self, active_campaign_academy=False,
-                                  automation=False, academy=False, tag=False, contact=False,
-                                  form_entry=False, short_link=False, user=False,
-                                  active_campaign_academy_kwargs={}, automation_kwargs={},
-                                  tag_kwargs={}, contact_kwargs={}, form_entry_kwargs={},
-                                  short_link_kwargs={}, models={}, **kwargs):
+    def generate_marketing_models(self,
+                                  active_campaign_academy=False,
+                                  automation=False,
+                                  academy=False,
+                                  tag=False,
+                                  contact=False,
+                                  form_entry=False,
+                                  short_link=False,
+                                  user=False,
+                                  active_campaign_academy_kwargs={},
+                                  automation_kwargs={},
+                                  tag_kwargs={},
+                                  contact_kwargs={},
+                                  form_entry_kwargs={},
+                                  short_link_kwargs={},
+                                  models={},
+                                  **kwargs):
         """Generate models"""
         models = models.copy()
 
@@ -37,7 +48,9 @@ class MarketingModelsMixin(ModelsMixin):
         # OneToOneField
         if 'active_campaign_academy' in models and active_campaign_academy:
             if 'automation' in models or automation:
-                models['active_campaign_academy'].event_attendancy_automation = models['automation']
+                models[
+                    'active_campaign_academy'].event_attendancy_automation = models[
+                        'automation']
 
             models['active_campaign_academy'].save()
 

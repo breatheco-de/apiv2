@@ -4,9 +4,17 @@ Collections of mixins used to login in authorize microservice
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
 
+
 class MediaModelsMixin(ModelsMixin):
-    def generate_media_models(self, category=False, media=False, media_resolution=False,
-            category_kwargs={}, media_kwargs={}, media_resolution_kwargs={}, models={}, **kwargs):
+    def generate_media_models(self,
+                              category=False,
+                              media=False,
+                              media_resolution=False,
+                              category_kwargs={},
+                              media_kwargs={},
+                              media_resolution_kwargs={},
+                              models={},
+                              **kwargs):
         models = models.copy()
 
         if not 'category' in models and category:
@@ -31,6 +39,7 @@ class MediaModelsMixin(ModelsMixin):
             kargs = {}
 
             kargs = {**kargs, **media_resolution_kwargs}
-            models['media_resolution'] = mixer.blend('media.MediaResolution', **kargs)
+            models['media_resolution'] = mixer.blend('media.MediaResolution',
+                                                     **kargs)
 
         return models

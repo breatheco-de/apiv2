@@ -3,6 +3,7 @@
 from django.db import migrations, models
 from django.utils import timezone
 
+
 class Migration(migrations.Migration):
 
     dependencies = [

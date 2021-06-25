@@ -13,14 +13,20 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AssetTechnology',
             fields=[
-                ('slug', models.SlugField(max_length=200, primary_key=True, serialize=False)),
+                ('slug',
+                 models.SlugField(max_length=200,
+                                  primary_key=True,
+                                  serialize=False)),
                 ('title', models.CharField(blank=True, max_length=200)),
             ],
         ),
         migrations.CreateModel(
             name='AssetTranslation',
             fields=[
-                ('slug', models.SlugField(max_length=2, primary_key=True, serialize=False)),
+                ('slug',
+                 models.SlugField(max_length=2,
+                                  primary_key=True,
+                                  serialize=False)),
                 ('title', models.CharField(blank=True, max_length=200)),
             ],
         ),
@@ -32,12 +38,19 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='asset',
             name='lang',
-            field=models.CharField(blank=True, default=None, max_length=50, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   max_length=50,
+                                   null=True),
         ),
         migrations.AlterField(
             model_name='asset',
             name='status',
-            field=models.CharField(choices=[('DRAFT', 'Draft'), ('OK', 'Ok'), ('WARNING', 'Warning'), ('ERROR', 'Error')], default='DRAFT', max_length=20),
+            field=models.CharField(choices=[('DRAFT', 'Draft'), ('OK', 'Ok'),
+                                            ('WARNING', 'Warning'),
+                                            ('ERROR', 'Error')],
+                                   default='DRAFT',
+                                   max_length=20),
         ),
         migrations.AddField(
             model_name='asset',

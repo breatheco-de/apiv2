@@ -2,6 +2,7 @@
 Requests mock
 """
 
+
 class ResponseMock():
     """Simutate Response to be used by mocks"""
     status_code = None
@@ -19,6 +20,7 @@ class ResponseMock():
     def json(self) -> dict:
         """Convert Response to JSON"""
         return self.data
+
 
 def post_mock(url: str, auth=None, data=None):
     """Requests get mock"""

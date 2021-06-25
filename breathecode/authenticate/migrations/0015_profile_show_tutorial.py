@@ -13,6 +13,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='profile',
             name='show_tutorial',
-            field=models.BooleanField(default=True, help_text='Set true if you want to show the tutorial on the user UI/UX'),
+            field=models.BooleanField(
+                default=True,
+                help_text=
+                'Set true if you want to show the tutorial on the user UI/UX'),
         ),
     ]

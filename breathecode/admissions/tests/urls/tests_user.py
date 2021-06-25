@@ -14,9 +14,9 @@ from breathecode.tests.mocks import (
 )
 from ..mixins import AdmissionsTestCase
 
+
 class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -26,7 +26,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.put(url, data)
         json = response.json()
-        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
+        expected = {
+            'detail': 'Authentication credentials were not provided.',
+            'status_code': 401
+        }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -63,8 +66,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         model_dict = self.get_user_dict(1)
         url = reverse_lazy('admissions:user')
         data = {
-            'first_name':  'Socrates',
-            'last_name':  'Aristoteles',
+            'first_name': 'Socrates',
+            'last_name': 'Aristoteles',
         }
         response = self.client.put(url, data)
         json = response.json()

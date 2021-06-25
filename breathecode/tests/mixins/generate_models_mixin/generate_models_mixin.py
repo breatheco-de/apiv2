@@ -19,16 +19,20 @@ from .media_models_mixin import MediaModelsMixin
 
 
 class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin,
-        AdmissionsModelsMixin, AuthenticateMixin, CertificateModelsMixin,
-        FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,
-        AssessmentModelsMixin, FreelanceModelsMixin, MarketingModelsMixin,
-        MonitoringModelsMixin, MediaModelsMixin):
-
+                          AdmissionsModelsMixin, AuthenticateMixin,
+                          CertificateModelsMixin, FeedbackModelsMixin,
+                          NotifyModelsMixin, EventsModelsMixin,
+                          AssessmentModelsMixin, FreelanceModelsMixin,
+                          MarketingModelsMixin, MonitoringModelsMixin,
+                          MediaModelsMixin):
     def __detect_invalid_arguments__(self, models={}, **kwargs):
         """check if one argument is invalid to prevent errors"""
         for key in kwargs:
-            if key != 'authenticate' and not key.endswith('_kwargs') and not key in models:
-                print(f'key `{key}` should not be implemented in self.generate_models')
+            if key != 'authenticate' and not key.endswith(
+                    '_kwargs') and not key in models:
+                print(
+                    f'key `{key}` should not be implemented in self.generate_models'
+                )
 
     def __inject_models_in_instance__(self, models={}):
         """Add support to model.name instead of model['name']"""

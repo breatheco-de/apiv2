@@ -13,9 +13,9 @@ from breathecode.tests.mocks import (
 )
 from ..mixins.new_feedback_test_case import FeedbackTestCase
 
+
 class AnswerTestSuite(FeedbackTestCase):
     """Test /answer"""
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -33,7 +33,7 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_wrong_academy(self):
         """Test /answer without auth"""
         url = reverse_lazy('feedback:answer')
-        response = self.client.get(url, **{'HTTP_Academy': 1 })
+        response = self.client.get(url, **{'HTTP_Academy': 1})
         json = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -49,10 +49,12 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: read_nps_answers for academy 1",
-            'status_code': 403
-        })
+        self.assertEqual(
+            json, {
+                'detail':
+                "You (user: 1) don't have this capability: read_nps_answers for academy 1",
+                'status_code': 403
+            })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -61,8 +63,10 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_nps_answers', role='potato')
+        models = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      capability='read_nps_answers',
+                                      role='potato')
         url = reverse_lazy('feedback:answer')
         response = self.client.get(url)
         json = response.json()
@@ -77,14 +81,19 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, answer=True, profile_academy=True,
-            capability='read_nps_answers', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     answer=True,
+                                     profile_academy=True,
+                                     capability='read_nps_answers',
+                                     role='potato')
         db = self.model_to_dict(model, 'answer')
         url = reverse_lazy('feedback:answer')
         response = self.client.get(url)
         json = response.json()
 
-        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+        json = [{
+            **x, 'created_at': None
+        } for x in json if self.assertDatetime(x['created_at'])]
 
         self.assertEqual(json, [{
             'created_at': None,
@@ -105,9 +114,9 @@ class AnswerTestSuite(FeedbackTestCase):
             'lang': model['answer'].lang,
             'lowest': model['answer'].lowest,
             'mentor': {
-                'first_name':  model['answer'].mentor.first_name,
-                'id':  model['answer'].mentor.id,
-                'last_name':  model['answer'].mentor.last_name,
+                'first_name': model['answer'].mentor.first_name,
+                'id': model['answer'].mentor.id,
+                'last_name': model['answer'].mentor.last_name,
             },
             'score': model['answer'].score,
             'status': model['answer'].status,
@@ -128,12 +137,14 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_bad_param_user_with_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, answer=True, profile_academy=True,
-            capability='read_nps_answers', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     user=True,
+                                     answer=True,
+                                     profile_academy=True,
+                                     capability='read_nps_answers',
+                                     role='potato')
         db = self.model_to_dict(model, 'answer')
-        params = {
-            'user': 9999
-        }
+        params = {'user': 9999}
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
         response = self.client.get(url)
@@ -149,8 +160,12 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_param_user_with_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, answer=True, profile_academy=True,
-            capability='read_nps_answers', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     user=True,
+                                     answer=True,
+                                     profile_academy=True,
+                                     capability='read_nps_answers',
+                                     role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'user': model['user'].id,
@@ -160,7 +175,9 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+        json = [{
+            **x, 'created_at': None
+        } for x in json if self.assertDatetime(x['created_at'])]
 
         self.assertEqual(json, [{
             'created_at': None,
@@ -181,9 +198,9 @@ class AnswerTestSuite(FeedbackTestCase):
             'lang': model['answer'].lang,
             'lowest': model['answer'].lowest,
             'mentor': {
-                'first_name':  model['answer'].mentor.first_name,
-                'id':  model['answer'].mentor.id,
-                'last_name':  model['answer'].mentor.last_name,
+                'first_name': model['answer'].mentor.first_name,
+                'id': model['answer'].mentor.id,
+                'last_name': model['answer'].mentor.last_name,
             },
             'score': model['answer'].score,
             'status': model['answer'].status,
@@ -204,8 +221,13 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_bad_param_cohort_with_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, cohort=True, answer=True, profile_academy=True,
-            capability='read_nps_answers', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     user=True,
+                                     cohort=True,
+                                     answer=True,
+                                     profile_academy=True,
+                                     capability='read_nps_answers',
+                                     role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'cohort': 'they-killed-kenny',
@@ -225,8 +247,13 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_param_cohort_with_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, cohort=True, answer=True, profile_academy=True,
-            capability='read_nps_answers', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     user=True,
+                                     cohort=True,
+                                     answer=True,
+                                     profile_academy=True,
+                                     capability='read_nps_answers',
+                                     role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'cohort': model['cohort'].slug,
@@ -236,7 +263,9 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+        json = [{
+            **x, 'created_at': None
+        } for x in json if self.assertDatetime(x['created_at'])]
 
         self.assertEqual(json, [{
             'created_at': None,
@@ -257,9 +286,9 @@ class AnswerTestSuite(FeedbackTestCase):
             'lang': model['answer'].lang,
             'lowest': model['answer'].lowest,
             'mentor': {
-                'first_name':  model['answer'].mentor.first_name,
-                'id':  model['answer'].mentor.id,
-                'last_name':  model['answer'].mentor.last_name,
+                'first_name': model['answer'].mentor.first_name,
+                'id': model['answer'].mentor.id,
+                'last_name': model['answer'].mentor.last_name,
             },
             'score': model['answer'].score,
             'status': model['answer'].status,
@@ -280,8 +309,14 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_param_academy_with_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            answer=True, profile_academy=True, capability='read_nps_answers', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     user=True,
+                                     cohort=True,
+                                     academy=True,
+                                     answer=True,
+                                     profile_academy=True,
+                                     capability='read_nps_answers',
+                                     role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'academy': model['academy'].id,
@@ -291,7 +326,9 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+        json = [{
+            **x, 'created_at': None
+        } for x in json if self.assertDatetime(x['created_at'])]
 
         self.assertEqual(json, [{
             'created_at': None,
@@ -312,9 +349,9 @@ class AnswerTestSuite(FeedbackTestCase):
             'lang': model['answer'].lang,
             'lowest': model['answer'].lowest,
             'mentor': {
-                'first_name':  model['answer'].mentor.first_name,
-                'id':  model['answer'].mentor.id,
-                'last_name':  model['answer'].mentor.last_name,
+                'first_name': model['answer'].mentor.first_name,
+                'id': model['answer'].mentor.id,
+                'last_name': model['answer'].mentor.last_name,
             },
             'score': model['answer'].score,
             'status': model['answer'].status,
@@ -335,9 +372,14 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_bad_param_mentor_with_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            answer=True, profile_academy=True, capability='read_nps_answers',
-            role='potato')
+        model = self.generate_models(authenticate=True,
+                                     user=True,
+                                     cohort=True,
+                                     academy=True,
+                                     answer=True,
+                                     profile_academy=True,
+                                     capability='read_nps_answers',
+                                     role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'mentor': 9999,
@@ -357,19 +399,27 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_param_mentor_with_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            answer=True, profile_academy=True, capability='read_nps_answers',
-            role='potato')
+        model = self.generate_models(authenticate=True,
+                                     user=True,
+                                     cohort=True,
+                                     academy=True,
+                                     answer=True,
+                                     profile_academy=True,
+                                     capability='read_nps_answers',
+                                     role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'mentor': model['user'].id,
         }
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
-        response = self.client.get(url, headers={"Academy": model['academy'].id})
+        response = self.client.get(url,
+                                   headers={"Academy": model['academy'].id})
         json = response.json()
 
-        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+        json = [{
+            **x, 'created_at': None
+        } for x in json if self.assertDatetime(x['created_at'])]
 
         self.assertEqual(json, [{
             'created_at': None,
@@ -413,9 +463,15 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_bad_param_event_with_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            answer=True, event=True, profile_academy=True,
-            capability='read_nps_answers', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     user=True,
+                                     cohort=True,
+                                     academy=True,
+                                     answer=True,
+                                     event=True,
+                                     profile_academy=True,
+                                     capability='read_nps_answers',
+                                     role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'event': 9999,
@@ -435,9 +491,15 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_param_event_with_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            answer=True, event=True, profile_academy=True,
-            capability='read_nps_answers', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     user=True,
+                                     cohort=True,
+                                     academy=True,
+                                     answer=True,
+                                     event=True,
+                                     profile_academy=True,
+                                     capability='read_nps_answers',
+                                     role='potato')
         db = self.model_to_dict(model, 'answer')
         params = {
             'event': model['event'].id,
@@ -447,7 +509,9 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+        json = [{
+            **x, 'created_at': None
+        } for x in json if self.assertDatetime(x['created_at'])]
 
         self.assertEqual(json, [{
             'created_at': None,
@@ -497,17 +561,23 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_bad_param_score_with_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            event=True, profile_academy=True, capability='read_nps_answers', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    user=True,
+                                    cohort=True,
+                                    academy=True,
+                                    event=True,
+                                    profile_academy=True,
+                                    capability='read_nps_answers',
+                                    role='potato')
 
         for number in range(1, 10):
             self.remove_all_answer()
             score = str(number)
 
-            answer_kwargs = {
-                'score': score
-            }
-            model = self.generate_models(answer=True, answer_kwargs=answer_kwargs, models=base)
+            answer_kwargs = {'score': score}
+            model = self.generate_models(answer=True,
+                                         answer_kwargs=answer_kwargs,
+                                         models=base)
             db = self.model_to_dict(model, 'answer')
             params = {
                 'score': 1 if number == 10 else number + 1,
@@ -529,27 +599,36 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_param_score_with_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, user=True, cohort=True, academy=True,
-            event=True, profile_academy=True, capability='read_nps_answers', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    user=True,
+                                    cohort=True,
+                                    academy=True,
+                                    event=True,
+                                    profile_academy=True,
+                                    capability='read_nps_answers',
+                                    role='potato')
 
         for number in range(1, 10):
             self.remove_all_answer()
             score = str(number)
 
-            answer_kwargs = {
-                'score': score
-            }
-            model = self.generate_models(answer=True, answer_kwargs=answer_kwargs, models=base)
+            answer_kwargs = {'score': score}
+            model = self.generate_models(answer=True,
+                                         answer_kwargs=answer_kwargs,
+                                         models=base)
             db = self.model_to_dict(model, 'answer')
             params = {
                 'score': score,
             }
             base_url = reverse_lazy('feedback:answer')
             url = f'{base_url}?{urllib.parse.urlencode(params)}'
-            response = self.client.get(url, headers={"Academy", model['academy'].id })
+            response = self.client.get(
+                url, headers={"Academy", model['academy'].id})
             json = response.json()
 
-            json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+            json = [{
+                **x, 'created_at': None
+            } for x in json if self.assertDatetime(x['created_at'])]
 
             self.assertEqual(json, [{
                 'created_at': None,
@@ -601,19 +680,26 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_data_without_pagination_get_just_100(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_nps_answers', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='read_nps_answers',
+                                    role='potato')
 
-        models = [self.generate_models(answer=True, models=base) for _ in range(0, 105)]
-        ordened_models = sorted(models, key=lambda x: x['answer'].created_at,
-            reverse=True)
+        models = [
+            self.generate_models(answer=True, models=base)
+            for _ in range(0, 105)
+        ]
+        ordened_models = sorted(models,
+                                key=lambda x: x['answer'].created_at,
+                                reverse=True)
 
         url = reverse_lazy('feedback:answer')
         response = self.client.get(url)
         json = response.json()
 
-        json = [{**x, 'created_at': None} for x in json
-            if self.assertDatetime(x['created_at'])]
+        json = [{
+            **x, 'created_at': None
+        } for x in json if self.assertDatetime(x['created_at'])]
 
         expected = [{
             'id': model['answer'].id,
@@ -641,9 +727,9 @@ class AnswerTestSuite(FeedbackTestCase):
                 'name': model['answer'].cohort.name,
             },
             'mentor': {
-                'id':  model['answer'].mentor.id,
-                'first_name':  model['answer'].mentor.first_name,
-                'last_name':  model['answer'].mentor.last_name,
+                'id': model['answer'].mentor.id,
+                'first_name': model['answer'].mentor.first_name,
+                'last_name': model['answer'].mentor.last_name,
             },
             'event': model['answer'].event,
         } for model in ordened_models][:100]
@@ -660,20 +746,27 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_data_with_pagination_first_five(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_nps_answers', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='read_nps_answers',
+                                    role='potato')
 
-        models = [self.generate_models(answer=True, models=base) for _ in range(0, 10)]
-        ordened_models = sorted(models, key=lambda x: x['answer'].created_at,
-            reverse=True)
+        models = [
+            self.generate_models(answer=True, models=base)
+            for _ in range(0, 10)
+        ]
+        ordened_models = sorted(models,
+                                key=lambda x: x['answer'].created_at,
+                                reverse=True)
 
         url = reverse_lazy('feedback:answer') + '?limit=5&offset=0'
         response = self.client.get(url)
         json = response.json()
 
         prev_results = json['results']
-        json['results'] = [{**x, 'created_at': None} for x in prev_results
-            if self.assertDatetime(x['created_at'])]
+        json['results'] = [{
+            **x, 'created_at': None
+        } for x in prev_results if self.assertDatetime(x['created_at'])]
 
         results = [{
             'id': model['answer'].id,
@@ -701,9 +794,9 @@ class AnswerTestSuite(FeedbackTestCase):
                 'name': model['answer'].cohort.name,
             },
             'mentor': {
-                'id':  model['answer'].mentor.id,
-                'first_name':  model['answer'].mentor.first_name,
-                'last_name':  model['answer'].mentor.last_name,
+                'id': model['answer'].mentor.id,
+                'first_name': model['answer'].mentor.first_name,
+                'last_name': model['answer'].mentor.last_name,
             },
             'event': model['answer'].event,
         } for model in ordened_models][:5]
@@ -712,10 +805,10 @@ class AnswerTestSuite(FeedbackTestCase):
             'count': 10,
             'first': None,
             'next': 'http://testserver/v1/feedback/academy/answer?limit=5&'
-                f'offset=5',
+            f'offset=5',
             'previous': None,
             'last': 'http://testserver/v1/feedback/academy/answer?limit=5&'
-                f'offset=5',
+            f'offset=5',
             'results': results
         }
 
@@ -731,20 +824,27 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_data_with_pagination_last_five(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_nps_answers', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='read_nps_answers',
+                                    role='potato')
 
-        models = [self.generate_models(answer=True, models=base) for _ in range(0, 10)]
-        ordened_models = sorted(models, key=lambda x: x['answer'].created_at,
-            reverse=True)
+        models = [
+            self.generate_models(answer=True, models=base)
+            for _ in range(0, 10)
+        ]
+        ordened_models = sorted(models,
+                                key=lambda x: x['answer'].created_at,
+                                reverse=True)
 
         url = reverse_lazy('feedback:answer') + '?limit=5&offset=5'
         response = self.client.get(url)
         json = response.json()
 
         prev_results = json['results']
-        json['results'] = [{**x, 'created_at': None} for x in prev_results
-            if self.assertDatetime(x['created_at'])]
+        json['results'] = [{
+            **x, 'created_at': None
+        } for x in prev_results if self.assertDatetime(x['created_at'])]
 
         results = [{
             'id': model['answer'].id,
@@ -772,9 +872,9 @@ class AnswerTestSuite(FeedbackTestCase):
                 'name': model['answer'].cohort.name,
             },
             'mentor': {
-                'id':  model['answer'].mentor.id,
-                'first_name':  model['answer'].mentor.first_name,
-                'last_name':  model['answer'].mentor.last_name,
+                'id': model['answer'].mentor.id,
+                'first_name': model['answer'].mentor.first_name,
+                'last_name': model['answer'].mentor.last_name,
             },
             'event': model['answer'].event,
         } for model in ordened_models][5:]
@@ -801,10 +901,15 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_data_with_pagination_last_five(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_nps_answers', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='read_nps_answers',
+                                    role='potato')
 
-        models = [self.generate_models(answer=True, models=base) for _ in range(0, 10)]
+        models = [
+            self.generate_models(answer=True, models=base)
+            for _ in range(0, 10)
+        ]
         url = reverse_lazy('feedback:answer') + '?limit=5&offset=10'
         response = self.client.get(url)
         json = response.json()
@@ -812,7 +917,8 @@ class AnswerTestSuite(FeedbackTestCase):
             'count': 10,
             'first': 'http://testserver/v1/feedback/academy/answer?limit=5',
             'next': None,
-            'previous': 'http://testserver/v1/feedback/academy/answer?limit=5&offset=5',
+            'previous':
+            'http://testserver/v1/feedback/academy/answer?limit=5&offset=5',
             'last': None,
             'results': [],
         }
@@ -834,22 +940,30 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_query_like_full_name(self):
         """Test /answer with like full name"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True, 
-            capability='read_nps_answers', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='read_nps_answers',
+                                    role='potato')
         del base['user']
         user_kwargs = {
-                'email':  'b@b.com',
-                'first_name': 'Rene',
-                'last_name': 'Descartes',
-            }
+            'email': 'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+        }
         user_kwargs_2 = {
-                'email': 'a@a.com',
-                'first_name': 'Reinaldo',
-                'last_name': 'Descarado',
-            }
+            'email': 'a@a.com',
+            'first_name': 'Reinaldo',
+            'last_name': 'Descarado',
+        }
         models = [
-            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs, models=base),
-            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs_2, models=base),
+            self.generate_models(user=True,
+                                 answer=True,
+                                 user_kwargs=user_kwargs,
+                                 models=base),
+            self.generate_models(user=True,
+                                 answer=True,
+                                 user_kwargs=user_kwargs_2,
+                                 models=base),
         ]
 
         base_url = reverse_lazy('feedback:answer')
@@ -858,40 +972,48 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        expected = [
-            {
-                'created_at': self.datetime_to_iso(models[0].answer.created_at),
-                'academy': {
-                    'id': models[0].answer.academy.id,
-                    'name': models[0].answer.academy.name,
-                    'slug': models[0].answer.academy.slug,
-                },
-                'cohort': {
-                    'id': models[0].cohort.id,
-                    'name': models[0].cohort.name,
-                    'slug': models[0].cohort.slug,
-                },
-                'comment': models[0].answer.comment,
-                'event': models[0].answer.event,
-                'highest': models[0].answer.highest,
-                'id': models[0].answer.id,
-                'lang': models[0].answer.lang,
-                'lowest': models[0].answer.lowest,
-                'mentor': {
-                    'first_name':  models[0].answer.mentor.first_name,
-                    'id':  models[0].answer.mentor.id,
-                    'last_name':  models[0].answer.mentor.last_name,
-                },
-                'score': models[0].answer.score,
-                'status': models[0].answer.status,
-                'title': models[0].answer.title,
-                'user': {
-                    'first_name': 'Rene',
-                    'id': 2,
-                    'last_name': 'Descartes',
-                },
-            }
-        ]
+        expected = [{
+            'created_at':
+            self.datetime_to_iso(models[0].answer.created_at),
+            'academy': {
+                'id': models[0].answer.academy.id,
+                'name': models[0].answer.academy.name,
+                'slug': models[0].answer.academy.slug,
+            },
+            'cohort': {
+                'id': models[0].cohort.id,
+                'name': models[0].cohort.name,
+                'slug': models[0].cohort.slug,
+            },
+            'comment':
+            models[0].answer.comment,
+            'event':
+            models[0].answer.event,
+            'highest':
+            models[0].answer.highest,
+            'id':
+            models[0].answer.id,
+            'lang':
+            models[0].answer.lang,
+            'lowest':
+            models[0].answer.lowest,
+            'mentor': {
+                'first_name': models[0].answer.mentor.first_name,
+                'id': models[0].answer.mentor.id,
+                'last_name': models[0].answer.mentor.last_name,
+            },
+            'score':
+            models[0].answer.score,
+            'status':
+            models[0].answer.status,
+            'title':
+            models[0].answer.title,
+            'user': {
+                'first_name': 'Rene',
+                'id': 2,
+                'last_name': 'Descartes',
+            },
+        }]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -902,22 +1024,30 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_query_like_first_name(self):
         """Test /answer with like first name"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True, 
-            capability='read_nps_answers', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='read_nps_answers',
+                                    role='potato')
         del base['user']
         user_kwargs = {
-                'email':  'b@b.com',
-                'first_name': 'Rene',
-                'last_name': 'Descartes',
-            }
+            'email': 'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+        }
         user_kwargs_2 = {
-                'email': 'a@a.com',
-                'first_name': 'Reinaldo',
-                'last_name': 'Descarado',
-            }
+            'email': 'a@a.com',
+            'first_name': 'Reinaldo',
+            'last_name': 'Descarado',
+        }
         models = [
-            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs, models=base),
-            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs_2, models=base),
+            self.generate_models(user=True,
+                                 answer=True,
+                                 user_kwargs=user_kwargs,
+                                 models=base),
+            self.generate_models(user=True,
+                                 answer=True,
+                                 user_kwargs=user_kwargs_2,
+                                 models=base),
         ]
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?like=Rene'
@@ -925,40 +1055,48 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        expected = [
-            {
-                'created_at': self.datetime_to_iso(models[0].answer.created_at),
-                'academy': {
-                    'id': models[0].answer.academy.id,
-                    'name': models[0].answer.academy.name,
-                    'slug': models[0].answer.academy.slug,
-                },
-                'cohort': {
-                    'id': models[0].cohort.id,
-                    'name': models[0].cohort.name,
-                    'slug': models[0].cohort.slug,
-                },
-                'comment': models[0].answer.comment,
-                'event': models[0].answer.event,
-                'highest': models[0].answer.highest,
-                'id': models[0].answer.id,
-                'lang': models[0].answer.lang,
-                'lowest': models[0].answer.lowest,
-                'mentor': {
-                    'first_name':  models[0].answer.mentor.first_name,
-                    'id':  models[0].answer.mentor.id,
-                    'last_name':  models[0].answer.mentor.last_name,
-                },
-                'score': models[0].answer.score,
-                'status': models[0].answer.status,
-                'title': models[0].answer.title,
-                'user': {
-                    'first_name': 'Rene',
-                    'id': 2,
-                    'last_name': 'Descartes',
-                },
-            }
-        ]
+        expected = [{
+            'created_at':
+            self.datetime_to_iso(models[0].answer.created_at),
+            'academy': {
+                'id': models[0].answer.academy.id,
+                'name': models[0].answer.academy.name,
+                'slug': models[0].answer.academy.slug,
+            },
+            'cohort': {
+                'id': models[0].cohort.id,
+                'name': models[0].cohort.name,
+                'slug': models[0].cohort.slug,
+            },
+            'comment':
+            models[0].answer.comment,
+            'event':
+            models[0].answer.event,
+            'highest':
+            models[0].answer.highest,
+            'id':
+            models[0].answer.id,
+            'lang':
+            models[0].answer.lang,
+            'lowest':
+            models[0].answer.lowest,
+            'mentor': {
+                'first_name': models[0].answer.mentor.first_name,
+                'id': models[0].answer.mentor.id,
+                'last_name': models[0].answer.mentor.last_name,
+            },
+            'score':
+            models[0].answer.score,
+            'status':
+            models[0].answer.status,
+            'title':
+            models[0].answer.title,
+            'user': {
+                'first_name': 'Rene',
+                'id': 2,
+                'last_name': 'Descartes',
+            },
+        }]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -969,22 +1107,30 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_query_like_last_name(self):
         """Test /answer with like last name"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True, 
-            capability='read_nps_answers', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='read_nps_answers',
+                                    role='potato')
         del base['user']
         user_kwargs = {
-                'email':  'b@b.com',
-                'first_name': 'Rene',
-                'last_name': 'Descartes',
-            }
+            'email': 'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+        }
         user_kwargs_2 = {
-                'email': 'a@a.com',
-                'first_name': 'Reinaldo',
-                'last_name': 'Descarado',
-            }
+            'email': 'a@a.com',
+            'first_name': 'Reinaldo',
+            'last_name': 'Descarado',
+        }
         models = [
-            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs, models=base),
-            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs_2, models=base),
+            self.generate_models(user=True,
+                                 answer=True,
+                                 user_kwargs=user_kwargs,
+                                 models=base),
+            self.generate_models(user=True,
+                                 answer=True,
+                                 user_kwargs=user_kwargs_2,
+                                 models=base),
         ]
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?like=Descartes'
@@ -992,40 +1138,48 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        expected = [
-            {
-                'created_at': self.datetime_to_iso(models[0].answer.created_at),
-                'academy': {
-                    'id': models[0].answer.academy.id,
-                    'name': models[0].answer.academy.name,
-                    'slug': models[0].answer.academy.slug,
-                },
-                'cohort': {
-                    'id': models[0].cohort.id,
-                    'name': models[0].cohort.name,
-                    'slug': models[0].cohort.slug,
-                },
-                'comment': models[0].answer.comment,
-                'event': models[0].answer.event,
-                'highest': models[0].answer.highest,
-                'id': models[0].answer.id,
-                'lang': models[0].answer.lang,
-                'lowest': models[0].answer.lowest,
-                'mentor': {
-                    'first_name':  models[0].answer.mentor.first_name,
-                    'id':  models[0].answer.mentor.id,
-                    'last_name':  models[0].answer.mentor.last_name,
-                },
-                'score': models[0].answer.score,
-                'status': models[0].answer.status,
-                'title': models[0].answer.title,
-                'user': {
-                    'first_name': 'Rene',
-                    'id': 2,
-                    'last_name': 'Descartes',
-                },
-            }
-        ]
+        expected = [{
+            'created_at':
+            self.datetime_to_iso(models[0].answer.created_at),
+            'academy': {
+                'id': models[0].answer.academy.id,
+                'name': models[0].answer.academy.name,
+                'slug': models[0].answer.academy.slug,
+            },
+            'cohort': {
+                'id': models[0].cohort.id,
+                'name': models[0].cohort.name,
+                'slug': models[0].cohort.slug,
+            },
+            'comment':
+            models[0].answer.comment,
+            'event':
+            models[0].answer.event,
+            'highest':
+            models[0].answer.highest,
+            'id':
+            models[0].answer.id,
+            'lang':
+            models[0].answer.lang,
+            'lowest':
+            models[0].answer.lowest,
+            'mentor': {
+                'first_name': models[0].answer.mentor.first_name,
+                'id': models[0].answer.mentor.id,
+                'last_name': models[0].answer.mentor.last_name,
+            },
+            'score':
+            models[0].answer.score,
+            'status':
+            models[0].answer.status,
+            'title':
+            models[0].answer.title,
+            'user': {
+                'first_name': 'Rene',
+                'id': 2,
+                'last_name': 'Descartes',
+            },
+        }]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1036,22 +1190,30 @@ class AnswerTestSuite(FeedbackTestCase):
     def test_answer_with_query_like_email(self):
         """Test /answer with like email"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True, 
-            capability='read_nps_answers', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='read_nps_answers',
+                                    role='potato')
         del base['user']
         user_kwargs = {
-                'email':  'b@b.com',
-                'first_name': 'Rene',
-                'last_name': 'Descartes',
-            }
+            'email': 'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+        }
         user_kwargs_2 = {
-                'email': 'a@a.com',
-                'first_name': 'Reinaldo',
-                'last_name': 'Descarado',
-            }
+            'email': 'a@a.com',
+            'first_name': 'Reinaldo',
+            'last_name': 'Descarado',
+        }
         models = [
-            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs, models=base),
-            self.generate_models(user=True, answer=True, user_kwargs=user_kwargs_2, models=base),
+            self.generate_models(user=True,
+                                 answer=True,
+                                 user_kwargs=user_kwargs,
+                                 models=base),
+            self.generate_models(user=True,
+                                 answer=True,
+                                 user_kwargs=user_kwargs_2,
+                                 models=base),
         ]
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?like=b@b.com'
@@ -1059,40 +1221,48 @@ class AnswerTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        expected = [
-            {
-                'created_at': self.datetime_to_iso(models[0].answer.created_at),
-                'academy': {
-                    'id': models[0].answer.academy.id,
-                    'name': models[0].answer.academy.name,
-                    'slug': models[0].answer.academy.slug,
-                },
-                'cohort': {
-                    'id': models[0].cohort.id,
-                    'name': models[0].cohort.name,
-                    'slug': models[0].cohort.slug,
-                },
-                'comment': models[0].answer.comment,
-                'event': models[0].answer.event,
-                'highest': models[0].answer.highest,
-                'id': models[0].answer.id,
-                'lang': models[0].answer.lang,
-                'lowest': models[0].answer.lowest,
-                'mentor': {
-                    'first_name':  models[0].answer.mentor.first_name,
-                    'id':  models[0].answer.mentor.id,
-                    'last_name':  models[0].answer.mentor.last_name,
-                },
-                'score': models[0].answer.score,
-                'status': models[0].answer.status,
-                'title': models[0].answer.title,
-                'user': {
-                    'first_name': 'Rene',
-                    'id': 2,
-                    'last_name': 'Descartes',
-                },
-            }
-        ]
+        expected = [{
+            'created_at':
+            self.datetime_to_iso(models[0].answer.created_at),
+            'academy': {
+                'id': models[0].answer.academy.id,
+                'name': models[0].answer.academy.name,
+                'slug': models[0].answer.academy.slug,
+            },
+            'cohort': {
+                'id': models[0].cohort.id,
+                'name': models[0].cohort.name,
+                'slug': models[0].cohort.slug,
+            },
+            'comment':
+            models[0].answer.comment,
+            'event':
+            models[0].answer.event,
+            'highest':
+            models[0].answer.highest,
+            'id':
+            models[0].answer.id,
+            'lang':
+            models[0].answer.lang,
+            'lowest':
+            models[0].answer.lowest,
+            'mentor': {
+                'first_name': models[0].answer.mentor.first_name,
+                'id': models[0].answer.mentor.id,
+                'last_name': models[0].answer.mentor.last_name,
+            },
+            'score':
+            models[0].answer.score,
+            'status':
+            models[0].answer.status,
+            'title':
+            models[0].answer.title,
+            'user': {
+                'first_name': 'Rene',
+                'id': 2,
+                'last_name': 'Descartes',
+            },
+        }]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

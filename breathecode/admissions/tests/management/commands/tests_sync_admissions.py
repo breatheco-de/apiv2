@@ -14,18 +14,20 @@ from breathecode.tests.mocks import (
 from ...mixins import AdmissionsTestCase
 from ....management.commands.sync_admissions import Command
 from ....models import Academy, Certificate, Cohort, User, CohortUser
-from ...mocks import (
-    LEGACY_API_PATH,
-    apply_screenshotmachine_requests_get_mock
-)
+from ...mocks import (LEGACY_API_PATH,
+                      apply_screenshotmachine_requests_get_mock)
 # from ...utils import GenerateModels
 
 HOST = os.environ.get("OLD_BREATHECODE_API")
 
-with open(f'{os.getcwd()}/breathecode/admissions/fixtures/legacy_teachers.json', 'r') as file:
+with open(
+        f'{os.getcwd()}/breathecode/admissions/fixtures/legacy_teachers.json',
+        'r') as file:
     legacy_teachers = json.load(file)
 
-with open(f'{os.getcwd()}/breathecode/admissions/fixtures/legacy_students.json', 'r') as file:
+with open(
+        f'{os.getcwd()}/breathecode/admissions/fixtures/legacy_students.json',
+        'r') as file:
     legacy_students = json.load(file)
 
 financial_status = {
@@ -44,9 +46,9 @@ educational_status = {
     'student_dropped': 'DROPPED',
 }
 
+
 class AcademyCohortTestSuite(AdmissionsTestCase):
     """Test /academy/cohort"""
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -61,8 +63,12 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 cohorts.add(cohort)
                 count_cohorts += 1
 
-        models = [mixer.blend('admissions.Cohort', slug=slug) for slug in cohorts]
-        models_dict = [self.remove_dinamics_fields(model.__dict__) for model in models]
+        models = [
+            mixer.blend('admissions.Cohort', slug=slug) for slug in cohorts
+        ]
+        models_dict = [
+            self.remove_dinamics_fields(model.__dict__) for model in models
+        ]
 
         command = Command()
         self.assertEqual(self.count_cohort_user(), 0)
@@ -78,35 +84,47 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         for student in legacy_students['data']:
             for slug in student['cohorts']:
                 email = student['email']
-                cohort = Cohort.objects.filter(slug=slug).values_list('id', flat=True).first()
-                user = User.objects.filter(email=email).values_list('id', flat=True).first()
+                cohort = Cohort.objects.filter(slug=slug).values_list(
+                    'id', flat=True).first()
+                user = User.objects.filter(email=email).values_list(
+                    'id', flat=True).first()
 
                 filter = {
                     'cohort_id': cohort,
                     'user_id': user,
                 }
 
-                self.assertEqual(CohortUser.objects.filter(**filter).count(), 1)
+                self.assertEqual(
+                    CohortUser.objects.filter(**filter).count(), 1)
 
                 model = CohortUser.objects.filter(**filter).first().__dict__
                 del model['_state']
 
-                self.assertEqual(isinstance(model['created_at'], datetime.datetime), True)
+                self.assertEqual(
+                    isinstance(model['created_at'], datetime.datetime), True)
                 del model['created_at']
 
-                self.assertEqual(isinstance(model['updated_at'], datetime.datetime), True)
+                self.assertEqual(
+                    isinstance(model['updated_at'], datetime.datetime), True)
                 del model['updated_at']
 
                 cohort_user_acc += 1
 
-                self.assertEqual(model, {
-                    'id': cohort_user_acc,
-                    'cohort_id': cohort,
-                    'user_id': user,
-                    'educational_status': educational_status[student['status']],
-                    'finantial_status': financial_status[student['financial_status']],
-                    'role': 'STUDENT',
-                })
+                self.assertEqual(
+                    model, {
+                        'id':
+                        cohort_user_acc,
+                        'cohort_id':
+                        cohort,
+                        'user_id':
+                        user,
+                        'educational_status':
+                        educational_status[student['status']],
+                        'finantial_status':
+                        financial_status[student['financial_status']],
+                        'role':
+                        'STUDENT',
+                    })
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
 
@@ -124,14 +142,19 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 cohorts.add(cohort)
                 count_cohorts += 1
 
-        models = [mixer.blend('admissions.Cohort', slug=slug) for slug in cohorts]
-        models_dict = [self.remove_dinamics_fields(model.__dict__) for model in models]
+        models = [
+            mixer.blend('admissions.Cohort', slug=slug) for slug in cohorts
+        ]
+        models_dict = [
+            self.remove_dinamics_fields(model.__dict__) for model in models
+        ]
 
         command = Command()
         self.assertEqual(self.count_cohort_user(), 0)
 
         self.assertEqual(command.students({'override': False}), None)
-        self.assertEqual(command.students({'override': False}), None) # call twice
+        self.assertEqual(command.students({'override': False}),
+                         None)  # call twice
         self.assertEqual(self.count_cohort(), len(cohorts))
         self.assertEqual(self.count_user(), 10)
         self.assertEqual(self.count_cohort_user(), count_cohorts)
@@ -142,35 +165,47 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         for student in legacy_students['data']:
             for slug in student['cohorts']:
                 email = student['email']
-                cohort = Cohort.objects.filter(slug=slug).values_list('id', flat=True).first()
-                user = User.objects.filter(email=email).values_list('id', flat=True).first()
+                cohort = Cohort.objects.filter(slug=slug).values_list(
+                    'id', flat=True).first()
+                user = User.objects.filter(email=email).values_list(
+                    'id', flat=True).first()
 
                 filter = {
                     'cohort_id': cohort,
                     'user_id': user,
                 }
 
-                self.assertEqual(CohortUser.objects.filter(**filter).count(), 1)
+                self.assertEqual(
+                    CohortUser.objects.filter(**filter).count(), 1)
 
                 model = CohortUser.objects.filter(**filter).first().__dict__
                 del model['_state']
 
-                self.assertEqual(isinstance(model['created_at'], datetime.datetime), True)
+                self.assertEqual(
+                    isinstance(model['created_at'], datetime.datetime), True)
                 del model['created_at']
 
-                self.assertEqual(isinstance(model['updated_at'], datetime.datetime), True)
+                self.assertEqual(
+                    isinstance(model['updated_at'], datetime.datetime), True)
                 del model['updated_at']
 
                 cohort_user_acc += 1
 
-                self.assertEqual(model, {
-                    'id': cohort_user_acc,
-                    'cohort_id': cohort,
-                    'user_id': user,
-                    'educational_status': educational_status[student['status']],
-                    'finantial_status': financial_status[student['financial_status']],
-                    'role': 'STUDENT',
-                })
+                self.assertEqual(
+                    model, {
+                        'id':
+                        cohort_user_acc,
+                        'cohort_id':
+                        cohort,
+                        'user_id':
+                        user,
+                        'educational_status':
+                        educational_status[student['status']],
+                        'finantial_status':
+                        financial_status[student['financial_status']],
+                        'role':
+                        'STUDENT',
+                    })
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
 
@@ -188,8 +223,12 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 cohorts.add(cohort)
                 count_cohorts += 1
 
-        models = [mixer.blend('admissions.Cohort', slug=slug) for slug in cohorts]
-        models_dict = [self.remove_dinamics_fields(model.__dict__) for model in models]
+        models = [
+            mixer.blend('admissions.Cohort', slug=slug) for slug in cohorts
+        ]
+        models_dict = [
+            self.remove_dinamics_fields(model.__dict__) for model in models
+        ]
 
         command = Command()
         self.assertEqual(self.count_cohort_user(), 0)
@@ -205,35 +244,41 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         for student in legacy_teachers['data']:
             for slug in student['cohorts']:
                 email = student['username']
-                cohort = Cohort.objects.filter(slug=slug).values_list('id', flat=True).first()
-                user = User.objects.filter(email=email).values_list('id', flat=True).first()
+                cohort = Cohort.objects.filter(slug=slug).values_list(
+                    'id', flat=True).first()
+                user = User.objects.filter(email=email).values_list(
+                    'id', flat=True).first()
 
                 filter = {
                     'cohort_id': cohort,
                     'user_id': user,
                 }
 
-                self.assertEqual(CohortUser.objects.filter(**filter).count(), 1)
+                self.assertEqual(
+                    CohortUser.objects.filter(**filter).count(), 1)
 
                 model = CohortUser.objects.filter(**filter).first().__dict__
                 del model['_state']
 
-                self.assertEqual(isinstance(model['created_at'], datetime.datetime), True)
+                self.assertEqual(
+                    isinstance(model['created_at'], datetime.datetime), True)
                 del model['created_at']
 
-                self.assertEqual(isinstance(model['updated_at'], datetime.datetime), True)
+                self.assertEqual(
+                    isinstance(model['updated_at'], datetime.datetime), True)
                 del model['updated_at']
 
                 cohort_user_acc += 1
 
-                self.assertEqual(model, {
-                    'id': cohort_user_acc,
-                    'cohort_id': cohort,
-                    'user_id': user,
-                    'educational_status': None,
-                    'finantial_status': None,
-                    'role': 'TEACHER',
-                })
+                self.assertEqual(
+                    model, {
+                        'id': cohort_user_acc,
+                        'cohort_id': cohort,
+                        'user_id': user,
+                        'educational_status': None,
+                        'finantial_status': None,
+                        'role': 'TEACHER',
+                    })
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)
 
@@ -251,14 +296,19 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 cohorts.add(cohort)
                 count_cohorts += 1
 
-        models = [mixer.blend('admissions.Cohort', slug=slug) for slug in cohorts]
-        models_dict = [self.remove_dinamics_fields(model.__dict__) for model in models]
+        models = [
+            mixer.blend('admissions.Cohort', slug=slug) for slug in cohorts
+        ]
+        models_dict = [
+            self.remove_dinamics_fields(model.__dict__) for model in models
+        ]
 
         command = Command()
         self.assertEqual(self.count_cohort_user(), 0)
 
         self.assertEqual(command.teachers({'override': False}), None)
-        self.assertEqual(command.teachers({'override': False}), None) # call twice
+        self.assertEqual(command.teachers({'override': False}),
+                         None)  # call twice
         self.assertEqual(self.count_cohort(), len(cohorts))
         self.assertEqual(self.count_user(), 10)
         self.assertEqual(self.count_cohort_user(), count_cohorts)
@@ -269,34 +319,40 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         for student in legacy_teachers['data']:
             for slug in student['cohorts']:
                 email = student['username']
-                cohort = Cohort.objects.filter(slug=slug).values_list('id', flat=True).first()
-                user = User.objects.filter(email=email).values_list('id', flat=True).first()
+                cohort = Cohort.objects.filter(slug=slug).values_list(
+                    'id', flat=True).first()
+                user = User.objects.filter(email=email).values_list(
+                    'id', flat=True).first()
 
                 filter = {
                     'cohort_id': cohort,
                     'user_id': user,
                 }
 
-                self.assertEqual(CohortUser.objects.filter(**filter).count(), 1)
+                self.assertEqual(
+                    CohortUser.objects.filter(**filter).count(), 1)
 
                 model = CohortUser.objects.filter(**filter).first().__dict__
                 del model['_state']
 
-                self.assertEqual(isinstance(model['created_at'], datetime.datetime), True)
+                self.assertEqual(
+                    isinstance(model['created_at'], datetime.datetime), True)
                 del model['created_at']
 
-                self.assertEqual(isinstance(model['updated_at'], datetime.datetime), True)
+                self.assertEqual(
+                    isinstance(model['updated_at'], datetime.datetime), True)
                 del model['updated_at']
 
                 cohort_user_acc += 1
 
-                self.assertEqual(model, {
-                    'id': cohort_user_acc,
-                    'cohort_id': cohort,
-                    'user_id': user,
-                    'educational_status': None,
-                    'finantial_status': None,
-                    'role': 'TEACHER',
-                })
+                self.assertEqual(
+                    model, {
+                        'id': cohort_user_acc,
+                        'cohort_id': cohort,
+                        'user_id': user,
+                        'educational_status': None,
+                        'finantial_status': None,
+                        'role': 'TEACHER',
+                    })
 
         self.assertEqual(self.count_cohort_user(), cohort_user_acc)

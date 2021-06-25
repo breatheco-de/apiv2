@@ -12,20 +12,22 @@ class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
     def test_login_with_bad_credentials(self):
         """Test /login with incorrect credentials"""
-        response = self.create_user(email='Konan@naruto.io', password='Pain!$%')
+        response = self.create_user(email='Konan@naruto.io',
+                                    password='Pain!$%')
 
         non_field_errors = response.data['non_field_errors']
         status_code = response.data['status_code']
 
         self.assertEqual(len(response.data), 2)
-        self.assertEqual(non_field_errors, ['Unable to log in with provided credentials.'])
+        self.assertEqual(non_field_errors,
+                         ['Unable to log in with provided credentials.'])
         self.assertEqual(status_code, 400)
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 
     def test_login_without_email(self):
         """Test /login with incorrect credentials"""
         url = reverse_lazy('authenticate:login')
-        data = { 'password': 'Pain!$%' }
+        data = {'password': 'Pain!$%'}
         response = self.client.post(url, data)
         status_code = response.data['status_code']
 
@@ -38,13 +40,14 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_login_without_password(self):
         """Test /login with incorrect credentials"""
         url = reverse_lazy('authenticate:login')
-        data = { 'email': 'Konan@naruto.io' }
+        data = {'email': 'Konan@naruto.io'}
         response = self.client.post(url, data)
         status_code = response.data['status_code']
 
         self.assertEqual(len(response.data), 2)
         self.assertEqual(len(response.data['password']), 1)
-        self.assertEqual(response.data['password'], ['This field is required.'])
+        self.assertEqual(response.data['password'],
+                         ['This field is required.'])
         self.assertEqual(status_code, 400)
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
 

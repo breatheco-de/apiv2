@@ -16,6 +16,7 @@ from rest_framework.decorators import api_view, permission_classes
 def get_endpoints(request):
     return Response([], status=status.HTTP_200_OK)
 
+
 # Create your views here.
 @api_view(['GET'])
 @permission_classes([AllowAny])

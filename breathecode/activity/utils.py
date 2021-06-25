@@ -44,9 +44,8 @@ def validate_require_activity_fields(data):
     for field in ACTIVITY_REQUIRED_FIELDS:
         if field not in data:
             slug = field.replace('_', '-')
-            raise ValidationException(
-                f'Missing {field} in the request',
-                slug=f'missing-{slug}')
+            raise ValidationException(f'Missing {field} in the request',
+                                      slug=f'missing-{slug}')
 
 
 def validate_if_activity_need_field_cohort(data):
@@ -71,9 +70,8 @@ def validate_activity_have_correct_data_field(data):
             json.loads(data['data'])
 
         except Exception as e:
-            raise ValidationException(
-                'Data is not a JSON',
-                slug='data-is-not-a-json')
+            raise ValidationException('Data is not a JSON',
+                                      slug='data-is-not-a-json')
 
 
 def generate_created_at():
