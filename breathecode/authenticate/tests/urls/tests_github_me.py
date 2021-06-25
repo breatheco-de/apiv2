@@ -5,7 +5,7 @@ import urllib
 import os
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from ..mixins import AuthTestCase
+from ..mixins.new_auth_test_case import AuthTestCase
 # from ..mocks import GithubRequestsMock
 
 
@@ -36,23 +36,24 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         json = response.json()
         expected = {
-            'detail': 'user-not-found',
-            'status_code': 404
+            'detail': "There is not user",
+            'status_code': 403
         }
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_github_with_args(self):
+    def test_github_with_auth(self):
         """Test /github"""
         original_url_callback = 'https://google.co.ve'
-        self.client.force_authenticate(user=self.user)
+        model = self.generate_models(authenticate=True)
         url = reverse_lazy('authenticate:github_me')
         url = urllib.parse.quote(url.encode("utf-8"))
         params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
+        token = self.get_token(1)
         params = {
             "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
-            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+f"?url={original_url_callback}&user=1",
+            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+f"?url={original_url_callback}&user=(<Token: {token}>, True)",
             "scope": 'user repo read:org',
         }
 

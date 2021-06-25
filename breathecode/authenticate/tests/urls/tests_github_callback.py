@@ -211,17 +211,17 @@ class AuthenticateTestSuite(AuthTestCase):
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
         role_kwargs = {'slug': 'student', 'name': 'Student'}
         model = self.generate_models(role=True, user=True, profile_academy=True,
-            user_kwargs=user_kwargs, role_kwargs=role_kwargs)
+            user_kwargs=user_kwargs, role_kwargs=role_kwargs, token=True)
 
-        original_url_callback = 'https://google.co.ve?user=2'
+        original_url_callback = 'https://google.co.ve'
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
-        params = {'url': original_url_callback, 'code': code, 'user': 2}
+        params = {'url': original_url_callback, 'code': code, 'user': 'b14f'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         json = response.json()
         expected = {
-            'detail': 'user-not-found',
+            'detail': 'token-not-found',
             'status_code': 404
         }
 
@@ -234,20 +234,22 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    def test_github_callback__with_user_in_querystring(self):
+    def test_github_callback__with_user(self):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
         role_kwargs = {'slug': 'student', 'name': 'Student'}
         model = self.generate_models(role=True, user=True, profile_academy=True,
-            user_kwargs=user_kwargs, role_kwargs=role_kwargs)
+            user_kwargs=user_kwargs, role_kwargs=role_kwargs, token=True)
 
         original_url_callback = 'https://google.co.ve'
         token_pattern = re.compile("^" + original_url_callback.replace('.', r'\.') +
-            r"\?user=[0-9]&token=[0-9a-zA-Z]{,40}$")
+            r"\?token=[0-9a-zA-Z]{,40}$")
         code = 'Konan'
 
+        token = self.get_token(1)
+
         url = reverse_lazy('authenticate:github_callback')
-        params = {'url': original_url_callback, 'code': code, 'user': 1}
+        params = {'url': original_url_callback, 'code': code, 'user': token}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
 
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
@@ -275,20 +277,22 @@ class AuthenticateTestSuite(AuthTestCase):
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
     @mock.patch('requests.post', GithubRequestsMock.apply_post_requests_mock())
-    def test_github_callback__with_user_in_querystring_different_email(self):
+    def test_github_callback__with_user_different_email(self):
         """Test /github/callback"""
-        user_kwargs = {'email': 'JEFERSONDEFREITASPINTO@GMAIL.COM'}
+        user_kwargs = {'email': 'FJOSE123@GMAIL.COM'}
         role_kwargs = {'slug': 'student', 'name': 'Student'}
         model = self.generate_models(role=True, user=True, profile_academy=True,
-            user_kwargs=user_kwargs, role_kwargs=role_kwargs)
+            user_kwargs=user_kwargs, role_kwargs=role_kwargs, token=True)
 
         original_url_callback = 'https://google.co.ve'
         token_pattern = re.compile("^" + original_url_callback.replace('.', r'\.') +
-            r"\?user=[0-9]&token=[0-9a-zA-Z]{,40}$")
+            r"\?token=[0-9a-zA-Z]{,40}$")
         code = 'Konan'
 
+        token = self.get_token(1)
+
         url = reverse_lazy('authenticate:github_callback')
-        params = {'url': original_url_callback, 'code': code, 'user': 1}
+        params = {'url': original_url_callback, 'code': code, 'user': token}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
 
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)

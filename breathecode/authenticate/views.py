@@ -549,13 +549,20 @@ def get_github_token(request, user_id=None):
     if url == None:
         raise ValidationException("No callback URL specified", slug="no-callback-url")
 
-    if user_id and not User.objects.filter(id=user_id).exists():
-        logger.debug(f'user {user_id} not found')
-        raise ValidationException('User was not found, please input different user',
-                code=404, slug='user-not-found')
+    url_name = resolve(request.path).url_name
 
-    print(request.user == AnonymousUser)
-    print(resolve(request.path).url_name)
+    if url_name == 'github_me':
+        try:
+            if isinstance(request.user, AnonymousUser):
+                raise PermissionDenied("There is not user")
+
+        except User.DoesNotExist:
+            raise PermissionDenied("You don't have a user")
+
+        user = Token.objects.get_or_create(user=request.user,
+                                                         token_type='login')
+        url = url + f"&user={user}"
+
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
         "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+f"?url={url}",
@@ -596,7 +603,7 @@ def save_github_token(request):
     if code == None:
         raise ValidationException("No github code specified", slug="no-code")
 
-    user_id = request.query_params.get('user', None)
+    token = request.query_params.get('user', None)
 
     payload = {
         'client_id': os.getenv('GITHUB_CLIENT_ID', ""),
@@ -640,13 +647,14 @@ def save_github_token(request):
             if github_user['email'] is None:
                 raise ValidationError("Impossible to retrieve user email")
 
-            if user_id and not User.objects.filter(id=user_id).exists():
-                logger.debug(f'user {user_id} not found')
-                raise ValidationException('User was not found, please input different user',
-                    code=404, slug='user-not-found')
+            if token and not Token.objects.filter(key=token).exists():
+                logger.debug(f'Token not found')
+                raise ValidationException('Token was not found, please input different token',
+                    code=404, slug='token-not-found')
 
-            if user_id:
-                user = User.objects.filter(id=user_id).first()
+            if token:
+                user_token = Token.objects.filter(key=token).first()
+                user = User.objects.filter(auth_token=user_token.id).first()
 
             else:
                 user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(
@@ -699,12 +707,14 @@ def save_github_token(request):
                         status='ACTIVE')
                     profile_academy.save()
 
-            token, created = Token.objects.get_or_create(
+
+            if not token:
+                token, created = Token.objects.get_or_create(
                 user=user, token_type='login')
-            if user_id:
-                return HttpResponseRedirect(redirect_to=url+f'?user={user_id}&token={token.key}')
-            else:
-                return HttpResponseRedirect(redirect_to=url+'?token='+token.key)
+                token = token.key
+
+            return HttpResponseRedirect(redirect_to=url+'?token='+token)
+
         else:
             raise APIException("Error from github")
 
