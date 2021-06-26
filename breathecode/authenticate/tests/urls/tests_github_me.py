@@ -36,7 +36,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         json = response.json()
         expected = {
-            'detail': "There is not user",
+            'detail': "not-user",
             'status_code': 403
         }
         self.assertEqual(json, expected)

@@ -554,13 +554,13 @@ def get_github_token(request, user_id=None):
     if url_name == 'github_me':
         try:
             if isinstance(request.user, AnonymousUser):
-                raise PermissionDenied("There is not user")
+                raise ValidationException("There is not user", code=403, slug="not-user")
 
         except User.DoesNotExist:
-            raise PermissionDenied("You don't have a user")
+            raise ValidationException("You don't have a user", code=403, slug="you-not-user")
 
         user, created = Token.objects.get_or_create(user=request.user,
-                                                         token_type='login')
+                                                        token_type='login')
         url = url + f"&user={user.key}"
 
     params = {
@@ -710,7 +710,7 @@ def save_github_token(request):
 
             if not token:
                 token, created = Token.objects.get_or_create(
-                user=user, token_type='login')
+                    user=user, token_type='login')
                 token = token.key
 
             return HttpResponseRedirect(redirect_to=url+'?token='+token)
