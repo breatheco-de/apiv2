@@ -20,7 +20,6 @@ class AuthenticateTestSuite(AuthTestCase):
 
         expected = {'detail': 'no-callback-url', 'status_code': 400}
 
-        self.assertEqual(2, len(data))
         self.assertEqual(data, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
