@@ -1,8 +1,4 @@
-import os
-import requests
-import base64
-import logging
-import urllib.parse
+import os, requests, base64, logging
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import update_session_auth_hash
@@ -10,13 +6,14 @@ from rest_framework.response import Response
 from django.db.models import Q
 from django.http import HttpResponseRedirect, HttpResponse
 from django.conf import settings
+from django.urls import resolve
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status, serializers
 from django.contrib.auth.models import User, Group, AnonymousUser
 from django.contrib import messages
 from rest_framework.authtoken.views import ObtainAuthToken
-from urllib.parse import urlencode, parse_qs
+from urllib.parse import urlencode, parse_qs, urlparse, parse_qsl
 from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
 from rest_framework.views import APIView
@@ -546,20 +543,34 @@ def get_roles(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def get_github_token(request):
-    # TODO: user_id
-    # url = request.query_params.get('url', None)
-    # if url == None:
-    #     raise ValidationError("No callback URL specified")
+def get_github_token(request, user_id=None):
 
     url = request.query_params.get('url', None)
     if url == None:
-        raise ValidationError("No callback URL specified")
+        raise ValidationException("No callback URL specified",
+                                  slug="no-callback-url")
 
-    # url = base64.b64decode(url).decode("utf-8")
+    url_name = resolve(request.path).url_name
+
+    if url_name == 'github_me':
+        try:
+            if isinstance(request.user, AnonymousUser):
+                raise ValidationException("There is not user",
+                                          code=403,
+                                          slug="not-user")
+
+        except User.DoesNotExist:
+            raise ValidationException("You don't have a user",
+                                      code=403,
+                                      slug="you-not-user")
+
+        user, created = Token.objects.get_or_create(user=request.user,
+                                                    token_type='login')
+        url = url + f"&user={user.key}"
+
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
-        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "") + "?url=" + url,
+        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "") + f"?url={url}",
         "scope": 'user repo read:org',
     }
 
@@ -592,10 +603,13 @@ def save_github_token(request):
 
     url = request.query_params.get('url', None)
     if url == None:
-        raise ValidationError("No callback URL specified")
+        raise ValidationException("No callback URL specified",
+                                  slug="no-callback-url")
     code = request.query_params.get('code', None)
     if code == None:
-        raise ValidationError("No github code specified")
+        raise ValidationException("No github code specified", slug="no-code")
+
+    token = request.query_params.get('user', None)
 
     payload = {
         'client_id': os.getenv('GITHUB_CLIENT_ID', ""),
@@ -621,6 +635,7 @@ def save_github_token(request):
         if resp.status_code == 200:
             github_user = resp.json()
             logger.debug(github_user)
+
             if github_user['email'] is None:
                 resp = requests.get(
                     'https://api.github.com/user/emails',
@@ -636,13 +651,24 @@ def save_github_token(request):
                         github_user['email'] = emails[0]["email"]
 
             if github_user['email'] is None:
-                raise ValidationError("Imposible to retrieve user email")
+                raise ValidationError("Impossible to retrieve user email")
 
-            # TODO: if user_id: User.objects.filter(id=user_id).first()
+            if token and not Token.objects.filter(key=token).exists():
+                logger.debug(f'Token not found')
+                raise ValidationException(
+                    'Token was not found, please input different token',
+                    code=404,
+                    slug='token-not-found')
 
-            user = User.objects.filter(
-                Q(credentialsgithub__github_id=github_user['id'])
-                | Q(email__iexact=github_user['email'])).first()
+            if token:
+                user_token = Token.objects.filter(key=token).first()
+                user = User.objects.filter(auth_token=user_token.id).first()
+
+            else:
+                user = User.objects.filter(
+                    Q(credentialsgithub__github_id=github_user['id'])
+                    | Q(email__iexact=github_user['email'])).first()
+
             if user is None:
                 user = User(username=github_user['email'],
                             email=github_user['email'])
@@ -690,14 +716,14 @@ def save_github_token(request):
                         status='ACTIVE')
                     profile_academy.save()
 
-            token, created = Token.objects.get_or_create(user=user,
-                                                         token_type='login')
+            if not token:
+                token, created = Token.objects.get_or_create(
+                    user=user, token_type='login')
+                token = token.key
 
-            return HttpResponseRedirect(redirect_to=url + '?token=' +
-                                        token.key)
+            return HttpResponseRedirect(redirect_to=url + '?token=' + token)
+
         else:
-            # print("Github error: ", resp.status_code)
-            # print("Error: ", resp.json())
             raise APIException("Error from github")
 
 

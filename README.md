@@ -1,4 +1,4 @@
-# Enable formater in Visual Studio Code
+# Enable formatter in Visual Studio Code
 
 - Open `.vscode\settings.json`
 - Add
