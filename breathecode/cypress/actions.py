@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 import inspect
 import logging
@@ -5,6 +6,7 @@ import os
 
 from django.contrib.auth.models import User
 from django.db.models import Model
+from mixer.backend.django import mixer
 
 from breathecode.authenticate.management.commands.create_roles import Command
 
@@ -45,8 +47,8 @@ def clean():
             if not issubclass(CurrentModel, Model):
                 continue
 
-            if (hasattr(CurrentModel, 'Meta') and
-                    hasattr(CurrentModel.Meta, 'abstract')):
+            if (hasattr(CurrentModel, 'Meta')
+                    and hasattr(CurrentModel.Meta, 'abstract')):
                 continue
 
             models.append(CurrentModel)
@@ -74,14 +76,6 @@ def load_fixtures():
                         f'python manage.py loaddata {path}/{name}')
 
 
-def extend(roles, slugs):
-    caps_groups = [item["caps"] for item in roles if item["slug"] in slugs]
-    inhered_caps = []
-    for roles in caps_groups:
-        inhered_caps = inhered_caps + roles
-    return list(dict.fromkeys(inhered_caps))
-
-
 def load_roles():
     command = Command()
     command.handle()
@@ -92,3 +86,84 @@ def load_roles():
 def reset():
     clean()
     load_fixtures()
+
+
+def get_model(model_name):
+    modules = MODULES
+    found = []
+
+    if '.' in model_name:
+        parts = model_name.split('.')
+        if len(parts) != 2:
+            raise Exception('Bad model name format')
+
+        modules = [parts[0]]
+        model_name = parts[1]
+
+    if model_name == 'User':
+        found.append(User)
+
+    for forder in modules:
+        path = f'{PROJECT}.{forder}.models'
+        module = importlib.import_module(path)
+
+        if not hasattr(module, model_name):
+            continue
+
+        model = getattr(module, model_name)
+
+        if not inspect.isclass(model):
+            continue
+
+        if not issubclass(model, Model):
+            continue
+
+        if (hasattr(model, 'Meta') and hasattr(model.Meta, 'abstract')):
+            continue
+
+        found.append(model)
+
+    if not found:
+        raise Exception('Model not found')
+
+    if len(found) > 1:
+        raise Exception(
+            'Exist many app with the same model name, use `app.model` syntax')
+
+    return found[0]
+
+
+def clean_model(model_name):
+    Model = get_model(model_name)
+    Model.objects.all().delete()
+
+
+def generate_model(index, data, how_many=1):
+    status = 'done'
+    pks = []
+
+    try:
+        model_name = data.pop('$model')
+        Model = get_model(model_name)
+        for element in mixer.cycle(how_many).blend(Model, **data):
+            pks.append(element.pk)
+
+    except Exception as e:
+        status = str(e)
+
+    return {
+        'pks': pks,
+        'model': model_name,
+        'index': index,
+        'status_text': status,
+    }
+
+
+def generate_models(step, how_many=1):
+    result = []
+
+    for index, data in enumerate(step):
+        current_result = generate_model(index, data, how_many)
+        result.append(current_result)
+
+    return result
