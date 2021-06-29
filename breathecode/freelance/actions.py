@@ -8,11 +8,16 @@ from github import Github
 
 
 def sync_user_issues(freelancer):
+
+    if freelancer.github_user is None:
+        raise ValueError(f"Freelancer has not github user")
+
     github_id = freelancer.github_user.github_id
     credentials = CredentialsGithub.objects.filter(github_id=github_id).first()
     if credentials is None:
-        raise ValueError(f"Credentials for this user {gitub_user_id} not found")
-    
+        raise ValueError(
+            f"Credentials for this user {gitub_user_id} not found")
+
     g = Github(credentials.token)
     user = g.get_user()
     open_issues = user.get_user_issues(state='open')
@@ -26,8 +31,8 @@ def sync_user_issues(freelancer):
             hours = float(result.group(1))
 
         if _issue is not None:
-            _issue.duration_in_minutes=hours * 60
-            _issue.duration_in_hours=hours
+            _issue.duration_in_minutes = hours * 60
+            _issue.duration_in_hours = hours
             _issue.save()
         else:
             new_issue = Issue(
@@ -43,27 +48,28 @@ def sync_user_issues(freelancer):
 
     return None
 
+
 def change_status(issue, status):
     issue.status = status
     issue.save()
     return None
 
+
 def generate_freelancer_bill(freelancer):
 
     Issue.objects.filter(status='TODO', bill__isnull=False).update(bill=None)
-    
-    open_bill = Bill.objects.filter(freelancer__id=freelancer.id, status='DUE').first()
+
+    open_bill = Bill.objects.filter(freelancer__id=freelancer.id,
+                                    status='DUE').first()
     if open_bill is None:
-        open_bill = Bill(
-            freelancer=freelancer,
-        )
+        open_bill = Bill(freelancer=freelancer, )
         open_bill.save()
 
     done_issues = Issue.objects.filter(status='DONE', bill__isnull=True)
-    total = { 
-        "minutes": open_bill.total_duration_in_minutes, 
-        "hours": open_bill.total_duration_in_hours, 
-        "price": open_bill.total_price 
+    total = {
+        "minutes": open_bill.total_duration_in_minutes,
+        "hours": open_bill.total_duration_in_hours,
+        "price": open_bill.total_price
     }
     print(f"{done_issues.count()} issues found")
     for issue in done_issues:

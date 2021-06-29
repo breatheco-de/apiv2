@@ -13,6 +13,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='cohortuser',
             name='role',
-            field=models.CharField(choices=[('TEACHER', 'Teacher'), ('ASSISTANT', 'Assistant'), ('REVIEWER', 'Reviewer'), ('STUDENT', 'Student')], default='STUDENT', max_length=9),
+            field=models.CharField(choices=[('TEACHER', 'Teacher'),
+                                            ('ASSISTANT', 'Assistant'),
+                                            ('REVIEWER', 'Reviewer'),
+                                            ('STUDENT', 'Student')],
+                                   default='STUDENT',
+                                   max_length=9),
         ),
     ]

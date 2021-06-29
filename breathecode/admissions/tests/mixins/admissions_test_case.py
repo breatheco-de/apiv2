@@ -10,9 +10,10 @@ from breathecode.tests.mixins import DateFormatterMixin
 from django.core.cache import cache
 from ...models import CohortUser, Cohort, Academy, Certificate, Cohort
 
+
 class AdmissionsTestCase(APITestCase, AuthenticateMixin, DateFormatterMixin):
     """AdmissionsTestCase with auth methods"""
-     # token = None
+    # token = None
     user = None
     password = 'pass1234'
     certificate = None
@@ -49,43 +50,56 @@ class AdmissionsTestCase(APITestCase, AuthenticateMixin, DateFormatterMixin):
 
     def get_academy_dict(self, id):
         data = Academy.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+        return self.remove_dinamics_fields(
+            data.__dict__.copy()) if data else None
 
     def get_certificate_dict(self, id):
         data = Certificate.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+        return self.remove_dinamics_fields(
+            data.__dict__.copy()) if data else None
 
     def get_cohort_user_dict(self, id):
         data = CohortUser.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+        return self.remove_dinamics_fields(
+            data.__dict__.copy()) if data else None
 
     def get_user_dict(self, id):
         data = User.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+        return self.remove_dinamics_fields(
+            data.__dict__.copy()) if data else None
 
     def get_cohort_dict(self, id):
         data = Cohort.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+        return self.remove_dinamics_fields(
+            data.__dict__.copy()) if data else None
 
     def all_cohort_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Cohort.objects.filter()]
+        return [
+            self.remove_dinamics_fields(data.__dict__.copy())
+            for data in Cohort.objects.filter()
+        ]
 
     def all_academy_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Academy.objects.filter()]
+        return [
+            self.remove_dinamics_fields(data.__dict__.copy())
+            for data in Academy.objects.filter()
+        ]
 
     def all_cohort_user_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            CohortUser.objects.filter()]
+        return [
+            self.remove_dinamics_fields(data.__dict__.copy())
+            for data in CohortUser.objects.filter()
+        ]
 
     def all_user_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            User.objects.filter()]
+        return [
+            self.remove_dinamics_fields(data.__dict__.copy())
+            for data in User.objects.filter()
+        ]
 
     def get_cohort(self, id):
         return Cohort.objects.filter(id=id).first()
-        
+
     def get_cohort_user(self, id):
         return CohortUser.objects.filter(id=id).first()
 
@@ -117,18 +131,35 @@ class AdmissionsTestCase(APITestCase, AuthenticateMixin, DateFormatterMixin):
     def headers(self, **kargs):
         headers = {}
 
-        items = [index for index in kargs if kargs[index] and (
-            isinstance(kargs[index], str) or isinstance(kargs[index], int))]
+        items = [
+            index for index in kargs if kargs[index] and (
+                isinstance(kargs[index], str) or isinstance(kargs[index], int))
+        ]
 
         for index in items:
             headers[f'HTTP_{index.upper()}'] = str(kargs[index])
 
         self.client.credentials(**headers)
 
-    def generate_models(self, user=False, authenticate=False, syllabus=False, academy=False,
-            cohort=False, profile_academy=False, certificate=False, cohort_user=False, impossible_kickoff_date=False,
-            finantial_status='', educational_status='', city=False, country=False, user_two=False,
-            cohort_two=False, task=False, task_status='', task_type=''):
+    def generate_models(self,
+                        user=False,
+                        authenticate=False,
+                        syllabus=False,
+                        academy=False,
+                        cohort=False,
+                        profile_academy=False,
+                        certificate=False,
+                        cohort_user=False,
+                        impossible_kickoff_date=False,
+                        finantial_status='',
+                        educational_status='',
+                        city=False,
+                        country=False,
+                        user_two=False,
+                        cohort_two=False,
+                        task=False,
+                        task_status='',
+                        task_type=''):
         # isinstance(True, bool)
         self.maxDiff = None
 
@@ -143,7 +174,8 @@ class AdmissionsTestCase(APITestCase, AuthenticateMixin, DateFormatterMixin):
 
         if certificate or profile_academy:
             self.certificate = mixer.blend('admissions.Certificate')
-            self.syllabus = mixer.blend('admissions.Syllabus', certificate=self.certificate)
+            self.syllabus = mixer.blend('admissions.Syllabus',
+                                        certificate=self.certificate)
 
         if cohort or profile_academy or cohort_user:
             kargs = {}
@@ -161,7 +193,8 @@ class AdmissionsTestCase(APITestCase, AuthenticateMixin, DateFormatterMixin):
             kargs = {}
 
             if profile_academy:
-                kargs['syllabus'] = mixer.blend('admissions.Syllabus', certificate=self.certificate)
+                kargs['syllabus'] = mixer.blend('admissions.Syllabus',
+                                                certificate=self.certificate)
                 kargs['academy'] = self.academy
 
             self.cohort_two = mixer.blend('admissions.Cohort', **kargs)
@@ -172,9 +205,7 @@ class AdmissionsTestCase(APITestCase, AuthenticateMixin, DateFormatterMixin):
             self.user.save()
 
         if task:
-            kargs = {
-                'user': self.user
-            }
+            kargs = {'user': self.user}
 
             if task_status:
                 kargs['task_status'] = task_status
@@ -207,5 +238,7 @@ class AdmissionsTestCase(APITestCase, AuthenticateMixin, DateFormatterMixin):
             self.client.force_authenticate(user=self.user)
 
         if profile_academy:
-            self.profile_academy = mixer.blend('authenticate.ProfileAcademy', user=self.user,
-                certificate=self.certificate, academy=self.academy)
+            self.profile_academy = mixer.blend('authenticate.ProfileAcademy',
+                                               user=self.user,
+                                               certificate=self.certificate,
+                                               academy=self.academy)

@@ -4,10 +4,16 @@ Collections of mixins used to login in authorize microservice
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
 
+
 class AssignmentsModelsMixin(ModelsMixin):
-    def generate_assignments_models(self, task=False, task_status='',
-            task_type='', task_revision_status='', models={}, task_kwargs={},
-            **kwargs):
+    def generate_assignments_models(self,
+                                    task=False,
+                                    task_status='',
+                                    task_type='',
+                                    task_revision_status='',
+                                    models={},
+                                    task_kwargs={},
+                                    **kwargs):
         models = models.copy()
 
         if not 'task' in models and task:

@@ -8,14 +8,14 @@ logger = logging.getLogger(__name__)
 
 
 class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception,)
+    autoretry_for = (Exception, )
     #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5 } 
+    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
     retry_backoff = True
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
-def persist_organization_events(self,args):
+def persist_organization_events(self, args):
     logger.debug("Starting persist_organization_events")
     org = Organization.objects.get(id=args['org_id'])
     result = sync_org_events(org)
@@ -27,10 +27,11 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
     logger.debug("Starting async_eventbrite_webhook")
     status = 'ok'
 
-    webhook = EventbriteWebhook.objects.filter(id=eventbrite_webhook_id).first()
-    organization_id = webhook.organization_id 
+    webhook = EventbriteWebhook.objects.filter(
+        id=eventbrite_webhook_id).first()
+    organization_id = webhook.organization_id
     organization = Organization.objects.filter(id=organization_id).first()
-    
+
     if organization:
         try:
             client = Eventbrite(organization.eventbrite_key)
@@ -51,4 +52,3 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
         status = 'error'
 
     logger.debug(f'Eventbrite status: {status}')
- 

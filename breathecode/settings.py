@@ -14,6 +14,7 @@ import sys
 import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +33,6 @@ DEBUG = (ENVIRONMENT == "development")
 
 ALLOWED_HOSTS = []
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -45,14 +45,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django.contrib.postgres',
-
     'rest_framework',
-
     'phonenumber_field',
-
     'drf_yasg',
     'corsheaders',
-
     'breathecode.authenticate',
     'breathecode.admissions',
     'breathecode.events',
@@ -72,11 +68,16 @@ if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
     INSTALLED_APPS.append('breathecode.cypress')
 
 REST_FRAMEWORK = {
-    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',
-    'DEFAULT_PAGINATION_CLASS': 'breathecode.utils.HeaderLimitOffsetPagination',
-    'EXCEPTION_HANDLER': 'breathecode.utils.breathecode_exception_handler',
-    'PAGE_SIZE': 100,
-    'DEFAULT_VERSION': 'v1',
+    'DEFAULT_VERSIONING_CLASS':
+    'rest_framework.versioning.NamespaceVersioning',
+    'DEFAULT_PAGINATION_CLASS':
+    'breathecode.utils.HeaderLimitOffsetPagination',
+    'EXCEPTION_HANDLER':
+    'breathecode.utils.breathecode_exception_handler',
+    'PAGE_SIZE':
+    100,
+    'DEFAULT_VERSION':
+    'v1',
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'breathecode.authenticate.authentication.ExpiringTokenAuthentication',
         # 'rest_framework.authentication.TokenAuthentication',
@@ -94,7 +95,6 @@ REST_FRAMEWORK = {
 MIDDLEWARE = [
     # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareOnly404',
     # ⬆ This Rollbar should always be first please!
-
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -103,21 +103,17 @@ MIDDLEWARE = [
     # 'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.cache.FetchFromCacheMiddleware',
-
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
     'breathecode.utils.admin_timezone.TimezoneMiddleware',
 
     # ⬇ Rollbar is always last please!
     # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',
 ]
 
-AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-)
+AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', )
 
 ROOT_URLCONF = 'breathecode.urls'
 
@@ -140,25 +136,27 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'breathecode.wsgi.application'
 
-
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
 
 # Disable Django's logging setup
 LOGGING_CONFIG = None
@@ -222,14 +220,18 @@ logging.config.dictConfig({
 })
 
 ROLLBAR = {
-    'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ""),
-    'environment': 'development' if DEBUG else 'production',
-    'branch': 'master',
-    'root': BASE_DIR,
+    'access_token':
+    os.getenv('ROLLBAR_ACCESS_TOKEN', ""),
+    'environment':
+    'development' if DEBUG else 'production',
+    'branch':
+    'master',
+    'root':
+    BASE_DIR,
     # parsed POST variables placed in your output for exception handling
-    'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler',
+    'EXCEPTION_HANDLER':
+    'rollbar.contrib.django_rest_framework.post_exception_handler',
 }
-
 
 MESSAGE_TAGS = {
     messages.DEBUG: 'alert-info',
@@ -238,7 +240,6 @@ MESSAGE_TAGS = {
     messages.WARNING: 'alert-warning',
     messages.ERROR: 'alert-danger',
 }
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
@@ -293,9 +294,7 @@ REDIS_URL = os.getenv('REDIS_URL', '')
 
 def cache_opts(is_test_env):
     if is_test_env:
-        return {
-            'OPTIONS': {}
-        }
+        return {'OPTIONS': {}}
     else:
         return {
             'OPTIONS': {
@@ -308,9 +307,11 @@ def cache_opts(is_test_env):
 is_test_env = os.getenv('ENV') == 'test'
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if
-        is_test_env else 'django_redis.cache.RedisCache',
-        'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
+        'BACKEND':
+        'django.core.cache.backends.locmem.LocMemCache'
+        if is_test_env else 'django_redis.cache.RedisCache',
+        'LOCATION':
+        'breathecode' if is_test_env else [REDIS_URL],
         # **cache_opts(is_test_env),
     },
 }

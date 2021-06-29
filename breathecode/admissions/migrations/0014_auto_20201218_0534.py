@@ -14,17 +14,26 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='academy',
             name='facebook_handle',
-            field=models.CharField(blank=True, default=None, max_length=30, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   max_length=30,
+                                   null=True),
         ),
         migrations.AddField(
             model_name='academy',
             name='github_handle',
-            field=models.CharField(blank=True, default=None, max_length=20, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   max_length=20,
+                                   null=True),
         ),
         migrations.AddField(
             model_name='academy',
             name='instagram_handle',
-            field=models.CharField(blank=True, default=None, max_length=30, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   max_length=30,
+                                   null=True),
         ),
         migrations.AddField(
             model_name='academy',
@@ -34,17 +43,33 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='academy',
             name='marketing_email',
-            field=models.EmailField(blank=True, default=None, max_length=254, null=True),
+            field=models.EmailField(blank=True,
+                                    default=None,
+                                    max_length=254,
+                                    null=True),
         ),
         migrations.AddField(
             model_name='academy',
             name='marketing_phone',
-            field=models.CharField(blank=True, default=None, max_length=17, null=True, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')]),
+            field=models.CharField(
+                blank=True,
+                default=None,
+                max_length=17,
+                null=True,
+                validators=[
+                    django.core.validators.RegexValidator(
+                        message=
+                        "Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                        regex='^\\+?1?\\d{9,15}$')
+                ]),
         ),
         migrations.AddField(
             model_name='academy',
             name='twitter_handle',
-            field=models.CharField(blank=True, default=None, max_length=15, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   max_length=15,
+                                   null=True),
         ),
         migrations.AddField(
             model_name='academy',

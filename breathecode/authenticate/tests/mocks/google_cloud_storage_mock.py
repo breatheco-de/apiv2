@@ -9,4 +9,5 @@ class GoogleCloudStorageMock():
     def get_bucket_object():
         def side_effect():
             return None
+
         return Mock(side_effect=side_effect)

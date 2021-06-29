@@ -7,17 +7,27 @@ from breathecode.authenticate.models import Token
 from mixer.backend.django import mixer
 from breathecode.tests.mixins import DateFormatterMixin
 
+
 class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
     """CapacitiesTestCase with auth methods"""
     password = 'pass1234'
 
-    def generate_credentials(self, user=False, task=False, authenticate=False,
-            manual_authenticate=False, cohort_user=False, slack_team=False,
-            profile_academy='', user_kwargs={}, models={}, **kwargs):
+    def generate_credentials(self,
+                             user=False,
+                             task=False,
+                             authenticate=False,
+                             manual_authenticate=False,
+                             cohort_user=False,
+                             slack_team=False,
+                             profile_academy='',
+                             user_kwargs={},
+                             models={},
+                             **kwargs):
         models = models.copy()
 
-        if not 'user' in models and (user or authenticate or profile_academy or
-                manual_authenticate or cohort_user or task or slack_team):
+        if not 'user' in models and (user or authenticate or profile_academy
+                                     or manual_authenticate or cohort_user
+                                     or task or slack_team):
             kargs = {}
 
             kargs = {**kargs, **user_kwargs}

@@ -50,7 +50,7 @@ class GetResolutionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MediaResolution
-        fields = ('id','hash', 'width', 'height', 'hits')
+        fields = ('id', 'hash', 'width', 'height', 'hits')
 
 
 class MediaSerializer(serializers.ModelSerializer):
@@ -87,6 +87,7 @@ class MediaListSerializer(serializers.ListSerializer):
 
         return ret
 
+
 class MediaSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
     url = serializers.CharField(read_only=True, required=False)
@@ -98,8 +99,8 @@ class MediaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Media
-        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime', 'name',
-            'categories', 'academy')
+        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime',
+                  'name', 'categories', 'academy')
         exclude = ()
         list_serializer_class = MediaListSerializer
 
@@ -115,15 +116,18 @@ class MediaPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Media
-        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime', 'name',
-            'categories', 'academy')
+        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime',
+                  'name', 'categories', 'academy')
         exclude = ()
         list_serializer_class = MediaListSerializer
 
     def validate(self, data):
-        if 'hash' in data and 'academy' in data and isinstance(data['academy'], Academy):
-            data['id'] = Media.objects.filter(hash=data['hash'],
-                academy__id=data['academy'].id).values_list('id', flat=True).first()
+        if 'hash' in data and 'academy' in data and isinstance(
+                data['academy'], Academy):
+            data['id'] = Media.objects.filter(
+                hash=data['hash'],
+                academy__id=data['academy'].id).values_list('id',
+                                                            flat=True).first()
 
         return data
 
@@ -136,10 +140,10 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ('name', 'slug','created_at', 'id')
+        fields = ('name', 'slug', 'created_at', 'id')
 
     def create(self, validated_data):
 
         _slug = slugify(validated_data["name"])
-        result = super().create({ **validated_data, "slug": _slug })
+        result = super().create({**validated_data, "slug": _slug})
         return result

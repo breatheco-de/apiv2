@@ -12,13 +12,13 @@ from ...actions import run_script
 class BaseSQL(object):
     template = "NOW() - INTERVAL '1 MINUTE' * %(expressions)s"
 
+
 class DurationAgr(BaseSQL, DM.Aggregate):
     def __init__(self, expression, **extra):
-        super(DurationAgr, self).__init__(
-            expression,
-            output_field=DM.DateTimeField(),
-            **extra
-        )
+        super(DurationAgr, self).__init__(expression,
+                                          output_field=DM.DateTimeField(),
+                                          **extra)
+
 
 class Command(BaseCommand):
     help = 'Sync academies from old breathecode'
@@ -30,20 +30,20 @@ class Command(BaseCommand):
             action='store_true',
             help='Delete and add again',
         )
-        parser.add_argument(
-            '--limit',
-            action='store',
-            dest='limit',
-            type=int,
-            default=0,
-            help='How many to import'
-        )
+        parser.add_argument('--limit',
+                            action='store',
+                            dest='limit',
+                            type=int,
+                            default=0,
+                            help='How many to import')
 
     def handle(self, *args, **options):
         try:
-            func = getattr(self,options['entity'], None)
+            func = getattr(self, options['entity'], None)
         except TypeError:
-            self.stderr.write(self.style.ERROR(f'Sync method for {options["entity"]} no Found!'))
+            self.stderr.write(
+                self.style.ERROR(
+                    f'Sync method for {options["entity"]} no Found!'))
             return
         except KeyError:
             self.stderr.write(self.style.ERROR('Entity arguments is not set'))
@@ -61,7 +61,8 @@ class Command(BaseCommand):
         for app_id in apps:
             monitor_app.delay(app_id)
 
-        self.stdout.write(self.style.SUCCESS(f"Enqueued {len(apps)} apps for diagnostic"))
+        self.stdout.write(
+            self.style.SUCCESS(f"Enqueued {len(apps)} apps for diagnostic"))
 
     def scripts(self, options):
         now = timezone.now()
@@ -73,4 +74,6 @@ class Command(BaseCommand):
         for script_id in scripts:
             execute_scripts.delay(script_id)
 
-        self.stdout.write(self.style.SUCCESS(f"Enqueued {len(scripts)} scripts for execution"))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Enqueued {len(scripts)} scripts for execution"))

@@ -1,4 +1,8 @@
-import os, datetime, logging, csv, pytz
+import os
+import datetime
+import logging
+import csv
+import pytz
 from urllib import parse
 from rest_framework_csv.renderers import CSVRenderer
 from breathecode.renderers import PlainTextRenderer
@@ -12,24 +16,25 @@ from django.db.models import Q
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
-from breathecode.utils import (
-    APIException, localize_query, capable_of, ValidationException,
-    GenerateLookupsMixin, HeaderLimitOffsetPagination
-)
-from .serializers import (
-    PostFormEntrySerializer, FormEntrySerializer, FormEntrySmallSerializer, TagSmallSerializer,
-    AutomationSmallSerializer
-)
+from breathecode.utils import (APIException, localize_query, capable_of,
+                               ValidationException, GenerateLookupsMixin,
+                               HeaderLimitOffsetPagination)
+from .serializers import (PostFormEntrySerializer, FormEntrySerializer,
+                          FormEntrySmallSerializer, TagSmallSerializer,
+                          AutomationSmallSerializer)
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
 from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation
 from breathecode.admissions.models import Academy
+from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
 
 logger = logging.getLogger(__name__)
 
 # Create your views here.
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead(request):
@@ -41,6 +46,7 @@ def create_lead(request):
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -60,12 +66,14 @@ def activecampaign_webhook(request, ac_academy_id=None, academy_slug=None):
     if webhook:
         async_activecampaign_webhook.delay(webhook.id)
     else:
-        logger.debug('One request cannot be parsed, maybe you should update `ActiveCampaign'
-                     '.add_webhook_to_log`')
+        logger.debug(
+            'One request cannot be parsed, maybe you should update `ActiveCampaign'
+            '.add_webhook_to_log`')
         logger.debug(request.data)
 
     # async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -73,12 +81,17 @@ def activecampaign_webhook(request, ac_academy_id=None, academy_slug=None):
 def googleads_enrollments(request, academy_slugs):
 
     slugs = academy_slugs.split(",")
-    academies = FormEntry.objects.filter(Q(academy__slug__in=slugs) | Q(ac_academy__academy__slug__in=slugs)).exclude(gclid__isnull=True)
+    academies = FormEntry.objects.filter(
+        Q(academy__slug__in=slugs)
+        | Q(ac_academy__academy__slug__in=slugs)).exclude(gclid__isnull=True)
 
     serializer = FormEntrySerializer(academies, many=True)
     return Response(serializer.data)
 
+
 # Create your views here.
+
+
 @api_view(['POST', 'GET'])
 @permission_classes([AllowAny])
 def receive_facebook_lead(request):
@@ -106,44 +119,55 @@ def receive_facebook_lead(request):
                 for entry in request.data["entry"]:
                     for changes in entry["changes"]:
                         if changes["field"] == "leadgen":
-                            serializer = PostFormEntrySerializer(data={
-                                "fb_leadgen_id": changes["value"]["leadgen_id"],
-                                "fb_page_id": changes["value"]["page_id"],
-                                "fb_form_id": changes["value"]["form_id"],
-                                "fb_adgroup_id": changes["value"]["adgroup_id"],
-                                "fb_ad_id": changes["value"]["ad_id"]
-                            })
+                            serializer = PostFormEntrySerializer(
+                                data={
+                                    "fb_leadgen_id": changes["value"]
+                                    ["leadgen_id"],
+                                    "fb_page_id": changes["value"]["page_id"],
+                                    "fb_form_id": changes["value"]["form_id"],
+                                    "fb_adgroup_id": changes["value"]
+                                    ["adgroup_id"],
+                                    "fb_ad_id": changes["value"]["ad_id"]
+                                })
                             if serializer.is_valid():
                                 serializer.save()
-                                #persist_single_lead.delay(request.data)
-                                return Response(serializer.data, status=status.HTTP_201_CREATED)
-                            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                                # persist_single_lead.delay(request.data)
+                                return Response(serializer.data,
+                                                status=status.HTTP_201_CREATED)
+                            return Response(serializer.errors,
+                                            status=status.HTTP_400_BAD_REQUEST)
 
-    return Response({"details": "No leads found"}, status=status.HTTP_400_BAD_REQUEST)
-
+    return Response({"details": "No leads found"},
+                    status=status.HTTP_400_BAD_REQUEST)
 
 
 # Create your views here.
 @api_view(['GET'])
 def sync_tags_with_active_campaign(request, academy_id):
 
-    academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    academy = ActiveCampaignAcademy.objects.filter(
+        academy__id=academy_id).first()
     if academy is None:
         raise APIException('Academy not found')
 
     tags = sync_tags(academy)
     return Response(tags, status=status.HTTP_200_OK)
 
+
 # Create your views here.
+
+
 @api_view(['GET'])
 def sync_automations_with_active_campaign(request, academy_id):
 
-    academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    academy = ActiveCampaignAcademy.objects.filter(
+        academy__id=academy_id).first()
     if academy is None:
         raise APIException('Academy not found')
 
     tags = sync_automations(academy)
     return Response(tags, status=status.HTTP_200_OK)
+
 
 def redirect_link(request, link_slug):
     short_link = ShortLink.objects.filter(slug=link_slug, active=True).first()
@@ -167,16 +191,16 @@ def redirect_link(request, link_slug):
     if len(url_parts) > 1:
         destination_params = dict(parse.parse_qsl(url_parts[1]))
 
-    params = { **destination_params, **params }
-    return HttpResponseRedirect(redirect_to=url_parts[0]+"?"+parse.urlencode(params))
+    params = {**destination_params, **params}
+    return HttpResponseRedirect(redirect_to=url_parts[0] + "?" +
+                                parse.urlencode(params))
+
 
 @api_view(['GET'])
 def get_leads(request, id=None):
 
     items = FormEntry.objects.all()
-
     if isinstance(request.user, AnonymousUser) == False:
-        # filter only to the local academy
         items = localize_query(items, request)
 
     academy = request.GET.get('academy', None)
@@ -230,14 +254,10 @@ def get_leads_report(request, id=None):
     items = items.values(*group_by).annotate(total_leads=Count('location'))
 
     if "created_at__date" in group_by:
-        items = items.annotate(
-            created_date=Func(
-                F('created_at'),
-                Value('YYYYMMDD'),
-                function='to_char',
-                output_field=CharField()
-            )
-        )
+        items = items.annotate(created_date=Func(F('created_at'),
+                                                 Value('YYYYMMDD'),
+                                                 function='to_char',
+                                                 output_field=CharField()))
     # items = items.order_by('created_at')
     return Response(items)
 
@@ -255,6 +275,7 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
         serializer = TagSmallSerializer(tags, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 class AcademyAutomationView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -268,7 +289,8 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class AcademyLeadView(APIView, HeaderLimitOffsetPagination,
+                      GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
@@ -276,7 +298,7 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
     def get(self, request, format=None, academy_id=None):
 
         academy = Academy.objects.get(id=academy_id)
-        items = FormEntry.objects.filter(Q(location=academy.slug) | Q(academy__id=academy.id))
+        items = FormEntry.objects.filter(academy__id=academy.id)
         lookup = {}
 
         start = request.GET.get('start', None)
@@ -303,6 +325,10 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 
         items = items.filter(**lookup).order_by('-created_at')
 
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = query_like_by_full_name(like=like, items=items)
+
         page = self.paginate_queryset(items, request)
         serializer = FormEntrySmallSerializer(page, many=True)
 
@@ -314,14 +340,12 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
     @capable_of('crud_lead')
     def delete(self, request, academy_id=None):
         # TODO: here i don't add one single delete, because i don't know if it is required
-        lookups = self.generate_lookups(
-            request,
-            many_fields=['id']
-        )
+        lookups = self.generate_lookups(request, many_fields=['id'])
         # automation_objects
 
         if not lookups:
-            raise ValidationException('Missing parameters in the querystring', code=400)
+            raise ValidationException('Missing parameters in the querystring',
+                                      code=400)
 
         items = FormEntry.objects.filter(**lookups, academy__id=academy_id)
 
@@ -329,6 +353,7 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             item.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
 
 def googleads_csv(request):
 
@@ -339,23 +364,27 @@ def googleads_csv(request):
     slugs = slugs.split(",") if slugs else []
 
     if ids:
-        form_entries = FormEntry.objects.filter(academy__id__in=ids).order_by('id')
+        form_entries = FormEntry.objects.filter(
+            academy__id__in=ids).order_by('id')
 
     elif slugs:
         form_entries = FormEntry.objects.filter(
-                academy__slug__in=slugs).order_by('id')
+            academy__slug__in=slugs).order_by('id')
 
     else:
         form_entries = FormEntry.objects.all()
 
-    if (Academy.objects.filter(id__in=ids).count() != len(ids) or
-                Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
-            raise ValidationException("Some academy not exist", slug='academy-not-found')
+    if (Academy.objects.filter(id__in=ids).count() != len(ids)
+            or Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
+        raise ValidationException("Some academy not exist",
+                                  slug='academy-not-found')
 
     data = []
     response = HttpResponse(
         content_type='text/csv',
-        headers={'Content-Disposition': 'attachment; filename="googleads.csv"'},
+        headers={
+            'Content-Disposition': 'attachment; filename="googleads.csv"'
+        },
     )
 
     for entry in form_entries:
@@ -363,23 +392,25 @@ def googleads_csv(request):
         if entry.gclid:
             entry_gclid = entry.gclid[-4:]
 
-            if(entry_gclid == '_BwE' and entry.deal_status == "WON"):
+            if (entry_gclid == '_BwE' and entry.deal_status == "WON"):
                 gclid = entry.gclid
                 convertion_name = entry.tags
 
                 timezone = pytz.timezone("US/Eastern")
                 convertion_time = entry.created_at.astimezone(timezone)
-                convertion_time = convertion_time.strftime("%Y-%m-%d %H-%M-%S%z")
+                convertion_time = convertion_time.strftime(
+                    "%Y-%m-%d %H-%M-%S%z")
 
-                data.append([gclid, convertion_name, convertion_time,None, None])
+                data.append(
+                    [gclid, convertion_name, convertion_time, None, None])
 
     writer = csv.writer(response)
-    writer.writerow(['Google Click ID','Conversion Name','Conversion Time',
-     'Conversion Value', 'Conversion Currency'])
+    writer.writerow([
+        'Google Click ID', 'Conversion Name', 'Conversion Time',
+        'Conversion Value', 'Conversion Currency'
+    ])
 
     for d in data:
         writer.writerow(d)
 
     return response
-
-

@@ -4,8 +4,9 @@ Collections of mixins used to login in authorize microservice
 from rest_framework.test import APITestCase
 from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin, DatetimeMixin
 
+
 class CertificateTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
-        TokenMixin, GenerateQueriesMixin, DatetimeMixin):
+                          TokenMixin, GenerateQueriesMixin, DatetimeMixin):
     """CertificateTestCase with auth methods"""
     def setUp(self):
         self.generate_queries()
@@ -27,4 +28,4 @@ class CertificateTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         for k in keys:
             _d[k] = None
 
-        return [{**item, **_d } for item in dicts]
+        return [{**item, **_d} for item in dicts]

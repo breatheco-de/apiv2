@@ -13,6 +13,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='automation',
             name='status',
-            field=models.PositiveSmallIntegerField(choices=[('2', 'Active'), ('1', 'Innactive'), ('0', 'Uknown')], default='0', help_text='2 = inactive, 1=active'),
+            field=models.PositiveSmallIntegerField(
+                choices=[('2', 'Active'), ('1', 'Innactive'), ('0', 'Uknown')],
+                default='0',
+                help_text='2 = inactive, 1=active'),
         ),
     ]

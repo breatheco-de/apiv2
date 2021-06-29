@@ -13,6 +13,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='userspecialty',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'), ('ERROR', 'Error')], default='PENDING', max_length=15),
+            field=models.CharField(choices=[('PENDING', 'Pending'),
+                                            ('PERSISTED', 'Persisted'),
+                                            ('ERROR', 'Error')],
+                                   default='PENDING',
+                                   max_length=15),
         ),
     ]

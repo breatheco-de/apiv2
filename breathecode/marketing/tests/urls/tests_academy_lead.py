@@ -1,6 +1,7 @@
 """
 Test /academy/lead
 """
+from logging import error
 from django.utils import timezone
 from datetime import timedelta
 import string
@@ -16,8 +17,10 @@ from breathecode.tests.mocks import (
 )
 from ..mixins import MarketingTestCase
 
+
 def random_string():
     return ''.join(choices(string.ascii_letters, k=10))
+
 
 def generate_form_entry_kwargs():
     """That random values is too long that i prefer have it in one function"""
@@ -52,16 +55,15 @@ def generate_form_entry_kwargs():
         'state': random_string(),
         'zip_code': randint(0, 9999),
         'browser_lang': random_string(),
-
         'storage_status': choice(['PENDING', 'PERSISTED']),
         'lead_type': choice(['STRONG', 'SOFT', 'DISCOVERY']),
         'deal_status': choice(['WON', 'LOST']),
         'sentiment': choice(['GOOD', 'BAD']),
     }
 
+
 class CohortUserTestSuite(MarketingTestCase):
     """Test /academy/lead"""
-
     """
     🔽🔽🔽 Auth
     """
@@ -88,15 +90,19 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_academy_lead__without_academy_header(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:academy_lead')
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato')
 
         response = self.client.get(url)
         json = response.json()
         expected = {
-            'detail': 'Missing academy_id parameter expected for the endpoint url or '
-                "'Academy' header",
-            'status_code': 403
+            'detail':
+            'Missing academy_id parameter expected for the endpoint url or '
+            "'Academy' header",
+            'status_code':
+            403
         }
 
         self.assertEqual(json, expected)
@@ -114,8 +120,10 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:academy_lead')
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato')
 
         response = self.client.get(url)
         json = response.json()
@@ -128,6 +136,7 @@ class CohortUserTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 With data
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -135,8 +144,12 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:academy_lead')
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True,
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability='read_lead',
+            role='potato',
+            form_entry=True,
             form_entry_kwargs=generate_form_entry_kwargs())
 
         response = self.client.get(url)
@@ -173,14 +186,19 @@ class CohortUserTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Storage status in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_bad_storage_status_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True,
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability='read_lead',
+            role='potato',
+            form_entry=True,
             form_entry_kwargs=generate_form_entry_kwargs())
 
         url = reverse_lazy('marketing:academy_lead') + '?storage_status=freyja'
@@ -200,11 +218,17 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_academy_lead__with_storage_status_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True,
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability='read_lead',
+            role='potato',
+            form_entry=True,
             form_entry_kwargs=generate_form_entry_kwargs())
 
-        url = reverse_lazy('marketing:academy_lead') + f'?storage_status={model.form_entry.storage_status}'
+        url = reverse_lazy(
+            'marketing:academy_lead'
+        ) + f'?storage_status={model.form_entry.storage_status}'
         response = self.client.get(url)
         json = response.json()
 
@@ -239,14 +263,19 @@ class CohortUserTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Course in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_bad_course_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True,
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability='read_lead',
+            role='potato',
+            form_entry=True,
             form_entry_kwargs=generate_form_entry_kwargs())
 
         url = reverse_lazy('marketing:academy_lead') + '?course=freyja'
@@ -266,11 +295,16 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_academy_lead__with_course_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True,
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability='read_lead',
+            role='potato',
+            form_entry=True,
             form_entry_kwargs=generate_form_entry_kwargs())
 
-        url = reverse_lazy('marketing:academy_lead') + f'?course={model.form_entry.course}'
+        url = reverse_lazy(
+            'marketing:academy_lead') + f'?course={model.form_entry.course}'
         response = self.client.get(url)
         json = response.json()
 
@@ -305,14 +339,19 @@ class CohortUserTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Location in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_bad_location_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True,
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability='read_lead',
+            role='potato',
+            form_entry=True,
             form_entry_kwargs=generate_form_entry_kwargs())
 
         url = reverse_lazy('marketing:academy_lead') + '?location=freyja'
@@ -332,11 +371,16 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_academy_lead__with_location_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True,
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability='read_lead',
+            role='potato',
+            form_entry=True,
             form_entry_kwargs=generate_form_entry_kwargs())
 
-        url = reverse_lazy('marketing:academy_lead') + f'?location={model.form_entry.location}'
+        url = reverse_lazy('marketing:academy_lead'
+                           ) + f'?location={model.form_entry.location}'
         response = self.client.get(url)
         json = response.json()
 
@@ -371,6 +415,7 @@ class CohortUserTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Start in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -378,8 +423,11 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:academy_lead') + '?start=2100-01-01'
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato',
+                                     form_entry=True)
 
         response = self.client.get(url)
         json = response.json()
@@ -397,9 +445,13 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_academy_lead__with_start_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        query_date = (timezone.now() - timedelta(hours=48)).strftime("%Y-%m-%d")
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True)
+        query_date = (timezone.now() -
+                      timedelta(hours=48)).strftime("%Y-%m-%d")
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato',
+                                     form_entry=True)
 
         url = reverse_lazy('marketing:academy_lead') + f'?start={query_date}'
         response = self.client.get(url)
@@ -436,6 +488,7 @@ class CohortUserTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 End in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -443,8 +496,11 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:academy_lead') + '?end=1900-01-01'
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato',
+                                     form_entry=True)
 
         response = self.client.get(url)
         json = response.json()
@@ -462,9 +518,13 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_academy_lead__with_end_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        query_date = (timezone.now() + timedelta(hours=48)).strftime("%Y-%m-%d")
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True)
+        query_date = (timezone.now() +
+                      timedelta(hours=48)).strftime("%Y-%m-%d")
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato',
+                                     form_entry=True)
 
         url = reverse_lazy('marketing:academy_lead') + f'?end={query_date}'
         response = self.client.get(url)
@@ -501,6 +561,7 @@ class CohortUserTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Bulk delete
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -509,17 +570,23 @@ class CohortUserTestSuite(MarketingTestCase):
         self.headers(academy=1)
         many_fields = ['id']
 
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_lead', role='potato', academy=True,
-            active_campaign_academy=True)
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='crud_lead',
+                                    role='potato',
+                                    academy=True,
+                                    active_campaign_academy=True)
 
         for field in many_fields:
             form_entry_kwargs = generate_form_entry_kwargs()
-            model = self.generate_models(form_entry=True, contact=True,
-                automation=True, form_entry_kwargs=form_entry_kwargs, models=base)
+            model = self.generate_models(form_entry=True,
+                                         contact=True,
+                                         automation=True,
+                                         form_entry_kwargs=form_entry_kwargs,
+                                         models=base)
 
             url = (reverse_lazy('marketing:academy_lead') + f'?{field}=' +
-                str(getattr(model['form_entry'], field)))
+                   str(getattr(model['form_entry'], field)))
             response = self.client.delete(url)
 
             if response.status_code != 204:
@@ -536,22 +603,31 @@ class CohortUserTestSuite(MarketingTestCase):
         self.headers(academy=1)
         many_fields = ['id']
 
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_lead', role='potato', academy=True,
-            active_campaign_academy=True)
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='crud_lead',
+                                    role='potato',
+                                    academy=True,
+                                    active_campaign_academy=True)
 
         for field in many_fields:
             form_entry_kwargs = generate_form_entry_kwargs()
-            model1 = self.generate_models(form_entry=True, contact=True,
-                automation=True, form_entry_kwargs=form_entry_kwargs, models=base)
+            model1 = self.generate_models(form_entry=True,
+                                          contact=True,
+                                          automation=True,
+                                          form_entry_kwargs=form_entry_kwargs,
+                                          models=base)
 
             form_entry_kwargs = generate_form_entry_kwargs()
-            model2 = self.generate_models(form_entry=True, contact=True,
-                automation=True, form_entry_kwargs=form_entry_kwargs, models=base)
+            model2 = self.generate_models(form_entry=True,
+                                          contact=True,
+                                          automation=True,
+                                          form_entry_kwargs=form_entry_kwargs,
+                                          models=base)
 
             url = (reverse_lazy('marketing:academy_lead') + f'?{field}=' +
-                str(getattr(model1['form_entry'], field)) + ',' +
-                str(getattr(model2['form_entry'], field)))
+                   str(getattr(model1['form_entry'], field)) + ',' +
+                   str(getattr(model2['form_entry'], field)))
             response = self.client.delete(url)
 
             if response.status_code != 204:
@@ -567,37 +643,61 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__with_ten_datas_with_location_with_comma_just_get_100(self):
+    def test_academy_lead__with_ten_datas_with_location_with_comma_just_get_100(
+            self):
         """Test /cohort without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='read_lead',
+                                    role='potato')
 
-        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 105)]
-        ordened_models = sorted(models, key=lambda x: x['form_entry'].created_at,
-            reverse=True)
+        models = [
+            self.generate_models(form_entry=True, models=base)
+            for _ in range(0, 105)
+        ]
+        ordened_models = sorted(models,
+                                key=lambda x: x['form_entry'].created_at,
+                                reverse=True)
 
         url = reverse_lazy('marketing:academy_lead')
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'country': model['form_entry'].country,
-            'course': model['form_entry'].course,
-            'email': model['form_entry'].email,
-            'first_name': model['form_entry'].first_name,
-            'gclid': None,
-            'id': model['form_entry'].id,
-            'language': model['form_entry'].language,
-            'last_name': model['form_entry'].last_name,
-            'lead_type': model['form_entry'].lead_type,
-            'location': model['form_entry'].location,
-            'storage_status': model['form_entry'].storage_status,
-            'tags': model['form_entry'].tags,
-            'utm_campaign': model['form_entry'].utm_campaign,
-            'utm_medium': model['form_entry'].utm_medium,
-            'utm_source': model['form_entry'].utm_source,
-            'utm_url': model['form_entry'].utm_url,
-            'created_at': self.datetime_to_iso(model['form_entry'].created_at),
+            'country':
+            model['form_entry'].country,
+            'course':
+            model['form_entry'].course,
+            'email':
+            model['form_entry'].email,
+            'first_name':
+            model['form_entry'].first_name,
+            'gclid':
+            None,
+            'id':
+            model['form_entry'].id,
+            'language':
+            model['form_entry'].language,
+            'last_name':
+            model['form_entry'].last_name,
+            'lead_type':
+            model['form_entry'].lead_type,
+            'location':
+            model['form_entry'].location,
+            'storage_status':
+            model['form_entry'].storage_status,
+            'tags':
+            model['form_entry'].tags,
+            'utm_campaign':
+            model['form_entry'].utm_campaign,
+            'utm_medium':
+            model['form_entry'].utm_medium,
+            'utm_source':
+            model['form_entry'].utm_source,
+            'utm_url':
+            model['form_entry'].utm_url,
+            'created_at':
+            self.datetime_to_iso(model['form_entry'].created_at),
         } for model in ordened_models][:100]
 
         self.assertEqual(json, expected)
@@ -609,45 +709,74 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_first_five(self):
+    def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_first_five(
+            self):
         """Test /cohort without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='read_lead',
+                                    role='potato')
 
-        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
-        ordened_models = sorted(models, key=lambda x: x['form_entry'].created_at,
-            reverse=True)
+        models = [
+            self.generate_models(form_entry=True, models=base)
+            for _ in range(0, 10)
+        ]
+        ordened_models = sorted(models,
+                                key=lambda x: x['form_entry'].created_at,
+                                reverse=True)
 
         url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=0'
         response = self.client.get(url)
         json = response.json()
         expected = {
-            'count': 10,
-            'first': None,
-            'next': 'http://testserver/v1/marketing/academy/lead?limit=5&'
-                f'offset=5',
-            'previous': None,
-            'last': 'http://testserver/v1/marketing/academy/lead?limit=5&'
-                f'offset=5',
+            'count':
+            10,
+            'first':
+            None,
+            'next':
+            'http://testserver/v1/marketing/academy/lead?limit=5&'
+            f'offset=5',
+            'previous':
+            None,
+            'last':
+            'http://testserver/v1/marketing/academy/lead?limit=5&'
+            f'offset=5',
             'results': [{
-                'country': model['form_entry'].country,
-                'course': model['form_entry'].course,
-                'email': model['form_entry'].email,
-                'first_name': model['form_entry'].first_name,
-                'gclid': None,
-                'id': model['form_entry'].id,
-                'language': model['form_entry'].language,
-                'last_name': model['form_entry'].last_name,
-                'lead_type': model['form_entry'].lead_type,
-                'location': model['form_entry'].location,
-                'storage_status': model['form_entry'].storage_status,
-                'tags': model['form_entry'].tags,
-                'utm_campaign': model['form_entry'].utm_campaign,
-                'utm_medium': model['form_entry'].utm_medium,
-                'utm_source': model['form_entry'].utm_source,
-                'utm_url': model['form_entry'].utm_url,
-                'created_at': self.datetime_to_iso(model['form_entry'].created_at),
+                'country':
+                model['form_entry'].country,
+                'course':
+                model['form_entry'].course,
+                'email':
+                model['form_entry'].email,
+                'first_name':
+                model['form_entry'].first_name,
+                'gclid':
+                None,
+                'id':
+                model['form_entry'].id,
+                'language':
+                model['form_entry'].language,
+                'last_name':
+                model['form_entry'].last_name,
+                'lead_type':
+                model['form_entry'].lead_type,
+                'location':
+                model['form_entry'].location,
+                'storage_status':
+                model['form_entry'].storage_status,
+                'tags':
+                model['form_entry'].tags,
+                'utm_campaign':
+                model['form_entry'].utm_campaign,
+                'utm_medium':
+                model['form_entry'].utm_medium,
+                'utm_source':
+                model['form_entry'].utm_source,
+                'utm_url':
+                model['form_entry'].utm_url,
+                'created_at':
+                self.datetime_to_iso(model['form_entry'].created_at),
             } for model in ordened_models][:5],
         }
 
@@ -660,43 +789,72 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_last_five(self):
+    def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_last_five(
+            self):
         """Test /cohort without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='read_lead',
+                                    role='potato')
 
-        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
-        ordened_models = sorted(models, key=lambda x: x['form_entry'].created_at,
-            reverse=True)
+        models = [
+            self.generate_models(form_entry=True, models=base)
+            for _ in range(0, 10)
+        ]
+        ordened_models = sorted(models,
+                                key=lambda x: x['form_entry'].created_at,
+                                reverse=True)
 
         url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=5'
         response = self.client.get(url)
         json = response.json()
         expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/marketing/academy/lead?limit=5',
-            'next': None,
-            'previous': 'http://testserver/v1/marketing/academy/lead?limit=5',
-            'last': None,
+            'count':
+            10,
+            'first':
+            'http://testserver/v1/marketing/academy/lead?limit=5',
+            'next':
+            None,
+            'previous':
+            'http://testserver/v1/marketing/academy/lead?limit=5',
+            'last':
+            None,
             'results': [{
-                'country': model['form_entry'].country,
-                'course': model['form_entry'].course,
-                'email': model['form_entry'].email,
-                'first_name': model['form_entry'].first_name,
-                'gclid': None,
-                'id': model['form_entry'].id,
-                'language': model['form_entry'].language,
-                'last_name': model['form_entry'].last_name,
-                'lead_type': model['form_entry'].lead_type,
-                'location': model['form_entry'].location,
-                'storage_status': model['form_entry'].storage_status,
-                'tags': model['form_entry'].tags,
-                'utm_campaign': model['form_entry'].utm_campaign,
-                'utm_medium': model['form_entry'].utm_medium,
-                'utm_source': model['form_entry'].utm_source,
-                'utm_url': model['form_entry'].utm_url,
-                'created_at': self.datetime_to_iso(model['form_entry'].created_at),
+                'country':
+                model['form_entry'].country,
+                'course':
+                model['form_entry'].course,
+                'email':
+                model['form_entry'].email,
+                'first_name':
+                model['form_entry'].first_name,
+                'gclid':
+                None,
+                'id':
+                model['form_entry'].id,
+                'language':
+                model['form_entry'].language,
+                'last_name':
+                model['form_entry'].last_name,
+                'lead_type':
+                model['form_entry'].lead_type,
+                'location':
+                model['form_entry'].location,
+                'storage_status':
+                model['form_entry'].storage_status,
+                'tags':
+                model['form_entry'].tags,
+                'utm_campaign':
+                model['form_entry'].utm_campaign,
+                'utm_medium':
+                model['form_entry'].utm_medium,
+                'utm_source':
+                model['form_entry'].utm_source,
+                'utm_url':
+                model['form_entry'].utm_url,
+                'created_at':
+                self.datetime_to_iso(model['form_entry'].created_at),
             } for model in ordened_models][5:],
         }
 
@@ -709,13 +867,19 @@ class CohortUserTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_after_last_five(self):
+    def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_after_last_five(
+            self):
         """Test /cohort without auth"""
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato')
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='read_lead',
+                                    role='potato')
 
-        models = [self.generate_models(form_entry=True, models=base) for _ in range(0, 10)]
+        models = [
+            self.generate_models(form_entry=True, models=base)
+            for _ in range(0, 10)
+        ]
 
         url = reverse_lazy('marketing:academy_lead') + '?limit=5&offset=10'
         response = self.client.get(url)
@@ -725,11 +889,255 @@ class CohortUserTestSuite(MarketingTestCase):
             'first': 'http://testserver/v1/marketing/academy/lead?limit=5',
             'next': None,
             'previous': 'http://testserver/v1/marketing/academy/lead?limit=5&'
-                f'offset=5',
+            f'offset=5',
             'last': None,
             'results': [],
         }
 
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
+
+    """
+    🔽🔽🔽 With full like in querystring
+    """
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_lead__with_full_name_in_querystring(self):
+        """Test /academy/lead """
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    academy=True,
+                                    capability='read_lead',
+                                    role='potato')
+
+        form_entry_kwargs_1 = generate_form_entry_kwargs()
+        form_entry_kwargs_2 = generate_form_entry_kwargs()
+
+        form_entry_kwargs_1['first_name'] = 'Michael'
+        form_entry_kwargs_1['last_name'] = 'Jordan'
+
+        models = [
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_1,
+                                 form_entry=True,
+                                 models=base),
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_2,
+                                 form_entry=True,
+                                 models=base)
+        ]
+
+        base_url = reverse_lazy('marketing:academy_lead')
+        url = f'{base_url}?like={models[0].form_entry.first_name} {models[0].form_entry.last_name}'
+
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertDatetime(json[0]['created_at'])
+        del json[0]['created_at']
+
+        expected = [{
+            'country': models[0].form_entry.country,
+            'course': models[0].form_entry.course,
+            'email': models[0].form_entry.email,
+            'first_name': models[0].form_entry.first_name,
+            'gclid': models[0].form_entry.gclid,
+            'id': models[0].form_entry.id,
+            'language': models[0].form_entry.language,
+            'last_name': models[0].form_entry.last_name,
+            'lead_type': models[0].form_entry.lead_type,
+            'location': models[0].form_entry.location,
+            'storage_status': models[0].form_entry.storage_status,
+            'tags': models[0].form_entry.tags,
+            'utm_campaign': models[0].form_entry.utm_campaign,
+            'utm_medium': models[0].form_entry.utm_medium,
+            'utm_source': models[0].form_entry.utm_source,
+            'utm_url': models[0].form_entry.utm_url,
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_lead__with_first_name_in_querystring(self):
+        """Test /academy/lead """
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    academy=True,
+                                    capability='read_lead',
+                                    role='potato')
+
+        form_entry_kwargs_1 = generate_form_entry_kwargs()
+        form_entry_kwargs_2 = generate_form_entry_kwargs()
+
+        form_entry_kwargs_1['first_name'] = 'Michael'
+        form_entry_kwargs_1['last_name'] = 'Jordan'
+
+        models = [
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_1,
+                                 form_entry=True,
+                                 models=base),
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_2,
+                                 form_entry=True,
+                                 models=base)
+        ]
+        base_url = reverse_lazy('marketing:academy_lead')
+        url = f'{base_url}?like={models[0].form_entry.first_name}'
+
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertDatetime(json[0]['created_at'])
+        del json[0]['created_at']
+
+        expected = [{
+            'country': models[0].form_entry.country,
+            'course': models[0].form_entry.course,
+            'email': models[0].form_entry.email,
+            'first_name': models[0].form_entry.first_name,
+            'gclid': models[0].form_entry.gclid,
+            'id': models[0].form_entry.id,
+            'language': models[0].form_entry.language,
+            'last_name': models[0].form_entry.last_name,
+            'lead_type': models[0].form_entry.lead_type,
+            'location': models[0].form_entry.location,
+            'storage_status': models[0].form_entry.storage_status,
+            'tags': models[0].form_entry.tags,
+            'utm_campaign': models[0].form_entry.utm_campaign,
+            'utm_medium': models[0].form_entry.utm_medium,
+            'utm_source': models[0].form_entry.utm_source,
+            'utm_url': models[0].form_entry.utm_url,
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_lead__with_last_name_in_querystring(self):
+        """Test /academy/lead """
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    academy=True,
+                                    capability='read_lead',
+                                    role='potato')
+
+        form_entry_kwargs_1 = generate_form_entry_kwargs()
+        form_entry_kwargs_2 = generate_form_entry_kwargs()
+
+        form_entry_kwargs_1['first_name'] = 'Michael'
+        form_entry_kwargs_1['last_name'] = 'Jordan'
+
+        models = [
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_1,
+                                 form_entry=True,
+                                 models=base),
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_2,
+                                 form_entry=True,
+                                 models=base)
+        ]
+
+        base_url = reverse_lazy('marketing:academy_lead')
+        url = f'{base_url}?like={models[0].form_entry.last_name}'
+
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertDatetime(json[0]['created_at'])
+        del json[0]['created_at']
+
+        expected = [{
+            'country': models[0].form_entry.country,
+            'course': models[0].form_entry.course,
+            'email': models[0].form_entry.email,
+            'first_name': models[0].form_entry.first_name,
+            'gclid': models[0].form_entry.gclid,
+            'id': models[0].form_entry.id,
+            'language': models[0].form_entry.language,
+            'last_name': models[0].form_entry.last_name,
+            'lead_type': models[0].form_entry.lead_type,
+            'location': models[0].form_entry.location,
+            'storage_status': models[0].form_entry.storage_status,
+            'tags': models[0].form_entry.tags,
+            'utm_campaign': models[0].form_entry.utm_campaign,
+            'utm_medium': models[0].form_entry.utm_medium,
+            'utm_source': models[0].form_entry.utm_source,
+            'utm_url': models[0].form_entry.utm_url,
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_form_entry_dict(), [{
+            **self.model_to_dict(model, 'form_entry')
+        } for model in models])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_lead__with_email_in_querystring(self):
+        """Test /academy/lead """
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    academy=True,
+                                    capability='read_lead',
+                                    role='potato')
+
+        form_entry_kwargs_1 = generate_form_entry_kwargs()
+        form_entry_kwargs_2 = generate_form_entry_kwargs()
+
+        form_entry_kwargs_1['email'] = 'michael@jordan.com'
+        models = [
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_1,
+                                 form_entry=True,
+                                 models=base),
+            self.generate_models(form_entry_kwargs=form_entry_kwargs_2,
+                                 form_entry=True,
+                                 models=base)
+        ]
+
+        base_url = reverse_lazy('marketing:academy_lead')
+        url = f'{base_url}?like={models[0].form_entry.email}'
+
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertDatetime(json[0]['created_at'])
+        del json[0]['created_at']
+
+        expected = [{
+            'country': models[0].form_entry.country,
+            'course': models[0].form_entry.course,
+            'email': models[0].form_entry.email,
+            'first_name': models[0].form_entry.first_name,
+            'gclid': models[0].form_entry.gclid,
+            'id': models[0].form_entry.id,
+            'language': models[0].form_entry.language,
+            'last_name': models[0].form_entry.last_name,
+            'lead_type': models[0].form_entry.lead_type,
+            'location': models[0].form_entry.location,
+            'storage_status': models[0].form_entry.storage_status,
+            'tags': models[0].form_entry.tags,
+            'utm_campaign': models[0].form_entry.utm_campaign,
+            'utm_medium': models[0].form_entry.utm_medium,
+            'utm_source': models[0].form_entry.utm_source,
+            'utm_url': models[0].form_entry.utm_url,
+        }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_form_entry_dict(), [{
