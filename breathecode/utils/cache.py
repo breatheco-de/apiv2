@@ -56,7 +56,6 @@ class Cache(DatetimeMixin):
         json_data = cache.get(key)
         return json.loads(json_data) if json_data else None
 
-
     def __fix_fields__(self, data):
         for key in data.keys():
             if isinstance(data[key], datetime):

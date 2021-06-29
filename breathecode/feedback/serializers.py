@@ -9,20 +9,24 @@ from rest_framework.exceptions import ValidationError
 import serpy, re
 from django.utils import timezone
 
+
 class GetAcademySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+
 
 class GetCohortSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
 
+
 class UserSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+
 
 class EventTypeSmallSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -30,6 +34,7 @@ class EventTypeSmallSerializer(serpy.Serializer):
     excerpt = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
+
 
 class AnswerSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -49,6 +54,7 @@ class AnswerSerializer(serpy.Serializer):
     mentor = UserSerializer(required=False)
     event = EventTypeSmallSerializer(required=False)
 
+
 class SurveySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     lang = serpy.Field()
@@ -62,6 +68,7 @@ class SurveySmallSerializer(serpy.Serializer):
 
     def get_public_url(self, obj):
         return "https://nps.breatheco.de/survey/" + str(obj.id)
+
 
 class BigAnswerSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -83,25 +90,29 @@ class BigAnswerSerializer(serpy.Serializer):
     mentor = UserSerializer(required=False)
     event = EventTypeSmallSerializer(required=False)
 
+
 class AnswerPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
-        exclude = ('token',)
+        exclude = ('token', )
 
     def validate(self, data):
         utc_now = timezone.now()
 
         # the user cannot vote to the same entity within 5 minutes
-        answer = Answer.objects.filter(user=self.context['request'].user,id=self.context['answer']).first()
+        answer = Answer.objects.filter(user=self.context['request'].user,
+                                       id=self.context['answer']).first()
         if answer is None:
             raise ValidationError('This survey does not exist for this user')
 
-        if not 'score' in data or int(data['score']) > 10 or int(data['score']) < 1:
+        if not 'score' in data or int(data['score']) > 10 or int(
+                data['score']) < 1:
             raise ValidationError('Score must be between 1 and 10')
-        
-        if answer.status == 'ANSWERED' and data['score'] != answer.score:
-            raise ValidationError(f'You have already answered {answer.score}, you must keep the same score')
 
+        if answer.status == 'ANSWERED' and data['score'] != answer.score:
+            raise ValidationError(
+                f'You have already answered {answer.score}, you must keep the same score'
+            )
 
         return data
 
@@ -132,19 +143,27 @@ class SurveySerializer(serializers.ModelSerializer):
     def validate(self, data):
 
         if not 'cohort' in data:
-            raise ValidationException('No cohort has been specified for this survey')
+            raise ValidationException(
+                'No cohort has been specified for this survey')
 
         if data["cohort"].academy.id != int(self.context['academy_id']):
-            raise ValidationException(f'You don\'t have rights for this cohort academy {self.context["academy_id"]}')
+            raise ValidationException(
+                f'You don\'t have rights for this cohort academy {self.context["academy_id"]}'
+            )
 
         reg = re.compile('^[0-9]{0,3}\s[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}$')
-        if "duration" in data and data["duration"] < timezone.timedelta(hours=1):
-            raise ValidationException(f'Minimum duration for surveys is one hour')
+        if "duration" in data and data["duration"] < timezone.timedelta(
+                hours=1):
+            raise ValidationException(
+                f'Minimum duration for surveys is one hour')
 
-        cohort_teacher = CohortUser.objects.filter(cohort=data["cohort"], role="TEACHER")
+        cohort_teacher = CohortUser.objects.filter(cohort=data["cohort"],
+                                                   role="TEACHER")
         if cohort_teacher.count() == 0:
-            raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
-        
+            raise ValidationException(
+                "This cohort must have a teacher assigned to be able to survey it",
+                400)
+
         return data
 
     def create(self, validated_data):
@@ -160,13 +179,13 @@ class SurveySerializer(serializers.ModelSerializer):
         if "lang" not in validated_data:
             validated_data["lang"] = cohort.language
 
-        
         result = super().create(validated_data)
 
         if send_now:
             send_survey_group(survey=result)
 
         return result
+
 
 class SurveyPUTSerializer(serializers.ModelSerializer):
     send_now = serializers.BooleanField(required=False, write_only=True)
@@ -179,14 +198,18 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
     def validate(self, data):
 
         if self.instance.status != 'PENDING':
-            raise ValidationException("This survey was already send, therefore it cannot be updated")
+            raise ValidationException(
+                "This survey was already send, therefore it cannot be updated")
 
         if 'cohort' in data:
-            raise ValidationException("The cohort cannot be updated in a survey, please create a new survey instead.")
+            raise ValidationException(
+                "The cohort cannot be updated in a survey, please create a new survey instead."
+            )
 
         if self.instance.cohort.academy.id != int(self.context['academy_id']):
-            raise ValidationException('You don\'t have rights for this cohort academy')
-        
+            raise ValidationException(
+                'You don\'t have rights for this cohort academy')
+
         return data
 
     def update(self, instance, validated_data):

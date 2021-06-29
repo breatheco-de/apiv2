@@ -9,22 +9,15 @@ from django.urls.base import reverse_lazy
 from rest_framework import status
 from breathecode.services.datetime_to_iso_format import datetime_to_iso_format
 from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-    MAILGUN_PATH,
-    MAILGUN_INSTANCES,
-    apply_mailgun_requests_post_mock,
-    OLD_BREATHECODE_PATH,
-    OLD_BREATHECODE_INSTANCES,
-    apply_old_breathecode_requests_request_mock
-)
+    GOOGLE_CLOUD_PATH, apply_google_cloud_client_mock,
+    apply_google_cloud_bucket_mock, apply_google_cloud_blob_mock, MAILGUN_PATH,
+    MAILGUN_INSTANCES, apply_mailgun_requests_post_mock, OLD_BREATHECODE_PATH,
+    OLD_BREATHECODE_INSTANCES, apply_old_breathecode_requests_request_mock)
 from ..mixins import MarketingTestCase
+
 
 class AnswerIdTestSuite(MarketingTestCase):
     """Test /answer/:id"""
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -45,13 +38,12 @@ class AnswerIdTestSuite(MarketingTestCase):
     def test_persist_single_lead_with_bad_location(self):
         """Test /answer/:id without auth"""
         try:
-            persist_single_lead({
-                'location': 'they-killed-kenny'
-            })
+            persist_single_lead({'location': 'they-killed-kenny'})
             assert False
         except Exception as e:
             message = str(e)
-            self.assertEqual(message, 'No academy found with slug they-killed-kenny')
+            self.assertEqual(message,
+                             'No academy found with slug they-killed-kenny')
 
         self.assertEqual(self.count_form_entry(), 0)
 
@@ -60,15 +52,15 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_persist_single_lead_with_location(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True, active_campaign_academy=True)
+        model = self.generate_models(academy=True,
+                                     active_campaign_academy=True)
         try:
-            persist_single_lead({
-                'location': model['academy'].slug
-            })
+            persist_single_lead({'location': model['academy'].slug})
             assert False
         except Exception as e:
             message = str(e)
-            self.assertEqual(message, 'You need to specify tags for this entry')
+            self.assertEqual(message,
+                             'You need to specify tags for this entry')
 
         self.assertEqual(self.count_form_entry(), 0)
 
@@ -77,7 +69,8 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_persist_single_lead_with_bad_tags(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True, active_campaign_academy=True)
+        model = self.generate_models(academy=True,
+                                     active_campaign_academy=True)
         try:
             persist_single_lead({
                 'location': model['academy'].slug,
@@ -86,7 +79,10 @@ class AnswerIdTestSuite(MarketingTestCase):
             assert False
         except Exception as e:
             message = str(e)
-            self.assertEqual(message, 'Tag applied to the contact not found or has not tag_type assigned')
+            self.assertEqual(
+                message,
+                'Tag applied to the contact not found or has not tag_type assigned'
+            )
 
         self.assertEqual(self.count_form_entry(), 0)
 
@@ -95,8 +91,10 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_persist_single_lead_with_tag_type(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True, active_campaign_academy=True,
-            tag=True, tag_kwargs={'tag_type': 'STRONG'})
+        model = self.generate_models(academy=True,
+                                     active_campaign_academy=True,
+                                     tag=True,
+                                     tag_kwargs={'tag_type': 'STRONG'})
         try:
             persist_single_lead({
                 'location': model['academy'].slug,
@@ -105,7 +103,10 @@ class AnswerIdTestSuite(MarketingTestCase):
             assert False
         except Exception as e:
             message = str(e)
-            self.assertEqual(message, 'No automation was specified and the the specified tag has no automation either')
+            self.assertEqual(
+                message,
+                'No automation was specified and the the specified tag has no automation either'
+            )
 
         self.assertEqual(self.count_form_entry(), 0)
 
@@ -114,8 +115,11 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_persist_single_lead_with_automations(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True, active_campaign_academy=True,
-            tag=True, tag_kwargs={'tag_type': 'STRONG'}, automation=True)
+        model = self.generate_models(academy=True,
+                                     active_campaign_academy=True,
+                                     tag=True,
+                                     tag_kwargs={'tag_type': 'STRONG'},
+                                     automation=True)
         try:
             persist_single_lead({
                 'location': model['academy'].slug,
@@ -125,7 +129,10 @@ class AnswerIdTestSuite(MarketingTestCase):
             assert False
         except Exception as e:
             message = str(e)
-            self.assertEqual(message, 'The specified automation they-killed-kenny was not found for this AC Academy')
+            self.assertEqual(
+                message,
+                'The specified automation they-killed-kenny was not found for this AC Academy'
+            )
 
         self.assertEqual(self.count_form_entry(), 0)
 
@@ -134,8 +141,12 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_persist_single_lead_with_automations_slug(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True, active_campaign_academy=True,
-            tag=True, tag_kwargs={'tag_type': 'STRONG'}, automation=True,
+        model = self.generate_models(
+            academy=True,
+            active_campaign_academy=True,
+            tag=True,
+            tag_kwargs={'tag_type': 'STRONG'},
+            automation=True,
             automation_kwargs={'slug': 'they-killed-kenny'})
 
         try:
@@ -156,8 +167,12 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_persist_single_lead_with_email(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True, active_campaign_academy=True,
-            tag=True, tag_kwargs={'tag_type': 'STRONG'}, automation=True,
+        model = self.generate_models(
+            academy=True,
+            active_campaign_academy=True,
+            tag=True,
+            tag_kwargs={'tag_type': 'STRONG'},
+            automation=True,
             automation_kwargs={'slug': 'they-killed-kenny'})
 
         try:
@@ -179,8 +194,12 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_persist_single_lead_with_first_name(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True, active_campaign_academy=True,
-            tag=True, tag_kwargs={'tag_type': 'STRONG'}, automation=True,
+        model = self.generate_models(
+            academy=True,
+            active_campaign_academy=True,
+            tag=True,
+            tag_kwargs={'tag_type': 'STRONG'},
+            automation=True,
             automation_kwargs={'slug': 'they-killed-kenny'})
 
         try:
@@ -203,8 +222,12 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_persist_single_lead_with_last_name(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True, active_campaign_academy=True,
-            tag=True, tag_kwargs={'tag_type': 'STRONG'}, automation=True,
+        model = self.generate_models(
+            academy=True,
+            active_campaign_academy=True,
+            tag=True,
+            tag_kwargs={'tag_type': 'STRONG'},
+            automation=True,
             automation_kwargs={'slug': 'they-killed-kenny'})
 
         try:
@@ -228,8 +251,12 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_persist_single_lead_with_phone(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True, active_campaign_academy=True,
-            tag=True, tag_kwargs={'tag_type': 'STRONG'}, automation=True,
+        model = self.generate_models(
+            academy=True,
+            active_campaign_academy=True,
+            tag=True,
+            tag_kwargs={'tag_type': 'STRONG'},
+            automation=True,
             automation_kwargs={'slug': 'they-killed-kenny'})
 
         try:
@@ -254,8 +281,12 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_persist_single_lead_with_id(self):
         """Test /answer/:id without auth"""
-        model = self.generate_models(academy=True, active_campaign_academy=True,
-            tag=True, tag_kwargs={'tag_type': 'STRONG'}, automation=True,
+        model = self.generate_models(
+            academy=True,
+            active_campaign_academy=True,
+            tag=True,
+            tag_kwargs={'tag_type': 'STRONG'},
+            automation=True,
             automation_kwargs={'slug': 'they-killed-kenny'})
 
         try:

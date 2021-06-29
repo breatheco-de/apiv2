@@ -20,10 +20,12 @@ from .media_queries_mixin import MediaQueriesMixin
 
 
 class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin,
-        AssessmentQueriesMixin, AssignmentsQueriesMixin,
-        AuthenticateQueriesMixin, CertificateQueriesMixin, EventsQueriesMixin,
-        FeedbackQueriesMixin, FreelanceQueriesMixin, MarketingQueriesMixin,
-        NotifyQueriesMixin, MonitoringQueriesMixin, MediaQueriesMixin):
+                           AssessmentQueriesMixin, AssignmentsQueriesMixin,
+                           AuthenticateQueriesMixin, CertificateQueriesMixin,
+                           EventsQueriesMixin, FeedbackQueriesMixin,
+                           FreelanceQueriesMixin, MarketingQueriesMixin,
+                           NotifyQueriesMixin, MonitoringQueriesMixin,
+                           MediaQueriesMixin):
     __project__ = 'breathecode'
     __generate_queries_was_loaded__ = False
 
@@ -32,6 +34,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin,
             kwargs = {key: pk}
 
             return Model.objects.filter(**kwargs).first()
+
         return get_model
 
     def __get_model_dict__(self, Model, key='id'):
@@ -39,32 +42,42 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin,
             kwargs = {key: pk}
 
             data = Model.objects.filter(**kwargs).first()
-            return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
+            return self.remove_dinamics_fields(
+                data.__dict__.copy()) if data else None
+
         return get_model_dict
 
     def __all_model__(self, Model):
         def all_model():
             return Model.objects.filter()
+
         return all_model
 
     def __all_model_dict__(self, Model):
         def all_model_dict():
-            return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-                Model.objects.filter()]
+            return [
+                self.remove_dinamics_fields(data.__dict__.copy())
+                for data in Model.objects.filter()
+            ]
+
         return all_model_dict
 
     def __count_model__(self, Model):
         def count_model():
             return Model.objects.count()
+
         return count_model
 
     def __set_queries__(self, Model):
-        snake_case_name = re.sub(r'(?<!^)(?=[A-Z])', '_', Model.__name__).lower()
+        snake_case_name = re.sub(r'(?<!^)(?=[A-Z])', '_',
+                                 Model.__name__).lower()
 
         setattr(self, f'get_{snake_case_name}', self.__get_model__(Model))
-        setattr(self, f'get_{snake_case_name}_dict', self.__get_model_dict__(Model))
+        setattr(self, f'get_{snake_case_name}_dict',
+                self.__get_model_dict__(Model))
         setattr(self, f'all_{snake_case_name}', self.__all_model__(Model))
-        setattr(self, f'all_{snake_case_name}_dict', self.__all_model_dict__(Model))
+        setattr(self, f'all_{snake_case_name}_dict',
+                self.__all_model_dict__(Model))
         setattr(self, f'count_{snake_case_name}', self.__count_model__(Model))
 
     def generate_queries(self):

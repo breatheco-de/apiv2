@@ -33,6 +33,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='endpoint',
             name='test_pattern',
-            field=models.CharField(blank=True, default=None, help_text='If left blank sys will only ping', max_length=100, null=True),
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text='If left blank sys will only ping',
+                max_length=100,
+                null=True),
         ),
     ]

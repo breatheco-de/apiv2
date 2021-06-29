@@ -10,8 +10,8 @@ from django.utils import timezone
 
 
 def calculate_weeks(date_created, current_date):
-    days = abs(date_created-current_date).days
-    weeks = days//7
+    days = abs(date_created - current_date).days
+    weeks = days // 7
     return weeks
 
 
@@ -41,11 +41,12 @@ for cohort in cohorts:
             cohorts_with_pending_surveys.append(cohort.name)
 
 if len(cohorts_with_pending_surveys) > 0:
-    cohort_names = ("\n").join(["- "+cohort_name for cohort_name in cohorts_with_pending_surveys])
+    cohort_names = ("\n").join(
+        ["- " + cohort_name for cohort_name in cohorts_with_pending_surveys])
 
     raise ScriptNotification(
-        f"There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent on theese cohorts: \n {cohort_names}", status='MINOR',
-        slug='cohort-have-pending-surveys'
-    )
+        f"There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent on theese cohorts: \n {cohort_names}",
+        status='MINOR',
+        slug='cohort-have-pending-surveys')
 
 print("No reminders")

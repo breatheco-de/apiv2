@@ -2,16 +2,13 @@ import logging
 import datetime
 import hashlib
 import requests
-import json,re,os,subprocess,sys
+import json, re, os, subprocess, sys
 from django.utils import timezone
 from breathecode.utils import ScriptNotification
 from .models import Endpoint
 from breathecode.services.slack.actions.monitoring import render_snooze_text_endpoint, render_snooze_script
 
-
 logger = logging.getLogger(__name__)
-
-
 
 USER_AGENT = "BreathecodeMonitoring/1.0"
 SCRIPT_HEADER = """
@@ -28,9 +25,7 @@ SCRIPT_HEADER = """
 def get_website_text(endp):
     """Make a request to get the content of the given URL."""
 
-    headers = {
-        'User-Agent': USER_AGENT
-    }
+    headers = {'User-Agent': USER_AGENT}
 
     url = endp.url
     status_code = 404
@@ -47,11 +42,13 @@ def get_website_text(endp):
         # if status is one error, we should need see the status text
         payload = r.text
 
-        if (endp.test_pattern and not (status_code >= 200 and status_code <= 299)
+        if (endp.test_pattern
+                and not (status_code >= 200 and status_code <= 299)
                 and int(length) > 3000):
             status_code = 400
-            status_text = ("Timeout: The payload of this request is too long "
-                           "(more than 3 MB), remove the test_pattern to avoid timeout")
+            status_text = (
+                "Timeout: The payload of this request is too long "
+                "(more than 3 MB), remove the test_pattern to avoid timeout")
 
     except requests.Timeout:
         status_code = 500
@@ -106,15 +103,13 @@ def get_website_text(endp):
 def run_app_diagnostic(app, report=False):
 
     failed_endpoints = []  # data to be send to slack
-    results = {
-        "severity_level": 0,
-        "details": ""
-    }
+    results = {"severity_level": 0, "details": ""}
     logger.debug(f"Testing application {app.title}")
     now = timezone.now()
     _endpoints = app.endpoint_set.all()
     for endpoint in _endpoints:
-        if endpoint.last_check is not None and endpoint.last_check > now - timezone.timedelta(minutes=endpoint.frequency_in_minutes):
+        if endpoint.last_check is not None and endpoint.last_check > now - timezone.timedelta(
+                minutes=endpoint.frequency_in_minutes):
             logger.debug(
                 f"Ignoring {endpoint.url} because frequency hast not been met")
             endpoint.status_text = "Ignored because its paused"
@@ -151,7 +146,6 @@ def run_app_diagnostic(app, report=False):
     else:
         results["status"] = 'MINOR'
 
-
     results["slack_payload"] = render_snooze_text_endpoint(
         failed_endpoints)  # converting to json to send to slack
 
@@ -167,17 +161,13 @@ def run_app_diagnostic(app, report=False):
 
 def run_endpoint_diagnostic(endpoint_id):
     endpoint = Endpoint.objects.get(id=endpoint_id)
-    results = {
-        "severity_level": 0,
-        "details": "",
-        "log": ""
-    }
+    results = {"severity_level": 0, "details": "", "log": ""}
 
     logger.debug(f"Testing endpoint {endpoint.url}")
     now = timezone.now()
 
-    if (endpoint.last_check and endpoint.last_check > now -
-            timezone.timedelta(minutes=endpoint.frequency_in_minutes)):
+    if (endpoint.last_check and endpoint.last_check >
+            now - timezone.timedelta(minutes=endpoint.frequency_in_minutes)):
         logger.debug(
             f"Ignoring {endpoint.url} because frequency hast not been met")
         endpoint.status_text = "Ignored because its paused"
@@ -254,7 +244,7 @@ def run_script(script):
             f"Script not found or its body is empty: {script.script_slug}")
 
     if content:
-        local = {"result": { "status": "OPERATIONAL"}}
+        local = {"result": {"status": "OPERATIONAL"}}
         with stdoutIO() as s:
             try:
                 exec(content, {"academy": script.application.academy}, local)
@@ -266,7 +256,8 @@ def run_script(script):
                 script.status_code = 1
                 if e.status is not None:
                     script.status = e.status
-                    results['severity_level'] = 5 if e.status != 'CRITICAL' else 100
+                    results[
+                        'severity_level'] = 5 if e.status != 'CRITICAL' else 100
                 else:
                     script.status = 'MINOR'
                     results['severity_level'] = 5

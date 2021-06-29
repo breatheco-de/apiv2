@@ -5,6 +5,7 @@ import os
 
 IS_TEST_ENV = os.getenv('ENV') == 'test'
 
+
 class CommonViewMixin(HeaderLimitOffsetPagination, GenerateLookupsMixin):
     __request__ = None
     __items__ = None
@@ -23,7 +24,6 @@ class CommonViewMixin(HeaderLimitOffsetPagination, GenerateLookupsMixin):
             for key in self.__request__.GET.keys():
                 self.__request__.GET.get(key)
 
-
     def __apply_sort__(self):
         if self.__method__ == 'GET' and isinstance(self.__items__, list):
             self.__items__.sort(self.__sort_by__)
@@ -37,17 +37,21 @@ class CommonViewMixin(HeaderLimitOffsetPagination, GenerateLookupsMixin):
         serializer = self.__serializer__(page, many=True)
 
         if self.is_paginate(self.__request__):
-            return self.get_paginated_response(
-                serializer.data,
-                cache=self.cache,
-                cache_kwargs=cache_kwargs
-            )
+            return self.get_paginated_response(serializer.data,
+                                               cache=self.cache,
+                                               cache_kwargs=cache_kwargs)
         else:
             self.cache.set(serializer.data, **cache_kwargs)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-    def apply_commons(self, request, items, serializer, serializer_kwargs={}, sort='-created_at', ban_lookups=[], lookups={}):
+    def apply_commons(self,
+                      request,
+                      items,
+                      serializer,
+                      serializer_kwargs={},
+                      sort='-created_at',
+                      ban_lookups=[],
+                      lookups={}):
         """
         apply_commons is used to handle the common feature that we supported
         in the views like paginations, filter lookups or sort_by

@@ -5,6 +5,7 @@ import logging, re, os, json, inspect, urllib
 
 logger = logging.getLogger(__name__)
 
+
 class ActiveCampaign:
     headers = {}
 
@@ -17,9 +18,7 @@ class ActiveCampaign:
 
         self.host = url
         self.token = token
-        self.headers = {
-            "Authorization": f"Bearer {token}"
-        }
+        self.headers = {"Authorization": f"Bearer {token}"}
 
     def execute_action(self, webhook_id: int):
         # wonderful way to fix one poor mocking system
@@ -79,7 +78,6 @@ class ActiveCampaign:
 
     @staticmethod
     def add_webhook_to_log(context: dict, academy_slug: str):
-
         """Add one incoming webhook request to log"""
 
         # prevent circular dependency import between thousand modules previuosly loaded and cached
@@ -88,10 +86,13 @@ class ActiveCampaign:
         if not context or not len(context):
             return None
 
-        ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=academy_slug).first()
+        ac_academy = ActiveCampaignAcademy.objects.filter(
+            academy__slug=academy_slug).first()
         if ac_academy is None:
-            logger.debug(f"ActiveCampaign academy {str(academy_slug)} not found")
-            raise APIException(f"ActiveCampaign academy {str(academy_slug)} not found")
+            logger.debug(
+                f"ActiveCampaign academy {str(academy_slug)} not found")
+            raise APIException(
+                f"ActiveCampaign academy {str(academy_slug)} not found")
 
         webhook = ActiveCampaignWebhook()
         webhook.webhook_type = context['type']
@@ -103,6 +104,7 @@ class ActiveCampaign:
         webhook.save()
 
         return webhook
+
 
 class Contacts(object):
     def __init__(self, client):
@@ -206,7 +208,8 @@ class Contacts(object):
         return self.client._post("contact_edit", data=data)
 
     def view_contact_email(self, email):
-        return self.client._get("contact_view_email", aditional_data=[('email',email)])
+        return self.client._get("contact_view_email",
+                                aditional_data=[('email', email)])
 
     def view_contact(self, id):
         return self.client._get("contact_view", aditional_data=[('id', id)])
@@ -216,13 +219,15 @@ class Contacts(object):
 
 
 class AC_Old_Client(object):
-
     def __init__(self, url, apikey):
 
         if url is None:
-            raise Exception("Invalid URL for active campaign API, have you setup your env variables?")
+            raise Exception(
+                "Invalid URL for active campaign API, have you setup your env variables?"
+            )
 
-        self._base_url = f"https://{url}" if not url.startswith("http") else url
+        self._base_url = f"https://{url}" if not url.startswith(
+            "http") else url
         self._apikey = apikey
         self.contacts = Contacts(self)
         # self.account = Account(self)
@@ -236,21 +241,27 @@ class AC_Old_Client(object):
         return self._request('GET', action, aditional_data=aditional_data)
 
     def _post(self, action, data=None, aditional_data=None):
-        return self._request('POST', action, data=data, aditional_data=aditional_data)
+        return self._request('POST',
+                             action,
+                             data=data,
+                             aditional_data=aditional_data)
 
     def _delete(self, action):
         return self._request('DELETE', action)
 
     def _request(self, method, action, data=None, aditional_data=None):
-        params =[
-            ('api_action',action),
+        params = [
+            ('api_action', action),
             ('api_key', self._apikey),
             ('api_output', 'json'),
         ]
         if aditional_data is not None:
             for aditional in aditional_data:
                 params.append(aditional)
-        response = requests.request(method, self._base_url+"/admin/api.php", params=params, data=data)
+        response = requests.request(method,
+                                    self._base_url + "/admin/api.php",
+                                    params=params,
+                                    data=data)
         if response.status_code >= 200 and response.status_code < 400:
             data = response.json()
             return self._parse(data)

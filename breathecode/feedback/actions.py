@@ -10,47 +10,59 @@ from .tasks import send_cohort_survey, build_question
 
 logger = logging.getLogger(__name__)
 
-def send_survey_group(survey=None,cohort=None):
+
+def send_survey_group(survey=None, cohort=None):
     if survey is None and cohort is None:
         raise ValidationException('Missing survey or cohort')
 
     if survey is None:
-        survey = Survey(cohort = cohort, lang=cohort.language)
+        survey = Survey(cohort=cohort, lang=cohort.language)
     elif cohort is not None:
         if survey.cohort.id != cohort.id:
-            raise ValidationException("The survey does not match the cohort id")
+            raise ValidationException(
+                "The survey does not match the cohort id")
 
     if cohort is None:
         cohort = survey.cohort
 
-    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort, role="TEACHER")
+    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort,
+                                               role="TEACHER")
     if cohort_teacher.count() == 0:
-        raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
+        raise ValidationException(
+            "This cohort must have a teacher assigned to be able to survey it",
+            400)
 
     ucs = CohortUser.objects.filter(cohort=cohort, role='STUDENT').filter()
-    result = { "success": [], "error": [] }
+    result = {"success": [], "error": []}
     for uc in ucs:
         if uc.educational_status in ['ACTIVE', 'GRADUATED']:
             send_cohort_survey.delay(uc.user.id, survey.id)
             logger.debug(f"Survey scheduled to send for {uc.user.email}")
-            result["success"].append(f"Survey scheduled to send for {uc.user.email}")
+            result["success"].append(
+                f"Survey scheduled to send for {uc.user.email}")
         else:
-            logger.debug(f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
-            result["error"].append(f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
+            logger.debug(
+                f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student"
+            )
+            result["error"].append(
+                f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student"
+            )
 
     return result
 
+
 def send_question(user, cohort=None):
-    answer = Answer(user = user)
-    if cohort is not None: 
+    answer = Answer(user=user)
+    if cohort is not None:
         answer.cohort = cohort
     else:
-        cohorts = CohortUser.objects.filter(user__id=user.id).order_by("-cohort__kickoff_date")
+        cohorts = CohortUser.objects.filter(
+            user__id=user.id).order_by("-cohort__kickoff_date")
         _count = cohorts.count()
         if _count == 1:
             _cohort = cohorts.first().cohort
             answer.cohort = _cohort
-    
+
     if answer.cohort is None:
         message = 'Impossible to determine the student cohort, maybe it has more than one, or cero.'
         logger.info(message)
@@ -78,13 +90,15 @@ def send_question(user, cohort=None):
         logger.info(message)
         raise Exception(message)
 
-    question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user,
-        status='SENT').count()
+    question_was_sent_previously = Answer.objects.filter(
+        cohort=answer.cohort, user=user, status='SENT').count()
 
     question = build_question(answer)
 
     if question_was_sent_previously:
-        answer = Answer.objects.filter(cohort=answer.cohort, user=user, status='SENT').first()
+        answer = Answer.objects.filter(cohort=answer.cohort,
+                                       user=user,
+                                       status='SENT').first()
         Token.objects.filter(id=answer.token_id).delete()
 
     else:
@@ -96,7 +110,8 @@ def send_question(user, cohort=None):
 
     token = create_token(user, hours_length=48)
 
-    token_id = Token.objects.filter(key=token).values_list('id', flat=True).first()
+    token_id = Token.objects.filter(key=token).values_list('id',
+                                                           flat=True).first()
     answer.token_id = token_id
     answer.save()
 
@@ -113,9 +128,13 @@ def send_question(user, cohort=None):
     if user.email:
         send_email_message("nps", user.email, data)
 
-    if hasattr(user, 'slackuser') and hasattr(answer.cohort.academy, 'slackteam'):
-        send_slack("nps", user.slackuser, answer.cohort.academy.slackteam, data=data)
-    
+    if hasattr(user, 'slackuser') and hasattr(answer.cohort.academy,
+                                              'slackteam'):
+        send_slack("nps",
+                   user.slackuser,
+                   answer.cohort.academy.slackteam,
+                   data=data)
+
     # keep track of sent survays until they get answered
     if not question_was_sent_previously:
         logger.info(f"Survey was sent for user: {str(user.id)}")
@@ -127,13 +146,13 @@ def send_question(user, cohort=None):
         logger.info(f"Survey was resent for user: {str(user.id)}")
         return True
 
+
 def answer_survey(user, data):
-    answer = Answer.objects.create(**{ **data, "user": user })
+    answer = Answer.objects.create(**{**data, "user": user})
 
     # log = SurveyLog.objects.filter(
-    #     user__id=user.id, 
-    #     cohort__id=answer.cohort.id, 
+    #     user__id=user.id,
+    #     cohort__id=answer.cohort.id,
     #     academy__id=answer.academy.id,
     #     mentor__id=answer.academy.id
     # )
-

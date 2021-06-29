@@ -15,13 +15,19 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='application',
             name='academy',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='admissions.academy'),
+            field=models.ForeignKey(
+                default=1,
+                on_delete=django.db.models.deletion.CASCADE,
+                to='admissions.academy'),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name='endpoint',
             name='application',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to='monitoring.application'),
+            field=models.ForeignKey(
+                default=1,
+                on_delete=django.db.models.deletion.CASCADE,
+                to='monitoring.application'),
             preserve_default=False,
         ),
     ]

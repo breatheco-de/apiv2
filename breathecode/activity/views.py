@@ -47,9 +47,8 @@ class ActivityTypeView(APIView):
     def get(self, request, activity_slug=None, academy_id=None):
         if activity_slug:
             if activity_slug not in ACTIVITIES:
-                raise ValidationException(
-                    'Activity type not found',
-                    slug='activity-not-found')
+                raise ValidationException('Activity type not found',
+                                          slug='activity-not-found')
 
             res = self.get_activity_object(activity_slug)
             return Response(res)
@@ -70,29 +69,25 @@ class ActivityView(APIView):
             kwargs['slug'] = slug
 
         if slug and slug not in ACTIVITIES:
-            raise ValidationException(
-                'Activity type not found',
-                slug='activity-not-found')
+            raise ValidationException('Activity type not found',
+                                      slug='activity-not-found')
 
         cohort = request.GET.get('cohort')
         if cohort:
             kwargs['cohort'] = cohort
 
         if (cohort and not Cohort.objects.filter(
-                slug=cohort,
-                academy__id=academy_id).exists()):
-            raise ValidationException(
-                'Cohort not found',
-                slug='cohort-not-found')
+                slug=cohort, academy__id=academy_id).exists()):
+            raise ValidationException('Cohort not found',
+                                      slug='cohort-not-found')
 
         user_id = request.GET.get('user_id')
         if user_id:
             try:
                 kwargs['user_id'] = int(user_id)
             except ValueError:
-                raise ValidationException(
-                    'user_id is not a interger',
-                    slug='bad-user-id')
+                raise ValidationException('user_id is not a interger',
+                                          slug='bad-user-id')
 
         email = request.GET.get('email')
         if email:
@@ -100,9 +95,8 @@ class ActivityView(APIView):
 
         user = User.objects.filter(Q(id=user_id) | Q(email=email))
         if (user_id or email) and not user:
-            raise ValidationException(
-                'User not exists',
-                slug='user-not-exists')
+            raise ValidationException('User not exists',
+                                      slug='user-not-exists')
 
         datastore = Datastore()
         academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
@@ -127,20 +121,17 @@ class ActivityView(APIView):
         academy_id = academy_id if slug not in ACTIVITY_PUBLIC_SLUGS else 0
 
         if slug not in ACTIVITIES:
-            raise ValidationException(
-                'Activity type not found',
-                slug='activity-not-found')
+            raise ValidationException('Activity type not found',
+                                      slug='activity-not-found')
 
         validate_if_activity_need_field_cohort(data)
         validate_if_activity_need_field_data(data)
         validate_activity_have_correct_data_field(data)
 
         if 'cohort' in data and not Cohort.objects.filter(
-                slug=data['cohort'],
-                academy__id=academy_id).exists():
-            raise ValidationException(
-                'Cohort not exists',
-                slug='cohort-not-exists')
+                slug=data['cohort'], academy__id=academy_id).exists():
+            raise ValidationException('Cohort not exists',
+                                      slug='cohort-not-exists')
 
         fields = {
             **data,

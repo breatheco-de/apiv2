@@ -13,13 +13,12 @@ class Migration(migrations.Migration):
     operations = [
         migrations.CreateModel(
             name='CohortUserProxy',
-            fields=[
-            ],
+            fields=[],
             options={
                 'proxy': True,
                 'indexes': [],
                 'constraints': [],
             },
-            bases=('admissions.cohortuser',),
+            bases=('admissions.cohortuser', ),
         ),
     ]

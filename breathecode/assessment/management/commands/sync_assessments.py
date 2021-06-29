@@ -4,8 +4,9 @@ from django.core.management.base import BaseCommand, CommandError
 from ...models import Assessment, Question, Option
 
 HOST_ASSETS = "https://assets.breatheco.de/apis"
-API_URL = os.getenv("API_URL","")
-DATETIME_FORMAT="%Y-%m-%d"
+API_URL = os.getenv("API_URL", "")
+DATETIME_FORMAT = "%Y-%m-%d"
+
 
 class Command(BaseCommand):
     help = 'Sync academies from old breathecode'
@@ -17,18 +18,16 @@ class Command(BaseCommand):
             action='store_true',
             help='Delete and add again',
         )
-        parser.add_argument(
-              '--limit',
-               action='store',
-               dest='limit',
-               type=int,
-               default=0,
-               help='How many to import'
-        )
+        parser.add_argument('--limit',
+                            action='store',
+                            dest='limit',
+                            type=int,
+                            default=0,
+                            help='How many to import')
 
     def handle(self, *args, **options):
         try:
-            func = getattr(self,options['entity'],'entity_not_found') 
+            func = getattr(self, options['entity'], 'entity_not_found')
         except TypeError:
             print(f'Sync method for {options["entity"]} no Found!')
         func(options)
@@ -40,19 +39,23 @@ class Command(BaseCommand):
 
         for quiz in quizzes:
             if "slug" not in quiz['info']:
-                self.stdout.write(self.style.ERROR(f"Ignoring quiz because it does not have a slug"))
+                self.stdout.write(
+                    self.style.ERROR(
+                        f"Ignoring quiz because it does not have a slug"))
                 continue
 
             name = 'No name yet'
             if "name" not in quiz['info']:
-                self.stdout.write(self.style.ERROR(f"Quiz f{quiz['info']['slug']} needs a name"))
+                self.stdout.write(
+                    self.style.ERROR(
+                        f"Quiz f{quiz['info']['slug']} needs a name"))
             else:
                 name = quiz['info']["name"]
 
             a = Assessment.objects.filter(slug=quiz['info']['slug']).first()
             if a is not None:
                 continue
-            
+
             a = Assessment(
                 slug=quiz['info']['slug'],
                 lang=quiz['info']['lang'],
@@ -72,9 +75,11 @@ class Command(BaseCommand):
                 for option in question["a"]:
                     o = Option(
                         title=option["option"],
-                        score= int(option['correct']),
+                        score=int(option['correct']),
                         question=q,
                     )
                     o.save()
 
-            self.stdout.write(self.style.SUCCESS(f"Created assesment {quiz['info']['slug']}"))
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"Created assesment {quiz['info']['slug']}"))
