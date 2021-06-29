@@ -76,6 +76,5 @@ urlpatterns = [
 
 if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or os.environ.get('ENV') == 'test':
     urlpatterns.append(
-        path(
-            'v1/cypress/',
-            include('breathecode.cypress.urls', namespace='cypress')))
+        path('v1/cypress/',
+             include('breathecode.cypress.urls', namespace='cypress')))

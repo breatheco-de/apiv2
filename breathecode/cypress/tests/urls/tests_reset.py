@@ -15,7 +15,6 @@ def os_system_mock():
 
 
 class AcademyEventTestSuite(CypressTestCase):
-
     def test_reset__bad_environment__not_exits(self):
         if 'ALLOW_UNSAFE_CYPRESS_APP' in os.environ:
             del os.environ['ALLOW_UNSAFE_CYPRESS_APP']
@@ -53,16 +52,12 @@ class AcademyEventTestSuite(CypressTestCase):
         self.assertEqual(self.all_academy_dict(), [])
         self.assertEqual(self.all_form_entry_dict(), [])
         self.assertEqual(mock.call_args_list, [
-            call(
-                'python manage.py loaddata breathecode/admissions/fixtures/'
-                'dev_data.json'),
-            call(
-                'python manage.py loaddata breathecode/authenticate/fixtures/'
-                'dev_data.json'),
-            call(
-                'python manage.py loaddata breathecode/authenticate/fixtures/'
-                'dev_users.json'),
-            call(
-                'python manage.py loaddata breathecode/marketing/fixtures/'
-                'dev_data.json'),
+            call('python manage.py loaddata breathecode/admissions/fixtures/'
+                 'dev_data.json'),
+            call('python manage.py loaddata breathecode/authenticate/fixtures/'
+                 'dev_data.json'),
+            call('python manage.py loaddata breathecode/authenticate/fixtures/'
+                 'dev_users.json'),
+            call('python manage.py loaddata breathecode/marketing/fixtures/'
+                 'dev_data.json'),
         ])
