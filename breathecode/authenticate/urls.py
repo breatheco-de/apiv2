@@ -69,6 +69,7 @@ urlpatterns = [
          name="member_password_reset"),
     path('password/<str:token>', pick_password, name="password_token"),
     path('github/', get_github_token, name="github"),
+    path('github/me', get_github_token, name="github_me"),
     path('github/callback/', save_github_token, name="github_callback"),
     path('slack/', get_slack_token, name="slack"),
     path('slack/callback/', save_slack_token, name="slack_callback"),

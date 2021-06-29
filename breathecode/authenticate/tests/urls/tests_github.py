@@ -17,12 +17,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         data = response.data
-        details = data['details']
-        status_code = data['status_code']
 
-        self.assertEqual(2, len(data))
-        self.assertEqual(details, 'No callback URL specified')
-        self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        expected = {'detail': 'no-callback-url', 'status_code': 400}
+
+        self.assertEqual(data, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_github(self):
