@@ -18,10 +18,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         data = response.data
 
-        expected = {
-            'detail' : 'no-callback-url',
-            'status_code' : 400
-        }
+        expected = {'detail': 'no-callback-url', 'status_code': 400}
 
         self.assertEqual(2, len(data))
         self.assertEqual(data, expected)

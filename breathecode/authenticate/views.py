@@ -547,25 +547,30 @@ def get_github_token(request, user_id=None):
 
     url = request.query_params.get('url', None)
     if url == None:
-        raise ValidationException("No callback URL specified", slug="no-callback-url")
+        raise ValidationException("No callback URL specified",
+                                  slug="no-callback-url")
 
     url_name = resolve(request.path).url_name
 
     if url_name == 'github_me':
         try:
             if isinstance(request.user, AnonymousUser):
-                raise ValidationException("There is not user", code=403, slug="not-user")
+                raise ValidationException("There is not user",
+                                          code=403,
+                                          slug="not-user")
 
         except User.DoesNotExist:
-            raise ValidationException("You don't have a user", code=403, slug="you-not-user")
+            raise ValidationException("You don't have a user",
+                                      code=403,
+                                      slug="you-not-user")
 
         user, created = Token.objects.get_or_create(user=request.user,
-                                                        token_type='login')
+                                                    token_type='login')
         url = url + f"&user={user.key}"
 
     params = {
         "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
-        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+f"?url={url}",
+        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "") + f"?url={url}",
         "scope": 'user repo read:org',
     }
 
@@ -598,7 +603,8 @@ def save_github_token(request):
 
     url = request.query_params.get('url', None)
     if url == None:
-        raise ValidationException("No callback URL specified", slug="no-callback-url")
+        raise ValidationException("No callback URL specified",
+                                  slug="no-callback-url")
     code = request.query_params.get('code', None)
     if code == None:
         raise ValidationException("No github code specified", slug="no-code")
@@ -649,16 +655,19 @@ def save_github_token(request):
 
             if token and not Token.objects.filter(key=token).exists():
                 logger.debug(f'Token not found')
-                raise ValidationException('Token was not found, please input different token',
-                    code=404, slug='token-not-found')
+                raise ValidationException(
+                    'Token was not found, please input different token',
+                    code=404,
+                    slug='token-not-found')
 
             if token:
                 user_token = Token.objects.filter(key=token).first()
                 user = User.objects.filter(auth_token=user_token.id).first()
 
             else:
-                user = User.objects.filter(Q(credentialsgithub__github_id=github_user['id']) | Q(
-                email__iexact=github_user['email'])).first()
+                user = User.objects.filter(
+                    Q(credentialsgithub__github_id=github_user['id'])
+                    | Q(email__iexact=github_user['email'])).first()
 
             if user is None:
                 user = User(username=github_user['email'],
@@ -707,13 +716,12 @@ def save_github_token(request):
                         status='ACTIVE')
                     profile_academy.save()
 
-
             if not token:
                 token, created = Token.objects.get_or_create(
                     user=user, token_type='login')
                 token = token.key
 
-            return HttpResponseRedirect(redirect_to=url+'?token='+token)
+            return HttpResponseRedirect(redirect_to=url + '?token=' + token)
 
         else:
             raise APIException("Error from github")

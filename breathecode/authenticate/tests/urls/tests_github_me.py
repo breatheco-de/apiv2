@@ -19,10 +19,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         data = response.data
 
-        expected = {
-            'detail' : 'no-callback-url',
-            'status_code' : 400
-        }
+        expected = {'detail': 'no-callback-url', 'status_code': 400}
 
         self.assertEqual(2, len(data))
         self.assertEqual(data, expected)
@@ -35,10 +32,7 @@ class AuthenticateTestSuite(AuthTestCase):
         params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         json = response.json()
-        expected = {
-            'detail': "not-user",
-            'status_code': 403
-        }
+        expected = {'detail': "not-user", 'status_code': 403}
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -53,7 +47,8 @@ class AuthenticateTestSuite(AuthTestCase):
         token = self.get_token(1)
         params = {
             "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
-            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+f"?url={original_url_callback}&user={token}",
+            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "") +
+            f"?url={original_url_callback}&user={token}",
             "scope": 'user repo read:org',
         }
 
