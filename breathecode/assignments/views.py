@@ -34,7 +34,6 @@ class TaskTeacherView(APIView):
                 Q(cohort__academy__id__in=profile_ids)
                 | Q(cohort__isnull=True))
 
-
         academy = request.GET.get('academy', None)
         if academy is not None:
             items = items.filter(
@@ -57,9 +56,11 @@ class TaskTeacherView(APIView):
         if stu_cohort is not None:
             ids = stu_cohort.split(",")
             if ids[0].isnumeric():
-                items = items.filter(user__cohortuser__cohort__id__in=ids, user__cohortuser__role="STUDENT")
+                items = items.filter(user__cohortuser__cohort__id__in=ids,
+                                     user__cohortuser__role="STUDENT")
             else:
-                items = items.filter(user__cohortuser__cohort__slug__in=ids, user__cohortuser__role="STUDENT")
+                items = items.filter(user__cohortuser__cohort__slug__in=ids,
+                                     user__cohortuser__role="STUDENT")
 
         # tasks from users that belong to these cohort
         teacher = request.GET.get('teacher', None)
