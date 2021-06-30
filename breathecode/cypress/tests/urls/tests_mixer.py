@@ -56,8 +56,6 @@ class AcademyEventTestSuite(CypressTestCase):
         json = response.json()
         expected = [{
             'model': 'TheyKilledKenny',
-            'pks': [],
-            'index': 0,
             'status_text': 'Model not found'
         }]
 
@@ -72,9 +70,8 @@ class AcademyEventTestSuite(CypressTestCase):
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = [{
-            'index': 0,
             'model': 'ProfileAcademy',
-            'pks': [1],
+            'pk': 1,
             'status_text': 'done'
         }]
 
@@ -92,12 +89,7 @@ class AcademyEventTestSuite(CypressTestCase):
         data = {'$model': 'User', 'first_name': 'konan'}
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = [{
-            'index': 0,
-            'model': 'User',
-            'pks': [1],
-            'status_text': 'done'
-        }]
+        expected = [{'model': 'User', 'pk': 1, 'status_text': 'done'}]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -120,14 +112,12 @@ class AcademyEventTestSuite(CypressTestCase):
         response = self.client.post(url, data, format='json')
         json = response.json()
         expected = [{
-            'index': 0,
             'model': 'User',
-            'pks': [1],
+            'pk': 1,
             'status_text': 'done'
         }, {
-            'index': 1,
             'model': 'ProfileAcademy',
-            'pks': [1],
+            'pk': 1,
             'status_text': 'done'
         }]
 

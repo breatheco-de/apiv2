@@ -64,28 +64,11 @@ def clean():
             cleaned.append(model_name)
 
 
-def load_fixtures():
-    for forder in MODULES:
-        path = f'{PROJECT}/{forder}/fixtures'
-
-        for root, dirs, files in os.walk(path):
-            for name in files:
-                if name.startswith('dev_') and name.endswith('.json'):
-                    logger.info(f'Load {path}/{name}')
-                    os.system(  # noqa: S605
-                        f'python manage.py loaddata {path}/{name}')
-
-
 def load_roles():
     command = Command()
     command.handle()
 
     logger.info('Roles loaded')
-
-
-def reset():
-    clean()
-    load_fixtures()
 
 
 def get_model(model_name):
@@ -138,32 +121,35 @@ def clean_model(model_name):
     Model.objects.all().delete()
 
 
-def generate_model(index, data, how_many=1):
+def generate_model(data):
     status = 'done'
-    pks = []
+    pk = 0
 
     try:
         model_name = data.pop('$model')
         Model = get_model(model_name)
-        for element in mixer.cycle(how_many).blend(Model, **data):
-            pks.append(element.pk)
+        element = mixer.blend(Model, **data)
+        pk = element.pk
 
     except Exception as e:
         status = str(e)
 
-    return {
-        'pks': pks,
+    result = {
         'model': model_name,
-        'index': index,
         'status_text': status,
     }
 
+    if pk:
+        result['pk'] = pk
 
-def generate_models(step, how_many=1):
+    return result
+
+
+def generate_models(step):
     result = []
 
-    for index, data in enumerate(step):
-        current_result = generate_model(index, data, how_many)
+    for data in step:
+        current_result = generate_model(data)
         result.append(current_result)
 
     return result
