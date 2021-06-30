@@ -152,10 +152,10 @@ class GetCohortSerializer(serpy.Serializer):
     language = serpy.Field()
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
+    current_day = serpy.Field()
     stage = serpy.Field()
     syllabus = SyllabusSmallSerializer(required=False)
     academy = GetAcademySerializer()
-    current_day = serpy.Field()
 
 
 class GetSmallCohortSerializer(serpy.Serializer):
