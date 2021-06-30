@@ -179,7 +179,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.put(url, data)
         json = response.json()
-
+        del json['academy']
         expected = {
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
@@ -437,30 +437,27 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.put(url, data)
         json = response.json()
+        del json['academy']
         expected = {
-            'id':
-            model['cohort'].id,
-            'slug':
-            data['slug'],
-            'name':
-            data['name'],
-            'never_ends':
-            False,
-            'private':
-            False,
-            'kickoff_date':
-            self.datetime_to_iso(model['cohort'].kickoff_date),
-            'ending_date':
-            self.datetime_to_iso(model['cohort'].ending_date),
-            'current_day':
-            data['current_day'],
-            'stage':
-            model['cohort'].stage,
-            'language':
-            data['language'],
-            'syllabus':
-            model['cohort'].syllabus.certificate.slug + '.v' +
-            str(model['cohort'].syllabus.version),
+            'id': model['cohort'].id,
+            'slug': data['slug'],
+            'name': data['name'],
+            'never_ends': False,
+            'private': False,
+            'language': data['language'],
+            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
+            'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
+            'current_day': data['current_day'],
+            'stage': model['cohort'].stage,
+            'syllabus': { 
+                'certificate': {
+                    'id': model['cohort'].syllabus.certificate.id,
+                    'name': model['cohort'].syllabus.certificate.name,
+                    'slug': model['cohort'].syllabus.certificate.slug,
+                    'duration_in_days': model['cohort'].syllabus.certificate.duration_in_days,
+                },
+                'version': model['cohort'].syllabus.version,
+            },
         }
 
         self.assertEqual(json, expected)

@@ -152,10 +152,10 @@ class GetCohortSerializer(serpy.Serializer):
     language = serpy.Field()
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
+    current_day = serpy.Field()
     stage = serpy.Field()
     syllabus = SyllabusSmallSerializer(required=False)
     academy = GetAcademySerializer()
-    current_day = serpy.Field()
 
 
 class GetSmallCohortSerializer(serpy.Serializer):
@@ -333,11 +333,11 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                 raise ValidationException('Syllabus doesn\'t exist',
                                           slug='syllabus-doesnt-exist')
 
-            if not CertificateTimeSlot.objects.filter(
-                    certificate__id=syllabus.certificate.id).exists():
-                raise ValidationException(
-                    'We can\’t use a Syllabus if its certificate does not have any time slots',
-                    slug='certificate-not-have-time-slots')
+            # if not CertificateTimeSlot.objects.filter(certificate__id=syllabus.certificate.id).exists():
+            #     raise ValidationException(
+            #         'We can\’t use a Syllabus if its certificate does not have any time slots',
+            #         slug='certificate-not-have-time-slots'
+            #     )
 
             data['syllabus'] = syllabus
 
