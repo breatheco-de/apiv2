@@ -11,7 +11,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_user_me_without_auth(self):
         """Test /user/me without auth"""
         url = reverse_lazy('authenticate:user_me')
-        data = { 'email': self.email, 'password': self.password }
+        data = {'email': self.email, 'password': self.password}
         # return client.post(url, data)
         # self.client.force_authenticate(user=self.user)
         response = self.client.post(url, data)
@@ -19,7 +19,8 @@ class AuthenticateTestSuite(AuthTestCase):
         status_code = int(response.data['status_code'])
 
         self.assertEqual(len(response.data), 2)
-        self.assertEqual(detail, 'Authentication credentials were not provided.')
+        self.assertEqual(detail,
+                         'Authentication credentials were not provided.')
         self.assertEqual(status_code, 401)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -30,15 +31,16 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'id': self.user.id,
-            'email': self.user.email,
-            'first_name': self.user.first_name,
-            'last_name': self.user.last_name,
-            'github': {
-                'avatar_url': None,
-                'name': None,
-                'username': None,
-            },
-            'roles': [],
-        })
+        self.assertEqual(
+            json, {
+                'id': self.user.id,
+                'email': self.user.email,
+                'first_name': self.user.first_name,
+                'last_name': self.user.last_name,
+                'github': {
+                    'avatar_url': None,
+                    'name': None,
+                    'username': None,
+                },
+                'roles': [],
+            })

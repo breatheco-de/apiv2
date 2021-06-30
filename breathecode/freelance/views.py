@@ -10,25 +10,32 @@ from rest_framework.views import APIView
 from breathecode.notify.actions import get_template_content
 from django.http import HttpResponse
 
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def render_html_bill(request, id=None):
     item = Bill.objects.filter(id=id).first()
     if item is None:
-        template = get_template_content("message", { "message": "Bill not found" })
+        template = get_template_content("message",
+                                        {"message": "Bill not found"})
         return HttpResponse(template['html'])
     else:
         serializer = BigBillSerializer(item, many=False)
-        data = { **serializer.data, "issues": SmallIssueSerializer(item.issue_set.all(), many=True).data }
+        data = {
+            **serializer.data, "issues":
+            SmallIssueSerializer(item.issue_set.all(), many=True).data
+        }
         template = get_template_content("invoice", data)
         return HttpResponse(template['html'])
+
+
 # Create your views here.
 class BillView(APIView):
     """
     List all snippets, or create a new snippet.
     """
     def get(self, request, format=None):
-        
+
         items = Bill.objects.all()
         lookup = {}
 
@@ -45,7 +52,7 @@ class BillView(APIView):
             lookup['status'] = status
 
         items = items.filter(**lookup).order_by('-created_at')
-        
+
         serializer = BillSerializer(items, many=True)
         return Response(serializer.data)
 
@@ -55,6 +62,7 @@ class BillView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class SingleBillView(APIView):
     """
@@ -72,18 +80,20 @@ class SingleBillView(APIView):
         item = Bill.objects.filter(id=id).first()
         if item is None:
             raise serializers.ValidationError("Bill not found", code=404)
-        
+
         serializer = BillSerializer(item, data=request.data, many=False)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 # Create your views here.
 @api_view(['GET'])
 def sync_user_issues(request):
     tags = sync_user_issues()
     return Response(tags, status=status.HTTP_200_OK)
+
 
 # Create your views here.
 @api_view(['GET'])
@@ -109,13 +119,15 @@ def get_issues(request):
     serializer = SmallIssueSerializer(issues, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 # Create your views here.
 @api_view(['GET'])
 def get_latest_bill(request, user_id=None):
     freelancer = Freelancer.objects.filter(user__id=user_id).first()
 
     if freelancer is None or reviewer is None:
-        raise serializers.ValidationError("Freelancer or reviewer not found", code=404)
-        
+        raise serializers.ValidationError("Freelancer or reviewer not found",
+                                          code=404)
+
     open_bill = generate_freelancer_bill(freelancer)
     return Response(open_bill, status=status.HTTP_200_OK)

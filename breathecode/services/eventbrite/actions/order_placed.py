@@ -1,7 +1,6 @@
 import logging
 from django.contrib.auth.models import User
 
-
 logger = logging.getLogger(__name__)
 SOURCE = 'eventbrite'
 CAMPAIGN = 'eventbrite order placed'
@@ -41,13 +40,15 @@ def order_placed(self, webhook, payload: dict):
     local_attendee = User.objects.filter(email=email).first()
 
     if not EventCheckin.objects.filter(email=email, event=local_event).count():
-        EventCheckin(email=email, status='PENDING', event=local_event,
-            attendee=local_attendee).save()
+        EventCheckin(email=email,
+                     status='PENDING',
+                     event=local_event,
+                     attendee=local_attendee).save()
 
-    elif not EventCheckin.objects.filter(email=email,
-            event=local_event, attendee=local_attendee).count():
+    elif not EventCheckin.objects.filter(
+            email=email, event=local_event, attendee=local_attendee).count():
         event_checkin = EventCheckin.objects.filter(email=email,
-            event=local_event).first()
+                                                    event=local_event).first()
         event_checkin.attendee = local_attendee
         event_checkin.save()
 
@@ -73,13 +74,15 @@ def order_placed(self, webhook, payload: dict):
     if local_event.lang:
         contact = set_optional(contact, 'utm_language', custom, 'language')
 
-    if not ActiveCampaignAcademy.objects.filter(academy__id=academy_id).count():
+    if not ActiveCampaignAcademy.objects.filter(
+            academy__id=academy_id).count():
         message = 'ActiveCampaignAcademy doesn\'t exist'
         logger.debug(message)
         raise Exception(message)
 
-    automation_id = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).values_list(
-        'event_attendancy_automation__id', flat=True).first()
+    automation_id = ActiveCampaignAcademy.objects.filter(
+        academy__id=academy_id).values_list('event_attendancy_automation__id',
+                                            flat=True).first()
 
     if automation_id:
         add_to_active_campaign(contact, academy_id, automation_id)

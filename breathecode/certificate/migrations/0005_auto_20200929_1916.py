@@ -12,19 +12,16 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.DeleteModel(
-            name='UserCertificate',
-        ),
+        migrations.DeleteModel(name='UserCertificate', ),
         migrations.CreateModel(
             name='UserProxy',
-            fields=[
-            ],
+            fields=[],
             options={
                 'proxy': True,
                 'indexes': [],
                 'constraints': [],
             },
-            bases=('auth.user',),
+            bases=('auth.user', ),
             managers=[
                 ('objects', django.contrib.auth.models.UserManager()),
             ],
@@ -32,6 +29,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='specialty',
             name='description',
-            field=models.TextField(blank=True, default=None, max_length=500, null=True),
+            field=models.TextField(blank=True,
+                                   default=None,
+                                   max_length=500,
+                                   null=True),
         ),
     ]

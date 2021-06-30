@@ -17,7 +17,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='formentry',
             name='automation_objects',
-            field=models.ManyToManyField(blank=True, to='marketing.Automation'),
+            field=models.ManyToManyField(blank=True,
+                                         to='marketing.Automation'),
         ),
         migrations.AddField(
             model_name='formentry',

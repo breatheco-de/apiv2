@@ -13,12 +13,14 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='automation',
             name='acp_id',
-            field=models.PositiveIntegerField(help_text='ID asigned in active campaign'),
+            field=models.PositiveIntegerField(
+                help_text='ID asigned in active campaign'),
         ),
         migrations.AlterField(
             model_name='tag',
             name='acp_id',
-            field=models.IntegerField(help_text='The id coming from active campaign'),
+            field=models.IntegerField(
+                help_text='The id coming from active campaign'),
         ),
         migrations.AlterField(
             model_name='tag',

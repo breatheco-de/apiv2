@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from .utils.environment import test_environment, reset_environment
 
-
 if __name__ == '__main__':
     args = ''
 

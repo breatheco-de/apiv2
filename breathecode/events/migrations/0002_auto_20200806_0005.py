@@ -19,7 +19,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='event',
             name='status',
-            field=models.CharField(blank=True, choices=[('ACTIVE', 'Active'), ('DRAFT', 'Draft'), ('DELETED', 'Deleted')], default='DRAFT', max_length=9),
+            field=models.CharField(blank=True,
+                                   choices=[('ACTIVE', 'Active'),
+                                            ('DRAFT', 'Draft'),
+                                            ('DELETED', 'Deleted')],
+                                   default='DRAFT',
+                                   max_length=9),
         ),
         migrations.AlterField(
             model_name='venue',

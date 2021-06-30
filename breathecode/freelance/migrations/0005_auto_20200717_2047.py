@@ -33,6 +33,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='issue',
             name='status',
-            field=models.CharField(choices=[('IGNORED', 'Ignored'), ('DRAFT', 'Draft'), ('TODO', 'Todo'), ('DOING', 'Doing'), ('DONE', 'Done')], default='DRAFT', max_length=20),
+            field=models.CharField(choices=[
+                ('IGNORED', 'Ignored'), ('DRAFT', 'Draft'), ('TODO', 'Todo'),
+                ('DOING', 'Doing'), ('DONE', 'Done')
+            ],
+                                   default='DRAFT',
+                                   max_length=20),
         ),
     ]

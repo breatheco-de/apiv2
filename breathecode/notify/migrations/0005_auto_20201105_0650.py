@@ -18,25 +18,23 @@ class Migration(migrations.Migration):
     operations = [
         migrations.CreateModel(
             name='CohortProxy',
-            fields=[
-            ],
+            fields=[],
             options={
                 'proxy': True,
                 'indexes': [],
                 'constraints': [],
             },
-            bases=('admissions.cohort',),
+            bases=('admissions.cohort', ),
         ),
         migrations.CreateModel(
             name='UserProxy',
-            fields=[
-            ],
+            fields=[],
             options={
                 'proxy': True,
                 'indexes': [],
                 'constraints': [],
             },
-            bases=('auth.user',),
+            bases=('auth.user', ),
             managers=[
                 ('objects', django.contrib.auth.models.UserManager()),
             ],
@@ -44,6 +42,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='slackuser',
             name='user',
-            field=models.OneToOneField(blank=True, default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
+            field=models.OneToOneField(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to=settings.AUTH_USER_MODEL),
         ),
     ]

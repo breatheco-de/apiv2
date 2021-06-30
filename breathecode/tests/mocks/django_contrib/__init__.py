@@ -4,11 +4,9 @@ Django contrib Mocks
 from unittest.mock import Mock
 from .messages_mock import MessagesMock
 
-
 DJANGO_CONTRIB_PATH = {
     'messages': 'django.contrib.messages',
 }
-
 
 DJANGO_CONTRIB_INSTANCES = {
     'messages': Mock(side_effect=MessagesMock),

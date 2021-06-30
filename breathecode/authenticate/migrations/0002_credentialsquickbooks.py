@@ -16,11 +16,18 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='CredentialsQuickBooks',
             fields=[
-                ('quibooks_code', models.CharField(max_length=255, primary_key=True, serialize=False)),
+                ('quibooks_code',
+                 models.CharField(max_length=255,
+                                  primary_key=True,
+                                  serialize=False)),
                 ('quibooks_realmid', models.CharField(max_length=255)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('user', models.OneToOneField(blank=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ('user',
+                 models.OneToOneField(
+                     blank=True,
+                     on_delete=django.db.models.deletion.CASCADE,
+                     to=settings.AUTH_USER_MODEL)),
             ],
         ),
     ]

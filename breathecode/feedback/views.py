@@ -7,10 +7,9 @@ from .tasks import generate_user_cohort_survey_answers
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import (
-    AnswerPUTSerializer, AnswerSerializer, SurveySerializer, SurveyPUTSerializer, 
-    BigAnswerSerializer, SurveySmallSerializer
-)
+from .serializers import (AnswerPUTSerializer, AnswerSerializer,
+                          SurveySerializer, SurveyPUTSerializer,
+                          BigAnswerSerializer, SurveySmallSerializer)
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
@@ -19,6 +18,7 @@ from breathecode.utils import capable_of, ValidationException, HeaderLimitOffset
 from PIL import Image
 from django.db.models import Q
 from breathecode.utils.find_by_full_name import query_like_by_full_name
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -38,6 +38,7 @@ def track_survey_open(request, answer_id=None):
     image.save(response, "PNG")
     return response
 
+
 @api_view(['GET'])
 def get_survey_questions(request, survey_id=None):
 
@@ -49,17 +50,26 @@ def get_survey_questions(request, survey_id=None):
     if utc_now > survey.created_at + survey.duration:
         raise ValidationException("This survey has already expired", 400)
 
-    cu = CohortUser.objects.filter(cohort=survey.cohort, role="STUDENT", user=request.user).first()
+    cu = CohortUser.objects.filter(cohort=survey.cohort,
+                                   role="STUDENT",
+                                   user=request.user).first()
     if cu is None:
-        raise ValidationException("This student does not belong to this cohort", 400)
+        raise ValidationException(
+            "This student does not belong to this cohort", 400)
 
-    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort, role="TEACHER")
+    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort,
+                                               role="TEACHER")
     if cohort_teacher.count() == 0:
-        raise ValidationException("This cohort must have a teacher assigned to be able to survey it", 400)
+        raise ValidationException(
+            "This cohort must have a teacher assigned to be able to survey it",
+            400)
 
-    answers = generate_user_cohort_survey_answers(request.user, survey, status='OPENED')
+    answers = generate_user_cohort_survey_answers(request.user,
+                                                  survey,
+                                                  status='OPENED')
     serializer = AnswerSerializer(answers, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 # Create your views here.
 class GetAnswerView(APIView, HeaderLimitOffsetPagination):
@@ -99,8 +109,10 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
         items = items.filter(**lookup).order_by('-created_at')
 
         like = request.GET.get('like', None)
-        if like is not None:      
-            items = query_like_by_full_name(like=like, items=items, prefix='user__')      
+        if like is not None:
+            items = query_like_by_full_name(like=like,
+                                            items=items,
+                                            prefix='user__')
 
         page = self.paginate_queryset(items, request)
         serializer = AnswerSerializer(page, many=True)
@@ -111,7 +123,6 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-
 class AnswerMeView(APIView):
     """
     List all snippets, or create a new snippet.
@@ -120,11 +131,16 @@ class AnswerMeView(APIView):
         if answer_id is None:
             raise serializers.ValidationError("Missing answer_id", code=400)
 
-        answer = Answer.objects.filter(user=request.user,id=answer_id).first()
+        answer = Answer.objects.filter(user=request.user, id=answer_id).first()
         if answer is None:
             raise NotFound('This survey does not exist for this user')
 
-        serializer = AnswerPUTSerializer(answer, data=request.data, context={ "request": request, "answer": answer_id })
+        serializer = AnswerPUTSerializer(answer,
+                                         data=request.data,
+                                         context={
+                                             "request": request,
+                                             "answer": answer_id
+                                         })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -134,7 +150,7 @@ class AnswerMeView(APIView):
         if answer_id is None:
             raise serializers.ValidationError("Missing answer_id", code=404)
 
-        answer = Answer.objects.filter(user=request.user,id=answer_id).first()
+        answer = Answer.objects.filter(user=request.user, id=answer_id).first()
         if answer is None:
             raise NotFound('This survey does not exist for this user')
 
@@ -143,18 +159,20 @@ class AnswerMeView(APIView):
 
 
 class AcademyAnswerView(APIView):
-
     @capable_of('read_nps_answers')
     def get(self, request, academy_id=None, answer_id=None):
         if answer_id is None:
             raise ValidationException("Missing answer_id", code=404)
 
-        answer = Answer.objects.filter(academy__id=academy_id,id=answer_id).first()
+        answer = Answer.objects.filter(academy__id=academy_id,
+                                       id=answer_id).first()
         if answer is None:
-            raise ValidationException('This survey does not exist for this academy')
+            raise ValidationException(
+                'This survey does not exist for this academy')
 
         serializer = BigAnswerSerializer(answer)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class SurveyView(APIView, HeaderLimitOffsetPagination):
     """
@@ -163,14 +181,20 @@ class SurveyView(APIView, HeaderLimitOffsetPagination):
     @capable_of('crud_survey')
     def post(self, request, academy_id=None):
 
-        serializer = SurveySerializer(data=request.data, context={ "request": request, "academy_id": academy_id })
+        serializer = SurveySerializer(data=request.data,
+                                      context={
+                                          "request": request,
+                                          "academy_id": academy_id
+                                      })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('crud_survey')
     def put(self, request, survey_id=None, academy_id=None):
         if survey_id is None:
@@ -180,7 +204,13 @@ class SurveyView(APIView, HeaderLimitOffsetPagination):
         if survey is None:
             raise NotFound('This survey does not exist')
 
-        serializer = SurveyPUTSerializer(survey, data=request.data, context={ "request": request, "survey": survey_id, "academy_id": academy_id })
+        serializer = SurveyPUTSerializer(survey,
+                                         data=request.data,
+                                         context={
+                                             "request": request,
+                                             "survey": survey_id,
+                                             "academy_id": academy_id
+                                         })
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -188,7 +218,7 @@ class SurveyView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('read_survey')
     def get(self, request, survey_id=None, academy_id=None):
-        
+
         if survey_id is not None:
             survey = Survey.objects.filter(id=survey_id).first()
             if survey is None:
