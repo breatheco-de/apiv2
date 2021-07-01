@@ -4,7 +4,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from breathecode.admissions.models import Cohort
+from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.utils import ValidationException, capable_of
 
 from .utils import (generate_created_at, validate_activity_fields,
@@ -48,7 +48,7 @@ class ActivityTypeView(APIView):
         if activity_slug:
             if activity_slug not in ACTIVITIES:
                 raise ValidationException(
-                    'Activity type not found',
+                    f'Activity type {activity_slug} not found',
                     slug='activity-not-found')
 
             res = self.get_activity_object(activity_slug)
@@ -58,7 +58,7 @@ class ActivityTypeView(APIView):
         return Response(res)
 
 
-class ActivityView(APIView):
+class ActivityMeView(APIView):
     @capable_of('read_activity')
     def get(self, request, academy_id=None):
         from breathecode.services.google_cloud import Datastore
@@ -71,7 +71,7 @@ class ActivityView(APIView):
 
         if slug and slug not in ACTIVITIES:
             raise ValidationException(
-                'Activity type not found',
+                f'Activity type {slug} not found',
                 slug='activity-not-found')
 
         cohort = request.GET.get('cohort')
@@ -115,43 +115,74 @@ class ActivityView(APIView):
 
     @capable_of('crud_activity')
     def post(self, request, academy_id=None):
-        from breathecode.services import Datastore
 
         data = request.data
         user = request.user
 
-        validate_activity_fields(data)
-        validate_require_activity_fields(data)
-
-        slug = data['slug']
-        academy_id = academy_id if slug not in ACTIVITY_PUBLIC_SLUGS else 0
-
-        if slug not in ACTIVITIES:
-            raise ValidationException(
-                'Activity type not found',
-                slug='activity-not-found')
-
-        validate_if_activity_need_field_cohort(data)
-        validate_if_activity_need_field_data(data)
-        validate_activity_have_correct_data_field(data)
-
-        if 'cohort' in data and not Cohort.objects.filter(
-                slug=data['cohort'],
-                academy__id=academy_id).exists():
-            raise ValidationException(
-                'Cohort not exists',
-                slug='cohort-not-exists')
-
-        fields = {
-            **data,
-            'created_at': generate_created_at(),
-            'slug': slug,
-            'user_id': user.id,
-            'email': user.email,
-            'academy_id': int(academy_id),
-        }
-
-        datastore = Datastore()
-        datastore.update('student_activity', fields)
+        fields = add_student_activity(user, data, academy_id)
 
         return Response(fields, status=status.HTTP_201_CREATED)
+
+
+class ActivityClassroomView(APIView):
+    @capable_of('classroom_activity')
+    def post(self, request, cohort_id=None, academy_id=None):
+
+        is_teacher = CohortUser.objects.filter(user__id=request.user.id).filter(Q(role='TEACHER') | Q(role='ASSISTANT')).first()
+        if is_teacher is None:
+            raise ValidationException("Only teachers or assistants from this cohort can report classroom activities on the student timeline")
+        
+        data = request.data
+        if isinstance(data, list) == False:
+            data = [data]
+        
+        new_activities = []
+        for activity in data:
+            student_id = activity['user_id']
+            del activity['user_id']
+            cohort_user = CohortUser.objects.filter(role='STUDENT', user__id=student_id).filter(Q(cohort__id=cohort_id) | Q(cohort__slug=cohort_id)).first()
+            if cohort_user is None:
+                raise ValidationException("Student not found in this cohort", slug="not-found-in-cohort")
+
+            new_activities.append(add_student_activity(cohort_user.user, activity, academy_id))
+
+        return Response(new_activities, status=status.HTTP_201_CREATED)
+
+def add_student_activity(user, data, academy_id):
+    from breathecode.services import Datastore
+
+    validate_activity_fields(data)
+    validate_require_activity_fields(data)
+
+    slug = data['slug']
+    academy_id = academy_id if slug not in ACTIVITY_PUBLIC_SLUGS else 0
+
+    if slug not in ACTIVITIES:
+        raise ValidationException(
+            f'Activity type {slug} not found',
+            slug='activity-not-found')
+
+    validate_if_activity_need_field_cohort(data)
+    validate_if_activity_need_field_data(data)
+    validate_activity_have_correct_data_field(data)
+
+    if 'cohort' in data and not Cohort.objects.filter(academy__id=academy_id).filter(
+                Q(slug=data['cohort']) | Q(id=data['cohort']),
+            ).exists():
+        raise ValidationException(
+            f"Cohort {str(data['cohort'])} doesn't exist",
+            slug='cohort-not-exists')
+
+    fields = {
+        **data,
+        'created_at': generate_created_at(),
+        'slug': slug,
+        'user_id': user.id,
+        'email': user.email,
+        'academy_id': int(academy_id),
+    }
+
+    datastore = Datastore()
+    datastore.update('student_activity', fields)
+
+    return fields
