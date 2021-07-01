@@ -34,6 +34,13 @@ class AcademySmallSerializer(serpy.Serializer):
     logo_url = serpy.Field()
     website_url = serpy.Field()
 
+class TinyLayoutDesignSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    slug = serpy.Field()
+    name = serpy.Field()
+    background_url = serpy.Field()
+
 class LayoutDesignSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -98,7 +105,7 @@ class UserSpecialtySerializer(serpy.Serializer):
 
     preview_url = serpy.Field()
 
-    layout = LayoutDesignSerializer(required=False, many=False)
+    layout = TinyLayoutDesignSerializer(required=False, many=False)
 
     expires_at = serpy.Field()
     updated_at = serpy.Field()
