@@ -303,6 +303,7 @@ class CertificateTestSuite(CertificateTestCase):
             1,
             'layout': {
                 'name': model['layout_design'].name,
+                'background_url': model['layout_design'].background_url,
                 'slug': model['layout_design'].slug
             },
             'preview_url':
@@ -431,6 +432,7 @@ class CertificateTestSuite(CertificateTestCase):
             1,
             'layout': {
                 'name': model['layout_design'].name,
+                'background_url': model['layout_design'].background_url,
                 'slug': model['layout_design'].slug
             },
             'preview_url':
@@ -560,6 +562,7 @@ class CertificateTestSuite(CertificateTestCase):
             1,
             'layout': {
                 'name': model['layout_design'].name,
+                'background_url': model['layout_design'].background_url,
                 'slug': model['layout_design'].slug
             },
             'preview_url':
@@ -692,6 +695,7 @@ class CertificateTestSuite(CertificateTestCase):
             1,
             'layout': {
                 'name': model['layout_design'].name,
+                'background_url': model['layout_design'].background_url,
                 'slug': model['layout_design'].slug
             },
             'preview_url':

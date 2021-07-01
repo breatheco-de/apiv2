@@ -196,7 +196,8 @@ class CertificateTestSuite(CertificateTestCase):
             1,
             'layout': {
                 'name': model['layout_design'].name,
-                'slug': model['layout_design'].slug
+                'slug': model['layout_design'].slug,
+                'background_url': model['layout_design'].background_url
             },
             'preview_url':
             model['user_specialty'].preview_url,
@@ -349,7 +350,8 @@ class CertificateTestSuite(CertificateTestCase):
             1,
             'layout': {
                 'name': models[0].layout_design.name,
-                'slug': models[0].layout_design.slug
+                'background_url': models[0].layout_design.background_url,
+                'slug': models[0].layout_design.slug,
             },
             'preview_url':
             models[0].user_specialty.preview_url,
@@ -401,7 +403,8 @@ class CertificateTestSuite(CertificateTestCase):
             2,
             'layout': {
                 'name': models[1].layout_design.name,
-                'slug': models[1].layout_design.slug
+                'slug': models[1].layout_design.slug,
+                'background_url': models[1].layout_design.background_url
             },
             'preview_url':
             models[1].user_specialty.preview_url,
