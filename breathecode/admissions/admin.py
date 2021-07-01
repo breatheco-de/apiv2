@@ -213,7 +213,7 @@ def sync_with_github(modeladmin, request, queryset):
             #/repos/:owner/:repo/contents/:path
             regex = r"github\.com\/([0-9a-zA-Z-]+)\/([0-9a-zA-Z-]+)\/blob\/([0-9a-zA-Z-]+)\/([0-9a-zA-Z-\/\.]+)"
             matches = re.findall(regex, syl.github_url)
-            print(matches, syl.github_url)
+            
             if matches is None:
                 logger.error(
                     f'Invalid github url, make sure it follows this format: https://github.com/:user/:repo/blob/:branch/:path'

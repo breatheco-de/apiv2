@@ -107,8 +107,7 @@ def generate_certificate(user, cohort=None):
     try:
         uspe.academy = cohort.academy
         tasks = Task.objects.filter(user__id=user.id, task_type='PROJECT')
-        tasks_count_pending = sum(task.task_status == 'PENDING'
-                                  for task in tasks)
+        tasks_count_pending = sum(task.revision_status == 'PENDING' for task in tasks)
 
         if tasks_count_pending:
             raise ValidationException(f'The student has {tasks_count_pending} '

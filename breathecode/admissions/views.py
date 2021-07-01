@@ -726,9 +726,9 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination,
 
         if cohort_id is not None:
             item = None
-            if str.isnumeric(cohort_id):
-                item = Cohort.objects.filter(id=int(cohort_id),
-                                             academy__id=academy_id).first()
+            if cohort_id.isnumeric():
+                item = Cohort.objects.filter(
+                    id=int(cohort_id), academy__id=academy_id).first()
             else:
                 item = Cohort.objects.filter(slug=cohort_id,
                                              academy__id=academy_id).first()
@@ -829,6 +829,8 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination,
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
+
+            serializer = GetCohortSerializer(cohort, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
