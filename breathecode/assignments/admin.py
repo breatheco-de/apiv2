@@ -61,15 +61,27 @@ class CohortAdmin(CohortAdmin):
     list_display = ('slug', 'name', 'stage')
     actions = [sync_cohort_tasks, delete_cohort_tasks]
 
+
 def mark_as_delivered(modeladmin, request, queryset):
     queryset.update(task_status='DONE')
+
+
 mark_as_delivered.short_description = "Mark task status as DONE"
+
+
 def mark_as_approved(modeladmin, request, queryset):
     queryset.update(revision_status='APPROVED')
+
+
 mark_as_approved.short_description = "Mark revision status as APPROVED"
+
+
 def mark_as_rejected(modeladmin, request, queryset):
     queryset.update(revision_status='REJECTED')
+
+
 mark_as_rejected.short_description = "Mark revision status as REJECTED"
+
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):

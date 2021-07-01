@@ -8,6 +8,7 @@ pytest-cov = "*"
 coverage = "*"
 atomicwrites = "*"
 yapf = "*"
+pre-commit = "*"
 
 [packages]
 django = "*"

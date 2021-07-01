@@ -449,12 +449,16 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
             'current_day': data['current_day'],
             'stage': model['cohort'].stage,
-            'syllabus': { 
+            'syllabus': {
                 'certificate': {
-                    'id': model['cohort'].syllabus.certificate.id,
-                    'name': model['cohort'].syllabus.certificate.name,
-                    'slug': model['cohort'].syllabus.certificate.slug,
-                    'duration_in_days': model['cohort'].syllabus.certificate.duration_in_days,
+                    'id':
+                    model['cohort'].syllabus.certificate.id,
+                    'name':
+                    model['cohort'].syllabus.certificate.name,
+                    'slug':
+                    model['cohort'].syllabus.certificate.slug,
+                    'duration_in_days':
+                    model['cohort'].syllabus.certificate.duration_in_days,
                 },
                 'version': model['cohort'].syllabus.version,
             },
