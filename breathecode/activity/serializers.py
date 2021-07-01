@@ -1,6 +1,7 @@
 from rest_framework import serializers
 import serpy
 
+
 class ActivitySerializer(serpy.Serializer):
     id = serpy.Field()
     # comment = serpy.Field()

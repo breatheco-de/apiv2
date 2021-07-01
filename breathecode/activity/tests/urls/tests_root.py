@@ -70,7 +70,6 @@ def datastore_update_mock():
 
 class MediaTestSuite(MediaTestCase):
     """Test /answer"""
-
     """
     🔽🔽🔽 Auth
     """
@@ -94,29 +93,33 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': (
-                "You (user: 1) don't have this capability: read_activity for "
-                "academy 1"),
-            'status_code': 403,
-        })
+        self.assertEqual(
+            json, {
+                'detail':
+                ("You (user: 1) don't have this capability: read_activity for "
+                 "academy 1"),
+                'status_code':
+                403,
+            })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     """
     🔽🔽🔽 Without data
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=[],
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__without_data(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root')
         response = self.client.get(url)
@@ -127,29 +130,28 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(
-                kind='student_activity',
-                academy_id=1),
-            call(
-                kind='student_activity',
-                academy_id=0),
+            call(kind='student_activity', academy_id=1),
+            call(kind='student_activity', academy_id=0),
         ])
 
     """
     🔽🔽🔽 With data
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=[],
-        second_fetch=DATASTORE_SHARED_SEED))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=[],
+                                           second_fetch=DATASTORE_SHARED_SEED))
     def test_type__just_have_public_activities(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root')
         response = self.client.get(url)
@@ -164,8 +166,7 @@ class MediaTestSuite(MediaTestCase):
                 'day': 13,
                 'email': 'konan@naruto.io',
                 'slug': 'breathecode-login',
-                'user_agent':
-                'bc/test',
+                'user_agent': 'bc/test',
                 'user_id': 1,
             },
         ]
@@ -173,26 +174,24 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(
-                kind='student_activity',
-                academy_id=1),
-            call(
-                kind='student_activity',
-                academy_id=0),
+            call(kind='student_activity', academy_id=1),
+            call(kind='student_activity', academy_id=0),
         ])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=DATASTORE_PRIVATE_SEED,
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED,
+                                           second_fetch=[]))
     def test_type__just_have_activities_from_current_academy(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root')
         response = self.client.get(url)
@@ -215,26 +214,24 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(
-                kind='student_activity',
-                academy_id=1),
-            call(
-                kind='student_activity',
-                academy_id=0),
+            call(kind='student_activity', academy_id=1),
+            call(kind='student_activity', academy_id=0),
         ])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=DATASTORE_PRIVATE_SEED,
-        second_fetch=DATASTORE_SHARED_SEED))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED,
+                                           second_fetch=DATASTORE_SHARED_SEED))
     def test_type__have_activities_public_and_from_current_academy(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root')
         response = self.client.get(url)
@@ -260,8 +257,7 @@ class MediaTestSuite(MediaTestCase):
                 'day': 13,
                 'email': 'konan@naruto.io',
                 'slug': 'breathecode-login',
-                'user_agent':
-                'bc/test',
+                'user_agent': 'bc/test',
                 'user_id': 1,
             },
         ]
@@ -269,29 +265,27 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(
-                kind='student_activity',
-                academy_id=1),
-            call(
-                kind='student_activity',
-                academy_id=0),
+            call(kind='student_activity', academy_id=1),
+            call(kind='student_activity', academy_id=0),
         ])
 
     """
     🔽🔽🔽 Slug in querystring
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=[],
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__bad_slug_by_querystring(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root') + '?slug=asdasd'
         response = self.client.get(url)
@@ -307,17 +301,18 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=[],
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__slug_by_querystring__its_not_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root') + '?slug=lesson-opened'
         response = self.client.get(url)
@@ -328,28 +323,24 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(
-                kind='student_activity',
-                slug='lesson-opened',
-                academy_id=1),
-            call(
-                kind='student_activity',
-                slug='lesson-opened',
-                academy_id=0),
+            call(kind='student_activity', slug='lesson-opened', academy_id=1),
+            call(kind='student_activity', slug='lesson-opened', academy_id=0),
         ])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=[],
-        second_fetch=DATASTORE_SHARED_SEED))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=[],
+                                           second_fetch=DATASTORE_SHARED_SEED))
     def test_type__with_data__slug_by_querystring__its_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root') + '?slug=breathecode-login'
         response = self.client.get(url)
@@ -364,8 +355,7 @@ class MediaTestSuite(MediaTestCase):
                 'day': 13,
                 'email': 'konan@naruto.io',
                 'slug': 'breathecode-login',
-                'user_agent':
-                'bc/test',
+                'user_agent': 'bc/test',
                 'user_id': 1,
             },
         ]
@@ -373,31 +363,31 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(
-                kind='student_activity',
-                slug='breathecode-login',
-                academy_id=1),
-            call(
-                kind='student_activity',
-                slug='breathecode-login',
-                academy_id=0),
+            call(kind='student_activity',
+                 slug='breathecode-login',
+                 academy_id=1),
+            call(kind='student_activity',
+                 slug='breathecode-login',
+                 academy_id=0),
         ])
 
     """
     🔽🔽🔽 Cohort in querystring
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=[],
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__bad_cohort_by_querystring(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root') + '?cohort=asdasd'
         response = self.client.get(url)
@@ -413,19 +403,21 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=[],
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__cohort_by_querystring__its_not_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
         cohort_kwargs = {'slug': 'miami-downtown-pt-xx'}
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato', cohort=True,
-            cohort_kwargs=cohort_kwargs)
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato',
+                             cohort=True,
+                             cohort_kwargs=cohort_kwargs)
 
         url = reverse_lazy('activity:root') + '?cohort=miami-downtown-pt-xx'
         response = self.client.get(url)
@@ -436,30 +428,31 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(
-                kind='student_activity',
-                cohort='miami-downtown-pt-xx',
-                academy_id=1),
-            call(
-                kind='student_activity',
-                cohort='miami-downtown-pt-xx',
-                academy_id=0),
+            call(kind='student_activity',
+                 cohort='miami-downtown-pt-xx',
+                 academy_id=1),
+            call(kind='student_activity',
+                 cohort='miami-downtown-pt-xx',
+                 academy_id=0),
         ])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=DATASTORE_PRIVATE_SEED,
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED,
+                                           second_fetch=[]))
     def test_type__with_data__cohort_by_querystring__its_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
         cohort_kwargs = {'slug': 'miami-downtown-pt-xx'}
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato', cohort=True,
-            cohort_kwargs=cohort_kwargs)
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato',
+                             cohort=True,
+                             cohort_kwargs=cohort_kwargs)
 
         url = reverse_lazy('activity:root') + '?cohort=miami-downtown-pt-xx'
         response = self.client.get(url)
@@ -482,31 +475,31 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(
-                kind='student_activity',
-                cohort='miami-downtown-pt-xx',
-                academy_id=1),
-            call(
-                kind='student_activity',
-                cohort='miami-downtown-pt-xx',
-                academy_id=0),
+            call(kind='student_activity',
+                 cohort='miami-downtown-pt-xx',
+                 academy_id=1),
+            call(kind='student_activity',
+                 cohort='miami-downtown-pt-xx',
+                 academy_id=0),
         ])
 
     """
     🔽🔽🔽 User id in querystring
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=[],
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__bad_user_id_by_querystring(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root') + '?user_id=0'
         response = self.client.get(url)
@@ -522,17 +515,18 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=[],
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__user_id_is_string_by_querystring(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root') + '?user_id=they-killed-kenny'
         response = self.client.get(url)
@@ -548,19 +542,21 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=[],
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__user_id_by_querystring__its_not_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
         cohort_kwargs = {'slug': 'miami-downtown-pt-xx'}
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato', cohort=True,
-            cohort_kwargs=cohort_kwargs)
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato',
+                             cohort=True,
+                             cohort_kwargs=cohort_kwargs)
 
         url = reverse_lazy('activity:root') + '?user_id=1'
         response = self.client.get(url)
@@ -571,30 +567,27 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(
-                kind='student_activity',
-                user_id=1,
-                academy_id=1),
-            call(
-                kind='student_activity',
-                user_id=1,
-                academy_id=0),
+            call(kind='student_activity', user_id=1, academy_id=1),
+            call(kind='student_activity', user_id=1, academy_id=0),
         ])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=DATASTORE_PRIVATE_SEED,
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED,
+                                           second_fetch=[]))
     def test_type__with_data__user_id_by_querystring__its_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
         cohort_kwargs = {'slug': 'miami-downtown-pt-xx'}
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato', cohort=True,
-            cohort_kwargs=cohort_kwargs)
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato',
+                             cohort=True,
+                             cohort_kwargs=cohort_kwargs)
 
         url = reverse_lazy('activity:root') + '?user_id=1'
         response = self.client.get(url)
@@ -617,31 +610,27 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(
-                kind='student_activity',
-                user_id=1,
-                academy_id=1),
-            call(
-                kind='student_activity',
-                user_id=1,
-                academy_id=0),
+            call(kind='student_activity', user_id=1, academy_id=1),
+            call(kind='student_activity', user_id=1, academy_id=0),
         ])
 
     """
     🔽🔽🔽 Email in querystring
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=[],
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__bad_email_by_querystring(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root') + '?email=xyz'
         response = self.client.get(url)
@@ -657,9 +646,9 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=[],
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__email_by_querystring__its_not_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -667,10 +656,13 @@ class MediaTestSuite(MediaTestCase):
         self.headers(academy=1)
         cohort_kwargs = {'slug': 'miami-downtown-pt-xx'}
         user_kwargs = {'email': 'konan@naruto.io'}
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato', cohort=True,
-            cohort_kwargs=cohort_kwargs, user_kwargs=user_kwargs)
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato',
+                             cohort=True,
+                             cohort_kwargs=cohort_kwargs,
+                             user_kwargs=user_kwargs)
 
         url = reverse_lazy('activity:root') + '?email=konan@naruto.io'
         response = self.client.get(url)
@@ -681,20 +673,19 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(
-                kind='student_activity',
-                email='konan@naruto.io',
-                academy_id=1),
-            call(
-                kind='student_activity',
-                email='konan@naruto.io',
-                academy_id=0),
+            call(kind='student_activity',
+                 email='konan@naruto.io',
+                 academy_id=1),
+            call(kind='student_activity',
+                 email='konan@naruto.io',
+                 academy_id=0),
         ])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(
-        first_fetch=DATASTORE_PRIVATE_SEED,
-        second_fetch=[]))
+    @patch.object(Datastore,
+                  'fetch',
+                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED,
+                                           second_fetch=[]))
     def test_type__with_data__email_by_querystring__its_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -702,10 +693,13 @@ class MediaTestSuite(MediaTestCase):
         self.headers(academy=1)
         cohort_kwargs = {'slug': 'miami-downtown-pt-xx'}
         user_kwargs = {'email': 'konan@naruto.io'}
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='read_activity', role='potato', cohort=True,
-            cohort_kwargs=cohort_kwargs, user_kwargs=user_kwargs)
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='read_activity',
+                             role='potato',
+                             cohort=True,
+                             cohort_kwargs=cohort_kwargs,
+                             user_kwargs=user_kwargs)
 
         url = reverse_lazy('activity:root') + '?email=konan@naruto.io'
         response = self.client.get(url)
@@ -728,19 +722,18 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(
-                kind='student_activity',
-                email='konan@naruto.io',
-                academy_id=1),
-            call(
-                kind='student_activity',
-                email='konan@naruto.io',
-                academy_id=0),
+            call(kind='student_activity',
+                 email='konan@naruto.io',
+                 academy_id=1),
+            call(kind='student_activity',
+                 email='konan@naruto.io',
+                 academy_id=0),
         ])
 
     """
     🔽🔽🔽 Post missing fields
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore, 'update', new=datastore_update_mock())
     def test_user_id__post__missing_slug(self):
@@ -748,9 +741,10 @@ class MediaTestSuite(MediaTestCase):
         mock.update.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='crud_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='crud_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root')
         data = {}
@@ -770,9 +764,10 @@ class MediaTestSuite(MediaTestCase):
         mock.update.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='crud_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='crud_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root')
         data = {'slug': 'they-killed-kenny'}
@@ -788,6 +783,7 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Post bad slug
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore, 'update', new=datastore_update_mock())
     def test_user_id__post__with_bad_slug(self):
@@ -795,9 +791,10 @@ class MediaTestSuite(MediaTestCase):
         mock.update.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='crud_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='crud_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root')
         data = {
@@ -815,6 +812,7 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Post with public slug
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore, 'update', new=datastore_update_mock())
     def test_user_id__post__with_public_slug(self):
@@ -822,9 +820,10 @@ class MediaTestSuite(MediaTestCase):
         mock.update.call_args_list = []
 
         self.headers(academy=1)
-        model = self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='crud_activity', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_activity',
+                                     role='potato')
 
         url = reverse_lazy('activity:root')
         data = {
@@ -866,6 +865,7 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Post with private slug missing cohort
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore, 'update', new=datastore_update_mock())
     def test_user_id__post__missing_cohort(self):
@@ -873,9 +873,10 @@ class MediaTestSuite(MediaTestCase):
         mock.update.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='crud_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='crud_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root')
         data = {
@@ -893,6 +894,7 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Post with private slug without cohort
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore, 'update', new=datastore_update_mock())
     def test_user_id__post__with_private_slug__slug_require_a_cohort(self):
@@ -900,9 +902,10 @@ class MediaTestSuite(MediaTestCase):
         mock.update.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='crud_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='crud_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root')
         data = {
@@ -921,6 +924,7 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Post with private slug without data
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore, 'update', new=datastore_update_mock())
     def test_user_id__post__with_private_slug__slug_require_a_data(self):
@@ -928,9 +932,10 @@ class MediaTestSuite(MediaTestCase):
         mock.update.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='crud_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='crud_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root')
         data = {
@@ -950,6 +955,7 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Post with private slug bad cohort
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore, 'update', new=datastore_update_mock())
     def test_user_id__post__with_private_slug__cohort_not_exist(self):
@@ -957,9 +963,10 @@ class MediaTestSuite(MediaTestCase):
         mock.update.call_args_list = []
 
         self.headers(academy=1)
-        self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='crud_activity', role='potato')
+        self.generate_models(authenticate=True,
+                             profile_academy=True,
+                             capability='crud_activity',
+                             role='potato')
 
         url = reverse_lazy('activity:root')
         data = {
@@ -979,6 +986,7 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Post with private slug field not allowed
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore, 'update', new=datastore_update_mock())
     def test_user_id__post__with_private_slug__field_not_allowed(self):
@@ -986,9 +994,11 @@ class MediaTestSuite(MediaTestCase):
         mock.update.call_args_list = []
 
         self.headers(academy=1)
-        model = self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='crud_activity', role='potato', cohort=True)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_activity',
+                                     role='potato',
+                                     cohort=True)
 
         url = reverse_lazy('activity:root')
         data = {
@@ -1009,6 +1019,7 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Post with private slug
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore, 'update', new=datastore_update_mock())
     def test_user_id__post__with_private_slug__cohort_not_exist___(self):
@@ -1016,9 +1027,11 @@ class MediaTestSuite(MediaTestCase):
         mock.update.call_args_list = []
 
         self.headers(academy=1)
-        model = self.generate_models(
-            authenticate=True, profile_academy=True,
-            capability='crud_activity', role='potato', cohort=True)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_activity',
+                                     role='potato',
+                                     cohort=True)
 
         url = reverse_lazy('activity:root')
         data = {

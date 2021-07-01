@@ -7,9 +7,8 @@ LOGGING_PATH = {
     'logger': 'logging.Logger',
 }
 
-LOGGING_INSTANCES = {
-    'logger': MagicMock()
-}
+LOGGING_INSTANCES = {'logger': MagicMock()}
+
 
 def apply_logging_logger_mock():
     """Apply Storage Blob Mock"""

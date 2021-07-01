@@ -8,9 +8,8 @@ MAILGUN_PATH = {
     'post': 'requests.post',
 }
 
-MAILGUN_INSTANCES = {
-    'post': Mock(side_effect=post_mock)
-}
+MAILGUN_INSTANCES = {'post': Mock(side_effect=post_mock)}
+
 
 def apply_mailgun_requests_post_mock():
     """Apply Storage Blob Mock"""

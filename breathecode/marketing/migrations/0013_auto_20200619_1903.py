@@ -14,11 +14,22 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='tag',
             name='automation',
-            field=models.ForeignKey(default=None, help_text='Leads that contain this tag will be asociated to this automation', null=True, on_delete=django.db.models.deletion.CASCADE, to='marketing.Automation'),
+            field=models.ForeignKey(
+                default=None,
+                help_text=
+                'Leads that contain this tag will be asociated to this automation',
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to='marketing.Automation'),
         ),
         migrations.AlterField(
             model_name='automation',
             name='status',
-            field=models.CharField(choices=[('1', 'Active'), ('2', 'Innactive'), ('0', 'Uknown')], default='0', help_text='2 = inactive, 1=active', max_length=1),
+            field=models.CharField(choices=[('1', 'Active'),
+                                            ('2', 'Innactive'),
+                                            ('0', 'Uknown')],
+                                   default='0',
+                                   help_text='2 = inactive, 1=active',
+                                   max_length=1),
         ),
     ]

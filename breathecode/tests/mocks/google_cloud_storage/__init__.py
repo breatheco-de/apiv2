@@ -6,13 +6,11 @@ from .blob_mock import BlobMock
 from .bucket_mock import BucketMock
 from .client_mock import ClientMock
 
-
 GOOGLE_CLOUD_PATH = {
     'client': 'google.cloud.storage.Client',
     'bucket': 'google.cloud.storage.Bucket',
     'blob': 'google.cloud.storage.Blob'
 }
-
 
 GOOGLE_CLOUD_INSTANCES = {
     'client': MagicMock(side_effect=ClientMock),

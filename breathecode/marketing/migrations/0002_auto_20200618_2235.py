@@ -29,17 +29,28 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='contact',
             name='latitude',
-            field=models.DecimalField(decimal_places=6, default=None, max_digits=9, null=True),
+            field=models.DecimalField(decimal_places=6,
+                                      default=None,
+                                      max_digits=9,
+                                      null=True),
         ),
         migrations.AlterField(
             model_name='contact',
             name='longitude',
-            field=models.DecimalField(decimal_places=6, default=None, max_digits=9, null=True),
+            field=models.DecimalField(decimal_places=6,
+                                      default=None,
+                                      max_digits=9,
+                                      null=True),
         ),
         migrations.AlterField(
             model_name='contact',
             name='phone',
-            field=phonenumber_field.modelfields.PhoneNumberField(blank=True, default=None, max_length=128, null=True, region=None),
+            field=phonenumber_field.modelfields.PhoneNumberField(
+                blank=True,
+                default=None,
+                max_length=128,
+                null=True,
+                region=None),
         ),
         migrations.AlterField(
             model_name='contact',

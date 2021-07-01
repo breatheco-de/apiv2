@@ -13,11 +13,19 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='answer',
             name='comment',
-            field=models.TextField(blank=True, default=None, max_length=1000, null=True),
+            field=models.TextField(blank=True,
+                                   default=None,
+                                   max_length=1000,
+                                   null=True),
         ),
         migrations.AlterField(
             model_name='survey',
             name='status',
-            field=models.CharField(choices=[('SENT', 'Sent'), ('PENDING', 'Pending'), ('PARTIAL', 'Partial'), ('FATAL', 'Fatal')], default='PENDING', max_length=15),
+            field=models.CharField(choices=[('SENT', 'Sent'),
+                                            ('PENDING', 'Pending'),
+                                            ('PARTIAL', 'Partial'),
+                                            ('FATAL', 'Fatal')],
+                                   default='PENDING',
+                                   max_length=15),
         ),
     ]

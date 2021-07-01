@@ -1,6 +1,15 @@
-# Enable linter in Visual Studio Code
+# Enable formatter in Visual Studio Code
 
-Press `ctrl` + `,`, you write `flake8 enable`, click in the checkbox and restart Visual Studio Code
+- Open `.vscode\settings.json`
+- Add
+
+```python
+  ...
+  "editor.formatOnSave": true,
+  "python.formatting.provider": "yapf"
+```
+
+- Save
 
 # Setup & Installation
 

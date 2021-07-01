@@ -5,6 +5,7 @@ import logging, re, os, json, inspect, urllib
 # from breathecode.services.eventbrite.actions import monitoring
 logger = logging.getLogger(__name__)
 
+
 class Eventbrite:
     # HOST = "https://slack.com/api/"
     headers = {}
@@ -15,9 +16,7 @@ class Eventbrite:
 
         self.host = "https://www.eventbriteapi.com/v3"
         self.token = token
-        self.headers = {
-            "Authorization": f"Bearer {token}"
-        }
+        self.headers = {"Authorization": f"Bearer {token}"}
 
     def has_error(self):
         # {
@@ -31,12 +30,14 @@ class Eventbrite:
         # wonderful way to fix one poor mocking system
         import requests
 
-        _headers = { **self.headers, **headers }
+        _headers = {**self.headers, **headers}
         _query_string = ""
         if query_string is not None:
             _query_string = "?" + urllib.parse.urlencode(query_string)
 
-        response = requests.request(_type, self.host + url + _query_string, headers=_headers)
+        response = requests.request(_type,
+                                    self.host + url + _query_string,
+                                    headers=_headers)
         result = response.json()
 
         if 'status_code' in result and result['status_code'] >= 400:
@@ -45,13 +46,19 @@ class Eventbrite:
         if "pagination" in result:
             print("has more items?", result["pagination"]["has_more_items"])
             if result["pagination"]["has_more_items"]:
-                    print("Continuation: ", result["pagination"]["continuation"])
-                    new_result = self.request(_type, url, query_string={ **query_string, "continuation": result["pagination"]["continuation"] })
-                    for key in new_result:
-                        print(key,type(new_result[key]) == "list")
-                        if type(new_result[key]) == "list":
-                            new_result[key] = result[key] + new_result[key]
-                    result.update(new_result)
+                print("Continuation: ", result["pagination"]["continuation"])
+                new_result = self.request(
+                    _type,
+                    url,
+                    query_string={
+                        **query_string, "continuation":
+                        result["pagination"]["continuation"]
+                    })
+                for key in new_result:
+                    print(key, type(new_result[key]) == "list")
+                    if type(new_result[key]) == "list":
+                        new_result[key] = result[key] + new_result[key]
+                result.update(new_result)
 
         return result
 
@@ -60,12 +67,15 @@ class Eventbrite:
         return data
 
     def get_organization_events(self, organization_id):
-        query_string = { "expand": "organizer", "status": "live" }
-        data = self.request('GET', f"/organizations/{str(organization_id)}/events/", query_string=query_string)
+        query_string = {"expand": "organizer", "status": "live"}
+        data = self.request('GET',
+                            f"/organizations/{str(organization_id)}/events/",
+                            query_string=query_string)
         return data
 
     def get_organization_venues(self, organization_id):
-        data = self.request('GET', f"/organizations/{str(organization_id)}/venues/")
+        data = self.request('GET',
+                            f"/organizations/{str(organization_id)}/venues/")
         return data
 
     def execute_action(self, eventbrite_webhook_id: int):
@@ -85,7 +95,8 @@ class Eventbrite:
         #     }
         # }
 
-        webhook = EventbriteWebhook.objects.filter(id=eventbrite_webhook_id).first()
+        webhook = EventbriteWebhook.objects.filter(
+            id=eventbrite_webhook_id).first()
 
         if not webhook:
             raise Exception("Invalid webhook")
@@ -95,7 +106,6 @@ class Eventbrite:
 
         if not webhook.api_url:
             raise Exception("Imposible to determine api url")
-
 
         action = webhook.action.replace('.', '_')
         api_url = webhook.api_url

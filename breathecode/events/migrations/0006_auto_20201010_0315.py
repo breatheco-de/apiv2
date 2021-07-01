@@ -13,12 +13,19 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='venue',
             name='eventbrite_id',
-            field=models.CharField(blank=True, default=None, max_length=80, null=True, unique=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   max_length=80,
+                                   null=True,
+                                   unique=True),
         ),
         migrations.AddField(
             model_name='venue',
             name='eventbrite_url',
-            field=models.CharField(blank=True, default=None, max_length=255, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   max_length=255,
+                                   null=True),
         ),
         migrations.AlterField(
             model_name='organizacion',

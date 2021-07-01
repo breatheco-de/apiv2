@@ -9,8 +9,9 @@ from rest_framework.test import APITestCase
 from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin, DatetimeMixin
 from breathecode.feedback.actions import strings
 
+
 class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
-        TokenMixin, GenerateQueriesMixin, DatetimeMixin):
+                        TokenMixin, GenerateQueriesMixin, DatetimeMixin):
     """MarketingTestCase with auth methods"""
     def tearDown(self):
         self.clear_cache()
@@ -22,7 +23,8 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         kwargs = {}
         if id:
             kwargs['id'] = id
-        return Token.objects.filter(**kwargs).values_list('key', flat=True).first()
+        return Token.objects.filter(**kwargs).values_list('key',
+                                                          flat=True).first()
 
     # This function was moved here because i want to use it as one example to
     # test the email
@@ -33,47 +35,54 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
 
         args_list = mock.call_args_list
 
-        template = get_template_content("nps", {
-            "QUESTION": question,
-            "HIGHEST": dicts[0]['highest'],
-            "LOWEST": dicts[0]['lowest'],
-            "SUBJECT": question,
-            "ANSWER_ID": dicts[0]['id'],
-            "BUTTON": strings[lang]["button_label"],
-            "LINK": link,
-        }, ["email"])
+        template = get_template_content(
+            "nps", {
+                "QUESTION": question,
+                "HIGHEST": dicts[0]['highest'],
+                "LOWEST": dicts[0]['lowest'],
+                "SUBJECT": question,
+                "ANSWER_ID": dicts[0]['id'],
+                "BUTTON": strings[lang]["button_label"],
+                "LINK": link,
+            }, ["email"])
 
-        self.assertEqual(args_list, [call(
-            'https://api.mailgun.net/v3/None/messages',
-            auth=('api', os.environ.get('MAILGUN_API_KEY', "")),
-            data={
-                "from": f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
-                "to": model['user'].email,
-                "subject": template['subject'],
-                "text": template['text'],
-                "html": template['html']
-            }
-        )])
+        self.assertEqual(args_list, [
+            call(
+                'https://api.mailgun.net/v3/None/messages',
+                auth=('api', os.environ.get('MAILGUN_API_KEY', "")),
+                data={
+                    "from":
+                    f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
+                    "to": model['user'].email,
+                    "subject": template['subject'],
+                    "text": template['text'],
+                    "html": template['html']
+                })
+        ])
 
         html = template['html']
         del template['html']
-        self.assertEqual(template, {
-            'SUBJECT': question,
-            'subject': question,
-            'text': '\n'
-                    '\n'
-                    'Please take 2 min to answer the following question:\n'
-                    '\n'
-                    f'{question}\n'
-                    '\n'
-                    'Click here to vote: '
-                    f'{link}'
-                    '\n'
-                    '\n'
-                    '\n'
-                    '\n'
-                    'The BreatheCode Team'
-        })
+        self.assertEqual(
+            template, {
+                'SUBJECT':
+                question,
+                'subject':
+                question,
+                'text':
+                '\n'
+                '\n'
+                'Please take 2 min to answer the following question:\n'
+                '\n'
+                f'{question}\n'
+                '\n'
+                'Click here to vote: '
+                f'{link}'
+                '\n'
+                '\n'
+                '\n'
+                '\n'
+                'The BreatheCode Team'
+            })
         self.assertToken(token)
         self.assertTrue(link in html)
 
@@ -93,6 +102,5 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
                         'contact': 1,
                         'automation': 1938270575
                     }
-                }
-            )
+                })
         ])

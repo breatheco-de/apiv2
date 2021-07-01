@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception,)
+    autoretry_for = (Exception, )
     #                                           seconds
     retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
     retry_backoff = True
@@ -48,11 +48,12 @@ def build_question(answer):
 
 def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
 
-    cohort_teacher = CohortUser.objects.filter(
-        cohort=survey.cohort, role="TEACHER")
+    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort,
+                                               role="TEACHER")
     if cohort_teacher.count() == 0:
         raise ValidationException(
-            "This cohort must have a teacher assigned to be able to survey it", 400)
+            "This cohort must have a teacher assigned to be able to survey it",
+            400)
 
     def new_answer(answer):
         question = build_question(answer)
@@ -72,7 +73,8 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
 
         # ask for the cohort in general
         answer = Answer(cohort=survey.cohort,
-                        academy=survey.cohort.academy, lang=survey.lang)
+                        academy=survey.cohort.academy,
+                        lang=survey.lang)
         _answers.append(new_answer(answer))
 
         # ask for each teacher, with a max of 2 teachers
@@ -80,20 +82,24 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
         for ct in cohort_teacher:
             if cont >= survey.max_teachers_to_ask:
                 break
-            answer = Answer(mentor=ct.user, cohort=survey.cohort,
-                            academy=survey.cohort.academy, lang=survey.lang)
+            answer = Answer(mentor=ct.user,
+                            cohort=survey.cohort,
+                            academy=survey.cohort.academy,
+                            lang=survey.lang)
             _answers.append(new_answer(answer))
             cont = cont + 1
 
         # ask for the first TA
-        cohort_assistant = CohortUser.objects.filter(
-            cohort=survey.cohort, role="ASSISTANT")
+        cohort_assistant = CohortUser.objects.filter(cohort=survey.cohort,
+                                                     role="ASSISTANT")
         cont = 0
         for ca in cohort_assistant:
             if cont >= survey.max_assistants_to_ask:
                 break
-            answer = Answer(mentor=ca.user, cohort=survey.cohort,
-                            academy=survey.cohort.academy, lang=survey.lang)
+            answer = Answer(mentor=ca.user,
+                            cohort=survey.cohort,
+                            academy=survey.cohort.academy,
+                            lang=survey.lang)
             _answers.append(new_answer(answer))
             cont = cont + 1
 
@@ -122,8 +128,9 @@ def send_cohort_survey(self, user_id, survey_id):
         logger.error("This survey has already expired")
         return False
 
-    cu = CohortUser.objects.filter(
-        cohort=survey.cohort, role="STUDENT", user=user).first()
+    cu = CohortUser.objects.filter(cohort=survey.cohort,
+                                   role="STUDENT",
+                                   user=user).first()
     if cu is None:
         raise ValidationException(
             "This student does not belong to this cohort", 400)
@@ -142,13 +149,17 @@ def send_cohort_survey(self, user_id, survey_id):
         "MESSAGE": strings[survey.lang]["survey_message"],
         "SURVEY_ID": survey_id,
         "BUTTON": strings[survey.lang]["button_label"],
-        "LINK": f"https://nps.breatheco.de/survey/{survey_id}?token={token.key}",
+        "LINK":
+        f"https://nps.breatheco.de/survey/{survey_id}?token={token.key}",
     }
 
     if user.email:
         send_email_message("nps_survey", user.email, data)
         survey.sent_at = timezone.now()
 
-    if hasattr(user, 'slackuser') and hasattr(survey.cohort.academy, 'slackteam'):
-        send_slack("nps_survey", user.slackuser,
-                   survey.cohort.academy.slackteam, data=data)
+    if hasattr(user, 'slackuser') and hasattr(survey.cohort.academy,
+                                              'slackteam'):
+        send_slack("nps_survey",
+                   user.slackuser,
+                   survey.cohort.academy.slackteam,
+                   data=data)

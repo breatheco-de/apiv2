@@ -15,17 +15,32 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='userinvite',
             name='academy',
-            field=models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to='admissions.academy'),
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to='admissions.academy'),
         ),
         migrations.AlterField(
             model_name='userinvite',
             name='cohort',
-            field=models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to='admissions.cohort'),
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to='admissions.cohort'),
         ),
         migrations.AlterField(
             model_name='userinvite',
             name='role',
-            field=models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to='authenticate.role'),
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to='authenticate.role'),
         ),
         migrations.AlterField(
             model_name='userinvite',

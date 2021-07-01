@@ -8,7 +8,9 @@ from breathecode.admissions.models import CohortUser
 from django.db.models import Count
 
 HOST = os.environ.get("OLD_BREATHECODE_API")
-DATETIME_FORMAT="%Y-%m-%d"
+DATETIME_FORMAT = "%Y-%m-%d"
+
+
 class Command(BaseCommand):
     help = 'Sync academies from old breathecode'
 
@@ -26,18 +28,16 @@ class Command(BaseCommand):
             default=None,
             help='Cohorts slugs to sync',
         )
-        parser.add_argument(
-              '--limit',
-               action='store',
-               dest='limit',
-               type=int,
-               default=0,
-               help='How many to import'
-        )
+        parser.add_argument('--limit',
+                            action='store',
+                            dest='limit',
+                            type=int,
+                            default=0,
+                            help='How many to import')
 
     def handle(self, *args, **options):
         try:
-            func = getattr(self,options['entity'],'entity_not_found') 
+            func = getattr(self, options['entity'], 'entity_not_found')
         except TypeError:
             print(f'Sync method for {options["entity"]} no Found!')
         func(options)
@@ -63,5 +63,3 @@ class Command(BaseCommand):
         teams = SlackTeam.objects.all()
         for team in teams:
             async_slack_team_channel.delay(team.id)
-
-

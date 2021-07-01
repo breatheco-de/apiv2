@@ -1,6 +1,5 @@
 class AttrDict(dict):
     """support use one dict like one javascript object"""
-
     def __init__(self, **kwargs):
         dict.__init__(self, **kwargs)
 

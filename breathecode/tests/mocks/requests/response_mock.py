@@ -1,5 +1,6 @@
 import json
 
+
 class ResponseMock():
     """Simutate Response to be used by mocks"""
     status_code = None

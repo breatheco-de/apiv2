@@ -2,7 +2,9 @@ import requests, logging, re, os, json, inspect
 from .decorator import commands, actions
 from breathecode.services.slack.commands import student, cohort
 from breathecode.services.slack.actions import monitoring
+
 logger = logging.getLogger(__name__)
+
 
 class Slack:
     HOST = "https://slack.com/api/"
@@ -24,7 +26,7 @@ class Slack:
 
         if method_name != "GET":
             self.headers = {
-                "Authorization": "Bearer "+self.token,
+                "Authorization": "Bearer " + self.token,
                 "Content-type": "application/json",
             }
         else:
@@ -33,25 +35,27 @@ class Slack:
                 **params,
             }
 
-        resp = requests.request(method=method_name,url=self.HOST+action_name, headers=self.headers,
-            params=params, json=json)
+        resp = requests.request(method=method_name,
+                                url=self.HOST + action_name,
+                                headers=self.headers,
+                                params=params,
+                                json=json)
 
         if resp.status_code == 200:
             data = resp.json()
             if data["ok"] == False:
-                raise Exception("Slack API Error "+data["error"])
+                raise Exception("Slack API Error " + data["error"])
             else:
                 logger.debug(f"Successfull call {method_name}: /{action_name}")
                 return data
         else:
-            raise Exception(f"Unable to communicate with Slack API, error: {resp.status_code}")
+            raise Exception(
+                f"Unable to communicate with Slack API, error: {resp.status_code}"
+            )
 
     def execute_command(self, context):
 
-        patterns = {
-            "users": r"\<@([^|]+)\|([^>]+)>",
-            "command": r"^(\w+)\s?"
-        }
+        patterns = {"users": r"\<@([^|]+)\|([^>]+)>", "command": r"^(\w+)\s?"}
         content = context["text"]
         response = {}
 
@@ -63,17 +67,18 @@ class Slack:
         response["users"] = [u[0] for u in matches]
 
         response["context"] = context
-        
+
         if hasattr(commands, _commands[0]):
             return getattr(commands, _commands[0]).execute(**response)
         else:
-            raise Exception("No implementation has been found for this command")
+            raise Exception(
+                "No implementation has been found for this command")
 
     def execute_action(self, context):
 
         payload = json.loads(context["payload"])
 
-        if "actions" not in payload or len(payload["actions"])==0:
+        if "actions" not in payload or len(payload["actions"]) == 0:
             raise Exception("Imposible to determine action")
 
         try:
@@ -84,20 +89,28 @@ class Slack:
             payload["action_state"] = _data
 
         except:
-            raise Exception("Invalid slack action format, must be ajson with class and method properties at least")
-        
+            raise Exception(
+                "Invalid slack action format, must be ajson with class and method properties at least"
+            )
+
         logger.debug(f"Executing {action_class} => {method}")
         if hasattr(actions, action_class):
             logger.debug(f"Action found")
-            _module = getattr(actions, action_class) #get action module
+            _module = getattr(actions, action_class)  #get action module
 
             if not hasattr(_module, action_class.capitalize()):
-                raise Exception(f"Class {action_class.capitalize()} not found in module {action_class}")
-            _class = getattr(_module, action_class.capitalize())(payload) #factory the class
+                raise Exception(
+                    f"Class {action_class.capitalize()} not found in module {action_class}"
+                )
+            _class = getattr(_module, action_class.capitalize())(
+                payload)  #factory the class
 
             if not hasattr(_class, method):
-                raise Exception(f"Method {method} not found in slack action class {action_class.capitalize()}")
-            response = getattr(_class, method)(payload=payload) # call action method
+                raise Exception(
+                    f"Method {method} not found in slack action class {action_class.capitalize()}"
+                )
+            response = getattr(_class,
+                               method)(payload=payload)  # call action method
 
             if "response_url" in payload and response:
                 resp = requests.post(payload["response_url"], json=response)
@@ -105,4 +118,6 @@ class Slack:
             else:
                 return True
         else:
-            raise Exception(f"No implementation has been found for this action: {action_class}")
+            raise Exception(
+                f"No implementation has been found for this action: {action_class}"
+            )

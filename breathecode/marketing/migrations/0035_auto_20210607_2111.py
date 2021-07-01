@@ -21,7 +21,10 @@ class Migration(migrations.Migration):
             fields=[
                 ('slug', models.SlugField(primary_key=True, serialize=False)),
                 ('active_campaign_slug', models.SlugField()),
-                ('academy', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ('academy',
+                 models.OneToOneField(
+                     on_delete=django.db.models.deletion.CASCADE,
+                     to='admissions.academy')),
             ],
         ),
     ]
