@@ -166,12 +166,19 @@ def add_student_activity(user, data, academy_id):
     validate_if_activity_need_field_data(data)
     validate_activity_have_correct_data_field(data)
 
-    if 'cohort' in data and not Cohort.objects.filter(academy__id=academy_id).filter(
-                Q(slug=data['cohort']) | Q(id=data['cohort']),
-            ).exists():
-        raise ValidationException(
-            f"Cohort {str(data['cohort'])} doesn't exist",
-            slug='cohort-not-exists')
+    if 'cohort' in data:
+        _query = Cohort.objects.filter(academy__id=academy_id)
+        if isinstance(data['cohort'], str): 
+            _query.filter(slug=data['cohort'])
+        elif isinstance(data['cohort'], int):
+            _query.filter(id=data['cohort'])
+        else:
+            raise ValidationException('Invalid cohort parameter format')
+
+        if _query.exists():
+            raise ValidationException(
+                f"Cohort {str(data['cohort'])} doesn't exist",
+                slug='cohort-not-exists')
 
     fields = {
         **data,

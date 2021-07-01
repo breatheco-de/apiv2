@@ -30,6 +30,7 @@ class Command(BaseCommand):
             { "slug": "crud_assignment", "description": "Update assignments" },
             { "slug": "read_certificate", "description": "List and read all academy certificates" },
             { "slug": "crud_certificate", "description": "Create, update or delete student certificates" },
+            { "slug": "read_layout", "description": "Read layouts to generate new certificates" },
             { "slug": "read_syllabus", "description": "List and read syllabus information" },
             { "slug": "crud_syllabus", "description": "Create, update or delete syllabus versions" },
             { "slug": "read_event", "description": "List and retrieve event information" },
@@ -68,7 +69,7 @@ class Command(BaseCommand):
         roles = [
             { "slug": "admin", "name": "Admin", "caps": [c["slug"] for c in caps] },
             { "slug": "academy_token", "name": "Academy Token", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "read_lead", "crud_lead"] },
-            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "get_academy_token", "crud_activity", "read_survey"] },
+            { "slug": "staff", "name": "Staff (Base)", "caps": ["read_member", "read_syllabus", "read_student", "read_cohort", "read_media", "read_my_academy", "read_invite", "get_academy_token", "crud_activity", "read_survey", "read_layout"] },
             { "slug": "student", "name": "Student", "caps": ["crud_assignment", "read_syllabus", "read_assignment", "read_cohort", "read_my_academy", "crud_activity"] },
         ]
 
