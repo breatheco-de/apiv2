@@ -80,6 +80,9 @@ class LayoutDesign(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
     name = models.CharField(max_length=40)
 
+    background_url = models.CharField(max_length=250, blank=False, null=False)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
     def __str__(self):
         return self.name
 
