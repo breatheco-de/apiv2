@@ -15,13 +15,19 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='layoutdesign',
             name='academy',
-            field=models.ForeignKey(default=4, on_delete=django.db.models.deletion.CASCADE, to='admissions.academy'),
+            field=models.ForeignKey(
+                default=4,
+                on_delete=django.db.models.deletion.CASCADE,
+                to='admissions.academy'),
             preserve_default=False,
         ),
         migrations.AddField(
             model_name='layoutdesign',
             name='background_url',
-            field=models.CharField(default='https://storage.cloud.google.com/certificates-breathecode/_template-default-4geeks.png', max_length=250),
+            field=models.CharField(
+                default=
+                'https://storage.cloud.google.com/certificates-breathecode/_template-default-4geeks.png',
+                max_length=250),
             preserve_default=False,
         ),
     ]

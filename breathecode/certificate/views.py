@@ -67,6 +67,7 @@ class LayoutView(APIView):
         serializer = LayoutDesignSerializer(layouts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 class CertificateView(APIView):
     """
     List all snippets, or create a new snippet.
