@@ -136,7 +136,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                 generate_certificate(model['user'], model['cohort']), None)
             assert False
         except Exception as e:
-            self.assertEqual(str(e), 'Missing a default layout')
+            self.assertEqual(str(e), 'no-default-layout')
 
         self.assertEqual(self.all_user_specialty_dict(), [])
 
