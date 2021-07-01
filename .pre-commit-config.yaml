@@ -4,7 +4,7 @@ repos:
       - id: yapf
         name: yapf
         language: python
-        entry: yapf
+        entry: pipenv run yapf
         args: [-i, -vv]
         types: [python]
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -16,11 +16,10 @@ repos:
       - id: check-added-large-files
       - id: check-yaml
       - id: debug-statements
-      - id: requirements-txt-fixer
       - id: check-merge-conflict
       - id: double-quote-string-fixer
       - id: end-of-file-fixer
-      - id: sort-simple-yaml
+      - id: detect-private-key
   - repo: meta
     hooks:
       - id: check-hooks-apply
