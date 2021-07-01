@@ -70,9 +70,8 @@ def validate_activity_have_correct_data_field(data):
             json.loads(data['data'])
 
         except Exception as e:
-            raise ValidationException(
-                'Data is not a JSON: ' + str(data),
-                slug='data-is-not-a-json')
+            raise ValidationException('Data is not a JSON: ' + str(data),
+                                      slug='data-is-not-a-json')
 
 
 def generate_created_at():
