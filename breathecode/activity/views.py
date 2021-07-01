@@ -139,10 +139,15 @@ class ActivityClassroomView(APIView):
         for activity in data:
             student_id = activity['user_id']
             del activity['user_id']
-            cohort_user = CohortUser.objects.filter(
-                role='STUDENT', user__id=student_id).filter(
-                    Q(cohort__id=cohort_id)
-                    | Q(cohort__slug=cohort_id)).first()
+            cohort_user = CohortUser.objects.filter(role='STUDENT', user__id=student_id)
+            
+            # filter by cohort id or slug depending on input
+            if isinstance(cohort_id,str):
+                cohort_user = cohort_user.filter(cohort__id=cohort_id)
+            else:
+                cohort_user = cohort_user.filter(cohort__slug=cohort_id)
+
+            cohort_user = cohort_user.first()
             if cohort_user is None:
                 raise ValidationException("Student not found in this cohort",
                                           slug="not-found-in-cohort")
