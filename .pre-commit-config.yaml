@@ -4,7 +4,7 @@ repos:
       - id: yapf
         name: yapf
         language: python
-        entry: pipenv run yapf
+        entry: yapf
         args: [-i, -vv]
         types: [python]
   - repo: https://github.com/pre-commit/pre-commit-hooks
