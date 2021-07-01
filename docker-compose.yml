@@ -1,42 +1,43 @@
 version: "3.2"
 
 services:
-   breathecode:
-      image: breathecode
-      ports:
-         - "8000:8000"
-      env_file:
-         - ./.env
-      environment:
-         - REDIS_URL=redis://redis:6379
-         - DATABASE_URL=postgres://user:pass@postgres:5432/breathecode
-         - CELERY_DISABLE_SCHEDULER=
-      depends_on:
-         - postgres
-         - redis
+  breathecode:
+    image: breathecode/apiv2
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgres://user:pass@postgres:5432/breathecode
+      - CELERY_DISABLE_SCHEDULER=
+      - ALLOW_UNSAFE_CYPRESS_APP=True
+    depends_on:
+      - postgres
+      - redis
 
-   redis:
-      image: redis:alpine
-      ports:
-         - "6379:6379"
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
 
-   postgres:
-      image: postgres:alpine
-      ports:
-         - "5432:5432"
-      volumes:
-         - postgres_data:/var/lib/postgresql/data/
-      environment:
-         - POSTGRES_USER=user
-         - POSTGRES_PASSWORD=pass
-         - POSTGRES_DB=breathecode
+  postgres:
+    image: postgres:alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=breathecode
 
-   adminer:
-      image: adminer
-      ports:
-         - 8080:8080
-      depends_on:
-         - postgres
+  adminer:
+    image: adminer
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
 
 volumes:
-   postgres_data:
+  postgres_data:
