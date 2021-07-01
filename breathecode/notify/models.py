@@ -52,21 +52,21 @@ class SlackTeam(models.Model):
         max_length=15,
         choices=SYNC_STATUS,
         default=INCOMPLETED,
-        help_text="Automatically set when synqued from slack")
+        help_text='Automatically set when synqued from slack')
     sync_message = models.CharField(
         max_length=100,
         blank=True,
         null=True,
         default=None,
         help_text=
-        "Contains any success or error messages depending on the status")
+        'Contains any success or error messages depending on the status')
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f"{self.name} ({self.slack_id})"
+        return f'{self.name} ({self.slack_id})'
 
 
 class SlackUser(models.Model):
@@ -103,7 +103,7 @@ class SlackUserTeam(models.Model):
         null=True,
         default=None,
         help_text=
-        "Contains any success or error messages depending on the status")
+        'Contains any success or error messages depending on the status')
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -134,7 +134,7 @@ class SlackChannel(models.Model):
         null=True,
         default=None,
         help_text=
-        "Contains any success or error messages depending on the status")
+        'Contains any success or error messages depending on the status')
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

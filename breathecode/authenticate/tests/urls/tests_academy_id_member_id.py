@@ -42,7 +42,7 @@ class AuthenticateTestSuite(AuthTestCase):
             json, {
                 'detail':
                 "You (user: 2) don't have this capability: read_member "
-                "for academy 1",
+                'for academy 1',
                 'status_code': 403
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -65,7 +65,7 @@ class AuthenticateTestSuite(AuthTestCase):
             json, {
                 'detail':
                 "You (user: 2) don't have this capability: read_member "
-                "for academy 1",
+                'for academy 1',
                 'status_code': 403
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

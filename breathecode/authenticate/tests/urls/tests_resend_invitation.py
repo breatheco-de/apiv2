@@ -1,5 +1,5 @@
 """
-Test cases for 
+Test cases for
 """
 import re
 from unittest.mock import patch
@@ -22,7 +22,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test """
         self.headers(academy=1)
         url = reverse_lazy('authenticate:academy_resent_invite',
-                           kwargs={"pa_id": 1})
+                           kwargs={'pa_id': 1})
 
         response = self.client.put(url)
         json = response.json()
@@ -46,7 +46,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      role='potato',
                                      syllabus=True)
         url = reverse_lazy('authenticate:academy_resent_invite',
-                           kwargs={"pa_id": 1})
+                           kwargs={'pa_id': 1})
 
         response = self.client.put(url)
         json = response.json()
@@ -72,7 +72,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      syllabus=True)
 
         url = reverse_lazy('authenticate:academy_resent_invite',
-                           kwargs={"pa_id": 1359})
+                           kwargs={'pa_id': 1359})
 
         response = self.client.put(url)
         json = response.json()
@@ -92,7 +92,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      role='potato',
                                      syllabus=True)
         url = reverse_lazy('authenticate:academy_resent_invite',
-                           kwargs={"pa_id": 1})
+                           kwargs={'pa_id': 1})
 
         response = self.client.put(url)
         json = response.json()
@@ -113,7 +113,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      syllabus=True,
                                      user_invite=True)
         url = reverse_lazy('authenticate:academy_resent_invite',
-                           kwargs={"pa_id": 1})
+                           kwargs={'pa_id': 1})
         response = self.client.put(url)
         json = response.json()
         token = json['token']
@@ -166,7 +166,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      token=True,
                                      user_invite_kwargs={'sent_at': past_time})
         url = reverse_lazy('authenticate:academy_resent_invite',
-                           kwargs={"pa_id": 1})
+                           kwargs={'pa_id': 1})
         response = self.client.put(url)
         json = response.json()
         expected = {

@@ -414,7 +414,7 @@ class AnswerTestSuite(FeedbackTestCase):
         base_url = reverse_lazy('feedback:answer')
         url = f'{base_url}?{urllib.parse.urlencode(params)}'
         response = self.client.get(url,
-                                   headers={"Academy": model['academy'].id})
+                                   headers={'Academy': model['academy'].id})
         json = response.json()
 
         json = [{
@@ -623,7 +623,7 @@ class AnswerTestSuite(FeedbackTestCase):
             base_url = reverse_lazy('feedback:answer')
             url = f'{base_url}?{urllib.parse.urlencode(params)}'
             response = self.client.get(
-                url, headers={"Academy", model['academy'].id})
+                url, headers={'Academy', model['academy'].id})
             json = response.json()
 
             json = [{

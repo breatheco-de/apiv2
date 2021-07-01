@@ -22,26 +22,26 @@ class BaseTaskWithRetry(Task):
 
 def build_question(answer):
 
-    question = {"title": "", "lowest": "", "highest": ""}
+    question = {'title': '', 'lowest': '', 'highest': ''}
     if answer.event is not None:
-        question["title"] = strings[answer.lang]["event"]["title"]
-        question["lowest"] = strings[answer.lang]["event"]["lowest"]
-        question["highest"] = strings[answer.lang]["event"]["highest"]
+        question['title'] = strings[answer.lang]['event']['title']
+        question['lowest'] = strings[answer.lang]['event']['lowest']
+        question['highest'] = strings[answer.lang]['event']['highest']
     elif answer.mentor is not None:
-        question["title"] = strings[answer.lang]["mentor"]["title"].format(
-            answer.mentor.first_name + " " + answer.mentor.last_name)
-        question["lowest"] = strings[answer.lang]["mentor"]["lowest"]
-        question["highest"] = strings[answer.lang]["mentor"]["highest"]
+        question['title'] = strings[answer.lang]['mentor']['title'].format(
+            answer.mentor.first_name + ' ' + answer.mentor.last_name)
+        question['lowest'] = strings[answer.lang]['mentor']['lowest']
+        question['highest'] = strings[answer.lang]['mentor']['highest']
     elif answer.cohort is not None:
-        question["title"] = strings[answer.lang]["cohort"]["title"].format(
+        question['title'] = strings[answer.lang]['cohort']['title'].format(
             answer.cohort.syllabus.certificate.name)
-        question["lowest"] = strings[answer.lang]["cohort"]["lowest"]
-        question["highest"] = strings[answer.lang]["cohort"]["highest"]
+        question['lowest'] = strings[answer.lang]['cohort']['lowest']
+        question['highest'] = strings[answer.lang]['cohort']['highest']
     elif answer.academy is not None:
-        question["title"] = strings[answer.lang]["academy"]["title"].format(
+        question['title'] = strings[answer.lang]['academy']['title'].format(
             answer.academy.name)
-        question["lowest"] = strings[answer.lang]["academy"]["lowest"]
-        question["highest"] = strings[answer.lang]["academy"]["highest"]
+        question['lowest'] = strings[answer.lang]['academy']['lowest']
+        question['highest'] = strings[answer.lang]['academy']['highest']
 
     return question
 
@@ -49,17 +49,17 @@ def build_question(answer):
 def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
 
     cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort,
-                                               role="TEACHER")
+                                               role='TEACHER')
     if cohort_teacher.count() == 0:
         raise ValidationException(
-            "This cohort must have a teacher assigned to be able to survey it",
+            'This cohort must have a teacher assigned to be able to survey it',
             400)
 
     def new_answer(answer):
         question = build_question(answer)
-        answer.title = question["title"]
-        answer.lowest = question["lowest"]
-        answer.highest = question["highest"]
+        answer.title = question['title']
+        answer.lowest = question['lowest']
+        answer.highest = question['highest']
         answer.user = user
         answer.status = status
         answer.survey = survey
@@ -91,7 +91,7 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
 
         # ask for the first TA
         cohort_assistant = CohortUser.objects.filter(cohort=survey.cohort,
-                                                     role="ASSISTANT")
+                                                     role='ASSISTANT')
         cont = 0
         for ca in cohort_assistant:
             if cont >= survey.max_assistants_to_ask:
@@ -112,28 +112,28 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def send_cohort_survey(self, user_id, survey_id):
-    logger.debug("Starting send_cohort_survey")
+    logger.debug('Starting send_cohort_survey')
     survey = Survey.objects.filter(id=survey_id).first()
     if survey is None:
-        logger.error("Survey not found")
+        logger.error('Survey not found')
         return False
 
     user = User.objects.filter(id=user_id).first()
     if user is None:
-        logger.error("User not found")
+        logger.error('User not found')
         return False
 
     utc_now = timezone.now()
     if utc_now > survey.created_at + survey.duration:
-        logger.error("This survey has already expired")
+        logger.error('This survey has already expired')
         return False
 
     cu = CohortUser.objects.filter(cohort=survey.cohort,
-                                   role="STUDENT",
+                                   role='STUDENT',
                                    user=user).first()
     if cu is None:
         raise ValidationException(
-            "This student does not belong to this cohort", 400)
+            'This student does not belong to this cohort', 400)
 
     answers = generate_user_cohort_survey_answers(user, survey, status='SENT')
 
@@ -145,21 +145,21 @@ def send_cohort_survey(self, user_id, survey_id):
 
     token = create_token(user, hours_length=48)
     data = {
-        "SUBJECT": strings[survey.lang]["survey_subject"],
-        "MESSAGE": strings[survey.lang]["survey_message"],
-        "SURVEY_ID": survey_id,
-        "BUTTON": strings[survey.lang]["button_label"],
-        "LINK":
-        f"https://nps.breatheco.de/survey/{survey_id}?token={token.key}",
+        'SUBJECT': strings[survey.lang]['survey_subject'],
+        'MESSAGE': strings[survey.lang]['survey_message'],
+        'SURVEY_ID': survey_id,
+        'BUTTON': strings[survey.lang]['button_label'],
+        'LINK':
+        f'https://nps.breatheco.de/survey/{survey_id}?token={token.key}',
     }
 
     if user.email:
-        send_email_message("nps_survey", user.email, data)
+        send_email_message('nps_survey', user.email, data)
         survey.sent_at = timezone.now()
 
     if hasattr(user, 'slackuser') and hasattr(survey.cohort.academy,
                                               'slackteam'):
-        send_slack("nps_survey",
+        send_slack('nps_survey',
                    user.slackuser,
                    survey.cohort.academy.slackteam,
                    data=data)

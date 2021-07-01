@@ -44,6 +44,6 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
                                      teacher=True,
                                      stage=True,
                                      user_specialty=True)
-        print("ewwowowowowoowowow", model['user_specialty'].preview_url)
+        print('ewwowowowowoowowow', model['user_specialty'].preview_url)
         self.assertEqual(
             remove_certificate_screenshot(model['user_specialty'].id), True)

@@ -35,22 +35,22 @@ class Command(BaseCommand):
         orgs = Organization.objects.all()
         count = 0
         for org in orgs:
-            if org.eventbrite_key is None or org.eventbrite_key == "" or org.eventbrite_id is None or org.eventbrite_id == "":
+            if org.eventbrite_key is None or org.eventbrite_key == '' or org.eventbrite_id is None or org.eventbrite_id == '':
                 org.sync_status = 'ERROR'
-                org.sync_desc = "Missing eventbrite key or id"
+                org.sync_desc = 'Missing eventbrite key or id'
                 org.save()
                 self.stdout.write(
                     self.style.ERROR(
-                        f"Organization {str(org)} is missing evenbrite key or ID"
+                        f'Organization {str(org)} is missing evenbrite key or ID'
                     ))
             else:
                 org.sync_status = 'PENDING'
-                org.sync_desc = "Running sync_eventbrite command at " + str(
+                org.sync_desc = 'Running sync_eventbrite command at ' + str(
                     now)
                 org.save()
-                persist_organization_events.delay({"org_id": org.id})
+                persist_organization_events.delay({'org_id': org.id})
                 count = count + 1
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Enqueued {count} of {len(orgs)} for sync events"))
+                f'Enqueued {count} of {len(orgs)} for sync events'))

@@ -6,7 +6,7 @@ from ...models import AssetAlias
 
 logger = logging.getLogger(__name__)
 
-HOST_ASSETS = "https://assets.breatheco.de/apis"
+HOST_ASSETS = 'https://assets.breatheco.de/apis'
 
 
 class Command(BaseCommand):
@@ -39,23 +39,23 @@ class Command(BaseCommand):
         return aa is not None
 
     def exercises(self, *args, **options):
-        response = requests.get(f"{HOST_ASSETS}/registry/all")
+        response = requests.get(f'{HOST_ASSETS}/registry/all')
         items = response.json()
         for slug in items:
             if self._exists(slug):
-                print("Skipping: Asset with this alias " + slug +
-                      " already exists")
+                print('Skipping: Asset with this alias ' + slug +
+                      ' already exists')
                 continue
             data = items[slug]
-            create_asset(data, asset_type="EXERCISE")
+            create_asset(data, asset_type='EXERCISE')
 
     def projects(self, *args, **options):
-        response = requests.get(f"{HOST_ASSETS}/project/registry/all")
+        response = requests.get(f'{HOST_ASSETS}/project/registry/all')
         items = response.json()
         for slug in items:
             if self._exists(slug):
-                print("Skipping: Asset with this alias " + slug +
-                      " already exists")
+                print('Skipping: Asset with this alias ' + slug +
+                      ' already exists')
                 continue
             data = items[slug]
-            create_asset(data, asset_type="PROJECT")
+            create_asset(data, asset_type='PROJECT')

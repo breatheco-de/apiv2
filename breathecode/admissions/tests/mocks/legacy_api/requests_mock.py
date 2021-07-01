@@ -3,7 +3,7 @@ Requests mock
 """
 import os, json
 
-HOST = os.environ.get("OLD_BREATHECODE_API")
+HOST = os.environ.get('OLD_BREATHECODE_API')
 
 with open(
         f'{os.getcwd()}/breathecode/admissions/fixtures/legacy_teachers.json',

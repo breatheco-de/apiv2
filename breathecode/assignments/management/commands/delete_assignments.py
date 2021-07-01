@@ -3,8 +3,8 @@ from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from ...models import Task
 
-HOST = os.environ.get("OLD_BREATHECODE_API")
-DATETIME_FORMAT = "%Y-%m-%d"
+HOST = os.environ.get('OLD_BREATHECODE_API')
+DATETIME_FORMAT = '%Y-%m-%d'
 
 
 class Command(BaseCommand):
@@ -37,19 +37,19 @@ class Command(BaseCommand):
                     a.delete()
                     self.stdout.write(
                         self.style.SUCCESS(
-                            f"Student: {a.user.email} task {a.associated_slug} with status {a.task_status} was deleted"
+                            f'Student: {a.user.email} task {a.associated_slug} with status {a.task_status} was deleted'
                         ))
                 elif b.task_status == 'PENDING':
                     b.delete()
                     self.stdout.write(
                         self.style.SUCCESS(
-                            f"Student: {b.user.email} task {b.associated_slug} with status {b.task_status} was deleted"
+                            f'Student: {b.user.email} task {b.associated_slug} with status {b.task_status} was deleted'
                         ))
                 else:
                     a.delete()
                     self.stdout.write(
                         self.style.SUCCESS(
-                            f"Student: {a.user.email} task {a.associated_slug} with status {a.task_status} was deleted"
+                            f'Student: {a.user.email} task {a.associated_slug} with status {a.task_status} was deleted'
                         ))
 
         self.stdout.write(

@@ -25,4 +25,4 @@ jobs:
           pipenv install --system --deploy --ignore-pipfile --dev
       - name: Linter
         run: |
-          pipenv run lint .
+          pipenv run format

@@ -3,10 +3,10 @@ from django.contrib.auth.models import User
 from breathecode.marketing.models import FormEntry
 
 status = {
-    "Won": "WON",
-    "Lost": "LOST",
-    "1": "WON",
-    "2": "LOST",
+    'Won': 'WON',
+    'Lost': 'LOST',
+    '1': 'WON',
+    '2': 'LOST',
 }
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ def deal_add(self, webhook, payload: dict):
             ac_deal_id__isnull=True).order_by('-created_at').first()
     if entry is None:
         raise Exception(
-            f"Impossible to find formentry for webhook {webhook.id} -> {webhook.webhook_type} "
+            f'Impossible to find formentry for webhook {webhook.id} -> {webhook.webhook_type} '
         )
         logger.debug(payload)
 

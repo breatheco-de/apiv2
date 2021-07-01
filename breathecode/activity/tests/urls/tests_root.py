@@ -97,7 +97,7 @@ class MediaTestSuite(MediaTestCase):
             json, {
                 'detail':
                 ("You (user: 1) don't have this capability: read_activity for "
-                 "academy 1"),
+                 'academy 1'),
                 'status_code':
                 403,
             })

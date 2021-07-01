@@ -62,7 +62,7 @@ class Command(BaseCommand):
             monitor_app.delay(app_id)
 
         self.stdout.write(
-            self.style.SUCCESS(f"Enqueued {len(apps)} apps for diagnostic"))
+            self.style.SUCCESS(f'Enqueued {len(apps)} apps for diagnostic'))
 
     def scripts(self, options):
         now = timezone.now()
@@ -76,4 +76,4 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"Enqueued {len(scripts)} scripts for execution"))
+                f'Enqueued {len(scripts)} scripts for execution'))

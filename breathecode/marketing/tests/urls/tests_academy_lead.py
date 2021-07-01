@@ -446,7 +446,7 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         query_date = (timezone.now() -
-                      timedelta(hours=48)).strftime("%Y-%m-%d")
+                      timedelta(hours=48)).strftime('%Y-%m-%d')
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='read_lead',
@@ -519,7 +519,7 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         query_date = (timezone.now() +
-                      timedelta(hours=48)).strftime("%Y-%m-%d")
+                      timedelta(hours=48)).strftime('%Y-%m-%d')
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='read_lead',

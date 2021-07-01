@@ -56,12 +56,12 @@ def activecampaign_webhook(request, ac_academy_id=None, academy_slug=None):
     if ac_academy_id is not None:
         a = Academy.objects.filter(slug=ac_academy_id).first()
         if a is None:
-            raise APIException(f"Academy not found (id:{ac_academy_id}) ")
+            raise APIException(f'Academy not found (id:{ac_academy_id}) ')
         webhook = ActiveCampaign.add_webhook_to_log(request.data, a.slug)
     elif academy_slug is not None:
         webhook = ActiveCampaign.add_webhook_to_log(request.data, academy_slug)
     else:
-        raise APIException("Please specify a valid academy slug or id")
+        raise APIException('Please specify a valid academy slug or id')
 
     if webhook:
         async_activecampaign_webhook.delay(webhook.id)
@@ -80,7 +80,7 @@ def activecampaign_webhook(request, ac_academy_id=None, academy_slug=None):
 @renderer_classes([CSVRenderer])
 def googleads_enrollments(request, academy_slugs):
 
-    slugs = academy_slugs.split(",")
+    slugs = academy_slugs.split(',')
     academies = FormEntry.objects.filter(
         Q(academy__slug__in=slugs)
         | Q(ac_academy__academy__slug__in=slugs)).exclude(gclid__isnull=True)
@@ -109,25 +109,25 @@ def receive_facebook_lead(request):
         if 'hub.mode' in request.GET:
             mode = request.GET['hub.mode']
 
-        if verify_token == os.getenv("FACEBOOK_VERIFY_TOKEN", ""):
+        if verify_token == os.getenv('FACEBOOK_VERIFY_TOKEN', ''):
             return Response(int(challenge), status=status.HTTP_200_OK)
         else:
             return Response(int(challenge), status=status.HTTP_400_BAD_REQUEST)
     else:
-        if "object" in request.data:
-            if request.data["object"] == "page":
-                for entry in request.data["entry"]:
-                    for changes in entry["changes"]:
-                        if changes["field"] == "leadgen":
+        if 'object' in request.data:
+            if request.data['object'] == 'page':
+                for entry in request.data['entry']:
+                    for changes in entry['changes']:
+                        if changes['field'] == 'leadgen':
                             serializer = PostFormEntrySerializer(
                                 data={
-                                    "fb_leadgen_id": changes["value"]
-                                    ["leadgen_id"],
-                                    "fb_page_id": changes["value"]["page_id"],
-                                    "fb_form_id": changes["value"]["form_id"],
-                                    "fb_adgroup_id": changes["value"]
-                                    ["adgroup_id"],
-                                    "fb_ad_id": changes["value"]["ad_id"]
+                                    'fb_leadgen_id': changes['value']
+                                    ['leadgen_id'],
+                                    'fb_page_id': changes['value']['page_id'],
+                                    'fb_form_id': changes['value']['form_id'],
+                                    'fb_adgroup_id': changes['value']
+                                    ['adgroup_id'],
+                                    'fb_ad_id': changes['value']['ad_id']
                                 })
                             if serializer.is_valid():
                                 serializer.save()
@@ -137,7 +137,7 @@ def receive_facebook_lead(request):
                             return Response(serializer.errors,
                                             status=status.HTTP_400_BAD_REQUEST)
 
-    return Response({"details": "No leads found"},
+    return Response({'details': 'No leads found'},
                     status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -172,19 +172,19 @@ def sync_automations_with_active_campaign(request, academy_id):
 def redirect_link(request, link_slug):
     short_link = ShortLink.objects.filter(slug=link_slug, active=True).first()
     if short_link is None:
-        return HttpResponseNotFound("URL not found")
+        return HttpResponseNotFound('URL not found')
 
     update_link_viewcount.delay(short_link.slug)
 
     params = {}
     if short_link.utm_source is not None:
-        params["utm_source"] = short_link.utm_source
+        params['utm_source'] = short_link.utm_source
     if short_link.utm_content is not None:
-        params["utm_content"] = short_link.utm_content
+        params['utm_content'] = short_link.utm_content
     if short_link.utm_medium is not None:
-        params["utm_medium"] = short_link.utm_medium
+        params['utm_medium'] = short_link.utm_medium
     if short_link.utm_campaign is not None:
-        params["utm_campaign"] = short_link.utm_campaign
+        params['utm_campaign'] = short_link.utm_campaign
 
     destination_params = {}
     url_parts = short_link.destination.split('?')
@@ -192,7 +192,7 @@ def redirect_link(request, link_slug):
         destination_params = dict(parse.parse_qsl(url_parts[1]))
 
     params = {**destination_params, **params}
-    return HttpResponseRedirect(redirect_to=url_parts[0] + "?" +
+    return HttpResponseRedirect(redirect_to=url_parts[0] + '?' +
                                 parse.urlencode(params))
 
 
@@ -205,16 +205,16 @@ def get_leads(request, id=None):
 
     academy = request.GET.get('academy', None)
     if academy is not None:
-        items = items.filter(academy__slug__in=academy.split(","))
+        items = items.filter(academy__slug__in=academy.split(','))
 
     start = request.GET.get('start', None)
     if start is not None:
-        start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
+        start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
         items = items.filter(created_at__gte=start_date)
 
     end = request.GET.get('end', None)
     if end is not None:
-        end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
+        end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date()
         items = items.filter(created_at__lte=end_date)
 
     items = items.order_by('created_at')
@@ -233,27 +233,27 @@ def get_leads_report(request, id=None):
 
     group_by = request.GET.get('by', 'location,created_at__date,course')
     if group_by != '':
-        group_by = group_by.split(",")
+        group_by = group_by.split(',')
     else:
         group_by = ['location', 'created_at__date', 'course']
 
     academy = request.GET.get('academy', None)
     if academy is not None:
-        items = items.filter(location__in=academy.split(","))
+        items = items.filter(location__in=academy.split(','))
 
     start = request.GET.get('start', None)
     if start is not None:
-        start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
+        start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
         items = items.filter(created_at__gte=start_date)
 
     end = request.GET.get('end', None)
     if end is not None:
-        end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
+        end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date()
         items = items.filter(created_at__lte=end_date)
 
     items = items.values(*group_by).annotate(total_leads=Count('location'))
 
-    if "created_at__date" in group_by:
+    if 'created_at__date' in group_by:
         items = items.annotate(created_date=Func(F('created_at'),
                                                  Value('YYYYMMDD'),
                                                  function='to_char',
@@ -269,7 +269,7 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     @capable_of('crud_lead')
     def get(self, request, format=None, academy_id=None):
 
-        print("academy_id", academy_id)
+        print('academy_id', academy_id)
         tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
 
         serializer = TagSmallSerializer(tags, many=True)
@@ -303,12 +303,12 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination,
 
         start = request.GET.get('start', None)
         if start is not None:
-            start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
+            start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
             lookup['created_at__gte'] = start_date
 
         end = request.GET.get('end', None)
         if end is not None:
-            end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
+            end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date()
             lookup['created_at__lte'] = end_date
 
         if 'storage_status' in self.request.GET:
@@ -360,8 +360,8 @@ def googleads_csv(request):
     ids = request.GET.get('academy', '')
     slugs = request.GET.get('academy_slug', '')
 
-    ids = ids.split(",") if ids else []
-    slugs = slugs.split(",") if slugs else []
+    ids = ids.split(',') if ids else []
+    slugs = slugs.split(',') if slugs else []
 
     if ids:
         form_entries = FormEntry.objects.filter(
@@ -376,7 +376,7 @@ def googleads_csv(request):
 
     if (Academy.objects.filter(id__in=ids).count() != len(ids)
             or Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
-        raise ValidationException("Some academy not exist",
+        raise ValidationException('Some academy not exist',
                                   slug='academy-not-found')
 
     data = []
@@ -392,14 +392,14 @@ def googleads_csv(request):
         if entry.gclid:
             entry_gclid = entry.gclid[-4:]
 
-            if (entry_gclid == '_BwE' and entry.deal_status == "WON"):
+            if (entry_gclid == '_BwE' and entry.deal_status == 'WON'):
                 gclid = entry.gclid
                 convertion_name = entry.tags
 
-                timezone = pytz.timezone("US/Eastern")
+                timezone = pytz.timezone('US/Eastern')
                 convertion_time = entry.created_at.astimezone(timezone)
                 convertion_time = convertion_time.strftime(
-                    "%Y-%m-%d %H-%M-%S%z")
+                    '%Y-%m-%d %H-%M-%S%z')
 
                 data.append(
                     [gclid, convertion_name, convertion_time, None, None])

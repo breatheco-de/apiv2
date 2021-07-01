@@ -40,7 +40,7 @@ class Specialty(models.Model):
     certificate = models.OneToOneField(
         Certificate,
         on_delete=models.CASCADE,
-        help_text="This specialty represents only one certificate",
+        help_text='This specialty represents only one certificate',
         blank=True,
         null=True,
         default=None)
@@ -119,7 +119,7 @@ class UserSpecialty(models.Model):
                                blank=True,
                                null=True)
     signed_by = models.CharField(max_length=100)
-    signed_by_role = models.CharField(max_length=100, default="Director")
+    signed_by_role = models.CharField(max_length=100, default='Director')
 
     preview_url = models.CharField(max_length=250,
                                    blank=True,
@@ -135,14 +135,14 @@ class UserSpecialty(models.Model):
 
         if self.cohort is not None and self.cohort.academy.id != self.academy.id:
             raise ValidationError(
-                "Cohort academy does not match the specified academy for this certificate"
+                'Cohort academy does not match the specified academy for this certificate'
             )
 
         utc_now = timezone.now()
-        if self.token is None or self.token == "":
+        if self.token is None or self.token == '':
             self.token = hashlib.sha1(
                 (str(self.user.id) +
-                 str(utc_now)).encode("UTF-8")).hexdigest()
+                 str(utc_now)).encode('UTF-8')).hexdigest()
 
         # set expiration
         if self.specialty.expiration_day_delta is not None:

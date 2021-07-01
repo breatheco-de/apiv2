@@ -5,10 +5,10 @@ from breathecode.marketing.models import FormEntry
 logger = logging.getLogger(__name__)
 
 status = {
-    "Won": "WON",
-    "Lost": "LOST",
-    "1": "WON",
-    "2": "LOST",
+    'Won': 'WON',
+    'Lost': 'LOST',
+    '1': 'WON',
+    '2': 'LOST',
 }
 
 
@@ -27,7 +27,7 @@ def deal_update(self, webhook, payload: dict):
                                          ).order_by('-created_at').first()
     if entry is None:
         raise Exception(
-            f"Impossible to find formentry for webhook {webhook.id} -> {webhook.webhook_type} "
+            f'Impossible to find formentry for webhook {webhook.id} -> {webhook.webhook_type} '
         )
         logger.debug(payload)
 

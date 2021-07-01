@@ -15,13 +15,13 @@ class AcademyCohortTestSuite(EventTestCase):
     """
     def test_ical_cohorts__without_student(self):
         url = reverse_lazy('events:ical_student_id', kwargs={'user_id': 1})
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
         json = response.json()
 
         expected = {
-            "detail": 'student-not-exist',
-            "status_code": 404,
+            'detail': 'student-not-exist',
+            'status_code': 404,
         }
 
         self.assertEqual(json, expected)
@@ -239,8 +239,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                      cohort_time_slot=True)
 
         url = reverse_lazy('events:ical_student_id', kwargs={'user_id': 1})
-        args = {'upcoming': "true"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'upcoming': 'true'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         key = model.device_id.key
         expected = '\r\n'.join([
@@ -269,8 +269,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                      cohort_kwargs=cohort_kwargs)
 
         url = reverse_lazy('events:ical_student_id', kwargs={'user_id': 1})
-        args = {'upcoming': "true"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'upcoming': 'true'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         key = model.device_id.key
         expected = '\r\n'.join([

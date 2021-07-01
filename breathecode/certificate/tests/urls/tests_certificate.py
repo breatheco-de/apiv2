@@ -64,21 +64,21 @@ class CertificateTestSuite(CertificateTestCase):
                                     capability='crud_certificate',
                                     cohort_user=True,
                                     specialty=True,
-                                    role="potato")
+                                    role='potato')
         del base['user']
 
         model1 = self.generate_models(
             user=True,
             profile_academy=True,
             user_specialty=True,
-            user_specialty_kwargs={'token': "hitman3000"},
+            user_specialty_kwargs={'token': 'hitman3000'},
             models=base)
 
         model2 = self.generate_models(
             user=True,
             profile_academy=True,
             user_specialty=True,
-            user_specialty_kwargs={'token': "batman2000"},
+            user_specialty_kwargs={'token': 'batman2000'},
             models=base)
 
         url = reverse_lazy('certificate:certificate_academy') + '?id=1,2'
@@ -105,19 +105,19 @@ class CertificateTestSuite(CertificateTestCase):
                                     capability='crud_certificate',
                                     cohort_user=True,
                                     specialty=True,
-                                    role="potato")
+                                    role='potato')
         del base['user']
 
         model1 = self.generate_models(
             user=True,
             user_specialty=True,
-            user_specialty_kwargs={'token': "hitman3000"},
+            user_specialty_kwargs={'token': 'hitman3000'},
             models=base)
 
         model2 = self.generate_models(
             user=True,
             user_specialty=True,
-            user_specialty_kwargs={'token': "batman2000"},
+            user_specialty_kwargs={'token': 'batman2000'},
             models=base)
 
         url = reverse_lazy('certificate:certificate_academy') + '?id=3,4'
@@ -145,19 +145,19 @@ class CertificateTestSuite(CertificateTestCase):
                                     capability='crud_certificate',
                                     cohort_user=True,
                                     specialty=True,
-                                    role="potato")
+                                    role='potato')
         del base['user']
 
         model1 = self.generate_models(
             user=True,
             user_specialty=True,
-            user_specialty_kwargs={'token': "hitman3000"},
+            user_specialty_kwargs={'token': 'hitman3000'},
             models=base)
 
         model2 = self.generate_models(
             user=True,
             user_specialty=True,
-            user_specialty_kwargs={'token': "batman2000"},
+            user_specialty_kwargs={'token': 'batman2000'},
             models=base)
 
         url = reverse_lazy('certificate:certificate_academy')

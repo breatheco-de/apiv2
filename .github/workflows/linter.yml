@@ -23,9 +23,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pipenv
           pipenv install --system --deploy --ignore-pipfile --dev
-      - name: set PY
-        run: echo "PY=$(python -VV | sha256sum | cut -d' ' -f1)" >> $GITHUB_ENV
-      - uses: actions/cache@v1
-        with:
-          path: ~/.cache/pre-commit
-          key: pre-commit|${{ env.PY }}|${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Linter
+        run: |
+          pipenv run lint .

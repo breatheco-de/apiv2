@@ -18,9 +18,9 @@ class Command(BaseCommand):
     def mock_application(self):
 
         academy = Academy.objects.filter(
-            slug="fake-sample-academy-delete-me-wililii").first()
+            slug='fake-sample-academy-delete-me-wililii').first()
         if academy is None:
-            academy = Academy(slug="fake-sample-academy-delete-me-wililii")
+            academy = Academy(slug='fake-sample-academy-delete-me-wililii')
             academy.save()
         if academy.application_set.count() == 0:
             app = Application(academy=academy)
@@ -30,10 +30,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if options['path'] is None:
-            print("Please specify the script path")
-        script_slug = options['path'].split(".")[0]
+            print('Please specify the script path')
+        script_slug = options['path'].split('.')[0]
 
-        print("Attempting to run script: " + self.style.WARNING(script_slug))
+        print('Attempting to run script: ' + self.style.WARNING(script_slug))
         script = MonitorScript.objects.filter(script_slug=script_slug).first()
         if script is None:
             script = MonitorScript(script_slug=script_slug,
@@ -44,13 +44,13 @@ class Command(BaseCommand):
             self.style.SUCCESS(
                 'The script was tested with the following outcome:'))
 
-        stdout = result["text"]
-        del result["text"]
-        del result["slack_payload"]
+        stdout = result['text']
+        del result['text']
+        del result['slack_payload']
 
-        if "details" in result:
-            del result["details"]
+        if 'details' in result:
+            del result['details']
 
-        print("Details: ", result)
-        print("\nStdout: ")
+        print('Details: ', result)
+        print('\nStdout: ')
         print(stdout)

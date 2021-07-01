@@ -34,9 +34,9 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(role=True, role_kwargs=role_kwargs)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile("^" +
+        token_pattern = re.compile('^' +
                                    original_url_callback.replace('.', r'\.') +
-                                   r"\?token=[0-9a-zA-Z]{,40}$")
+                                   r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
@@ -103,9 +103,9 @@ class AuthenticateTestSuite(AuthTestCase):
                                      role_kwargs=role_kwargs)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile("^" +
+        token_pattern = re.compile('^' +
                                    original_url_callback.replace('.', r'\.') +
-                                   r"\?token=[0-9a-zA-Z]{,40}$")
+                                   r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
@@ -158,9 +158,9 @@ class AuthenticateTestSuite(AuthTestCase):
                                      role_kwargs=role_kwargs)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile("^" +
+        token_pattern = re.compile('^' +
                                    original_url_callback.replace('.', r'\.') +
-                                   r"\?token=[0-9a-zA-Z]{,40}$")
+                                   r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         url = reverse_lazy('authenticate:github_callback')
@@ -244,9 +244,9 @@ class AuthenticateTestSuite(AuthTestCase):
                                      token=True)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile("^" +
+        token_pattern = re.compile('^' +
                                    original_url_callback.replace('.', r'\.') +
-                                   r"\?token=[0-9a-zA-Z]{,40}$")
+                                   r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         token = self.get_token(1)
@@ -303,9 +303,9 @@ class AuthenticateTestSuite(AuthTestCase):
                                      token=True)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile("^" +
+        token_pattern = re.compile('^' +
                                    original_url_callback.replace('.', r'\.') +
-                                   r"\?token=[0-9a-zA-Z]{,40}$")
+                                   r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
         token = self.get_token(1)

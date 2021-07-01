@@ -15,13 +15,13 @@ def send_bulk_assesment(modeladmin, request, queryset):
     try:
         for u in user:
             send_assestment(u)
-        messages.success(request, message="Assessment was successfully sent")
+        messages.success(request, message='Assessment was successfully sent')
     except Exception as e:
         logger.fatal(str(e))
         messages.error(request, message=str(e))
 
 
-send_bulk_assesment.short_description = "Send General Assessment"
+send_bulk_assesment.short_description = 'Send General Assessment'
 
 
 @admin.register(UserProxy)
