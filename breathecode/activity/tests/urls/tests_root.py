@@ -19,7 +19,7 @@ DATASTORE_SHARED_SEED = [
         'data': None,
         'day': 13,
         'email': 'konan@naruto.io',
-        'slug': 'breathecode-login',
+        'slug': 'breathecode_login',
         'user_agent': 'bc/test',
         'user_id': 1,
     },
@@ -165,7 +165,7 @@ class MediaTestSuite(MediaTestCase):
                 'data': None,
                 'day': 13,
                 'email': 'konan@naruto.io',
-                'slug': 'breathecode-login',
+                'slug': 'breathecode_login',
                 'user_agent': 'bc/test',
                 'user_id': 1,
             },
@@ -256,7 +256,7 @@ class MediaTestSuite(MediaTestCase):
                 'data': None,
                 'day': 13,
                 'email': 'konan@naruto.io',
-                'slug': 'breathecode-login',
+                'slug': 'breathecode_login',
                 'user_agent': 'bc/test',
                 'user_id': 1,
             },
@@ -314,7 +314,7 @@ class MediaTestSuite(MediaTestCase):
                              capability='read_activity',
                              role='potato')
 
-        url = reverse_lazy('activity:root') + '?slug=lesson-opened'
+        url = reverse_lazy('activity:root') + '?slug=lesson_opened'
         response = self.client.get(url)
 
         json = response.json()
@@ -323,8 +323,8 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(kind='student_activity', slug='lesson-opened', academy_id=1),
-            call(kind='student_activity', slug='lesson-opened', academy_id=0),
+            call(kind='student_activity', slug='lesson_opened', academy_id=1),
+            call(kind='student_activity', slug='lesson_opened', academy_id=0),
         ])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
@@ -342,7 +342,7 @@ class MediaTestSuite(MediaTestCase):
                              capability='read_activity',
                              role='potato')
 
-        url = reverse_lazy('activity:root') + '?slug=breathecode-login'
+        url = reverse_lazy('activity:root') + '?slug=breathecode_login'
         response = self.client.get(url)
 
         json = response.json()
@@ -354,7 +354,7 @@ class MediaTestSuite(MediaTestCase):
                 'data': None,
                 'day': 13,
                 'email': 'konan@naruto.io',
-                'slug': 'breathecode-login',
+                'slug': 'breathecode_login',
                 'user_agent': 'bc/test',
                 'user_id': 1,
             },
@@ -364,10 +364,10 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
             call(kind='student_activity',
-                 slug='breathecode-login',
+                 slug='breathecode_login',
                  academy_id=1),
             call(kind='student_activity',
-                 slug='breathecode-login',
+                 slug='breathecode_login',
                  academy_id=0),
         ])
 
@@ -827,7 +827,7 @@ class MediaTestSuite(MediaTestCase):
 
         url = reverse_lazy('activity:root')
         data = {
-            'slug': 'breathecode-login',
+            'slug': 'breathecode_login',
             'user_agent': 'bc/test',
         }
         response = self.client.post(url, data, format='json')
@@ -841,7 +841,7 @@ class MediaTestSuite(MediaTestCase):
         expected = {
             'academy_id': 0,
             'email': model.user.email,
-            'slug': 'breathecode-login',
+            'slug': 'breathecode_login',
             'user_agent': 'bc/test',
             'user_id': 1,
         }
@@ -852,7 +852,7 @@ class MediaTestSuite(MediaTestCase):
             call(
                 'student_activity',
                 {
-                    'slug': 'breathecode-login',
+                    'slug': 'breathecode_login',
                     'user_agent': 'bc/test',
                     'created_at': self.iso_to_datetime(created_at),
                     'user_id': 1,
@@ -880,7 +880,7 @@ class MediaTestSuite(MediaTestCase):
 
         url = reverse_lazy('activity:root')
         data = {
-            'slug': 'nps-survey-answered',
+            'slug': 'nps_survey_answered',
             'user_agent': 'bc/test',
         }
         response = self.client.post(url, data, format='json')
@@ -910,7 +910,7 @@ class MediaTestSuite(MediaTestCase):
         url = reverse_lazy('activity:root')
         data = {
             'cohort': 'they-killed-kenny',
-            'slug': 'nps-survey-answered',
+            'slug': 'nps_survey_answered',
             'user_agent': 'bc/test',
         }
         response = self.client.post(url, data, format='json')
@@ -941,7 +941,7 @@ class MediaTestSuite(MediaTestCase):
         data = {
             'data': '',
             'cohort': 'they-killed-kenny',
-            'slug': 'nps-survey-answered',
+            'slug': 'nps_survey_answered',
             'user_agent': 'bc/test',
         }
         response = self.client.post(url, data, format='json')
@@ -972,7 +972,7 @@ class MediaTestSuite(MediaTestCase):
         data = {
             'data': '{"name": "Freyja"}',
             'cohort': 'they-killed-kenny',
-            'slug': 'nps-survey-answered',
+            'slug': 'nps_survey_answered',
             'user_agent': 'bc/test',
         }
         response = self.client.post(url, data, format='json')
@@ -1004,7 +1004,7 @@ class MediaTestSuite(MediaTestCase):
         data = {
             'data': '{"name": "Freyja"}',
             'cohort': model.cohort.slug,
-            'slug': 'nps-survey-answered',
+            'slug': 'nps_survey_answered',
             'user_agent': 'bc/test',
             'id': 1,
         }
@@ -1037,7 +1037,7 @@ class MediaTestSuite(MediaTestCase):
         data = {
             'data': '{"name": "Freyja"}',
             'cohort': model.cohort.slug,
-            'slug': 'nps-survey-answered',
+            'slug': 'nps_survey_answered',
             'user_agent': 'bc/test',
         }
         response = self.client.post(url, data, format='json')
@@ -1047,7 +1047,7 @@ class MediaTestSuite(MediaTestCase):
             'cohort': model.cohort.slug,
             'data': '{"name": "Freyja"}',
             'email': model.user.email,
-            'slug': 'nps-survey-answered',
+            'slug': 'nps_survey_answered',
             'user_agent': 'bc/test',
             'user_id': 1,
         }
@@ -1066,7 +1066,7 @@ class MediaTestSuite(MediaTestCase):
                     'data': '{"name": "Freyja"}',
                     'user_agent': 'bc/test',
                     'created_at': self.iso_to_datetime(created_at),
-                    'slug': 'nps-survey-answered',
+                    'slug': 'nps_survey_answered',
                     'user_id': 1,
                     'email': model.user.email,
                     'academy_id': 1,

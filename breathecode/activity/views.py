@@ -21,21 +21,21 @@ from .utils import (generate_created_at, validate_activity_fields,
 # https://googleapis.dev/python/datastore/latest/index.html
 
 ACTIVITIES = {
-    "breathecode-login": 'Every time it logs in',
-    "online-platform-registration": 'First day using breathecode',
-    "public-event-attendance": 'Attendy on an eventbrite event',
+    "breathecode_login": 'Every time it logs in',
+    "online_platform_registration": 'First day using breathecode',
+    "public_event_attendance": 'Attendy on an eventbrite event',
     "classroom-attendance": 'When the student attent to class',
-    "classroom-unattendance": 'When the student miss class',
-    "lesson-opened": 'When a lessons is opened on the platform',
-    "office-attendance": 'When the office raspberry pi detects the student',
-    "nps-survey-answered": 'When a nps survey is answered by the student',
-    "exercise-success": 'When student successfuly tests exercise',
-    "academy-registration": 'When student successfuly join to academy',
+    "classroom_unattendance": 'When the student miss class',
+    "lesson_opened": 'When a lessons is opened on the platform',
+    "office_attendance": 'When the office raspberry pi detects the student',
+    "nps_survey_answered": 'When a nps survey is answered by the student',
+    "exercise_success": 'When student successfuly tests exercise',
+    "academy_registration": 'When student successfuly join to academy',
 }
 
 ACTIVITY_PUBLIC_SLUGS = [
-    'breathecode-login',
-    'online-platform-registration',
+    'breathecode_login',
+    'online_platform_registration',
 ]
 
 
