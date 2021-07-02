@@ -24,7 +24,7 @@ ACTIVITIES = {
     "breathecode_login": 'Every time it logs in',
     "online_platform_registration": 'First day using breathecode',
     "public_event_attendance": 'Attendy on an eventbrite event',
-    "classroom-attendance": 'When the student attent to class',
+    "classroom_attendance": 'When the student attent to class',
     "classroom_unattendance": 'When the student miss class',
     "lesson_opened": 'When a lessons is opened on the platform',
     "office_attendance": 'When the office raspberry pi detects the student',
@@ -149,7 +149,7 @@ class ActivityClassroomView(APIView):
 
             cohort_user = cohort_user.first()
             if cohort_user is None:
-                raise ValidationException("Student not found in this cohort",
+                raise ValidationException(f"Student {student_id} not found in this cohort {cohort_id}",
                                           slug="not-found-in-cohort")
 
             new_activities.append(

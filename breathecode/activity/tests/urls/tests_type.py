@@ -92,7 +92,7 @@ class MediaTestSuite(MediaTestCase):
             },
             {
                 'description': 'When the student attent to class',
-                'slug': 'classroom-attendance',
+                'slug': 'classroom_attendance',
             },
             {
                 'description': 'When the student miss class',
