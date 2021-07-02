@@ -70,4 +70,18 @@ pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json
 
 ## Icons
 
-The following icons arebeing used for the slack integrations: https://www.pngrepo.com/collection/soft-colored-ui-icons/1
+The following icons arebeing used for the slack integrations: <https://www.pngrepo.com/collection/soft-colored-ui-icons/1>
+
+# troubleshooting
+
+- Executable \`yapf\` not found: this appear because the pre-commit use the python that found in the $PATH, this project has `yapf` installed in a virtual environment
+
+```bash
+# You should run the commands in the virtual environment
+pipenv shell
+git add .
+git commit -m "message"
+
+# You should install globally yapf if you want to commit using vscode
+pip install yapf
+```
