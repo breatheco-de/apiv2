@@ -143,9 +143,9 @@ class ActivityClassroomView(APIView):
             
             # filter by cohort id or slug depending on input
             if isinstance(cohort_id,str):
-                cohort_user = cohort_user.filter(cohort__id=cohort_id)
-            else:
                 cohort_user = cohort_user.filter(cohort__slug=cohort_id)
+            else:
+                cohort_user = cohort_user.filter(cohort__id=cohort_id)
 
             cohort_user = cohort_user.first()
             if cohort_user is None:
