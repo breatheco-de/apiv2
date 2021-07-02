@@ -74,7 +74,7 @@ The following icons arebeing used for the slack integrations: <https://www.pngre
 
 # troubleshooting
 
-- Executable \`yapf\` not found: this appear because the pre-commit use the python that found in the $PATH, this project has `yapf` installed in a virtual environment
+- `` Executable `yapf\` not found ``: this appear because the pre-commit use the python that found in the $PATH, this project has `yapf` installed in a virtual environment
 
 ```bash
 # You should run the commands in the virtual environment
