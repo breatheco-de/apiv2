@@ -139,7 +139,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if user_id_or_email is not None:
             item = None
-            if isinstance(user_id_or_email, int):
+            if user_id_or_email.isnumeric():
                 item = ProfileAcademy.objects.filter(
                     user__id=user_id_or_email, academy_id=academy_id).first()
             else:
@@ -337,7 +337,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def get(self, request, academy_id=None, user_id_or_email=None):
         if user_id_or_email is not None:
             profile = None
-            if isinstance(user_id_or_email, int):
+            if user_id_or_email.isnumeric():
                 profile = ProfileAcademy.objects.filter(academy__id=academy_id,
                                                         user__id=user_id_or_email).first()
             else:
@@ -546,7 +546,7 @@ def get_users(request):
 def get_user_by_id_or_email(request, id_or_email):
 
     query = None
-    if isinstance(id_or_email, int):
+    if id_or_email.isnumeric():
         query = User.objects.filter(id=id_or_email).first()
     else:
         query = User.objects.filter(email=id_or_email).first()
