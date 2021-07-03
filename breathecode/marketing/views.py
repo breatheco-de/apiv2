@@ -315,6 +315,10 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination,
             param = self.request.GET.get('storage_status')
             lookup['storage_status'] = param
 
+        if 'deal_status' in self.request.GET:
+            param = self.request.GET.get('deal_status')
+            lookup['deal_status'] = param.upper()
+
         if 'course' in self.request.GET:
             param = self.request.GET.get('course')
             lookup['course'] = param
@@ -323,7 +327,11 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination,
             param = self.request.GET.get('location')
             lookup['location'] = param
 
-        items = items.filter(**lookup).order_by('-created_at')
+        sort_by = "-created_at"
+        if 'sort' in self.request.GET and self.request.GET['sort'] != "":
+            sort_by = self.request.GET.get('sort')
+
+        items = items.filter(**lookup).order_by(sort_by)
 
         like = request.GET.get('like', None)
         if like is not None:
