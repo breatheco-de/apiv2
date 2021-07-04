@@ -144,7 +144,8 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     user__id=user_id_or_email, academy_id=academy_id).first()
             else:
                 item = ProfileAcademy.objects.filter(
-                    user__email=user_id_or_email, academy_id=academy_id).first()
+                    user__email=user_id_or_email,
+                    academy_id=academy_id).first()
 
             if item is None:
                 raise ValidationException(
@@ -338,11 +339,12 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if user_id_or_email is not None:
             profile = None
             if user_id_or_email.isnumeric():
-                profile = ProfileAcademy.objects.filter(academy__id=academy_id,
-                                                        user__id=user_id_or_email).first()
+                profile = ProfileAcademy.objects.filter(
+                    academy__id=academy_id, user__id=user_id_or_email).first()
             else:
-                profile = ProfileAcademy.objects.filter(academy__id=academy_id,
-                                                        user__email=user_id_or_email).first()
+                profile = ProfileAcademy.objects.filter(
+                    academy__id=academy_id,
+                    user__email=user_id_or_email).first()
 
             if profile is None:
                 raise ValidationException("Profile not found", 404)
@@ -542,6 +544,7 @@ def get_users(request):
     users = UserSmallSerializer(query, many=True)
     return Response(users.data)
 
+
 @api_view(['GET'])
 def get_user_by_id_or_email(request, id_or_email):
 
@@ -552,7 +555,9 @@ def get_user_by_id_or_email(request, id_or_email):
         query = User.objects.filter(email=id_or_email).first()
 
     if query is None:
-        raise ValidationException("User with that id or email does not exists", slug="user-dont-exists", code=404)
+        raise ValidationException("User with that id or email does not exists",
+                                  slug="user-dont-exists",
+                                  code=404)
 
     users = UserSmallSerializer(query, many=False)
     return Response(users.data)
