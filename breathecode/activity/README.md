@@ -17,6 +17,16 @@ Possible activities (so far):
 "exercise_success" //when student successfuly tests exercise
 ```
 
+Any activity has the following inputs:
+
+```
+    'cohort',
+    'data',
+    'day',
+    'slug',
+    'user_agent',
+```
+
 ## Endpoints for the user
 
 Get recent user activity

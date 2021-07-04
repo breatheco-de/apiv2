@@ -6,8 +6,8 @@ verify_ssl = true
 [dev-packages]
 pytest-cov = "*"
 coverage = "*"
-pylint-django = "*"
 atomicwrites = "*"
+yapf = "*"
 
 [packages]
 django = "*"
@@ -52,8 +52,9 @@ test="python -m scripts.test"
 celery="python -m scripts.celery"
 coverage="python -m scripts.coverage"
 cov="python -m scripts.coverage"
-docker_build="bash ./scripts/docker-build.sh"
-lint="pylint ./breathecode --load-plugins pylint_django"
+docker_build="python -m scripts.docker_build"
+lint="yapf -r --diff"
+format="yapf -ri ."
 start="python manage.py runserver"
 migrate="python manage.py migrate"
 makemigrations="python manage.py makemigrations"

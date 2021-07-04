@@ -4,7 +4,9 @@ from django.core.management.base import BaseCommand, CommandError
 from ...models import Academy, Certificate, Cohort, User, CohortUser
 
 HOST = os.environ.get("OLD_BREATHECODE_API")
-DATETIME_FORMAT="%Y-%m-%d"
+DATETIME_FORMAT = "%Y-%m-%d"
+
+
 class Command(BaseCommand):
     help = 'Delete duplicate cohort users imported from old breathecode'
 
@@ -17,9 +19,12 @@ class Command(BaseCommand):
 
         # collector
         qs = CohortUser.objects.order_by("id")
-        for user_id, cohort_id in set(qs.values_list("user__id", "cohort__id")):
-            result.append(qs.filter(user__id=user_id, cohort__id=cohort_id).values('id', 'user__id',
-                'cohort__id').first())
+        for user_id, cohort_id in set(qs.values_list("user__id",
+                                                     "cohort__id")):
+            result.append(
+                qs.filter(user__id=user_id,
+                          cohort__id=cohort_id).values('id', 'user__id',
+                                                       'cohort__id').first())
 
         # remove dups
         for data in result:
@@ -33,13 +38,13 @@ class Command(BaseCommand):
 
             # # second students with a educational_status and finantial_status
             # if pref is None:
-            #     pref = (CohortUser.objects.filter(user__id=data['user__id'], 
+            #     pref = (CohortUser.objects.filter(user__id=data['user__id'],
             #         cohort__id=data['cohort__id']).exclude(educational_status=None,
             #         finantial_status=None)).first()
 
-            # # third students with a educational_status 
+            # # third students with a educational_status
             # if pref is None:
-            #     pref = (CohortUser.objects.filter(user__id=data['user__id'], 
+            #     pref = (CohortUser.objects.filter(user__id=data['user__id'],
             #         cohort__id=data['cohort__id']).exclude(educational_status=None)).first()
 
             # # fourth students with a finantial_status
@@ -52,7 +57,9 @@ class Command(BaseCommand):
             #     id = pref.id
 
             # bulk delete but cohort user with that id
-            (CohortUser.objects.filter(user__id=user, cohort__id=cohort)
-                .exclude(id=id).delete())
+            (CohortUser.objects.filter(
+                user__id=user, cohort__id=cohort).exclude(id=id).delete())
 
-        self.stdout.write(self.style.SUCCESS(f'Remove duplicates from cohort users has ended'))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'Remove duplicates from cohort users has ended'))

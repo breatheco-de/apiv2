@@ -13,7 +13,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='asset',
             name='difficulty',
-            field=models.CharField(blank=True, choices=[('BEGINNER', 'Beginner'), ('EASY', 'Easy')], default=None, max_length=20, null=True),
+            field=models.CharField(blank=True,
+                                   choices=[('BEGINNER', 'Beginner'),
+                                            ('EASY', 'Easy')],
+                                   default=None,
+                                   max_length=20,
+                                   null=True),
         ),
         migrations.AddField(
             model_name='asset',
@@ -43,7 +48,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='asset',
             name='duration',
-            field=models.IntegerField(blank=True, default=None, help_text='In hours', null=True),
+            field=models.IntegerField(blank=True,
+                                      default=None,
+                                      help_text='In hours',
+                                      null=True),
         ),
         migrations.AlterField(
             model_name='asset',

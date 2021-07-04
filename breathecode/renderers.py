@@ -1,6 +1,7 @@
 from rest_framework import renderers
 from django.utils.encoding import smart_text
 
+
 class PlainTextRenderer(renderers.BaseRenderer):
     media_type = 'text/plain'
     format = 'txt'

@@ -15,11 +15,21 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='application',
             name='notify_email',
-            field=models.CharField(blank=True, default=None, max_length=255, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   max_length=255,
+                                   null=True),
         ),
         migrations.AlterField(
             model_name='application',
             name='notify_slack_channel',
-            field=models.ForeignKey(blank=True, default=None, help_text='Please pick an academy first to be able to see the available slack channels to notify', null=True, on_delete=django.db.models.deletion.SET_NULL, to='notify.slackchannel'),
+            field=models.ForeignKey(
+                blank=True,
+                default=None,
+                help_text=
+                'Please pick an academy first to be able to see the available slack channels to notify',
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to='notify.slackchannel'),
         ),
     ]

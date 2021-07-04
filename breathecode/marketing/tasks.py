@@ -7,11 +7,13 @@ from .actions import register_new_lead, save_get_geolocal
 
 logger = logging.getLogger(__name__)
 
+
 class BaseTaskWithRetry(Task):
-    autoretry_for = (Exception,)
+    autoretry_for = (Exception, )
     #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5 } 
+    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
     retry_backoff = True
+
 
 @shared_task
 def persist_leads():
@@ -22,8 +24,9 @@ def persist_leads():
         result = register_new_lead(form_data)
         if result is not None and result != False:
             save_get_geolocal(entry, form_data)
-    
+
     return True
+
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def persist_single_lead(self, form_data):
@@ -31,8 +34,9 @@ def persist_single_lead(self, form_data):
     entry = register_new_lead(form_data)
     if entry is not None and entry != False:
         save_get_geolocal(entry, form_data)
-    
+
     return True
+
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def update_link_viewcount(self, slug):
@@ -47,7 +51,7 @@ def async_activecampaign_webhook(self, webhook_id):
 
     webhook = ActiveCampaignWebhook.objects.filter(id=webhook_id).first()
     ac_academy = webhook.ac_academy
-    
+
     if ac_academy is not None:
         try:
             client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
@@ -68,4 +72,3 @@ def async_activecampaign_webhook(self, webhook_id):
         status = 'error'
 
     logger.debug(f'ActiveCampaign webook status: {status}')
- 

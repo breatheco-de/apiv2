@@ -14,14 +14,13 @@ class Migration(migrations.Migration):
     operations = [
         migrations.CreateModel(
             name='UserAdmissions',
-            fields=[
-            ],
+            fields=[],
             options={
                 'proxy': True,
                 'indexes': [],
                 'constraints': [],
             },
-            bases=('auth.user',),
+            bases=('auth.user', ),
             managers=[
                 ('objects', django.contrib.auth.models.UserManager()),
             ],
@@ -29,6 +28,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='academy',
             name='website_url',
-            field=models.CharField(blank=True, default=None, max_length=255, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   max_length=255,
+                                   null=True),
         ),
     ]

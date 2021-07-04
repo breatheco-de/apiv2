@@ -14,7 +14,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='monitorscript',
             name='frequency_delta',
-            field=models.DurationField(default=datetime.timedelta(seconds=1800), help_text='How long to wait for the next execution, defaults to 30 minutes'),
+            field=models.DurationField(
+                default=datetime.timedelta(seconds=1800),
+                help_text=
+                'How long to wait for the next execution, defaults to 30 minutes'
+            ),
         ),
         migrations.AlterField(
             model_name='monitorscript',

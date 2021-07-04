@@ -18,9 +18,10 @@ from ...models import Answer
 from ...actions import strings
 
 
-class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
+class FeedbackTestCase(APITestCase, DevelopmentEnvironment,
+                       DateFormatterMixin):
     """FeedbackTestCase with auth methods"""
-     # token = None
+    # token = None
     user = None
     password = 'pass1234'
     certificate = None
@@ -53,16 +54,20 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
         return self.remove_updated_at(self.remove_model_state(dict))
 
     def all_cohort_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Answer.objects.filter()]
+        return [
+            self.remove_dinamics_fields(data.__dict__.copy())
+            for data in Answer.objects.filter()
+        ]
 
     def model_to_dict(self, models: dict, key: str) -> dict:
         if key in models:
             return self.remove_dinamics_fields(models[key].__dict__)
 
     def all_answer_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Answer.objects.filter()]
+        return [
+            self.remove_dinamics_fields(data.__dict__.copy())
+            for data in Answer.objects.filter()
+        ]
 
     def remove_all_answer(self):
         Answer.objects.all().delete()
@@ -74,7 +79,8 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
         kwargs = {}
         if id:
             kwargs['id'] = id
-        return Token.objects.filter(**kwargs).values_list('key', flat=True).first()
+        return Token.objects.filter(**kwargs).values_list('key',
+                                                          flat=True).first()
 
     def count_token(self):
         return Token.objects.count()
@@ -86,61 +92,70 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
         self.assertTrue('opened_at' in model)
         self.assertTrue(isinstance(model['opened_at'], datetime))
 
-        model['opened_at'] = None # remove dinamic datetime after test it
+        model['opened_at'] = None  # remove dinamic datetime after test it
 
         return model
 
-    def check_all_opened_at_and_remove_it(self, models: list[dict]) -> list[dict]:
+    def check_all_opened_at_and_remove_it(self,
+                                          models: list[dict]) -> list[dict]:
         return [self.check_opened_at_and_remove_it(model) for model in models]
 
-    def check_email_contain_a_correct_token(self, lang, academy, dicts, mock, model):
+    def check_email_contain_a_correct_token(self, lang, academy, dicts, mock,
+                                            model):
         token = self.get_token()
         question = 'asdasd'
         link = f"https://nps.breatheco.de/{dicts[0]['id']}?token={token}"
 
         args_list = mock.call_args_list
 
-        template = get_template_content("nps", {
-            "QUESTION": question,
-            "HIGHEST": dicts[0]['highest'],
-            "LOWEST": dicts[0]['lowest'],
-            "SUBJECT": question,
-            "ANSWER_ID": dicts[0]['id'],
-            "BUTTON": strings[lang]["button_label"],
-            "LINK": link,
-        }, ["email"])
+        template = get_template_content(
+            "nps", {
+                "QUESTION": question,
+                "HIGHEST": dicts[0]['highest'],
+                "LOWEST": dicts[0]['lowest'],
+                "SUBJECT": question,
+                "ANSWER_ID": dicts[0]['id'],
+                "BUTTON": strings[lang]["button_label"],
+                "LINK": link,
+            }, ["email"])
 
-        self.assertEqual(args_list, [call(
-            'https://api.mailgun.net/v3/None/messages',
-            auth=('api', os.environ.get('MAILGUN_API_KEY', "")),
-            data={
-                "from": f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
-                "to": model['user'].email,
-                "subject": template['subject'],
-                "text": template['text'],
-                "html": template['html']
-            }
-        )])
-        
+        self.assertEqual(args_list, [
+            call(
+                'https://api.mailgun.net/v3/None/messages',
+                auth=('api', os.environ.get('MAILGUN_API_KEY', "")),
+                data={
+                    "from":
+                    f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
+                    "to": model['user'].email,
+                    "subject": template['subject'],
+                    "text": template['text'],
+                    "html": template['html']
+                })
+        ])
+
         html = template['html']
         del template['html']
-        self.assertEqual(template, {
-            'SUBJECT': question,
-            'subject': question,
-            'text': '\n'
-                    '\n'
-                    'Please take 2 min to answer the following question:\n'
-                    '\n'
-                    '{{ QUESTION }}\n' 
-                    '\n'
-                    'Click here to vote: '
-                    f'{link}'
-                    '\n'
-                    '\n'
-                    '\n'
-                    '\n'
-                    'The BreatheCode Team'
-        })
+        self.assertEqual(
+            template, {
+                'SUBJECT':
+                question,
+                'subject':
+                question,
+                'text':
+                '\n'
+                '\n'
+                'Please take 2 min to answer the following question:\n'
+                '\n'
+                '{{ QUESTION }}\n'
+                '\n'
+                'Click here to vote: '
+                f'{link}'
+                '\n'
+                '\n'
+                '\n'
+                '\n'
+                'The BreatheCode Team'
+            })
         self.assertTrue(isinstance(token, str))
         self.assertTrue(token)
         self.assertTrue(link in html)
@@ -153,40 +168,45 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
         question = "question title"
         answer = strings[lang]["button_label"]
 
-        expected = [call(
-            method='POST',
-            url='https://slack.com/api/chat.postMessage',
-            headers={
-                'Authorization':
-                f'Bearer {slack_token}',
-                'Content-type': 'application/json'
-            },
-            params=None,
-            json={
-                'channel': slack_id,
-                'private_metadata': '',
-                'blocks': [{
-                    'type': 'header',
-                    'text': {
-                        'type': 'plain_text',
-                        'text': question,
-                        'emoji': True
-                    }
-                }, {
-                    'type': 'actions',
-                    'elements': [{
-                        'type': 'button',
-                        'text': {
-                            'type': 'plain_text',
-                            'text': answer,
-                            'emoji': True
-                        },
-                        'url': f'https://nps.breatheco.de/1?token={token}'
-                    }]
-                }],
-                'parse': 'full'
-            }
-        )]
+        expected = [
+            call(method='POST',
+                 url='https://slack.com/api/chat.postMessage',
+                 headers={
+                     'Authorization': f'Bearer {slack_token}',
+                     'Content-type': 'application/json'
+                 },
+                 params=None,
+                 json={
+                     'channel':
+                     slack_id,
+                     'private_metadata':
+                     '',
+                     'blocks': [{
+                         'type': 'header',
+                         'text': {
+                             'type': 'plain_text',
+                             'text': question,
+                             'emoji': True
+                         }
+                     }, {
+                         'type':
+                         'actions',
+                         'elements': [{
+                             'type':
+                             'button',
+                             'text': {
+                                 'type': 'plain_text',
+                                 'text': answer,
+                                 'emoji': True
+                             },
+                             'url':
+                             f'https://nps.breatheco.de/1?token={token}'
+                         }]
+                     }],
+                     'parse':
+                     'full'
+                 })
+        ]
 
         self.assertEqual(args_list, expected)
 
@@ -197,13 +217,34 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
     def setUp(self):
         cache.clear()
 
-    def generate_models(self, user=False, authenticate=False, certificate=False, academy=False,
-            cohort=False, profile_academy=False, cohort_user=False, impossible_kickoff_date=False,
-            finantial_status='', educational_status='', mentor=False, cohort_two=False, task=False,
-            task_status='', task_type='', answer=False, answer_status='', lang='', event=False,
-            answer_score=0, cohort_user_role='', cohort_user_two=False, slack_user=False,
-            slack_team=False, credentials_slack=False, manual_authenticate=False,
-            slack_team_owner=False):
+    def generate_models(self,
+                        user=False,
+                        authenticate=False,
+                        certificate=False,
+                        academy=False,
+                        cohort=False,
+                        profile_academy=False,
+                        cohort_user=False,
+                        impossible_kickoff_date=False,
+                        finantial_status='',
+                        educational_status='',
+                        mentor=False,
+                        cohort_two=False,
+                        task=False,
+                        task_status='',
+                        task_type='',
+                        answer=False,
+                        answer_status='',
+                        lang='',
+                        event=False,
+                        answer_score=0,
+                        cohort_user_role='',
+                        cohort_user_two=False,
+                        slack_user=False,
+                        slack_team=False,
+                        credentials_slack=False,
+                        manual_authenticate=False,
+                        slack_team_owner=False):
         os.environ['EMAIL_NOTIFICATIONS_ENABLED'] = 'TRUE'
         self.maxDiff = None
 
@@ -223,7 +264,7 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
 
             if profile_academy:
                 kargs['certificate'] = models['certificate']
-            
+
             if academy or profile_academy:
                 kargs['academy'] = models['academy']
 
@@ -241,15 +282,15 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
 
             models['cohort_two'] = mixer.blend('admissions.Cohort', **kargs)
 
-        if (user or authenticate or profile_academy or cohort_user or task or slack_user or
-                manual_authenticate or slack_team):
+        if (user or authenticate or profile_academy or cohort_user or task
+                or slack_user or manual_authenticate or slack_team):
             models['user'] = mixer.blend('auth.User')
             models['user'].set_password(self.password)
             models['user'].save()
 
         if credentials_slack:
-            models['credentials_slack'] = mixer.blend('authenticate.CredentialsSlack',
-                user=models['user'])
+            models['credentials_slack'] = mixer.blend(
+                'authenticate.CredentialsSlack', user=models['user'])
 
         if slack_team:
             kargs = {}
@@ -276,9 +317,7 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
             models['slack_user'] = mixer.blend('notify.SlackUser', **kargs)
 
         if task:
-            kargs = {
-                'user': models['user']
-            }
+            kargs = {'user': models['user']}
 
             if task_status:
                 kargs['task_status'] = task_status
@@ -316,7 +355,8 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
             if educational_status:
                 kargs['educational_status'] = educational_status
 
-            models['cohort_user'] = mixer.blend('admissions.CohortUser', **kargs)
+            models['cohort_user'] = mixer.blend('admissions.CohortUser',
+                                                **kargs)
 
         if cohort_user_two:
             kargs = {}
@@ -332,7 +372,8 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
             if educational_status:
                 kargs['educational_status'] = educational_status
 
-            models['cohort_user_two'] = mixer.blend('admissions.CohortUser', **kargs)
+            models['cohort_user_two'] = mixer.blend('admissions.CohortUser',
+                                                    **kargs)
 
         if authenticate:
             self.client.force_authenticate(user=models['user'])
@@ -341,8 +382,11 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
             self.auth_with_token(models['user'])
 
         if profile_academy:
-            models['profile_academy'] = mixer.blend('authenticate.ProfileAcademy',
-                user=models['user'], certificate=models['certificate'], academy=models['academy'])
+            models['profile_academy'] = mixer.blend(
+                'authenticate.ProfileAcademy',
+                user=models['user'],
+                certificate=models['certificate'],
+                academy=models['academy'])
 
         if answer:
             # token = create_token(models['user'], hours_length=48)
@@ -378,5 +422,5 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
                 kargs['lang'] = lang
 
             models['answer'] = mixer.blend('feedback.Answer', **kargs)
-        
+
         return models

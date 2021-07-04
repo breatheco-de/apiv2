@@ -1,5 +1,6 @@
 from rest_framework.views import exception_handler
 
+
 def breathecode_exception_handler(exc, context):
     # This is to be used with the Django REST Framework (DRF) as its
     # global exception handler.  It replaces the POST data of the Django
@@ -18,9 +19,15 @@ def breathecode_exception_handler(exc, context):
     if response is not None:
         if isinstance(response.data, list):
             if response.data[0].code != 'invalid':
-                response.data = { 'status_code': response.data[0].code, 'details': str(response.data[0]) }
+                response.data = {
+                    'status_code': response.data[0].code,
+                    'details': str(response.data[0])
+                }
             else:
-                response.data = { 'status_code': 500, 'details': str(response.data[0]) }
+                response.data = {
+                    'status_code': 500,
+                    'details': str(response.data[0])
+                }
         else:
             response.data['status_code'] = response.status_code
 

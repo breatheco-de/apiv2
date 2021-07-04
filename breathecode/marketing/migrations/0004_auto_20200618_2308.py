@@ -15,11 +15,21 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Contact',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(auto_created=True,
+                                  primary_key=True,
+                                  serialize=False,
+                                  verbose_name='ID')),
                 ('first_name', models.CharField(max_length=150)),
-                ('last_name', models.CharField(default=None, max_length=150, null=True)),
+                ('last_name',
+                 models.CharField(default=None, max_length=150, null=True)),
                 ('email', models.CharField(max_length=150, unique=True)),
-                ('phone', phonenumber_field.modelfields.PhoneNumberField(blank=True, default=None, max_length=128, null=True, region=None)),
+                ('phone',
+                 phonenumber_field.modelfields.PhoneNumberField(blank=True,
+                                                                default=None,
+                                                                max_length=128,
+                                                                null=True,
+                                                                region=None)),
                 ('language', models.CharField(max_length=2)),
                 ('country', models.CharField(max_length=30)),
                 ('city', models.CharField(max_length=30)),
@@ -30,6 +40,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='formentry',
             name='contact',
-            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to='marketing.Contact'),
+            field=models.ForeignKey(
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to='marketing.Contact'),
         ),
     ]

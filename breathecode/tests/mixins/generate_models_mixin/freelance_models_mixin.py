@@ -6,9 +6,16 @@ from mixer.backend.django import mixer
 
 
 class FreelanceModelsMixin(ModelsMixin):
-    def generate_freelance_models(self, freelancer=False, user=False,
-                                  credentials_github=False, bill=False, issue=False,
-                                  freelancer_kwargs={}, bill_kwargs={}, issue_kwargs={}, models={},
+    def generate_freelance_models(self,
+                                  freelancer=False,
+                                  user=False,
+                                  credentials_github=False,
+                                  bill=False,
+                                  issue=False,
+                                  freelancer_kwargs={},
+                                  bill_kwargs={},
+                                  issue_kwargs={},
+                                  models={},
                                   **kwargs):
         """Generate models"""
         models = models.copy()

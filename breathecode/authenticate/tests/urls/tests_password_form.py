@@ -5,7 +5,6 @@
 # from rest_framework import status
 # from .mixin import AuthTestCase
 
-
 # class AuthenticateTestSuite(AuthTestCase):
 #     """Authentication test suite"""
 #     def test_change_password_without_token(self):
@@ -64,6 +63,6 @@
 #         data = {'token': token, 'password1': password, 'password2': password}
 #         response = self.client.post(url, data)
 
-#         self.assertContains(response, 'You password has been reset successfully, 
+#         self.assertContains(response, 'You password has been reset successfully,
 #             you can close this window.')
 #         self.assertEqual(response.status_code, status.HTTP_200_OK)

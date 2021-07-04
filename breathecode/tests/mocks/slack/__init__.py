@@ -8,9 +8,8 @@ SLACK_PATH = {
     'request': 'requests.request',
 }
 
-SLACK_INSTANCES = {
-    'request': Mock(side_effect=request_mock)
-}
+SLACK_INSTANCES = {'request': Mock(side_effect=request_mock)}
+
 
 def apply_slack_requests_request_mock():
     """Apply Storage Blob Mock"""

@@ -3,6 +3,7 @@ from rest_framework.exceptions import APIException
 
 IS_TEST_ENV = os.getenv('ENV') == 'test'
 
+
 class ValidationException(APIException):
     status_code = 400
     default_detail = 'There is an error in your request'

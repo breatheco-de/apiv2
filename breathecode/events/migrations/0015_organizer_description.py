@@ -13,6 +13,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='organizer',
             name='description',
-            field=models.CharField(blank=True, default=None, max_length=250, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   max_length=250,
+                                   null=True),
         ),
     ]

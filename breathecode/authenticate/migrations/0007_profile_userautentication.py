@@ -17,14 +17,13 @@ class Migration(migrations.Migration):
     operations = [
         migrations.CreateModel(
             name='UserAutentication',
-            fields=[
-            ],
+            fields=[],
             options={
                 'proxy': True,
                 'indexes': [],
                 'constraints': [],
             },
-            bases=('auth.user',),
+            bases=('auth.user', ),
             managers=[
                 ('objects', django.contrib.auth.models.UserManager()),
             ],
@@ -32,9 +31,20 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Profile',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('avatar_url', models.CharField(blank=True, default=None, max_length=255, null=True)),
-                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ('id',
+                 models.AutoField(auto_created=True,
+                                  primary_key=True,
+                                  serialize=False,
+                                  verbose_name='ID')),
+                ('avatar_url',
+                 models.CharField(blank=True,
+                                  default=None,
+                                  max_length=255,
+                                  null=True)),
+                ('user',
+                 models.OneToOneField(
+                     on_delete=django.db.models.deletion.CASCADE,
+                     to=settings.AUTH_USER_MODEL)),
             ],
         ),
     ]

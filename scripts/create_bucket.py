@@ -6,18 +6,20 @@ def resolve_credentials():
     """Resolve Google Cloud Credentials"""
     path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
 
-    if os.path.exists( path ):
+    if os.path.exists(path):
         return True
 
     credentials = os.getenv('GOOGLE_SERVICE_KEY', None)
     if credentials:
         with open(path, 'w') as credentials_file:
-            credentials_file.write( credentials )
+            credentials_file.write(credentials)
 
 
 def help_command():
     print('Usage:')
-    print('   `pipenv run create_bucket BUCKET_NAME` where BUCKET_NAME is the name of new bucket')
+    print(
+        '   `pipenv run create_bucket BUCKET_NAME` where BUCKET_NAME is the name of new bucket'
+    )
     print('')
     print('commands:')
     print('   --help see this help message.')

@@ -8,17 +8,17 @@ from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins.new_events_tests_case import EventTestCase
 
+
 class AcademyCohortTestSuite(EventTestCase):
     """Test /academy/cohort"""
-
     def test_ical_events__without_academy(self):
         """Test /academy/cohort without auth"""
         url = reverse_lazy('events:academy_id_ical_events')
-        args ={'academy': "1"}
+        args = {'academy': "1"}
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
         json = response.json()
 
-        expected = {"detail":"Some academy not exist","status_code":400}
+        expected = {"detail": "Some academy not exist", "status_code": 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -26,11 +26,12 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_events__without_events(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
-        model = self.generate_models(academy=True, device_id=True,
-            device_id_kwargs=device_id_kwargs)
+        model = self.generate_models(academy=True,
+                                     device_id=True,
+                                     device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_events')
-        args ={'academy': "1"}
+        args = {'academy': "1"}
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         key = model.device_id.key
@@ -52,11 +53,13 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_events__dont_get_status_draft(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
-        model = self.generate_models(academy=True, event=True, device_id=True,
-            device_id_kwargs=device_id_kwargs)
+        model = self.generate_models(academy=True,
+                                     event=True,
+                                     device_id=True,
+                                     device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_events')
-        args ={'academy': "1"}
+        args = {'academy': "1"}
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         academy = model['academy']
@@ -80,11 +83,14 @@ class AcademyCohortTestSuite(EventTestCase):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'DELETED'}
         device_id_kwargs = {'name': 'server'}
-        model = self.generate_models(academy=True, event=True, device_id=True,
-            event_kwargs=event_kwargs, device_id_kwargs=device_id_kwargs)
+        model = self.generate_models(academy=True,
+                                     event=True,
+                                     device_id=True,
+                                     event_kwargs=event_kwargs,
+                                     device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_events')
-        args ={'academy': "1"}
+        args = {'academy': "1"}
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         academy = model['academy']
@@ -108,11 +114,15 @@ class AcademyCohortTestSuite(EventTestCase):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'ACTIVE'}
         device_id_kwargs = {'name': 'server'}
-        model = self.generate_models(academy=True, user=True, event=True, device_id=True,
-            event_kwargs=event_kwargs, device_id_kwargs=device_id_kwargs)
+        model = self.generate_models(academy=True,
+                                     user=True,
+                                     event=True,
+                                     device_id=True,
+                                     event_kwargs=event_kwargs,
+                                     device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_events')
-        args={'academy': "1"}
+        args = {'academy': "1"}
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         event = model['event']
@@ -134,8 +144,10 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event.created_at)}',
             f'UID:breathecode_event_{event.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
-                f'{event.academy.name}\\n'),
-            self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
+                            f'{event.academy.name}\\n'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'
+            ),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -148,11 +160,15 @@ class AcademyCohortTestSuite(EventTestCase):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'ACTIVE', 'online_event': True}
         device_id_kwargs = {'name': 'server'}
-        model = self.generate_models(academy=True, user=True, event=True, device_id=True,
-            event_kwargs=event_kwargs, device_id_kwargs=device_id_kwargs)
+        model = self.generate_models(academy=True,
+                                     user=True,
+                                     event=True,
+                                     device_id=True,
+                                     event_kwargs=event_kwargs,
+                                     device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_events')
-        args={'academy': "1"}
+        args = {'academy': "1"}
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         event = model['event']
@@ -174,8 +190,10 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event.created_at)}',
             f'UID:breathecode_event_{event.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
-                f'{event.academy.name}\\nLocation: online\\n'),
-            self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
+                            f'{event.academy.name}\\nLocation: online\\n'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'
+            ),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -196,11 +214,16 @@ class AcademyCohortTestSuite(EventTestCase):
             'country': 'Colombia',
         }
 
-        model = self.generate_models(academy=True, user=True, event=True, device_id=True,
-            venue=True, event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-            device_id_kwargs=device_id_kwargs)
+        model = self.generate_models(academy=True,
+                                     user=True,
+                                     event=True,
+                                     device_id=True,
+                                     venue=True,
+                                     event_kwargs=event_kwargs,
+                                     venue_kwargs=venue_kwargs,
+                                     device_id_kwargs=device_id_kwargs)
         url = reverse_lazy('events:academy_id_ical_events')
-        args ={'academy': "1"}
+        args = {'academy': "1"}
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         event = model['event']
@@ -221,11 +244,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event.created_at)}',
             f'UID:breathecode_event_{event.id}_{key}',
-            self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
+            self.line_limit(
+                f'DESCRIPTION:Url: {event.url}\\nAcademy: '
                 f'{event.academy.name}\\nVenue: {event.venue.title}\\n'
                 ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
-            self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'
+            ),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -234,7 +260,8 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_ical_events__with_one_and_venue__upcoming_true__return_zero_events(self):
+    def test_ical_events__with_one_and_venue__upcoming_true__return_zero_events(
+            self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
         event_kwargs = {
@@ -248,11 +275,16 @@ class AcademyCohortTestSuite(EventTestCase):
             'country': 'Colombia',
         }
 
-        model = self.generate_models(academy=True, user=True, event=True, device_id=True,
-            venue=True, event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-            device_id_kwargs=device_id_kwargs)
+        model = self.generate_models(academy=True,
+                                     user=True,
+                                     event=True,
+                                     device_id=True,
+                                     venue=True,
+                                     event_kwargs=event_kwargs,
+                                     venue_kwargs=venue_kwargs,
+                                     device_id_kwargs=device_id_kwargs)
         url = reverse_lazy('events:academy_id_ical_events')
-        args ={'academy': "1", 'upcoming': 'true'}
+        args = {'academy': "1", 'upcoming': 'true'}
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         key = model.device_id.key
@@ -286,12 +318,17 @@ class AcademyCohortTestSuite(EventTestCase):
             'country': 'Colombia',
         }
 
-        model = self.generate_models(academy=True, user=True, event=True, device_id=True,
-            venue=True, event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-            device_id_kwargs=device_id_kwargs)
+        model = self.generate_models(academy=True,
+                                     user=True,
+                                     event=True,
+                                     device_id=True,
+                                     venue=True,
+                                     event_kwargs=event_kwargs,
+                                     venue_kwargs=venue_kwargs,
+                                     device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_events')
-        args ={'academy': "1", 'upcoming': 'true'}
+        args = {'academy': "1", 'upcoming': 'true'}
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         event = model['event']
@@ -311,11 +348,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event.created_at)}',
             f'UID:breathecode_event_{event.id}_{key}',
-            self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
+            self.line_limit(
+                f'DESCRIPTION:Url: {event.url}\\nAcademy: '
                 f'{event.academy.name}\\nVenue: {event.venue.title}\\n'
                 ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
-            self.line_limit(f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'
+            ),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -328,18 +368,23 @@ class AcademyCohortTestSuite(EventTestCase):
         """Test /academy/cohort without auth"""
         event_kwargs = {'status': 'ACTIVE'}
         device_id_kwargs = {'name': 'server'}
-        base = self.generate_models(device_id=True, academy=True,
-            device_id_kwargs=device_id_kwargs)
+        base = self.generate_models(device_id=True,
+                                    academy=True,
+                                    device_id_kwargs=device_id_kwargs)
 
         models = [
-            self.generate_models(user=True, event=True, event_kwargs=event_kwargs,
-                models=base),
-            self.generate_models(user=True, event=True, event_kwargs=event_kwargs,
-                models=base),
+            self.generate_models(user=True,
+                                 event=True,
+                                 event_kwargs=event_kwargs,
+                                 models=base),
+            self.generate_models(user=True,
+                                 event=True,
+                                 event_kwargs=event_kwargs,
+                                 models=base),
         ]
 
         url = reverse_lazy('events:academy_id_ical_events')
-        args ={'academy': "1"}
+        args = {'academy': "1"}
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         event1 = models[0]['event']
@@ -363,8 +408,10 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event1.created_at)}',
             f'UID:breathecode_event_{event1.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
-                f'{event1.academy.name}\\n'),
-            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+                            f'{event1.academy.name}\\n'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'
+            ),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -373,8 +420,10 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event2.created_at)}',
             f'UID:breathecode_event_{event2.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
-                f'{event2.academy.name}\\n'),
-            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+                            f'{event2.academy.name}\\n'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'
+            ),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -394,20 +443,27 @@ class AcademyCohortTestSuite(EventTestCase):
             'country': 'Colombia',
         }
         device_id_kwargs = {'name': 'server'}
-        base = self.generate_models(device_id=True, academy=True,
-            device_id_kwargs=device_id_kwargs)
+        base = self.generate_models(device_id=True,
+                                    academy=True,
+                                    device_id_kwargs=device_id_kwargs)
 
         models = [
-            self.generate_models(user=True, event=True, venue=True,
-                event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-                models=base),
-            self.generate_models(user=True, event=True, venue=True,
-                event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-                models=base),
+            self.generate_models(user=True,
+                                 event=True,
+                                 venue=True,
+                                 event_kwargs=event_kwargs,
+                                 venue_kwargs=venue_kwargs,
+                                 models=base),
+            self.generate_models(user=True,
+                                 event=True,
+                                 venue=True,
+                                 event_kwargs=event_kwargs,
+                                 venue_kwargs=venue_kwargs,
+                                 models=base),
         ]
 
         url = reverse_lazy('events:academy_id_ical_events')
-        args ={'academy': "1"}
+        args = {'academy': "1"}
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
         event1 = models[0]['event']
@@ -430,11 +486,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event1.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event1.created_at)}',
             f'UID:breathecode_event_{event1.id}_{key}',
-            self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
+            self.line_limit(
+                f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
                 f'{event1.academy.name}\\nVenue: {event1.venue.title}\\n'
                 ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
-            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'
+            ),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -442,11 +501,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event2.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event2.created_at)}',
             f'UID:breathecode_event_{event2.id}_{key}',
-            self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
+            self.line_limit(
+                f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
                 f'{event2.academy.name}\\nVenue: {event2.venue.title}\\n'
                 ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
-            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'
+            ),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -466,31 +528,44 @@ class AcademyCohortTestSuite(EventTestCase):
             'country': 'Colombia',
         }
         device_id_kwargs = {'name': 'server'}
-        base = self.generate_models(device_id=True, device_id_kwargs=device_id_kwargs)
+        base = self.generate_models(device_id=True,
+                                    device_id_kwargs=device_id_kwargs)
         base1 = self.generate_models(academy=True, models=base)
 
         models = [
-            self.generate_models(user=True, event=True, venue=True,
-                event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-                models=base1),
-            self.generate_models(user=True, event=True, venue=True,
-                event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-                models=base1),
+            self.generate_models(user=True,
+                                 event=True,
+                                 venue=True,
+                                 event_kwargs=event_kwargs,
+                                 venue_kwargs=venue_kwargs,
+                                 models=base1),
+            self.generate_models(user=True,
+                                 event=True,
+                                 venue=True,
+                                 event_kwargs=event_kwargs,
+                                 venue_kwargs=venue_kwargs,
+                                 models=base1),
         ]
 
         base2 = self.generate_models(academy=True, models=base)
 
         models = models + [
-            self.generate_models(user=True, event=True, venue=True,
-                event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-                models=base2),
-            self.generate_models(user=True, event=True, venue=True,
-                event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-                models=base2),
+            self.generate_models(user=True,
+                                 event=True,
+                                 venue=True,
+                                 event_kwargs=event_kwargs,
+                                 venue_kwargs=venue_kwargs,
+                                 models=base2),
+            self.generate_models(user=True,
+                                 event=True,
+                                 venue=True,
+                                 event_kwargs=event_kwargs,
+                                 venue_kwargs=venue_kwargs,
+                                 models=base2),
         ]
 
         url = reverse_lazy('events:academy_id_ical_events')
-        args ={'academy': "1,2"}
+        args = {'academy': "1,2"}
         url = url + "?" + urllib.parse.urlencode(args)
         response = self.client.get(url)
 
@@ -518,11 +593,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event1.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event1.created_at)}',
             f'UID:breathecode_event_{event1.id}_{key}',
-            self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
+            self.line_limit(
+                f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
                 f'{event1.academy.name}\\nVenue: {event1.venue.title}\\n'
                 ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
-            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'
+            ),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -530,11 +608,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event2.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event2.created_at)}',
             f'UID:breathecode_event_{event2.id}_{key}',
-            self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
+            self.line_limit(
+                f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
                 f'{event2.academy.name}\\nVenue: {event2.venue.title}\\n'
                 ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
-            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'
+            ),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -542,11 +623,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event3.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event3.created_at)}',
             f'UID:breathecode_event_{event3.id}_{key}',
-            self.line_limit(f'DESCRIPTION:Url: {event3.url}\\nAcademy: '
+            self.line_limit(
+                f'DESCRIPTION:Url: {event3.url}\\nAcademy: '
                 f'{event3.academy.name}\\nVenue: {event3.venue.title}\\n'
                 ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
-            self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'
+            ),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -554,11 +638,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event4.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event4.created_at)}',
             f'UID:breathecode_event_{event4.id}_{key}',
-            self.line_limit(f'DESCRIPTION:Url: {event4.url}\\nAcademy: '
+            self.line_limit(
+                f'DESCRIPTION:Url: {event4.url}\\nAcademy: '
                 f'{event4.academy.name}\\nVenue: {event4.venue.title}\\n'
                 ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
-            self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'
+            ),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -578,31 +665,47 @@ class AcademyCohortTestSuite(EventTestCase):
             'country': 'Colombia',
         }
         device_id_kwargs = {'name': 'server'}
-        base = self.generate_models(device_id=True, device_id_kwargs=device_id_kwargs)
+        base = self.generate_models(device_id=True,
+                                    device_id_kwargs=device_id_kwargs)
         base1 = self.generate_models(academy=True, models=base)
 
         models = [
-            self.generate_models(user=True, event=True, venue=True,
-                event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-                models=base1),
-            self.generate_models(user=True, event=True, venue=True,
-                event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-                models=base1),
+            self.generate_models(user=True,
+                                 event=True,
+                                 venue=True,
+                                 event_kwargs=event_kwargs,
+                                 venue_kwargs=venue_kwargs,
+                                 models=base1),
+            self.generate_models(user=True,
+                                 event=True,
+                                 venue=True,
+                                 event_kwargs=event_kwargs,
+                                 venue_kwargs=venue_kwargs,
+                                 models=base1),
         ]
 
         base2 = self.generate_models(academy=True, models=base)
 
         models = models + [
-            self.generate_models(user=True, event=True, venue=True,
-                event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-                models=base2),
-            self.generate_models(user=True, event=True, venue=True,
-                event_kwargs=event_kwargs, venue_kwargs=venue_kwargs,
-                models=base2),
+            self.generate_models(user=True,
+                                 event=True,
+                                 venue=True,
+                                 event_kwargs=event_kwargs,
+                                 venue_kwargs=venue_kwargs,
+                                 models=base2),
+            self.generate_models(user=True,
+                                 event=True,
+                                 venue=True,
+                                 event_kwargs=event_kwargs,
+                                 venue_kwargs=venue_kwargs,
+                                 models=base2),
         ]
 
         url = reverse_lazy('events:academy_id_ical_events')
-        args ={'academy_slug': ','.join(list(dict.fromkeys([x.academy.slug for x in models])))}
+        args = {
+            'academy_slug':
+            ','.join(list(dict.fromkeys([x.academy.slug for x in models])))
+        }
         url = url + "?" + urllib.parse.urlencode(args)
         response = self.client.get(url + "?" + urllib.parse.urlencode(args))
 
@@ -630,11 +733,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event1.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event1.created_at)}',
             f'UID:breathecode_event_{event1.id}_{key}',
-            self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
+            self.line_limit(
+                f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
                 f'{event1.academy.name}\\nVenue: {event1.venue.title}\\n'
                 ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
-            self.line_limit(f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'
+            ),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -642,11 +748,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event2.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event2.created_at)}',
             f'UID:breathecode_event_{event2.id}_{key}',
-            self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
+            self.line_limit(
+                f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
                 f'{event2.academy.name}\\nVenue: {event2.venue.title}\\n'
                 ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
-            self.line_limit(f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'
+            ),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -654,11 +763,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event3.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event3.created_at)}',
             f'UID:breathecode_event_{event3.id}_{key}',
-            self.line_limit(f'DESCRIPTION:Url: {event3.url}\\nAcademy: '
+            self.line_limit(
+                f'DESCRIPTION:Url: {event3.url}\\nAcademy: '
                 f'{event3.academy.name}\\nVenue: {event3.venue.title}\\n'
                 ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
-            self.line_limit(f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'
+            ),
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
@@ -666,11 +778,14 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event4.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event4.created_at)}',
             f'UID:breathecode_event_{event4.id}_{key}',
-            self.line_limit(f'DESCRIPTION:Url: {event4.url}\\nAcademy: '
+            self.line_limit(
+                f'DESCRIPTION:Url: {event4.url}\\nAcademy: '
                 f'{event4.academy.name}\\nVenue: {event4.venue.title}\\n'
                 ''),
             'LOCATION:Street 2 #10-51\, Gaira\, Magdalena\, Colombia',
-            self.line_limit(f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
+            self.line_limit(
+                f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'
+            ),
             'END:VEVENT',
             'END:VCALENDAR',
             '',

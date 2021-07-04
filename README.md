@@ -1,3 +1,16 @@
+# Enable formatter in Visual Studio Code
+
+- Open `.vscode\settings.json`
+- Add
+
+```python
+  ...
+  "editor.formatOnSave": true,
+  "python.formatting.provider": "yapf"
+```
+
+- Save
+
 # Setup & Installation
 
 1. Install redis, postgress, python 3.8+ and node 14+

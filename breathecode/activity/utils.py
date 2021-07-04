@@ -1,24 +1,78 @@
-import os, re
+import json
+import re
+from datetime import datetime
+
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
-def resolve_google_credentials():
-    path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS',"")
-    if not os.path.exists( path ):
-        print("Loading credentials")
-        # credentials = os.getenv('GOOGLE_SERVICE_KEY',None)
-        # if credentials is not None:
-        #     with open(path, 'w') as credentials_file:
-        #         credentials_file.write( credentials )
+from breathecode.utils.validation_exception import ValidationException
 
-def check_params(body, *args):
-    msg = ''
-    if body is None: 
-        msg = 'request body as a json object, '
-    else: 
-        for prop in args: 
-            if prop not in body: 
-                msg += f'{prop}, '
-    if msg: 
-        msg = re.sub(r'(.*),', r'\1 and', msg[:-2])
-        raise ValidationError('You must specify the ' + msg, 400)
-    return body
+ACTIVITY_FIELDS = [
+    'cohort',
+    'data',
+    'day',
+    'slug',
+    'user_agent',
+]
+
+ACTIVITY_REQUIRED_FIELDS = [
+    'slug',
+    'user_agent',
+]
+
+ACTIVITY_TYPE_DONT_NEED_A_COHORT = [
+    'breathecode-login',
+    'online-platform-registration',
+]
+
+ACTIVITY_TYPE_DONT_NEED_A_DATA = [
+    'breathecode-login',
+    'online-platform-registration',
+]
+
+
+def validate_activity_fields(data):
+    for field in data:
+        if field not in ACTIVITY_FIELDS:
+            slug = field.replace('_', '-')
+            raise ValidationException(
+                f'Field {field} is not allowed in the request',
+                slug=f'{slug}-not-allowed')
+
+
+def validate_require_activity_fields(data):
+    for field in ACTIVITY_REQUIRED_FIELDS:
+        if field not in data:
+            slug = field.replace('_', '-')
+            raise ValidationException(f'Missing {field} in the request',
+                                      slug=f'missing-{slug}')
+
+
+def validate_if_activity_need_field_cohort(data):
+    slug = data.get('slug')
+    if 'cohort' not in data and slug not in ACTIVITY_TYPE_DONT_NEED_A_COHORT:
+        raise ValidationException(
+            'This activity type need a cohort in the request',
+            slug='missing-cohort')
+
+
+def validate_if_activity_need_field_data(data):
+    slug = data.get('slug')
+    if 'data' not in data and slug not in ACTIVITY_TYPE_DONT_NEED_A_DATA:
+        raise ValidationException(
+            'This activity type need a data field in the request',
+            slug='missing-data')
+
+
+def validate_activity_have_correct_data_field(data):
+    if 'data' in data and data['data'] is not None:
+        try:
+            json.loads(data['data'])
+
+        except Exception as e:
+            raise ValidationException('Data is not a JSON: ' + str(data),
+                                      slug='data-is-not-a-json')
+
+
+def generate_created_at():
+    return timezone.make_aware(datetime.now())
