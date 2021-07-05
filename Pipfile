@@ -8,12 +8,13 @@ pytest-cov = "*"
 coverage = "*"
 atomicwrites = "*"
 yapf = "*"
+pyyaml = "*"
+uritemplate = "*"
 
 [packages]
 django = "*"
 djangorestframework = "~=3.11.1"
 serpy = "*"
-drf-yasg = "*"
 gunicorn = "*"
 requests = "*"
 psycopg2-binary = "*"
@@ -41,6 +42,7 @@ hiredis = "*"
 icalendar = "*"
 djangorestframework-csv = "*"
 python-slugify = "*"
+pyyaml = "*"
 
 [requires]
 python_version = "3.9"

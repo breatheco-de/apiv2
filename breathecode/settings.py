@@ -44,9 +44,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django.contrib.postgres',
+    'django.contrib.admindocs',
     'rest_framework',
     'phonenumber_field',
-    'drf_yasg',
     'corsheaders',
     'breathecode.authenticate',
     'breathecode.admissions',
@@ -64,6 +64,8 @@ INSTALLED_APPS = [
 ]
 
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS':
+    'rest_framework.schemas.openapi.AutoSchema',
     'DEFAULT_VERSIONING_CLASS':
     'rest_framework.versioning.NamespaceVersioning',
     'DEFAULT_PAGINATION_CLASS':
