@@ -8,8 +8,6 @@ pytest-cov = "*"
 coverage = "*"
 atomicwrites = "*"
 yapf = "*"
-pyyaml = "*"
-uritemplate = "*"
 
 [packages]
 django = "*"
@@ -43,6 +41,7 @@ icalendar = "*"
 djangorestframework-csv = "*"
 python-slugify = "*"
 pyyaml = "*"
+uritemplate = "*"
 
 [requires]
 python_version = "3.9"
