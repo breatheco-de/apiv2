@@ -137,12 +137,18 @@ class LogoutView(APIView):
 
 class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('read_member')
-    def get(self, request, academy_id, user_id=None):
-        is_many = bool(not user_id)
+    def get(self, request, academy_id, user_id_or_email=None):
+        is_many = bool(not user_id_or_email)
 
-        if user_id is not None:
-            item = ProfileAcademy.objects.filter(
-                user__id=user_id, academy_id=academy_id).first()
+        if user_id_or_email is not None:
+            item = None
+            if user_id_or_email.isnumeric():
+                item = ProfileAcademy.objects.filter(
+                    user__id=user_id_or_email, academy_id=academy_id).first()
+            else:
+                item = ProfileAcademy.objects.filter(
+                    user__email=user_id_or_email, academy_id=academy_id).first()
+
             if item is None:
                 raise ValidationException(
                     'Profile not found for this user and academy', 404)
@@ -331,10 +337,16 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination,
 
 class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('read_student')
-    def get(self, request, academy_id=None, user_id=None):
-        if user_id is not None:
-            profile = ProfileAcademy.objects.filter(academy__id=academy_id,
-                                                    user__id=user_id).first()
+    def get(self, request, academy_id=None, user_id_or_email=None):
+        if user_id_or_email is not None:
+            profile = None
+            if user_id_or_email.isnumeric():
+                profile = ProfileAcademy.objects.filter(academy__id=academy_id,
+                                                        user__id=user_id_or_email).first()
+            else:
+                profile = ProfileAcademy.objects.filter(academy__id=academy_id,
+                                                        user__email=user_id_or_email).first()
+
             if profile is None:
                 raise ValidationException("Profile not found", 404)
 
@@ -533,6 +545,21 @@ def get_users(request):
     query = query.exclude(email__contains="@token.com")
     query = query.order_by('-date_joined')
     users = UserSmallSerializer(query, many=True)
+    return Response(users.data)
+
+@api_view(['GET'])
+def get_user_by_id_or_email(request, id_or_email):
+
+    query = None
+    if id_or_email.isnumeric():
+        query = User.objects.filter(id=id_or_email).first()
+    else:
+        query = User.objects.filter(email=id_or_email).first()
+
+    if query is None:
+        raise ValidationException("User with that id or email does not exists", slug="user-dont-exists", code=404)
+
+    users = UserSmallSerializer(query, many=False)
     return Response(users.data)
 
 
