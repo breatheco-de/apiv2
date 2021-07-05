@@ -16,21 +16,19 @@ Including another URLconf
 # from django.contrib import admin
 # from rest_framework.authtoken import views
 from django.urls import path
-from .views import (get_users, get_user_by_id_or_email, UserMeView, LoginView, LogoutView,
-                    TemporalTokenView, get_github_token, save_github_token,
-                    get_slack_token, save_slack_token, pick_password,
-                    change_password, get_token_info, get_facebook_token,
-                    save_facebook_token, MemberView, reset_password_view,
-                    login_html_view, StudentView, get_roles, render_invite,
-                    AcademyInviteView, ProfileInviteView, MeInviteView,
-                    AcademyTokenView, PasswordResetView)
+from .views import (
+    get_users, get_user_by_id_or_email, UserMeView, LoginView, LogoutView,
+    TemporalTokenView, get_github_token, save_github_token, get_slack_token,
+    save_slack_token, pick_password, change_password, get_token_info,
+    get_facebook_token, save_facebook_token, MemberView, reset_password_view,
+    login_html_view, StudentView, get_roles, render_invite, AcademyInviteView,
+    ProfileInviteView, MeInviteView, AcademyTokenView, PasswordResetView)
 
 app_name = 'authenticate'
 urlpatterns = [
     path('user/', get_users, name="user"),
     path('user/me', UserMeView.as_view(), name="user_me"),
     path('user/<str:id_or_email>', get_user_by_id_or_email),
-
     path('role', get_roles, name="role"),
     path('member/invite/resend/<int:pa_id>',
          AcademyInviteView.as_view(),
@@ -78,6 +76,5 @@ urlpatterns = [
     path('slack/callback/', save_slack_token, name="slack_callback"),
     path('facebook/', get_facebook_token, name="facebook"),
     path('facebook/callback/', save_facebook_token, name="facebook_callback"),
-    
     path('user/me/invite', MeInviteView.as_view()),
 ]
