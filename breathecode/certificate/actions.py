@@ -86,7 +86,8 @@ def generate_certificate(user, cohort=None, layout=None):
             )
 
     if layout is None:
-        layout = LayoutDesign.objects.filter(is_default=True, academy=cohort.academy).first()
+        layout = LayoutDesign.objects.filter(is_default=True,
+                                             academy=cohort.academy).first()
     if layout is None:
         layout = LayoutDesign.objects.filter(slug="default").first()
     if layout is None:

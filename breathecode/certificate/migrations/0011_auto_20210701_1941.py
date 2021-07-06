@@ -23,6 +23,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='layoutdesign',
             name='is_default',
-            field=models.BooleanField(default=False, help_text='Will be used as default for all future certificates. Only one default layout per academy.'),
+            field=models.BooleanField(
+                default=False,
+                help_text=
+                'Will be used as default for all future certificates. Only one default layout per academy.'
+            ),
         ),
     ]
