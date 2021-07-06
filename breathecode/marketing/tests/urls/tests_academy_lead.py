@@ -704,7 +704,8 @@ class CohortUserTestSuite(MarketingTestCase):
             model['form_entry'].utm_url,
             'created_at':
             self.datetime_to_iso(model['form_entry'].created_at),
-            'user': None,
+            'user':
+            None,
         } for model in ordened_models][:100]
 
         self.assertEqual(json, expected)
@@ -784,7 +785,8 @@ class CohortUserTestSuite(MarketingTestCase):
                 model['form_entry'].utm_url,
                 'created_at':
                 self.datetime_to_iso(model['form_entry'].created_at),
-                'user': None,
+                'user':
+                None,
             } for model in ordened_models][:5],
         }
 
@@ -863,7 +865,8 @@ class CohortUserTestSuite(MarketingTestCase):
                 model['form_entry'].utm_url,
                 'created_at':
                 self.datetime_to_iso(model['form_entry'].created_at),
-                'user': None,
+                'user':
+                None,
             } for model in ordened_models][5:],
         }
 

@@ -334,9 +334,10 @@ class FormEntry(models.Model):
 
     # if user is not null, it probably means the lead was won and we invited it to breathecode
     user = models.ForeignKey(User,
-                                on_delete=models.SET_NULL,
-                                null=True,
-                                default=None, blank=True)
+                             on_delete=models.SET_NULL,
+                             null=True,
+                             default=None,
+                             blank=True)
 
     ac_contact_id = models.CharField(max_length=20,
                                      null=True,
