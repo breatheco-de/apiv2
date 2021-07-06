@@ -35,6 +35,9 @@ jobs:
           verbose: true # optional (default = false)
 
       - name: Coveralls
-        run: coveralls
+        run: |
+          echo $GITHUB_TOKEN
+          echo $COVERALLS_TOKEN
+          coveralls
         env:
           GITHUB_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
