@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.9
@@ -38,6 +40,5 @@ jobs:
         run: |
           echo $GITHUB_TOKEN
           echo $COVERALLS_TOKEN
+          echo $GITHUB_WORKFLOW
           coveralls
-        env:
-          GITHUB_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
