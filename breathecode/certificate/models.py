@@ -79,6 +79,9 @@ class Badge(models.Model):
 class LayoutDesign(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
     name = models.CharField(max_length=40)
+    is_default = models.BooleanField(default=False, help_text="Will be used as default for all future certificates. Only one default layout per academy.")
+    html_content = models.TextField(null=True, default=None, blank=True)
+    css_content = models.TextField(null=True, default=None, blank=True)
 
     background_url = models.CharField(max_length=250, blank=False, null=False)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)

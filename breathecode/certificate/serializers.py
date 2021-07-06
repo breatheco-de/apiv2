@@ -50,7 +50,7 @@ class LayoutDesignSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     slug = serpy.Field()
     name = serpy.Field()
-    academy = AcademyTinySerializer()
+    is_default = serpy.Field()
     background_url = serpy.Field()
 
 

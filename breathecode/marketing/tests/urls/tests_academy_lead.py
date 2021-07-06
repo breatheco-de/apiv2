@@ -175,6 +175,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'user': None,
         }]
 
         self.assertEqual(json, expected)
@@ -252,6 +253,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'user': None,
         }]
 
         self.assertEqual(json, expected)
@@ -328,6 +330,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'user': None,
         }]
 
         self.assertEqual(json, expected)
@@ -404,6 +407,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'user': None,
         }]
 
         self.assertEqual(json, expected)
@@ -477,6 +481,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'user': None,
         }]
 
         self.assertEqual(json, expected)
@@ -550,6 +555,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'user': None,
         }]
 
         self.assertEqual(json, expected)
@@ -698,6 +704,7 @@ class CohortUserTestSuite(MarketingTestCase):
             model['form_entry'].utm_url,
             'created_at':
             self.datetime_to_iso(model['form_entry'].created_at),
+            'user': None,
         } for model in ordened_models][:100]
 
         self.assertEqual(json, expected)
@@ -777,6 +784,7 @@ class CohortUserTestSuite(MarketingTestCase):
                 model['form_entry'].utm_url,
                 'created_at':
                 self.datetime_to_iso(model['form_entry'].created_at),
+                'user': None,
             } for model in ordened_models][:5],
         }
 
@@ -855,6 +863,7 @@ class CohortUserTestSuite(MarketingTestCase):
                 model['form_entry'].utm_url,
                 'created_at':
                 self.datetime_to_iso(model['form_entry'].created_at),
+                'user': None,
             } for model in ordened_models][5:],
         }
 
@@ -957,6 +966,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': models[0].form_entry.utm_medium,
             'utm_source': models[0].form_entry.utm_source,
             'utm_url': models[0].form_entry.utm_url,
+            'user': None,
         }]
 
         self.assertEqual(json, expected)
@@ -1017,6 +1027,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': models[0].form_entry.utm_medium,
             'utm_source': models[0].form_entry.utm_source,
             'utm_url': models[0].form_entry.utm_url,
+            'user': None,
         }]
 
         self.assertEqual(json, expected)
@@ -1078,6 +1089,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': models[0].form_entry.utm_medium,
             'utm_source': models[0].form_entry.utm_source,
             'utm_url': models[0].form_entry.utm_url,
+            'user': None,
         }]
 
         self.assertEqual(json, expected)
@@ -1137,6 +1149,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': models[0].form_entry.utm_medium,
             'utm_source': models[0].form_entry.utm_source,
             'utm_url': models[0].form_entry.utm_url,
+            'user': None,
         }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

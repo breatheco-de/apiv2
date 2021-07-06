@@ -14,6 +14,10 @@ def extend(roles, slugs):
     return list(dict.fromkeys(inhered_caps))
 
 
+def remove_duplicates(slugs):
+    return list(dict.fromkeys(slugs))
+
+
 class Command(BaseCommand):
     help = 'Create default system capabilities'
 
@@ -166,8 +170,16 @@ class Command(BaseCommand):
                 'description': 'List all the user activities'
             },
             {
-                'slug': 'crud_activity',
-                'description': 'Create, updatre or delete a user activities'
+                "slug": "crud_activity",
+                "description": "Create, update or delete a user activities"
+            },
+            {
+                "slug": "read_assigment",
+                "description": "List all the assigments"
+            },
+            {
+                "slug": "crud_assigment",
+                "description": "Create, update or delete a assigment"
             },
             {
                 'slug':
@@ -336,5 +348,6 @@ class Command(BaseCommand):
                 _r.save()
 
             _r.capabilities.clear()
-            for c in r['caps']:
+            r['caps'] = remove_duplicates(r['caps'])
+            for c in r["caps"]:
                 _r.capabilities.add(c)

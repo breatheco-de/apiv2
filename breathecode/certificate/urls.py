@@ -9,7 +9,7 @@ app_name = 'certificate'
 urlpatterns = [
     path('specialty', get_specialties),
     path('badge', get_badges),
-    path('layout', LayoutView.as_view()),
+    path('academy/layout', LayoutView.as_view()),
     path('token/<str:token>/', get_certificate),
     path('cohort/<int:cohort_id>/student/<int:student_id>',
          CertificateView.as_view()),
