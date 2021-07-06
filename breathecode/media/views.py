@@ -215,6 +215,28 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def delete_id(self, request, media_id=None, academy_id=None):
         from ..services.google_cloud import Storage
 
+        lookups = self.generate_lookups(request, many_fields=['id'])
+
+        if lookups and media_id:
+            raise ValidationException(
+                'media_id was provided in url in bulk mode request, use '
+                'querystring style instead',
+                slug='bad_bulk',
+                code=400)
+
+        if lookups:
+            items = Media.objects.filter(**lookups)
+
+            if items.filter(academy__id=academy_id).count() != len(items):
+                raise ValidationException(
+                    'You may not delete media that belongs to a different academy',
+                    slug='academy-different-than-media-academy')
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
         data = Media.objects.filter(id=media_id).first()
         if not data:
             raise ValidationException('Media not found', code=404)

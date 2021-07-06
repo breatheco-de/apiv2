@@ -15,8 +15,14 @@ Including another URLconf
 """
 from breathecode.utils.views import get_root_schema_view
 from breathecode.utils.urls import mount_app_openapi
+import os
+
+from django.conf.urls import url
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
+from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
+from rest_framework import permissions
 from django.views.generic import TemplateView
 
 apps = [
@@ -73,3 +79,7 @@ urlpatterns_django = [
 ]
 
 urlpatterns = urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django
+if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or os.environ.get('ENV') == 'test':
+    urlpatterns.append(
+        path('v1/cypress/',
+             include('breathecode.cypress.urls', namespace='cypress')))
