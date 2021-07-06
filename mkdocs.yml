@@ -1,0 +1,16 @@
+site_name: BreatheCode
+site_url: https://breathecode.herokuapp.com/
+
+theme:
+  name: "material"
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          setup_commands:
+            - import os
+            - import django
+            - os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
+            - django.setup()

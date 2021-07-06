@@ -8,6 +8,9 @@ pytest-cov = "*"
 coverage = "*"
 atomicwrites = "*"
 yapf = "*"
+mkdocs = "*"
+mkdocs-material = "*"
+mkdocstrings = "*"
 
 [packages]
 django = "*"
