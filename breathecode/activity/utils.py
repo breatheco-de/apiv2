@@ -65,12 +65,12 @@ def validate_if_activity_need_field_data(data):
 
 
 def validate_activity_have_correct_data_field(data):
-    if 'data' in data:
+    if 'data' in data and data['data'] is not None:
         try:
             json.loads(data['data'])
 
         except Exception as e:
-            raise ValidationException('Data is not a JSON',
+            raise ValidationException('Data is not a JSON: ' + str(data),
                                       slug='data-is-not-a-json')
 
 

@@ -204,7 +204,7 @@ class CertificateTestSuite(CertificateTestCase):
                            kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
-        expected = {'detail': "Missing a default layout", 'status_code': 400}
+        expected = {'detail': "no-default-layout", 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -303,6 +303,7 @@ class CertificateTestSuite(CertificateTestCase):
             1,
             'layout': {
                 'name': model['layout_design'].name,
+                'background_url': model['layout_design'].background_url,
                 'slug': model['layout_design'].slug
             },
             'preview_url':
@@ -431,6 +432,7 @@ class CertificateTestSuite(CertificateTestCase):
             1,
             'layout': {
                 'name': model['layout_design'].name,
+                'background_url': model['layout_design'].background_url,
                 'slug': model['layout_design'].slug
             },
             'preview_url':
@@ -560,6 +562,7 @@ class CertificateTestSuite(CertificateTestCase):
             1,
             'layout': {
                 'name': model['layout_design'].name,
+                'background_url': model['layout_design'].background_url,
                 'slug': model['layout_design'].slug
             },
             'preview_url':
@@ -692,6 +695,7 @@ class CertificateTestSuite(CertificateTestCase):
             1,
             'layout': {
                 'name': model['layout_design'].name,
+                'background_url': model['layout_design'].background_url,
                 'slug': model['layout_design'].slug
             },
             'preview_url':

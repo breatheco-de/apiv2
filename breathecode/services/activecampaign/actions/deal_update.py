@@ -1,5 +1,6 @@
 import logging
 from django.contrib.auth.models import User
+from django.utils import timezone
 from breathecode.marketing.models import FormEntry
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,13 @@ def deal_update(self, webhook, payload: dict):
     entry.ac_deal_id = payload['deal[id]']
     entry.ac_contact_id = payload['contact[id]']
     if payload['deal[status]'] in status:
+
+        # check if we just won or lost the deal
+        if entry.deal_status is None and status[payload['deal[status]']] == "WON":
+            entry.won_at = timezone.now()
+        elif status[payload['deal[status]']] != "WON":
+            entry.won_at = None
+
         entry.deal_status = status[payload['deal[status]']]
     entry.save()
 

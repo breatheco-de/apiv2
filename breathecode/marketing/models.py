@@ -218,17 +218,6 @@ class FormEntry(models.Model):
     fb_adgroup_id = models.BigIntegerField(null=True, default=None, blank=True)
     fb_ad_id = models.BigIntegerField(null=True, default=None, blank=True)
 
-    ac_contact_id = models.CharField(max_length=20,
-                                     null=True,
-                                     default=None,
-                                     blank=True,
-                                     help_text="Active Campaign Contact ID")
-    ac_deal_id = models.CharField(max_length=20,
-                                  null=True,
-                                  default=None,
-                                  blank=True,
-                                  help_text="Active Campaign Deal ID")
-
     first_name = models.CharField(max_length=150, default='')
     last_name = models.CharField(max_length=150, default='', blank=True)
     email = models.CharField(max_length=150,
@@ -342,6 +331,24 @@ class FormEntry(models.Model):
                                 on_delete=models.CASCADE,
                                 null=True,
                                 default=None)
+
+    # if user is not null, it probably means the lead was won and we invited it to breathecode
+    user = models.ForeignKey(User,
+                                on_delete=models.SET_NULL,
+                                null=True,
+                                default=None, blank=True)
+
+    ac_contact_id = models.CharField(max_length=20,
+                                     null=True,
+                                     default=None,
+                                     blank=True,
+                                     help_text="Active Campaign Contact ID")
+    ac_deal_id = models.CharField(max_length=20,
+                                  null=True,
+                                  default=None,
+                                  blank=True,
+                                  help_text="Active Campaign Deal ID")
+    won_at = models.DateTimeField(default=None, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

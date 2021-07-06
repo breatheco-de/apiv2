@@ -23,7 +23,19 @@ class SpecialtyAdmin(admin.ModelAdmin):
 
 @admin.register(LayoutDesign)
 class LayoutDesignAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'name')
+    list_display = ('slug', 'name', 'academy', 'template', 'default')
+    list_filter = ['academy__slug']
+
+    def template(self, obj):
+        return format_html(
+            f"<a rel='noopener noreferrer' target='_blank' href='{obj.background_url}'>view template</a>"
+        )
+
+    def default(self, obj):
+        if obj.is_default:
+            return "✅ default"
+        else:
+            return "not default"
 
 
 def screenshot(modeladmin, request, queryset):

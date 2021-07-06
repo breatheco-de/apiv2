@@ -19,9 +19,10 @@ class UserSmallSerializer(serpy.Serializer):
     profile = ProfileSmallSerializer(required=False, many=False)
 
 
-class LayoutDesignSerializer(serpy.Serializer):
+class AcademyTinySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
 
@@ -34,6 +35,23 @@ class AcademySmallSerializer(serpy.Serializer):
     name = serpy.Field()
     logo_url = serpy.Field()
     website_url = serpy.Field()
+
+
+class TinyLayoutDesignSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    slug = serpy.Field()
+    name = serpy.Field()
+    background_url = serpy.Field()
+
+
+class LayoutDesignSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    slug = serpy.Field()
+    name = serpy.Field()
+    is_default = serpy.Field()
+    background_url = serpy.Field()
 
 
 class CohortSmallSerializer(serpy.Serializer):
@@ -88,7 +106,7 @@ class UserSpecialtySerializer(serpy.Serializer):
 
     preview_url = serpy.Field()
 
-    layout = LayoutDesignSerializer(required=False, many=False)
+    layout = TinyLayoutDesignSerializer(required=False, many=False)
 
     expires_at = serpy.Field()
     updated_at = serpy.Field()

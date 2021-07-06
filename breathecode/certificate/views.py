@@ -4,11 +4,11 @@ from django.shortcuts import render
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.auth.models import User
-from .models import Specialty, Badge, UserSpecialty
+from .models import Specialty, Badge, UserSpecialty, LayoutDesign
 from django.db.models import Q
 from breathecode.admissions.models import CohortUser
 from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, APIException, GenerateLookupsMixin
-from .serializers import SpecialtySerializer, UserSpecialtySerializer, UserSmallSerializer
+from .serializers import SpecialtySerializer, UserSpecialtySerializer, UserSmallSerializer, LayoutDesignSerializer
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -53,6 +53,19 @@ def get_certificate(request, token):
 def post_save_course_dosomething(sender, instance, **kwargs):
     if instance.preview_url is None or instance.preview_url == "" and instance.status == 'PERSISTED':
         take_screenshot.delay(instance.id)
+
+
+class LayoutView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('read_layout')
+    def get(self, request, academy_id=None):
+
+        layouts = LayoutDesign.objects.filter(academy__id=academy_id)
+
+        serializer = LayoutDesignSerializer(layouts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class CertificateView(APIView):

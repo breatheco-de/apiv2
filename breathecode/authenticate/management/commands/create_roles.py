@@ -70,6 +70,10 @@ class Command(BaseCommand):
                 "description": "Create, update or delete student certificates"
             },
             {
+                "slug": "read_layout",
+                "description": "Read layouts to generate new certificates"
+            },
+            {
                 "slug": "read_syllabus",
                 "description": "List and read syllabus information"
             },
@@ -165,6 +169,12 @@ class Command(BaseCommand):
                 "slug": "crud_activity",
                 "description": "Create, updatre or delete a user activities"
             },
+            {
+                "slug":
+                "classroom_activity",
+                "description":
+                "To report student activities during the classroom or cohorts (Specially meant for teachers)"
+            },
         ]
 
         for c in caps:
@@ -203,7 +213,7 @@ class Command(BaseCommand):
                     "read_member", "read_syllabus", "read_student",
                     "read_cohort", "read_media", "read_my_academy",
                     "read_invite", "get_academy_token", "crud_activity",
-                    "read_survey"
+                    "read_survey", "read_layout"
                 ]
             },
             {
@@ -228,7 +238,7 @@ class Command(BaseCommand):
             "caps":
             extend(roles, ["staff"]) + [
                 "read_assigment", "crud_assignment", "read_cohort_activity",
-                "read_nps_answers"
+                "read_nps_answers", "classroom_activity"
             ]
         })
         roles.append({
