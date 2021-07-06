@@ -36,10 +36,16 @@ jobs:
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
 
+      # - name: Coveralls
+      #   run: |
+      #     echo $GITHUB_TOKEN
+      #     echo $COVERALLS_TOKEN
+      #     echo $GITHUB_WORKFLOW
+      #     echo ${{ secrets.COVERALLS_TOKEN }}
+      #     echo ${{ secrets.COVERALLS_TOKEN }}
+      #     coveralls
+
       - name: Coveralls
-        run: |
-          echo $GITHUB_TOKEN
-          echo $COVERALLS_TOKEN
-          echo $GITHUB_WORKFLOW
-          echo ${{ secrets.COVERALLS_TOKEN }}
-          coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
