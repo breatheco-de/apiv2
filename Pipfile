@@ -7,6 +7,8 @@ verify_ssl = true
 pytest-cov = "*"
 coverage = "*"
 atomicwrites = "*"
+pytest = "*"
+coveralls = "*"
 yapf = "*"
 
 [packages]
@@ -52,6 +54,8 @@ test="python -m scripts.test"
 celery="python -m scripts.celery"
 coverage="python -m scripts.coverage"
 cov="python -m scripts.coverage"
+coverage_ci="python -m scripts.coverage_ci"
+cov_ci="python -m scripts.coverage_ci"
 docker_build="python -m scripts.docker_build"
 lint="yapf -r --diff"
 format="yapf -ri ."
