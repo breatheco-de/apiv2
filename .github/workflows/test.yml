@@ -45,7 +45,13 @@ jobs:
       #     echo ${{ secrets.COVERALLS_TOKEN }}
       #     coveralls
 
-      - name: Coveralls
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Coveralls
+      #   uses: coverallsapp/github-action@master
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload coverage data to coveralls.io
+        run: |
+          coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
