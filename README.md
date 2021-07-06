@@ -1,15 +1,4 @@
-# Enable formatter in Visual Studio Code
 
-- Open `.vscode\settings.json`
-- Add
-
-```python
-  ...
-  "editor.formatOnSave": true,
-  "python.formatting.provider": "yapf"
-```
-
-- Save
 
 # Setup & Installation
 
@@ -37,6 +26,17 @@
 ## Online editor
 
 [Gitpod](https://gitpod.io/#https://github.com/breatheco-de/apiv2)
+
+## Enable formatter in Visual Studio Code
+
+- Open `.vscode\settings.json`
+- Add the following inside the file:
+
+```json
+  ...
+  "editor.formatOnSave": true,
+  "python.formatting.provider": "yapf"
+```
 
 ## Run the tests
 
