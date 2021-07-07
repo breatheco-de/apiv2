@@ -662,7 +662,8 @@ class CertificateTestSuite(CertificateTestCase):
 
         url = reverse_lazy('certificate:certificate_cohort',
                            kwargs={'cohort_id': 1})
-        response = self.client.post(url, format='json')
+        data = {'layout_slug':'vanilla'}
+        response = self.client.post(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json[0]['updated_at'])
