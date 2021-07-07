@@ -352,11 +352,8 @@ class MediaTestSuite(MediaTestCase):
 
         url = reverse_lazy('media:info')
         response = self.client.delete(url)
-        json = response.json()
-        expected = {'detail': 'Media not found', 'status_code': 404}
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.all_media_dict(), [{
             **self.model_to_dict(model, 'media')
         }])

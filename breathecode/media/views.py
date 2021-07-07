@@ -1,9 +1,13 @@
+# from breathecode.media.schemas import MediaSchema
+from breathecode.media.schemas import FileSchema, MediaSchema
 import os, hashlib, requests, logging
+
 from breathecode.services.google_cloud.function import Function
 from django.shortcuts import redirect
 from breathecode.media.models import Media, Category, MediaResolution
 from breathecode.utils import GenerateLookupsMixin, num_to_roman
 from rest_framework.views import APIView
+from rest_framework.viewsets import ViewSet
 from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
 from rest_framework.response import Response
 from rest_framework.parsers import FileUploadParser, MultiPartParser
@@ -29,43 +33,36 @@ def media_gallery_bucket():
     return os.getenv('MEDIA_GALLERY_BUCKET')
 
 
-class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
-    # permission_classes = [AllowAny]
+class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    """
+    get:
+        Return a list of Media.
+
+    put:
+        Update the categories of a Media in bulk.
+
+    put_id:
+        Update a Media by id.
+
+    delete:
+        Remove many Media with many ids passed through of id in the querystring.
+
+    delete_id:
+        Remove a Media by id.
+
+    get_id:
+        Media by id.
+
+    get_slug:
+        Media by slug.
+
+    get_name:
+        Media by name.
+    """
+    schema = MediaSchema()
 
     @capable_of('read_media')
-    def get(self,
-            request,
-            media_id=None,
-            media_slug=None,
-            media_name=None,
-            academy_id=None):
-        if media_id:
-            item = Media.objects.filter(id=media_id).first()
-
-            if not item:
-                raise ValidationException('Media not found', code=404)
-
-            serializer = GetMediaSerializer(item, many=False)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
-        if media_slug:
-            item = Media.objects.filter(slug=media_slug).first()
-
-            if not item:
-                raise ValidationException('Media not found', code=404)
-
-            serializer = GetMediaSerializer(item, many=False)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
-        if media_name:
-            item = Media.objects.filter(name=media_name).first()
-
-            if not item:
-                raise ValidationException('Media not found', code=404)
-
-            serializer = GetMediaSerializer(item, many=False)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
+    def get(self, request, academy_id=None):
         lookups = self.generate_lookups(
             request,
             many_fields=['mime', 'name', 'slug', 'id'],
@@ -101,65 +98,80 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @capable_of('read_media')
+    def get_id(self, request, media_id: int, academy_id=None):
+        item = Media.objects.filter(id=media_id).first()
+
+        if not item:
+            raise ValidationException('Media not found', code=404)
+
+        serializer = GetMediaSerializer(item, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('read_media')
+    def get_slug(self, request, media_slug: str, academy_id=None):
+        item = Media.objects.filter(slug=media_slug).first()
+
+        if not item:
+            raise ValidationException('Media not found', code=404)
+
+        serializer = GetMediaSerializer(item, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('read_media')
+    def get_name(self, request, media_name: str, academy_id=None):
+        item = Media.objects.filter(name=media_name).first()
+
+        if not item:
+            raise ValidationException('Media not found', code=404)
+
+        serializer = GetMediaSerializer(item, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @capable_of('crud_media')
-    def put(self, request, media_id=None, academy_id=None):
+    def put(self, request, academy_id=None):
         many = isinstance(request.data, list)
+        current = []
         context = {
             'request': request,
-            'media_id': media_id,
-            'many': many,
+            'media_id': None,
+            'many': True,
         }
 
-        if media_id and not many:
-            current = Media.objects.filter(id=media_id).first()
+        if not request.data:
+            raise ValidationException('Please input data to use request',
+                                      slug='no-args')
 
-            if not current:
+        for x in request.data:
+
+            if not 'categories' in x:
+                raise ValidationException(
+                    'For bulk mode, please input category in the request',
+                    slug='categories-not-in-bulk')
+
+            if len(x) > 2:
+                raise ValidationException(
+                    'Bulk mode its only to edit categories, ' +
+                    'please change to single put for more',
+                    slug='extra-args-bulk-mode')
+
+            if not 'id' in x:
+                raise ValidationException(
+                    'Please input id in body for bulk mode',
+                    slug='id-not-in-bulk')
+
+            media = Media.objects.filter(id=x['id']).first()
+            if not media:
                 raise ValidationException('Media not found',
                                           code=404,
                                           slug='media-not-found')
 
-            if current.academy_id != int(academy_id):
+            if media.academy_id != int(academy_id):
                 raise ValidationException(
                     "You can't edit media belonging to other academies",
                     slug="different-academy-media-put")
 
-        else:
-            current = []
-
-            if not request.data:
-                raise ValidationException('Please input data to use request',
-                                          slug='no-args')
-
-            for x in request.data:
-
-                if not 'categories' in x:
-                    raise ValidationException(
-                        'For bulk mode, please input category in the request',
-                        slug='categories-not-in-bulk')
-
-                if len(x) > 2:
-                    raise ValidationException(
-                        'Bulk mode its only to edit categories, ' +
-                        'please change to single put for more',
-                        slug='extra-args-bulk-mode')
-
-                if not 'id' in x:
-                    raise ValidationException(
-                        'Please input id in body for bulk mode',
-                        slug='id-not-in-bulk')
-
-                media = Media.objects.filter(id=x['id']).first()
-                if not media:
-                    raise ValidationException('Media not found',
-                                              code=404,
-                                              slug='media-not-found')
-
-                if media.academy_id != int(academy_id):
-                    raise ValidationException(
-                        "You can't edit media belonging to other academies",
-                        slug="different-academy-media-put")
-
-                current.append(media)
+            current.append(media)
 
         serializer = MediaSerializer(current,
                                      data=request.data,
@@ -171,17 +183,39 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_media')
-    def delete(self, request, media_id=None, academy_id=None):
+    def put_id(self, request, media_id, academy_id=None):
+        context = {
+            'request': request,
+            'media_id': media_id,
+            'many': False,
+        }
+
+        current = Media.objects.filter(id=media_id).first()
+
+        if not current:
+            raise ValidationException('Media not found',
+                                      code=404,
+                                      slug='media-not-found')
+
+        if current.academy_id != int(academy_id):
+            raise ValidationException(
+                "You can't edit media belonging to other academies",
+                slug="different-academy-media-put")
+
+        serializer = MediaSerializer(current,
+                                     data=request.data,
+                                     context=context,
+                                     many=False)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_media')
+    def delete(self, request, academy_id=None):
         from ..services.google_cloud import Storage
 
         lookups = self.generate_lookups(request, many_fields=['id'])
-
-        if lookups and media_id:
-            raise ValidationException(
-                'media_id was provided in url in bulk mode request, use '
-                'querystring style instead',
-                slug='bad_bulk',
-                code=400)
 
         if lookups:
             items = Media.objects.filter(**lookups)
@@ -192,9 +226,32 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     slug='academy-different-than-media-academy')
 
             for item in items:
+                url = item.url
+                hash = item.hash
                 item.delete()
 
-            return Response(None, status=status.HTTP_204_NO_CONTENT)
+                if not Media.objects.filter(hash=hash).count():
+                    storage = Storage()
+                    file = storage.file(media_gallery_bucket(), url)
+                    file.delete()
+
+                    resolution = MediaResolution.objects.filter(
+                        hash=hash).first()
+                    if resolution:
+                        resolution_url = f'{url}-{resolution.width}x{resolution.height}'
+                        resolution_file = storage.file(media_gallery_bucket(),
+                                                       resolution_url)
+                        resolution_file.delete()
+
+                        resolutions = MediaResolution.objects.filter(hash=hash)
+                        for resolution in resolutions:
+                            resolution.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    @capable_of('crud_media')
+    def delete_id(self, request, media_id=None, academy_id=None):
+        from ..services.google_cloud import Storage
 
         data = Media.objects.filter(id=media_id).first()
         if not data:
@@ -208,6 +265,7 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         url = data.url
         hash = data.hash
         data.delete()
+
         if not Media.objects.filter(hash=hash).count():
             storage = Storage()
             file = storage.file(media_gallery_bucket(), url)
@@ -227,35 +285,36 @@ class MediaView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class CategoryView(APIView, HeaderLimitOffsetPagination):
-    # permission_classes = [AllowAny]
+class CategoryView(ViewSet, HeaderLimitOffsetPagination):
+    """
+    get:
+        Get a Category.
 
+    get_id:
+        Get a Category by id.
+
+    get_slug:
+        Get a Category by slug.
+
+    post:
+        Add a new Category.
+
+    post:
+        Add a new Category.
+
+    put:
+        Update a Category by slug.
+
+    delete:
+        Delete a Category by slug.
+    """
     @capable_of('read_media')
     def get(self,
             request,
             category_id=None,
             category_slug=None,
             academy_id=None):
-        if category_id:
-            item = Category.objects.filter(id=category_id).first()
-
-            if not item:
-                raise ValidationException('Category not found', code=404)
-
-            serializer = GetCategorySerializer(item, many=False)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
-        if category_slug:
-            item = Category.objects.filter(slug=category_slug).first()
-
-            if not item:
-                raise ValidationException('Category not found', code=404)
-
-            serializer = GetCategorySerializer(item, many=False)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
         items = Category.objects.filter()
-
         page = self.paginate_queryset(items, request)
         serializer = GetCategorySerializer(page, many=True)
 
@@ -263,6 +322,26 @@ class CategoryView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('read_media')
+    def get_id(self, request, category_id=None, academy_id=None):
+        item = Category.objects.filter(id=category_id).first()
+
+        if not item:
+            raise ValidationException('Category not found', code=404)
+
+        serializer = GetCategorySerializer(item, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('read_media')
+    def get_slug(self, request, category_slug=None, academy_id=None):
+        item = Category.objects.filter(slug=category_slug).first()
+
+        if not item:
+            raise ValidationException('Category not found', code=404)
+
+        serializer = GetCategorySerializer(item, many=False)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_media')
     def post(self, request, academy_id=None):
@@ -299,6 +378,10 @@ class CategoryView(APIView, HeaderLimitOffsetPagination):
 
 
 class UploadView(APIView):
+    """
+    put:
+        Upload a file to Google Cloud.
+    """
     parser_classes = [MultiPartParser, FileUploadParser]
 
     # permission_classes = [AllowAny]
@@ -427,8 +510,13 @@ class UploadView(APIView):
 
 
 class MaskingUrlView(APIView):
+    """
+    get:
+        Get file from Google Cloud.
+    """
     parser_classes = [FileUploadParser]
     permission_classes = [AllowAny]
+    schema = FileSchema()
 
     def get(self, request, media_id=None, media_slug=None):
         lookups = {}
@@ -525,43 +613,52 @@ class MaskingUrlView(APIView):
         return resource
 
 
-class ResolutionView(APIView):
+class ResolutionView(ViewSet):
+    """
+    get_id:
+        Get Resolution by id.
+
+    get_media_id:
+        Get Resolution by Media.id.
+
+    delete:
+        Delete a Resolution by id.
+    """
     @capable_of('read_media_resolution')
-    def get(self, request, media_id=None, academy_id=None, resolution_id=None):
-        if media_id:
+    def get_id(self, request, resolution_id: int, academy_id=None):
+        resolutions = MediaResolution.objects.filter(id=resolution_id).first()
+        if not resolutions:
+            raise ValidationException('Resolution was not found',
+                                      code=404,
+                                      slug='resolution-not-found')
 
-            media = Media.objects.filter(id=media_id).first()
-            if not media:
-                raise ValidationException('Media not found',
-                                          code=404,
-                                          slug='media-not-found')
+        media = Media.objects.filter(hash=resolutions.hash).first()
 
-            resolutions = MediaResolution.objects.filter(hash=media.hash)
-            if not resolutions:
-                raise ValidationException('Resolution was not found',
-                                          code=404,
-                                          slug='resolution-not-found')
+        if not media:
+            resolutions.delete()
+            raise ValidationException(
+                'Resolution was deleted for not having parent element',
+                slug='resolution-media-not-found',
+                code=404)
 
-            serializer = GetResolutionSerializer(resolutions, many=True)
+        serializer = GetResolutionSerializer(resolutions)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
-        elif resolution_id:
-            resolutions = MediaResolution.objects.filter(
-                id=resolution_id).first()
-            if not resolutions:
-                raise ValidationException('Resolution was not found',
-                                          code=404,
-                                          slug='resolution-not-found')
+    @capable_of('read_media_resolution')
+    def get_media_id(self, request, media_id: int, academy_id=None):
+        media = Media.objects.filter(id=media_id).first()
+        if not media:
+            raise ValidationException('Media not found',
+                                      code=404,
+                                      slug='media-not-found')
 
-            media = Media.objects.filter(hash=resolutions.hash).first()
+        resolutions = MediaResolution.objects.filter(hash=media.hash)
+        if not resolutions:
+            raise ValidationException('Resolution was not found',
+                                      code=404,
+                                      slug='resolution-not-found')
 
-            if not media:
-                resolutions.delete()
-                raise ValidationException(
-                    'Resolution was deleted for not having parent element',
-                    slug='resolution-media-not-found',
-                    code=404)
-
-            serializer = GetResolutionSerializer(resolutions)
+        serializer = GetResolutionSerializer(resolutions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_media_resolution')
