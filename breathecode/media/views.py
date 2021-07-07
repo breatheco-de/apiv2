@@ -44,6 +44,9 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     put_id:
         Update a Media by id.
 
+    delete:
+        Remove many Media with many ids passed through of id in the querystring.
+
     delete_id:
         Remove a Media by id.
 
@@ -51,10 +54,10 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         Media by id.
 
     get_slug:
-        Media by slug
+        Media by slug.
 
     get_name:
-        Media by name
+        Media by name.
     """
     schema = MediaSchema()
 
@@ -181,9 +184,6 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('crud_media')
     def put_id(self, request, media_id, academy_id=None):
-        """
-        Aaaaa3
-        """
         context = {
             'request': request,
             'media_id': media_id,
@@ -212,17 +212,10 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_media')
-    def delete_id(self, request, media_id=None, academy_id=None):
+    def delete(self, request, academy_id=None):
         from ..services.google_cloud import Storage
 
         lookups = self.generate_lookups(request, many_fields=['id'])
-
-        if lookups and media_id:
-            raise ValidationException(
-                'media_id was provided in url in bulk mode request, use '
-                'querystring style instead',
-                slug='bad_bulk',
-                code=400)
 
         if lookups:
             items = Media.objects.filter(**lookups)
@@ -233,9 +226,32 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     slug='academy-different-than-media-academy')
 
             for item in items:
+                url = item.url
+                hash = item.hash
                 item.delete()
 
-            return Response(None, status=status.HTTP_204_NO_CONTENT)
+                if not Media.objects.filter(hash=hash).count():
+                    storage = Storage()
+                    file = storage.file(media_gallery_bucket(), url)
+                    file.delete()
+
+                    resolution = MediaResolution.objects.filter(
+                        hash=hash).first()
+                    if resolution:
+                        resolution_url = f'{url}-{resolution.width}x{resolution.height}'
+                        resolution_file = storage.file(media_gallery_bucket(),
+                                                       resolution_url)
+                        resolution_file.delete()
+
+                        resolutions = MediaResolution.objects.filter(hash=hash)
+                        for resolution in resolutions:
+                            resolution.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+    @capable_of('crud_media')
+    def delete_id(self, request, media_id=None, academy_id=None):
+        from ..services.google_cloud import Storage
 
         data = Media.objects.filter(id=media_id).first()
         if not data:
@@ -249,6 +265,7 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         url = data.url
         hash = data.hash
         data.delete()
+
         if not Media.objects.filter(hash=hash).count():
             storage = Storage()
             file = storage.file(media_gallery_bucket(), url)

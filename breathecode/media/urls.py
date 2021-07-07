@@ -1,7 +1,12 @@
 from django.urls.conf import path
 from .views import MediaView, CategoryView, UploadView, MaskingUrlView, ResolutionView
 
-media_view = MediaView.as_view({'get': 'get', 'put': 'put'})
+media_view = MediaView.as_view({
+    'get': 'get',
+    'put': 'put',
+    'delete': 'delete'
+})
+
 media_by_id_view = MediaView.as_view({
     'get': 'get_id',
     'put': 'put_id',
