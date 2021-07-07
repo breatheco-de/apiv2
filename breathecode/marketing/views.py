@@ -405,9 +405,13 @@ def googleads_csv(request):
                 convertion_name = entry.tags
 
                 timezone = pytz.timezone("US/Eastern")
-                convertion_time = entry.created_at.astimezone(timezone)
+                if entry.won_at is not None:
+                    convertion_time = entry.won_at.astimezone(timezone)
+                else:
+                    convertion_time = entry.updated_at.astimezone(timezone)
+
                 convertion_time = convertion_time.strftime(
-                    "%Y-%m-%d %H-%M-%S%z")
+                    "%Y-%m-%d %H-%M-%S")
 
                 data.append(
                     [gclid, convertion_name, convertion_time, None, None])
