@@ -28,9 +28,14 @@
 3. Run containers with `docker-compose up -d`
 4. Make sure you can login into the django admin, you can create a login user with `docker-compose exec breathecode python manage.py createsuperuser`
 
-# Documentation for BreatheCode API
+# Documentation for BreatheCode API Endpoints
 
 [Read the docs](https://documenter.getpostman.com/view/2432393/T1LPC6ef)
+
+# Signals
+
+[More about signals](./SIGNALS.md)
+
 
 # Additional Resources
 
