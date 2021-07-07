@@ -411,7 +411,7 @@ def googleads_csv(request):
                     convertion_time = entry.updated_at.astimezone(timezone)
 
                 convertion_time = convertion_time.strftime(
-                    "%Y-%m-%d %H-%M-%S")
+                    "%Y-%m-%d %H:%M:%S")
 
                 data.append(
                     [gclid, convertion_name, convertion_time, None, None])
