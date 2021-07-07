@@ -414,6 +414,9 @@ def googleads_csv(request):
 
     writer = csv.writer(response)
     writer.writerow([
+        'Parameters:TimeZone=US/Eastern'
+    ])
+    writer.writerow([
         'Google Click ID', 'Conversion Name', 'Conversion Time',
         'Conversion Value', 'Conversion Currency'
     ])
