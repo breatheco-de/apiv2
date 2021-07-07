@@ -144,7 +144,7 @@ PROFILE_ACADEMY_STATUS = (
 class ProfileAcademy(models.Model):
     def __init__(self, *args, **kwargs):
         super(ProfileAcademy, self).__init__(*args, **kwargs)
-        self._old_status = self.status
+        self.__old_status = self.status
 
     user = models.ForeignKey(User,
                              on_delete=models.SET_NULL,
@@ -187,7 +187,7 @@ class ProfileAcademy(models.Model):
 
     def save(self, *args, **kwargs):
 
-        if self._old_status != self.status and self.status == 'ACTIVE':
+        if self.__old_status != self.status and self.status == 'ACTIVE':
             invite_accepted.send(instance=self, sender=ProfileAcademy)
         
         super().save(*args, **kwargs)  # Call the "real" save() method.
