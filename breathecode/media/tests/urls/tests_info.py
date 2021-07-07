@@ -333,3 +333,113 @@ class MediaTestSuite(MediaTestCase):
             'url':
             model[1]['media'].url,
         }])
+
+    """
+    🔽🔽🔽 Bulk delete
+    """
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_info__delete__without_bulk(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_media',
+                                     role='potato',
+                                     media=True)
+
+        url = reverse_lazy('media:info')
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media')
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_info__delete__bad_id(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_media',
+                                     role='potato',
+                                     media=True)
+        url = reverse_lazy('media:info') + '?id=0'
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model, 'media')
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_info__delete(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_media',
+                                     role='potato',
+                                     media=True)
+
+        url = reverse_lazy('media:info') + '?id=1'
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.all_media_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_info__delete__media_that_belongs_to_a_different_academy(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        model1 = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      capability='crud_media',
+                                      role='potato',
+                                      media=True)
+
+        model2 = self.generate_models(media=True, academy=True)
+        url = reverse_lazy('media:info') + '?id=1,2'
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {
+            'detail': 'academy-different-than-media-academy',
+            'status_code': 400,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_media_dict(), [{
+            **self.model_to_dict(model1, 'media'),
+        }, {
+            **self.model_to_dict(model2, 'media'),
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_info__delete__two_media(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True,
+                                    profile_academy=True,
+                                    capability='crud_media',
+                                    role='potato')
+
+        for _ in range(0, 2):
+            self.generate_models(media=True, models=base)
+
+        url = reverse_lazy('media:info') + '?id=1,2'
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.all_media_dict(), [])

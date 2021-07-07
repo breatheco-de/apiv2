@@ -45,9 +45,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django.contrib.postgres',
+    'django.contrib.admindocs',
     'rest_framework',
     'phonenumber_field',
-    'drf_yasg',
     'corsheaders',
     'breathecode.authenticate',
     'breathecode.admissions',
@@ -68,6 +68,8 @@ if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
     INSTALLED_APPS.append('breathecode.cypress')
 
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS':
+    'rest_framework.schemas.openapi.AutoSchema',
     'DEFAULT_VERSIONING_CLASS':
     'rest_framework.versioning.NamespaceVersioning',
     'DEFAULT_PAGINATION_CLASS':

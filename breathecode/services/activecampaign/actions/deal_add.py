@@ -36,9 +36,10 @@ def deal_add(self, webhook, payload: dict):
     entry.ac_deal_id = payload['deal[id]']
     entry.ac_contact_id = payload['deal[contactid]']
     if payload['deal[status]'] in status:
-        
+
         # check if we just won or lost the deal
-        if entry.deal_status is None and status[payload['deal[status]']] == "WON":
+        if entry.deal_status is None and status[
+                payload['deal[status]']] == "WON":
             entry.won_at = timezone.now()
         elif status[payload['deal[status]']] != "WON":
             entry.won_at = None
