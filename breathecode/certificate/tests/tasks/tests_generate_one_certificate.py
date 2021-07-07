@@ -1,5 +1,5 @@
 """
-Tasks tests
+Tasks Tests
 """
 from unittest.mock import patch, call
 from ...tasks import generate_one_certificate
