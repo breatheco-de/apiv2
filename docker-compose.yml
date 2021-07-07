@@ -2,7 +2,7 @@ version: "3.2"
 
 services:
   breathecode:
-    image: breathecode/apiv2:development
+    image: geeksacademy/breathecode:development
     ports:
       - "8000:8000"
     env_file:
