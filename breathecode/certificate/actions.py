@@ -89,11 +89,11 @@ def generate_certificate(user, cohort=None, layout=None):
         layout = LayoutDesign.objects.filter(is_default=True,
                                              academy=cohort.academy).first()
     if layout is None:
-        layout = LayoutDesign.objects.filter(slug="default").first()
+        layout = LayoutDesign.objects.filter(slug='default').first()
     if layout is None:
-        message = "No layout was specified and there is no default layout for this academy"
+        message = 'No layout was specified and there is no default layout for this academy'
         logger.error(message)
-        raise ValidationException(message, slug="no-default-layout")
+        raise ValidationException(message, slug='no-default-layout')
 
     uspe.layout = layout
 

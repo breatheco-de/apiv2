@@ -14,7 +14,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_id_member_id',
                            kwargs={
                                'academy_id': 1,
-                               'user_id_or_email': "2"
+                               'user_id_or_email': '2'
                            })
         data = {'email': self.email, 'password': self.password}
         response = self.client.post(url, data)
@@ -33,7 +33,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_id_member_id',
                            kwargs={
                                'academy_id': 1,
-                               'user_id_or_email': "2"
+                               'user_id_or_email': '2'
                            })
         response = self.client.get(url)
         json = response.json()
@@ -56,7 +56,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_id_member_id',
                            kwargs={
                                'academy_id': 1,
-                               'user_id_or_email': "2"
+                               'user_id_or_email': '2'
                            })
         response = self.client.get(url)
         json = response.json()
@@ -80,7 +80,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_id_member_id',
                            kwargs={
                                'academy_id': 1,
-                               'user_id_or_email': "2"
+                               'user_id_or_email': '2'
                            })
         response = self.client.get(url)
         json = response.json()
@@ -140,7 +140,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_id_member_id',
                            kwargs={
                                'academy_id': 1,
-                               'user_id_or_email': "2"
+                               'user_id_or_email': '2'
                            })
         response = self.client.get(url)
         json = response.json()

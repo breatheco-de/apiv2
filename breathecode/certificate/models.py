@@ -82,7 +82,7 @@ class LayoutDesign(models.Model):
     is_default = models.BooleanField(
         default=False,
         help_text=
-        "Will be used as default for all future certificates. Only one default layout per academy."
+        'Will be used as default for all future certificates. Only one default layout per academy.'
     )
     html_content = models.TextField(null=True, default=None, blank=True)
     css_content = models.TextField(null=True, default=None, blank=True)

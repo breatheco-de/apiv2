@@ -45,7 +45,7 @@ urlpatterns = [
     path(
         'info',
         media_view,
-        name="info",
+        name='info',
     ),
     path(
         'info/<int:media_id>',

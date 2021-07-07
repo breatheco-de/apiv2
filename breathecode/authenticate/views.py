@@ -560,8 +560,8 @@ def get_user_by_id_or_email(request, id_or_email):
         query = User.objects.filter(email=id_or_email).first()
 
     if query is None:
-        raise ValidationException("User with that id or email does not exists",
-                                  slug="user-dont-exists",
+        raise ValidationException('User with that id or email does not exists',
+                                  slug='user-dont-exists',
                                   code=404)
 
     users = UserSmallSerializer(query, many=False)

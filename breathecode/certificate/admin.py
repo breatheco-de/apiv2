@@ -33,9 +33,9 @@ class LayoutDesignAdmin(admin.ModelAdmin):
 
     def default(self, obj):
         if obj.is_default:
-            return "✅ default"
+            return '✅ default'
         else:
-            return "not default"
+            return 'not default'
 
 
 def screenshot(modeladmin, request, queryset):

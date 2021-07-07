@@ -249,16 +249,16 @@ class AcademyEventTestSuite(CypressTestCase):
                 'description': 'List all the user activities'
             },
             {
-                "slug": "crud_activity",
-                "description": "Create, update or delete a user activities"
+                'slug': 'crud_activity',
+                'description': 'Create, update or delete a user activities'
             },
             {
-                "slug": "read_assigment",
-                "description": "List all the assigments"
+                'slug': 'read_assigment',
+                'description': 'List all the assigments'
             },
             {
-                "slug": "crud_assigment",
-                "description": "Create, update or delete a assigment"
+                'slug': 'crud_assigment',
+                'description': 'Create, update or delete a assigment'
             },
             {
                 'slug':

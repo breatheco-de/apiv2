@@ -327,8 +327,8 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination,
             param = self.request.GET.get('location')
             lookup['location'] = param
 
-        sort_by = "-created_at"
-        if 'sort' in self.request.GET and self.request.GET['sort'] != "":
+        sort_by = '-created_at'
+        if 'sort' in self.request.GET and self.request.GET['sort'] != '':
             sort_by = self.request.GET.get('sort')
 
         items = items.filter(**lookup).order_by(sort_by)

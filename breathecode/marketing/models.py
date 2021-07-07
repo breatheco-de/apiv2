@@ -354,12 +354,12 @@ class FormEntry(models.Model):
                                      null=True,
                                      default=None,
                                      blank=True,
-                                     help_text="Active Campaign Contact ID")
+                                     help_text='Active Campaign Contact ID')
     ac_deal_id = models.CharField(max_length=20,
                                   null=True,
                                   default=None,
                                   blank=True,
-                                  help_text="Active Campaign Deal ID")
+                                  help_text='Active Campaign Deal ID')
     won_at = models.DateTimeField(default=None, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

@@ -204,7 +204,7 @@ class CertificateTestSuite(CertificateTestCase):
                            kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
-        expected = {'detail': "no-default-layout", 'status_code': 400}
+        expected = {'detail': 'no-default-layout', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
