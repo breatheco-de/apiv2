@@ -38,31 +38,9 @@ jobs:
           fail_ci_if_error: true # optional (default = false)
           verbose: true # optional (default = false)
 
-      # - name: Coveralls
-      #   run: |
-      #     echo $GITHUB_TOKEN
-      #     echo $COVERALLS_TOKEN
-      #     echo $GITHUB_WORKFLOW
-      #     echo ${{ secrets.COVERALLS_TOKEN }}
-      #     echo ${{ secrets.COVERALLS_TOKEN }}
-      #     coveralls
-
-      # - name: Coveralls
-      #   uses: coverallsapp/github-action@master
-      #   if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
-      #   with:
-      #     github-token: ${{ secrets.COVERALLS_TOKEN }}
-
-      # - name: Publish to coveralls.io
-      #   uses: coverallsapp/github-action@v1.1.2
-      #   if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
-      #   with:
-      #     github-token: ${{ github.token }}
-
       - name: Upload coverage data to coveralls.io
         if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
         run: |
           coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          # GITHUB_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
