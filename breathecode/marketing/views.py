@@ -1,8 +1,4 @@
-import os
-import datetime
-import logging
-import csv
-import pytz
+import os, re, datetime, logging, csv, pytz
 from urllib import parse
 from rest_framework_csv.renderers import CSVRenderer
 from breathecode.renderers import PlainTextRenderer
@@ -362,6 +358,18 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination,
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
+def get_real_conversion_name(slug):
+    mapper = {
+        'Website Lead': "Application Submitted",
+    }
+    words = re.split(' |_|-', slug)
+    words = [w.capitalize() for w in words]
+    words = " ".join(words)
+    if words in mapper:
+        words = mapper[words]
+    
+    return words
+
 
 def googleads_csv(request):
 
@@ -402,7 +410,7 @@ def googleads_csv(request):
 
             if (entry_gclid == '_BwE' and entry.deal_status == "WON"):
                 gclid = entry.gclid
-                convertion_name = entry.tags
+                convertion_name = get_real_conversion_name(entry.tags)
 
                 timezone = pytz.timezone("US/Eastern")
                 if entry.won_at is not None:
