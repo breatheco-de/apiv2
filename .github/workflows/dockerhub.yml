@@ -2,7 +2,7 @@ name: CI to Docker Hub
 
 on:
   push:
-    # branches: [master, development]
+    branches: [master, development]
 
 jobs:
 
@@ -22,7 +22,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: breathecode/apiv2
+          images: geeksacademy/breathecode
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v2
