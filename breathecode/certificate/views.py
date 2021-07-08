@@ -90,6 +90,7 @@ class CertificateView(APIView):
     def post(self, request, cohort_id, student_id, academy_id=None):
         
         layout_slug = None
+        
         if 'layout_slug' in request.data:
             layout_slug = request.data['layout_slug']
 
