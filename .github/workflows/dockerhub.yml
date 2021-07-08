@@ -8,6 +8,7 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    if: ${{ github.repository == 'breatheco-de/apiv2' }}
     steps:
       - name: Check out the repo
         uses: actions/checkout@v2
