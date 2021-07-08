@@ -53,15 +53,16 @@ jobs:
       #   with:
       #     github-token: ${{ secrets.COVERALLS_TOKEN }}
 
-      - name: Publish to coveralls.io
-        uses: coverallsapp/github-action@v1.1.2
-        if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
-        with:
-          github-token: ${{ github.token }}
-
-      # - name: Upload coverage data to coveralls.io
+      # - name: Publish to coveralls.io
+      #   uses: coverallsapp/github-action@v1.1.2
       #   if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
-      #   run: |
-      #     coveralls --service=github
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
+      #   with:
+      #     github-token: ${{ github.token }}
+
+      - name: Upload coverage data to coveralls.io
+        if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
+        run: |
+          coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # GITHUB_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
