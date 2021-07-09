@@ -307,7 +307,6 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination,
 
         return Response(serializer.data)
 
-
 # class SyllabusView(APIView):
 #     """
 #     List all snippets, or create a new snippet.
