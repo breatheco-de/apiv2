@@ -88,12 +88,11 @@ class CertificateView(APIView):
 
     @capable_of('crud_certificate')
     def post(self, request, cohort_id, student_id, academy_id=None):
-        
+
         layout_slug = None
 
         if 'layout_slug' in request.data:
             layout_slug = request.data['layout_slug']
-        
 
         cu = CohortUser.objects.filter(cohort__id=cohort_id,
                                        user__id=student_id,
@@ -124,7 +123,7 @@ class CertificateCohortView(APIView):
 
     @capable_of('crud_certificate')
     def post(self, request, cohort_id, academy_id=None):
-        
+
         layout_slug = None
         if 'layout_slug' in request.data:
             layout_slug = request.data['layout_slug']
@@ -255,7 +254,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination,
     def post(self, request, academy_id=None):
         if isinstance(request.data, list):
             data = request.data
-            
+
         else:
             data = [request.data]
 
@@ -301,11 +300,14 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination,
                     'There is no certificate for this student and cohort',
                     code=404,
                     slug="no-user-specialty")
-            generate_one_certificate.delay(cu.cohort_id, cu.user_id, layout="default")
+            generate_one_certificate.delay(cu.cohort_id,
+                                           cu.user_id,
+                                           layout="default")
 
         serializer = UserSpecialtySerializer(certs, many=True)
 
         return Response(serializer.data)
+
 
 # class SyllabusView(APIView):
 #     """

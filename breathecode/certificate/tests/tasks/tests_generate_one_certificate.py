@@ -34,7 +34,8 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
                    ) as mock:
             layout = 'vanilla'
             generate_one_certificate(1, 1, layout)
-        self.assertEqual(mock.call_args_list, [call(model.user, model.cohort, 'vanilla')])
+        self.assertEqual(mock.call_args_list,
+                         [call(model.user, model.cohort, 'vanilla')])
 
     def test_generate_one_certificate_with_user_role_teacher(self):
         """bad request with user role teacher"""

@@ -662,7 +662,7 @@ class CertificateTestSuite(CertificateTestCase):
 
         url = reverse_lazy('certificate:certificate_cohort',
                            kwargs={'cohort_id': 1})
-        data = {'layout_slug':'vanilla'}
+        data = {'layout_slug': 'vanilla'}
         response = self.client.post(url, data, format='json')
         json = response.json()
 
