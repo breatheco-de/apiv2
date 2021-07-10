@@ -311,7 +311,8 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
-    @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
+    @patch(OLD_BREATHECODE_PATH['request'],
+           apply_old_breathecode_requests_request_mock())
     def test_persist_single_lead_with_form_entry(self):
         """Test /answer/:id without auth"""
         mock_mailgun = MAILGUN_INSTANCES['post']
@@ -319,10 +320,17 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
         mock_old_breathecode.call_args_list = []
-        model = self.generate_models(academy=True, active_campaign_academy=True,
-            tag=True, tag_kwargs={'tag_type': 'STRONG'}, automation=True,
-            automation_kwargs={'slug': 'they-killed-kenny'}, form_entry=True,
-            active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
+        model = self.generate_models(
+            academy=True,
+            active_campaign_academy=True,
+            tag=True,
+            tag_kwargs={'tag_type': 'STRONG'},
+            automation=True,
+            automation_kwargs={'slug': 'they-killed-kenny'},
+            form_entry=True,
+            active_campaign_academy_kwargs={
+                'ac_url': 'https://old.hardcoded.breathecode.url'
+            })
 
         persist_single_lead({
             'location': model['academy'].slug,
