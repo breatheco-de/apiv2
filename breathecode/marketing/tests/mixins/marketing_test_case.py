@@ -87,13 +87,14 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         self.assertToken(token)
         self.assertTrue(link in html)
 
-    # This function is incompleted
     def check_old_breathecode_calls(self, mock, model):
         mock_list = list(mock.call_args_list[1])
         del mock_list[1]['json']['contactAutomation']['automation']
 
         token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
-        self.assertEqual(bool(token_pattern.match(mock_list[1]['headers']['Api-Token'])), True)
+        self.assertEqual(
+            bool(token_pattern.match(mock_list[1]['headers']['Api-Token'])),
+            True)
         del mock_list[1]['headers']['Api-Token']
 
         self.assertEqual(mock_list, [
