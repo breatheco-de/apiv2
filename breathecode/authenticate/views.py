@@ -16,6 +16,7 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from urllib.parse import urlencode, parse_qs, urlparse, parse_qsl
 from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
+from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 from django.utils import timezone
 from datetime import datetime
@@ -49,6 +50,7 @@ logger = logging.getLogger(__name__)
 
 
 class TemporalTokenView(ObtainAuthToken):
+    schema = AutoSchema()
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -67,6 +69,7 @@ class TemporalTokenView(ObtainAuthToken):
 
 
 class AcademyTokenView(ObtainAuthToken):
+    schema = AutoSchema()
     permission_classes = [IsAuthenticated]
 
     @capable_of('get_academy_token')
@@ -453,6 +456,8 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
 
 class LoginView(ObtainAuthToken):
+    schema = AutoSchema()
+
     def post(self, request, *args, **kwargs):
         # delete expired tokens
         utc_now = timezone.now()
