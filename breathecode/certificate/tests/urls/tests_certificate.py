@@ -12,7 +12,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins.new_certificate_test_case import CertificateTestCase
+from ..mixins import CertificateTestCase
 
 
 class CertificateTestSuite(CertificateTestCase):

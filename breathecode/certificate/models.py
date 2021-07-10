@@ -4,7 +4,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.contrib.postgres.fields import JSONField
-from breathecode.admissions.models import Academy, Cohort, Certificate
+from breathecode.admissions.models import Academy, Cohort, Syllabus
 
 
 class UserProxy(User):
@@ -37,8 +37,8 @@ class Specialty(models.Model):
                                                null=True,
                                                default=None)
 
-    certificate = models.OneToOneField(
-        Certificate,
+    syllabus = models.OneToOneField(
+        Syllabus,
         on_delete=models.CASCADE,
         help_text="This specialty represents only one certificate",
         blank=True,

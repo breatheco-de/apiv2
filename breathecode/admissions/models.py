@@ -146,7 +146,45 @@ SCHEDULE_TYPE = (
 )
 
 
-class Certificate(models.Model):
+class Syllabus(models.Model):
+    json = models.JSONField()
+    github_url = models.URLField(max_length=255,
+                                 blank=True,
+                                 null=True,
+                                 default=None)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    # by default a syllabus can be re-used by any other academy
+    private = models.BooleanField(default=False)
+
+    # a syllabus can be shared with other academy, but only the academy owner can update or delete it
+    academy_owner = models.ForeignKey(Academy,
+                                      on_delete=models.CASCADE,
+                                      null=True,
+                                      default=None)
+
+    @property
+    def slug(self):
+        return f'{self.specialty_mode.slug}.v{self.version}'
+
+    def __str__(self):
+        return f'{self.specialty_mode.slug}.v{self.version}'
+
+
+class SyllabusVersion(models.Model):
+    version = models.PositiveSmallIntegerField()
+    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.syllabus.slug}.v{self.version}'
+
+
+class SpecialtyMode(models.Model):
     slug = models.SlugField(max_length=100)
     name = models.CharField(max_length=150)
 
@@ -163,6 +201,10 @@ class Certificate(models.Model):
                                      default='PART-TIME')
 
     description = models.TextField(max_length=450)
+    syllabus = models.ForeignKey(Syllabus,
+                                 on_delete=models.CASCADE,
+                                 default=None,
+                                 null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -184,43 +226,12 @@ class Certificate(models.Model):
         super().save(*args, **kwargs)  # Call the "real" save() method.
 
 
-class AcademyCertificate(models.Model):
-    certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)
+class AcademySpecialtyMode(models.Model):
+    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-
-class Syllabus(models.Model):
-
-    version = models.PositiveSmallIntegerField()
-
-    json = models.JSONField()
-    github_url = models.URLField(max_length=255,
-                                 blank=True,
-                                 null=True,
-                                 default=None)
-    certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    # by default a syllabus can be re-used by any other academy
-    private = models.BooleanField(default=False)
-
-    # a syllabus can be shared with other academy, but only the academy owner can update or delete it
-    academy_owner = models.ForeignKey(Academy,
-                                      on_delete=models.CASCADE,
-                                      null=True,
-                                      default=None)
-
-    @property
-    def slug(self):
-        return f'{self.certificate.slug}.v{self.version}'
-
-    def __str__(self):
-        return f'{self.certificate.slug}.v{self.version}'
 
 
 INACTIVE = 'INACTIVE'
@@ -256,10 +267,15 @@ class Cohort(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
-    syllabus = models.ForeignKey(Syllabus,
-                                 on_delete=models.CASCADE,
-                                 default=None,
-                                 null=True)
+    syllabus_version = models.ForeignKey(SyllabusVersion,
+                                         on_delete=models.CASCADE,
+                                         default=None,
+                                         null=True)
+
+    specialty_mode = models.ForeignKey(SpecialtyMode,
+                                       on_delete=models.CASCADE,
+                                       default=None,
+                                       null=True)
 
     language = models.CharField(max_length=2, default='en')
 
@@ -350,9 +366,9 @@ class TimeSlot(models.Model):
         abstract = True
 
 
-class CertificateTimeSlot(TimeSlot):
+class SpecialtyModeTimeSlot(TimeSlot):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)
+    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE)
 
 
 class CohortTimeSlot(TimeSlot):

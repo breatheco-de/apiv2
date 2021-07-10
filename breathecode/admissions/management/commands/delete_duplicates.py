@@ -1,7 +1,6 @@
-import os, requests, sys, pytz
-from datetime import datetime
-from django.core.management.base import BaseCommand, CommandError
-from ...models import Academy, Certificate, Cohort, User, CohortUser
+import os
+from django.core.management.base import BaseCommand
+from ...models import CohortUser
 
 HOST = os.environ.get("OLD_BREATHECODE_API")
 DATETIME_FORMAT = "%Y-%m-%d"

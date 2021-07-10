@@ -13,7 +13,7 @@ from breathecode.tests.mocks import (
 )
 from ...mixins import AdmissionsTestCase
 from ....management.commands.sync_admissions import Command
-from ....models import Academy, Certificate, Cohort, User, CohortUser
+from ....models import Cohort, User, CohortUser
 from ...mocks import (LEGACY_API_PATH,
                       apply_screenshotmachine_requests_get_mock)
 # from ...utils import GenerateModels

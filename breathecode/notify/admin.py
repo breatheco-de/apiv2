@@ -140,5 +140,6 @@ test_cohort_notification.short_description = "💬 Send slack test notification"
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
-    list_display = ('slug', 'name', 'stage')
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date',
+                    'syllabus_version', 'specialty_mode')
     actions = [test_cohort_notification]

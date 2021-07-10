@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 from breathecode.admissions.models import CohortUser, FULLY_PAID, UP_TO_DATE
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, APIException
-from .models import ERROR, PERSISTED, UserSpecialty, LayoutDesign
+from .models import ERROR, PERSISTED, Specialty, UserSpecialty, LayoutDesign
 from ..services.google_cloud import Storage
 
 logger = logging.getLogger(__name__)
@@ -34,41 +34,36 @@ def generate_certificate(user, cohort=None, layout=None):
     cohort_user = CohortUser.objects.filter(**query).first()
 
     if not cohort_user:
-        message = (
-            "Impossible to obtain the student cohort, maybe it's none assigned"
-        )
-        logger.error(message)
-        raise ValidationException(message)
+        raise ValidationException(
+            "Impossible to obtain the student cohort, maybe it's none assigned",
+            slug='missing-cohort-user')
 
     if not cohort:
         cohort = cohort_user.cohort
 
-    if cohort.syllabus is None:
-        message = f"The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}"
-        logger.error(message)
-        raise ValidationException(message)
+    if cohort.syllabus_version is None:
+        raise ValidationException(
+            f"The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}",
+            slug='missing-syllabus-version')
 
-    if cohort.syllabus.certificate is None:
-        message = ('The cohort has no certificate assigned, please set a '
-                   f'certificate for cohort: {cohort.name}')
-        logger.error(message)
-        raise ValidationException(message)
+    if cohort.specialty_mode is None:
+        raise ValidationException(
+            'The cohort has no certificate assigned, please set a '
+            f'certificate for cohort: {cohort.name}',
+            slug='missing-specialty-mode')
 
-    if (not hasattr(cohort.syllabus.certificate, 'specialty')
-            or not cohort.syllabus.certificate.specialty):
-        message = (
-            'Specialty has no certificate assigned, please set a '
-            f'certificate on the Specialty model: {cohort.syllabus.certificate.name}'
-        )
-        logger.error(message)
-        raise ValidationException(message)
+    specialty = Specialty.objects.filter(
+        syllabus__id=cohort.syllabus_version.syllabus_id).first()
+    if not specialty:
+        raise ValidationException('Specialty has no Syllabus assigned',
+                                  slug='missing-specialty')
 
     uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
 
     if (uspe is not None and uspe.status == 'PERSISTED' and uspe.preview_url):
-        message = "This user already has a certificate created"
-        logger.error(message)
-        raise ValidationException(message)
+        raise ValidationException(
+            "This user already has a certificate created",
+            slug='already-exists')
 
     if uspe is None:
         utc_now = timezone.now()
@@ -77,13 +72,12 @@ def generate_certificate(user, cohort=None, layout=None):
             cohort=cohort,
             token=hashlib.sha1(
                 (str(user.id) + str(utc_now)).encode("UTF-8")).hexdigest(),
-            specialty=cohort.syllabus.certificate.specialty,
+            specialty=specialty,
             signed_by_role=strings[cohort.language]["Main Instructor"],
         )
-        if cohort.syllabus.certificate.specialty.expiration_day_delta is not None:
+        if specialty.expiration_day_delta is not None:
             uspe.expires_at = utc_now + timezone.timedelta(
-                days=cohort.syllabus.certificate.specialty.expiration_day_delta
-            )
+                days=specialty.expiration_day_delta)
 
     if layout is None:
         layout = LayoutDesign.objects.filter(is_default=True,
@@ -91,9 +85,9 @@ def generate_certificate(user, cohort=None, layout=None):
     if layout is None:
         layout = LayoutDesign.objects.filter(slug="default").first()
     if layout is None:
-        message = "No layout was specified and there is no default layout for this academy"
-        logger.error(message)
-        raise ValidationException(message, slug="no-default-layout")
+        raise ValidationException(
+            "No layout was specified and there is no default layout for this academy",
+            slug="no-default-layout")
 
     uspe.layout = layout
 
@@ -101,9 +95,9 @@ def generate_certificate(user, cohort=None, layout=None):
     main_teacher = CohortUser.objects.filter(cohort__id=cohort.id,
                                              role='TEACHER').first()
     if main_teacher is None or main_teacher.user is None:
-        message = "This cohort does not have a main teacher, please assign it first"
-        logger.error(message)
-        raise ValidationException(message)
+        raise ValidationException(
+            "This cohort does not have a main teacher, please assign it first",
+            slug='without-main-teacher')
 
     main_teacher = main_teacher.user
     uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
@@ -127,15 +121,15 @@ def generate_certificate(user, cohort=None, layout=None):
             raise ValidationException('The student must have educational '
                                       'status GRADUATED')
 
-        if cohort.current_day != cohort.syllabus.certificate.duration_in_days:
+        if cohort.current_day != cohort.specialty_mode.duration_in_days:
             raise ValidationException(
                 'Cohort current day should be '
-                f'{cohort.syllabus.certificate.duration_in_days}')
+                f'{cohort.specialty_mode.duration_in_days}')
 
         if cohort.stage != 'ENDED':
-            message = f"The student cohort stage has to be 'ENDED' before you can issue any certificates"
-            logger.error(message)
-            raise ValidationException(message)
+            raise ValidationException(
+                f"The student cohort stage has to be 'ENDED' before you can issue any certificates",
+                slug='cohort-without-status-ended')
 
         uspe.status = PERSISTED
         uspe.status_text = "Certificate successfully queued for PDF generation"
@@ -145,7 +139,6 @@ def generate_certificate(user, cohort=None, layout=None):
         message = str(e)
         uspe.status = ERROR
         uspe.status_text = message
-        logger.error(message)
         uspe.save()
 
     return uspe

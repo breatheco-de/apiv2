@@ -10,7 +10,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins.new_admissions_test_case import AdmissionsTestCase
+from ..mixins import AdmissionsTestCase
 
 
 class CertificateTestSuite(AdmissionsTestCase):
@@ -48,7 +48,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_with_data(self):
         """Test /certificate without auth"""
-        model = self.generate_models(authenticate=True, certificate=True)
+        model = self.generate_models(authenticate=True, specialty_mode=True)
         url = reverse_lazy(
             'admissions:certificate_slug',
             kwargs={'certificate_slug': model['certificate'].slug})

@@ -11,7 +11,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins.new_admissions_test_case import AdmissionsTestCase
+from ..mixins import AdmissionsTestCase
 
 
 class CertificateTestSuite(AdmissionsTestCase):
@@ -45,7 +45,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_with_data(self):
         """Test /certificate without auth"""
-        model = self.generate_models(authenticate=True, certificate=True)
+        model = self.generate_models(authenticate=True, specialty_mode=True)
         url = reverse_lazy('admissions:certificate')
         response = self.client.get(url)
         json = response.json()
@@ -72,7 +72,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         base = self.generate_models(authenticate=True)
         models = [
-            self.generate_models(certificate=True, models=base)
+            self.generate_models(specialty_mode=True, models=base)
             for _ in range(0, 105)
         ]
         url = reverse_lazy('admissions:certificate')
@@ -101,7 +101,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         base = self.generate_models(authenticate=True)
         models = [
-            self.generate_models(certificate=True, models=base)
+            self.generate_models(specialty_mode=True, models=base)
             for _ in range(0, 10)
         ]
         url = reverse_lazy('admissions:certificate') + '?limit=5&offset=0'
@@ -142,7 +142,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         base = self.generate_models(authenticate=True)
         models = [
-            self.generate_models(certificate=True, models=base)
+            self.generate_models(specialty_mode=True, models=base)
             for _ in range(0, 10)
         ]
         url = reverse_lazy('admissions:certificate') + '?limit=5&offset=5'
@@ -183,7 +183,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         base = self.generate_models(authenticate=True)
         models = [
-            self.generate_models(certificate=True, models=base)
+            self.generate_models(specialty_mode=True, models=base)
             for _ in range(0, 10)
         ]
         url = reverse_lazy('admissions:certificate') + '?limit=5&offset=10'
@@ -274,8 +274,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                                          capability='crud_certificate',
                                          role='potato',
                                          certificate_kwargs=certificate_kwargs,
-                                         academy_certificate=True,
-                                         certificate=True,
+                                         academy_specialty_mode=True,
+                                         specialty_mode=True,
                                          models=base)
             url = (reverse_lazy('admissions:academy_certificate') +
                    f'?{field}=' + str(getattr(model['certificate'], field)))
@@ -315,8 +315,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                 capability='crud_certificate',
                 role='potato',
                 certificate_kwargs=certificate_kwargs,
-                academy_certificate=True,
-                certificate=True,
+                academy_specialty_mode=True,
+                specialty_mode=True,
                 models=base)
 
             model2 = self.generate_models(
@@ -324,8 +324,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                 capability='crud_certificate',
                 role='potato',
                 certificate_kwargs=certificate_kwargs,
-                academy_certificate=True,
-                certificate=True,
+                academy_specialty_mode=True,
+                specialty_mode=True,
                 models=base)
 
             url = (reverse_lazy('admissions:academy_certificate') +

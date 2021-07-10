@@ -14,17 +14,17 @@ from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
 from .serializers import (
-    AcademySerializer, CertificateTimeSlotSerializer, CohortSerializer,
-    CohortTimeSlotSerializer, GETCertificateTimeSlotSerializer,
+    AcademySerializer, SpecialtyModeTimeSlotSerializer, CohortSerializer,
+    CohortTimeSlotSerializer, GETSpecialtyModeTimeSlotSerializer,
     GETCohortTimeSlotSerializer, GetCohortSerializer, SyllabusGetSerializer,
     SyllabusSerializer, SyllabusSmallSerializer, CohortUserSerializer,
     GETCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
     UserDJangoRestSerializer, UserMeSerializer, GetCertificateSerializer,
     SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer,
     GetBigAcademySerializer)
-from .models import (Academy, AcademyCertificate, CertificateTimeSlot,
-                     CohortTimeSlot, CohortUser, Certificate, Cohort, Country,
-                     STUDENT, DELETED, Syllabus)
+from .models import (Academy, AcademySpecialtyMode, SpecialtyModeTimeSlot,
+                     CohortTimeSlot, CohortUser, SpecialtyMode, Cohort,
+                     Country, STUDENT, DELETED, Syllabus)
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -551,7 +551,7 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
         data = []
         for cohort in cohorts:
             certificate_id = cohort.syllabus.certificate.id
-            certificate_timeslots = CertificateTimeSlot.objects.filter(
+            certificate_timeslots = SpecialtyModeTimeSlot.objects.filter(
                 academy__id=academy_id, certificate__id=certificate_id)
 
             for certificate_timeslot in certificate_timeslots:
@@ -575,7 +575,7 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
+class AcademySpecialtyModeTimeSlotView(APIView, GenerateLookupsMixin):
     @capable_of('read_certificate')
     def get(self,
             request,
@@ -583,7 +583,7 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
             timeslot_id=None,
             academy_id=None):
         if timeslot_id:
-            item = CertificateTimeSlot.objects.filter(
+            item = SpecialtyModeTimeSlot.objects.filter(
                 academy__id=academy_id,
                 certificate__id=certificate_id,
                 id=timeslot_id).first()
@@ -593,13 +593,13 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
                                           404,
                                           slug='time-slot-not-found')
 
-            serializer = GETCertificateTimeSlotSerializer(item, many=False)
+            serializer = GETSpecialtyModeTimeSlotSerializer(item, many=False)
             return Response(serializer.data)
 
-        items = CertificateTimeSlot.objects.filter(
+        items = SpecialtyModeTimeSlot.objects.filter(
             academy__id=academy_id, certificate__id=certificate_id)
 
-        serializer = GETCertificateTimeSlotSerializer(items, many=True)
+        serializer = GETSpecialtyModeTimeSlotSerializer(items, many=True)
         return Response(serializer.data)
 
     @capable_of('crud_certificate')
@@ -610,7 +610,7 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
                 400,
                 slug='certificate-in-body')
 
-        academy_certificate = AcademyCertificate.objects.filter(
+        academy_certificate = AcademySpecialtyMode.objects.filter(
             certificate__id=certificate_id, academy__id=academy_id).first()
 
         if certificate_id and not academy_certificate:
@@ -626,7 +626,7 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
             'certificate': certificate.id,
         }
 
-        serializer = CertificateTimeSlotSerializer(data=data, many=False)
+        serializer = SpecialtyModeTimeSlotSerializer(data=data, many=False)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -642,7 +642,7 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
             raise ValidationException(
                 "Certificate can't be passed is the body", 400)
 
-        academy_certificate = AcademyCertificate.objects.filter(
+        academy_certificate = AcademySpecialtyMode.objects.filter(
             certificate__id=certificate_id, academy__id=academy_id).first()
 
         if certificate_id and not academy_certificate:
@@ -652,7 +652,7 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
 
         certificate = academy_certificate.certificate
 
-        item = CertificateTimeSlot.objects.filter(
+        item = SpecialtyModeTimeSlot.objects.filter(
             academy__id=academy_id,
             certificate__id=certificate_id,
             id=timeslot_id).first()
@@ -669,7 +669,7 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
             'certificate': certificate.id,
         }
 
-        serializer = CertificateTimeSlotSerializer(item, data=data)
+        serializer = SpecialtyModeTimeSlotSerializer(item, data=data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -681,7 +681,7 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
                certificate_id=None,
                timeslot_id=None,
                academy_id=None):
-        item = CertificateTimeSlot.objects.filter(
+        item = SpecialtyModeTimeSlot.objects.filter(
             academy__id=academy_id,
             certificate__id=certificate_id,
             id=timeslot_id).first()
@@ -890,7 +890,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination,
 
 class CertificateAllView(APIView, HeaderLimitOffsetPagination):
     def get(self, request):
-        items = Certificate.objects.all()
+        items = SpecialtyMode.objects.all()
         page = self.paginate_queryset(items, request)
         serializer = GetCertificateSerializer(page, many=True)
 
@@ -904,9 +904,9 @@ class CertificateView(APIView, HeaderLimitOffsetPagination,
                       GenerateLookupsMixin):
     @capable_of('read_certificate')
     def get(self, request, academy_id=None):
-        cert_ids = AcademyCertificate.objects.filter(
+        cert_ids = AcademySpecialtyMode.objects.filter(
             academy__id=academy_id).values_list('certificate_id', flat=True)
-        items = Certificate.objects.filter(id__in=cert_ids)
+        items = SpecialtyMode.objects.filter(id__in=cert_ids)
 
         page = self.paginate_queryset(items, request)
         serializer = GetCertificateSerializer(page, many=True)
@@ -925,9 +925,9 @@ class CertificateView(APIView, HeaderLimitOffsetPagination,
             raise ValidationException('Missing parameters in the querystring',
                                       code=400)
 
-        ids = AcademyCertificate.objects.filter(
+        ids = AcademySpecialtyMode.objects.filter(
             academy__id=academy_id).values_list('certificate_id', flat=True)
-        items = Certificate.objects.filter(**lookups).filter(id__in=ids)
+        items = SpecialtyMode.objects.filter(**lookups).filter(id__in=ids)
 
         for item in items:
             item.delete()
@@ -937,7 +937,7 @@ class CertificateView(APIView, HeaderLimitOffsetPagination,
 
 @api_view(['GET'])
 def get_single_course(request, certificate_slug):
-    certificates = Certificate.objects.filter(slug=certificate_slug).first()
+    certificates = SpecialtyMode.objects.filter(slug=certificate_slug).first()
     if certificates is None:
         raise ValidationException("Certificate slug not found", code=404)
     serializer = GetCertificateSerializer(certificates, many=False)
@@ -957,7 +957,7 @@ class SyllabusView(APIView):
         if academy_id is None:
             raise ValidationException("Missing academy id")
 
-        certificates = Certificate.objects.filter(
+        certificates = SpecialtyMode.objects.filter(
             slug=certificate_slug).first()
         if certificates is None:
             raise ValidationException("Certificate slug not found", code=404)
@@ -983,12 +983,13 @@ class SyllabusView(APIView):
     @capable_of('crud_syllabus')
     def post(self, request, certificate_slug=None, academy_id=None):
         version = 1
-        certificate = Certificate.objects.filter(slug=certificate_slug).first()
+        certificate = SpecialtyMode.objects.filter(
+            slug=certificate_slug).first()
         if certificate is None:
             raise ValidationException(
                 f"Invalid certificates slug {certificate_slug}", code=404)
 
-        # if not CertificateTimeSlot.objects.filter(
+        # if not SpecialtyModeTimeSlot.objects.filter(
         #         academy__id=academy_id,
         #         certificate__slug=certificate_slug).exists():
         #     raise ValidationException(
@@ -1031,7 +1032,7 @@ class SyllabusView(APIView):
             raise ValidationException(
                 "Syllabus version not found for this academy", code=404)
 
-        # if not CertificateTimeSlot.objects.filter(
+        # if not SpecialtyModeTimeSlot.objects.filter(
         #         academy__id=academy_id,
         #         certificate__slug=certificate_slug).exists():
         #     raise ValidationException(

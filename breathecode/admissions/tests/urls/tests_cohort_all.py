@@ -11,7 +11,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins.new_admissions_test_case import AdmissionsTestCase
+from ..mixins import AdmissionsTestCase
 
 
 class CohortAllTestSuite(AdmissionsTestCase):

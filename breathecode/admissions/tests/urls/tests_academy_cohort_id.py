@@ -14,7 +14,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins.new_admissions_test_case import AdmissionsTestCase
+from ..mixins import AdmissionsTestCase
 from .tests_academy_cohort import AcademyCohortTestSuite
 
 
@@ -420,7 +420,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      cohort_kwargs=cohort_kwargs,
-                                     certificate_time_slot=True)
+                                     specialty_mode_time_slot=True)
         url = reverse_lazy('admissions:academy_cohort_id',
                            kwargs={'cohort_id': model['cohort'].id})
         data = {

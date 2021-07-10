@@ -12,7 +12,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins.new_admissions_test_case import AdmissionsTestCase
+from ..mixins import AdmissionsTestCase
 
 
 class CohortUserTestSuite(AdmissionsTestCase):
@@ -114,7 +114,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='read_certificate',
                                      role='potato',
-                                     certificate_time_slot=True)
+                                     specialty_mode_time_slot=True)
         url = reverse_lazy('admissions:academy_certificate_id_timeslot_id',
                            kwargs={
                                'certificate_id': 1,
@@ -188,7 +188,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
-                                     academy_certificate=True)
+                                     academy_specialty_mode=True)
         url = reverse_lazy('admissions:academy_certificate_id_timeslot_id',
                            kwargs={
                                'certificate_id': 1,
@@ -216,8 +216,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
-                                     certificate_time_slot=True,
-                                     academy_certificate=True)
+                                     specialty_mode_time_slot=True,
+                                     academy_specialty_mode=True)
         url = reverse_lazy('admissions:academy_certificate_id_timeslot_id',
                            kwargs={
                                'certificate_id': 1,
@@ -246,8 +246,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
-                                     certificate_time_slot=True,
-                                     academy_certificate=True)
+                                     specialty_mode_time_slot=True,
+                                     academy_specialty_mode=True)
         url = reverse_lazy('admissions:academy_certificate_id_timeslot_id',
                            kwargs={
                                'certificate_id': 1,
@@ -319,7 +319,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
-                                     certificate_time_slot=True)
+                                     specialty_mode_time_slot=True)
         url = reverse_lazy('admissions:academy_certificate_id_timeslot_id',
                            kwargs={
                                'certificate_id': 1,

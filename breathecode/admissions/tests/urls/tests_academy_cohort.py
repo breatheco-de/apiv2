@@ -17,7 +17,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins.new_admissions_test_case import AdmissionsTestCase
+from ..mixins import AdmissionsTestCase
 
 
 class AcademyCohortTestSuite(AdmissionsTestCase):
@@ -229,7 +229,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      skip_cohort=True,
-                                     certificate_time_slot=True)
+                                     specialty_mode_time_slot=True)
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus':
@@ -266,7 +266,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      skip_cohort=True,
-                                     certificate_time_slot=True)
+                                     specialty_mode_time_slot=True)
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus':
@@ -308,7 +308,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      skip_cohort=True,
-                                     certificate_time_slot=True)
+                                     specialty_mode_time_slot=True)
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus':
@@ -347,7 +347,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      skip_cohort=True,
-                                     certificate_time_slot=True)
+                                     specialty_mode_time_slot=True)
         models_dict = self.all_cohort_dict()
         url = reverse_lazy('admissions:academy_cohort')
         data = {
@@ -520,7 +520,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      capability='read_cohort',
                                      role='potato',
                                      syllabus=True,
-                                     certificate_time_slot=True)
+                                     specialty_mode_time_slot=True)
             ]
 
         models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
@@ -1980,7 +1980,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato2',
-                                     certificate_time_slot=True,
+                                     specialty_mode_time_slot=True,
                                      models=base)
 
         url = reverse_lazy('admissions:academy_cohort')

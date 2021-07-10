@@ -15,7 +15,7 @@ from breathecode.tests.mocks import (
     SLACK_INSTANCES,
     apply_slack_requests_request_mock,
 )
-from ..mixins.new_feedback_test_case import FeedbackTestCase
+from ..mixins import FeedbackTestCase
 from ...actions import send_question, strings
 
 

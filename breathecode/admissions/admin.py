@@ -4,7 +4,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
-from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions, Syllabus, AcademyCertificate, CohortTimeSlot, CertificateTimeSlot
+from .models import Academy, SpecialtyMode, AcademySpecialtyMode, Cohort, CohortUser, Country, City, UserAdmissions, Syllabus, CohortTimeSlot, SpecialtyModeTimeSlot
 from .actions import sync_cohort_timeslots
 from breathecode.assignments.actions import sync_student_tasks
 
@@ -36,10 +36,10 @@ class AcademyAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'city')
 
 
-@admin.register(AcademyCertificate)
-class AcademyCertificateAdmin(admin.ModelAdmin):
-    list_display = ('certificate', 'academy')
-    list_filter = ['certificate__slug', 'academy__slug']
+@admin.register(AcademySpecialtyMode)
+class AcademySpecialtyMode(admin.ModelAdmin):
+    list_display = ('specialty_mode', 'academy')
+    list_filter = ['specialty_mode__slug', 'academy__slug']
 
 
 @admin.register(Country)
@@ -52,8 +52,8 @@ class CityAdmin(admin.ModelAdmin):
     list_display = ('name', 'country')
 
 
-@admin.register(Certificate)
-class CertificateAdmin(admin.ModelAdmin):
+@admin.register(SpecialtyMode)
+class SpecialtyModeAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'duration_in_hours')
 
 
@@ -184,8 +184,12 @@ class CohortForm(forms.ModelForm):
 class CohortAdmin(admin.ModelAdmin):
     form = CohortForm
     search_fields = ['slug', 'name', 'academy__city__name']
-    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus')
-    list_filter = ['stage', 'academy__slug', 'syllabus__certificate__slug']
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date',
+                    'syllabus_version', 'specialty_mode')
+    list_filter = [
+        'stage', 'academy__slug', 'specialty_mode__slug',
+        'syllabus_version__version'
+    ]
     actions = [
         sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive,
         sync_timeslots
@@ -249,7 +253,7 @@ sync_with_github.short_description = "Sync from Github"
 
 @admin.register(Syllabus)
 class SyllabusAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'certificate', 'academy_owner', 'version')
+    list_display = ('slug', 'academy_owner', 'private')
     actions = [sync_with_github]
 
 
@@ -271,15 +275,15 @@ def replicate_in_all(modeladmin, request, queryset):
         for c in cert_timeslot:
             # delete all timeslots for that academy and certificate ONLY the first time
             if c.certificate.slug not in to_filter:
-                CertificateTimeSlot.objects.filter(certificate=c.certificate,
-                                                   academy=a).delete()
+                SpecialtyModeTimeSlot.objects.filter(certificate=c.certificate,
+                                                     academy=a).delete()
                 to_filter[c.certificate.slug] = True
             # and then re add the timeslots one by one
-            new_timeslot = CertificateTimeSlot(recurrent=c.recurrent,
-                                               starting_at=c.starting_at,
-                                               ending_at=c.ending_at,
-                                               certificate=c.certificate,
-                                               academy=a)
+            new_timeslot = SpecialtyModeTimeSlot(recurrent=c.recurrent,
+                                                 starting_at=c.starting_at,
+                                                 ending_at=c.ending_at,
+                                                 certificate=c.certificate,
+                                                 academy=a)
             new_timeslot.save()
 
         logger.info(f"All academies in sync with those timeslots")
@@ -291,15 +295,15 @@ def replicate_in_all(modeladmin, request, queryset):
 replicate_in_all.short_description = "Replicate same timeslots in all academies"
 
 
-@admin.register(CertificateTimeSlot)
-class CertificateTimeSlotAdmin(admin.ModelAdmin):
-    list_display = ('id', 'certificate', 'starting_at', 'ending_at', 'academy',
-                    'recurrent', 'recurrency_type')
+@admin.register(SpecialtyModeTimeSlot)
+class SpecialtyModeTimeSlotAdmin(admin.ModelAdmin):
+    list_display = ('id', 'specialty_mode', 'starting_at', 'ending_at',
+                    'academy', 'recurrent', 'recurrency_type')
     list_filter = [
-        'certificate__slug', 'academy__slug', 'recurrent', 'recurrency_type'
+        'specialty_mode__slug', 'academy__slug', 'recurrent', 'recurrency_type'
     ]
     search_fields = [
-        'certificate__slug', 'certificate__name', 'academy__slug',
+        'specialty_mode__slug', 'specialty_mode__name', 'academy__slug',
         'academy__name'
     ]
     actions = [replicate_in_all]

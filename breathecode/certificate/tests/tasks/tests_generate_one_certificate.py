@@ -3,7 +3,7 @@ Tasks tests
 """
 from unittest.mock import patch, call
 from ...tasks import generate_one_certificate
-from ..mixins.new_certificate_test_case import CertificateTestCase
+from ..mixins import CertificateTestCase
 from ..mocks import (
     ACTIONS_PATH,
     ACTIONS_INSTANCES,

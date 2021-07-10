@@ -11,7 +11,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins.new_admissions_test_case import AdmissionsTestCase
+from ..mixins import AdmissionsTestCase
 
 
 class CertificateTestSuite(AdmissionsTestCase):
@@ -112,7 +112,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
-                                     certificate=True,
+                                     specialty_mode=True,
                                      syllabus=True)
 
         data = {}
@@ -137,9 +137,9 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
-                                     certificate=True,
+                                     specialty_mode=True,
                                      syllabus=True,
-                                     certificate_time_slot=True)
+                                     specialty_mode_time_slot=True)
 
         data = {}
         response = self.client.post(url, data)
@@ -181,11 +181,11 @@ class CertificateTestSuite(AdmissionsTestCase):
                                     profile_academy=True,
                                     capability='crud_certificate',
                                     role='potato',
-                                    certificate=True,
+                                    specialty_mode=True,
                                     syllabus=True)
 
         models = [
-            self.generate_models(certificate_time_slot=True, models=base)
+            self.generate_models(specialty_mode_time_slot=True, models=base)
             for _ in range(0, 2)
         ]
 
@@ -234,7 +234,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                     profile_academy=True,
                                     capability='crud_certificate',
                                     role='potato',
-                                    certificate=True,
+                                    specialty_mode=True,
                                     syllabus=True,
                                     skip_cohort=True)
 
@@ -244,7 +244,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         ]
 
         certificate_timeslots = [
-            self.generate_models(certificate_time_slot=True,
+            self.generate_models(specialty_mode_time_slot=True,
                                  models=base).certificate_time_slot
             for _ in range(0, 2)
         ]
@@ -316,10 +316,10 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
-                                     certificate=True,
+                                     specialty_mode=True,
                                      syllabus=True,
                                      cohort_time_slot=True,
-                                     certificate_time_slot=True)
+                                     specialty_mode_time_slot=True)
 
         data = {}
         response = self.client.post(url, data)

@@ -11,7 +11,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins.new_admissions_test_case import AdmissionsTestCase
+from ..mixins import AdmissionsTestCase
 
 
 class CertificateTestSuite(AdmissionsTestCase):
@@ -94,7 +94,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             self):
         """Test /certificate without auth"""
         model = self.generate_models(authenticate=True,
-                                     certificate=True,
+                                     specialty_mode=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato')
@@ -121,7 +121,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             self):
         """Test /certificate without auth"""
         model = self.generate_models(authenticate=True,
-                                     certificate=True,
+                                     specialty_mode=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato',
@@ -158,7 +158,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_certificate_slug_academy_id_syllabus_version(self):
         """Test /certificate without auth"""
         model = self.generate_models(authenticate=True,
-                                     certificate=True,
+                                     specialty_mode=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato',
@@ -367,7 +367,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     #     """Test /certificate without auth"""
     #     model = self.generate_models(authenticate=True, profile_academy=True,
     #         capability='crud_syllabus', role='potato', syllabus=True,
-    #         certificate=True)
+    #         specialty_mode=True)
     #     url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus_version',
     #         kwargs={'certificate_slug': model['certificate'].slug, 'academy_id': 1,
     #         'version': model['syllabus'].version})
@@ -403,8 +403,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      capability='crud_syllabus',
                                      role='potato',
                                      syllabus=True,
-                                     certificate=True,
-                                     certificate_time_slot=True)
+                                     specialty_mode=True,
+                                     specialty_mode_time_slot=True)
         url = reverse_lazy(
             'admissions:certificate_slug_academy_id_syllabus_version',
             kwargs={
@@ -440,8 +440,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      capability='crud_syllabus',
                                      role='potato',
                                      syllabus=True,
-                                     certificate=True,
-                                     certificate_time_slot=True)
+                                     specialty_mode=True,
+                                     specialty_mode_time_slot=True)
         url = reverse_lazy(
             'admissions:certificate_slug_academy_id_syllabus_version',
             kwargs={
