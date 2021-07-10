@@ -307,7 +307,6 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(self.count_form_entry(), 0)
 
-    # TODO: this tests is stopped because we have other priorities
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -380,6 +379,4 @@ class AnswerIdTestSuite(MarketingTestCase):
         }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
-        # self.assertEqual(mock_old_breathecode.call_args_list, [])
-        
         self.check_old_breathecode_calls(mock_old_breathecode, model)
