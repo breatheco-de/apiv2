@@ -2,6 +2,7 @@
 Collections of mixins used to login in authorize microservice
 """
 import os
+import re
 from breathecode.authenticate.models import Token
 from unittest.mock import call
 from breathecode.notify.actions import get_template_content
@@ -88,19 +89,25 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
 
     # This function is incompleted
     def check_old_breathecode_calls(self, mock, model):
-        self.assertEqual(mock.call_args_list, [
-            call(
-                'POST',
-                'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
-                headers={
+        mock_list = list(mock.call_args_list[1])
+        del mock_list[1]['json']['contactAutomation']['automation']
+
+        token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
+        self.assertEqual(bool(token_pattern.match(mock_list[1]['headers']['Api-Token'])), True)
+        del mock_list[1]['headers']['Api-Token']
+
+        self.assertEqual(mock_list, [
+            ('POST',
+             'https://old.hardcoded.breathecode.url/api/3/contactAutomations'),
+            {
+                'headers': {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
-                    'Api-Token': model['active_campaign_academy'].ac_key
                 },
-                json={
+                'json': {
                     'contactAutomation': {
-                        'contact': 1,
-                        'automation': 1938270575
+                        'contact': 1
                     }
-                })
+                }
+            }
         ])

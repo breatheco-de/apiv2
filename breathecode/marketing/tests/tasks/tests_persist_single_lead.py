@@ -308,72 +308,78 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(self.count_form_entry(), 0)
 
     # TODO: this tests is stopped because we have other priorities
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
-    # @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
-    # def test_persist_single_lead_with_form_entry(self):
-    #     """Test /answer/:id without auth"""
-    #     mock_mailgun = MAILGUN_INSTANCES['post']
-    #     mock_mailgun.call_args_list = []
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(OLD_BREATHECODE_PATH['request'], apply_old_breathecode_requests_request_mock())
+    def test_persist_single_lead_with_form_entry(self):
+        """Test /answer/:id without auth"""
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
 
-    #     mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
-    #     mock_old_breathecode.call_args_list = []
-    #     model = self.generate_models(academy=True, active_campaign_academy=True,
-    #         tag=True, tag_kwargs={'tag_type': 'STRONG'}, automation=True,
-    #         automation_kwargs={'slug': 'they-killed-kenny'}, form_entry=True,
-    #         active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
+        mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
+        mock_old_breathecode.call_args_list = []
+        model = self.generate_models(academy=True, active_campaign_academy=True,
+            tag=True, tag_kwargs={'tag_type': 'STRONG'}, automation=True,
+            automation_kwargs={'slug': 'they-killed-kenny'}, form_entry=True,
+            active_campaign_academy_kwargs={'ac_url': 'https://old.hardcoded.breathecode.url'})
 
-    #     persist_single_lead({
-    #         'location': model['academy'].slug,
-    #         'tags': model['tag'].slug,
-    #         'automations': model['automation'].slug,
-    #         'email': 'pokemon@potato.io',
-    #         'first_name': 'Konan',
-    #         'last_name': 'Amegakure',
-    #         'phone': '123123123',
-    #         'id': model['form_entry'].id,
-    #     })
+        persist_single_lead({
+            'location': model['academy'].slug,
+            'tags': model['tag'].slug,
+            'automations': model['automation'].slug,
+            'email': 'pokemon@potato.io',
+            'first_name': 'Konan',
+            'last_name': 'Amegakure',
+            'phone': '123123123',
+            'id': model['form_entry'].id,
+        })
 
-    #     self.assertEqual(self.all_form_entry_dict(), [{
-    #         'ac_academy_id': 1,
-    #         'academy_id': 1,
-    #         'automations': '',
-    #         'browser_lang': None,
-    #         'city': None,
-    #         'client_comments': None,
-    #         'contact_id': None,
-    #         'country': None,
-    #         'course': None,
-    #         'email': None,
-    #         'fb_ad_id': None,
-    #         'fb_adgroup_id': None,
-    #         'fb_form_id': None,
-    #         'fb_leadgen_id': None,
-    #         'fb_page_id': None,
-    #         'first_name': '',
-    #         'gclid': None,
-    #         'id': 1,
-    #         'language': 'en',
-    #         'last_name': '',
-    #         'latitude': None,
-    #         'lead_type': None,
-    #         'location': None,
-    #         'longitude': None,
-    #         'phone': None,
-    #         'referral_key': None,
-    #         'state': None,
-    #         'storage_status': 'PERSISTED',
-    #         'street_address': None,
-    #         'tags': '',
-    #         'utm_campaign': None,
-    #         'utm_medium': None,
-    #         'utm_source': None,
-    #         'utm_url': None,
-    #         'zip_code': None
-    #     }])
+        self.assertEqual(self.all_form_entry_dict(), [{
+            'ac_contact_id': '1',
+            'ac_deal_id': None,
+            'academy_id': 1,
+            'automations': '',
+            'browser_lang': None,
+            'city': None,
+            'client_comments': None,
+            'contact_id': None,
+            'country': None,
+            'course': None,
+            'deal_status': None,
+            'email': None,
+            'fb_ad_id': None,
+            'fb_adgroup_id': None,
+            'fb_form_id': None,
+            'fb_leadgen_id': None,
+            'fb_page_id': None,
+            'first_name': '',
+            'gclid': None,
+            'id': 1,
+            'language': 'en',
+            'last_name': '',
+            'latitude': None,
+            'lead_type': None,
+            'location': None,
+            'longitude': None,
+            'phone': None,
+            'referral_key': None,
+            'sentiment': None,
+            'state': None,
+            'storage_status': 'PERSISTED',
+            'street_address': None,
+            'tags': '',
+            'user_id': None,
+            'utm_campaign': None,
+            'utm_medium': None,
+            'utm_source': None,
+            'utm_url': None,
+            'won_at': None,
+            'zip_code': None
+        }])
 
-    #     self.assertEqual(mock_mailgun.call_args_list, [])
-    #     # self.assertEqual(mock_old_breathecode.call_args_list, [])
-    #     self.check_old_breathecode_calls(mock_old_breathecode, model)
+        self.assertEqual(mock_mailgun.call_args_list, [])
+        # self.assertEqual(mock_old_breathecode.call_args_list, [])
+        
+        self.check_old_breathecode_calls(mock_old_breathecode, model)
