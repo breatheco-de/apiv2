@@ -120,6 +120,10 @@ class Command(BaseCommand):
                 "description": "List all the leads"
             },
             {
+                "slug": "read_won_lead",
+                "description": "List all the won leads"
+            },
+            {
                 "slug": "crud_lead",
                 "description": "Create, update or delete academy leads"
             },
@@ -238,7 +242,7 @@ class Command(BaseCommand):
             "caps":
             extend(roles, ["staff"]) + [
                 "read_assigment", "crud_assignment", "read_cohort_activity",
-                "read_nps_answers", "classroom_activity"
+                "read_nps_answers", "classroom_activity", "read_won_lead"
             ]
         })
         roles.append({

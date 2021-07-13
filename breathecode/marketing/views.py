@@ -285,6 +285,59 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination,
+                      GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('read_won_lead')
+    def get(self, request, format=None, academy_id=None):
+
+        academy = Academy.objects.get(id=academy_id)
+        items = FormEntry.objects.filter(academy__id=academy.id, deal_status="WON")
+        lookup = {}
+
+        start = request.GET.get('start', None)
+        if start is not None:
+            start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
+            lookup['created_at__gte'] = start_date
+
+        end = request.GET.get('end', None)
+        if end is not None:
+            end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
+            lookup['created_at__lte'] = end_date
+
+        if 'storage_status' in self.request.GET:
+            param = self.request.GET.get('storage_status')
+            lookup['storage_status'] = param
+
+        if 'course' in self.request.GET:
+            param = self.request.GET.get('course')
+            lookup['course'] = param
+
+        if 'location' in self.request.GET:
+            param = self.request.GET.get('location')
+            lookup['location'] = param
+
+        sort_by = "-created_at"
+        if 'sort' in self.request.GET and self.request.GET['sort'] != "":
+            sort_by = self.request.GET.get('sort')
+
+        items = items.filter(**lookup).order_by(sort_by)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = query_like_by_full_name(like=like, items=items)
+
+        page = self.paginate_queryset(items, request)
+        serializer = FormEntrySmallSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
+
+
 class AcademyLeadView(APIView, HeaderLimitOffsetPagination,
                       GenerateLookupsMixin):
     """
