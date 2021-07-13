@@ -62,7 +62,7 @@ class CohortSmallSerializer(serpy.Serializer):
     name = serpy.Field()
     syllabus = SyllabusCertificateSerializer()
 
-
+hola = ['asd',45,354,34,234,4356,567,867,978,7896,4563,342,234,345,456,567,546,345,324,234,3443,456,567,678,7869,756,453,324,243,3456,567,678,78,657,645,345,345,3434]
 class SpecialtySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
