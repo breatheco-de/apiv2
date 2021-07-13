@@ -13,62 +13,69 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import os
+from breathecode.utils.views import get_root_schema_view
+from breathecode.utils.urls import mount_app_openapi
+
 from django.contrib import admin
-from django.urls import path, include
-from django.conf.urls import url
-from rest_framework import routers
-from rest_framework import permissions
-from drf_yasg.views import get_schema_view
-from drf_yasg import openapi
+from django.urls import include, path
+from django.views.generic import TemplateView
 
-schema_view = get_schema_view(
-    openapi.Info(
-        title="BreatheCode API",
-        default_version='v1',
-        description="Technology for Learning",
-        terms_of_service="https://www.google.com/policies/terms/",
-        contact=openapi.Contact(email="contact@snippets.local"),
-        license=openapi.License(name="BSD License"),
-    ),
-    public=True,
-    permission_classes=(permissions.AllowAny, ),
-)
-
-urlpatterns = [
-    url(r'^swagger(?P<format>\.json|\.yaml)$',
-        schema_view.without_ui(cache_timeout=0),
-        name='schema-json'),
-    url(r'^swagger/$',
-        schema_view.with_ui('swagger', cache_timeout=0),
-        name='schema-swagger-ui'),
-    url(r'^redoc/$',
-        schema_view.with_ui('redoc', cache_timeout=0),
-        name='schema-redoc'),
-    path('admin/', admin.site.urls),
-    path('v1/auth/', include('breathecode.authenticate.urls',
-                             namespace='auth')),
-    path('v1/admissions/',
-         include('breathecode.admissions.urls', namespace='admissions')),
-    path('v1/assignment/',
-         include('breathecode.assignments.urls', namespace='assignments')),
-    path('v1/freelance/',
-         include('breathecode.freelance.urls', namespace='freelance')),
-    path('v1/events/', include('breathecode.events.urls', namespace='events')),
-    path('v1/registry/',
-         include('breathecode.registry.urls', namespace='registry')),
-    path('v1/activity/',
-         include('breathecode.activity.urls', namespace='activity')),
-    path('v1/feedback/',
-         include('breathecode.feedback.urls', namespace='feedback')),
-    path('v1/messaging/', include('breathecode.notify.urls',
-                                  namespace='notify')),
-    path('v1/assessment/',
-         include('breathecode.assessment.urls', namespace='assessment')),
-    path('v1/certificate/',
-         include('breathecode.certificate.urls', namespace='certificate')),
-    path('v1/media/', include('breathecode.media.urls', namespace='media')),
-    path('v1/marketing/',
-         include('breathecode.marketing.urls', namespace='marketing')),
-    path('s/',
-         include('breathecode.marketing.urls_shortner', namespace='shortner')),
+apps = [
+    ('v1/auth/', 'breathecode.authenticate.urls', 'auth'),
+    ('v1/admissions/', 'breathecode.admissions.urls', 'admissions'),
+    ('v1/assignment/', 'breathecode.assignments.urls', 'assignments'),
+    ('v1/freelance/', 'breathecode.freelance.urls', 'freelance'),
+    ('v1/events/', 'breathecode.events.urls', 'events'),
+    ('v1/registry/', 'breathecode.registry.urls', 'registry'),
+    ('v1/activity/', 'breathecode.activity.urls', 'activity'),
+    ('v1/feedback/', 'breathecode.feedback.urls', 'feedback'),
+    ('v1/messaging/', 'breathecode.notify.urls', 'notify'),
+    ('v1/assessment/', 'breathecode.assessment.urls', 'assessment'),
+    ('v1/certificate/', 'breathecode.certificate.urls', 'certificate'),
+    ('v1/media/', 'breathecode.media.urls', 'media'),
+    ('v1/marketing/', 'breathecode.marketing.urls', 'marketing'),
+    ('s/', 'breathecode.marketing.urls_shortner', 'shortner'),
 ]
+
+urlpatterns_apps = [
+    path(url, include(urlconf, namespace=namespace))
+    for url, urlconf, namespace in apps
+]
+
+urlpatterns_app_openapi = [
+    mount_app_openapi(url, urlconf, namespace)
+    for url, urlconf, namespace in apps
+]
+
+urlpatterns_docs = [
+    path(
+        'openapi.json',
+        get_root_schema_view(
+            [namespace for _, _, namespace in apps if namespace != 'shortner'],
+            extend={
+                'title': "BreatheCode API",
+                'description': "Technology for Learning",
+                'version': "v1.0.0",
+            }),
+        name='openapi-schema'),
+    path('admin/doc/', include('django.contrib.admindocs.urls')),
+    path('swagger/',
+         TemplateView.as_view(template_name='swagger-ui.html',
+                              extra_context={'schema_url': 'openapi-schema'}),
+         name='swagger-ui'),
+    path('redoc/',
+         TemplateView.as_view(template_name='redoc.html',
+                              extra_context={'schema_url': 'openapi-schema'}),
+         name='redoc'),
+]
+
+urlpatterns_django = [
+    path('admin/', admin.site.urls),
+]
+
+urlpatterns = urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django
+if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or os.environ.get('ENV') == 'test':
+    urlpatterns.append(
+        path('v1/cypress/',
+             include('breathecode.cypress.urls', namespace='cypress')))

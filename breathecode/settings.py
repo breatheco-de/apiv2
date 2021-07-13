@@ -14,6 +14,7 @@ import sys
 import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -44,9 +45,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django.contrib.postgres',
+    'django.contrib.admindocs',
     'rest_framework',
     'phonenumber_field',
-    'drf_yasg',
     'corsheaders',
     'breathecode.authenticate',
     'breathecode.admissions',
@@ -63,7 +64,12 @@ INSTALLED_APPS = [
     'breathecode.registry',
 ]
 
+if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
+    INSTALLED_APPS.append('breathecode.cypress')
+
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS':
+    'rest_framework.schemas.openapi.AutoSchema',
     'DEFAULT_VERSIONING_CLASS':
     'rest_framework.versioning.NamespaceVersioning',
     'DEFAULT_PAGINATION_CLASS':

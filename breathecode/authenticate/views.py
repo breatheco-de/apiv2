@@ -16,6 +16,7 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from urllib.parse import urlencode, parse_qs, urlparse, parse_qsl
 from django.shortcuts import render, redirect
 from django.http import HttpResponseRedirect
+from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 from django.utils import timezone
 from datetime import datetime
@@ -49,6 +50,7 @@ logger = logging.getLogger(__name__)
 
 
 class TemporalTokenView(ObtainAuthToken):
+    schema = AutoSchema()
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -67,6 +69,7 @@ class TemporalTokenView(ObtainAuthToken):
 
 
 class AcademyTokenView(ObtainAuthToken):
+    schema = AutoSchema()
     permission_classes = [IsAuthenticated]
 
     @capable_of('get_academy_token')
@@ -144,7 +147,8 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     user__id=user_id_or_email, academy_id=academy_id).first()
             else:
                 item = ProfileAcademy.objects.filter(
-                    user__email=user_id_or_email, academy_id=academy_id).first()
+                    user__email=user_id_or_email,
+                    academy_id=academy_id).first()
 
             if item is None:
                 raise ValidationException(
@@ -338,11 +342,12 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if user_id_or_email is not None:
             profile = None
             if user_id_or_email.isnumeric():
-                profile = ProfileAcademy.objects.filter(academy__id=academy_id,
-                                                        user__id=user_id_or_email).first()
+                profile = ProfileAcademy.objects.filter(
+                    academy__id=academy_id, user__id=user_id_or_email).first()
             else:
-                profile = ProfileAcademy.objects.filter(academy__id=academy_id,
-                                                        user__email=user_id_or_email).first()
+                profile = ProfileAcademy.objects.filter(
+                    academy__id=academy_id,
+                    user__email=user_id_or_email).first()
 
             if profile is None:
                 raise ValidationException("Profile not found", 404)
@@ -451,6 +456,8 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
 
 class LoginView(ObtainAuthToken):
+    schema = AutoSchema()
+
     def post(self, request, *args, **kwargs):
         # delete expired tokens
         utc_now = timezone.now()
@@ -542,6 +549,7 @@ def get_users(request):
     users = UserSmallSerializer(query, many=True)
     return Response(users.data)
 
+
 @api_view(['GET'])
 def get_user_by_id_or_email(request, id_or_email):
 
@@ -552,7 +560,9 @@ def get_user_by_id_or_email(request, id_or_email):
         query = User.objects.filter(email=id_or_email).first()
 
     if query is None:
-        raise ValidationException("User with that id or email does not exists", slug="user-dont-exists", code=404)
+        raise ValidationException("User with that id or email does not exists",
+                                  slug="user-dont-exists",
+                                  code=404)
 
     users = UserSmallSerializer(query, many=False)
     return Response(users.data)

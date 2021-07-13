@@ -9,6 +9,7 @@ class AcademySmallSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
 
+
 class UserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
 

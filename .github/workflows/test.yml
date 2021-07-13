@@ -6,9 +6,12 @@ name: Test
 on:
   push: {}
   pull_request: {}
+
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.COVERALLS_TOKEN }}
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python 3.9
@@ -20,7 +23,24 @@ jobs:
           PYTHONUNBUFFERED=1
           python -m pip install --upgrade pip
           python -m pip install pipenv
-          pipenv install --system --deploy --ignore-pipfile
+          pipenv install --dev --system --deploy --ignore-pipfile
       - name: Test with pytest
         run: |
-          pipenv run test
+          pipenv run cov_ci
+
+      - uses: codecov/codecov-action@v1
+        if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }} # not required for public repos
+          files: ./coverage.xml # optional
+          flags: unittests # optional
+          name: codecov-umbrella # optional
+          fail_ci_if_error: true # optional (default = false)
+          verbose: true # optional (default = false)
+
+      - name: Upload coverage data to coveralls.io
+        if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
+        run: |
+          coveralls --service=github
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
