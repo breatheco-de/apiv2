@@ -129,11 +129,15 @@ class AnswerMeView(APIView):
     """
     def put(self, request, answer_id=None):
         if answer_id is None:
-            raise serializers.ValidationError("Missing answer_id", code=400)
+            raise ValidationException("Missing answer_id",
+                                      slug='missing-answer-id')
 
         answer = Answer.objects.filter(user=request.user, id=answer_id).first()
         if answer is None:
-            raise NotFound('This survey does not exist for this user')
+            raise ValidationException(
+                'This survey does not exist for this user',
+                code=404,
+                slug='answer-of-other-user-or-not-exists')
 
         serializer = AnswerPUTSerializer(answer,
                                          data=request.data,
@@ -148,11 +152,15 @@ class AnswerMeView(APIView):
 
     def get(self, request, answer_id=None):
         if answer_id is None:
-            raise serializers.ValidationError("Missing answer_id", code=404)
+            raise ValidationException("Missing answer_id",
+                                      slug='missing-answer-id')
 
         answer = Answer.objects.filter(user=request.user, id=answer_id).first()
         if answer is None:
-            raise NotFound('This survey does not exist for this user')
+            raise ValidationException(
+                'This survey does not exist for this user',
+                code=404,
+                slug='answer-of-other-user-or-not-exists')
 
         serializer = BigAnswerSerializer(answer)
         return Response(serializer.data, status=status.HTTP_200_OK)

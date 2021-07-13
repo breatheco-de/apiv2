@@ -34,7 +34,7 @@ def build_question(answer):
         question["highest"] = strings[answer.lang]["mentor"]["highest"]
     elif answer.cohort is not None:
         question["title"] = strings[answer.lang]["cohort"]["title"].format(
-            answer.cohort.syllabus.certificate.name)
+            answer.cohort.specialty_mode.name)
         question["lowest"] = strings[answer.lang]["cohort"]["lowest"]
         question["highest"] = strings[answer.lang]["cohort"]["highest"]
     elif answer.academy is not None:

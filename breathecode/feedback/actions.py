@@ -64,9 +64,9 @@ def send_question(user, cohort=None):
             answer.cohort = _cohort
 
     if answer.cohort is None:
-        message = 'Impossible to determine the student cohort, maybe it has more than one, or cero.'
-        logger.info(message)
-        raise Exception(message)
+        raise ValidationException(
+            'Impossible to determine the student cohort, maybe it has more than one, or cero.',
+            slug='without-cohort-or-cannot-determine-cohort')
     else:
         answer.lang = answer.cohort.language
         answer.save()
@@ -74,21 +74,17 @@ def send_question(user, cohort=None):
     has_slackuser = hasattr(user, 'slackuser')
 
     if not user.email and not has_slackuser:
-        message = f'User not have email and slack, this survey cannot be send: {str(user.id)}'
-        logger.info(message)
-        raise Exception(message)
+        raise ValidationException(
+            f'User not have email and slack, this survey cannot be send: {str(user.id)}',
+            slug='without-email-or-slack-user')
 
-    # if not answer.cohort.syllabus.certificate.name:
-    if not answer.cohort.syllabus:
-        message = 'Cohort not have one Syllabus'
-        logger.info(message)
-        raise Exception(message)
+    if not answer.cohort.syllabus_version:
+        raise ValidationException('Cohort not have one SyllabusVersion',
+                                  slug='cohort-without-syllabus-version')
 
-        # if not answer.cohort.syllabus.certificate.name:
-    if not answer.cohort.syllabus.certificate:
-        message = f'Syllabus not have one Certificate'
-        logger.info(message)
-        raise Exception(message)
+    if not answer.cohort.specialty_mode:
+        raise ValidationException('Cohort not have one SpecialtyMode',
+                                  slug='cohort-without-specialty-mode')
 
     question_was_sent_previously = Answer.objects.filter(
         cohort=answer.cohort, user=user, status='SENT').count()

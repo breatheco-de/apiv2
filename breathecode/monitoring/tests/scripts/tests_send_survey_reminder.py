@@ -26,6 +26,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         model = self.generate_models(
             academy=True,
+            skip_cohort=True,
             monitor_script=True,
             monitor_script_kwargs=monitor_script_kwargs)
 

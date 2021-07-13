@@ -104,27 +104,34 @@ def generate_certificate(user, cohort=None, layout=None):
 
     try:
         uspe.academy = cohort.academy
-        tasks = Task.objects.filter(user__id=user.id, task_type='PROJECT')
-        tasks_count_pending = sum(task.revision_status == 'PENDING'
-                                  for task in tasks)
+        tasks_count_pending = Task.objects.filter(
+            user__id=user.id, task_type='PROJECT',
+            revision_status='PENDING').count()
 
         if tasks_count_pending:
-            raise ValidationException(f'The student has {tasks_count_pending} '
-                                      'pending tasks')
+            raise ValidationException(
+                f'The student has {tasks_count_pending} '
+                'pending tasks',
+                slug='with-pending-tasks')
 
         if not (cohort_user.finantial_status == FULLY_PAID
                 or cohort_user.finantial_status == UP_TO_DATE):
-            raise ValidationException('The student must have finantial status '
-                                      'FULLY_PAID or UP_TO_DATE')
+            raise ValidationException(
+                'The student must have finantial status '
+                'FULLY_PAID or UP_TO_DATE',
+                slug='bad-finantial-status')
 
         if cohort_user.educational_status != 'GRADUATED':
-            raise ValidationException('The student must have educational '
-                                      'status GRADUATED')
+            raise ValidationException(
+                'The student must have educational '
+                'status GRADUATED',
+                slug='bad-educational-status')
 
         if cohort.current_day != cohort.specialty_mode.duration_in_days:
             raise ValidationException(
                 'Cohort current day should be '
-                f'{cohort.specialty_mode.duration_in_days}')
+                f'{cohort.specialty_mode.duration_in_days}',
+                slug='cohort-not-finished')
 
         if cohort.stage != 'ENDED':
             raise ValidationException(

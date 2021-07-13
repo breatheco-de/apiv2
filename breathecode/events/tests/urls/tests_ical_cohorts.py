@@ -28,6 +28,7 @@ class AcademyCohortTestSuite(EventTestCase):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
         model = self.generate_models(academy=True,
+                                     skip_cohort=True,
                                      device_id=True,
                                      device_id_kwargs=device_id_kwargs)
 
@@ -1053,6 +1054,7 @@ class AcademyCohortTestSuite(EventTestCase):
         }
 
         base = self.generate_models(academy=True,
+                                    skip_cohort=True,
                                     device_id=True,
                                     device_id_kwargs=device_id_kwargs)
 
