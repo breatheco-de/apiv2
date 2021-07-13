@@ -20,10 +20,10 @@ from ..mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_client_mock,
 class CertificateTestCase(APITestCase, DevelopmentEnvironment):
     """APITestCase with Certificate models"""
     token = '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
-    token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
+    token_pattern = re.compile('^[0-9a-zA-Z]{,40}$')
     preview_url_pattern = re.compile(
-        "^https:\/\/storage\.cloud\.google\.com\/certificates-"
-        "breathecode\/[0-9a-zA-Z]{,40}$")
+        '^https:\/\/storage\.cloud\.google\.com\/certificates-'
+        'breathecode\/[0-9a-zA-Z]{,40}$')
 
     def check_all_token(self, models: dict):
         return [
@@ -35,9 +35,9 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
         # return [model for model in models if "preview_url" in models and self.preview_url_pattern.match(model['preview_url'])]
         _models = []
         for model in models:
-            if "preview_url" in model:
+            if 'preview_url' in model:
                 model.pop(
-                    "preview_url"
+                    'preview_url'
                 )  # and self.preview_url_pattern.match(model['preview_url'])]
             _models.append(model)
 
@@ -175,7 +175,7 @@ class CertificateTestCase(APITestCase, DevelopmentEnvironment):
             models['user_specialty'] = mixer.blend(
                 'certificate.UserSpecialty',
                 token=self.token,
-                preview_url="https://asdasd.com")
+                preview_url='https://asdasd.com')
 
         if not 'user' in models and (user or cohort_user or task):
             models['user'] = mixer.blend('auth.User')

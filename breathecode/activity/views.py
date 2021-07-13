@@ -21,16 +21,16 @@ from .utils import (generate_created_at, validate_activity_fields,
 # https://googleapis.dev/python/datastore/latest/index.html
 
 ACTIVITIES = {
-    "breathecode-login": 'Every time it logs in',
-    "online-platform-registration": 'First day using breathecode',
-    "public-event-attendance": 'Attendy on an eventbrite event',
-    "classroom-attendance": 'When the student attent to class',
-    "classroom-unattendance": 'When the student miss class',
-    "lesson-opened": 'When a lessons is opened on the platform',
-    "office-attendance": 'When the office raspberry pi detects the student',
-    "nps-survey-answered": 'When a nps survey is answered by the student',
-    "exercise-success": 'When student successfuly tests exercise',
-    "academy-registration": 'When student successfuly join to academy',
+    'breathecode-login': 'Every time it logs in',
+    'online-platform-registration': 'First day using breathecode',
+    'public-event-attendance': 'Attendy on an eventbrite event',
+    'classroom-attendance': 'When the student attent to class',
+    'classroom-unattendance': 'When the student miss class',
+    'lesson-opened': 'When a lessons is opened on the platform',
+    'office-attendance': 'When the office raspberry pi detects the student',
+    'nps-survey-answered': 'When a nps survey is answered by the student',
+    'exercise-success': 'When student successfuly tests exercise',
+    'academy-registration': 'When student successfuly join to academy',
 }
 
 ACTIVITY_PUBLIC_SLUGS = [
@@ -128,7 +128,7 @@ class ActivityClassroomView(APIView):
                 Q(role='TEACHER') | Q(role='ASSISTANT')).first()
         if is_teacher is None:
             raise ValidationException(
-                "Only teachers or assistants from this cohort can report classroom activities on the student timeline"
+                'Only teachers or assistants from this cohort can report classroom activities on the student timeline'
             )
 
         data = request.data
@@ -144,8 +144,8 @@ class ActivityClassroomView(APIView):
                     Q(cohort__id=cohort_id)
                     | Q(cohort__slug=cohort_id)).first()
             if cohort_user is None:
-                raise ValidationException("Student not found in this cohort",
-                                          slug="not-found-in-cohort")
+                raise ValidationException('Student not found in this cohort',
+                                          slug='not-found-in-cohort')
 
             new_activities.append(
                 add_student_activity(cohort_user.user, activity, academy_id))

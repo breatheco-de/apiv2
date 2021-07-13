@@ -35,7 +35,7 @@ class Application(models.Model):
         default=None,
         null=True,
         help_text=
-        "Please pick an academy first to be able to see the available slack channels to notify"
+        'Please pick an academy first to be able to see the available slack channels to notify'
     )
 
     status = models.CharField(max_length=20,

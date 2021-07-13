@@ -105,165 +105,165 @@ class AcademyEventTestSuite(CypressTestCase):
 
         self.assertEqual(self.all_capability_dict(), [
             {
-                "slug": "read_my_academy",
-                "description": "Read your academy information"
+                'slug': 'read_my_academy',
+                'description': 'Read your academy information'
             },
             {
-                "slug":
-                "crud_my_academy",
-                "description":
-                "Read, or update your academy information (very high level, almost the academy admin)"
+                'slug':
+                'crud_my_academy',
+                'description':
+                'Read, or update your academy information (very high level, almost the academy admin)'
             },
             {
-                "slug":
-                "crud_member",
-                "description":
-                "Create, update or delete academy members (very high level, almost the academy admin)"
+                'slug':
+                'crud_member',
+                'description':
+                'Create, update or delete academy members (very high level, almost the academy admin)'
             },
             {
-                "slug": "read_member",
-                "description": "Read academy staff member information"
+                'slug': 'read_member',
+                'description': 'Read academy staff member information'
             },
             {
-                "slug": "crud_student",
-                "description": "Create, update or delete students"
+                'slug': 'crud_student',
+                'description': 'Create, update or delete students'
             },
             {
-                "slug": "read_student",
-                "description": "Read student information"
+                'slug': 'read_student',
+                'description': 'Read student information'
             },
             {
-                "slug": "read_invite",
-                "description": "Read invites from users"
+                'slug': 'read_invite',
+                'description': 'Read invites from users'
             },
             {
-                "slug": "read_assignment",
-                "description": "Read assigment information"
+                'slug': 'read_assignment',
+                'description': 'Read assigment information'
             },
             {
-                "slug": "crud_assignment",
-                "description": "Update assignments"
+                'slug': 'crud_assignment',
+                'description': 'Update assignments'
             },
             {
-                "slug": "read_certificate",
-                "description": "List and read all academy certificates"
+                'slug': 'read_certificate',
+                'description': 'List and read all academy certificates'
             },
             {
-                "slug": "crud_certificate",
-                "description": "Create, update or delete student certificates"
+                'slug': 'crud_certificate',
+                'description': 'Create, update or delete student certificates'
             },
             {
-                "slug": "read_layout",
-                "description": "Read layouts to generate new certificates"
+                'slug': 'read_layout',
+                'description': 'Read layouts to generate new certificates'
             },
             {
-                "slug": "read_syllabus",
-                "description": "List and read syllabus information"
+                'slug': 'read_syllabus',
+                'description': 'List and read syllabus information'
             },
             {
-                "slug": "crud_syllabus",
-                "description": "Create, update or delete syllabus versions"
+                'slug': 'crud_syllabus',
+                'description': 'Create, update or delete syllabus versions'
             },
             {
-                "slug": "read_event",
-                "description": "List and retrieve event information"
+                'slug': 'read_event',
+                'description': 'List and retrieve event information'
             },
             {
-                "slug": "crud_event",
-                "description": "Create, update or delete event information"
+                'slug': 'crud_event',
+                'description': 'Create, update or delete event information'
             },
             {
-                "slug":
-                "read_cohort",
-                "description":
-                "List all the cohorts or a single cohort information"
+                'slug':
+                'read_cohort',
+                'description':
+                'List all the cohorts or a single cohort information'
             },
             {
-                "slug": "crud_cohort",
-                "description": "Create, update or delete cohort info"
+                'slug': 'crud_cohort',
+                'description': 'Create, update or delete cohort info'
             },
             {
-                "slug": "read_eventcheckin",
-                "description": "List and read all the event_checkins"
+                'slug': 'read_eventcheckin',
+                'description': 'List and read all the event_checkins'
             },
             {
-                "slug": "read_survey",
-                "description": "List all the nps answers"
+                'slug': 'read_survey',
+                'description': 'List all the nps answers'
             },
             {
-                "slug": "crud_survey",
-                "description": "Create, update or delete surveys"
+                'slug': 'crud_survey',
+                'description': 'Create, update or delete surveys'
             },
             {
-                "slug": "read_nps_answers",
-                "description": "List all the nps answers"
+                'slug': 'read_nps_answers',
+                'description': 'List all the nps answers'
             },
             {
-                "slug": "read_lead",
-                "description": "List all the leads"
+                'slug': 'read_lead',
+                'description': 'List all the leads'
             },
             {
-                "slug": "crud_lead",
-                "description": "Create, update or delete academy leads"
+                'slug': 'crud_lead',
+                'description': 'Create, update or delete academy leads'
             },
             {
-                "slug": "read_media",
-                "description": "List all the medias"
+                'slug': 'read_media',
+                'description': 'List all the medias'
             },
             {
-                "slug": "crud_media",
-                "description": "Create, update or delete academy medias"
+                'slug': 'crud_media',
+                'description': 'Create, update or delete academy medias'
             },
             {
-                "slug": "read_media_resolution",
-                "description": "List all the medias resolutions"
+                'slug': 'read_media_resolution',
+                'description': 'List all the medias resolutions'
             },
             {
-                "slug": "crud_media_resolution",
-                "description":
-                "Create, update or delete academy media resolutions"
+                'slug': 'crud_media_resolution',
+                'description':
+                'Create, update or delete academy media resolutions'
             },
             {
-                "slug":
-                "read_cohort_activity",
-                "description":
-                "Read low level activity in a cohort (attendancy, etc.)"
+                'slug':
+                'read_cohort_activity',
+                'description':
+                'Read low level activity in a cohort (attendancy, etc.)'
             },
             {
-                "slug": "generate_academy_token",
-                "description":
-                "Create a new token only to be used by the academy"
+                'slug': 'generate_academy_token',
+                'description':
+                'Create a new token only to be used by the academy'
             },
             {
-                "slug": "get_academy_token",
-                "description": "Read the academy token"
+                'slug': 'get_academy_token',
+                'description': 'Read the academy token'
             },
             {
-                "slug":
-                "send_reset_password",
-                "description":
-                "Generate a temporal token and resend forgot password link"
+                'slug':
+                'send_reset_password',
+                'description':
+                'Generate a temporal token and resend forgot password link'
             },
             {
-                "slug": "read_activity",
-                "description": "List all the user activities"
+                'slug': 'read_activity',
+                'description': 'List all the user activities'
             },
             {
-                "slug": "crud_activity",
-                "description": "Create, update or delete a user activities"
+                'slug': 'crud_activity',
+                'description': 'Create, update or delete a user activities'
             },
             {
-                "slug": "read_assigment",
-                "description": "List all the assigments"
+                'slug': 'read_assigment',
+                'description': 'List all the assigments'
             },
             {
-                "slug": "crud_assigment",
-                "description": "Create, update or delete a assigment"
+                'slug': 'crud_assigment',
+                'description': 'Create, update or delete a assigment'
             },
             {
-                "slug":
-                "classroom_activity",
-                "description":
-                "To report student activities during the classroom or cohorts (Specially meant for teachers)"
+                'slug':
+                'classroom_activity',
+                'description':
+                'To report student activities during the classroom or cohorts (Specially meant for teachers)'
             },
         ])

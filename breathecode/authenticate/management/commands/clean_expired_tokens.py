@@ -10,4 +10,4 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         count = delete_tokens()
-        print(f"{count} tokens were deleted")
+        print(f'{count} tokens were deleted')

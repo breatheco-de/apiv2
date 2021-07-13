@@ -3,7 +3,7 @@
 
 #### Sync academies
 ```
-python manage.py sync_admissions academies 
+python manage.py sync_admissions academies
 ```
 
 Override previous academies

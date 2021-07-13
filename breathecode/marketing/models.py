@@ -28,14 +28,14 @@ class ActiveCampaignAcademy(models.Model):
         choices=SYNC_STATUS,
         default=INCOMPLETED,
         help_text=
-        "Automatically set when interacting with the Active Campaign API")
+        'Automatically set when interacting with the Active Campaign API')
     sync_message = models.CharField(
         max_length=100,
         blank=True,
         null=True,
         default=None,
         help_text=
-        "Contains any success or error messages depending on the status")
+        'Contains any success or error messages depending on the status')
     last_interaction_at = models.DateTimeField(default=None,
                                                blank=True,
                                                null=True)
@@ -44,16 +44,16 @@ class ActiveCampaignAcademy(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f"{self.academy.name}"
-
-
-"""
-The academy alias is great to accept several utm_location or location slug for the same academy in active campaign or breathecode
-when a new lead applies to the academy it will look for matching alias to find the lead academy.
-"""
+        return f'{self.academy.name}'
 
 
 class AcademyAlias(models.Model):
+    """
+    The academy alias is great to accept several utm_location or location slug
+    for the same academy in active campaign or breathecode when a new lead
+    applies to the academy it will look for matching alias to find the lead
+    academy.
+    """
     slug = models.SlugField(primary_key=True)
     active_campaign_slug = models.SlugField()
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -75,19 +75,19 @@ class Automation(models.Model):
         blank=True,
         default='',
         help_text=
-        "unique string id that is used to connect incoming leads to automations"
+        'unique string id that is used to connect incoming leads to automations'
     )
     name = models.CharField(max_length=100)
     acp_id = models.PositiveIntegerField(
-        help_text="ID asigned in active campaign")
+        help_text='ID asigned in active campaign')
     status = models.CharField(max_length=1,
                               choices=AUTOMATION_STATUS,
                               default=UKNOWN,
-                              help_text="2 = inactive, 1=active")
+                              help_text='2 = inactive, 1=active')
     entered = models.PositiveSmallIntegerField(
-        help_text="How many contacts have entered")
+        help_text='How many contacts have entered')
     exited = models.PositiveSmallIntegerField(
-        help_text="How many contacts have exited")
+        help_text='How many contacts have exited')
 
     ac_academy = models.ForeignKey(ActiveCampaignAcademy,
                                    on_delete=models.CASCADE,
@@ -98,8 +98,8 @@ class Automation(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        tag_imporance = self.slug if self.slug != '' else "unknown"
-        return f"{tag_imporance} -> {self.name}"
+        tag_imporance = self.slug if self.slug != '' else 'unknown'
+        return f'{tag_imporance} -> {self.name}'
 
 
 STRONG = 'STRONG'
@@ -125,7 +125,7 @@ class Tag(models.Model):
         "The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON"
     )
     acp_id = models.IntegerField(
-        help_text="The id coming from active campaign")
+        help_text='The id coming from active campaign')
     subscribers = models.IntegerField()
     automation = models.ForeignKey(
         Automation,
@@ -133,7 +133,7 @@ class Tag(models.Model):
         null=True,
         default=None,
         help_text=
-        "Leads that contain this tag will be asociated to this automation")
+        'Leads that contain this tag will be asociated to this automation')
 
     ac_academy = models.ForeignKey(ActiveCampaignAcademy,
                                    on_delete=models.CASCADE,
@@ -173,7 +173,7 @@ class Contact(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.first_name + " " + self.last_name
+        return self.first_name + ' ' + self.last_name
 
 
 PENDING = 'PENDING'
@@ -217,6 +217,17 @@ class FormEntry(models.Model):
     fb_form_id = models.BigIntegerField(null=True, default=None, blank=True)
     fb_adgroup_id = models.BigIntegerField(null=True, default=None, blank=True)
     fb_ad_id = models.BigIntegerField(null=True, default=None, blank=True)
+
+    ac_contact_id = models.CharField(max_length=20,
+                                     null=True,
+                                     default=None,
+                                     blank=True,
+                                     help_text='Active Campaign Contact ID')
+    ac_deal_id = models.CharField(max_length=20,
+                                  null=True,
+                                  default=None,
+                                  blank=True,
+                                  help_text='Active Campaign Deal ID')
 
     first_name = models.CharField(max_length=150, default='')
     last_name = models.CharField(max_length=150, default='', blank=True)
@@ -343,39 +354,39 @@ class FormEntry(models.Model):
                                      null=True,
                                      default=None,
                                      blank=True,
-                                     help_text="Active Campaign Contact ID")
+                                     help_text='Active Campaign Contact ID')
     ac_deal_id = models.CharField(max_length=20,
                                   null=True,
                                   default=None,
                                   blank=True,
-                                  help_text="Active Campaign Deal ID")
+                                  help_text='Active Campaign Deal ID')
     won_at = models.DateTimeField(default=None, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.first_name + " " + self.last_name
+        return self.first_name + ' ' + self.last_name
 
     def toFormData(self):
         _entry = {
-            "id": self.id,
-            "first_name": self.first_name,
-            "last_name": self.last_name,
-            "phone": self.phone,
-            "email": self.email,
-            "location": self.location,
-            "referral_key": self.referral_key,
-            "course": self.course,
-            "tags": self.tags,
-            "automations": self.automations,
-            "language": self.language,
-            "city": self.city,
-            "country": self.country,
-            "utm_url": self.utm_url,
-            "client_comments": self.client_comments,
-            "latitude": self.longitude,
-            "longitude": self.latitude,
+            'id': self.id,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'phone': self.phone,
+            'email': self.email,
+            'location': self.location,
+            'referral_key': self.referral_key,
+            'course': self.course,
+            'tags': self.tags,
+            'automations': self.automations,
+            'language': self.language,
+            'city': self.city,
+            'country': self.country,
+            'utm_url': self.utm_url,
+            'client_comments': self.client_comments,
+            'latitude': self.longitude,
+            'longitude': self.latitude,
         }
         return _entry
 
@@ -422,7 +433,7 @@ class ShortLink(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f"{str(self.hits)} {self.slug}"
+        return f'{str(self.hits)} {self.slug}'
 
 
 PENDING = 'PENDING'
@@ -441,15 +452,15 @@ class ActiveCampaignWebhook(models.Model):
                                     blank=True,
                                     null=True,
                                     default=None)
-    run_at = models.DateTimeField(help_text="Date/time that the webhook ran")
+    run_at = models.DateTimeField(help_text='Date/time that the webhook ran')
     initiated_by = models.CharField(
         max_length=100,
         help_text=
-        "Source/section of the software that triggered the webhook to run")
+        'Source/section of the software that triggered the webhook to run')
 
     payload = models.JSONField(
         help_text=
-        "Extra info that came on the request, it varies depending on the webhook type"
+        'Extra info that came on the request, it varies depending on the webhook type'
     )
 
     ac_academy = models.ForeignKey(ActiveCampaignAcademy,

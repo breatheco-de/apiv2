@@ -26,8 +26,8 @@ def track_assesment_open(request, user_assessment_id=None):
         ass.save()
 
     image = Image.new('RGB', (1, 1))
-    response = HttpResponse(content_type="image/png")
-    image.save(response, "PNG")
+    response = HttpResponse(content_type='image/png')
+    image.save(response, 'PNG')
     return response
 
 
@@ -47,7 +47,7 @@ class GetAssessmentView(APIView):
 
             item = Assessment.objects.filter(slug=assessment_slug).first()
             if item is None:
-                raise ValidationException("Assessment not found", 404)
+                raise ValidationException('Assessment not found', 404)
 
             if lang is not None and item.lang != lang:
                 item = item.translations.filter(lang=lang).first()

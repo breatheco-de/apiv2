@@ -6,9 +6,9 @@ from ...models import Profile
 
 logger = logging.getLogger(__name__)
 
-API_URL = os.getenv("API_URL", "")
-HOST = os.environ.get("OLD_BREATHECODE_API")
-DATETIME_FORMAT = "%Y-%m-%d"
+API_URL = os.getenv('API_URL', '')
+HOST = os.environ.get('OLD_BREATHECODE_API')
+DATETIME_FORMAT = '%Y-%m-%d'
 
 
 class Command(BaseCommand):
@@ -44,20 +44,20 @@ class Command(BaseCommand):
 
     def clean_expired_tokens(self, options):
         count = delete_tokens()
-        print(f"{count} tokens were deleted")
+        print(f'{count} tokens were deleted')
 
     def sanitize_profiles(self, options):
         profile = Profile.objects.all()
 
         for p in profile:
-            logger.debug("Sanitizing " + p.user.email)
-            if p.avatar_url is None or p.avatar_url == "":
-                p.avatar_url = API_URL + "/static/img/avatar.png"
+            logger.debug('Sanitizing ' + p.user.email)
+            if p.avatar_url is None or p.avatar_url == '':
+                p.avatar_url = API_URL + '/static/img/avatar.png'
 
             if p.github_username is None:
-                p.github_username = ""
+                p.github_username = ''
             else:
-                matches = re.findall(r"github.com\/(\w+)", p.github_username)
+                matches = re.findall(r'github.com\/(\w+)', p.github_username)
                 if len(matches) > 0:
                     p.github_username = matches[0]
 

@@ -67,12 +67,12 @@ def get_events(request):
 
     if 'academy' in request.GET:
         value = request.GET.get('academy')
-        lookup['academy__slug__in'] = value.split(",")
+        lookup['academy__slug__in'] = value.split(',')
 
     lookup['starting_at__gte'] = timezone.now()
     if 'past' in request.GET:
-        if request.GET.get('past') == "true":
-            lookup.pop("starting_at__gte")
+        if request.GET.get('past') == 'true':
+            lookup.pop('starting_at__gte')
             lookup['starting_at__lte'] = timezone.now()
 
     items = items.filter(**lookup).order_by('starting_at')
@@ -104,8 +104,8 @@ class EventView(APIView):
 
         lookup['starting_at__gte'] = timezone.now()
         if 'past' in self.request.GET:
-            if self.request.GET.get('past') == "true":
-                lookup.pop("starting_at__gte")
+            if self.request.GET.get('past') == 'true':
+                lookup.pop('starting_at__gte')
                 lookup['starting_at__lte'] = timezone.now()
 
         items = items.filter(**lookup).order_by('-created_at')
@@ -154,7 +154,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
             single_event = Event.objects.filter(
                 id=event_id, academy__id=academy_id).first()
             if single_event is None:
-                raise ValidationException("Event not found", 404)
+                raise ValidationException('Event not found', 404)
 
             serializer = EventSmallSerializer(single_event, many=False)
             self.cache.set(serializer.data, **cache_kwargs)
@@ -176,8 +176,8 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
             lookup['starting_at__gte'] = timezone.now()
         elif past:
             if 'starting_at__gte' in lookup:
-                lookup.pop("starting_at__gte")
-            if past == "true":
+                lookup.pop('starting_at__gte')
+            if past == 'true':
                 lookup['starting_at__lte'] = timezone.now()
 
         items = items.filter(**lookup).order_by('-starting_at')
@@ -197,13 +197,13 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
     def post(self, request, format=None, academy_id=None):
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
-            raise ValidationException(f"Academy {academy_id} not found")
+            raise ValidationException(f'Academy {academy_id} not found')
 
         data = {}
         for key in request.data.keys():
             data[key] = request.data.get(key)
 
-        serializer = EventSerializer(data={**data, "academy": academy.id})
+        serializer = EventSerializer(data={**data, 'academy': academy.id})
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
@@ -216,7 +216,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
                                        academy__id=academy_id).first()
         if already is None:
             raise ValidationException(
-                f"Event not found for this academy {academy_id}")
+                f'Event not found for this academy {academy_id}')
 
         serializer = EventSerializer(already, data=request.data)
         if serializer.is_valid():
@@ -271,12 +271,12 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
 
         start = request.GET.get('start', None)
         if start is not None:
-            start_date = datetime.strptime(start, "%Y-%m-%d").date()
+            start_date = datetime.strptime(start, '%Y-%m-%d').date()
             items = items.filter(created_at__gte=start_date)
 
         end = request.GET.get('end', None)
         if end is not None:
-            end_date = datetime.strptime(end, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end, '%Y-%m-%d').date()
             items = items.filter(created_at__lte=end_date)
 
         items = items.filter(**lookup).order_by('-created_at')
@@ -357,7 +357,7 @@ class ICalStudentView(APIView):
         items = Cohort.objects.all()
 
         if not User.objects.filter(id=user_id).count():
-            raise ValidationException("Student not exist",
+            raise ValidationException('Student not exist',
                                       404,
                                       slug='student-not-exist')
 
@@ -461,8 +461,8 @@ class ICalCohortsView(APIView):
         ids = request.GET.get('academy', '')
         slugs = request.GET.get('academy_slug', '')
 
-        ids = ids.split(",") if ids else []
-        slugs = slugs.split(",") if slugs else []
+        ids = ids.split(',') if ids else []
+        slugs = slugs.split(',') if slugs else []
 
         if ids:
             items = Cohort.objects.filter(academy__id__in=ids).order_by('id')
@@ -476,12 +476,12 @@ class ICalCohortsView(APIView):
 
         if not ids and not slugs:
             raise ValidationException(
-                "You need to specify at least one academy or academy_slug (comma separated) in the querystring"
+                'You need to specify at least one academy or academy_slug (comma separated) in the querystring'
             )
 
         if (Academy.objects.filter(id__in=ids).count() != len(ids) or
                 Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
-            raise ValidationException("Some academy not exist")
+            raise ValidationException('Some academy not exist')
 
         items = items.exclude(stage='DELETED')
 
@@ -634,8 +634,8 @@ class ICalEventView(APIView):
         ids = request.GET.get('academy', '')
         slugs = request.GET.get('academy_slug', '')
 
-        ids = ids.split(",") if ids else []
-        slugs = slugs.split(",") if slugs else []
+        ids = ids.split(',') if ids else []
+        slugs = slugs.split(',') if slugs else []
 
         if ids:
             items = Event.objects.filter(academy__id__in=ids,
@@ -650,12 +650,12 @@ class ICalEventView(APIView):
 
         if not ids and not slugs:
             raise ValidationException(
-                "You need to specify at least one academy or academy_slug (comma separated) in the querystring"
+                'You need to specify at least one academy or academy_slug (comma separated) in the querystring'
             )
 
         if (Academy.objects.filter(id__in=ids).count() != len(ids) or
                 Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
-            raise ValidationException("Some academy not exist")
+            raise ValidationException('Some academy not exist')
 
         upcoming = request.GET.get('upcoming')
         if upcoming == 'true':

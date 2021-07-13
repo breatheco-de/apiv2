@@ -83,7 +83,7 @@ class Asset(models.Model):
     external = models.BooleanField(
         default=False,
         help_text=
-        "External assets will open in a new window, they are not built using breathecode or learnpack tecnology"
+        'External assets will open in a new window, they are not built using breathecode or learnpack tecnology'
     )
 
     interactive = models.BooleanField(default=False)
@@ -94,7 +94,7 @@ class Asset(models.Model):
     duration = models.IntegerField(null=True,
                                    blank=True,
                                    default=None,
-                                   help_text="In hours")
+                                   help_text='In hours')
 
     difficulty = models.CharField(max_length=20,
                                   choices=DIFFICULTY,

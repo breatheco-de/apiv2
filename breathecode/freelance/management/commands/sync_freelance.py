@@ -8,4 +8,4 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         # sync_tags()
-        self.stdout.write(self.style.SUCCESS("Successfully sync tags"))
+        self.stdout.write(self.style.SUCCESS('Successfully sync tags'))

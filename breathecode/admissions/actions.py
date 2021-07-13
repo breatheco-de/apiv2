@@ -2,7 +2,7 @@ import logging
 from django.db.models.query_utils import Q
 from breathecode.services.google_cloud import Storage
 
-BUCKET_NAME = "admissions-breathecode"
+BUCKET_NAME = 'admissions-breathecode'
 logger = logging.getLogger(__name__)
 
 

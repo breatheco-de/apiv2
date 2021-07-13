@@ -72,15 +72,15 @@ def get_cohorts(request, id=None):
 
     academy = request.GET.get('academy', None)
     if academy is not None:
-        items = items.filter(academy__slug__in=academy.split(","))
+        items = items.filter(academy__slug__in=academy.split(','))
 
     location = request.GET.get('location', None)
     if location is not None:
-        items = items.filter(academy__slug__in=location.split(","))
+        items = items.filter(academy__slug__in=location.split(','))
 
     sort = request.GET.get('sort', None)
-    if sort is None or sort == "":
-        sort = "-kickoff_date"
+    if sort is None or sort == '':
+        sort = '-kickoff_date'
 
     items = items.order_by(sort)
 
@@ -94,7 +94,7 @@ class UserMeView(APIView):
 
         try:
             if isinstance(request.user, AnonymousUser):
-                raise PermissionDenied("There is not user")
+                raise PermissionDenied('There is not user')
 
         except User.DoesNotExist:
             raise PermissionDenied("You don't have a user")
@@ -138,7 +138,7 @@ class UserView(APIView):
     def put(self, request):
         serializer = UserDJangoRestSerializer(request.user,
                                               data=request.data,
-                                              context={"request": request})
+                                              context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -154,29 +154,29 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         roles = request.GET.get('roles', None)
         if roles is not None:
-            items = items.filter(role__in=roles.split(","))
+            items = items.filter(role__in=roles.split(','))
 
         finantial_status = request.GET.get('finantial_status', None)
         if finantial_status is not None:
             items = items.filter(
-                finantial_status__in=finantial_status.split(","))
+                finantial_status__in=finantial_status.split(','))
 
         educational_status = request.GET.get('educational_status', None)
         if educational_status is not None:
             items = items.filter(
-                educational_status__in=educational_status.split(","))
+                educational_status__in=educational_status.split(','))
 
         academy = request.GET.get('academy', None)
         if academy is not None:
-            items = items.filter(cohort__academy__slug__in=academy.split(","))
+            items = items.filter(cohort__academy__slug__in=academy.split(','))
 
         cohorts = request.GET.get('cohorts', None)
         if cohorts is not None:
-            items = items.filter(cohort__slug__in=cohorts.split(","))
+            items = items.filter(cohort__slug__in=cohorts.split(','))
 
         users = request.GET.get('users', None)
         if users is not None:
-            items = items.filter(user__id__in=users.split(","))
+            items = items.filter(user__id__in=users.split(','))
 
         serializer = GETCohortUserSerializer(items, many=True)
         return Response(serializer.data)
@@ -261,7 +261,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if cohort_id is None or user_id is None:
-            raise ValidationException("Missing user_id or cohort_id", code=400)
+            raise ValidationException('Missing user_id or cohort_id', code=400)
 
         cu = CohortUser.objects.filter(
             user__id=user_id,
@@ -292,7 +292,7 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination,
                                              user__id=user_id,
                                              cohort__id=cohort_id).first()
             if item is None:
-                raise ValidationException("Cohort user not found", 404)
+                raise ValidationException('Cohort user not found', 404)
             serializer = GETCohortUserSerializer(item, many=False)
             return Response(serializer.data)
 
@@ -301,25 +301,25 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination,
         try:
             roles = request.GET.get('roles', None)
             if roles is not None:
-                items = items.filter(role__in=roles.split(","))
+                items = items.filter(role__in=roles.split(','))
 
             finantial_status = request.GET.get('finantial_status', None)
             if finantial_status is not None:
                 items = items.filter(
-                    finantial_status__in=finantial_status.split(","))
+                    finantial_status__in=finantial_status.split(','))
 
             educational_status = request.GET.get('educational_status', None)
             if educational_status is not None:
                 items = items.filter(
-                    educational_status__in=educational_status.split(","))
+                    educational_status__in=educational_status.split(','))
 
             cohorts = request.GET.get('cohorts', None)
             if cohorts is not None:
-                items = items.filter(cohort__slug__in=cohorts.split(","))
+                items = items.filter(cohort__slug__in=cohorts.split(','))
 
             users = request.GET.get('users', None)
             if users is not None:
-                items = items.filter(user__id__in=users.split(","))
+                items = items.filter(user__id__in=users.split(','))
 
         except Exception as e:
             raise ValidationException(str(e), 400)
@@ -412,7 +412,7 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination,
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if cohort_id is None or user_id is None:
-            raise ValidationException("Missing user_id or cohort_id", code=400)
+            raise ValidationException('Missing user_id or cohort_id', code=400)
 
         cu = CohortUser.objects.filter(
             user__id=user_id,
@@ -437,7 +437,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
                 id=timeslot_id).first()
 
             if item is None:
-                raise ValidationException("Time slot not found",
+                raise ValidationException('Time slot not found',
                                           404,
                                           slug='time-slot-not-found')
 
@@ -461,7 +461,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
                                        academy__id=academy_id).first()
 
         if cohort_id and not cohort:
-            raise ValidationException("Cohort not found",
+            raise ValidationException('Cohort not found',
                                       404,
                                       slug='cohort-not-found')
 
@@ -483,7 +483,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
                                        academy__id=academy_id).first()
 
         if cohort_id and not cohort:
-            raise ValidationException("Cohort not found",
+            raise ValidationException('Cohort not found',
                                       404,
                                       slug='cohort-not-found')
 
@@ -492,7 +492,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
                                              id=timeslot_id).first()
 
         if not item:
-            raise ValidationException("Time slot not found",
+            raise ValidationException('Time slot not found',
                                       404,
                                       slug='time-slot-not-found')
 
@@ -515,7 +515,7 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
                                              id=timeslot_id).first()
 
         if not item:
-            raise ValidationException("Time slot not found",
+            raise ValidationException('Time slot not found',
                                       404,
                                       slug='time-slot-not-found')
 
@@ -529,7 +529,7 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
     def post(self, request, academy_id=None):
         cohort_ids = request.GET.get('cohort', '')
         if not cohort_ids:
-            raise ValidationException("Missing cohort in querystring",
+            raise ValidationException('Missing cohort in querystring',
                                       400,
                                       slug='missing-cohort-in-querystring')
 
@@ -537,7 +537,7 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
         cohorts = Cohort.objects.filter(id__in=cohort_ids)
 
         if len(cohorts) != len(cohort_ids):
-            raise ValidationException("Cohort not found",
+            raise ValidationException('Cohort not found',
                                       404,
                                       slug='cohort-not-found')
 
@@ -589,7 +589,7 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
                 id=timeslot_id).first()
 
             if item is None:
-                raise ValidationException("Time slot not found",
+                raise ValidationException('Time slot not found',
                                           404,
                                           slug='time-slot-not-found')
 
@@ -614,7 +614,7 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
             certificate__id=certificate_id, academy__id=academy_id).first()
 
         if certificate_id and not academy_certificate:
-            raise ValidationException("Certificate not found",
+            raise ValidationException('Certificate not found',
                                       404,
                                       slug='certificate-not-found')
 
@@ -646,7 +646,7 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
             certificate__id=certificate_id, academy__id=academy_id).first()
 
         if certificate_id and not academy_certificate:
-            raise ValidationException("Certificate not found",
+            raise ValidationException('Certificate not found',
                                       404,
                                       slug='certificate-not-found')
 
@@ -658,7 +658,7 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
             id=timeslot_id).first()
 
         if not item:
-            raise ValidationException("Time slot not found",
+            raise ValidationException('Time slot not found',
                                       404,
                                       slug='time-slot-not-found')
 
@@ -687,7 +687,7 @@ class AcademyCertificateTimeSlotView(APIView, GenerateLookupsMixin):
             id=timeslot_id).first()
 
         if not item:
-            raise ValidationException("Time slot not found",
+            raise ValidationException('Time slot not found',
                                       404,
                                       slug='time-slot-not-found')
 
@@ -746,18 +746,18 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination,
             items = items.filter(kickoff_date__gte=now)
 
         if academy is not None:
-            items = items.filter(academy__slug__in=academy.split(","))
+            items = items.filter(academy__slug__in=academy.split(','))
 
         if location is not None:
-            items = items.filter(academy__slug__in=location.split(","))
+            items = items.filter(academy__slug__in=location.split(','))
 
         if like is not None:
             items = items.filter(
                 Q(name__icontains=like) | Q(slug__icontains=like))
 
         sort = request.GET.get('sort', None)
-        if sort is None or sort == "":
-            sort = "-kickoff_date"
+        if sort is None or sort == '':
+            sort = '-kickoff_date'
 
         items = items.order_by(sort)
 
@@ -799,8 +799,8 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination,
 
         serializer = CohortSerializer(data=data,
                                       context={
-                                          "request": request,
-                                          "academy": academy
+                                          'request': request,
+                                          'academy': academy
                                       })
         if serializer.is_valid():
             self.cache.clear()
@@ -811,20 +811,20 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination,
     @capable_of('crud_cohort')
     def put(self, request, cohort_id=None, academy_id=None):
         if cohort_id is None:
-            raise ValidationException("Missing cohort_id", code=400)
+            raise ValidationException('Missing cohort_id', code=400)
 
         cohort = Cohort.objects.filter(id=cohort_id, academy__id=academy_id)
         # only from this academy
         cohort = localize_query(cohort, request).first()
         if cohort is None:
-            logger.debug(f"Cohort not be found in related academies")
+            logger.debug(f'Cohort not be found in related academies')
             raise ValidationException('Specified cohort not be found')
 
         serializer = CohortPUTSerializer(cohort,
                                          data=request.data,
                                          context={
-                                             "request": request,
-                                             "cohort_id": cohort_id
+                                             'request': request,
+                                             'cohort_id': cohort_id
                                          })
         if serializer.is_valid():
             self.cache.clear()
@@ -853,7 +853,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination,
 
                 if item_users.count() > 0:
                     raise ValidationException(
-                        "Please remove all students before trying to delete cohort",
+                        'Please remove all students before trying to delete cohort',
                         slug='cohort-has-students')
 
             for item in items:
@@ -864,7 +864,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination,
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if cohort_id is None:
-            raise ValidationException("Missing cohort_id", code=400)
+            raise ValidationException('Missing cohort_id', code=400)
 
         try:
             cohort = Cohort.objects.get(id=cohort_id, academy__id=academy_id)
@@ -878,7 +878,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination,
         # Check if cohort has students before deleting
         if cohort_users.count() > 0:
             raise ValidationException(
-                "Please remove all students before trying to delete cohort",
+                'Please remove all students before trying to delete cohort',
                 slug='cohort-has-students')
 
         cohort.stage = DELETED
@@ -939,7 +939,7 @@ class CertificateView(APIView, HeaderLimitOffsetPagination,
 def get_single_course(request, certificate_slug):
     certificates = Certificate.objects.filter(slug=certificate_slug).first()
     if certificates is None:
-        raise ValidationException("Certificate slug not found", code=404)
+        raise ValidationException('Certificate slug not found', code=404)
     serializer = GetCertificateSerializer(certificates, many=False)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -955,12 +955,12 @@ class SyllabusView(APIView):
             version=None,
             academy_id=None):
         if academy_id is None:
-            raise ValidationException("Missing academy id")
+            raise ValidationException('Missing academy id')
 
         certificates = Certificate.objects.filter(
             slug=certificate_slug).first()
         if certificates is None:
-            raise ValidationException("Certificate slug not found", code=404)
+            raise ValidationException('Certificate slug not found', code=404)
 
         syl = None
         if version is None:
@@ -975,7 +975,7 @@ class SyllabusView(APIView):
                 Q(academy_owner__id=academy_id) | Q(private=False)).first()
 
         if syl is None:
-            raise ValidationException("Syllabus not found", code=404)
+            raise ValidationException('Syllabus not found', code=404)
 
         serializer = SyllabusGetSerializer(syl, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -986,7 +986,7 @@ class SyllabusView(APIView):
         certificate = Certificate.objects.filter(slug=certificate_slug).first()
         if certificate is None:
             raise ValidationException(
-                f"Invalid certificates slug {certificate_slug}", code=404)
+                f'Invalid certificates slug {certificate_slug}', code=404)
 
         # if not CertificateTimeSlot.objects.filter(
         #         academy__id=academy_id,
@@ -1004,11 +1004,11 @@ class SyllabusView(APIView):
 
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
-            raise ValidationException(f"Invalid academy {str(academy_id)}")
+            raise ValidationException(f'Invalid academy {str(academy_id)}')
         serializer = SyllabusSerializer(data=request.data,
                                         context={
-                                            "certificate": certificate,
-                                            "academy": academy
+                                            'certificate': certificate,
+                                            'academy': academy
                                         })
         if serializer.is_valid():
             serializer.save()
@@ -1022,14 +1022,14 @@ class SyllabusView(APIView):
             version=None,
             academy_id=None):
         if version is None:
-            raise ValidationException("Missing syllabus version", code=400)
+            raise ValidationException('Missing syllabus version', code=400)
 
         item = Syllabus.objects.filter(certificate__slug=certificate_slug,
                                        version=version,
                                        academy_owner__id=academy_id).first()
         if item is None:
             raise ValidationException(
-                "Syllabus version not found for this academy", code=404)
+                'Syllabus version not found for this academy', code=404)
 
         # if not CertificateTimeSlot.objects.filter(
         #         academy__id=academy_id,

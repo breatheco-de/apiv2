@@ -32,7 +32,7 @@ class AuthenticateTestSuite(AuthTestCase):
             json, {
                 'detail':
                 "You (user: 1) don't have this capability: get_academy_token "
-                "for academy 1",
+                'for academy 1',
                 'status_code':
                 403
             })
@@ -40,7 +40,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
     def test_academy_token_get_without_user(self):
         """Test /academy/:id/member/:id without auth"""
-        role = "konan"
+        role = 'konan'
         self.headers(academy=1)
         self.generate_models(authenticate=True,
                              role=role,
@@ -49,14 +49,14 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.get(url)
         json = response.json()
-        expected = {'detail': "academy-token-not-found", 'status_code': 400}
+        expected = {'detail': 'academy-token-not-found', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_academy_token_get_without_token(self):
         """Test /academy/:id/member/:id without auth"""
-        role = "konan"
+        role = 'konan'
         self.headers(academy=1)
         user_kwargs = {'username': 'kenny'}
         academy_kwargs = {'slug': 'kenny'}
@@ -70,7 +70,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.get(url)
         json = response.json()
-        expected = {'detail': "academy-token-not-found", 'status_code': 400}
+        expected = {'detail': 'academy-token-not-found', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -87,7 +87,7 @@ class AuthenticateTestSuite(AuthTestCase):
             json, {
                 'detail':
                 "You (user: 1) don't have this capability: generate_academy_token "
-                "for academy 1",
+                'for academy 1',
                 'status_code':
                 403
             })
@@ -104,7 +104,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.post(url)
         json = response.json()
-        token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile(r'[0-9a-zA-Z]{,40}$')
         expected = {'token_type': 'permanent', 'expires_at': None}
 
         token = self.get_token(1)
@@ -178,7 +178,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url)
         expected = {'token_type': 'permanent', 'expires_at': None}
         json = response.json()
-        token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile(r'[0-9a-zA-Z]{,40}$')
 
         token = self.get_token(2)
 
@@ -216,7 +216,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.post(url)
         json = response.json()
-        token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile(r'[0-9a-zA-Z]{,40}$')
 
         self.assertEqual(bool(token_pattern.match(json['token'])), True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -274,7 +274,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.post(url)
         json = response.json()
-        token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile(r'[0-9a-zA-Z]{,40}$')
 
         self.assertEqual(bool(token_pattern.match(json['token'])), True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -307,7 +307,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_token')
         response = self.client.post(url)
         json = response.json()
-        token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile(r'[0-9a-zA-Z]{,40}$')
 
         self.assertEqual(bool(token_pattern.match(json['token'])), True)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

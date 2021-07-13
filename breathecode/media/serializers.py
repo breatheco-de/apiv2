@@ -35,7 +35,7 @@ class GetMediaSerializer(serpy.Serializer):
     owner = GetUserSerializer(required=False)
 
     def get_thumbnail(self, obj):
-        return obj.url + "-thumbnail"
+        return obj.url + '-thumbnail'
 
     def get_categories(self, obj):
         return [GetCategorySerializer(x).data for x in obj.categories.all()]
@@ -144,6 +144,6 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
 
-        _slug = slugify(validated_data["name"])
-        result = super().create({**validated_data, "slug": _slug})
+        _slug = slugify(validated_data['name'])
+        result = super().create({**validated_data, 'slug': _slug})
         return result
