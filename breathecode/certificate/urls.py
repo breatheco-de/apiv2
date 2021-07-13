@@ -12,7 +12,7 @@ urlpatterns = [
     path('academy/layout', LayoutView.as_view()),
     path('token/<str:token>/', get_certificate),
     path('cohort/<int:cohort_id>/student/<int:student_id>',
-         CertificateView.as_view()),
+         CertificateView.as_view(), name="certificate_single"),
     path('cohort/<int:cohort_id>',
          CertificateCohortView.as_view(),
          name="certificate_cohort"),
