@@ -229,7 +229,7 @@ class Command(BaseCommand):
                     "read_member", "read_syllabus", "read_student",
                     "read_cohort", "read_media", "read_my_academy",
                     "read_invite", "get_academy_token", "crud_activity",
-                    "read_survey", "read_layout"
+                    "read_survey", "read_layout", "read_event"
                 ]
             },
             {
@@ -254,7 +254,7 @@ class Command(BaseCommand):
             "caps":
             extend(roles, ["staff"]) + [
                 "read_assigment", "crud_assignment", "read_cohort_activity",
-                "read_nps_answers", "classroom_activity", "read_won_lead"
+                "read_nps_answers", "classroom_activity",
             ]
         })
         roles.append({
@@ -274,7 +274,7 @@ class Command(BaseCommand):
             "caps":
             extend(roles, ["staff"]) + [
                 "crud_lead", "crud_student", "crud_cohort", "read_cohort",
-                "read_lead", "read_event", "read_eventcheckin"
+                "read_lead", "read_eventcheckin"
             ]
         })
         roles.append({
@@ -308,7 +308,7 @@ class Command(BaseCommand):
             "Growth Manager",
             "caps":
             extend(roles, ["staff", "community_manager"]) +
-            ["crud_media", "read_activity"]
+            ["crud_media", "read_activity", "read_won_lead"]
         })
         roles.append({
             "slug": "homework_reviewer",
@@ -327,7 +327,7 @@ class Command(BaseCommand):
             "Mentor in residence",
             "caps":
             extend(roles, ["teacher"]) +
-            ["crud_syllabus", "crud_cohort", "crud_student", "crud_survey"]
+            ["crud_syllabus", "crud_cohort", "crud_student", "crud_survey", "read_won_lead"]
         })
         roles.append({
             "slug":
