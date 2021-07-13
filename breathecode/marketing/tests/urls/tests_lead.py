@@ -75,6 +75,7 @@ class LeadTestSuite(MarketingTestCase):
         json = response.json()
 
         self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
         del json['created_at']
         del json['updated_at']
 
@@ -202,6 +203,7 @@ class LeadTestSuite(MarketingTestCase):
         json = response.json()
 
         self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
         del json['created_at']
         del json['updated_at']
 
@@ -312,6 +314,7 @@ class LeadTestSuite(MarketingTestCase):
         json = response.json()
 
         self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
         del json['created_at']
         del json['updated_at']
 
@@ -427,6 +430,7 @@ class LeadTestSuite(MarketingTestCase):
         json = response.json()
 
         self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
         del json['created_at']
         del json['updated_at']
 

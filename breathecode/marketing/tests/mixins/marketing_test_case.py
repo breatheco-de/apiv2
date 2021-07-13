@@ -88,27 +88,44 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         self.assertTrue(link in html)
 
     def check_old_breathecode_calls(self, mock, model):
-        mock_list = list(mock.call_args_list[1])
-        del mock_list[1]['json']['contactAutomation']['automation']
-
-        token_pattern = re.compile(r"[0-9a-zA-Z]{,40}$")
-        self.assertEqual(
-            bool(token_pattern.match(mock_list[1]['headers']['Api-Token'])),
-            True)
-        del mock_list[1]['headers']['Api-Token']
-
-        self.assertEqual(mock_list, [
-            ('POST',
-             'https://old.hardcoded.breathecode.url/api/3/contactAutomations'),
-            {
-                'headers': {
+        self.assertEqual(mock.call_args_list, [
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/admin/api.php',
+                 params=[('api_action', 'contact_sync'),
+                         ('api_key', model['active_campaign_academy'].ac_key),
+                         ('api_output', 'json')],
+                 data={
+                     'email': 'pokemon@potato.io',
+                     'first_name': 'Konan',
+                     'last_name': 'Amegakure',
+                     'phone': '123123123',
+                     'field[18,0]': model['academy'].slug
+                 }),
+            call(
+                'POST',
+                'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
+                headers={
                     'Accept': 'application/json',
                     'Content-Type': 'application/json',
+                    'Api-Token': model['active_campaign_academy'].ac_key
                 },
-                'json': {
+                json={
                     'contactAutomation': {
-                        'contact': 1
+                        'contact': 1,
+                        'automation': model['automation'].acp_id
                     }
-                }
-            }
+                }),
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/api/3/contactTags',
+                 headers={
+                     'Accept': 'application/json',
+                     'Content-Type': 'application/json',
+                     'Api-Token': model['active_campaign_academy'].ac_key
+                 },
+                 json={
+                     'contactTag': {
+                         'contact': 1,
+                         'tag': model['tag'].acp_id
+                     }
+                 })
         ])
