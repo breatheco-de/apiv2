@@ -70,6 +70,7 @@ class SpecialtySerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     logo_url = serpy.Field()
+    description = serpy.Field()
 
     updated_at = serpy.Field()
     created_at = serpy.Field()

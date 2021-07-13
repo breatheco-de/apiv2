@@ -203,6 +203,10 @@ class AcademyEventTestSuite(CypressTestCase):
                 "description": "List all the leads"
             },
             {
+                "slug": "read_won_lead",
+                "description": "List all the won leads"
+            },
+            {
                 "slug": "crud_lead",
                 "description": "Create, update or delete academy leads"
             },
