@@ -1,3 +1,14 @@
+# Setup & Installation
+
+1. Install redis, postgress, python 3.8+ and node 14+
+2. Create environment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
+3. Make sure to get inside the environment: `pipenv shell`
+4. Install the dependencies including development packages: `pipenv install --dev`
+5. Run the migrations into your database `pipenv run migrate`
+6. Run the fixtures to add sample data: `pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json`
+7. Make sure you can login into the django admin, you can create a login user with `python manage.py createsuperuser`
+8. Enable pre-commit library: `pipenv run pre-commit install` (this library helps prevent longer error wait times and get instant feedbackpipe)
+
 # Enable formatter in Visual Studio Code
 
 - Open `.vscode\settings.json`
@@ -10,16 +21,6 @@
 ```
 
 - Save
-
-# Setup & Installation
-
-1. Install redis, postgress, python 3.8+ and node 14+
-2. Create environment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
-3. Make sure to get inside the environment: `pipenv shell`
-4. Install the dependencies including development packages: `pipenv install --dev`
-5. Run the migrations into your database `pipenv run migrate`
-6. Run the fixtures to add sample data: `pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json`
-7. Make sure you can login into the django admin, you can create a login user with `python manage.py createsuperuser`
 
 # Setup & Installation with Docker
 
