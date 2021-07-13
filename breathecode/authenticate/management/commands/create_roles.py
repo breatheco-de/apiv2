@@ -254,7 +254,7 @@ class Command(BaseCommand):
             "caps":
             extend(roles, ["staff"]) + [
                 "read_assigment", "crud_assignment", "read_cohort_activity",
-                "read_nps_answers", "classroom_activity",
+                "read_nps_answers", "classroom_activity", "read_event"
             ]
         })
         roles.append({
