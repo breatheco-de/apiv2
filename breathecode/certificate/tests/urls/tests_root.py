@@ -204,6 +204,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': None,
                 'created_at':
                 self.datetime_to_iso(model['specialty'].created_at),
                 'id': 1,
@@ -358,6 +359,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': models[0].specialty.description,
                 'created_at':
                 self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
@@ -411,6 +413,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': models[0].specialty.description,
                 'created_at':
                 self.datetime_to_iso(models[1].specialty.created_at),
                 'id': 1,
@@ -573,6 +576,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': None,
                 'created_at':
                 self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
@@ -680,6 +684,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': None,
                 'created_at':
                 self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
@@ -783,6 +788,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': None,
                 'created_at':
                 self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
@@ -886,6 +892,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': None,
                 'created_at':
                 self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
