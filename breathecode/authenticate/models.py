@@ -299,7 +299,7 @@ class Token(rest_framework.authtoken.models.Token):
     @staticmethod
     def get_or_create(user, **kwargs):
 
-        now = timezone.now()
+        utc_now = timezone.now()
         if "token_type" not in kwargs:
             kwargs["token_type"] = 'temporal'
 
@@ -310,7 +310,7 @@ class Token(rest_framework.authtoken.models.Token):
         token, created = Token.objects.get_or_create(user=user, **kwargs)
 
         if not created:
-            if token.expires_at < now:
+            if token.expires_at < utc_now:
                 token.delete()
                 created = True
                 token = Token.objects.create(user=user, **kwargs)
