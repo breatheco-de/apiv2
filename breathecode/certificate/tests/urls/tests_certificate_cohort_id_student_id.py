@@ -53,6 +53,39 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_generate_certificate_no_cohort_user(self):
+        """ No main teacher in cohort """
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True,
+                             cohort=True,
+                             user=True,
+                             profile_academy=True,
+                             capability='crud_certificate',
+                             role='POTATO',
+                             syllabus=True,
+                             specialty=True,
+                             )
+
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_role='TEACHER',
+                                             models=base)
+
+        url = reverse_lazy('certificate:certificate_single',
+                           kwargs={'cohort_id': 1, 'student_id': 1})
+        response = self.client.post(url, format='json')
+        json = response.json()
+        expected = {
+            'detail': 'student-not-found', 'status_code': 404
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.all_user_specialty_dict(), [])
+
     
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
