@@ -167,6 +167,7 @@ def sync_with_github(asset_slug, author_id=None):
                         technology.save()
                     asset.technologies.add(technology)
 
+        asset.status_text = "Successfully Synched"
         asset.status = 'OK'
         asset.save()
     except Exception as e:

@@ -8,13 +8,14 @@ from django.urls.base import reverse_lazy
 from rest_framework.test import APITestCase, APIClient
 from mixer.backend.django import mixer
 from django.core.cache import cache
+from breathecode.tests.mixins import ModelsMixin
 from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH,
                                      apply_google_cloud_client_mock,
                                      apply_google_cloud_bucket_mock,
                                      apply_google_cloud_blob_mock)
 
 
-class AuthTestCase(APITestCase):
+class AuthTestCase(APITestCase, ModelsMixin):
     """APITestCase with auth methods"""
     # token = None
     user = None
@@ -59,33 +60,6 @@ class AuthTestCase(APITestCase):
             self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token}')
 
         return response
-
-    def remove_model_state(self, dict):
-        result = None
-        if dict:
-            result = dict.copy()
-            del result['_state']
-        return result
-
-    def remove_updated_at(self, dict):
-        result = None
-        if dict:
-            result = dict.copy()
-            if 'updated_at' in result:
-                del result['updated_at']
-        return result
-
-    def remove_created_at(self, dict):
-        result = None
-        if dict:
-            result = dict.copy()
-            if 'created_at' in result:
-                del result['created_at']
-        return result
-
-    def remove_dinamics_fields(self, dict):
-        return self.remove_updated_at(
-            self.remove_created_at(self.remove_model_state(dict)))
 
     def all_profile_academy_dict(self):
         return [

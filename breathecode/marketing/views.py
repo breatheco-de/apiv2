@@ -1,8 +1,4 @@
-import os
-import datetime
-import logging
-import csv
-import pytz
+import os, re, datetime, logging, csv, pytz
 from urllib import parse
 from rest_framework_csv.renderers import CSVRenderer
 from breathecode.renderers import PlainTextRenderer
@@ -289,6 +285,59 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination,
+                      GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('read_won_lead')
+    def get(self, request, format=None, academy_id=None):
+
+        academy = Academy.objects.get(id=academy_id)
+        items = FormEntry.objects.filter(academy__id=academy.id, deal_status="WON")
+        lookup = {}
+
+        start = request.GET.get('start', None)
+        if start is not None:
+            start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
+            lookup['created_at__gte'] = start_date
+
+        end = request.GET.get('end', None)
+        if end is not None:
+            end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
+            lookup['created_at__lte'] = end_date
+
+        if 'storage_status' in self.request.GET:
+            param = self.request.GET.get('storage_status')
+            lookup['storage_status'] = param
+
+        if 'course' in self.request.GET:
+            param = self.request.GET.get('course')
+            lookup['course'] = param
+
+        if 'location' in self.request.GET:
+            param = self.request.GET.get('location')
+            lookup['location'] = param
+
+        sort_by = "-created_at"
+        if 'sort' in self.request.GET and self.request.GET['sort'] != "":
+            sort_by = self.request.GET.get('sort')
+
+        items = items.filter(**lookup).order_by(sort_by)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = query_like_by_full_name(like=like, items=items)
+
+        page = self.paginate_queryset(items, request)
+        serializer = FormEntrySmallSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
+
+
 class AcademyLeadView(APIView, HeaderLimitOffsetPagination,
                       GenerateLookupsMixin):
     """
@@ -362,6 +411,18 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination,
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
+def get_real_conversion_name(slug):
+    mapper = {
+        'Website Lead': "Application Submitted",
+    }
+    words = re.split(' |_|-', slug)
+    words = [w.capitalize() for w in words]
+    words = " ".join(words)
+    if words in mapper:
+        words = mapper[words]
+    
+    return words
+
 
 def googleads_csv(request):
 
@@ -402,17 +463,24 @@ def googleads_csv(request):
 
             if (entry_gclid == '_BwE' and entry.deal_status == 'WON'):
                 gclid = entry.gclid
-                convertion_name = entry.tags
+                convertion_name = get_real_conversion_name(entry.tags)
 
                 timezone = pytz.timezone('US/Eastern')
-                convertion_time = entry.created_at.astimezone(timezone)
+                if entry.won_at is not None:
+                    convertion_time = entry.won_at.astimezone(timezone)
+                else:
+                    convertion_time = entry.updated_at.astimezone(timezone)
+
                 convertion_time = convertion_time.strftime(
-                    '%Y-%m-%d %H-%M-%S%z')
+                    '%Y-%m-%d %H:%M:%S')
 
                 data.append(
                     [gclid, convertion_name, convertion_time, None, None])
 
     writer = csv.writer(response)
+    writer.writerow([
+        'Parameters:TimeZone=US/Eastern'
+    ])
     writer.writerow([
         'Google Click ID', 'Conversion Name', 'Conversion Time',
         'Conversion Value', 'Conversion Currency'

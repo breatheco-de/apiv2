@@ -6,6 +6,7 @@ from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
 from django.core.validators import RegexValidator
+from .signals import invite_accepted
 from breathecode.admissions.models import Academy, Cohort
 
 
@@ -141,6 +142,10 @@ PROFILE_ACADEMY_STATUS = (
 
 
 class ProfileAcademy(models.Model):
+    def __init__(self, *args, **kwargs):
+        super(ProfileAcademy, self).__init__(*args, **kwargs)
+        self.__old_status = self.status
+
     user = models.ForeignKey(User,
                              on_delete=models.SET_NULL,
                              default=None,
@@ -180,6 +185,12 @@ class ProfileAcademy(models.Model):
     def __str__(self):
         return f'{self.email} for academy ({self.academy.name})'
 
+    def save(self, *args, **kwargs):
+
+        if self.__old_status != self.status and self.status == 'ACTIVE':
+            invite_accepted.send(instance=self, sender=ProfileAcademy)
+        
+        super().save(*args, **kwargs)  # Call the "real" save() method.
 
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)
