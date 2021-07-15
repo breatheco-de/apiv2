@@ -3,7 +3,6 @@ from celery import shared_task, Task
 from django.utils import timezone
 from breathecode.notify.actions import send_email_message, send_slack
 from .utils import strings
-from breathecode.authenticate.actions import create_token
 from breathecode.admissions.models import CohortUser
 from django.contrib.auth.models import User
 from .models import Survey, Answer
@@ -143,7 +142,7 @@ def send_cohort_survey(self, user_id, survey_id):
         logger.info(message)
         raise Exception(message)
 
-    token = create_token(user, hours_length=48)
+    token, created = Token.get_or_create(user, hours_length=48)
     data = {
         'SUBJECT': strings[survey.lang]['survey_subject'],
         'MESSAGE': strings[survey.lang]['survey_message'],
