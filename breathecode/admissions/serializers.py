@@ -281,11 +281,7 @@ class SyllabusGetSerializer(serpy.Serializer):
         return obj.certificate.slug
 
 
-"""
-            ↓ EDIT SERLIZERS ↓
-"""
-
-
+#        ↓ EDIT SERIALIZERS ↓
 class AcademySerializer(serializers.ModelSerializer):
     country = CountrySerializer(required=True)
     city = CitySerializer(required=True)
@@ -296,7 +292,7 @@ class AcademySerializer(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        if "slug" in data and data["slug"] != self.instance.slug:
+        if 'slug' in data and data['slug'] != self.instance.slug:
             raise ValidationException('Academy slug cannot be updated')
 
         return data
@@ -341,9 +337,9 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
             data['syllabus'] = syllabus
 
-        if "slug" in data:
-            cohort = Cohort.objects.filter(slug=data["slug"]).first()
-            if cohort is not None and self.instance.slug != data["slug"]:
+        if 'slug' in data:
+            cohort = Cohort.objects.filter(slug=data['slug']).first()
+            if cohort is not None and self.instance.slug != data['slug']:
                 raise ValidationException(
                     'Slug already exists for another cohort',
                     slug='slug-already-exists')
@@ -464,7 +460,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
                 'user_id', 'cohort_id').first()
 
             if not ids:
-                raise ValidationException("Invalid id", code=400)
+                raise ValidationException('Invalid id', code=400)
             user_id = ids[0]
             cohort_id = ids[1]
 
@@ -472,20 +468,20 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             user_id = request_item.get('user')
 
         if not is_many and (cohort_id is None or user_id is None):
-            raise ValidationException("Missing cohort_id or user_id", code=400)
+            raise ValidationException('Missing cohort_id or user_id', code=400)
 
         if User.objects.filter(id=user_id).count() == 0:
-            raise ValidationException("invalid user_id", code=400)
+            raise ValidationException('invalid user_id', code=400)
 
         cohort = Cohort.objects.filter(id=cohort_id)
         if not cohort:
-            raise ValidationException("invalid cohort_id", code=400)
+            raise ValidationException('invalid cohort_id', code=400)
 
         # only from this academy
         cohort = localize_query(cohort, request).first()
 
         if cohort is None:
-            logger.debug(f"Cohort not be found in related academies")
+            logger.debug(f'Cohort not be found in related academies')
             raise ValidationException('Specified cohort not be found')
 
         if not disable_cohort_user_just_once and CohortUser.objects.filter(
@@ -658,11 +654,11 @@ class SyllabusSerializer(serializers.ModelSerializer):
         if previous_syllabus is not None:
             version = previous_syllabus.version + 1
         return super(SyllabusSerializer, self).create({
-            **validated_data, "certificate":
+            **validated_data, 'certificate':
             self.context['certificate'],
-            "academy_owner":
+            'academy_owner':
             self.context['academy'],
-            "version":
+            'version':
             version
         })
 

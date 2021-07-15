@@ -21,21 +21,21 @@ from .utils import (generate_created_at, validate_activity_fields,
 # https://googleapis.dev/python/datastore/latest/index.html
 
 ACTIVITIES = {
-    "breathecode-login": 'Every time it logs in',
-    "online-platform-registration": 'First day using breathecode',
-    "public-event-attendance": 'Attendy on an eventbrite event',
-    "classroom-attendance": 'When the student attent to class',
-    "classroom-unattendance": 'When the student miss class',
-    "lesson-opened": 'When a lessons is opened on the platform',
-    "office-attendance": 'When the office raspberry pi detects the student',
-    "nps-survey-answered": 'When a nps survey is answered by the student',
-    "exercise-success": 'When student successfuly tests exercise',
-    "academy-registration": 'When student successfuly join to academy',
+    "breathecode_login": 'Every time it logs in',
+    "online_platform_registration": 'First day using breathecode',
+    "public_event_attendance": 'Attendy on an eventbrite event',
+    "classroom_attendance": 'When the student attent to class',
+    "classroom_unattendance": 'When the student miss class',
+    "lesson_opened": 'When a lessons is opened on the platform',
+    "office_attendance": 'When the office raspberry pi detects the student',
+    "nps_survey_answered": 'When a nps survey is answered by the student',
+    "exercise_success": 'When student successfuly tests exercise',
+    "academy_registration": 'When student successfuly join to academy',
 }
 
 ACTIVITY_PUBLIC_SLUGS = [
-    'breathecode-login',
-    'online-platform-registration',
+    'breathecode_login',
+    'online_platform_registration',
 ]
 
 
@@ -123,12 +123,19 @@ class ActivityClassroomView(APIView):
     @capable_of('classroom_activity')
     def post(self, request, cohort_id=None, academy_id=None):
 
-        is_teacher = CohortUser.objects.filter(
+        cu = CohortUser.objects.filter(
             user__id=request.user.id).filter(
-                Q(role='TEACHER') | Q(role='ASSISTANT')).first()
-        if is_teacher is None:
+                Q(role='TEACHER') | Q(role='ASSISTANT'))
+                
+        if cohort_id.isnumeric():
+            cu = cu.filter(cohort__id=cohort_id)
+        else:
+            cu = cu.filter(cohort__slug=cohort_id)
+        
+        cu = cu.first()
+        if cu is None:
             raise ValidationException(
-                "Only teachers or assistants from this cohort can report classroom activities on the student timeline"
+                'Only teachers or assistants from this cohort can report classroom activities on the student timeline'
             )
 
         data = request.data
@@ -139,18 +146,68 @@ class ActivityClassroomView(APIView):
         for activity in data:
             student_id = activity['user_id']
             del activity['user_id']
-            cohort_user = CohortUser.objects.filter(
-                role='STUDENT', user__id=student_id).filter(
-                    Q(cohort__id=cohort_id)
-                    | Q(cohort__slug=cohort_id)).first()
+            cohort_user = CohortUser.objects.filter(role='STUDENT', user__id=student_id,cohort__id=cu.cohort.id).first()
             if cohort_user is None:
-                raise ValidationException("Student not found in this cohort",
-                                          slug="not-found-in-cohort")
+                raise ValidationException('Student not found in this cohort',
+                                          slug='not-found-in-cohort')
 
             new_activities.append(
                 add_student_activity(cohort_user.user, activity, academy_id))
 
         return Response(new_activities, status=status.HTTP_201_CREATED)
+    
+    @capable_of('classroom_activity')
+    def get(self, request, cohort_id=None, academy_id=None):
+        from breathecode.services.google_cloud import Datastore
+
+        kwargs = {'kind': 'student_activity'}
+
+        # get the cohort
+        cohort = Cohort.objects.filter(academy__id=academy_id)
+        if cohort_id.isnumeric():
+            cohort = cohort.filter(id=cohort_id)
+        else:
+            cohort = cohort.filter(slug=cohort_id)
+        cohort = cohort.first()
+        if cohort is None:
+            raise ValidationException(f'Cohort {cohort_id} not found at this academy {academy_id}', slug='cohort-not-found')
+        kwargs['cohort'] = cohort.slug
+
+
+        slug = request.GET.get('slug')
+        if slug:
+            kwargs['slug'] = slug
+
+        if slug and slug not in ACTIVITIES:
+            raise ValidationException(f'Activity type {slug} not found',
+                                      slug='activity-not-found')
+
+        user_id = request.GET.get('user_id')
+        if user_id:
+            try:
+                kwargs['user_id'] = int(user_id)
+            except ValueError:
+                raise ValidationException('user_id is not a interger',
+                                          slug='bad-user-id')
+
+        email = request.GET.get('email')
+        if email:
+            kwargs['email'] = email
+
+        user = User.objects.filter(Q(id=user_id) | Q(email=email))
+        if (user_id or email) and not user:
+            raise ValidationException('User not exists',
+                                      slug='user-not-exists')
+
+        datastore = Datastore()
+        #academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
+        
+        public_iter = datastore.fetch(**kwargs)# TODO: remove this in the future because the academy_id was not present brefore and students didn't have it
+
+        query_iter = academy_iter + public_iter
+        query_iter.sort(key=lambda x: x['created_at'], reverse=True)
+
+        return Response(query_iter)
 
 
 def add_student_activity(user, data, academy_id):
@@ -172,12 +229,10 @@ def add_student_activity(user, data, academy_id):
 
     if 'cohort' in data:
         _query = Cohort.objects.filter(academy__id=academy_id)
-        if isinstance(data['cohort'], str):
-            _query = _query.filter(slug=data['cohort'])
-        elif isinstance(data['cohort'], int):
+        if data['cohort'].isnumeric():
             _query = _query.filter(id=data['cohort'])
         else:
-            raise ValidationException('Invalid cohort parameter format')
+            _query = _query.filter(slug=data['cohort'])
 
         if not _query.exists():
             raise ValidationException(

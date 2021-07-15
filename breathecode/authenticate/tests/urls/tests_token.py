@@ -29,7 +29,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /token"""
         login_response = self.login()
         token = str(login_response.data['token'])
-        token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile('^[0-9a-zA-Z]{,40}$')
 
         url = reverse_lazy('authenticate:token')
         data = {'email': self.email, 'password': self.password}

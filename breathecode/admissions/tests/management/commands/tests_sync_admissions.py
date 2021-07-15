@@ -18,7 +18,7 @@ from ...mocks import (LEGACY_API_PATH,
                       apply_screenshotmachine_requests_get_mock)
 # from ...utils import GenerateModels
 
-HOST = os.environ.get("OLD_BREATHECODE_API")
+HOST = os.environ.get('OLD_BREATHECODE_API')
 
 with open(
         f'{os.getcwd()}/breathecode/admissions/fixtures/legacy_teachers.json',

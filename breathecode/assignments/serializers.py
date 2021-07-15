@@ -40,11 +40,11 @@ class PostTaskSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        user = User.objects.filter(id=self.context["user_id"]).first()
+        user = User.objects.filter(id=self.context['user_id']).first()
         if user is None:
-            raise ValidationException("User does not exists")
+            raise ValidationException('User does not exists')
 
-        return super(PostTaskSerializer, self).validate({**data, "user": user})
+        return super(PostTaskSerializer, self).validate({**data, 'user': user})
 
     def create(self, validated_data):
 
@@ -87,32 +87,32 @@ class PUTTaskSerializer(serializers.ModelSerializer):
         # the user cannot vote to the same entity within 5 minutes
         # answer = Task.objects.filter(user=self.context['request'].user,id=self.context['answer']).first()
         if self.instance.user.id != self.context['request'].user.id:
-            if "task_status" in data and data[
-                    "task_status"] != self.instance.task_status:
+            if 'task_status' in data and data[
+                    'task_status'] != self.instance.task_status:
                 raise ValidationException(
                     'Only the task owner can modify its status')
-            if "live_url" in data and data[
-                    "live_url"] != self.instance.live_url:
+            if 'live_url' in data and data[
+                    'live_url'] != self.instance.live_url:
                 raise ValidationException(
                     'Only the task owner can modify its live_url')
-            if "github_url" in data and data[
-                    "github_url"] != self.instance.github_url:
+            if 'github_url' in data and data[
+                    'github_url'] != self.instance.github_url:
                 raise ValidationException(
                     'Only the task owner can modify its github_url')
 
-        if "revision_status" in data and data[
-                "revision_status"] != self.instance.revision_status:
+        if 'revision_status' in data and data[
+                'revision_status'] != self.instance.revision_status:
             student_cohorts = CohortUser.objects.filter(
                 user__id=self.instance.user.id,
-                role="STUDENT").values_list('cohort__id', flat=True)
+                role='STUDENT').values_list('cohort__id', flat=True)
             student_academies = CohortUser.objects.filter(
                 user__id=self.instance.user.id,
-                role="STUDENT").values_list('cohort__academy__id', flat=True)
+                role='STUDENT').values_list('cohort__academy__id', flat=True)
 
             # the logged in user could be a teacher from the same cohort as the student
             teacher = CohortUser.objects.filter(
                 cohort__id__in=student_cohorts,
-                role__in=["TEACHER", "ASSISTANT"],
+                role__in=['TEACHER', 'ASSISTANT'],
                 user__id=self.context['request'].user.id).first()
 
             # the logged in user could be a staff member from the same academy that the student belongs

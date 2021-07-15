@@ -14,20 +14,20 @@ def sync_issues(modeladmin, request, queryset):
             messages.error(request, err)
 
 
-sync_issues.short_description = "Sync open issues"
+sync_issues.short_description = 'Sync open issues'
 
 
 def generate_bill(modeladmin, request, queryset):
     freelancers = queryset.all()
     for freelancer in freelancers:
         try:
-            print(f"Genereting bill for {freelancer.user.email}")
+            print(f'Genereting bill for {freelancer.user.email}')
             actions.generate_freelancer_bill(freelancer)
         except ValueError as err:
             messages.error(request, err)
 
 
-generate_bill.short_description = "Generate bill"
+generate_bill.short_description = 'Generate bill'
 
 
 def mark_as(queryset, status, request):
@@ -38,7 +38,7 @@ def mark_as(queryset, status, request):
         for i in issues:
             if i.bill is not None and i.bill.status != 'DUE':
                 raise Exception(
-                    f"Github {i.github_number} cannot be updated because it was already approved for payment"
+                    f'Github {i.github_number} cannot be updated because it was already approved for payment'
                 )
             freelancers[i.freelancer.id] = i.freelancer
             i.status = status
@@ -54,31 +54,31 @@ def mask_as_done(modeladmin, request, queryset):
     mark_as(queryset, 'DONE', request)
 
 
-mask_as_done.short_description = "Mark as DONE"
+mask_as_done.short_description = 'Mark as DONE'
 
 
 def mask_as_todo(modeladmin, request, queryset):
     mark_as(queryset, 'TODO', request)
 
 
-mask_as_todo.short_description = "Mark as TODO"
+mask_as_todo.short_description = 'Mark as TODO'
 
 
 def mask_as_ignored(modeladmin, request, queryset):
     mark_as(queryset, 'IGNORED', request)
 
 
-mask_as_ignored.short_description = "Mark as IGNORED"
+mask_as_ignored.short_description = 'Mark as IGNORED'
 
 
 @admin.register(Freelancer)
 class FreelancerAdmin(admin.ModelAdmin):
-    list_display = ['user_id', 'full_name', "email"]
-    raw_id_fields = ["user", "github_user"]
+    list_display = ['user_id', 'full_name', 'email']
+    raw_id_fields = ['user', 'github_user']
     actions = [sync_issues, generate_bill]
 
     def full_name(self, obj):
-        return obj.user.first_name + " " + obj.user.last_name
+        return obj.user.first_name + ' ' + obj.user.last_name
 
     def email(self, obj):
         return obj.user.email
@@ -105,14 +105,14 @@ def mask_as_paid(modeladmin, request, queryset):
     issues = queryset.update(status='PAID')
 
 
-mask_as_paid.short_description = "Mark as PAID"
+mask_as_paid.short_description = 'Mark as PAID'
 
 
 def mask_as_approved(modeladmin, request, queryset):
     issues = queryset.update(status='APPROVED')
 
 
-mask_as_approved.short_description = "Mark as APPROVED"
+mask_as_approved.short_description = 'Mark as APPROVED'
 
 
 @admin.register(Bill)

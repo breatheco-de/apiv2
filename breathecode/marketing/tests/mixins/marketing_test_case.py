@@ -36,27 +36,27 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         args_list = mock.call_args_list
 
         template = get_template_content(
-            "nps", {
-                "QUESTION": question,
-                "HIGHEST": dicts[0]['highest'],
-                "LOWEST": dicts[0]['lowest'],
-                "SUBJECT": question,
-                "ANSWER_ID": dicts[0]['id'],
-                "BUTTON": strings[lang]["button_label"],
-                "LINK": link,
-            }, ["email"])
+            'nps', {
+                'QUESTION': question,
+                'HIGHEST': dicts[0]['highest'],
+                'LOWEST': dicts[0]['lowest'],
+                'SUBJECT': question,
+                'ANSWER_ID': dicts[0]['id'],
+                'BUTTON': strings[lang]['button_label'],
+                'LINK': link,
+            }, ['email'])
 
         self.assertEqual(args_list, [
             call(
                 'https://api.mailgun.net/v3/None/messages',
-                auth=('api', os.environ.get('MAILGUN_API_KEY', "")),
+                auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
                 data={
-                    "from":
+                    'from':
                     f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
-                    "to": model['user'].email,
-                    "subject": template['subject'],
-                    "text": template['text'],
-                    "html": template['html']
+                    'to': model['user'].email,
+                    'subject': template['subject'],
+                    'text': template['text'],
+                    'html': template['html']
                 })
         ])
 

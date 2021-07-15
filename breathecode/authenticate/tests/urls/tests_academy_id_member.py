@@ -36,7 +36,7 @@ class AuthenticateTestSuite(AuthTestCase):
             json, {
                 'detail':
                 "You (user: 2) don't have this capability: read_member "
-                "for academy 1",
+                'for academy 1',
                 'status_code': 403
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -56,7 +56,7 @@ class AuthenticateTestSuite(AuthTestCase):
             json, {
                 'detail':
                 "You (user: 2) don't have this capability: read_member "
-                "for academy 1",
+                'for academy 1',
                 'status_code': 403
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -586,7 +586,7 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {'role': role}
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'detail': "user-not-found", 'status_code': 400}
+        expected = {'detail': 'user-not-found', 'status_code': 400}
         profile_academy = self.get_profile_academy(1)
 
         self.assertEqual(json, expected)
@@ -616,7 +616,7 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {'role': role, 'invite': True}
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'detail': "no-email-or-id", 'status_code': 400}
+        expected = {'detail': 'no-email-or-id', 'status_code': 400}
         profile_academy = self.get_profile_academy(1)
 
         self.assertEqual(json, expected)

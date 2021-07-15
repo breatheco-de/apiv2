@@ -4,20 +4,20 @@ from breathecode.admissions.models import CohortUser
 
 logger = logging.getLogger(__name__)
 
-HOST = os.environ.get("OLD_BREATHECODE_API")
+HOST = os.environ.get('OLD_BREATHECODE_API')
 
 
 def sync_student_tasks(user, cohort=None):
 
     if cohort is None:
         cu = CohortUser.objects.filter(user=user).exclude(
-            cohort__slug__contains="prework").first()
+            cohort__slug__contains='prework').first()
         if cu is not None:
             cohort = cu.cohort
 
-    response = requests.get(f"{HOST}/student/{user.email}/task/")
+    response = requests.get(f'{HOST}/student/{user.email}/task/')
     if response.status_code != 200:
-        raise Exception(f"Student {user.email} not found on the old API")
+        raise Exception(f'Student {user.email} not found on the old API')
 
     tasks = response.json()
     task_type = {
@@ -67,7 +67,7 @@ def sync_student_tasks(user, cohort=None):
             task.save()
             task.save()
         syncronized.append(task)
-    logger.debug(f"Added {len(syncronized)} tasks for student {user.email}")
+    logger.debug(f'Added {len(syncronized)} tasks for student {user.email}')
     return syncronized
 
 
@@ -75,8 +75,8 @@ def sync_cohort_tasks(cohort):
 
     synchronized = []
     cohort_users = CohortUser.objects.filter(cohort__id=cohort.id,
-                                             role="STUDENT",
-                                             educational_status__in=["ACTIVE"])
+                                             role='STUDENT',
+                                             educational_status__in=['ACTIVE'])
     for cu in cohort_users:
         try:
             tasks = sync_student_tasks(cu.user, cohort=cohort)

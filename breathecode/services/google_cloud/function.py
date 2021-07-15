@@ -33,7 +33,7 @@ class Function:
 
         auth_req = GCRequest()
         id_token = fetch_id_token(auth_req, 'https://' + self.service_url)
-        headers = {"Authorization": f"Bearer {id_token}"}
+        headers = {'Authorization': f'Bearer {id_token}'}
 
         if data:
             headers['Content-Type'] = 'application/json'

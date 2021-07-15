@@ -7,8 +7,8 @@ from django import forms
 class ResetPasswordForm(forms.Form):
     callback = forms.CharField(required=False, widget=forms.HiddenInput())
     email = forms.EmailField(widget=forms.EmailInput(attrs={
-        "label": "email",
-        "class": "form-control",
+        'label': 'email',
+        'class': 'form-control',
     }), )
 
     def __init__(self, params, *args, **kwargs):
@@ -20,14 +20,14 @@ class ResetPasswordForm(forms.Form):
 class LoginForm(forms.Form):
     url = forms.CharField(required=False, widget=forms.HiddenInput())
     email = forms.EmailField(widget=forms.EmailInput(attrs={
-        "label": "email",
-        "class": "form-control",
+        'label': 'email',
+        'class': 'form-control',
     }), )
     password = forms.CharField(
         min_length=8,
         widget=forms.PasswordInput(attrs={
-            "type": "password",
-            "class": "form-control",
+            'type': 'password',
+            'class': 'form-control',
         }))
 
     def __init__(self, params, *args, **kwargs):
@@ -41,16 +41,16 @@ class PickPasswordForm(forms.Form):
     password1 = forms.CharField(
         min_length=8,
         widget=forms.PasswordInput(attrs={
-            "type": "password",
-            "label": "hello",
-            "class": "form-control",
+            'type': 'password',
+            'label': 'hello',
+            'class': 'form-control',
         }),
     )
     password2 = forms.CharField(
         min_length=8,
         widget=forms.PasswordInput(attrs={
-            "type": "password",
-            "class": "form-control",
+            'type': 'password',
+            'class': 'form-control',
         }))
 
     def __init__(self, params, *args, **kwargs):
@@ -67,40 +67,40 @@ class InviteForm(forms.Form):
     first_name = forms.CharField(
         min_length=2,
         widget=forms.TextInput(attrs={
-            "type": "text",
-            "label": "first_name",
-            "class": "form-control",
+            'type': 'text',
+            'label': 'first_name',
+            'class': 'form-control',
         }),
     )
     last_name = forms.CharField(
         min_length=2,
         widget=forms.TextInput(attrs={
-            "type": "text",
-            "label": "last_name",
-            "class": "form-control",
+            'type': 'text',
+            'label': 'last_name',
+            'class': 'form-control',
         }),
     )
     phone = forms.CharField(
         min_length=8,
         widget=forms.TextInput(attrs={
-            "type": "text",
-            "label": "phone",
-            "class": "form-control",
+            'type': 'text',
+            'label': 'phone',
+            'class': 'form-control',
         }),
     )
     password1 = forms.CharField(
         min_length=8,
         widget=forms.PasswordInput(attrs={
-            "type": "password",
-            "label": "hello",
-            "class": "form-control",
+            'type': 'password',
+            'label': 'hello',
+            'class': 'form-control',
         }),
     )
     password2 = forms.CharField(
         min_length=8,
         widget=forms.PasswordInput(attrs={
-            "type": "password",
-            "class": "form-control",
+            'type': 'password',
+            'class': 'form-control',
         }))
 
     def __init__(self, params, *args, **kwargs):

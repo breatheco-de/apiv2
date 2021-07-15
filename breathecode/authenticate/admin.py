@@ -17,7 +17,7 @@ def clean_all_tokens(modeladmin, request, queryset):
     count = delete_tokens(users=user_ids, status='all')
 
 
-clean_all_tokens.short_description = "Delete all tokens"
+clean_all_tokens.short_description = 'Delete all tokens'
 
 
 def clean_expired_tokens(modeladmin, request, queryset):
@@ -25,14 +25,14 @@ def clean_expired_tokens(modeladmin, request, queryset):
     count = delete_tokens(users=user_ids, status='expired')
 
 
-clean_expired_tokens.short_description = "Delete EXPIRED tokens"
+clean_expired_tokens.short_description = 'Delete EXPIRED tokens'
 
 
 def send_reset_password(modeladmin, request, queryset):
     reset_password(users=queryset)
 
 
-send_reset_password.short_description = "Send reset password link"
+send_reset_password.short_description = 'Send reset password link'
 
 
 @admin.register(CredentialsGithub)
@@ -41,14 +41,14 @@ class CredentialsGithubAdmin(admin.ModelAdmin):
     search_fields = [
         'user__first_name', 'user__last_name', 'user__email', 'email'
     ]
-    raw_id_fields = ["user"]
+    raw_id_fields = ['user']
 
 
 @admin.register(CredentialsSlack)
 class CredentialsSlackAdmin(admin.ModelAdmin):
     list_display = ('user', 'app_id', 'bot_user_id', 'team_id', 'team_name')
     search_fields = ['user__first_name', 'user__last_name', 'user__email']
-    raw_id_fields = ["user"]
+    raw_id_fields = ['user']
 
 
 @admin.register(CredentialsFacebook)
@@ -59,7 +59,8 @@ class CredentialsFacebookAdmin(admin.ModelAdmin):
 @admin.register(Token)
 class TokenAdmin(admin.ModelAdmin):
     list_display = ('key', 'token_type', 'expires_at', 'user')
-    raw_id_fields = ["user"]
+    search_fields = ('user__email', 'user__first_name', 'user__last_name')
+    raw_id_fields = ['user']
 
     def get_readonly_fields(self, request, obj=None):
         return ['key']
@@ -73,10 +74,10 @@ class UserInviteAdmin(admin.ModelAdmin):
                     'token', 'created_at', 'invite_url')
 
     def invite_url(self, obj):
-        params = {"callback": "https://learn.breatheco.de"}
+        params = {'callback': 'https://learn.breatheco.de'}
         querystr = urllib.parse.urlencode(params)
-        url = os.getenv('API_URL') + "/v1/auth/member/invite/" + str(
-            obj.token) + "?" + querystr
+        url = os.getenv('API_URL') + '/v1/auth/member/invite/' + str(
+            obj.token) + '?' + querystr
         return format_html(
             f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>"
         )
@@ -88,7 +89,7 @@ def clear_user_password(modeladmin, request, queryset):
         u.save()
 
 
-clear_user_password.short_description = "Clear user password"
+clear_user_password.short_description = 'Clear user password'
 
 
 @admin.register(UserProxy)
@@ -102,10 +103,10 @@ class UserAdmin(UserAdmin):
 
     def get_queryset(self, request):
 
-        self.github_callback = f"https://app.breatheco.de"
+        self.github_callback = f'https://app.breatheco.de'
         self.github_callback = str(
-            base64.urlsafe_b64encode(self.github_callback.encode("utf-8")),
-            "utf-8")
+            base64.urlsafe_b64encode(self.github_callback.encode('utf-8')),
+            'utf-8')
         return super(UserAdmin, self).get_queryset(request)
 
     def github_login(self, obj):
@@ -130,10 +131,10 @@ def mark_as_active(modeladmin, request, queryset):
         ap.status = 'ACTIVE'
         ap.save()
 
-    logger.info(f"All AcademyProfiles marked as ACTIVE")
+    logger.info(f'All AcademyProfiles marked as ACTIVE')
 
 
-mark_as_active.short_description = "Mark as ACTIVE"
+mark_as_active.short_description = 'Mark as ACTIVE'
 
 
 @admin.register(ProfileAcademy)
@@ -143,14 +144,14 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
     search_fields = ['user__first_name', 'user__last_name', 'user__email']
     list_filter = ['academy__slug', 'status', 'role__slug']
     actions = [mark_as_active]
-    raw_id_fields = ["user"]
+    raw_id_fields = ['user']
 
     def get_queryset(self, request):
 
-        self.slack_callback = f"https://app.breatheco.de"
+        self.slack_callback = f'https://app.breatheco.de'
         self.slack_callback = str(
-            base64.urlsafe_b64encode(self.slack_callback.encode("utf-8")),
-            "utf-8")
+            base64.urlsafe_b64encode(self.slack_callback.encode('utf-8')),
+            'utf-8')
         return super(ProfileAcademyAdmin, self).get_queryset(request)
 
     def slack(self, obj):
@@ -159,7 +160,7 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
                 f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/slack/?a={obj.academy.id}&user={obj.user.id}&url={self.slack_callback}'>slack login</a>"
             )
         else:
-            return "Pending invite response"
+            return 'Pending invite response'
 
     def facebook(self, obj):
         if obj.user is not None:
@@ -167,7 +168,7 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
                 f"<a rel='noopener noreferrer' target='_blank' href='/v1/auth/facebook/?a={obj.academy.id}&user={obj.user.id}&url={self.slack_callback}'>facebook login</a>"
             )
         else:
-            return "Pending invite response"
+            return 'Pending invite response'
 
 
 @admin.register(Profile)

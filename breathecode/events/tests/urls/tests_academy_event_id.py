@@ -20,7 +20,7 @@ class AcademyEventsTestSuite(EventTestCase):
     def test_academy_single_event_no_auth(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_single_event',
-                           kwargs={"event_id": 1})
+                           kwargs={'event_id': 1})
 
         response = self.client.get(url)
         json = response.json()
@@ -35,7 +35,7 @@ class AcademyEventsTestSuite(EventTestCase):
     def test_all_academy_events_without_capability(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_single_event',
-                           kwargs={"event_id": 1})
+                           kwargs={'event_id': 1})
         self.generate_models(authenticate=True)
 
         response = self.client.get(url)
@@ -55,7 +55,7 @@ class AcademyEventsTestSuite(EventTestCase):
     def test_academy_single_event_invalid_id(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_single_event',
-                           kwargs={"event_id": 1})
+                           kwargs={'event_id': 1})
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='read_event',
@@ -75,7 +75,7 @@ class AcademyEventsTestSuite(EventTestCase):
     def test_academy_single_event_valid_id(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_single_event',
-                           kwargs={"event_id": 1})
+                           kwargs={'event_id': 1})
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='read_event',

@@ -9,19 +9,19 @@ urlpatterns = [
     path('all', get_events, name='all'),
     path('academy/event',
          AcademyEventView.as_view(),
-         name="academy_all_events"),
+         name='academy_all_events'),
     path('ical/cohorts',
          ICalCohortsView.as_view(),
-         name="academy_id_ical_cohorts"),  # don't correct that name
+         name='academy_id_ical_cohorts'),  # don't correct that name
     path('ical/events', ICalEventView.as_view(),
-         name="academy_id_ical_events"),  # don't correct that name
+         name='academy_id_ical_events'),  # don't correct that name
     path('ical/student/<int:user_id>',
          ICalStudentView.as_view(),
-         name="ical_student_id"),  # don't correct that name
-    path('academy/venues', AcademyVenueView.as_view(), name="academy_venues"),
+         name='ical_student_id'),  # don't correct that name
+    path('academy/venues', AcademyVenueView.as_view(), name='academy_venues'),
     path('academy/event/<int:event_id>',
          AcademyEventView.as_view(),
-         name="academy_single_event"),
+         name='academy_single_event'),
     path('academy/eventype', EventTypeView.as_view(), name='type'),
     path('academy/checkin', EventCheckinView.as_view(),
          name='academy_checkin'),
