@@ -459,15 +459,12 @@ class LoginView(ObtainAuthToken):
     schema = AutoSchema()
 
     def post(self, request, *args, **kwargs):
-        # delete expired tokens
-        utc_now = timezone.now()
-        Token.objects.filter(expires_at__lt=utc_now).delete()
 
         serializer = AuthSerializer(data=request.data,
                                     context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-        token, created = Token.objects.get_or_create(user=user,
+        token, created = Token.get_or_create(user=user,
                                                      token_type='login')
         return Response({
             'token': token.key,
@@ -601,7 +598,7 @@ def get_github_token(request, user_id=None):
                                       code=403,
                                       slug='you-not-user')
 
-        user, created = Token.objects.get_or_create(user=request.user,
+        user, created = Token.get_or_create(user=request.user,
                                                     token_type='login')
         url = url + f'&user={user.key}'
 
@@ -690,22 +687,27 @@ def save_github_token(request):
             if github_user['email'] is None:
                 raise ValidationError('Impossible to retrieve user email')
 
-            if token and not Token.objects.filter(key=token).exists():
-                logger.debug(f'Token not found')
-                raise ValidationException(
-                    'Token was not found, please input different token',
-                    code=404,
-                    slug='token-not-found')
-
-            if token:
-                user_token = Token.objects.filter(key=token).first()
-                user = User.objects.filter(auth_token=user_token.id).first()
-
+            # is a valid token??? if not valid it will become None
+            if token is not None and token != "":
+                token = Token.get_valid(token)
+                if not token:
+                    logger.debug(f'Token not found or is expired')
+                    raise ValidationException(
+                        'Token was not found or is expired, please use a different token',
+                        code=404,
+                        slug='token-not-found')
+                user = User.objects.filter(auth_token=token.id).first()
             else:
+                # for the token to become null for easier management
+                token = None
+
+            # user can't be found thru token, lets try thru the github credentials
+            if token is None:
                 user = User.objects.filter(
                     Q(credentialsgithub__github_id=github_user['id'])
                     | Q(email__iexact=github_user['email'])).first()
 
+            # create the user if not exists
             if user is None:
                 user = User(username=github_user['email'],
                             email=github_user['email'])
@@ -754,11 +756,10 @@ def save_github_token(request):
                     profile_academy.save()
 
             if not token:
-                token, created = Token.objects.get_or_create(
+                token, created = Token.get_or_create(
                     user=user, token_type='login')
-                token = token.key
 
-            return HttpResponseRedirect(redirect_to=url + '?token=' + token)
+            return HttpResponseRedirect(redirect_to=url + '?token=' + token.key)
 
         else:
             raise APIException('Error from github')
@@ -1329,7 +1330,7 @@ def login_html_view(request):
                 msg = 'Must include "username" and "password".'
                 raise Exception(msg, code=403)
 
-            token, created = Token.objects.get_or_create(user=user,
+            token, created = Token.get_or_create(user=user,
                                                          token_type='login')
             return HttpResponseRedirect(url + '?token=' + str(token))
 

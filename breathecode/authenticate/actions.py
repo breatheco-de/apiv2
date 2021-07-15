@@ -22,15 +22,6 @@ def create_user(github_id=None, email=None):
     return user
 
 
-def create_token(user, hours_length=1):
-    utc_now = timezone.now()
-    expires_at = utc_now + timezone.timedelta(hours=hours_length)
-    token, created = Token.objects.get_or_create(user=user,
-                                                 token_type='temporal',
-                                                 expires_at=expires_at)
-    return token
-
-
 def delete_tokens(users=None, status='expired'):
     now = timezone.now()
 
@@ -51,7 +42,7 @@ def reset_password(users=None):
         raise Exception('Missing users')
 
     for user in users:
-        token = Token.create_temp(user)
+        token, created = Token.get_or_create(user, token_type='temporal')
 
         # returns true or false if the email was send
         return send_email_message(
