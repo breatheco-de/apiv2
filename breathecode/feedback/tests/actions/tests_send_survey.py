@@ -264,7 +264,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         try:
             send_question(model['user'])
         except Exception as e:
-            self.assertEqual(str(e), f"Team owner not has slack credentials")
+            self.assertEqual(str(e), f'Team owner not has slack credentials')
 
         expected = [{
             'id': 1,

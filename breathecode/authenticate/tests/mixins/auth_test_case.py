@@ -35,7 +35,7 @@ class AuthTestCase(APITestCase, ModelsMixin):
         self.email = user.email
         self.client = APIClient()
 
-        params = {"user": user}
+        params = {'user': user}
         github = mixer.blend('authenticate.CredentialsGithub', **params)
         github.save()
 

@@ -237,7 +237,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.delete(url)
         json = response.json()
         expected = {
-            'detail': "Missing parameters in the querystring",
+            'detail': 'Missing parameters in the querystring',
             'status_code': 400
         }
 

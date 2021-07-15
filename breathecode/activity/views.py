@@ -135,7 +135,7 @@ class ActivityClassroomView(APIView):
         cu = cu.first()
         if cu is None:
             raise ValidationException(
-                "Only teachers or assistants from this cohort can report classroom activities on the student timeline"
+                'Only teachers or assistants from this cohort can report classroom activities on the student timeline'
             )
 
         data = request.data
@@ -148,8 +148,13 @@ class ActivityClassroomView(APIView):
             del activity['user_id']
             cohort_user = CohortUser.objects.filter(role='STUDENT', user__id=student_id,cohort__id=cu.cohort.id).first()
             if cohort_user is None:
+<<<<<<< HEAD
                 raise ValidationException(f"Student {student_id} not found in this cohort {cohort_id}",
                                           slug="not-found-in-cohort")
+=======
+                raise ValidationException('Student not found in this cohort',
+                                          slug='not-found-in-cohort')
+>>>>>>> c1ee163d27fad5aa5abbe42b5d17fc028a1acd3c
 
             new_activities.append(
                 add_student_activity(cohort_user.user, activity, academy_id))

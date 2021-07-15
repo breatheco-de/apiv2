@@ -88,7 +88,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        del json["user"]
+        del json['user']
         self.assertEqual(
             json, {
                 'id': model['answer'].id,

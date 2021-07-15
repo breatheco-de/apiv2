@@ -35,7 +35,7 @@ class Profile(models.Model):
 
     show_tutorial = models.BooleanField(
         default=True,
-        help_text="Set true if you want to show the tutorial on the user UI/UX"
+        help_text='Set true if you want to show the tutorial on the user UI/UX'
     )
 
     twitter_username = models.CharField(max_length=50, blank=True, null=True)
@@ -54,7 +54,7 @@ class Capability(models.Model):
                                    default=None)
 
     def __str__(self):
-        return f"{self.slug}"
+        return f'{self.slug}'
 
 
 class Role(models.Model):
@@ -69,7 +69,7 @@ class Role(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f"{self.name} ({self.slug})"
+        return f'{self.name} ({self.slug})'
 
 
 PENDING = 'PENDING'
@@ -130,7 +130,7 @@ class UserInvite(models.Model):
     sent_at = models.DateTimeField(default=None, null=True, blank=True)
 
     def __str__(self):
-        return f"Invite for {self.email}"
+        return f'Invite for {self.email}'
 
 
 INVITED = 'INVITED'
@@ -183,7 +183,7 @@ class ProfileAcademy(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f"{self.email} for academy ({self.academy.name})"
+        return f'{self.email} for academy ({self.academy.name})'
 
     def save(self, *args, **kwargs):
 
@@ -210,7 +210,7 @@ class CredentialsGithub(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f"{self.email} ({self.user.id})"
+        return f'{self.email} ({self.user.id})'
 
     def save(self, *args, **kwargs):
         if self.email:
@@ -236,7 +236,7 @@ class CredentialsSlack(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f"{self.user.email} ({self.authed_user})"
+        return f'{self.user.email} ({self.authed_user})'
 
 
 class CredentialsFacebook(models.Model):
@@ -258,7 +258,7 @@ class CredentialsFacebook(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f"Team {str(self.user)}"
+        return f'Team {str(self.user)}'
 
 
 class CredentialsQuickBooks(models.Model):
@@ -280,7 +280,7 @@ class Token(rest_framework.authtoken.models.Token):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
                              related_name='auth_token',
                              on_delete=models.CASCADE,
-                             verbose_name=_("User"))
+                             verbose_name=_('User'))
     token_type = models.CharField(max_length=64, default='temporal')
     expires_at = models.DateTimeField(default=None, blank=True, null=True)
 
@@ -298,10 +298,10 @@ class Token(rest_framework.authtoken.models.Token):
 
     def create_temp(user):
         token, created = Token.objects.get_or_create(user=user,
-                                                     token_type="temporal")
+                                                     token_type='temporal')
         return token
 
-    def get_valid(token, token_type="temporal"):
+    def get_valid(token, token_type='temporal'):
         utc_now = timezone.now()
         # delete expired tokens
         Token.objects.filter(expires_at__lt=utc_now).delete()

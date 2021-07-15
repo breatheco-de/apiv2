@@ -29,7 +29,7 @@ ENVIRONMENT = os.environ.get('ENV')
 SECRET_KEY = '5ar3h@ha%y*dc72z=8-ju7@4xqm0o59*@k*c2i=xacmy2r=%4a'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = (ENVIRONMENT == "development")
+DEBUG = (ENVIRONMENT == 'development')
 
 ALLOWED_HOSTS = []
 
@@ -223,7 +223,7 @@ logging.config.dictConfig({
 
 ROLLBAR = {
     'access_token':
-    os.getenv('ROLLBAR_ACCESS_TOKEN', ""),
+    os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
     'environment':
     'development' if DEBUG else 'production',
     'branch':
@@ -276,19 +276,19 @@ STATICFILES_DIRS = [
 CORS_ORIGIN_ALLOW_ALL = True
 
 CORS_ALLOW_HEADERS = [
-    "accept",
-    "academy",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "dnt",
-    "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
-    "cache-control",
-    "credentials",
-    "http-access-control-request-method",
+    'accept',
+    'academy',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'cache-control',
+    'credentials',
+    'http-access-control-request-method',
 ]
 
 REDIS_URL = os.getenv('REDIS_URL', '')
@@ -300,8 +300,8 @@ def cache_opts(is_test_env):
     else:
         return {
             'OPTIONS': {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-                "PARSER_CLASS": "redis.connection.HiredisParser",
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'PARSER_CLASS': 'redis.connection.HiredisParser',
             }
         }
 

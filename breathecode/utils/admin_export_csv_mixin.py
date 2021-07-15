@@ -20,4 +20,4 @@ class AdminExportCsvMixin:
 
         return response
 
-    export_as_csv.short_description = "Export Selected as CSV"
+    export_as_csv.short_description = 'Export Selected as CSV'

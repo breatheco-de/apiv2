@@ -80,7 +80,7 @@ class CertificateTestSuite(CertificateTestCase):
                              syllabus=True,
                              specialty=True,
                              layout_design=True,
-                             cohort_stage="ENDED")
+                             cohort_stage='ENDED')
 
         url = reverse_lazy('certificate:certificate_cohort',
                            kwargs={'cohort_id': 1})
@@ -108,8 +108,8 @@ class CertificateTestSuite(CertificateTestCase):
                              user=True,
                              profile_academy=True,
                              capability='crud_certificate',
-                             role="STUDENT",
-                             cohort_stage="ENDED")
+                             role='STUDENT',
+                             cohort_stage='ENDED')
 
         url = reverse_lazy('certificate:certificate_cohort',
                            kwargs={'cohort_id': 1})
@@ -136,14 +136,14 @@ class CertificateTestSuite(CertificateTestCase):
                              capability='crud_certificate',
                              role='STUDENT',
                              cohort_user=True,
-                             cohort_stage="ENDED")
+                             cohort_stage='ENDED')
 
         url = reverse_lazy('certificate:certificate_cohort',
                            kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
         expected = {
-            'detail': "cohort-has-no-syllabus-assigned",
+            'detail': 'cohort-has-no-syllabus-assigned',
             'status_code': 400
         }
 
@@ -167,14 +167,14 @@ class CertificateTestSuite(CertificateTestCase):
                              role='STUDENT',
                              cohort_user=True,
                              syllabus=True,
-                             cohort_stage="ENDED")
+                             cohort_stage='ENDED')
 
         url = reverse_lazy('certificate:certificate_cohort',
                            kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
         expected = {
-            'detail': "specialty-has-no-certificate-assigned",
+            'detail': 'specialty-has-no-certificate-assigned',
             'status_code': 400
         }
 
@@ -198,13 +198,13 @@ class CertificateTestSuite(CertificateTestCase):
                              cohort_user=True,
                              syllabus=True,
                              specialty=True,
-                             cohort_stage="ENDED")
+                             cohort_stage='ENDED')
 
         url = reverse_lazy('certificate:certificate_cohort',
                            kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
-        expected = {'detail': "no-default-layout", 'status_code': 400}
+        expected = {'detail': 'no-default-layout', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -232,7 +232,7 @@ class CertificateTestSuite(CertificateTestCase):
                            kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
-        expected = {'detail': "cohort-stage-must-be-ended", 'status_code': 400}
+        expected = {'detail': 'cohort-stage-must-be-ended', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -255,7 +255,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      role='STUDENT',
                                      syllabus=True,
                                      specialty=True,
-                                     cohort_stage="ENDED",
+                                     cohort_stage='ENDED',
                                      user_specialty=True,
                                      layout_design=True)
 
@@ -309,7 +309,7 @@ class CertificateTestSuite(CertificateTestCase):
             'preview_url':
             model['user_specialty'].preview_url,
             'signed_by':
-            teacher_model['user'].first_name + " " +
+            teacher_model['user'].first_name + ' ' +
             teacher_model['user'].last_name,
             'signed_by_role':
             'Director',
@@ -351,7 +351,7 @@ class CertificateTestSuite(CertificateTestCase):
             'preview_url':
             model['user_specialty'].preview_url,
             'signed_by':
-            teacher_model['user'].first_name + " " +
+            teacher_model['user'].first_name + ' ' +
             teacher_model['user'].last_name,
             'signed_by_role':
             'Director',
@@ -364,7 +364,7 @@ class CertificateTestSuite(CertificateTestCase):
             'user_id':
             1,
             'token':
-            "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+            '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -384,7 +384,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      role='STUDENT',
                                      syllabus=True,
                                      specialty=True,
-                                     cohort_stage="ENDED",
+                                     cohort_stage='ENDED',
                                      user_specialty=True,
                                      layout_design=True,
                                      cohort_user_finantial_status='UP_TO_DATE')
@@ -439,7 +439,7 @@ class CertificateTestSuite(CertificateTestCase):
             'preview_url':
             model['user_specialty'].preview_url,
             'signed_by':
-            teacher_model['user'].first_name + " " +
+            teacher_model['user'].first_name + ' ' +
             teacher_model['user'].last_name,
             'signed_by_role':
             'Director',
@@ -481,7 +481,7 @@ class CertificateTestSuite(CertificateTestCase):
             'preview_url':
             model['user_specialty'].preview_url,
             'signed_by':
-            teacher_model['user'].first_name + " " +
+            teacher_model['user'].first_name + ' ' +
             teacher_model['user'].last_name,
             'signed_by_role':
             'Director',
@@ -494,7 +494,7 @@ class CertificateTestSuite(CertificateTestCase):
             'user_id':
             1,
             'token':
-            "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+            '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -514,7 +514,7 @@ class CertificateTestSuite(CertificateTestCase):
             capability='crud_certificate',
             role='STUDENT',
             specialty=True,
-            cohort_stage="ENDED",
+            cohort_stage='ENDED',
             user_specialty=True,
             layout_design=True,
             cohort_user_finantial_status='UP_TO_DATE',
@@ -570,7 +570,7 @@ class CertificateTestSuite(CertificateTestCase):
             'preview_url':
             model['user_specialty'].preview_url,
             'signed_by':
-            teacher_model['user'].first_name + " " +
+            teacher_model['user'].first_name + ' ' +
             teacher_model['user'].last_name,
             'signed_by_role':
             'Director',
@@ -613,7 +613,7 @@ class CertificateTestSuite(CertificateTestCase):
             'preview_url':
             model['user_specialty'].preview_url,
             'signed_by':
-            teacher_model['user'].first_name + " " +
+            teacher_model['user'].first_name + ' ' +
             teacher_model['user'].last_name,
             'signed_by_role':
             'Director',
@@ -627,7 +627,7 @@ class CertificateTestSuite(CertificateTestCase):
             'user_id':
             1,
             'token':
-            "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+            '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -647,7 +647,7 @@ class CertificateTestSuite(CertificateTestCase):
             role='STUDENT',
             cohort_user=True,
             specialty=True,
-            cohort_stage="ENDED",
+            cohort_stage='ENDED',
             user_specialty=True,
             cohort_user_educational_status='GRADUATED',
             cohort_user_finantial_status='UP_TO_DATE',
@@ -704,7 +704,7 @@ class CertificateTestSuite(CertificateTestCase):
             'preview_url':
             model['user_specialty'].preview_url,
             'signed_by':
-            teacher_model['user'].first_name + " " +
+            teacher_model['user'].first_name + ' ' +
             teacher_model['user'].last_name,
             'signed_by_role':
             'Director',
@@ -746,7 +746,7 @@ class CertificateTestSuite(CertificateTestCase):
             'preview_url':
             model['user_specialty'].preview_url,
             'signed_by':
-            teacher_model['user'].first_name + " " +
+            teacher_model['user'].first_name + ' ' +
             teacher_model['user'].last_name,
             'signed_by_role':
             'Director',
@@ -759,5 +759,5 @@ class CertificateTestSuite(CertificateTestCase):
             'user_id':
             1,
             'token':
-            "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+            '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
         }])

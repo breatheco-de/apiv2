@@ -78,7 +78,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
         }
 
-        slug = "missing_ids"
+        slug = 'missing_ids'
 
         model = self.generate_models(academy=True,
                                      capability='crud_invite',

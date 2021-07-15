@@ -21,14 +21,14 @@ class TaskTeacherView(APIView):
     def get(self, request):
 
         items = Task.objects.all()
-        logger.debug(f"Found {items.count()} tasks")
+        logger.debug(f'Found {items.count()} tasks')
 
         if request.user is not None:
             profile_ids = ProfileAcademy.objects.filter(
                 user=request.user.id).values_list('academy__id', flat=True)
             if profile_ids is None:
                 raise APIException(
-                    "The quest user must belong to at least one academy to be able to request student tasks"
+                    'The quest user must belong to at least one academy to be able to request student tasks'
                 )
             items = items.filter(
                 Q(cohort__academy__id__in=profile_ids)
@@ -37,53 +37,53 @@ class TaskTeacherView(APIView):
         academy = request.GET.get('academy', None)
         if academy is not None:
             items = items.filter(
-                Q(cohort__academy__slug__in=academy.split(","))
+                Q(cohort__academy__slug__in=academy.split(','))
                 | Q(cohort__isnull=True))
 
         user = request.GET.get('user', None)
         if user is not None:
-            items = items.filter(user__id__in=user.split(","))
+            items = items.filter(user__id__in=user.split(','))
 
         # tasks these cohorts (not the users, but the tasts belong to the cohort)
         cohort = request.GET.get('cohort', None)
         if cohort is not None:
             items = items.filter(
-                Q(cohort__slug__in=cohort.split(","))
-                | Q(cohort__id__in=cohort.split(",")))
+                Q(cohort__slug__in=cohort.split(','))
+                | Q(cohort__id__in=cohort.split(',')))
 
         # tasks from users that belong to these cohort
         stu_cohort = request.GET.get('stu_cohort', None)
         if stu_cohort is not None:
-            ids = stu_cohort.split(",")
+            ids = stu_cohort.split(',')
             if ids[0].isnumeric():
                 items = items.filter(user__cohortuser__cohort__id__in=ids,
-                                     user__cohortuser__role="STUDENT")
+                                     user__cohortuser__role='STUDENT')
             else:
                 items = items.filter(user__cohortuser__cohort__slug__in=ids,
-                                     user__cohortuser__role="STUDENT")
+                                     user__cohortuser__role='STUDENT')
 
         # tasks from users that belong to these cohort
         teacher = request.GET.get('teacher', None)
         if teacher is not None:
             teacher_cohorts = CohortUser.objects.filter(
-                user__id__in=teacher.split(","),
-                role="TEACHER").values_list('cohort__id', flat=True)
+                user__id__in=teacher.split(','),
+                role='TEACHER').values_list('cohort__id', flat=True)
             items = items.filter(
                 user__cohortuser__cohort__id__in=teacher_cohorts,
-                user__cohortuser__role="STUDENT")
+                user__cohortuser__role='STUDENT')
 
         task_status = request.GET.get('task_status', None)
         if task_status is not None:
-            items = items.filter(task_status__in=task_status.split(","))
+            items = items.filter(task_status__in=task_status.split(','))
 
         revision_status = request.GET.get('revision_status', None)
         if revision_status is not None:
             items = items.filter(
-                revision_status__in=revision_status.split(","))
+                revision_status__in=revision_status.split(','))
 
         task_type = request.GET.get('task_type', None)
         if task_type is not None:
-            items = items.filter(task_type__in=task_type.split(","))
+            items = items.filter(task_type__in=task_type.split(','))
 
         items = items.order_by('created_at')
         serializer = TaskGETSerializer(items, many=True)
@@ -94,11 +94,11 @@ class TaskTeacherView(APIView):
 def sync_cohort_tasks_view(request, cohort_id=None):
     item = Cohort.objects.filter(id=cohort_id).first()
     if item is None:
-        raise ValidationException("Cohort not found")
+        raise ValidationException('Cohort not found')
 
     syncronized = sync_cohort_tasks(item)
     if len(syncronized) == 0:
-        raise ValidationException("No tasks updated")
+        raise ValidationException('No tasks updated')
 
     serializer = TaskGETSerializer(syncronized, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
@@ -113,7 +113,7 @@ class TaskMeView(APIView):
         if task_id is not None:
             item = Task.objects.filter(id=task_id).first()
             if item is None:
-                raise ValidationException("Task not found")
+                raise ValidationException('Task not found')
 
             serializer = TaskGETSerializer(item, many=False)
             return Response(serializer.data)
@@ -127,11 +127,11 @@ class TaskMeView(APIView):
 
         item = Task.objects.filter(id=task_id).first()
         if item is None:
-            raise ValidationException("Task not found")
+            raise ValidationException('Task not found')
 
         serializer = PUTTaskSerializer(item,
                                        data=request.data,
-                                       context={"request": request})
+                                       context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -150,8 +150,8 @@ class TaskMeView(APIView):
 
         serializer = PostTaskSerializer(data=payload,
                                         context={
-                                            "request": request,
-                                            "user_id": user_id
+                                            'request': request,
+                                            'user_id': user_id
                                         },
                                         many=True)
         if serializer.is_valid():

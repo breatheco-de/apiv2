@@ -32,7 +32,7 @@ class TokenSmallSerializer(serpy.Serializer):
     reset_password_url = serpy.MethodField()
 
     def get_reset_password_url(self, obj):
-        return os.getenv('API_URL') + "/v1/auth/password/" + str(obj.key)
+        return os.getenv('API_URL') + '/v1/auth/password/' + str(obj.key)
 
 
 class RoleSmallSerializer(serpy.Serializer):
@@ -67,7 +67,7 @@ class UserInviteSerializer(serpy.Serializer):
     def get_invite_url(self, _invite):
         if _invite.token is None:
             return None
-        return os.getenv('API_URL') + "/v1/auth/member/invite/" + str(
+        return os.getenv('API_URL') + '/v1/auth/member/invite/' + str(
             _invite.token)
 
 
@@ -199,18 +199,18 @@ class UserMeSerializer(serializers.ModelSerializer):
                 serializer = UserMeProfileSerializer(
                     self.instance.profile,
                     data={
-                        **profile_data, "user": self.instance.id
+                        **profile_data, 'user': self.instance.id
                     })
             except Profile.DoesNotExist:
                 serializer = UserMeProfileSerializer(
                     data={
-                        **profile_data, "user": self.instance.id
+                        **profile_data, 'user': self.instance.id
                     })
 
             if serializer and serializer.is_valid():
                 serializer.save()
             else:
-                raise ValidationException("Error saving user profile")
+                raise ValidationException('Error saving user profile')
 
         return super().update(self.instance, validated_data)
 
@@ -226,15 +226,15 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                   'address', 'phone', 'invite', 'status')
 
     def validate(self, data):
-        if "user" not in data:
-            if "invite" not in data or data["invite"] != True:
+        if 'user' not in data:
+            if 'invite' not in data or data['invite'] != True:
                 raise ValidationException(
-                    "User does not exists, do you want to invite it?",
-                    slug="user-not-found")
-            elif "email" not in data:
+                    'User does not exists, do you want to invite it?',
+                    slug='user-not-found')
+            elif 'email' not in data:
                 raise ValidationException(
-                    "Please specify user id or member email",
-                    slug="no-email-or-id")
+                    'Please specify user id or member email',
+                    slug='no-email-or-id')
 
             already = ProfileAcademy.objects.filter(
                 email=data['email'],
@@ -244,7 +244,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     'There is a member already in this academy with this email, or with invitation to this email pending'
                 )
 
-        elif "user" in data:
+        elif 'user' in data:
             student_role = Role.objects.filter(slug='student').first()
 
             already = ProfileAcademy.objects.filter(
@@ -255,8 +255,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     f'This user is already a member of this academy as {str(already.role)}',
                     slug='user-already-exists')
 
-        if "role" not in data:
-            raise ValidationException("Missing role")
+        if 'role' not in data:
+            raise ValidationException('Missing role')
 
         return data
 
@@ -265,19 +265,19 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
         academy = Academy.objects.filter(
             id=self.context.get('academy_id')).first()
         if academy is None:
-            raise ValidationException("Academy not found")
+            raise ValidationException('Academy not found')
 
         role = validated_data['role']
 
         user = None
         email = None
-        status = "INVITED"
-        if "user" in validated_data:
-            user = User.objects.filter(id=validated_data["user"]).first()
+        status = 'INVITED'
+        if 'user' in validated_data:
+            user = User.objects.filter(id=validated_data['user']).first()
             if user is None:
-                raise ValidationException("User not found")
+                raise ValidationException('User not found')
             email = user.email
-            status = "ACTIVE"
+            status = 'ACTIVE'
 
             student_role = Role.objects.filter(slug='student').first()
             already_as_student = ProfileAcademy.objects.filter(
@@ -285,21 +285,21 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             if already_as_student is not None:
                 return super().update(
                     already_as_student, {
-                        **validated_data, "email": email,
-                        "user": user,
-                        "academy": academy,
-                        "role": role,
-                        "status": status
+                        **validated_data, 'email': email,
+                        'user': user,
+                        'academy': academy,
+                        'role': role,
+                        'status': status
                     })
 
-        if "user" not in validated_data:
+        if 'user' not in validated_data:
             validated_data.pop('invite')
-            email = validated_data["email"].lower()
+            email = validated_data['email'].lower()
             invite = UserInvite.objects.filter(
                 email=email, author=self.context.get('request').user).first()
             if invite is not None:
                 raise ValidationException(
-                    "You already invited this user, check for previous invites and resend"
+                    'You already invited this user, check for previous invites and resend'
                 )
 
             invite = UserInvite(email=email,
@@ -311,28 +311,28 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                                 token=random.getrandbits(128))
             invite.save()
 
-            logger.debug("Sending invite email to " + email)
+            logger.debug('Sending invite email to ' + email)
 
-            params = {"callback": "https://admin.breatheco.de"}
+            params = {'callback': 'https://admin.breatheco.de'}
             querystr = urllib.parse.urlencode(params)
             # TODO: obj is not defined
-            url = os.getenv('API_URL') + "/v1/auth/member/invite/" + \
-                str(invite.token) + "?" + querystr
+            url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
+                str(invite.token) + '?' + querystr
 
             send_email_message(
-                "welcome_academy", email, {
-                    "email": email,
-                    "subject": "Welcome to Breathecode",
-                    "LINK": url,
-                    "FIST_NAME": validated_data['first_name']
+                'welcome_academy', email, {
+                    'email': email,
+                    'subject': 'Welcome to Breathecode',
+                    'LINK': url,
+                    'FIST_NAME': validated_data['first_name']
                 })
 
         return super().create({
-            **validated_data, "email": email,
-            "user": user,
-            "academy": academy,
-            "role": role,
-            "status": status
+            **validated_data, 'email': email,
+            'user': user,
+            'academy': academy,
+            'role': role,
+            'status': status
         })
 
 
@@ -351,13 +351,13 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         if 'email' in data:
             data['email'] = data['email'].lower()
 
-        if "user" not in data:
-            if "invite" not in data or data["invite"] != True:
+        if 'user' not in data:
+            if 'invite' not in data or data['invite'] != True:
                 raise ValidationException(
-                    "User does not exists, do you want to invite it?")
-            elif "email" not in data:
+                    'User does not exists, do you want to invite it?')
+            elif 'email' not in data:
                 raise ValidationException(
-                    "Please specify user id or student email")
+                    'Please specify user id or student email')
 
             already = ProfileAcademy.objects.filter(
                 email=data['email'],
@@ -367,7 +367,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     'There is a student already in this academy, or with invitation pending'
                 )
 
-        elif "user" in data:
+        elif 'user' in data:
             already = ProfileAcademy.objects.filter(
                 user=data['user'], academy=self.context['academy_id']).first()
             if already:
@@ -381,25 +381,25 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         academy = Academy.objects.filter(
             id=self.context.get('academy_id')).first()
         if academy is None:
-            raise ValidationException("Academy not found")
+            raise ValidationException('Academy not found')
 
         role = Role.objects.filter(slug='student').first()
         if role is None:
-            raise ValidationException("Role student not found")
+            raise ValidationException('Role student not found')
 
         user = None
         email = None
-        status = "INVITED"
-        if "user" in validated_data:
-            user = User.objects.filter(id=validated_data["user"]).first()
+        status = 'INVITED'
+        if 'user' in validated_data:
+            user = User.objects.filter(id=validated_data['user']).first()
             if user is None:
-                raise ValidationException("User not found")
+                raise ValidationException('User not found')
             email = user.email
-            status = "ACTIVE"
+            status = 'ACTIVE'
 
-        if "user" not in validated_data:
+        if 'user' not in validated_data:
             validated_data.pop('invite')
-            email = validated_data["email"]
+            email = validated_data['email']
             cohort = None
             if 'cohort' in validated_data:
                 cohort = Cohort.objects.filter(
@@ -410,7 +410,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 author=self.context.get('request').user).first()
             if invite is not None:
                 raise ValidationException(
-                    "You already invited this user, check for previous invites and resend"
+                    'You already invited this user, check for previous invites and resend'
                 )
 
             invite = UserInvite(email=validated_data['email'],
@@ -423,28 +423,28 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                                 token=random.getrandbits(128))
             invite.save()
 
-            logger.debug("Sending invite email to " + email)
+            logger.debug('Sending invite email to ' + email)
 
-            params = {"callback": "https://learn.breatheco.de"}
+            params = {'callback': 'https://learn.breatheco.de'}
 
             querystr = urllib.parse.urlencode(params)
-            url = os.getenv('API_URL') + "/v1/auth/member/invite/" + \
-                str(invite.token) + "?" + querystr
+            url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
+                str(invite.token) + '?' + querystr
 
             send_email_message(
-                "welcome_academy", email, {
-                    "email": email,
-                    "subject": "Welcome to Breathecode",
-                    "LINK": url,
-                    "FIST_NAME": validated_data['first_name']
+                'welcome_academy', email, {
+                    'email': email,
+                    'subject': 'Welcome to Breathecode',
+                    'LINK': url,
+                    'FIST_NAME': validated_data['first_name']
                 })
 
         return super().create({
-            **validated_data, "email": email,
-            "user": user,
-            "academy": academy,
-            "role": role,
-            "status": status
+            **validated_data, 'email': email,
+            'user': user,
+            'academy': academy,
+            'role': role,
+            'status': status
         })
 
 
@@ -465,9 +465,9 @@ class MemberPUTSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
 
-        if instance.user.first_name is None or instance.user.first_name == "":
+        if instance.user.first_name is None or instance.user.first_name == '':
             instance.user.first_name = instance.first_name
-        if instance.user.last_name is None or instance.user.last_name == "":
+        if instance.user.last_name is None or instance.user.last_name == '':
             instance.user.last_name = instance.last_name
         instance.user.save()
 
@@ -475,8 +475,8 @@ class MemberPUTSerializer(serializers.ModelSerializer):
 
 
 class AuthSerializer(serializers.Serializer):
-    email = serializers.EmailField(label="Email")
-    password = serializers.CharField(label="Password",
+    email = serializers.EmailField(label='Email')
+    password = serializers.CharField(label='Password',
                                      style={'input_type': 'password'},
                                      trim_whitespace=False)
 
@@ -512,7 +512,7 @@ class UserInvitePUTSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        if "status" not in data:
-            raise ValidationException("Missing status on invite")
+        if 'status' not in data:
+            raise ValidationException('Missing status on invite')
 
         return data

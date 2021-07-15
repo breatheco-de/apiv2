@@ -12,11 +12,11 @@ class Eventbrite:
 
     def __init__(self, token=None):
         if token is None:
-            token = os.getenv('EVENTBRITE_KEY', "")
+            token = os.getenv('EVENTBRITE_KEY', '')
 
-        self.host = "https://www.eventbriteapi.com/v3"
+        self.host = 'https://www.eventbriteapi.com/v3'
         self.token = token
-        self.headers = {"Authorization": f"Bearer {token}"}
+        self.headers = {'Authorization': f'Bearer {token}'}
 
     def has_error(self):
         # {
@@ -31,9 +31,9 @@ class Eventbrite:
         import requests
 
         _headers = {**self.headers, **headers}
-        _query_string = ""
+        _query_string = ''
         if query_string is not None:
-            _query_string = "?" + urllib.parse.urlencode(query_string)
+            _query_string = '?' + urllib.parse.urlencode(query_string)
 
         response = requests.request(_type,
                                     self.host + url + _query_string,
@@ -43,39 +43,39 @@ class Eventbrite:
         if 'status_code' in result and result['status_code'] >= 400:
             raise Exception(result['error_description'])
 
-        if "pagination" in result:
-            print("has more items?", result["pagination"]["has_more_items"])
-            if result["pagination"]["has_more_items"]:
-                print("Continuation: ", result["pagination"]["continuation"])
+        if 'pagination' in result:
+            print('has more items?', result['pagination']['has_more_items'])
+            if result['pagination']['has_more_items']:
+                print('Continuation: ', result['pagination']['continuation'])
                 new_result = self.request(
                     _type,
                     url,
                     query_string={
-                        **query_string, "continuation":
-                        result["pagination"]["continuation"]
+                        **query_string, 'continuation':
+                        result['pagination']['continuation']
                     })
                 for key in new_result:
-                    print(key, type(new_result[key]) == "list")
-                    if type(new_result[key]) == "list":
+                    print(key, type(new_result[key]) == 'list')
+                    if type(new_result[key]) == 'list':
                         new_result[key] = result[key] + new_result[key]
                 result.update(new_result)
 
         return result
 
     def get_my_organizations(self):
-        data = self.request('GET', f"/users/me/organizations/")
+        data = self.request('GET', f'/users/me/organizations/')
         return data
 
     def get_organization_events(self, organization_id):
-        query_string = {"expand": "organizer", "status": "live"}
+        query_string = {'expand': 'organizer', 'status': 'live'}
         data = self.request('GET',
-                            f"/organizations/{str(organization_id)}/events/",
+                            f'/organizations/{str(organization_id)}/events/',
                             query_string=query_string)
         return data
 
     def get_organization_venues(self, organization_id):
         data = self.request('GET',
-                            f"/organizations/{str(organization_id)}/venues/")
+                            f'/organizations/{str(organization_id)}/venues/')
         return data
 
     def execute_action(self, eventbrite_webhook_id: int):
@@ -99,19 +99,19 @@ class Eventbrite:
             id=eventbrite_webhook_id).first()
 
         if not webhook:
-            raise Exception("Invalid webhook")
+            raise Exception('Invalid webhook')
 
         if not webhook.action:
-            raise Exception("Imposible to determine action")
+            raise Exception('Imposible to determine action')
 
         if not webhook.api_url:
-            raise Exception("Imposible to determine api url")
+            raise Exception('Imposible to determine api url')
 
         action = webhook.action.replace('.', '_')
         api_url = webhook.api_url
         # organization_id = webhook.organization_id
 
-        logger.debug(f"Executing => {action}")
+        logger.debug(f'Executing => {action}')
         if hasattr(actions, action):
             response = requests.get(api_url, headers=self.headers)
             json = response.json()
@@ -119,17 +119,17 @@ class Eventbrite:
             # logger.debug("Eventbrite response")
             # logger.debug(json)
 
-            logger.debug("Action found")
+            logger.debug('Action found')
             fn = getattr(actions, action)
 
             try:
                 fn(self, webhook, json)
-                logger.debug("Mark action as done")
+                logger.debug('Mark action as done')
                 webhook.status = 'DONE'
                 webhook.save()
 
             except Exception as e:
-                logger.debug("Mark action with error")
+                logger.debug('Mark action with error')
 
                 # stack trace
                 # import traceback
@@ -141,7 +141,7 @@ class Eventbrite:
                 webhook.save()
 
         else:
-            message = f"Action `{action}` is not implemented"
+            message = f'Action `{action}` is not implemented'
             logger.debug(message)
 
             webhook.status = 'ERROR'

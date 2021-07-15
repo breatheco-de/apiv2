@@ -15,28 +15,28 @@ def add_gitpod(modeladmin, request, queryset):
     assets = queryset.update(gitpod=True)
 
 
-add_gitpod.short_description = "Add GITPOD"
+add_gitpod.short_description = 'Add GITPOD'
 
 
 def remove_gitpod(modeladmin, request, queryset):
     assets = queryset.update(gitpod=False)
 
 
-remove_gitpod.short_description = "Remove GITPOD"
+remove_gitpod.short_description = 'Remove GITPOD'
 
 
 def make_external(modeladmin, request, queryset):
     result = queryset.update(external=True)
 
 
-make_external.short_description = "Make it an EXTERNAL resource (new window)"
+make_external.short_description = 'Make it an EXTERNAL resource (new window)'
 
 
 def make_internal(modeladmin, request, queryset):
     result = queryset.update(external=False)
 
 
-make_internal.short_description = "Make it an INTERNAL resource"
+make_internal.short_description = 'Make it an INTERNAL resource'
 
 
 def sync_github(modeladmin, request, queryset):
@@ -46,7 +46,7 @@ def sync_github(modeladmin, request, queryset):
         # sync_with_github(a.slug, request.user.id)
 
 
-sync_github.short_description = "Sync With Github"
+sync_github.short_description = 'Sync With Github'
 
 
 def author_aalejo(modeladmin, request, queryset):
@@ -57,7 +57,7 @@ def author_aalejo(modeladmin, request, queryset):
         # sync_with_github(a.slug, request.user.id)
 
 
-author_aalejo.short_description = "Make myself the author of these assets"
+author_aalejo.short_description = 'Make myself the author of these assets'
 
 
 # Register your models here.
@@ -76,10 +76,10 @@ class AssetAdmin(admin.ModelAdmin):
 
     def current_status(self, obj):
         colors = {
-            "OK": "bg-success",
-            "ERROR": "bg-error",
-            "WARNING": "bg-warning",
-            "DRAFT": "",
+            'OK': 'bg-success',
+            'ERROR': 'bg-error',
+            'WARNING': 'bg-warning',
+            'DRAFT': '',
         }
         return format_html(
             f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")

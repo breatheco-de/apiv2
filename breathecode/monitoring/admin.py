@@ -16,7 +16,7 @@ def test_app(modeladmin, request, queryset):
         monitor_app.delay(app.id)
 
 
-test_app.short_description = "Run Applications Diagnostic"
+test_app.short_description = 'Run Applications Diagnostic'
 
 
 class CustomAppModelForm(forms.ModelForm):
@@ -42,13 +42,13 @@ class ApplicationAdmin(admin.ModelAdmin):
                     'status_text')
     actions = [test_app]
     list_filter = ['status', 'academy__slug']
-    raw_id_fields = ["notify_slack_channel"]
+    raw_id_fields = ['notify_slack_channel']
 
     def current_status(self, obj):
         colors = {
-            "OPERATIONAL": "bg-success",
-            "CRITICAL": "bg-error",
-            "MINOR": "bg-warning",
+            'OPERATIONAL': 'bg-success',
+            'CRITICAL': 'bg-error',
+            'MINOR': 'bg-warning',
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
@@ -67,7 +67,7 @@ def test_endpoint(modeladmin, request, queryset):
         test_endpoint.delay(end.id)
 
 
-test_endpoint.short_description = "Test Endpoint"
+test_endpoint.short_description = 'Test Endpoint'
 
 
 def pause_for_one_day(modeladmin, request, queryset):
@@ -76,7 +76,7 @@ def pause_for_one_day(modeladmin, request, queryset):
         end.save()
 
 
-pause_for_one_day.short_description = "PAUSE for 1 day"
+pause_for_one_day.short_description = 'PAUSE for 1 day'
 
 
 # Register your models here.
@@ -92,9 +92,9 @@ class EndpointAdmin(admin.ModelAdmin):
 
     def current_status(self, obj):
         colors = {
-            "OPERATIONAL": "bg-success",
-            "CRITICAL": "bg-error",
-            "MINOR": "bg-warning",
+            'OPERATIONAL': 'bg-success',
+            'CRITICAL': 'bg-error',
+            'MINOR': 'bg-warning',
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
@@ -113,7 +113,7 @@ def run_single_script(modeladmin, request, queryset):
         execute_scripts.delay(s.id)
 
 
-run_single_script.short_description = "Run Script"
+run_single_script.short_description = 'Run Script'
 
 
 class CustomForm(forms.ModelForm):
@@ -122,15 +122,15 @@ class CustomForm(forms.ModelForm):
 
         options = []
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        files = os.listdir(dir_path + "/scripts")
+        files = os.listdir(dir_path + '/scripts')
         for file_name in files:
-            if ".py" not in file_name:
+            if '.py' not in file_name:
                 continue
             doc = file_name
-            with open(dir_path + "/scripts/" + file_name) as f:
+            with open(dir_path + '/scripts/' + file_name) as f:
                 doc = ast.get_docstring(ast.parse(f.read()))
             options.append((file_name[0:-3], doc))
-        options.append(("other", "other"))
+        options.append(('other', 'other'))
 
         # timezones = [(x, x) for x in pytz.common_timezones]
         self.fields['script_slug'] = forms.ChoiceField(choices=options)
@@ -147,9 +147,9 @@ class MonitorScriptAdmin(admin.ModelAdmin):
 
     def current_status(self, obj):
         colors = {
-            "OPERATIONAL": "bg-success",
-            "CRITICAL": "bg-error",
-            "MINOR": "bg-warning",
+            'OPERATIONAL': 'bg-success',
+            'CRITICAL': 'bg-error',
+            'MINOR': 'bg-warning',
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
