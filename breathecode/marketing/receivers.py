@@ -10,8 +10,8 @@ logger = logging.getLogger(__name__)
 @receiver(invite_accepted, sender=ProfileAcademy)
 def post_save_profileacademy(sender, instance, **kwargs):
     # if a new ProfileAcademy is created on the authanticate app
-    # logger.debug("invite_accepted", instance)
     # look for the email on the formentry list and bind it
+    logger.debug("Reveiver for invite_accepted triggered, linking the new user to its respective form entries")
     entries = FormEntry.objects.filter(email=instance.user.email, user__isnull=True)
     for entry in entries:
         entry.user = instance.user
