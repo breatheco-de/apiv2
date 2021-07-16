@@ -2,6 +2,7 @@ import os
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
+from breathecode.utils.recurrency import TimeSlot
 from .actions import get_bucket_object
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS',
@@ -332,23 +333,6 @@ RECURRENCY_TYPE = (
     (MONTHLY, 'Monthly'),
     # (YEARLY, 'Yearly'),
 )
-
-
-class TimeSlot(models.Model):
-    starting_at = models.DateTimeField()
-    ending_at = models.DateTimeField()
-
-    recurrent = models.BooleanField(default=True)
-    recurrency_type = models.CharField(max_length=10,
-                                       choices=RECURRENCY_TYPE,
-                                       default=WEEKLY)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    class Meta:
-        abstract = True
-
 
 class CertificateTimeSlot(TimeSlot):
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
