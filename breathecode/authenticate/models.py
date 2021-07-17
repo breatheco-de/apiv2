@@ -269,6 +269,16 @@ class CredentialsQuickBooks(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+class CredentialsGoogle(models.Model):
+    
+    token = models.CharField(max_length=255)
+    refresh_token = models.CharField(max_length=255)
+    expires_at = models.DateTimeField()
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
 
 class Token(rest_framework.authtoken.models.Token):
     '''

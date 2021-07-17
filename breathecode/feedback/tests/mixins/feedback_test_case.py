@@ -78,8 +78,7 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment,
         kwargs = {}
         if id:
             kwargs['id'] = id
-        return Token.objects.filter(**kwargs).values_list('key',
-                                                          flat=True).first()
+        return Token.objects.filter(**kwargs).values_list('key',flat=True).first()
 
     def count_token(self):
         return Token.objects.count()

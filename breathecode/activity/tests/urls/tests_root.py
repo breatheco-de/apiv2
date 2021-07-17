@@ -1,7 +1,8 @@
 """
 Test /answer
 """
-from datetime import datetime, timedelta
+from django.utils import timezone
+from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
 
 from django.urls.base import reverse_lazy
@@ -15,7 +16,7 @@ DATASTORE_SHARED_SEED = [
     {
         'academy_id': 0,
         'cohort': None,
-        'created_at': (datetime.now() + timedelta(days=1)).isoformat() + 'Z',
+        'created_at': (timezone.now() + timedelta(days=1)).isoformat() + 'Z',
         'data': None,
         'day': 13,
         'email': 'konan@naruto.io',
@@ -28,7 +29,7 @@ DATASTORE_PRIVATE_SEED = [
     {
         'academy_id': 1,
         'cohort': 'miami-downtown-pt-xx',
-        'created_at': (datetime.now() + timedelta(days=2)).isoformat() + 'Z',
+        'created_at': (timezone.now() + timedelta(days=2)).isoformat() + 'Z',
         'data': '{"cohort": "miami-downtown-pt-xx", "day": "13"}',
         'day': 13,
         'email': 'konan@naruto.io',

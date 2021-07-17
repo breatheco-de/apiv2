@@ -6,7 +6,7 @@ from .actions import delete_tokens
 from django.utils.html import format_html
 from .models import (CredentialsGithub, Token, UserProxy, Profile,
                      CredentialsSlack, ProfileAcademy, Role,
-                     CredentialsFacebook, Capability, UserInvite)
+                     CredentialsFacebook, Capability, UserInvite, CredentialsGoogle)
 from .actions import reset_password
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,15 @@ class CredentialsGithubAdmin(admin.ModelAdmin):
     list_display = ('github_id', 'user_id', 'email', 'token')
     search_fields = [
         'user__first_name', 'user__last_name', 'user__email', 'email'
+    ]
+    raw_id_fields = ['user']
+
+
+@admin.register(CredentialsGoogle)
+class CredentialsGoogleAdmin(admin.ModelAdmin):
+    list_display = ('user', 'token', 'expires_at')
+    search_fields = [
+        'user__first_name', 'user__last_name', 'user__email',
     ]
     raw_id_fields = ['user']
 
