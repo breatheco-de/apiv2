@@ -56,7 +56,7 @@ class TemporalTokenView(ObtainAuthToken):
 
     def post(self, request):
 
-        token = Token.get_or_create(user=request.user, token_type='temporal')
+        token, created = Token.get_or_create(user=request.user, token_type='temporal')
         return Response({
             'token': token.key,
             'token_type': token.token_type,
