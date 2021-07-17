@@ -204,7 +204,7 @@ class ActivityClassroomView(APIView):
         public_iter = datastore.fetch(**kwargs)# TODO: remove this in the future because the academy_id was not present brefore and students didn't have it
 
         # query_iter = academy_iter + public_iter
-        query_iter.sort(key=lambda x: x['created_at'], reverse=True)
+        public_iter.sort(key=lambda x: x['created_at'], reverse=True)
 
         return Response(query_iter)
 
