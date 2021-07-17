@@ -61,8 +61,8 @@ class TemporalTokenView(ObtainAuthToken):
             'token': token.key,
             'token_type': token.token_type,
             'expires_at': token.expires_at,
-            'user_id': user.pk,
-            'email': user.email
+            'user_id': token.user.pk,
+            'email': token.user.email
         })
 
 
