@@ -73,7 +73,6 @@ urlpatterns = [
         SyllabusView.as_view(),
         name='certificate_slug_academy_id_syllabus'),
     path('catalog/timezones', get_timezones, name='timezones_all'),
-    
-    
-#     path('report/admissions', get_timezones, name='timezones_all'),
+
+    #     path('report/admissions', get_timezones, name='timezones_all'),
 ]

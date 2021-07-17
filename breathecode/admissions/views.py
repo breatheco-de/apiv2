@@ -727,9 +727,11 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination,
         if cohort_id is not None:
             item = None
             if cohort_id.isnumeric():
-                item = Cohort.objects.filter(id=int(cohort_id),academy__id=academy_id).first()
+                item = Cohort.objects.filter(id=int(cohort_id),
+                                             academy__id=academy_id).first()
             else:
-                item = Cohort.objects.filter(slug=cohort_id,academy__id=academy_id).first()
+                item = Cohort.objects.filter(slug=cohort_id,
+                                             academy__id=academy_id).first()
 
             if item is None:
                 return Response(status=status.HTTP_404_NOT_FOUND)

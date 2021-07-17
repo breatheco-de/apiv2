@@ -196,8 +196,8 @@ class LeadTestSuite(MarketingTestCase):
         url = reverse_lazy('marketing:lead')
 
         data = generate_form_entry_kwargs()
-        data['phone'] = "123456789"
-        data['language'] = "en"
+        data['phone'] = '123456789'
+        data['language'] = 'en'
 
         response = self.client.post(url, data)
         json = response.json()
@@ -306,8 +306,8 @@ class LeadTestSuite(MarketingTestCase):
         url = reverse_lazy('marketing:lead')
 
         data = generate_form_entry_kwargs()
-        data['phone'] = "123456789"
-        data['language'] = "en"
+        data['phone'] = '123456789'
+        data['language'] = 'en'
         data['location'] = 'midgard'
 
         response = self.client.post(url, data)
@@ -419,8 +419,8 @@ class LeadTestSuite(MarketingTestCase):
         url = reverse_lazy('marketing:lead')
 
         data = generate_form_entry_kwargs()
-        data['phone'] = "123456789"
-        data['language'] = "en"
+        data['phone'] = '123456789'
+        data['language'] = 'en'
         data['location'] = 'midgard'
 
         response = self.client.post(url, data)
@@ -535,8 +535,8 @@ class LeadTestSuite(MarketingTestCase):
         url = reverse_lazy('marketing:lead')
 
         data = generate_form_entry_kwargs()
-        data['phone'] = "123456789"
-        data['language'] = "en"
+        data['phone'] = '123456789'
+        data['language'] = 'en'
         data['location'] = 'midgard'
 
         response = self.client.post(url, data)

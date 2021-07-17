@@ -44,11 +44,11 @@ def generate_form_entry_kwargs():
         'first_name': choice(['Rene', 'Albert', 'Immanuel']),
         'last_name': choice(['Descartes', 'Camus', 'Kant']),
         'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
-        'phone': "123456789",
+        'phone': '123456789',
         'course': random_string(),
         'client_comments': random_string(),
         'location': random_string(),
-        'language': "en",
+        'language': 'en',
         'utm_url': random_string(),
         'utm_medium': random_string(),
         'utm_campaign': random_string(),
@@ -455,7 +455,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         REQUESTS_PATH['get'],
         apply_requests_get_mock([(
             200,
-            f"https://maps.googleapis.com/maps/api/geocode/json?latlng=15.000000000000000,15.000000000000000&key={GOOGLE_CLOUD_KEY}",
+            f'https://maps.googleapis.com/maps/api/geocode/json?latlng=15.000000000000000,15.000000000000000&key={GOOGLE_CLOUD_KEY}',
             {
                 'status':
                 'OK',
