@@ -54,9 +54,9 @@ urlpatterns_docs = [
         get_root_schema_view(
             [namespace for _, _, namespace in apps if namespace != 'shortner'],
             extend={
-                'title': "BreatheCode API",
-                'description': "Technology for Learning",
-                'version': "v1.0.0",
+                'title': 'BreatheCode API',
+                'description': 'Technology for Learning',
+                'version': 'v1.0.0',
             }),
         name='openapi-schema'),
     path('admin/doc/', include('django.contrib.admindocs.urls')),

@@ -3,9 +3,9 @@ from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from ...models import Assessment, Question, Option
 
-HOST_ASSETS = "https://assets.breatheco.de/apis"
-API_URL = os.getenv("API_URL", "")
-DATETIME_FORMAT = "%Y-%m-%d"
+HOST_ASSETS = 'https://assets.breatheco.de/apis'
+API_URL = os.getenv('API_URL', '')
+DATETIME_FORMAT = '%Y-%m-%d'
 
 
 class Command(BaseCommand):
@@ -34,23 +34,23 @@ class Command(BaseCommand):
 
     def quiz(self, options):
 
-        response = requests.get(f"{HOST_ASSETS}/quiz/all")
+        response = requests.get(f'{HOST_ASSETS}/quiz/all')
         quizzes = response.json()
 
         for quiz in quizzes:
-            if "slug" not in quiz['info']:
+            if 'slug' not in quiz['info']:
                 self.stdout.write(
                     self.style.ERROR(
-                        f"Ignoring quiz because it does not have a slug"))
+                        f'Ignoring quiz because it does not have a slug'))
                 continue
 
             name = 'No name yet'
-            if "name" not in quiz['info']:
+            if 'name' not in quiz['info']:
                 self.stdout.write(
                     self.style.ERROR(
                         f"Quiz f{quiz['info']['slug']} needs a name"))
             else:
-                name = quiz['info']["name"]
+                name = quiz['info']['name']
 
             a = Assessment.objects.filter(slug=quiz['info']['slug']).first()
             if a is not None:
@@ -64,17 +64,17 @@ class Command(BaseCommand):
             )
             a.save()
 
-            for question in quiz["questions"]:
+            for question in quiz['questions']:
                 q = Question(
-                    title=question["q"],
+                    title=question['q'],
                     lang=quiz['info']['lang'],
                     assessment=a,
                     question_type='SELECT',
                 )
                 q.save()
-                for option in question["a"]:
+                for option in question['a']:
                     o = Option(
-                        title=option["option"],
+                        title=option['option'],
                         score=int(option['correct']),
                         question=q,
                     )

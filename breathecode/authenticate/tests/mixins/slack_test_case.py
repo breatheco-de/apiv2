@@ -18,7 +18,7 @@ class SlackTestCase(APITestCase):
         """Get /slack"""
         url = reverse_lazy('authenticate:slack')
         params = {
-            'url': base64.b64encode(self.url_callback.encode("utf-8")),
+            'url': base64.b64encode(self.url_callback.encode('utf-8')),
             'user': 1,
             'a': self.academy
         }

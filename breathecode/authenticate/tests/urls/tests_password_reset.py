@@ -131,8 +131,7 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {'email': model['user'].email}
         response = self.client.post(url, data)
         content = response.content.decode('utf-8')
-        token = Token.objects.filter(id=1).values_list('key',
-                                                       flat=True).first()
+        token, created = Token.get_or_create(model['user'])
 
         self.assertNotEqual(
             content.find('Check your email for a password reset!'), -1)
@@ -145,10 +144,10 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    "SUBJECT":
-                    "You asked to reset your password at BreatheCode",
-                    "LINK":
-                    os.getenv('API_URL', '') + f"/v1/auth/password/{token}"
+                    'SUBJECT':
+                    'You asked to reset your password at BreatheCode',
+                    'LINK':
+                    os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])
 
@@ -164,8 +163,7 @@ class AuthenticateTestSuite(AuthTestCase):
         }
         response = self.client.post(url, data)
         content = response.content.decode('utf-8')
-        token = Token.objects.filter(id=1).values_list('key',
-                                                       flat=True).first()
+        token, created = Token.get_or_create(model['user'])
 
         self.assertNotEqual(
             content.find('Check your email for a password reset!'), -1)
@@ -178,10 +176,10 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    "SUBJECT":
-                    "You asked to reset your password at BreatheCode",
-                    "LINK":
-                    os.getenv('API_URL', '') + f"/v1/auth/password/{token}"
+                    'SUBJECT':
+                    'You asked to reset your password at BreatheCode',
+                    'LINK':
+                    os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])
 
@@ -217,8 +215,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'callback': 'https://naturo.io/',
         }
         response = self.client.post(url, data)
-        token = Token.objects.filter(id=1).values_list('key',
-                                                       flat=True).first()
+        token, created = Token.get_or_create(model['user'])
 
         self.assertEqual(
             response.url,
@@ -232,10 +229,10 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    "SUBJECT":
-                    "You asked to reset your password at BreatheCode",
-                    "LINK":
-                    os.getenv('API_URL', '') + f"/v1/auth/password/{token}"
+                    'SUBJECT':
+                    'You asked to reset your password at BreatheCode',
+                    'LINK':
+                    os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])
 
@@ -251,8 +248,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'callback': 'https://naturo.io/',
         }
         response = self.client.post(url, data)
-        token = Token.objects.filter(id=1).values_list('key',
-                                                       flat=True).first()
+        token, created = Token.get_or_create(model['user'])
 
         self.assertEqual(
             response.url,
@@ -266,9 +262,9 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    "SUBJECT":
-                    "You asked to reset your password at BreatheCode",
-                    "LINK":
-                    os.getenv('API_URL', '') + f"/v1/auth/password/{token}"
+                    'SUBJECT':
+                    'You asked to reset your password at BreatheCode',
+                    'LINK':
+                    os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])

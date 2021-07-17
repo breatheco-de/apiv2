@@ -15,11 +15,11 @@ class AcademyCohortTestSuite(EventTestCase):
     def test_ical_cohorts__without_academy(self):
         """Test /academy/cohort without auth"""
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
         json = response.json()
 
-        expected = {"detail": "Some academy not exist", "status_code": 400}
+        expected = {'detail': 'Some academy not exist', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -32,8 +32,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                      device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         key = model.device_id.key
         expected = '\r\n'.join([
@@ -63,8 +63,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                      device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         key = model.device_id.key
         expected = '\r\n'.join([
@@ -90,8 +90,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                      device_id=True,
                                      device_id_kwargs=device_id_kwargs)
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         cohort = model['cohort']
         academy = model['academy']
@@ -133,8 +133,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                      device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1", 'upcoming': 'true'}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1', 'upcoming': 'true'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         key = model.device_id.key
         expected = '\r\n'.join([
@@ -163,8 +163,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                      device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1", 'upcoming': 'true'}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1', 'upcoming': 'true'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         cohort = model['cohort']
         academy = model['academy']
@@ -208,8 +208,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                      device_id_kwargs=device_id_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         cohort = model['cohort']
         academy = model['academy']
@@ -258,8 +258,8 @@ class AcademyCohortTestSuite(EventTestCase):
         ]
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         cohort1 = models[0]['cohort']
         cohort2 = models[1]['cohort']
@@ -327,8 +327,8 @@ class AcademyCohortTestSuite(EventTestCase):
         ]
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         cohort1 = models[0]['cohort']
         cohort2 = models[1]['cohort']
@@ -428,8 +428,8 @@ class AcademyCohortTestSuite(EventTestCase):
         ]
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1,2"}
-        url = url + "?" + urllib.parse.urlencode(args)
+        args = {'academy': '1,2'}
+        url = url + '?' + urllib.parse.urlencode(args)
         response = self.client.get(url)
 
         cohort1 = models[0]['cohort']
@@ -572,7 +572,7 @@ class AcademyCohortTestSuite(EventTestCase):
             'academy_slug':
             ','.join(list(dict.fromkeys([x.academy.slug for x in models])))
         }
-        url = url + "?" + urllib.parse.urlencode(args)
+        url = url + '?' + urllib.parse.urlencode(args)
         response = self.client.get(url)
 
         cohort1 = models[0]['cohort']
@@ -674,8 +674,8 @@ class AcademyCohortTestSuite(EventTestCase):
                                      device_id_kwargs=device_id_kwargs,
                                      cohort_time_slot=True)
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         cohort = model['cohort']
         timeslot = model['cohort_time_slot']
@@ -746,8 +746,8 @@ class AcademyCohortTestSuite(EventTestCase):
             cohort_time_slot_kwargs=cohort_time_slot_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         cohort = model['cohort']
         timeslot = model['cohort_time_slot']
@@ -846,8 +846,8 @@ class AcademyCohortTestSuite(EventTestCase):
             cohort_time_slot_kwargs=cohort_time_slot_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         cohort = model['cohort']
         timeslot = model['cohort_time_slot']
@@ -951,8 +951,8 @@ class AcademyCohortTestSuite(EventTestCase):
         ]
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         cohort = base['cohort']
         timeslot = models[0]['cohort_time_slot']
@@ -1081,8 +1081,8 @@ class AcademyCohortTestSuite(EventTestCase):
             model['timeslot2'] = timeslot2.cohort_time_slot
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {'academy': "1"}
-        response = self.client.get(url + "?" + urllib.parse.urlencode(args))
+        args = {'academy': '1'}
+        response = self.client.get(url + '?' + urllib.parse.urlencode(args))
 
         cohort1 = models[0]['cohort']
         cohort2 = models[1]['cohort']

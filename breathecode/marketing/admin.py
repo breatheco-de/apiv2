@@ -24,13 +24,13 @@ def test_ac(modeladmin, request, queryset):
     try:
         for entry in entries:
             test_ac_connection(entry)
-        messages.success(request, message="Connection was a success")
+        messages.success(request, message='Connection was a success')
     except Exception as e:
         logger.fatal(str(e))
         messages.error(request, message=str(e))
 
 
-test_ac.short_description = "♼ Test connection to Active Campaign"
+test_ac.short_description = '♼ Test connection to Active Campaign'
 
 
 def sync_ac_tags(modeladmin, request, queryset):
@@ -38,13 +38,13 @@ def sync_ac_tags(modeladmin, request, queryset):
     try:
         for entry in entries:
             sync_tags(entry)
-        messages.success(request, message="Tags imported successfully")
+        messages.success(request, message='Tags imported successfully')
     except Exception as e:
         logger.fatal(str(e))
         messages.error(request, message=str(e))
 
 
-sync_ac_tags.short_description = "♼ Sync AC Tags"
+sync_ac_tags.short_description = '♼ Sync AC Tags'
 
 
 def sync_ac_automations(modeladmin, request, queryset):
@@ -52,13 +52,13 @@ def sync_ac_automations(modeladmin, request, queryset):
     try:
         for entry in entries:
             sync_automations(entry)
-        messages.success(request, message="Automations imported successfully")
+        messages.success(request, message='Automations imported successfully')
     except Exception as e:
         logger.fatal(str(e))
         messages.error(request, message=str(e))
 
 
-sync_ac_automations.short_description = "♼ Sync AC Automations"
+sync_ac_automations.short_description = '♼ Sync AC Automations'
 
 
 class CustomForm(forms.ModelForm):
@@ -97,7 +97,7 @@ def send_to_ac(modeladmin, request, queryset):
         register_new_lead(entry.toFormData())
 
 
-send_to_ac.short_description = "⨁ Add lead to automations in AC"
+send_to_ac.short_description = '⨁ Add lead to automations in AC'
 
 
 def fetch_more_facebook_info(modeladmin, request, queryset):
@@ -106,7 +106,7 @@ def fetch_more_facebook_info(modeladmin, request, queryset):
         get_facebook_lead_info(entry.id)
 
 
-fetch_more_facebook_info.short_description = "♺ Download more info from facebook"
+fetch_more_facebook_info.short_description = '♺ Download more info from facebook'
 
 
 def get_geoinfo(modeladmin, request, queryset):
@@ -114,13 +114,13 @@ def get_geoinfo(modeladmin, request, queryset):
     for entry in entries:
 
         form_enty = {
-            "latitude": entry.latitude,
-            "longitude": entry.longitude,
+            'latitude': entry.latitude,
+            'longitude': entry.longitude,
         }
         save_get_geolocal(entry, form_enty)
 
 
-get_geoinfo.short_description = "🌐 Get GEO info"
+get_geoinfo.short_description = '🌐 Get GEO info'
 
 
 class PPCFilter(SimpleListFilter):
@@ -150,7 +150,7 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'country'
     ]
     actions = [
-        send_to_ac, get_geoinfo, fetch_more_facebook_info, "export_as_csv"
+        send_to_ac, get_geoinfo, fetch_more_facebook_info, 'export_as_csv'
     ]
 
 
@@ -158,28 +158,28 @@ def mark_tag_as_strong(modeladmin, request, queryset):
     queryset.update(tag_type='STRONG')
 
 
-mark_tag_as_strong.short_description = "Mark tags as STRONG"
+mark_tag_as_strong.short_description = 'Mark tags as STRONG'
 
 
 def mark_tag_as_soft(modeladmin, request, queryset):
     queryset.update(tag_type='SOFT')
 
 
-mark_tag_as_soft.short_description = "Mark tags as SOFT"
+mark_tag_as_soft.short_description = 'Mark tags as SOFT'
 
 
 def mark_tag_as_discovery(modeladmin, request, queryset):
     queryset.update(tag_type='DISCOVERY')
 
 
-mark_tag_as_discovery.short_description = "Mark tags as DISCOVERY"
+mark_tag_as_discovery.short_description = 'Mark tags as DISCOVERY'
 
 
 def mark_tag_as_other(modeladmin, request, queryset):
     queryset.update(tag_type='OTHER')
 
 
-mark_tag_as_other.short_description = "Mark tags as OTHER"
+mark_tag_as_other.short_description = 'Mark tags as OTHER'
 
 
 class CustomTagModelForm(forms.ModelForm):
@@ -202,7 +202,7 @@ class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_filter = ['tag_type', 'ac_academy__academy__slug']
     actions = [
         mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery,
-        mark_tag_as_other, "export_as_csv"
+        mark_tag_as_other, 'export_as_csv'
     ]
 
 
@@ -212,7 +212,7 @@ class AutomationAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = ('id', 'acp_id', 'slug', 'name', 'status', 'entered',
                     'exited')
     list_filter = ['status', 'ac_academy__academy__slug']
-    actions = ["export_as_csv"]
+    actions = ['export_as_csv']
 
 
 @admin.register(ShortLink)
@@ -221,7 +221,7 @@ class ShortLinkAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = ('id', 'slug', 'hits', 'active', 'destination_status',
                     'destination')
     list_filter = ['destination_status', 'active']
-    actions = ["export_as_csv"]
+    actions = ['export_as_csv']
 
 
 def run_hook(modeladmin, request, queryset):
@@ -232,7 +232,7 @@ def run_hook(modeladmin, request, queryset):
         client.execute_action(hook.id)
 
 
-run_hook.short_description = "Process Hook"
+run_hook.short_description = 'Process Hook'
 
 
 @admin.register(ActiveCampaignWebhook)
@@ -243,9 +243,9 @@ class ActiveCampaignWebhookAdmin(admin.ModelAdmin):
 
     def current_status(self, obj):
         colors = {
-            "DONE": "bg-success",
-            "ERROR": "bg-error",
-            "PENDING": "bg-warning",
+            'DONE': 'bg-success',
+            'ERROR': 'bg-error',
+            'PENDING': 'bg-warning',
         }
         return format_html(
             f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")

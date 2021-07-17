@@ -3,8 +3,8 @@ from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from ...models import Academy, Certificate, Cohort, User, CohortUser
 
-HOST = os.environ.get("OLD_BREATHECODE_API")
-DATETIME_FORMAT = "%Y-%m-%d"
+HOST = os.environ.get('OLD_BREATHECODE_API')
+DATETIME_FORMAT = '%Y-%m-%d'
 
 
 class Command(BaseCommand):
@@ -18,9 +18,9 @@ class Command(BaseCommand):
         result = []
 
         # collector
-        qs = CohortUser.objects.order_by("id")
-        for user_id, cohort_id in set(qs.values_list("user__id",
-                                                     "cohort__id")):
+        qs = CohortUser.objects.order_by('id')
+        for user_id, cohort_id in set(qs.values_list('user__id',
+                                                     'cohort__id')):
             result.append(
                 qs.filter(user__id=user_id,
                           cohort__id=cohort_id).values('id', 'user__id',

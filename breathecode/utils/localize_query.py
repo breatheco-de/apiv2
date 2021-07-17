@@ -16,7 +16,7 @@ def localize_query(query, request, matcher=None):
 
     kwargs = {}
     if matcher is None:
-        kwargs["academy__id__in"] = academy_ids
+        kwargs['academy__id__in'] = academy_ids
     else:
         kwargs[matcher] = academy_ids
 

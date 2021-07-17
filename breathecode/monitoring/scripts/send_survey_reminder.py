@@ -22,7 +22,7 @@ cohorts = Cohort.objects.filter(academy__id=academy.id).exclude(
 cohorts_with_pending_surveys = []
 
 if not cohorts:
-    print("No cohorts found")
+    print('No cohorts found')
 
 for cohort in cohorts:
 
@@ -37,16 +37,16 @@ for cohort in cohorts:
             sent_at = lastest_survey.sent_at.date()
 
         num_weeks = calculate_weeks(sent_at, datetime.now().date())
-        if num_weeks > 4:
+        if num_weeks > 4 and num_weeks < 16:
             cohorts_with_pending_surveys.append(cohort.name)
 
 if len(cohorts_with_pending_surveys) > 0:
-    cohort_names = ("\n").join(
-        ["- " + cohort_name for cohort_name in cohorts_with_pending_surveys])
+    cohort_names = ('\n').join(
+        ['- ' + cohort_name for cohort_name in cohorts_with_pending_surveys])
 
     raise ScriptNotification(
-        f"There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent on theese cohorts: \n {cohort_names}",
+        f'There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent on theese cohorts: \n {cohort_names}',
         status='MINOR',
         slug='cohort-have-pending-surveys')
 
-print("No reminders")
+print('No reminders')

@@ -19,7 +19,7 @@ class Assessment(models.Model):
         blank=True,
         null=True,
         help_text=
-        "You can set a threshold to determine if the user score is successfull"
+        'You can set a threshold to determine if the user score is successfull'
     )
     academy = models.ForeignKey(
         Academy,
@@ -27,7 +27,7 @@ class Assessment(models.Model):
         default=None,
         blank=True,
         null=True,
-        help_text="Not all assesments are triggered by academies")
+        help_text='Not all assesments are triggered by academies')
     author = models.ForeignKey(User,
                                on_delete=models.SET_NULL,
                                default=None,
@@ -40,12 +40,12 @@ class Assessment(models.Model):
     original = models.ForeignKey(
         'Assessment',
         on_delete=models.CASCADE,
-        related_name="translations",
+        related_name='translations',
         default=None,
         blank=True,
         null=True,
         help_text=
-        "The original translation (will only be set if the quiz is a translation of anotherone)"
+        'The original translation (will only be set if the quiz is a translation of anotherone)'
     )
 
     comment = models.CharField(max_length=255,
@@ -110,7 +110,7 @@ class Option(models.Model):
                                  null=True)
     score = models.FloatField(
         help_text=
-        "If picked, this value will add up to the total score of the assesment, you can have negative or fractional values"
+        'If picked, this value will add up to the total score of the assesment, you can have negative or fractional values'
     )
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -149,7 +149,7 @@ class UserAssessment(models.Model):
                               null=True)
 
     total_score = models.FloatField(
-        help_text="Total sum of all chosen options in the assesment")
+        help_text='Total sum of all chosen options in the assesment')
 
     opened = models.BooleanField(default=False)
     status = models.CharField(max_length=15,
@@ -181,7 +181,7 @@ class Answer(models.Model):
         default=None,
         blank=True,
         null=True,
-        help_text="Will be null if open question, no options to pick")
+        help_text='Will be null if open question, no options to pick')
     question = models.ForeignKey(Question,
                                  on_delete=models.CASCADE,
                                  default=None,

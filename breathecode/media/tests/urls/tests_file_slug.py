@@ -120,7 +120,7 @@ class MediaTestSuite(MediaTestCase):
                                    }) + '?mask=true'
         response = self.client.get(url)
 
-        self.assertEqual(response.getvalue().decode("utf-8"), 'ok')
+        self.assertEqual(response.getvalue().decode('utf-8'), 'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{
             **self.model_to_dict(model, 'media'),
@@ -145,7 +145,7 @@ class MediaTestSuite(MediaTestCase):
                                    }) + '?width=1000'
         response = self.client.get(url)
         json = response.json()
-        expected = {"detail": "cannot-resize-media", "status_code": 400}
+        expected = {'detail': 'cannot-resize-media', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -276,8 +276,8 @@ class MediaTestSuite(MediaTestCase):
                 json = response.json()
 
         expected = {
-            "detail": "cloud-function-bad-input",
-            "status_code": 500,
+            'detail': 'cloud-function-bad-input',
+            'status_code': 500,
         }
 
         self.assertEqual(json, expected)
@@ -329,8 +329,8 @@ class MediaTestSuite(MediaTestCase):
                 json = response.json()
 
         expected = {
-            "detail": "cloud-function-bad-input",
-            "status_code": 500,
+            'detail': 'cloud-function-bad-input',
+            'status_code': 500,
         }
 
         self.assertEqual(json, expected)
@@ -373,7 +373,7 @@ class MediaTestSuite(MediaTestCase):
                                    }) + '?height=1000'
         response = self.client.get(url)
         json = response.json()
-        expected = {"detail": "cannot-resize-media", "status_code": 400}
+        expected = {'detail': 'cannot-resize-media', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -504,8 +504,8 @@ class MediaTestSuite(MediaTestCase):
                 json = response.json()
 
         expected = {
-            "detail": "cloud-function-bad-input",
-            "status_code": 500,
+            'detail': 'cloud-function-bad-input',
+            'status_code': 500,
         }
 
         self.assertEqual(json, expected)
@@ -557,8 +557,8 @@ class MediaTestSuite(MediaTestCase):
                 json = response.json()
 
         expected = {
-            "detail": "cloud-function-bad-input",
-            "status_code": 500,
+            'detail': 'cloud-function-bad-input',
+            'status_code': 500,
         }
 
         self.assertEqual(json, expected)

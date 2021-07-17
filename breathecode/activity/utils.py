@@ -21,13 +21,13 @@ ACTIVITY_REQUIRED_FIELDS = [
 ]
 
 ACTIVITY_TYPE_DONT_NEED_A_COHORT = [
-    'breathecode-login',
-    'online-platform-registration',
+    'breathecode_login',
+    'online_platform_registration',
 ]
 
 ACTIVITY_TYPE_DONT_NEED_A_DATA = [
-    'breathecode-login',
-    'online-platform-registration',
+    'breathecode_login',
+    'online_platform_registration',
 ]
 
 

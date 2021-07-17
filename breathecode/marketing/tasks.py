@@ -17,7 +17,7 @@ class BaseTaskWithRetry(Task):
 
 @shared_task
 def persist_leads():
-    logger.debug("Starting persist_leads")
+    logger.debug('Starting persist_leads')
     entries = FormEntry.objects.filter(storage_status='PENDING')
     for entry in entries:
         form_data = entry.toFormData()
@@ -30,7 +30,7 @@ def persist_leads():
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def persist_single_lead(self, form_data):
-    logger.debug("Starting persist_single_lead")
+    logger.debug('Starting persist_single_lead')
     entry = register_new_lead(form_data)
     if entry is not None and entry != False:
         save_get_geolocal(entry, form_data)
@@ -40,13 +40,13 @@ def persist_single_lead(self, form_data):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def update_link_viewcount(self, slug):
-    logger.debug("Starting update_link_viewcount")
+    logger.debug('Starting update_link_viewcount')
     ShortLink.objects.filter(slug=slug).update(hits=F('hits') + 1)
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def async_activecampaign_webhook(self, webhook_id):
-    logger.debug("Starting async_activecampaign_webhook")
+    logger.debug('Starting async_activecampaign_webhook')
     status = 'ok'
 
     webhook = ActiveCampaignWebhook.objects.filter(id=webhook_id).first()

@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=Cohort)
 def post_save_cohort(sender, **kwargs):
 
-    instance = kwargs["instance"]
-    logger.debug("New cohort was saved")
+    instance = kwargs['instance']
+    logger.debug('New cohort was saved')
     logger.debug(instance)
 
 
@@ -56,10 +56,10 @@ def test_email(request, email):
 def process_interaction(request):
     try:
         async_slack_action.delay(request.POST)
-        logger.debug("Slack action enqueued")
+        logger.debug('Slack action enqueued')
         return Response(None, status=status.HTTP_200_OK)
     except Exception as e:
-        logger.exception("Error processing slack action")
+        logger.exception('Error processing slack action')
         return Response(str(e), status=status.HTTP_200_OK)
 
 
@@ -70,7 +70,7 @@ def slack_command(request):
     try:
         client = Slack()
         response = client.execute_command(context=request.POST)
-        logger.debug("Slack reponse")
+        logger.debug('Slack reponse')
         logger.debug(response)
         return Response(response, status=status.HTTP_200_OK)
     except Exception as e:

@@ -11,14 +11,14 @@ class ActiveCampaign:
 
     def __init__(self, token=None, url=None):
         if token is None:
-            token = os.getenv('ACTIVE_CAMPAIGN_KEY', "")
+            token = os.getenv('ACTIVE_CAMPAIGN_KEY', '')
 
         if url is None:
-            url = os.getenv('ACTIVE_CAMPAIGN_URL', "")
+            url = os.getenv('ACTIVE_CAMPAIGN_URL', '')
 
         self.host = url
         self.token = token
-        self.headers = {"Authorization": f"Bearer {token}"}
+        self.headers = {'Authorization': f'Bearer {token}'}
 
     def execute_action(self, webhook_id: int):
         # wonderful way to fix one poor mocking system
@@ -40,34 +40,34 @@ class ActiveCampaign:
         webhook = ActiveCampaignWebhook.objects.filter(id=webhook_id).first()
 
         if not webhook:
-            raise Exception("Invalid webhook")
+            raise Exception('Invalid webhook')
 
         if not webhook.webhook_type:
-            raise Exception("Imposible to webhook_type")
+            raise Exception('Imposible to webhook_type')
 
         action = webhook.webhook_type
-        logger.debug(f"Executing ActiveCampaign Webhook => {action}")
+        logger.debug(f'Executing ActiveCampaign Webhook => {action}')
         if hasattr(actions, action):
 
-            logger.debug("Action found")
+            logger.debug('Action found')
             fn = getattr(actions, action)
 
             try:
                 fn(self, webhook, json.loads(webhook.payload))
-                logger.debug("Mark active campaign action as done")
+                logger.debug('Mark active campaign action as done')
                 webhook.status = 'DONE'
                 webhook.status_text = 'OK'
                 webhook.save()
 
             except Exception as e:
-                logger.debug("Mark active campaign action with error")
+                logger.debug('Mark active campaign action with error')
 
                 webhook.status = 'ERROR'
                 webhook.status_text = str(e)
                 webhook.save()
 
         else:
-            message = f"ActiveCampaign Action `{action}` is not implemented"
+            message = f'ActiveCampaign Action `{action}` is not implemented'
             logger.debug(message)
 
             webhook.status = 'ERROR'
@@ -90,9 +90,9 @@ class ActiveCampaign:
             academy__slug=academy_slug).first()
         if ac_academy is None:
             logger.debug(
-                f"ActiveCampaign academy {str(academy_slug)} not found")
+                f'ActiveCampaign academy {str(academy_slug)} not found')
             raise APIException(
-                f"ActiveCampaign academy {str(academy_slug)} not found")
+                f'ActiveCampaign academy {str(academy_slug)} not found')
 
         webhook = ActiveCampaignWebhook()
         webhook.webhook_type = context['type']
@@ -138,9 +138,9 @@ class Contacts(object):
             }
         :return: A json
         """
-        if "email" not in data:
-            raise KeyError("The contact must have an email")
-        return self.client._post("contact_sync", data=data)
+        if 'email' not in data:
+            raise KeyError('The contact must have an email')
+        return self.client._post('contact_sync', data=data)
 
     def subscribe_contact(self, data):
         """
@@ -170,10 +170,10 @@ class Contacts(object):
             }
         :return: A json
         """
-        if "email" not in data:
-            raise KeyError("The contact must have an email")
+        if 'email' not in data:
+            raise KeyError('The contact must have an email')
 
-        return self.client._post("contact_add", data=data)
+        return self.client._post('contact_add', data=data)
 
     def edit_contact(self, data):
         """
@@ -203,19 +203,19 @@ class Contacts(object):
             }
         :return: A json
         """
-        if "email" not in data:
-            raise KeyError("The contact must have an email")
-        return self.client._post("contact_edit", data=data)
+        if 'email' not in data:
+            raise KeyError('The contact must have an email')
+        return self.client._post('contact_edit', data=data)
 
     def view_contact_email(self, email):
-        return self.client._get("contact_view_email",
+        return self.client._get('contact_view_email',
                                 aditional_data=[('email', email)])
 
     def view_contact(self, id):
-        return self.client._get("contact_view", aditional_data=[('id', id)])
+        return self.client._get('contact_view', aditional_data=[('id', id)])
 
     def delete_contact(self, id):
-        return self.client._get("contact_delete", aditional_data=[('id', id)])
+        return self.client._get('contact_delete', aditional_data=[('id', id)])
 
 
 class AC_Old_Client(object):
@@ -223,11 +223,11 @@ class AC_Old_Client(object):
 
         if url is None:
             raise Exception(
-                "Invalid URL for active campaign API, have you setup your env variables?"
+                'Invalid URL for active campaign API, have you setup your env variables?'
             )
 
-        self._base_url = f"https://{url}" if not url.startswith(
-            "http") else url
+        self._base_url = f'https://{url}' if not url.startswith(
+            'http') else url
         self._apikey = apikey
         self.contacts = Contacts(self)
         # self.account = Account(self)
@@ -259,18 +259,18 @@ class AC_Old_Client(object):
             for aditional in aditional_data:
                 params.append(aditional)
         response = requests.request(method,
-                                    self._base_url + "/admin/api.php",
+                                    self._base_url + '/admin/api.php',
                                     params=params,
                                     data=data)
         if response.status_code >= 200 and response.status_code < 400:
             data = response.json()
             return self._parse(data)
         else:
-            print("Error when saving contact on AC", response.text)
-            raise Exception("Error when saving contact on AC")
+            print('Error when saving contact on AC', response.text)
+            raise Exception('Error when saving contact on AC')
 
     def _parse(self, response):
         if response['result_code'] == 1:
             return response
         else:
-            raise Exception(response["result_message"])
+            raise Exception(response['result_message'])

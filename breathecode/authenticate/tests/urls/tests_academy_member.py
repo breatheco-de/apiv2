@@ -37,7 +37,7 @@ class AuthenticateTestSuite(AuthTestCase):
             json, {
                 'detail':
                 "You (user: 1) don't have this capability: read_member "
-                "for academy 1",
+                'for academy 1',
                 'status_code': 403
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -57,7 +57,7 @@ class AuthenticateTestSuite(AuthTestCase):
             json, {
                 'detail':
                 "You (user: 1) don't have this capability: read_member "
-                "for academy 1",
+                'for academy 1',
                 'status_code': 403
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -459,7 +459,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_member')
         response = self.client.delete(url)
         json = response.json()
-        expected = {'detail': "Member not found", 'status_code': 404}
+        expected = {'detail': 'Member not found', 'status_code': 404}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -616,13 +616,13 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': 'b@b.com',
             'first_name': 'Rene',
             'last_name': 'Descartes',
-            'status': "ACTIVE"
+            'status': 'ACTIVE'
         }
         profile_academy_kwargs_2 = {
             'email': 'a@a.com',
             'first_name': 'Michael',
             'last_name': 'Jordan',
-            'status': "ACTIVE"
+            'status': 'ACTIVE'
         }
 
         model_1 = self.generate_models(
@@ -713,13 +713,13 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': 'b@b.com',
             'first_name': 'Rene',
             'last_name': 'Descartes',
-            'status': "ACTIVE"
+            'status': 'ACTIVE'
         }
         profile_academy_kwargs_2 = {
             'email': 'a@a.com',
             'first_name': 'Michael',
             'last_name': 'Jordan',
-            'status': "ACTIVE"
+            'status': 'ACTIVE'
         }
 
         model_1 = self.generate_models(
@@ -810,13 +810,13 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': 'b@b.com',
             'first_name': 'Rene',
             'last_name': 'Descartes',
-            'status': "ACTIVE"
+            'status': 'ACTIVE'
         }
         profile_academy_kwargs_2 = {
             'email': 'a@a.com',
             'first_name': 'Michael',
             'last_name': 'Jordan',
-            'status': "ACTIVE"
+            'status': 'ACTIVE'
         }
 
         model_1 = self.generate_models(
@@ -907,13 +907,13 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': 'b@b.com',
             'first_name': 'Rene',
             'last_name': 'Descartes',
-            'status': "ACTIVE"
+            'status': 'ACTIVE'
         }
         profile_academy_kwargs_2 = {
             'email': 'a@a.com',
             'first_name': 'Michael',
             'last_name': 'Jordan',
-            'status': "ACTIVE"
+            'status': 'ACTIVE'
         }
 
         model_1 = self.generate_models(
@@ -1004,13 +1004,13 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': 'b@b.com',
             'first_name': 'Rene',
             'last_name': 'Descartes',
-            'status': "INVITED"
+            'status': 'INVITED'
         }
         profile_academy_kwargs_2 = {
             'email': 'a@a.com',
             'first_name': 'Michael',
             'last_name': 'Jordan',
-            'status': "INVITED"
+            'status': 'INVITED'
         }
 
         model_1 = self.generate_models(
@@ -1101,13 +1101,13 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': 'b@b.com',
             'first_name': 'Rene',
             'last_name': 'Descartes',
-            'status': "INVITED"
+            'status': 'INVITED'
         }
         profile_academy_kwargs_2 = {
             'email': 'a@a.com',
             'first_name': 'Michael',
             'last_name': 'Jordan',
-            'status': "INVITED"
+            'status': 'INVITED'
         }
 
         model_1 = self.generate_models(
@@ -1198,13 +1198,13 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': 'b@b.com',
             'first_name': 'Rene',
             'last_name': 'Descartes',
-            'status': "INVITED"
+            'status': 'INVITED'
         }
         profile_academy_kwargs_2 = {
             'email': 'a@a.com',
             'first_name': 'Michael',
             'last_name': 'Jordan',
-            'status': "INVITED"
+            'status': 'INVITED'
         }
 
         model_1 = self.generate_models(
@@ -1295,13 +1295,13 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': 'b@b.com',
             'first_name': 'Rene',
             'last_name': 'Descartes',
-            'status': "INVITED"
+            'status': 'INVITED'
         }
         profile_academy_kwargs_2 = {
             'email': 'a@a.com',
             'first_name': 'Michael',
             'last_name': 'Jordan',
-            'status': "INVITED"
+            'status': 'INVITED'
         }
 
         model_1 = self.generate_models(

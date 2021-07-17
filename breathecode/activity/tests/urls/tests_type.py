@@ -80,44 +80,44 @@ class MediaTestSuite(MediaTestCase):
         expected = [
             {
                 'description': 'Every time it logs in',
-                'slug': 'breathecode-login',
+                'slug': 'breathecode_login',
             },
             {
                 'description': 'First day using breathecode',
-                'slug': 'online-platform-registration',
+                'slug': 'online_platform_registration',
             },
             {
                 'description': 'Attendy on an eventbrite event',
-                'slug': 'public-event-attendance',
+                'slug': 'public_event_attendance',
             },
             {
                 'description': 'When the student attent to class',
-                'slug': 'classroom-attendance',
+                'slug': 'classroom_attendance',
             },
             {
                 'description': 'When the student miss class',
-                'slug': 'classroom-unattendance',
+                'slug': 'classroom_unattendance',
             },
             {
                 'description': 'When a lessons is opened on the platform',
-                'slug': 'lesson-opened',
+                'slug': 'lesson_opened',
             },
             {
                 'description':
                 ('When the office raspberry pi detects the student'),
-                'slug': 'office-attendance',
+                'slug': 'office_attendance',
             },
             {
                 'description': 'When a nps survey is answered by the student',
-                'slug': 'nps-survey-answered',
+                'slug': 'nps_survey_answered',
             },
             {
                 'description': 'When student successfuly tests exercise',
-                'slug': 'exercise-success',
+                'slug': 'exercise_success',
             },
             {
                 'description': 'When student successfuly join to academy',
-                'slug': 'academy-registration',
+                'slug': 'academy_registration',
             },
         ]
 

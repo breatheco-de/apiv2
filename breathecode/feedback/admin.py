@@ -37,10 +37,10 @@ def send_bulk_survey(modeladmin, request, queryset):
             [f'{error} ({errors[error]})' for error in errors.keys()])
         messages.error(request, message=message)
     else:
-        messages.success(request, message="Survey was successfully sent")
+        messages.success(request, message='Survey was successfully sent')
 
 
-send_bulk_survey.short_description = "Send General NPS Survey"
+send_bulk_survey.short_description = 'Send General NPS Survey'
 
 
 @admin.register(UserProxy)
@@ -73,10 +73,10 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
             [f'{error} ({errors[error]})' for error in errors.keys()])
         messages.error(request, message=message)
     else:
-        messages.success(request, message="Survey was successfully sent")
+        messages.success(request, message='Survey was successfully sent')
 
 
-send_bulk_cohort_user_survey.short_description = "Send General NPS Survey"
+send_bulk_cohort_user_survey.short_description = 'Send General NPS Survey'
 
 
 @admin.register(CohortUserProxy)
@@ -103,7 +103,7 @@ def add_academy_to_answer(modeladmin, request, queryset):
         answer.save()
 
 
-add_academy_to_answer.short_description = "Add academy to answer"
+add_academy_to_answer.short_description = 'Add academy to answer'
 # Register your models here.
 
 
@@ -115,11 +115,11 @@ class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'user__first_name', 'user__last_name', 'user__email', 'cohort__slug'
     ]
     list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
-    actions = ["export_as_csv", add_academy_to_answer]
-    raw_id_fields = ["user", "cohort", "mentor"]
+    actions = ['export_as_csv', add_academy_to_answer]
+    raw_id_fields = ['user', 'cohort', 'mentor']
 
     def answer_url(self, obj):
-        url = "https://nps.breatheco.de/" + str(obj.id)
+        url = 'https://nps.breatheco.de/' + str(obj.id)
         return format_html(
             f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open answer</a>"
         )
@@ -129,19 +129,19 @@ class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
 
 
 def send_big_cohort_bulk_survey(modeladmin, request, queryset):
-    logger.debug(f"send_big_cohort_bulk_survey called")
+    logger.debug(f'send_big_cohort_bulk_survey called')
 
     # cohort_ids = queryset.values_list('id', flat=True)
     surveys = queryset.all()
     for s in surveys:
-        logger.debug(f"Sending survey {s.id}")
+        logger.debug(f'Sending survey {s.id}')
 
         try:
             result = send_survey_group(survey=s)
             s.status_json = json.dumps(result)
-            if len(result["success"]) == 0:
+            if len(result['success']) == 0:
                 s.status = 'FATAL'
-            elif len(result["error"]) > 0:
+            elif len(result['error']) > 0:
                 s.status = 'PARTIAL'
             else:
                 s.status = 'SENT'
@@ -149,13 +149,13 @@ def send_big_cohort_bulk_survey(modeladmin, request, queryset):
             s.status = 'FATAL'
             logger.fatal(str(e))
     if s.status != 'SENT':
-        messages.error(request, message="Some surveys have not been sent")
+        messages.error(request, message='Some surveys have not been sent')
     s.save()
 
-    logger.info(f"All surveys scheduled to send for cohorts")
+    logger.info(f'All surveys scheduled to send for cohorts')
 
 
-send_big_cohort_bulk_survey.short_description = "Send GENERAL BIG Survey to all cohort students"
+send_big_cohort_bulk_survey.short_description = 'Send GENERAL BIG Survey to all cohort students'
 
 
 @admin.register(Survey)
@@ -166,11 +166,11 @@ class SurveyAdmin(admin.ModelAdmin):
         'cohort__academy__name'
     ]
     list_filter = ['status', 'cohort__academy__slug']
-    raw_id_fields = ["cohort"]
+    raw_id_fields = ['cohort']
     actions = [send_big_cohort_bulk_survey]
 
     def survey_url(self, obj):
-        url = "https://nps.breatheco.de/survey/" + str(obj.id)
+        url = 'https://nps.breatheco.de/survey/' + str(obj.id)
         return format_html(
             f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open survey</a>"
         )
