@@ -165,12 +165,8 @@ class Syllabus(models.Model):
                                       null=True,
                                       default=None)
 
-    @property
-    def slug(self):
-        return f'{self.specialty_mode.slug}.v{self.version}'
-
     def __str__(self):
-        return f'{self.specialty_mode.slug}.v{self.version}'
+        return self.github_url
 
 
 class SyllabusVersion(models.Model):

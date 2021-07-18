@@ -34,9 +34,8 @@ def generate_certificate(user, cohort=None, layout=None):
     cohort_user = CohortUser.objects.filter(**query).first()
 
     if not cohort_user:
-        raise ValidationException(
-            "Impossible to obtain the student cohort, maybe it's none assigned",
-            slug='missing-cohort-user')
+        raise ValidationException("Impossible to obtain the student cohort, maybe it's none assigned",
+                                  slug='missing-cohort-user')
 
     if not cohort:
         cohort = cohort_user.cohort
@@ -52,80 +51,68 @@ def generate_certificate(user, cohort=None, layout=None):
             f'certificate for cohort: {cohort.name}',
             slug='missing-specialty-mode')
 
-    specialty = Specialty.objects.filter(
-        syllabus__id=cohort.syllabus_version.syllabus_id).first()
+    specialty = Specialty.objects.filter(syllabus__id=cohort.syllabus_version.syllabus_id).first()
     if not specialty:
-        raise ValidationException('Specialty has no Syllabus assigned',
-                                  slug='missing-specialty')
+        raise ValidationException('Specialty has no Syllabus assigned', slug='missing-specialty')
 
     uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
 
     if (uspe is not None and uspe.status == 'PERSISTED' and uspe.preview_url):
-        raise ValidationException(
-            "This user already has a certificate created",
-            slug='already-exists')
+        raise ValidationException("This user already has a certificate created", slug='already-exists')
 
     if uspe is None:
         utc_now = timezone.now()
         uspe = UserSpecialty(
             user=user,
             cohort=cohort,
-            token=hashlib.sha1(
-                (str(user.id) + str(utc_now)).encode("UTF-8")).hexdigest(),
+            token=hashlib.sha1((str(user.id) + str(utc_now)).encode("UTF-8")).hexdigest(),
             specialty=specialty,
             signed_by_role=strings[cohort.language]["Main Instructor"],
         )
         if specialty.expiration_day_delta is not None:
-            uspe.expires_at = utc_now + timezone.timedelta(
-                days=specialty.expiration_day_delta)
+            uspe.expires_at = utc_now + timezone.timedelta(days=specialty.expiration_day_delta)
 
     if layout is None:
-        layout = LayoutDesign.objects.filter(is_default=True,
-                                             academy=cohort.academy).first()
+        layout = LayoutDesign.objects.filter(is_default=True, academy=cohort.academy).first()
+
     if layout is None:
         layout = LayoutDesign.objects.filter(slug="default").first()
+
     if layout is None:
-        raise ValidationException(
-            "No layout was specified and there is no default layout for this academy",
-            slug="no-default-layout")
+        raise ValidationException("No layout was specified and there is no default layout for this academy",
+                                  slug="no-default-layout")
 
     uspe.layout = layout
 
     # validate for teacher
-    main_teacher = CohortUser.objects.filter(cohort__id=cohort.id,
-                                             role='TEACHER').first()
+    main_teacher = CohortUser.objects.filter(cohort__id=cohort.id, role='TEACHER').first()
     if main_teacher is None or main_teacher.user is None:
-        raise ValidationException(
-            "This cohort does not have a main teacher, please assign it first",
-            slug='without-main-teacher')
+        raise ValidationException("This cohort does not have a main teacher, please assign it first",
+                                  slug='without-main-teacher')
 
     main_teacher = main_teacher.user
     uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
 
     try:
         uspe.academy = cohort.academy
-        tasks_count_pending = Task.objects.filter(
-            user__id=user.id, task_type='PROJECT',
-            revision_status='PENDING').count()
+        tasks_count_pending = Task.objects.filter(user__id=user.id,
+                                                  task_type='PROJECT',
+                                                  revision_status='PENDING').count()
 
         if tasks_count_pending:
-            raise ValidationException(
-                f'The student has {tasks_count_pending} '
-                'pending tasks',
-                slug='with-pending-tasks')
+            raise ValidationException(f'The student has {tasks_count_pending} '
+                                      'pending tasks',
+                                      slug='with-pending-tasks')
 
-        if not (cohort_user.finantial_status == FULLY_PAID
-                or cohort_user.finantial_status == UP_TO_DATE):
-            raise ValidationException(
-                'The student must have finantial status '
-                'FULLY_PAID or UP_TO_DATE',
-                slug='bad-finantial-status')
+        if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status == UP_TO_DATE):
+            raise ValidationException('The student must have finantial status '
+                                      'FULLY_PAID or UP_TO_DATE',
+                                      slug='bad-finantial-status')
 
         if cohort_user.educational_status != 'GRADUATED':
-            raise ValidationException(
-                'The student must have educational '
-                'status GRADUATED',
-                slug='bad-educational-status')
+            raise ValidationException('The student must have educational '
+                                      'status GRADUATED',
+                                      slug='bad-educational-status')
 
         if cohort.current_day != cohort.specialty_mode.duration_in_days:
             raise ValidationException(
@@ -163,20 +150,13 @@ def certificate_screenshot(certificate_id: int):
         # if the file does not exist
         if file.blob is None:
             query_string = urlencode({
-                'key':
-                os.environ.get('SCREENSHOT_MACHINE_KEY'),
-                'url':
-                f'https://certificate.breatheco.de/preview/{certificate.token}',
-                'device':
-                'desktop',
-                'cacheLimit':
-                '0',
-                'dimension':
-                '1024x707',
+                'key': os.environ.get('SCREENSHOT_MACHINE_KEY'),
+                'url': f'https://certificate.breatheco.de/preview/{certificate.token}',
+                'device': 'desktop',
+                'cacheLimit': '0',
+                'dimension': '1024x707',
             })
-            r = requests.get(
-                f'https://api.screenshotmachine.com?{query_string}',
-                stream=True)
+            r = requests.get(f'https://api.screenshotmachine.com?{query_string}', stream=True)
             if r.status_code == 200:
                 file.upload(r.content, public=True)
             else:

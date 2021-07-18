@@ -41,11 +41,34 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     def test_generate_certificate__without_cohort_user(self):
         model = self.generate_models(user=True, cohort=True)
         try:
-            self.assertEqual(
-                generate_certificate(model['user'], model['cohort']), None)
+            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'missing-cohort-user')
+
+        self.assertEqual(self.all_user_specialty_dict(), [])
+
+    """
+    🔽🔽🔽 Cohort not ended
+    """
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_generate_certificate__cohort_not_ended(self):
+        model = self.generate_models(user=True,
+                                     cohort=True,
+                                     cohort_user=True,
+                                     syllabus=True,
+                                     syllabus_version=True,
+                                     specialty=True,
+                                     specialty_mode=True,
+                                     layout_design=True)
+        try:
+            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
+            assert False
+        except Exception as e:
+            self.assertEqual(str(e), 'cohort-without-status-ended')
 
         self.assertEqual(self.all_user_specialty_dict(), [])
 
@@ -58,13 +81,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_generate_certificate__without_syllabus_version(self):
         cohort_kwargs = {'stage': 'ENDED'}
-        model = self.generate_models(user=True,
-                                     cohort=True,
-                                     cohort_user=True,
-                                     cohort_kwargs=cohort_kwargs)
+        model = self.generate_models(user=True, cohort=True, cohort_user=True, cohort_kwargs=cohort_kwargs)
         try:
-            self.assertEqual(
-                generate_certificate(model['user'], model['cohort']), None)
+            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'missing-syllabus-version')
@@ -86,8 +105,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      syllabus_version=True,
                                      cohort_kwargs=cohort_kwargs)
         try:
-            self.assertEqual(
-                generate_certificate(model['user'], model['cohort']), None)
+            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'missing-specialty-mode')
@@ -110,8 +128,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      syllabus_version=True,
                                      cohort_kwargs=cohort_kwargs)
         try:
-            self.assertEqual(
-                generate_certificate(model['user'], model['cohort']), None)
+            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'missing-specialty')
@@ -135,8 +152,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      specialty=True,
                                      cohort_kwargs=cohort_kwargs)
         try:
-            self.assertEqual(
-                generate_certificate(model['user'], model['cohort']), None)
+            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'missing-specialty')
@@ -161,8 +177,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      specialty=True,
                                      cohort_kwargs=cohort_kwargs)
         try:
-            self.assertEqual(
-                generate_certificate(model['user'], model['cohort']), None)
+            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'no-default-layout')
@@ -188,8 +203,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs)
         try:
-            self.assertEqual(
-                generate_certificate(model['user'], model['cohort']), None)
+            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'without-main-teacher')
@@ -220,51 +234,35 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         del base['cohort_user']
 
         cohort_user_kwargs = {'role': 'TEACHER'}
-        teacher_model = self.generate_models(
-            user=True,
-            cohort_user=True,
-            cohort_user_kwargs=cohort_user_kwargs,
-            models=base)
-        result = self.remove_dinamics_fields(
-            generate_certificate(model['user'], model['cohort']).__dict__)
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
 
         self.assertToken(result['token'])
         result['token'] = None
 
         translation = strings[model['cohort'].language]
         expected = {
-            'academy_id':
-            1,
-            'cohort_id':
-            1,
-            'expires_at':
-            None,
-            'id':
-            1,
-            'layout_id':
-            1,
-            'preview_url':
-            None,
-            'signed_by': (teacher_model['user'].first_name + " " +
-                          teacher_model['user'].last_name),
-            'signed_by_role':
-            translation["Main Instructor"],
-            'specialty_id':
-            1,
-            'status':
-            'ERROR',
-            'token':
-            None,
-            'status_text':
-            'bad-finantial-status',
-            'user_id':
-            1,
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': (teacher_model['user'].first_name + " " + teacher_model['user'].last_name),
+            'signed_by_role': translation["Main Instructor"],
+            'specialty_id': 1,
+            'status': 'ERROR',
+            'token': None,
+            'status_text': 'bad-finantial-status',
+            'user_id': 1,
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(
-            self.clear_keys(self.all_user_specialty_dict(),
-                            ["preview_url", "token"]), [expected])
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),
+                         [expected])
 
     """
     🔽🔽🔽 Student with pending tasks
@@ -275,7 +273,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_generate_certificate__with_student_that_didnt_finish_tasks(self):
         cohort_kwargs = {'stage': 'ENDED'}
-        task_kwargs = {'type': 'PROJECT'}
+        task_kwargs = {'task_type': 'PROJECT', 'revision_status': 'PENDING'}
+        cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE'}
         model = self.generate_models(user=True,
                                      cohort=True,
                                      cohort_user=True,
@@ -286,57 +285,41 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      layout_design=True,
                                      task=True,
                                      task_kwargs=task_kwargs,
-                                     cohort_kwargs=cohort_kwargs)
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_user_kwargs=cohort_user_kwargs)
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
         cohort_user_kwargs = {'role': 'TEACHER'}
-        teacher_model = self.generate_models(
-            user=True,
-            cohort_user=True,
-            cohort_user_kwargs=cohort_user_kwargs,
-            models=base)
-        result = self.remove_dinamics_fields(
-            generate_certificate(model['user'], model['cohort']).__dict__)
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
 
         self.assertToken(result["token"])
         result["token"] = None
 
         expected = {
-            'academy_id':
-            1,
-            'cohort_id':
-            1,
-            'expires_at':
-            None,
-            'id':
-            1,
-            'layout_id':
-            1,
-            'preview_url':
-            None,
-            'signed_by':
-            teacher_model['user'].first_name + " " +
-            teacher_model['user'].last_name,
-            'signed_by_role':
-            strings[model['cohort'].language]["Main Instructor"],
-            'specialty_id':
-            1,
-            'status':
-            'ERROR',
-            'token':
-            None,
-            'status_text':
-            'with-pending-tasks',
-            'user_id':
-            1,
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'specialty_id': 1,
+            'status': 'ERROR',
+            'token': None,
+            'status_text': 'with-pending-tasks',
+            'user_id': 1,
         }
         self.assertEqual(result, expected)
-        self.assertEqual(
-            self.clear_keys(self.all_user_specialty_dict(),
-                            ["preview_url", "token"]), [expected])
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),
+                         [expected])
 
     """
     🔽🔽🔽 Student not graduated
@@ -364,50 +347,33 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         del base['cohort_user']
 
         cohort_user_kwargs = {'role': 'TEACHER'}
-        teacher_model = self.generate_models(
-            user=True,
-            cohort_user=True,
-            cohort_user_kwargs=cohort_user_kwargs,
-            models=base)
-        result = self.remove_dinamics_fields(
-            generate_certificate(model['user'], model['cohort']).__dict__)
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
 
         self.assertToken(result["token"])
         result["token"] = None
 
         expected = {
-            'academy_id':
-            1,
-            'cohort_id':
-            1,
-            'expires_at':
-            None,
-            'id':
-            1,
-            'layout_id':
-            1,
-            'preview_url':
-            None,
-            'signed_by':
-            teacher_model['user'].first_name + " " +
-            teacher_model['user'].last_name,
-            'signed_by_role':
-            strings[model['cohort'].language]["Main Instructor"],
-            'specialty_id':
-            1,
-            'status':
-            'ERROR',
-            'status_text':
-            'bad-educational-status',
-            'token':
-            None,
-            'user_id':
-            1,
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'specialty_id': 1,
+            'status': 'ERROR',
+            'status_text': 'bad-educational-status',
+            'token': None,
+            'user_id': 1,
         }
         self.assertEqual(result, expected)
-        self.assertEqual(
-            self.clear_keys(self.all_user_specialty_dict(),
-                            ["preview_url", "token"]), [expected])
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),
+                         [expected])
 
     """
     🔽🔽🔽 Student with bad finantial_status
@@ -416,8 +382,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate__with_cohort_user__with_finantial_status_eq_up_to_date(
-            self):
+    def test_generate_certificate__with_cohort_user__with_finantial_status_eq_up_to_date(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE'}
         model = self.generate_models(user=True,
@@ -436,50 +401,33 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         del base['cohort_user']
 
         cohort_user_kwargs = {'role': 'TEACHER'}
-        teacher_model = self.generate_models(
-            user=True,
-            cohort_user=True,
-            cohort_user_kwargs=cohort_user_kwargs,
-            models=base)
-        result = self.remove_dinamics_fields(
-            generate_certificate(model['user'], model['cohort']).__dict__)
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
         self.assertToken(result["token"])
         result["token"] = None
 
         expected = {
-            'academy_id':
-            1,
-            'cohort_id':
-            1,
-            'expires_at':
-            None,
-            'id':
-            1,
-            'layout_id':
-            1,
-            'preview_url':
-            None,
-            'signed_by':
-            teacher_model['user'].first_name + " " +
-            teacher_model['user'].last_name,
-            'signed_by_role':
-            strings[model['cohort'].language]["Main Instructor"],
-            'specialty_id':
-            1,
-            'status':
-            'ERROR',
-            'status_text':
-            'bad-educational-status',
-            'token':
-            None,
-            'user_id':
-            1,
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'specialty_id': 1,
+            'status': 'ERROR',
+            'status_text': 'bad-educational-status',
+            'token': None,
+            'user_id': 1,
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(
-            self.clear_keys(self.all_user_specialty_dict(),
-                            ["preview_url", "token"]), [expected])
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),
+                         [expected])
 
     """
     🔽🔽🔽 Student dropped
@@ -488,13 +436,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate__with_cohort_user__with_educational_status_eq_dropped(
-            self):
+    def test_generate_certificate__with_cohort_user__with_educational_status_eq_dropped(self):
         cohort_kwargs = {'stage': 'ENDED'}
-        cohort_user_kwargs = {
-            'finantial_status': 'UP_TO_DATE',
-            'educational_status': 'DROPPED'
-        }
+        cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'DROPPED'}
         model = self.generate_models(user=True,
                                      cohort=True,
                                      cohort_user=True,
@@ -511,51 +455,34 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         del base['cohort_user']
 
         cohort_user_kwargs = {'role': 'TEACHER'}
-        teacher_model = self.generate_models(
-            user=True,
-            cohort_user=True,
-            cohort_user_kwargs=cohort_user_kwargs,
-            models=base)
-        result = self.remove_dinamics_fields(
-            generate_certificate(model['user'], model['cohort']).__dict__)
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
 
         self.assertToken(result["token"])
         result["token"] = None
 
         expected = {
-            'academy_id':
-            1,
-            'cohort_id':
-            1,
-            'expires_at':
-            None,
-            'id':
-            1,
-            'layout_id':
-            1,
-            'preview_url':
-            None,
-            'signed_by':
-            teacher_model['user'].first_name + " " +
-            teacher_model['user'].last_name,
-            'signed_by_role':
-            strings[model['cohort'].language]["Main Instructor"],
-            'specialty_id':
-            1,
-            'status':
-            'ERROR',
-            'status_text':
-            'bad-educational-status',
-            'token':
-            None,
-            'user_id':
-            1,
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'specialty_id': 1,
+            'status': 'ERROR',
+            'status_text': 'bad-educational-status',
+            'token': None,
+            'user_id': 1,
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(
-            self.clear_keys(self.all_user_specialty_dict(),
-                            ["preview_url", "token"]), [expected])
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),
+                         [expected])
 
     """
     🔽🔽🔽 Cohort not finished
@@ -566,10 +493,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_generate_certificate__with_cohort_not_finished(self):
         cohort_kwargs = {'stage': 'ENDED'}
-        cohort_user_kwargs = {
-            'finantial_status': 'UP_TO_DATE',
-            'educational_status': 'GRADUATED'
-        }
+        cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
         model = self.generate_models(user=True,
                                      cohort=True,
                                      cohort_user=True,
@@ -586,39 +510,24 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         del base['cohort_user']
 
         cohort_user_kwargs = {'role': 'TEACHER'}
-        teacher_model = self.generate_models(
-            user=True,
-            cohort_user=True,
-            cohort_user_kwargs=cohort_user_kwargs,
-            models=base)
-        result = self.remove_dinamics_fields(
-            generate_certificate(model['user'], model['cohort']).__dict__)
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
         expected = {
-            'academy_id':
-            1,
-            'cohort_id':
-            1,
-            'expires_at':
-            None,
-            'id':
-            1,
-            'layout_id':
-            1,
-            'preview_url':
-            None,
-            'signed_by':
-            teacher_model['user'].first_name + " " +
-            teacher_model['user'].last_name,
-            'signed_by_role':
-            strings[model['cohort'].language]["Main Instructor"],
-            'specialty_id':
-            1,
-            'status':
-            'ERROR',
-            'status_text':
-            'cohort-not-finished',
-            'user_id':
-            1,
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'specialty_id': 1,
+            'status': 'ERROR',
+            'status_text': 'cohort-not-finished',
+            'user_id': 1,
         }
 
         self.assertToken(result['token'])
@@ -627,11 +536,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(result, expected)
 
-        self.assertEqual(
-            self.clear_preview_url(self.all_user_specialty_dict()),
-            [{
-                **expected, 'token': token
-            }])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
+            **expected, 'token': token
+        }])
 
     """
     🔽🔽🔽 Generate certificate
@@ -642,64 +549,44 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_generate_certificate(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799}
-        cohort_user_kwargs = {
-            'finantial_status': 'UP_TO_DATE',
-            'educational_status': 'GRADUATED'
-        }
+        cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
         specialty_mode_kwargs = {'duration_in_days': 9545799}
-        model = self.generate_models(
-            user=True,
-            cohort=True,
-            cohort_user=True,
-            syllabus_version=True,
-            syllabus=True,
-            specialty_mode=True,
-            specialty=True,
-            layout_design=True,
-            cohort_kwargs=cohort_kwargs,
-            cohort_user_kwargs=cohort_user_kwargs,
-            specialty_mode_kwargs=specialty_mode_kwargs)
+        model = self.generate_models(user=True,
+                                     cohort=True,
+                                     cohort_user=True,
+                                     syllabus_version=True,
+                                     syllabus=True,
+                                     specialty_mode=True,
+                                     specialty=True,
+                                     layout_design=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_user_kwargs=cohort_user_kwargs,
+                                     specialty_mode_kwargs=specialty_mode_kwargs)
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
         cohort_user_kwargs = {'role': 'TEACHER'}
-        teacher_model = self.generate_models(
-            user=True,
-            cohort_user=True,
-            cohort_user_kwargs=cohort_user_kwargs,
-            models=base)
-        result = self.remove_dinamics_fields(
-            generate_certificate(model['user'], model['cohort']).__dict__)
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
         expected = {
-            'academy_id':
-            1,
-            'cohort_id':
-            1,
-            'expires_at':
-            None,
-            'id':
-            1,
-            'layout_id':
-            1,
-            'preview_url':
-            None,
-            'signed_by':
-            teacher_model['user'].first_name + " " +
-            teacher_model['user'].last_name,
-            'signed_by_role':
-            strings[model['cohort'].language]["Main Instructor"],
-            'specialty_id':
-            1,
-            'status':
-            'PERSISTED',
-            'status_text':
-            'Certificate successfully queued for PDF generation',
-            'user_id':
-            1,
-            'is_cleaned':
-            True,
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'specialty_id': 1,
+            'status': 'PERSISTED',
+            'status_text': 'Certificate successfully queued for PDF generation',
+            'user_id': 1,
+            'is_cleaned': True,
         }
 
         self.assertToken(result['token'])
@@ -709,11 +596,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertEqual(result, expected)
         del expected['is_cleaned']
 
-        self.assertEqual(
-            self.clear_preview_url(self.all_user_specialty_dict()),
-            [{
-                **expected, 'token': token
-            }])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
+            **expected, 'token': token
+        }])
 
     """
     🔽🔽🔽 Translations
@@ -723,69 +608,45 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_generate_certificate__lang_en(self):
-        cohort_kwargs = {
-            'stage': 'ENDED',
-            'current_day': 9545799,
-            'language': 'en'
-        }
-        cohort_user_kwargs = {
-            'finantial_status': 'UP_TO_DATE',
-            'educational_status': 'GRADUATED'
-        }
+        cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799, 'language': 'en'}
+        cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
         specialty_mode_kwargs = {'duration_in_days': 9545799}
-        model = self.generate_models(
-            user=True,
-            cohort=True,
-            cohort_user=True,
-            syllabus_version=True,
-            syllabus=True,
-            specialty_mode=True,
-            specialty=True,
-            layout_design=True,
-            cohort_kwargs=cohort_kwargs,
-            cohort_user_kwargs=cohort_user_kwargs,
-            specialty_mode_kwargs=specialty_mode_kwargs)
+        model = self.generate_models(user=True,
+                                     cohort=True,
+                                     cohort_user=True,
+                                     syllabus_version=True,
+                                     syllabus=True,
+                                     specialty_mode=True,
+                                     specialty=True,
+                                     layout_design=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_user_kwargs=cohort_user_kwargs,
+                                     specialty_mode_kwargs=specialty_mode_kwargs)
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
         cohort_user_kwargs = {'role': 'TEACHER'}
-        teacher_model = self.generate_models(
-            user=True,
-            cohort_user=True,
-            cohort_user_kwargs=cohort_user_kwargs,
-            models=base)
-        result = self.remove_dinamics_fields(
-            generate_certificate(model['user'], model['cohort']).__dict__)
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
         expected = {
-            'academy_id':
-            1,
-            'cohort_id':
-            1,
-            'expires_at':
-            None,
-            'id':
-            1,
-            'layout_id':
-            1,
-            'preview_url':
-            None,
-            'signed_by':
-            teacher_model['user'].first_name + " " +
-            teacher_model['user'].last_name,
-            'signed_by_role':
-            strings[model['cohort'].language]["Main Instructor"],
-            'specialty_id':
-            1,
-            'status':
-            'PERSISTED',
-            'status_text':
-            'Certificate successfully queued for PDF generation',
-            'user_id':
-            1,
-            'is_cleaned':
-            True,
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'specialty_id': 1,
+            'status': 'PERSISTED',
+            'status_text': 'Certificate successfully queued for PDF generation',
+            'user_id': 1,
+            'is_cleaned': True,
         }
 
         self.assertToken(result['token'])
@@ -795,79 +656,53 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertEqual(result, expected)
         del expected['is_cleaned']
 
-        self.assertEqual(
-            self.clear_preview_url(self.all_user_specialty_dict()),
-            [{
-                **expected, 'token': token
-            }])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
+            **expected, 'token': token
+        }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_generate_certificate__lang_es(self):
-        cohort_kwargs = {
-            'stage': 'ENDED',
-            'current_day': 9545799,
-            'language': 'es'
-        }
-        cohort_user_kwargs = {
-            'finantial_status': 'UP_TO_DATE',
-            'educational_status': 'GRADUATED'
-        }
+        cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799, 'language': 'es'}
+        cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
         specialty_mode_kwargs = {'duration_in_days': 9545799}
-        model = self.generate_models(
-            user=True,
-            cohort=True,
-            cohort_user=True,
-            syllabus_version=True,
-            syllabus=True,
-            specialty_mode=True,
-            specialty=True,
-            layout_design=True,
-            cohort_kwargs=cohort_kwargs,
-            cohort_user_kwargs=cohort_user_kwargs,
-            specialty_mode_kwargs=specialty_mode_kwargs)
+        model = self.generate_models(user=True,
+                                     cohort=True,
+                                     cohort_user=True,
+                                     syllabus_version=True,
+                                     syllabus=True,
+                                     specialty_mode=True,
+                                     specialty=True,
+                                     layout_design=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_user_kwargs=cohort_user_kwargs,
+                                     specialty_mode_kwargs=specialty_mode_kwargs)
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
         cohort_user_kwargs = {'role': 'TEACHER'}
-        teacher_model = self.generate_models(
-            user=True,
-            cohort_user=True,
-            cohort_user_kwargs=cohort_user_kwargs,
-            models=base)
-        result = self.remove_dinamics_fields(
-            generate_certificate(model['user'], model['cohort']).__dict__)
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
         expected = {
-            'academy_id':
-            1,
-            'cohort_id':
-            1,
-            'expires_at':
-            None,
-            'id':
-            1,
-            'layout_id':
-            1,
-            'preview_url':
-            None,
-            'signed_by':
-            teacher_model['user'].first_name + " " +
-            teacher_model['user'].last_name,
-            'signed_by_role':
-            strings[model['cohort'].language]["Main Instructor"],
-            'specialty_id':
-            1,
-            'status':
-            'PERSISTED',
-            'status_text':
-            'Certificate successfully queued for PDF generation',
-            'user_id':
-            1,
-            'is_cleaned':
-            True,
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'specialty_id': 1,
+            'status': 'PERSISTED',
+            'status_text': 'Certificate successfully queued for PDF generation',
+            'user_id': 1,
+            'is_cleaned': True,
         }
 
         self.assertToken(result['token'])
@@ -877,11 +712,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertEqual(result, expected)
         del expected['is_cleaned']
 
-        self.assertEqual(
-            self.clear_preview_url(self.all_user_specialty_dict()),
-            [{
-                **expected, 'token': token
-            }])
+        self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
+            **expected, 'token': token
+        }])
 
     """
     🔽🔽🔽 Retry generate certificate
@@ -892,40 +725,32 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_generate_certificate__retry_generate_certificate(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799}
-        cohort_user_kwargs = {
-            'finantial_status': 'UP_TO_DATE',
-            'educational_status': 'GRADUATED'
-        }
+        cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
         specialty_mode_kwargs = {'duration_in_days': 9545799}
         user_specialty_kwargs = {'status': 'PERSISTED'}
-        model = self.generate_models(
-            user=True,
-            cohort=True,
-            cohort_user=True,
-            syllabus_version=True,
-            syllabus=True,
-            specialty_mode=True,
-            specialty=True,
-            layout_design=True,
-            user_specialty=True,
-            cohort_kwargs=cohort_kwargs,
-            cohort_user_kwargs=cohort_user_kwargs,
-            specialty_mode_kwargs=specialty_mode_kwargs,
-            user_specialty_kwargs=user_specialty_kwargs)
+        model = self.generate_models(user=True,
+                                     cohort=True,
+                                     cohort_user=True,
+                                     syllabus_version=True,
+                                     syllabus=True,
+                                     specialty_mode=True,
+                                     specialty=True,
+                                     layout_design=True,
+                                     user_specialty=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_user_kwargs=cohort_user_kwargs,
+                                     specialty_mode_kwargs=specialty_mode_kwargs,
+                                     user_specialty_kwargs=user_specialty_kwargs)
 
         base = model.copy()
         del base['user']
         del base['cohort_user']
 
         cohort_user_kwargs = {'role': 'TEACHER'}
-        self.generate_models(user=True,
-                             cohort_user=True,
-                             cohort_user_kwargs=cohort_user_kwargs,
-                             models=base)
+        self.generate_models(user=True, cohort_user=True, cohort_user_kwargs=cohort_user_kwargs, models=base)
 
         try:
-            self.assertEqual(
-                generate_certificate(model['user'], model['cohort']), None)
+            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'already-exists')

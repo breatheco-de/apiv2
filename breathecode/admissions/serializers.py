@@ -77,7 +77,7 @@ class GetCertificateSerializer(serpy.Serializer):
     logo = serpy.Field()
 
 
-class GetSmallCertificateSerializer(serpy.Serializer):
+class GetSmallSpecialtyModeSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
@@ -128,17 +128,22 @@ class GetBigAcademySerializer(serpy.Serializer):
     youtube_url = serpy.Field()
 
 
-class SyllabusSmallSerializer(serpy.Serializer):
+class GetSyllabusSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    json = serpy.Field()
+    github_url = serpy.Field()
+    private = serpy.Field()
+    academy_owner = serpy.MethodField()
+
+    def get_academy_owner(self, obj):
+        return obj.academy_owner.id if obj.academy_owner else None
+
+
+class SyllabusVersionSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     version = serpy.Field()
-    certificate = GetSmallCertificateSerializer(required=False)
-
-
-class SyllabusCertificateSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
-    certificate = GetTinnyCertificateSerializer(required=False)
 
 
 class GetCohortSerializer(serpy.Serializer):
@@ -154,7 +159,7 @@ class GetCohortSerializer(serpy.Serializer):
     ending_date = serpy.Field()
     current_day = serpy.Field()
     stage = serpy.Field()
-    syllabus = SyllabusSmallSerializer(required=False)
+    syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
 
 
@@ -178,7 +183,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     current_day = serpy.Field()
-    syllabus = SyllabusSmallSerializer(required=False)
+    syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = AcademySerializer()
     stage = serpy.Field()
 

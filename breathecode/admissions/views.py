@@ -17,11 +17,10 @@ from .serializers import (
     AcademySerializer, SpecialtyModeTimeSlotSerializer, CohortSerializer,
     CohortTimeSlotSerializer, GETSpecialtyModeTimeSlotSerializer,
     GETCohortTimeSlotSerializer, GetCohortSerializer, SyllabusGetSerializer,
-    SyllabusSerializer, SyllabusSmallSerializer, CohortUserSerializer,
-    GETCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
-    UserDJangoRestSerializer, UserMeSerializer, GetCertificateSerializer,
-    SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer,
-    GetBigAcademySerializer)
+    SyllabusSerializer, CohortUserSerializer, GETCohortUserSerializer,
+    CohortUserPUTSerializer, CohortPUTSerializer, UserDJangoRestSerializer,
+    UserMeSerializer, GetCertificateSerializer, SyllabusGetSerializer,
+    SyllabusSerializer, GetBigAcademySerializer)
 from .models import (Academy, AcademySpecialtyMode, SpecialtyModeTimeSlot,
                      CohortTimeSlot, CohortUser, SpecialtyMode, Cohort,
                      Country, STUDENT, DELETED, Syllabus)
@@ -982,26 +981,18 @@ class SyllabusView(APIView):
 
     @capable_of('crud_syllabus')
     def post(self, request, certificate_slug=None, academy_id=None):
-        version = 1
+        # version = 1
         certificate = SpecialtyMode.objects.filter(
             slug=certificate_slug).first()
         if certificate is None:
             raise ValidationException(
                 f"Invalid certificates slug {certificate_slug}", code=404)
 
-        # if not SpecialtyModeTimeSlot.objects.filter(
-        #         academy__id=academy_id,
-        #         certificate__slug=certificate_slug).exists():
-        #     raise ValidationException(
-        #         'We can\’t use a Certificate if it does not have time slots',
-        #         slug='certificate-not-have-time-slots'
-        #     )
-
-        item = Syllabus.objects.filter(
-            certificate__slug=certificate_slug,
-            academy_owner__id=academy_id).order_by('version').first()
-        if item is not None:
-            version = item.version + 1
+        # item = Syllabus.objects.filter(
+        #     certificate__slug=certificate_slug,
+        #     academy_owner__id=academy_id).order_by('version').first()
+        # if item is not None:
+        #     version = item.version + 1
 
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:

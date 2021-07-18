@@ -60,8 +60,7 @@ class AdmissionsModelsMixin(ModelsMixin):
             kargs = {**kargs, **city_kwargs}
             models['city'] = mixer.blend('admissions.City', **kargs)
 
-        if not 'academy' in models and (academy or profile_academy or syllabus
-                                        or academy_specialty_mode):
+        if not 'academy' in models and (academy or profile_academy or syllabus or academy_specialty_mode):
             kargs = {}
 
             if 'country' in models:
@@ -89,8 +88,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                 kargs['syllabus'] = models['syllabus']
 
             kargs = {**kargs, **syllabus_version_kwargs}
-            models['syllabus_version'] = mixer.blend(
-                'admissions.SyllabusVersion', **kargs)
+            models['syllabus_version'] = mixer.blend('admissions.SyllabusVersion', **kargs)
 
         if not 'specialty_mode' in models and specialty_mode:
             kargs = {}
@@ -99,8 +97,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                 kargs['syllabus'] = models['syllabus']
 
             kargs = {**kargs, **specialty_mode_kwargs}
-            models['specialty_mode'] = mixer.blend('admissions.SpecialtyMode',
-                                                   **kargs)
+            models['specialty_mode'] = mixer.blend('admissions.SpecialtyMode', **kargs)
 
         if not 'academy_specialty_mode' in models and academy_specialty_mode:
             kargs = {}
@@ -112,11 +109,10 @@ class AdmissionsModelsMixin(ModelsMixin):
                 kargs['academy'] = models['academy']
 
             kargs = {**kargs, **academy_specialty_mode_kwargs}
-            models['academy_specialty_mode'] = mixer.blend(
-                'admissions.AcademySpecialtyMode', **kargs)
+            models['academy_specialty_mode'] = mixer.blend('admissions.AcademySpecialtyMode', **kargs)
 
-        if not 'cohort' in models and not skip_cohort and (
-                cohort or profile_academy or cohort_user or academy):
+        if not 'cohort' in models and not skip_cohort and (cohort or profile_academy or cohort_user
+                                                           or academy):
             kargs = {}
 
             if profile_academy or 'academy' in models:
@@ -141,8 +137,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                 kargs['cohort'] = models['cohort']
 
             kargs = {**kargs, **cohort_user_kwargs}
-            models['cohort_user'] = mixer.blend('admissions.CohortUser',
-                                                **kargs)
+            models['cohort_user'] = mixer.blend('admissions.CohortUser', **kargs)
 
         if not 'time_slot' in models and time_slot:
             kargs = {}
@@ -160,8 +155,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                 kargs['specialty_mode'] = models['specialty_mode']
 
             kargs = {**kargs, **specialty_mode_time_slot_kwargs}
-            models['specialty_mode_time_slot'] = mixer.blend(
-                'admissions.SpecialtyModeTimeSlot', **kargs)
+            models['specialty_mode_time_slot'] = mixer.blend('admissions.SpecialtyModeTimeSlot', **kargs)
 
         if not 'cohort_time_slot' in models and cohort_time_slot:
             kargs = {}
@@ -170,7 +164,6 @@ class AdmissionsModelsMixin(ModelsMixin):
                 kargs['cohort'] = models['cohort']
 
             kargs = {**kargs, **cohort_time_slot_kwargs}
-            models['cohort_time_slot'] = mixer.blend(
-                'admissions.CohortTimeSlot', **kargs)
+            models['cohort_time_slot'] = mixer.blend('admissions.CohortTimeSlot', **kargs)
 
         return models

@@ -1,3 +1,4 @@
+from breathecode.utils.validation_exception import ValidationException
 import logging, time
 from celery import shared_task, Task
 from breathecode.admissions.models import CohortUser
@@ -85,7 +86,7 @@ def generate_one_certificate(self, cohort_id, user_id):
     )
     try:
         generate_certificate(cohort__user.user, cohort__user.cohort)
-    except Exception:
+    except:
         logger.exception(
             f"Error generating certificate for {str(cohort__user.user.id)}, cohort {str(cohort__user.cohort.id)}"
         )

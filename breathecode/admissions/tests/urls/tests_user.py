@@ -26,10 +26,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.put(url, data)
         json = response.json()
-        expected = {
-            'detail': 'Authentication credentials were not provided.',
-            'status_code': 401
-        }
+        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -39,17 +36,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_user_post_without_data(self):
         """Test /academy/cohort without auth"""
-        self.generate_models(authenticate=True)
+        model = self.generate_models(authenticate=True)
         model_dict = self.get_user_dict(1)
         url = reverse_lazy('admissions:user')
         data = {}
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'id': self.user.id,
-            'first_name': self.user.first_name,
-            'last_name': self.user.last_name,
-            'email': self.user.email,
+            'id': model.user.id,
+            'first_name': model.user.first_name,
+            'last_name': model.user.last_name,
+            'email': model.user.email,
         }
 
         self.assertEqual(json, expected)
@@ -62,7 +59,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_user_post(self):
         """Test /academy/cohort without auth"""
-        self.generate_models(authenticate=True, user=True)
+        model = self.generate_models(authenticate=True, user=True)
         model_dict = self.get_user_dict(1)
         url = reverse_lazy('admissions:user')
         data = {
@@ -72,10 +69,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'id': self.user.id,
+            'id': model.user.id,
             'first_name': data['first_name'],
             'last_name': data['last_name'],
-            'email': self.user.email,
+            'email': model.user.email,
         }
 
         model_dict.update(data)
