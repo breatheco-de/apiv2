@@ -7,8 +7,8 @@ from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, GenerateQu
 from rest_framework import status
 
 
-class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
-                         GenerateQueriesMixin, DatetimeMixin, ICallMixin):
+class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin,
+                         ICallMixin):
     """AdmissionsTestCase with auth methods"""
     def setUp(self):
         self.generate_queries()
@@ -26,8 +26,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
             'recurrency_type': certificate_timeslot.recurrency_type,
         }
 
-    def check_cohort_user_that_not_have_role_student_can_be_teacher(
-            self, role, update=False):
+    def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, update=False):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
 
@@ -46,12 +45,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         model = self.generate_models(**model_kwargs)
 
         reverse_name = 'academy_cohort_id_user_id' if update else 'cohort_id_user'
-        url_params = {
-            'cohort_id': 1,
-            'user_id': 1
-        } if update else {
-            'cohort_id': 1
-        }
+        url_params = {'cohort_id': 1, 'user_id': 1} if update else {'cohort_id': 1}
         url = reverse_lazy(f'admissions:{reverse_name}', kwargs=url_params)
         data = {'user': model['user'].id, 'role': 'TEACHER'}
 
@@ -72,8 +66,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
-                'kickoff_date':
-                self.datetime_to_iso(model['cohort'].kickoff_date),
+                'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
                 'current_day': model['cohort'].current_day,
                 'academy': {
                     'id': model['cohort'].academy.id,
@@ -83,7 +76,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'syllabus': None,
+                'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
                 'language': model['cohort'].language,
@@ -107,19 +100,17 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
             self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         if update:
-            self.assertEqual(
-                self.all_cohort_user_dict(),
-                [{
-                    **self.model_to_dict(model, 'cohort_user'),
-                    'role': 'TEACHER',
-                }])
-        else:
             self.assertEqual(self.all_cohort_user_dict(),
                              [{
-                                 'cohort_id': 1,
-                                 'educational_status': None,
-                                 'finantial_status': None,
-                                 'id': 1,
+                                 **self.model_to_dict(model, 'cohort_user'),
                                  'role': 'TEACHER',
-                                 'user_id': 1
                              }])
+        else:
+            self.assertEqual(self.all_cohort_user_dict(), [{
+                'cohort_id': 1,
+                'educational_status': None,
+                'finantial_status': None,
+                'id': 1,
+                'role': 'TEACHER',
+                'user_id': 1
+            }])
