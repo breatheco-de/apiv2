@@ -4,7 +4,7 @@ from .views import (AcademyView, CohortUserView, AcademyCohortView,
                     get_single_course, SyllabusView, CertificateView,
                     CertificateAllView, get_all_academies, get_cohorts,
                     AcademyCohortTimeSlotView, AcademyCertificateTimeSlotView,
-                    AcademySyncCohortTimeSlotView)
+                    AcademySyncCohortTimeSlotView, AcademyReportView)
 
 app_name = 'admissions'
 urlpatterns = [
@@ -75,5 +75,5 @@ urlpatterns = [
     path('catalog/timezones', get_timezones, name='timezones_all'),
     
     
-#     path('report/admissions', get_timezones, name='timezones_all'),
+    path('report', AcademyReportView.as_view(), name='report_admissions'),
 ]

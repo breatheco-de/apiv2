@@ -675,3 +675,49 @@ class SyllabusUpdateSerializer(serializers.ModelSerializer):
                 'read_only': True
             },
         }
+
+
+
+
+class AcademyReportSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    name = serpy.Field()
+    slug = serpy.Field()
+    logo_url = serpy.Field()
+    website_url = serpy.Field()
+    street_address = serpy.Field()
+    latitude = serpy.Field()
+    longitude = serpy.Field()
+    status = serpy.Field()
+
+    students = serpy.MethodField()
+    def students(self, obj):
+
+        query = CohortUser.objects.filter(cohort__academy__id=obj.id, role='STUDENT')
+        return {
+            "total": query.count(),
+            "active": qurey.filter(educational_status='ACTIVE'),
+            "suspended": qurey.filter(educational_status='SUSPENDED'),
+            "graduated": qurey.filter(educational_status='GRADUATED'),
+            "dropped": qurey.filter(educational_status='DROPPED'),
+        }
+
+    teachers = serpy.MethodField()
+    def teachers(self, obj):
+
+        query = CohortUser.objects.filter(cohort__academy__id=obj.id, cohort__stage__in=['STARTED', 'FINAL_PROJECT'])
+        active = {
+            "main": qurey.filter(role='TEACHER'),
+            "assistant": qurey.filter(role='ASSISTANT'),
+            "reviewer": qurey.filter(role='REVIEWER'),
+        }
+        active["total"] = int(active["main"]) + int(active["assistant"]) + int(active["reviewer"]) 
+
+        total = ProfileAcademy.objects.filter(role__slug__in=['teacher', 'assistant'])
+
+        return {
+            "total": total.count(),
+            "active": active,
+        }
