@@ -1,6 +1,5 @@
 from breathecode.notify.actions import send_email_message
 import logging
-from breathecode.authenticate.actions import create_token
 from .models import UserAssessment
 
 logger = logging.getLogger(__name__)
@@ -8,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 def send_assestment(user_assessment):
 
-    token = create_token(user_assessment.user, hours_length=48)
+    token, created = Token.get_or_create(user_assessment.user, hours_length=48)
     data = {
         'SUBJECT':
         user_assessment.assessment.title,

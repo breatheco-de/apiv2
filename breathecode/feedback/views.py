@@ -106,6 +106,10 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
             param = self.request.GET.get('status')
             lookup['status'] = param
 
+        if 'survey' in self.request.GET:
+            param = self.request.GET.get('survey')
+            lookup['survey__id'] = param
+
         items = items.filter(**lookup).order_by('-created_at')
 
         like = request.GET.get('like', None)

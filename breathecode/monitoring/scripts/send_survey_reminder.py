@@ -37,7 +37,7 @@ for cohort in cohorts:
             sent_at = lastest_survey.sent_at.date()
 
         num_weeks = calculate_weeks(sent_at, datetime.now().date())
-        if num_weeks > 4:
+        if num_weeks > 4 and num_weeks < 16:
             cohorts_with_pending_surveys.append(cohort.name)
 
 if len(cohorts_with_pending_surveys) > 0:

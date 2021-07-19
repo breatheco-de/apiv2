@@ -6,6 +6,7 @@ from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
 from django.core.validators import RegexValidator
+from .signals import invite_accepted
 from breathecode.admissions.models import Academy, Cohort
 
 
@@ -141,6 +142,10 @@ PROFILE_ACADEMY_STATUS = (
 
 
 class ProfileAcademy(models.Model):
+    def __init__(self, *args, **kwargs):
+        super(ProfileAcademy, self).__init__(*args, **kwargs)
+        self.__old_status = self.status
+
     user = models.ForeignKey(User,
                              on_delete=models.SET_NULL,
                              default=None,
@@ -180,6 +185,12 @@ class ProfileAcademy(models.Model):
     def __str__(self):
         return f'{self.email} for academy ({self.academy.name})'
 
+    def save(self, *args, **kwargs):
+
+        if self.__old_status != self.status and self.status == 'ACTIVE':
+            invite_accepted.send(instance=self, sender=ProfileAcademy)
+        
+        super().save(*args, **kwargs)  # Call the "real" save() method.
 
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)
@@ -258,6 +269,16 @@ class CredentialsQuickBooks(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+class CredentialsGoogle(models.Model):
+    
+    token = models.CharField(max_length=255)
+    refresh_token = models.CharField(max_length=255)
+    expires_at = models.DateTimeField()
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
 
 class Token(rest_framework.authtoken.models.Token):
     '''
@@ -285,20 +306,35 @@ class Token(rest_framework.authtoken.models.Token):
                 self.expires_at = utc_now + timezone.timedelta(minutes=10)
         super().save(*args, **kwargs)
 
-    def create_temp(user):
-        token, created = Token.objects.get_or_create(user=user,
-                                                     token_type='temporal')
-        return token
+    @staticmethod
+    def get_or_create(user, **kwargs):
 
-    def get_valid(token, token_type='temporal'):
+        utc_now = timezone.now()
+        if "token_type" not in kwargs:
+            kwargs["token_type"] = 'temporal'
+
+        if "hours_length" in kwargs:
+            kwargs["expires_at"] = utc_now + timezone.timedelta(hours=kwargs["hours_length"])
+            del kwargs["hours_length"]
+
+        token, created = Token.objects.get_or_create(user=user, **kwargs)
+
+        if not created:
+            if token.expires_at < utc_now:
+                token.delete()
+                created = True
+                token = Token.objects.create(user=user, **kwargs)
+
+        return token, created
+
+    @staticmethod
+    def get_valid(token):
         utc_now = timezone.now()
         # delete expired tokens
         Token.objects.filter(expires_at__lt=utc_now).delete()
         # find among any non-expired token
         _token = Token.objects.filter(key=token,
                                       expires_at__gt=utc_now).first()
-        if _token is None:
-            return None
 
         return _token
 

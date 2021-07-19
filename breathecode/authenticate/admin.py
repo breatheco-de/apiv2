@@ -6,7 +6,7 @@ from .actions import delete_tokens
 from django.utils.html import format_html
 from .models import (CredentialsGithub, Token, UserProxy, Profile,
                      CredentialsSlack, ProfileAcademy, Role,
-                     CredentialsFacebook, Capability, UserInvite)
+                     CredentialsFacebook, Capability, UserInvite, CredentialsGoogle)
 from .actions import reset_password
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,15 @@ class CredentialsGithubAdmin(admin.ModelAdmin):
     raw_id_fields = ['user']
 
 
+@admin.register(CredentialsGoogle)
+class CredentialsGoogleAdmin(admin.ModelAdmin):
+    list_display = ('user', 'token', 'expires_at')
+    search_fields = [
+        'user__first_name', 'user__last_name', 'user__email',
+    ]
+    raw_id_fields = ['user']
+
+
 @admin.register(CredentialsSlack)
 class CredentialsSlackAdmin(admin.ModelAdmin):
     list_display = ('user', 'app_id', 'bot_user_id', 'team_id', 'team_name')
@@ -59,6 +68,7 @@ class CredentialsFacebookAdmin(admin.ModelAdmin):
 @admin.register(Token)
 class TokenAdmin(admin.ModelAdmin):
     list_display = ('key', 'token_type', 'expires_at', 'user')
+    search_fields = ('user__email', 'user__first_name', 'user__last_name')
     raw_id_fields = ['user']
 
     def get_readonly_fields(self, request, obj=None):
