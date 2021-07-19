@@ -206,7 +206,7 @@ class ActivityClassroomView(APIView):
         # query_iter = academy_iter + public_iter
         public_iter.sort(key=lambda x: x['created_at'], reverse=True)
 
-        return Response(query_iter)
+        return Response(public_iter)
 
 
 def add_student_activity(user, data, academy_id):
