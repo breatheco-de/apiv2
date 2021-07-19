@@ -129,7 +129,7 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
 
 class AnswerMeView(APIView):
     """
-    List all snippets, or create a new snippet.
+    Student answers a survey (normally several answers are required for each survey)
     """
     def put(self, request, answer_id=None):
         if answer_id is None:

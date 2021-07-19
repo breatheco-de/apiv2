@@ -206,7 +206,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_id_put_with_all_valid_scores(self):
         """Test /answer/:id without auth"""
-        for number in range(1, 10):
+        for score in range(1, 10):
             self.remove_all_answer()
             model = self.generate_models(authenticate=True,
                                          answer=True,
@@ -216,7 +216,6 @@ class AnswerIdTestSuite(FeedbackTestCase):
             url = reverse_lazy('feedback:answer_id',
                                kwargs={'answer_id': model['answer'].id})
 
-            score = str(number)
             data = {
                 'comment': 'They killed kenny',
                 'score': score,
@@ -302,7 +301,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
                            kwargs={'answer_id': model['answer'].id})
         data = {
             'comment': 'They killed kenny',
-            'score': '3',
+            'score': 3,
         }
         self.client.put(url, data)
 

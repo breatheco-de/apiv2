@@ -119,8 +119,7 @@ class Answer(models.Model):
                                  blank=True,
                                  null=True)
 
-    score = models.CharField(max_length=250,
-                             default=None,
+    score = models.IntegerField(default=None,
                              blank=True,
                              null=True)
     comment = models.TextField(max_length=1000,
