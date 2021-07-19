@@ -73,7 +73,23 @@ def generate_form_entry_kwargs():
 
 
 class AnswerIdTestSuite(MarketingTestCase):
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_persist_single_lead_no_form_entry(self):
+        """Test /answer/:id without auth"""
+        try:
+            persist_single_lead(None)
+            assert False
+        except Exception as e:
+            message = str(e)
+            self.assertEqual(message,
+                             'You need to specify the form entry data')
+
+        self.assertEqual(self.count_form_entry(), 0)
+
     """Test /answer/:id"""
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -112,6 +128,26 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      active_campaign_academy=True)
         try:
             persist_single_lead({'location': model['academy'].slug})
+            assert False
+        except Exception as e:
+            message = str(e)
+            self.assertEqual(message,
+                             'You need to specify tags for this entry')
+
+        self.assertEqual(self.count_form_entry(), 0)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_persist_single_lead_with_location_academy_alias(self):
+        """Test /answer/:id without auth"""
+        model = self.generate_models(
+            academy=True,
+            active_campaign_academy=True,
+            academy_alias=True,
+            academy_alias_kwargs={'active_campaign_slug': 'odin'})
+        try:
+            persist_single_lead({'location': 'odin'})
             assert False
         except Exception as e:
             message = str(e)
@@ -163,6 +199,28 @@ class AnswerIdTestSuite(MarketingTestCase):
                 message,
                 'No automation was specified and the the specified tag has no automation either'
             )
+
+        self.assertEqual(self.count_form_entry(), 0)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_persist_single_lead_with_tag_type_automation(self):
+        """Test /answer/:id without auth"""
+        model = self.generate_models(academy=True,
+                                     active_campaign_academy=True,
+                                     tag=True,
+                                     automation=True,
+                                     tag_kwargs={'tag_type': 'STRONG'})
+        try:
+            persist_single_lead({
+                'location': model['academy'].slug,
+                'tags': model['tag'].slug
+            })
+            assert False
+        except Exception as e:
+            message = str(e)
+            self.assertEqual(message, "The email doesn't exist")
 
         self.assertEqual(self.count_form_entry(), 0)
 
@@ -444,6 +502,56 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.check_old_breathecode_calls(mock_old_breathecode, model)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
+    @patch(OLD_BREATHECODE_PATH['request'],
+           apply_old_breathecode_requests_request_mock())
+    @patch(
+        REQUESTS_PATH['get'],
+        apply_requests_get_mock([(
+            200,
+            f'https://maps.googleapis.com/maps/api/geocode/json?latlng=15.000000000000000,15.000000000000000&key={GOOGLE_CLOUD_KEY}',
+            {
+                'status': 'INVALID_REQUEST',
+            })]))
+    def test_persist_single_lead_with_form_entry_with_data_invalid(self):
+        """Test /answer/:id without auth"""
+        mock_mailgun = MAILGUN_INSTANCES['post']
+        mock_mailgun.call_args_list = []
+
+        mock_old_breathecode = OLD_BREATHECODE_INSTANCES['request']
+        mock_old_breathecode.call_args_list = []
+        model = self.generate_models(
+            academy=True,
+            active_campaign_academy=True,
+            tag=True,
+            tag_kwargs={'tag_type': 'STRONG'},
+            automation=True,
+            automation_kwargs={'slug': 'they-killed-kenny'},
+            form_entry=True,
+            form_entry_kwargs=generate_form_entry_kwargs(),
+            active_campaign_academy_kwargs={
+                'ac_url': 'https://old.hardcoded.breathecode.url'
+            })
+
+        try:
+            persist_single_lead({
+                'location': model['academy'].slug,
+                'tags': model['tag'].slug,
+                'automations': model['automation'].slug,
+                'email': 'pokemon@potato.io',
+                'first_name': 'Konan',
+                'last_name': 'Amegakure',
+                'phone': '123123123',
+                'id': model['form_entry'].id,
+            })
+            assert False
+        except Exception as e:
+            message = str(e)
+            self.assertEqual(message, "'error_message'")
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

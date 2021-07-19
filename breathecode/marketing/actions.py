@@ -13,8 +13,8 @@ from breathecode.services.activecampaign import AC_Old_Client
 
 logger = logging.getLogger(__name__)
 
-SAVE_LEADS = os.getenv('SAVE_LEADS', None)
-GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY', None)
+SAVE_LEADS = os.getenv('SAVE_LEADS')
+GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY')
 
 acp_ids = {
     # "strong": "49",
@@ -249,6 +249,7 @@ def register_new_lead(form_entry=None):
             })
 
     # ENV Variable to fake lead storage
+    print(SAVE_LEADS)
     if SAVE_LEADS == 'FALSE':
         logger.debug(
             'Ignoring leads because SAVE_LEADS is FALSE on the env variables')
