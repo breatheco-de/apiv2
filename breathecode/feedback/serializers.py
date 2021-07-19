@@ -131,6 +131,7 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
 
 class SurveySerializer(serializers.ModelSerializer):
     send_now = serializers.BooleanField(required=False, write_only=True)
+    status = serializers.BooleanField(required=False, read_only=True)
     public_url = serializers.SerializerMethodField()
 
     def get_public_url(self, obj):
@@ -138,7 +139,7 @@ class SurveySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        exclude = ('avg_score', 'status_json', 'status')
+        exclude = ('avg_score', 'status_json')
 
     def validate(self, data):
 

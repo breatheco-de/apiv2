@@ -385,18 +385,18 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_student')
-    def put(self, request, academy_id=None, user_id=None):
+    def put(self, request, academy_id=None, user_id_or_email=None):
 
-        already = ProfileAcademy.objects.filter(
-            user=user_id, academy__id=academy_id).first()
+        student = ProfileAcademy.objects.filter(
+            user=user_id_or_email, academy__id=academy_id).first()
 
-        if already and already.role.slug != 'student':
+        if student and student.role.slug != 'student':
             raise ValidationException(
-                f'This endpoint can only update student profiles (not {already.role.slug})'
+                f'This endpoint can only update student profiles (not {student.role.slug})'
             )
 
         request_data = {
-            **request.data, 'user': user_id,
+            **request.data, 'user': student.id,
             'academy': academy_id,
             'role': 'student'
         }
@@ -405,8 +405,8 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                 'The student role cannot be updated with this endpoint, user /member instead.'
             )
 
-        if already:
-            serializer = MemberPUTSerializer(already, data=request_data)
+        if student:
+            serializer = MemberPUTSerializer(student, data=request_data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data,
@@ -418,10 +418,10 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                 'The user is not a student in this academy')
 
     @capable_of('crud_student')
-    def delete(self, request, academy_id=None, user_id=None):
+    def delete(self, request, academy_id=None, user_id_or_email=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
-        if lookups and user_id:
+        if lookups and user_id_or_email:
             raise ValidationException(
                 'user_id was provided in url '
                 'in bulk mode request, use querystring style instead',
@@ -438,12 +438,12 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        if academy_id is None or user_id is None:
+        if academy_id is None or user_id_or_email is None:
             raise serializers.ValidationError('Missing user_id or academy_id',
                                               code=400)
 
         profile = ProfileAcademy.objects.filter(academy__id=academy_id,
-                                                user__id=user_id,
+                                                user__id=user_id_or_email,
                                                 role__slug='student').first()
         if profile is None:
             raise serializers.ValidationError(
