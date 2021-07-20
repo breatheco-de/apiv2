@@ -10,5 +10,10 @@ RUN sudo apt-get update \
     && sudo apt-get clean \
     && sudo rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
 
+RUN ls /home/gitpod/.bashrc
+RUN cat /home/gitpod/.bashrc
+COPY .bashrc /home/gitpod/.bashrc
+RUN ls /home/gitpod/.bashrc
+
 # RUN pyenv update && pyenv install 3.9.1 && pyenv global 3.9.1
 RUN pip install pipenv
