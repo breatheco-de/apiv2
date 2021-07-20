@@ -249,7 +249,6 @@ def register_new_lead(form_entry=None):
             })
 
     # ENV Variable to fake lead storage
-    print(SAVE_LEADS)
     if SAVE_LEADS == 'FALSE':
         logger.debug(
             'Ignoring leads because SAVE_LEADS is FALSE on the env variables')

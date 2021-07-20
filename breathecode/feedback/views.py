@@ -106,6 +106,10 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
             param = self.request.GET.get('status')
             lookup['status'] = param
 
+        if 'survey' in self.request.GET:
+            param = self.request.GET.get('survey')
+            lookup['survey__id'] = param
+
         items = items.filter(**lookup).order_by('-created_at')
 
         like = request.GET.get('like', None)
@@ -125,7 +129,7 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
 
 class AnswerMeView(APIView):
     """
-    List all snippets, or create a new snippet.
+    Student answers a survey (normally several answers are required for each survey)
     """
     def put(self, request, answer_id=None):
         if answer_id is None:

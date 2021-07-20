@@ -3,6 +3,7 @@ from breathecode.admissions.models import CohortUser, Cohort
 from breathecode.admissions.serializers import CohortSerializer
 from breathecode.utils import ValidationException
 from .models import Answer, Survey
+from .signals import survey_answered
 from .actions import send_survey_group
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -126,11 +127,15 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
 
         instance.save()
 
+        # signal the updated answer
+        survey_answered.send(instance=instance, sender=Answer)
+
         return instance
 
 
 class SurveySerializer(serializers.ModelSerializer):
     send_now = serializers.BooleanField(required=False, write_only=True)
+    status = serializers.BooleanField(required=False, read_only=True)
     public_url = serializers.SerializerMethodField()
 
     def get_public_url(self, obj):
@@ -138,7 +143,7 @@ class SurveySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        exclude = ('avg_score', 'status_json', 'status')
+        exclude = ('avg_score', 'status_json')
 
     def validate(self, data):
 

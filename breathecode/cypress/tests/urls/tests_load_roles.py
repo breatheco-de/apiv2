@@ -270,4 +270,9 @@ class AcademyEventTestSuite(CypressTestCase):
                 'description':
                 'To report student activities during the classroom or cohorts (Specially meant for teachers)'
             },
+            {
+                'slug': 'academy_reporting',
+                'description':
+                'Get detailed reports about the academy activity'
+            },
         ])
