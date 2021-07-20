@@ -18,3 +18,5 @@ tasks:
         pipenv run start;
     - init: pipenv install --dev && cp -n .env.example .env
       command: pipenv run celery
+    - init: pipenv install --dev && pipenv run install_precommit
+      command: pipenv run celery
