@@ -1,15 +1,14 @@
 import sys
 from unittest.mock import patch, MagicMock
-from pre_commit.main import main
 
 ENVIRONMENT_DIR = 'py_env'
 
 
 def install_environment_mock():
-    # from pre_commit.prefix import Prefix
     from pre_commit.languages import helpers
     from pre_commit.languages.python import norm_version
     from pre_commit.util import cmd_output_b
+    from pre_commit.util import clean_path_on_failure
 
     def install_environment(
             prefix,
@@ -28,6 +27,6 @@ def install_environment_mock():
     return MagicMock(side_effect=install_environment)
 
 if __name__ == '__main__':
-    from pre_commit.languages import python
-    with patch.object(python, 'install_environment', new=install_environment_mock()) as mock:
+    with patch('pre_commit.languages.python.install_environment', new=install_environment_mock()) as mock:
+        from pre_commit.main import main
         exit(main())
