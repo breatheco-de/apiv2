@@ -6,7 +6,7 @@ RUN sudo apt-get update \
     && sudo apt-get clean \
     && sudo rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
 
-RUN pyenv update && pyenv install 3.9.1 && pyenv global 3.9.1
+RUN pyenv update && pyenv install 3.9.6 && pyenv global 3.9.6
 RUN pip install pipenv
 
 # remove PIP_USER environment
