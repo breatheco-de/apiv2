@@ -21,7 +21,7 @@ from .serializers import (
     GETCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
     UserDJangoRestSerializer, UserMeSerializer, GetCertificateSerializer,
     SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer,
-    GetBigAcademySerializer)
+    GetBigAcademySerializer, AcademyReportSerializer)
 from .models import (Academy, AcademyCertificate, CertificateTimeSlot,
                      CohortTimeSlot, CohortUser, Certificate, Cohort, Country,
                      STUDENT, DELETED, Syllabus)
@@ -88,6 +88,20 @@ def get_cohorts(request, id=None):
 
     return Response(serializer.data)
 
+
+class AcademyReportView(APIView):
+
+    @capable_of('academy_reporting')
+    def get(self, request, academy_id=None):
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if academy is None:
+            raise ValidationError("Academy not found", slug='academy-not-found')
+
+        
+
+        users = AcademyReportSerializer(academy)
+        return Response(users.data)
 
 class UserMeView(APIView):
     def get(self, request, format=None):

@@ -22,7 +22,9 @@ from .views import (
     save_slack_token, pick_password, change_password, get_token_info,
     get_facebook_token, save_facebook_token, MemberView, reset_password_view,
     login_html_view, StudentView, get_roles, render_invite, AcademyInviteView,
-    ProfileInviteView, MeInviteView, AcademyTokenView, PasswordResetView)
+    ProfileInviteView, MeInviteView, AcademyTokenView, PasswordResetView,
+    get_google_token, save_google_token
+)
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -61,7 +63,7 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     # get a another token (temporal), from a logged in user
     path('academy/token/', AcademyTokenView.as_view(), name='academy_token'),
-    path('token/', TemporalTokenView.as_view(), name='token'),
+    path('token/me', TemporalTokenView.as_view(), name='token'),
     path('token/<str:token>', get_token_info,
          name='token'),  # get token information
     path('password/reset', reset_password_view, name='password_reset'),
@@ -70,7 +72,7 @@ urlpatterns = [
          name='member_password_reset'),
     path('password/<str:token>', pick_password, name='password_token'),
     path('github/', get_github_token, name='github'),
-    path('github/me', get_github_token, name='github_me'),
+    path('github/<str:token>', get_github_token, name='github_token'),
     path('github/callback/', save_github_token, name='github_callback'),
     path('slack/', get_slack_token, name='slack'),
     path('slack/callback/', save_slack_token, name='slack_callback'),
@@ -78,4 +80,8 @@ urlpatterns = [
     path('facebook/callback/', save_facebook_token, name='facebook_callback'),
     path('user/me', UserMeView.as_view(), name='user_me'),
     path('user/me/invite', MeInviteView.as_view()),
+
+     # google authentication oath2.0
+    path('google/<str:token>', get_google_token, name='google_token'),
+    path('google/callback/', save_google_token, name='google_callback'),
 ]

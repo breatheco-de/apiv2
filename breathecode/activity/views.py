@@ -203,13 +203,10 @@ class ActivityClassroomView(APIView):
 
         datastore = Datastore()
         #academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
+        public_iter = datastore.fetch(**kwargs)# TODO: remove this in the future because the academy_id was not present brefore and students didn't have it
 
-        public_iter = datastore.fetch(
-            **kwargs
-        )  # TODO: remove this in the future because the academy_id was not present brefore and students didn't have it
-
-        query_iter = academy_iter + public_iter
-        query_iter.sort(key=lambda x: x['created_at'], reverse=True)
+        # query_iter = academy_iter + public_iter
+        public_iter.sort(key=lambda x: x['created_at'], reverse=True)
 
         return Response(query_iter)
 

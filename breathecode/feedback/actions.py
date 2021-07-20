@@ -1,7 +1,6 @@
 from breathecode.notify.actions import send_email_message, send_slack
 import logging, random
 from breathecode.utils import ValidationException
-from breathecode.authenticate.actions import create_token
 from breathecode.authenticate.models import Token
 from .models import Answer, Survey
 from .utils import strings
@@ -108,7 +107,7 @@ def send_question(user, cohort=None):
         answer.lang = answer.cohort.language
         answer.save()
 
-    token = create_token(user, hours_length=48)
+    token, created = Token.get_or_create(user, hours_length=48)
 
     token_id = Token.objects.filter(key=token).values_list('id',
                                                            flat=True).first()

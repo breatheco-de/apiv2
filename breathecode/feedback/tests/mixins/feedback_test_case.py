@@ -5,7 +5,6 @@ import os
 from unittest.mock import call
 
 from django.db.models.expressions import F
-from breathecode.authenticate.actions import create_token
 from breathecode.authenticate.models import Token
 from datetime import datetime
 from rest_framework.test import APITestCase
@@ -79,8 +78,7 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment,
         kwargs = {}
         if id:
             kwargs['id'] = id
-        return Token.objects.filter(**kwargs).values_list('key',
-                                                          flat=True).first()
+        return Token.objects.filter(**kwargs).values_list('key',flat=True).first()
 
     def count_token(self):
         return Token.objects.count()
@@ -389,11 +387,7 @@ class FeedbackTestCase(APITestCase, DevelopmentEnvironment,
                 academy=models['academy'])
 
         if answer:
-            # token = create_token(models['user'], hours_length=48)
-
-            kargs = {
-                # 'token_id': Token.objects.filter(key=token).values_list('id', flat=True).first()
-            }
+            kargs = {}
 
             if user:
                 kargs['user'] = models['user']

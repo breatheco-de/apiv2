@@ -570,9 +570,8 @@ class AnswerTestSuite(FeedbackTestCase):
                                     capability='read_nps_answers',
                                     role='potato')
 
-        for number in range(1, 10):
+        for score in range(1, 10):
             self.remove_all_answer()
-            score = str(number)
 
             answer_kwargs = {'score': score}
             model = self.generate_models(answer=True,
@@ -580,7 +579,7 @@ class AnswerTestSuite(FeedbackTestCase):
                                          models=base)
             db = self.model_to_dict(model, 'answer')
             params = {
-                'score': 1 if number == 10 else number + 1,
+                'score': 1 if score == 10 else score + 1,
             }
             base_url = reverse_lazy('feedback:answer')
             url = f'{base_url}?{urllib.parse.urlencode(params)}'
@@ -608,9 +607,8 @@ class AnswerTestSuite(FeedbackTestCase):
                                     capability='read_nps_answers',
                                     role='potato')
 
-        for number in range(1, 10):
+        for score in range(1, 10):
             self.remove_all_answer()
-            score = str(number)
 
             answer_kwargs = {'score': score}
             model = self.generate_models(answer=True,

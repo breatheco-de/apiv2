@@ -1,4 +1,5 @@
 import os, requests, base64, logging
+from datetime import timezone, timedelta
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import update_session_auth_hash
@@ -25,7 +26,7 @@ from .authentication import ExpiringTokenAuthentication
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
 from .models import (
     Profile,
-    CredentialsGithub,
+    CredentialsGithub, CredentialsGoogle,
     Token,
     CredentialsSlack,
     CredentialsFacebook,
@@ -55,16 +56,13 @@ class TemporalTokenView(ObtainAuthToken):
 
     def post(self, request):
 
-        user = request.user
-        Token.objects.filter(token_type='temporal').delete()
-        token = Token.objects.create(user=user, token_type='temporal')
-        token.save()
+        token, created = Token.get_or_create(user=request.user, token_type='temporal')
         return Response({
             'token': token.key,
             'token_type': token.token_type,
             'expires_at': token.expires_at,
-            'user_id': user.pk,
-            'email': user.email
+            'user_id': token.user.pk,
+            'email': token.user.email
         })
 
 
@@ -387,18 +385,18 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_student')
-    def put(self, request, academy_id=None, user_id=None):
+    def put(self, request, academy_id=None, user_id_or_email=None):
 
-        already = ProfileAcademy.objects.filter(
-            user=user_id, academy__id=academy_id).first()
+        student = ProfileAcademy.objects.filter(
+            user=user_id_or_email, academy__id=academy_id).first()
 
-        if already and already.role.slug != 'student':
+        if student and student.role.slug != 'student':
             raise ValidationException(
-                f'This endpoint can only update student profiles (not {already.role.slug})'
+                f'This endpoint can only update student profiles (not {student.role.slug})'
             )
 
         request_data = {
-            **request.data, 'user': user_id,
+            **request.data, 'user': student.user.id,
             'academy': academy_id,
             'role': 'student'
         }
@@ -407,8 +405,8 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                 'The student role cannot be updated with this endpoint, user /member instead.'
             )
 
-        if already:
-            serializer = MemberPUTSerializer(already, data=request_data)
+        if student:
+            serializer = MemberPUTSerializer(student, data=request_data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data,
@@ -420,10 +418,10 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                 'The user is not a student in this academy')
 
     @capable_of('crud_student')
-    def delete(self, request, academy_id=None, user_id=None):
+    def delete(self, request, academy_id=None, user_id_or_email=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
-        if lookups and user_id:
+        if lookups and user_id_or_email:
             raise ValidationException(
                 'user_id was provided in url '
                 'in bulk mode request, use querystring style instead',
@@ -440,12 +438,12 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        if academy_id is None or user_id is None:
+        if academy_id is None or user_id_or_email is None:
             raise serializers.ValidationError('Missing user_id or academy_id',
                                               code=400)
 
         profile = ProfileAcademy.objects.filter(academy__id=academy_id,
-                                                user__id=user_id,
+                                                user__id=user_id_or_email,
                                                 role__slug='student').first()
         if profile is None:
             raise serializers.ValidationError(
@@ -459,15 +457,12 @@ class LoginView(ObtainAuthToken):
     schema = AutoSchema()
 
     def post(self, request, *args, **kwargs):
-        # delete expired tokens
-        utc_now = timezone.now()
-        Token.objects.filter(expires_at__lt=utc_now).delete()
 
         serializer = AuthSerializer(data=request.data,
                                     context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-        token, created = Token.objects.get_or_create(user=user,
+        token, created = Token.get_or_create(user=user,
                                                      token_type='login')
         return Response({
             'token': token.key,
@@ -580,30 +575,18 @@ def get_roles(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def get_github_token(request, user_id=None):
+def get_github_token(request, token=None):
+    
 
     url = request.query_params.get('url', None)
     if url == None:
-        raise ValidationException('No callback URL specified',
-                                  slug='no-callback-url')
+        raise ValidationException('No callback URL specified', slug='no-callback-url')
 
-    url_name = resolve(request.path).url_name
-
-    if url_name == 'github_me':
-        try:
-            if isinstance(request.user, AnonymousUser):
-                raise ValidationException('There is not user',
-                                          code=403,
-                                          slug='not-user')
-
-        except User.DoesNotExist:
-            raise ValidationException("You don't have a user",
-                                      code=403,
-                                      slug='you-not-user')
-
-        user, created = Token.objects.get_or_create(user=request.user,
-                                                    token_type='login')
-        url = url + f'&user={user.key}'
+    if token is not None:
+        if Token.get_valid(token) is None:
+            raise ValidationException('Invalid or missing token', slug='invalid-token')
+        else:
+            url = url + f'&user={token}'
 
     params = {
         'client_id': os.getenv('GITHUB_CLIENT_ID', ''),
@@ -690,22 +673,27 @@ def save_github_token(request):
             if github_user['email'] is None:
                 raise ValidationError('Impossible to retrieve user email')
 
-            if token and not Token.objects.filter(key=token).exists():
-                logger.debug(f'Token not found')
-                raise ValidationException(
-                    'Token was not found, please input different token',
-                    code=404,
-                    slug='token-not-found')
-
-            if token:
-                user_token = Token.objects.filter(key=token).first()
-                user = User.objects.filter(auth_token=user_token.id).first()
-
+            # is a valid token??? if not valid it will become None
+            if token is not None and token != "":
+                token = Token.get_valid(token)
+                if not token:
+                    logger.debug(f'Token not found or is expired')
+                    raise ValidationException(
+                        'Token was not found or is expired, please use a different token',
+                        code=404,
+                        slug='token-not-found')
+                user = User.objects.filter(auth_token=token.id).first()
             else:
+                # for the token to become null for easier management
+                token = None
+
+            # user can't be found thru token, lets try thru the github credentials
+            if token is None:
                 user = User.objects.filter(
                     Q(credentialsgithub__github_id=github_user['id'])
                     | Q(email__iexact=github_user['email'])).first()
 
+            # create the user if not exists
             if user is None:
                 user = User(username=github_user['email'],
                             email=github_user['email'])
@@ -754,11 +742,10 @@ def save_github_token(request):
                     profile_academy.save()
 
             if not token:
-                token, created = Token.objects.get_or_create(
+                token, created = Token.get_or_create(
                     user=user, token_type='login')
-                token = token.key
 
-            return HttpResponseRedirect(redirect_to=url + '?token=' + token)
+            return HttpResponseRedirect(redirect_to=url + '?token=' + token.key)
 
         else:
             raise APIException('Error from github')
@@ -1329,7 +1316,7 @@ def login_html_view(request):
                 msg = 'Must include "username" and "password".'
                 raise Exception(msg, code=403)
 
-            token, created = Token.objects.get_or_create(user=user,
+            token, created = Token.get_or_create(user=user,
                                                          token_type='login')
             return HttpResponseRedirect(url + '?token=' + str(token))
 
@@ -1348,3 +1335,115 @@ def login_html_view(request):
         'form': form,
         'redirect_url': request.GET.get('url', None)
     })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_google_token(request, token=None):
+
+    if token == None:
+        raise ValidationException('No session token has been specified',slug='no-session-token')
+
+    url = request.query_params.get('url', None)
+    if url == None:
+        raise ValidationException('No callback URL specified',slug='no-callback-url')
+
+    token = Token.get_valid(token) # IMPORTANT!! you can only connect to google with temporal short lasting tokens
+    if token is None or token.token_type != "temporal":
+        raise ValidationException('Invalid or inactive token', code=403, slug='invalid-token')
+
+    params = {
+        'response_type': 'code',
+        'client_id': os.getenv('GOOGLE_CLIENT_ID', ''),
+        'redirect_uri': os.getenv('GOOGLE_REDIRECT_URL', ''),
+        'access_type': 'offline', #we need offline access to receive refresh token and avoid total expiration
+        'scope': 'https://www.googleapis.com/auth/calendar.events',
+        'state': f'token={token.key}&url={url}'
+    }
+
+    logger.debug('Redirecting to google')
+    logger.debug(params)
+
+    redirect = f'https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}'
+
+    if settings.DEBUG:
+        return HttpResponse(
+            f"Redirect to: <a href='{redirect}'>{redirect}</a>")
+    else:
+        return HttpResponseRedirect(redirect_to=redirect)
+
+
+# Create your views here.
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def save_google_token(request):
+
+    logger.debug('Google callback just landed')
+    logger.debug(request.query_params)
+
+    error = request.query_params.get('error', False)
+    error_description = request.query_params.get('error_description', '')
+    if error:
+        raise APIException('Google OAuth: ' + error_description)
+
+    state = parse_qs(request.query_params.get('state', None))
+
+    if state['url'] == None:
+        raise ValidationException('No callback URL specified',slug='no-callback-url')
+    if state['token'] == None:
+        raise ValidationException('No user token specified',slug='no-user-token')
+
+    code = request.query_params.get('code', None)
+    if code == None:
+        raise ValidationException('No google code specified', slug='no-code')
+
+    payload = {
+        'client_id': os.getenv('GOOGLE_CLIENT_ID', ''),
+        'client_secret': os.getenv('GOOGLE_SECRET', ''),
+        'redirect_uri': os.getenv('GOOGLE_REDIRECT_URL', ''),
+        'grant_type': 'authorization_code',
+        'code': code,
+    }
+    headers = {'Accept': 'application/json'}
+    resp = requests.post('https://oauth2.googleapis.com/token',
+                         data=payload,
+                         headers=headers)
+    if resp.status_code == 200:
+
+        logger.debug('Google responded with 200')
+
+        body = resp.json()
+        if 'access_token' not in body:
+            raise APIException(body['error_description'])
+
+        logger.debug(body)
+
+        token = Token.get_valid(state['token'][0])
+        if not token:
+            logger.debug(f'Token {state["token"][0]} not found or is expired')
+            raise ValidationException(
+                'Token was not found or is expired, please use a different token',
+                code=404,
+                slug='token-not-found')
+
+        user = token.user
+        refresh = ""
+        if 'refresh_token' in body:
+            refresh = body['refresh_token']
+
+        CredentialsGoogle.objects.filter(user__id=user.id).delete()
+        google_credentials = CredentialsGoogle(
+            user=user,
+            token=body['access_token'],
+            refresh_token=refresh,
+            expires_at= timezone.now() + timedelta(seconds=body['expires_in']),
+        )
+        google_credentials.save()
+
+        return HttpResponseRedirect(redirect_to=state['url'][0] + '?token=' + token.key)
+
+    else:
+        logger.error(resp.json())
+        raise APIException('Error from google credentials')
