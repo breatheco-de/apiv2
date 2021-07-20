@@ -37,11 +37,11 @@ export GEM_PATH=$GEM_HOME:$GEM_PATH
 export PATH=/workspace/.rvm/bin:$PATH
 
 export PIPENV_VENV_IN_PROJECT=true
-# export PIP_USER=yes
 export PYTHONUSERBASE=/workspace/.pip-modules
 export PATH=$PYTHONUSERBASE/bin:$PATH
 unset PIP_TARGET
 unset PYTHONPATH
+unset PIP_USER
 
 # Set CARGO_HOME to reside in workspace if:
 #  - it's RUNTIME (/workspace present)
@@ -188,6 +188,7 @@ for i in $(ls $HOME/.bashrc.d/*); do source $i; done
 ##########  Gitpod - append - begin
 ###############################################################################
 
+unset PIP_USER
 
 ###############################################################################
 ##########  Gitpod - append - end
