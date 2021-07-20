@@ -14,6 +14,7 @@ from breathecode.tests.mocks import (
 )
 from ..mixins.new_certificate_test_case import CertificateTestCase
 
+
 class CertificateTestSuite(CertificateTestCase):
     """Test /certificate/cohort/id/student/id"""
     """
@@ -25,16 +26,17 @@ class CertificateTestSuite(CertificateTestCase):
     def test_generate_certificate_no_default_layout(self):
         """ No main teacher in cohort """
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                             cohort=True,
-                             user=True,
-                             profile_academy=True,
-                             capability='crud_certificate',
-                             role='STUDENT',
-                             cohort_user=True,
-                             syllabus=True,
-                             specialty=True,
-                             )
+        base = self.generate_models(
+            authenticate=True,
+            cohort=True,
+            user=True,
+            profile_academy=True,
+            capability='crud_certificate',
+            role='STUDENT',
+            cohort_user=True,
+            syllabus=True,
+            specialty=True,
+        )
 
         teacher_model = self.generate_models(user=True,
                                              cohort_user=True,
@@ -42,12 +44,13 @@ class CertificateTestSuite(CertificateTestCase):
                                              models=base)
 
         url = reverse_lazy('certificate:certificate_single',
-                           kwargs={'cohort_id': 1, 'student_id': 1})
+                           kwargs={
+                               'cohort_id': 1,
+                               'student_id': 1
+                           })
         response = self.client.post(url, format='json')
         json = response.json()
-        expected = {
-            'detail': 'no-default-layout', 'status_code': 400
-        }
+        expected = {'detail': 'no-default-layout', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -59,15 +62,16 @@ class CertificateTestSuite(CertificateTestCase):
     def test_generate_certificate_no_cohort_user(self):
         """ No main teacher in cohort """
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                             cohort=True,
-                             user=True,
-                             profile_academy=True,
-                             capability='crud_certificate',
-                             role='POTATO',
-                             syllabus=True,
-                             specialty=True,
-                             )
+        base = self.generate_models(
+            authenticate=True,
+            cohort=True,
+            user=True,
+            profile_academy=True,
+            capability='crud_certificate',
+            role='POTATO',
+            syllabus=True,
+            specialty=True,
+        )
 
         teacher_model = self.generate_models(user=True,
                                              cohort_user=True,
@@ -75,40 +79,40 @@ class CertificateTestSuite(CertificateTestCase):
                                              models=base)
 
         url = reverse_lazy('certificate:certificate_single',
-                           kwargs={'cohort_id': 1, 'student_id': 1})
+                           kwargs={
+                               'cohort_id': 1,
+                               'student_id': 1
+                           })
         response = self.client.post(url, format='json')
         json = response.json()
-        expected = {
-            'detail': 'student-not-found', 'status_code': 404
-        }
+        expected = {'detail': 'student-not-found', 'status_code': 404}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
-    
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_generate_certificate(self):
         """ No main teacher in cohort """
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                             cohort=True,
-                             user=True,
-                             profile_academy=True,
-                             capability='crud_certificate',
-                             role='STUDENT',
-                             cohort_user=True,
-                             syllabus=True,
-                             specialty=True,
-                             user_specialty=True,
-                             layout_design=True,
-                             cohort_user_educational_status='GRADUATED',
-                             cohort_user_finantial_status='UP_TO_DATE',
-                             cohort_stage="ENDED",
-                             cohort_finished=True
-                             )
+        model = self.generate_models(
+            authenticate=True,
+            cohort=True,
+            user=True,
+            profile_academy=True,
+            capability='crud_certificate',
+            role='STUDENT',
+            cohort_user=True,
+            syllabus=True,
+            specialty=True,
+            user_specialty=True,
+            layout_design=True,
+            cohort_user_educational_status='GRADUATED',
+            cohort_user_finantial_status='UP_TO_DATE',
+            cohort_stage='ENDED',
+            cohort_finished=True)
         base = model.copy()
         del base['user']
         del base['cohort_user']
@@ -119,7 +123,10 @@ class CertificateTestSuite(CertificateTestCase):
                                              models=base)
 
         url = reverse_lazy('certificate:certificate_single',
-                           kwargs={'cohort_id': 1, 'student_id': 1})
+                           kwargs={
+                               'cohort_id': 1,
+                               'student_id': 1
+                           })
         data = {'layout_slug': 'vanilla'}
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -158,7 +165,7 @@ class CertificateTestSuite(CertificateTestCase):
             'preview_url':
             model['user_specialty'].preview_url,
             'signed_by':
-            teacher_model['user'].first_name + " " +
+            teacher_model['user'].first_name + ' ' +
             teacher_model['user'].last_name,
             'signed_by_role':
             'Director',
@@ -187,18 +194,31 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_user_specialty_dict(), [{
-            'academy_id': 1,
-            'cohort_id': 1,
-            'expires_at': None,
-            'id': 1,
-            'layout_id': 1,
-            'preview_url': model['user_specialty'].preview_url,
-            'signed_by': teacher_model['user'].first_name + " " +
-                        teacher_model['user'].last_name,
-            'signed_by_role': 'Director',
-            'specialty_id': 1,
-            'status': 'PERSISTED',
-            'status_text': 'Certificate successfully queued for PDF generation',
-            'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
-            'user_id': 1
-            }])
+            'academy_id':
+            1,
+            'cohort_id':
+            1,
+            'expires_at':
+            None,
+            'id':
+            1,
+            'layout_id':
+            1,
+            'preview_url':
+            model['user_specialty'].preview_url,
+            'signed_by':
+            teacher_model['user'].first_name + ' ' +
+            teacher_model['user'].last_name,
+            'signed_by_role':
+            'Director',
+            'specialty_id':
+            1,
+            'status':
+            'PERSISTED',
+            'status_text':
+            'Certificate successfully queued for PDF generation',
+            'token':
+            '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
+            'user_id':
+            1
+        }])

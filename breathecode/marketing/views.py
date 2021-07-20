@@ -286,7 +286,7 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
 
 
 class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination,
-                      GenerateLookupsMixin):
+                         GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
@@ -294,17 +294,18 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination,
     def get(self, request, format=None, academy_id=None):
 
         academy = Academy.objects.get(id=academy_id)
-        items = FormEntry.objects.filter(academy__id=academy.id, deal_status="WON")
+        items = FormEntry.objects.filter(academy__id=academy.id,
+                                         deal_status='WON')
         lookup = {}
 
         start = request.GET.get('start', None)
         if start is not None:
-            start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
+            start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
             lookup['created_at__gte'] = start_date
 
         end = request.GET.get('end', None)
         if end is not None:
-            end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
+            end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date()
             lookup['created_at__lte'] = end_date
 
         if 'storage_status' in self.request.GET:
@@ -319,8 +320,8 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination,
             param = self.request.GET.get('location')
             lookup['location'] = param
 
-        sort_by = "-created_at"
-        if 'sort' in self.request.GET and self.request.GET['sort'] != "":
+        sort_by = '-created_at'
+        if 'sort' in self.request.GET and self.request.GET['sort'] != '':
             sort_by = self.request.GET.get('sort')
 
         items = items.filter(**lookup).order_by(sort_by)
@@ -411,16 +412,17 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination,
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
+
 def get_real_conversion_name(slug):
     mapper = {
-        'Website Lead': "Application Submitted",
+        'Website Lead': 'Application Submitted',
     }
     words = re.split(' |_|-', slug)
     words = [w.capitalize() for w in words]
-    words = " ".join(words)
+    words = ' '.join(words)
     if words in mapper:
         words = mapper[words]
-    
+
     return words
 
 
@@ -471,16 +473,13 @@ def googleads_csv(request):
                 else:
                     convertion_time = entry.updated_at.astimezone(timezone)
 
-                convertion_time = convertion_time.strftime(
-                    '%Y-%m-%d %H:%M:%S')
+                convertion_time = convertion_time.strftime('%Y-%m-%d %H:%M:%S')
 
                 data.append(
                     [gclid, convertion_name, convertion_time, None, None])
 
     writer = csv.writer(response)
-    writer.writerow([
-        'Parameters:TimeZone=US/Eastern'
-    ])
+    writer.writerow(['Parameters:TimeZone=US/Eastern'])
     writer.writerow([
         'Google Click ID', 'Conversion Name', 'Conversion Time',
         'Conversion Value', 'Conversion Currency'

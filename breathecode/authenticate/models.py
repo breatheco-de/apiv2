@@ -189,8 +189,9 @@ class ProfileAcademy(models.Model):
 
         if self.__old_status != self.status and self.status == 'ACTIVE':
             invite_accepted.send(instance=self, sender=ProfileAcademy)
-        
+
         super().save(*args, **kwargs)  # Call the "real" save() method.
+
 
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)

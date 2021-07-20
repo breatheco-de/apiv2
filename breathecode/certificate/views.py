@@ -100,10 +100,9 @@ class CertificateView(APIView):
                                        cohort__academy__id=academy_id).first()
 
         if cu is None:
-            raise ValidationException(
-                "Student not found for this cohort",
-                code=404,
-                slug="student-not-found")
+            raise ValidationException('Student not found for this cohort',
+                                      code=404,
+                                      slug='student-not-found')
 
         cert = generate_certificate(cu.user, cu.cohort, layout_slug)
         serializer = UserSpecialtySerializer(cert, many=False)
@@ -301,10 +300,10 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination,
                 raise ValidationException(
                     'There is no certificate for this student and cohort',
                     code=404,
-                    slug="no-user-specialty")
+                    slug='no-user-specialty')
             generate_one_certificate.delay(cu.cohort_id,
                                            cu.user_id,
-                                           layout="default")
+                                           layout='default')
 
         serializer = UserSpecialtySerializer(certs, many=True)
 

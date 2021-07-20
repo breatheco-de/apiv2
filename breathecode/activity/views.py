@@ -21,16 +21,16 @@ from .utils import (generate_created_at, validate_activity_fields,
 # https://googleapis.dev/python/datastore/latest/index.html
 
 ACTIVITIES = {
-    "breathecode_login": 'Every time it logs in',
-    "online_platform_registration": 'First day using breathecode',
-    "public_event_attendance": 'Attendy on an eventbrite event',
-    "classroom_attendance": 'When the student attent to class',
-    "classroom_unattendance": 'When the student miss class',
-    "lesson_opened": 'When a lessons is opened on the platform',
-    "office_attendance": 'When the office raspberry pi detects the student',
-    "nps_survey_answered": 'When a nps survey is answered by the student',
-    "exercise_success": 'When student successfuly tests exercise',
-    "academy_registration": 'When student successfuly join to academy',
+    'breathecode_login': 'Every time it logs in',
+    'online_platform_registration': 'First day using breathecode',
+    'public_event_attendance': 'Attendy on an eventbrite event',
+    'classroom_attendance': 'When the student attent to class',
+    'classroom_unattendance': 'When the student miss class',
+    'lesson_opened': 'When a lessons is opened on the platform',
+    'office_attendance': 'When the office raspberry pi detects the student',
+    'nps_survey_answered': 'When a nps survey is answered by the student',
+    'exercise_success': 'When student successfuly tests exercise',
+    'academy_registration': 'When student successfuly join to academy',
 }
 
 ACTIVITY_PUBLIC_SLUGS = [
@@ -123,15 +123,14 @@ class ActivityClassroomView(APIView):
     @capable_of('classroom_activity')
     def post(self, request, cohort_id=None, academy_id=None):
 
-        cu = CohortUser.objects.filter(
-            user__id=request.user.id).filter(
-                Q(role='TEACHER') | Q(role='ASSISTANT'))
-                
+        cu = CohortUser.objects.filter(user__id=request.user.id).filter(
+            Q(role='TEACHER') | Q(role='ASSISTANT'))
+
         if cohort_id.isnumeric():
             cu = cu.filter(cohort__id=cohort_id)
         else:
             cu = cu.filter(cohort__slug=cohort_id)
-        
+
         cu = cu.first()
         if cu is None:
             raise ValidationException(
@@ -146,7 +145,9 @@ class ActivityClassroomView(APIView):
         for activity in data:
             student_id = activity['user_id']
             del activity['user_id']
-            cohort_user = CohortUser.objects.filter(role='STUDENT', user__id=student_id,cohort__id=cu.cohort.id).first()
+            cohort_user = CohortUser.objects.filter(
+                role='STUDENT', user__id=student_id,
+                cohort__id=cu.cohort.id).first()
             if cohort_user is None:
                 raise ValidationException('Student not found in this cohort',
                                           slug='not-found-in-cohort')
@@ -155,7 +156,7 @@ class ActivityClassroomView(APIView):
                 add_student_activity(cohort_user.user, activity, academy_id))
 
         return Response(new_activities, status=status.HTTP_201_CREATED)
-    
+
     @capable_of('classroom_activity')
     def get(self, request, cohort_id=None, academy_id=None):
         from breathecode.services.google_cloud import Datastore
@@ -170,9 +171,10 @@ class ActivityClassroomView(APIView):
             cohort = cohort.filter(slug=cohort_id)
         cohort = cohort.first()
         if cohort is None:
-            raise ValidationException(f'Cohort {cohort_id} not found at this academy {academy_id}', slug='cohort-not-found')
+            raise ValidationException(
+                f'Cohort {cohort_id} not found at this academy {academy_id}',
+                slug='cohort-not-found')
         kwargs['cohort'] = cohort.slug
-
 
         slug = request.GET.get('slug')
         if slug:
@@ -201,8 +203,10 @@ class ActivityClassroomView(APIView):
 
         datastore = Datastore()
         #academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
-        
-        public_iter = datastore.fetch(**kwargs)# TODO: remove this in the future because the academy_id was not present brefore and students didn't have it
+
+        public_iter = datastore.fetch(
+            **kwargs
+        )  # TODO: remove this in the future because the academy_id was not present brefore and students didn't have it
 
         query_iter = academy_iter + public_iter
         query_iter.sort(key=lambda x: x['created_at'], reverse=True)
