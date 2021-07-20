@@ -1,7 +1,5 @@
 # BreatheCode API
 
-
-
 # Setup & Installation
 
 1. Install redis, postgress, python 3.8+ and node 14+
@@ -45,7 +43,6 @@
 # Signals
 
 [More about signals](./docs/references/SIGNALS.md)
-
 
 # Additional Resources
 
