@@ -15,7 +15,6 @@ tasks:
         pipenv run migrate &&
         pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
         pipenv run python manage.py create_roles &&
-        pip install yapf &&
         pipenv run install_precommit &&
         pipenv run start;
     - init: pipenv install --dev && cp -n .env.example .env
