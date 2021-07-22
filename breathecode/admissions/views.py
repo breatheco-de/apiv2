@@ -90,18 +90,17 @@ def get_cohorts(request, id=None):
 
 
 class AcademyReportView(APIView):
-
     @capable_of('academy_reporting')
     def get(self, request, academy_id=None):
 
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
-            raise ValidationError("Academy not found", slug='academy-not-found')
-
-        
+            raise ValidationError('Academy not found',
+                                  slug='academy-not-found')
 
         users = AcademyReportSerializer(academy)
         return Response(users.data)
+
 
 class UserMeView(APIView):
     def get(self, request, format=None):

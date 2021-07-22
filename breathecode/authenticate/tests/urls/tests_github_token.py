@@ -13,7 +13,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
     def test_github_id_without_url(self):
         """Test /github without auth"""
-        url = reverse_lazy('authenticate:github_token', kwargs={'token': None })
+        url = reverse_lazy('authenticate:github_token', kwargs={'token': None})
         url = urllib.parse.quote(url.encode('utf-8'))
         response = self.client.get(url)
 
@@ -27,7 +27,8 @@ class AuthenticateTestSuite(AuthTestCase):
 
     def test_github_id_with_args_no_invalid_token(self):
         """Test /github"""
-        url = reverse_lazy('authenticate:github_token', kwargs={'token': 'asdasd' })
+        url = reverse_lazy('authenticate:github_token',
+                           kwargs={'token': 'asdasd'})
         url = urllib.parse.quote(url.encode('utf-8'))
         params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
@@ -41,9 +42,10 @@ class AuthenticateTestSuite(AuthTestCase):
         original_url_callback = 'https://google.co.ve'
         model = self.generate_models(authenticate=True, token=True)
         token = self.get_token(1)
-        url = reverse_lazy('authenticate:github_token', kwargs={
-            'token': token,
-        })
+        url = reverse_lazy('authenticate:github_token',
+                           kwargs={
+                               'token': token,
+                           })
         url = urllib.parse.quote(url.encode('utf-8'))
         params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
