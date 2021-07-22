@@ -38,7 +38,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.count_certificate(), 0)
+        self.assertEqual(self.count_specialty_mode(), 0)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -52,17 +52,17 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(
             json, [{
-                'id': model['certificate'].id,
-                'name': model['certificate'].name,
-                'slug': model['certificate'].slug,
-                'logo': model['certificate'].logo,
-                'description': model['certificate'].description,
-                'duration_in_days': model['certificate'].duration_in_days,
+                'id': model['specialty_mode'].id,
+                'name': model['specialty_mode'].name,
+                'slug': model['specialty_mode'].slug,
+                'logo': model['specialty_mode'].logo,
+                'description': model['specialty_mode'].description,
+                'duration_in_days': model['specialty_mode'].duration_in_days,
             }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.all_certificate_dict(), [{
-            **self.model_to_dict(model, 'certificate'),
+        self.assertEqual(self.all_specialty_mode_dict(), [{
+            **self.model_to_dict(model, 'specialty_mode'),
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -81,17 +81,17 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(
             json, [{
-                'id': model['certificate'].id,
-                'name': model['certificate'].name,
-                'slug': model['certificate'].slug,
-                'logo': model['certificate'].logo,
-                'duration_in_days': model['certificate'].duration_in_days,
-                'description': model['certificate'].description,
-            } for model in models if model['certificate'].id <= 100])
+                'id': model['specialty_mode'].id,
+                'name': model['specialty_mode'].name,
+                'slug': model['specialty_mode'].slug,
+                'logo': model['specialty_mode'].logo,
+                'duration_in_days': model['specialty_mode'].duration_in_days,
+                'description': model['specialty_mode'].description,
+            } for model in models if model['specialty_mode'].id <= 100])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.all_certificate_dict(), [{
-            **self.model_to_dict(model, 'certificate'),
+        self.assertEqual(self.all_specialty_mode_dict(), [{
+            **self.model_to_dict(model, 'specialty_mode'),
         } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -121,18 +121,18 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'previous':
                 None,
                 'results': [{
-                    'id': model['certificate'].id,
-                    'name': model['certificate'].name,
-                    'slug': model['certificate'].slug,
-                    'logo': model['certificate'].logo,
-                    'duration_in_days': model['certificate'].duration_in_days,
-                    'description': model['certificate'].description,
-                } for model in models if model['certificate'].id <= 5]
+                    'id': model['specialty_mode'].id,
+                    'name': model['specialty_mode'].name,
+                    'slug': model['specialty_mode'].slug,
+                    'logo': model['specialty_mode'].logo,
+                    'duration_in_days': model['specialty_mode'].duration_in_days,
+                    'description': model['specialty_mode'].description,
+                } for model in models if model['specialty_mode'].id <= 5]
             })
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_certificate_dict(), [{
-            **self.model_to_dict(model, 'certificate'),
+        self.assertEqual(self.all_specialty_mode_dict(), [{
+            **self.model_to_dict(model, 'specialty_mode'),
         } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -162,18 +162,18 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'previous':
                 'http://testserver/v1/admissions/certificate?limit=5',
                 'results': [{
-                    'id': model['certificate'].id,
-                    'name': model['certificate'].name,
-                    'slug': model['certificate'].slug,
-                    'logo': model['certificate'].logo,
-                    'duration_in_days': model['certificate'].duration_in_days,
-                    'description': model['certificate'].description,
-                } for model in models if model['certificate'].id > 5]
+                    'id': model['specialty_mode'].id,
+                    'name': model['specialty_mode'].name,
+                    'slug': model['specialty_mode'].slug,
+                    'logo': model['specialty_mode'].logo,
+                    'duration_in_days': model['specialty_mode'].duration_in_days,
+                    'description': model['specialty_mode'].description,
+                } for model in models if model['specialty_mode'].id > 5]
             })
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_certificate_dict(), [{
-            **self.model_to_dict(model, 'certificate'),
+        self.assertEqual(self.all_specialty_mode_dict(), [{
+            **self.model_to_dict(model, 'specialty_mode'),
         } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -202,8 +202,8 @@ class CertificateTestSuite(AdmissionsTestCase):
             })
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_certificate_dict(), [{
-            **self.model_to_dict(model, 'certificate'),
+        self.assertEqual(self.all_specialty_mode_dict(), [{
+            **self.model_to_dict(model, 'specialty_mode'),
         } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -221,7 +221,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.all_certificate_dict(), [])
+        self.assertEqual(self.all_specialty_mode_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -243,9 +243,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_certificate_dict(), [{
-            **self.model_to_dict(model, 'certificate'),
-        }])
+        self.assertEqual(self.all_specialty_mode_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -278,14 +276,14 @@ class CertificateTestSuite(AdmissionsTestCase):
                                          specialty_mode=True,
                                          models=base)
             url = (reverse_lazy('admissions:academy_certificate') +
-                   f'?{field}=' + str(getattr(model['certificate'], field)))
+                   f'?{field}=' + str(getattr(model['specialty_mode'], field)))
             response = self.client.delete(url)
 
             if response.status_code != 204:
                 print(response.json())
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_certificate_dict(), [])
+            self.assertEqual(self.all_specialty_mode_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -329,12 +327,12 @@ class CertificateTestSuite(AdmissionsTestCase):
                 models=base)
 
             url = (reverse_lazy('admissions:academy_certificate') +
-                   f'?{field}=' + str(getattr(model1['certificate'], field)) +
-                   ',' + str(getattr(model2['certificate'], field)))
+                   f'?{field}=' + str(getattr(model1['specialty_mode'], field)) +
+                   ',' + str(getattr(model2['specialty_mode'], field)))
             response = self.client.delete(url)
 
             if response.status_code != 204:
                 print(response.json())
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-            self.assertEqual(self.all_certificate_dict(), [])
+            self.assertEqual(self.all_specialty_mode_dict(), [])

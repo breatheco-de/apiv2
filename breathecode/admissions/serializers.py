@@ -7,7 +7,7 @@ from breathecode.utils import ValidationException, localize_query
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
-from .models import Academy, SpecialtyModeTimeSlot, Cohort, SpecialtyMode, CohortTimeSlot, CohortUser, Syllabus
+from .models import Academy, SpecialtyModeTimeSlot, Cohort, SpecialtyMode, CohortTimeSlot, CohortUser, Syllabus, SyllabusVersion
 
 logger = logging.getLogger(__name__)
 
@@ -319,6 +319,7 @@ class SyllabusPOSTSerializer(serializers.ModelSerializer):
 
 class CohortSerializerMixin(serializers.ModelSerializer):
     syllabus = serializers.CharField(required=False)
+    syllabus_version = serializers.CharField(required=False)
 
     def validate(self, data):
         if 'syllabus' in data:
@@ -330,19 +331,27 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                     slug='syllabus-field-marformed')
 
             [certificate_slug, syllabus_version] = strings
-            syllabus = Syllabus.objects.filter(version=syllabus_version,
-                                               certificate__slug=certificate_slug).first()
 
-            if not syllabus:
-                raise ValidationException('Syllabus doesn\'t exist', slug='syllabus-doesnt-exist')
+            certificate = SpecialtyMode.objects.filter(
+                Q(syllabus__private=False) | Q(syllabus__academy_owner__id=self.context['academy'].id),
+                slug=certificate_slug).first()
 
-            # if not CertificateTimeSlot.objects.filter(certificate__id=syllabus.certificate.id).exists():
-            #     raise ValidationException(
-            #         'We can\’t use a Syllabus if its certificate does not have any time slots',
-            #         slug='certificate-not-have-time-slots'
-            #     )
+            if not certificate:
+                raise ValidationException('Syllabus doesn\'t exist', slug='specialty-mode-not-found')
 
-            data['syllabus'] = syllabus
+            syllabus_version = SyllabusVersion.objects.filter(
+                Q(syllabus__private=False) | Q(syllabus__academy_owner__id=self.context['academy'].id),
+                version=syllabus_version).first()
+
+            if not syllabus_version:
+                raise ValidationException('Syllabus doesn\'t exist', slug='syllabus-version-not-found')
+
+            if syllabus_version.id != certificate.id:
+                raise ValidationException('The cohort have a certificate that don\'t match with the syllabus',
+                                          slug='syllabus-ids-of-version-and-specialty-mode-dont-match')
+
+            data['syllabus_version'] = syllabus_version
+            del data['syllabus']
 
         if "slug" in data:
             cohort = Cohort.objects.filter(slug=data["slug"]).first()
@@ -375,8 +384,9 @@ class CohortSerializer(CohortSerializerMixin):
 
     class Meta:
         model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus_version',
-                  'ending_date', 'stage', 'language', 'created_at', 'updated_at', 'never_ends')
+        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus',
+                  'syllabus_version', 'ending_date', 'stage', 'language', 'created_at', 'updated_at',
+                  'never_ends')
 
     def create(self, validated_data):
         del self.context['request']
@@ -627,10 +637,9 @@ class SyllabusSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-
         previous_syllabus = Syllabus.objects.filter(
             academy_owner=self.context['academy'],
-            certificate=self.context['certificate']).order_by('-version').first()
+            special=self.context['certificate']).order_by('-version').first()
         version = 1
         if previous_syllabus is not None:
             version = previous_syllabus.version + 1

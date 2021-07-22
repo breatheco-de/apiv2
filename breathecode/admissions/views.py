@@ -475,18 +475,19 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if len(cohorts) != len(cohort_ids):
             raise ValidationException("Cohort not found", 404, slug='cohort-not-found')
 
-        if len([x for x in cohorts if x.syllabus]) != len(cohort_ids):
-            raise ValidationException("Cohort doesn't have any syllabus",
-                                      400,
-                                      slug='cohort-without-certificate')
+        for cohort in cohorts:
+            if not cohort.specialty_mode:
+                raise ValidationException("Cohort doesn't have any certificate",
+                                          400,
+                                          slug='cohort-without-specialty-mode')
 
         CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).delete()
 
         data = []
         for cohort in cohorts:
-            certificate_id = cohort.syllabus.certificate.id
+            certificate_id = cohort.specialty_mode.id
             certificate_timeslots = SpecialtyModeTimeSlot.objects.filter(academy__id=academy_id,
-                                                                         certificate__id=certificate_id)
+                                                                         specialty_mode__id=certificate_id)
 
             for certificate_timeslot in certificate_timeslots:
                 data.append({
@@ -809,7 +810,7 @@ class CertificateView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         if not lookups:
             raise ValidationException('Missing parameters in the querystring', code=400)
 
-        ids = AcademySpecialtyMode.objects.filter(academy__id=academy_id).values_list('certificate_id',
+        ids = AcademySpecialtyMode.objects.filter(academy__id=academy_id).values_list('specialty_mode_id',
                                                                                       flat=True)
         items = SpecialtyMode.objects.filter(**lookups).filter(id__in=ids)
 
@@ -839,7 +840,7 @@ class SyllabusView(APIView):
 
         certificate = SpecialtyMode.objects.filter(slug=certificate_slug).first()
         if certificate is None:
-            raise ValidationException("Certificate slug not found", code=404)
+            raise ValidationException("Certificate slug not found", code=404, slug='specialty-mode-not-found')
 
         syllabus = certificate.syllabus
         if not syllabus:
