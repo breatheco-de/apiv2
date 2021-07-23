@@ -4,7 +4,7 @@
 
 # Setup & Installation
 
-1. Install redis, postgress, python 3.8+ and node 14+
+1. You can use docker (recomended) or instead manually install redis, postgress, python 3.8+ and node 14+.
 2. Create environment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
 3. Make sure to get inside the environment: `pipenv shell`
 4. Install the dependencies including development packages: `pipenv install --dev`
