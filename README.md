@@ -2,7 +2,7 @@
 
 ## Setup & Installation with Docker (recomended)
 
-1. Instal docker desktop in your computer.
+1. Instal [docker desktop](https://www.docker.com/products/docker-desktop) in your computer.
 2. Create environment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
 3. Run containers with `docker-compose up -d`
 4. Congratulations!! You API must be running, with the migrations applied and everything.
