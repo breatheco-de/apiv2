@@ -692,6 +692,12 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         for key in request.data:
             data[key] = request.data.get(key)
 
+        if 'syllabus_version' in data:
+            del data['syllabus_version']
+
+        if 'specialty_mode' in data:
+            del data['specialty_mode']
+
         serializer = CohortSerializer(data=data, context={"request": request, "academy": academy})
         if serializer.is_valid():
             self.cache.clear()
@@ -710,6 +716,12 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if cohort is None:
             logger.debug(f"Cohort not be found in related academies")
             raise ValidationException('Specified cohort not be found')
+
+        if 'syllabus_version' in request.data:
+            del request.data['syllabus_version']
+
+        if 'specialty_mode' in request.data:
+            del request.data['specialty_mode']
 
         serializer = CohortPUTSerializer(cohort,
                                          data=request.data,

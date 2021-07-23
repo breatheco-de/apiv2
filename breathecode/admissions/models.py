@@ -139,7 +139,9 @@ class SyllabusVersion(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.syllabus.slug}.v{self.version}'
+        certificate_slug = SpecialtyMode.objects.filter(syllabus=self.syllabus).values_list(
+            'slug', flat=True).first()
+        return f'{certificate_slug}.v{self.version}' if certificate_slug else 'Syllabus without certificate'
 
 
 class SpecialtyMode(models.Model):

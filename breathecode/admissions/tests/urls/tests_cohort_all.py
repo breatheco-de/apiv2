@@ -107,6 +107,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
+            'specialty_mode': None,
         } for model in ordened_models]
 
         self.assertEqual(json, expected)
@@ -172,6 +173,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
+            'specialty_mode': None,
         }]
 
         self.assertEqual(json, expected)
@@ -235,6 +237,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
+            'specialty_mode': None,
         }]
 
         self.assertEqual(json, expected)
@@ -282,6 +285,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
+            'specialty_mode': None,
         }]
 
         self.assertEqual(json, expected)
@@ -293,7 +297,10 @@ class CohortAllTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_all_with_data_with_get_upcoming_false(self):
         """Test /cohort/all without auth"""
-        model = self.generate_models(authenticate=True, cohort=True, profile_academy=True, syllabus_version=True)
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     profile_academy=True,
+                                     syllabus_version=True)
 
         base_url = reverse_lazy('admissions:cohort_all')
         url = f'{base_url}?upcoming=false'
@@ -326,6 +333,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
+            'specialty_mode': None,
         }]
 
         self.assertEqual(json, expected)
@@ -391,6 +399,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
+            'specialty_mode': None,
         }]
 
         self.assertEqual(json, expected)
@@ -437,6 +446,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
+            'specialty_mode': None,
         }]
 
         self.assertEqual(json, expected)

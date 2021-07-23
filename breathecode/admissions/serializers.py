@@ -159,6 +159,7 @@ class GetCohortSerializer(serpy.Serializer):
     ending_date = serpy.Field()
     current_day = serpy.Field()
     stage = serpy.Field()
+    specialty_mode = GetSmallSpecialtyModeSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
 
@@ -351,7 +352,10 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                                           slug='syllabus-ids-of-version-and-specialty-mode-dont-match')
 
             data['syllabus_version'] = syllabus_version
-            del data['syllabus']
+            data['specialty_mode'] = certificate
+
+            if 'syllabus' in data:
+                del data['syllabus']
 
         if "slug" in data:
             cohort = Cohort.objects.filter(slug=data["slug"]).first()
@@ -409,7 +413,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
-                  'syllabus', 'never_ends', 'private')
+                  'syllabus_version', 'specialty_mode', 'never_ends', 'private')
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
