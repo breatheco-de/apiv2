@@ -21,7 +21,7 @@ from .serializers import (
     GETCohortUserSerializer, CohortUserPUTSerializer, CohortPUTSerializer,
     UserDJangoRestSerializer, UserMeSerializer, GetCertificateSerializer,
     SyllabusGetSerializer, SyllabusSerializer, SyllabusSmallSerializer,
-    GetBigAcademySerializer)
+    GetBigAcademySerializer, AcademyReportSerializer)
 from .models import (Academy, AcademyCertificate, CertificateTimeSlot,
                      CohortTimeSlot, CohortUser, Certificate, Cohort, Country,
                      STUDENT, DELETED, Syllabus)
@@ -100,7 +100,7 @@ class AcademyReportView(APIView):
 
         
 
-        users = UserMeSerializer(request.user)
+        users = AcademyReportSerializer(academy)
         return Response(users.data)
 
 class UserMeView(APIView):

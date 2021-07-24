@@ -3,6 +3,7 @@ from breathecode.admissions.models import CohortUser, Cohort
 from breathecode.admissions.serializers import CohortSerializer
 from breathecode.utils import ValidationException
 from .models import Answer, Survey
+from .signals import survey_answered
 from .actions import send_survey_group
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -125,6 +126,9 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
             instance.comment = validated_data['comment']
 
         instance.save()
+
+        # signal the updated answer
+        survey_answered.send(instance=instance, sender=Answer)
 
         return instance
 

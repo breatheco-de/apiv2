@@ -396,7 +396,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             )
 
         request_data = {
-            **request.data, 'user': student.id,
+            **request.data, 'user': student.user.id,
             'academy': academy_id,
             'role': 'student'
         }
