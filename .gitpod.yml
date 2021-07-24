@@ -15,7 +15,6 @@ tasks:
         pipenv run migrate &&
         pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
         pipenv run python manage.py create_roles &&
-        pipenv run install_precommit &&
         pipenv run start;
     - init: python -m scripts.install
       command: pipenv run celery
