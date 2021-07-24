@@ -203,12 +203,12 @@ class AcademyEventTestSuite(CypressTestCase):
                 'description': 'List all the leads'
             },
             {
-                "slug": "read_won_lead",
-                "description": "List all the won leads"
+                'slug': 'read_won_lead',
+                'description': 'List all the won leads'
             },
             {
-                "slug": "crud_lead",
-                "description": "Create, update or delete academy leads"
+                'slug': 'crud_lead',
+                'description': 'Create, update or delete academy leads'
             },
             {
                 'slug': 'read_media',
@@ -271,8 +271,7 @@ class AcademyEventTestSuite(CypressTestCase):
                 'To report student activities during the classroom or cohorts (Specially meant for teachers)'
             },
             {
-                'slug':
-                'academy_reporting',
+                'slug': 'academy_reporting',
                 'description':
                 'Get detailed reports about the academy activity'
             },
