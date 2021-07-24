@@ -5,7 +5,7 @@ import sys
 
 commands = ';\n'.join([
     'pip install --upgrade pip',
-    'pip install yapf',
+    'pip install --upgrade yapf pipenv',
     '',
 ])
 
