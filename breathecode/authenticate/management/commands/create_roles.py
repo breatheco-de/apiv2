@@ -124,12 +124,12 @@ class Command(BaseCommand):
                 'description': 'List all the leads'
             },
             {
-                "slug": "read_won_lead",
-                "description": "List all the won leads"
+                'slug': 'read_won_lead',
+                'description': 'List all the won leads'
             },
             {
-                "slug": "crud_lead",
-                "description": "Create, update or delete academy leads"
+                'slug': 'crud_lead',
+                'description': 'Create, update or delete academy leads'
             },
             {
                 'slug': 'read_media',
@@ -192,8 +192,7 @@ class Command(BaseCommand):
                 'To report student activities during the classroom or cohorts (Specially meant for teachers)'
             },
             {
-                'slug':
-                'academy_reporting',
+                'slug': 'academy_reporting',
                 'description':
                 'Get detailed reports about the academy activity'
             },
@@ -227,15 +226,15 @@ class Command(BaseCommand):
                 ]
             },
             {
-                "slug":
-                "staff",
-                "name":
-                "Staff (Base)",
-                "caps": [
-                    "read_member", "read_syllabus", "read_student",
-                    "read_cohort", "read_media", "read_my_academy",
-                    "read_invite", "get_academy_token", "crud_activity",
-                    "read_survey", "read_layout", "read_event"
+                'slug':
+                'staff',
+                'name':
+                'Staff (Base)',
+                'caps': [
+                    'read_member', 'read_syllabus', 'read_student',
+                    'read_cohort', 'read_media', 'read_my_academy',
+                    'read_invite', 'get_academy_token', 'crud_activity',
+                    'read_survey', 'read_layout', 'read_event'
                 ]
             },
             {
@@ -253,14 +252,14 @@ class Command(BaseCommand):
         # These are additional roles that extend from the base roles above,
         # you can exend from more than one role but also add additional capabilitis at the end
         roles.append({
-            "slug":
-            "assistant",
-            "name":
-            "Teacher Assistant",
-            "caps":
-            extend(roles, ["staff"]) + [
-                "read_assigment", "crud_assignment", "read_cohort_activity",
-                "read_nps_answers", "classroom_activity", "read_event"
+            'slug':
+            'assistant',
+            'name':
+            'Teacher Assistant',
+            'caps':
+            extend(roles, ['staff']) + [
+                'read_assigment', 'crud_assignment', 'read_cohort_activity',
+                'read_nps_answers', 'classroom_activity', 'read_event'
             ]
         })
         roles.append({
@@ -273,14 +272,14 @@ class Command(BaseCommand):
             ['read_certificate', 'crud_certificate']
         })
         roles.append({
-            "slug":
-            "admissions_developer",
-            "name":
-            "Admissions Developer",
-            "caps":
-            extend(roles, ["staff"]) + [
-                "crud_lead", "crud_student", "crud_cohort", "read_cohort",
-                "read_lead", "read_eventcheckin"
+            'slug':
+            'admissions_developer',
+            'name':
+            'Admissions Developer',
+            'caps':
+            extend(roles, ['staff']) + [
+                'crud_lead', 'crud_student', 'crud_cohort', 'read_cohort',
+                'read_lead', 'read_eventcheckin'
             ]
         })
         roles.append({
@@ -308,13 +307,13 @@ class Command(BaseCommand):
             ]
         })
         roles.append({
-            "slug":
-            "growth_manager",
-            "name":
-            "Growth Manager",
-            "caps":
-            extend(roles, ["staff", "community_manager"]) +
-            ["crud_media", "read_activity", "read_won_lead"]
+            'slug':
+            'growth_manager',
+            'name':
+            'Growth Manager',
+            'caps':
+            extend(roles, ['staff', 'community_manager']) +
+            ['crud_media', 'read_activity', 'read_won_lead']
         })
         roles.append({
             'slug': 'homework_reviewer',
@@ -327,13 +326,15 @@ class Command(BaseCommand):
             'caps': extend(roles, ['assistant'])
         })
         roles.append({
-            "slug":
-            "academy_coordinator",
-            "name":
-            "Mentor in residence",
-            "caps":
-            extend(roles, ["teacher"]) +
-            ["crud_syllabus", "crud_cohort", "crud_student", "crud_survey", "read_won_lead"]
+            'slug':
+            'academy_coordinator',
+            'name':
+            'Mentor in residence',
+            'caps':
+            extend(roles, ['teacher']) + [
+                'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey',
+                'read_won_lead'
+            ]
         })
         roles.append({
             'slug':

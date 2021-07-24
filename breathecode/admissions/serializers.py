@@ -677,8 +677,6 @@ class SyllabusUpdateSerializer(serializers.ModelSerializer):
         }
 
 
-
-
 class AcademyReportSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -693,30 +691,37 @@ class AcademyReportSerializer(serpy.Serializer):
     status = serpy.Field()
 
     students = serpy.MethodField()
+
     def get_students(self, obj):
 
-        query = CohortUser.objects.filter(cohort__academy__id=obj.id, role='STUDENT')
+        query = CohortUser.objects.filter(cohort__academy__id=obj.id,
+                                          role='STUDENT')
         return {
-            "total": query.count(),
-            "active": query.filter(educational_status='ACTIVE').count(),
-            "suspended": query.filter(educational_status='SUSPENDED').count(),
-            "graduated": query.filter(educational_status='GRADUATED').count(),
-            "dropped": query.filter(educational_status='DROPPED').count(),
+            'total': query.count(),
+            'active': query.filter(educational_status='ACTIVE').count(),
+            'suspended': query.filter(educational_status='SUSPENDED').count(),
+            'graduated': query.filter(educational_status='GRADUATED').count(),
+            'dropped': query.filter(educational_status='DROPPED').count(),
         }
 
     teachers = serpy.MethodField()
+
     def get_teachers(self, obj):
 
-        query = CohortUser.objects.filter(cohort__academy__id=obj.id, cohort__stage__in=['STARTED', 'FINAL_PROJECT'])
+        query = CohortUser.objects.filter(
+            cohort__academy__id=obj.id,
+            cohort__stage__in=['STARTED', 'FINAL_PROJECT'])
         active = {
-            "main": query.filter(role='TEACHER').count(),
-            "assistant": query.filter(role='ASSISTANT').count(),
-            "reviewer": query.filter(role='REVIEWER').count(),
+            'main': query.filter(role='TEACHER').count(),
+            'assistant': query.filter(role='ASSISTANT').count(),
+            'reviewer': query.filter(role='REVIEWER').count(),
         }
-        active["total"] = int(active["main"]) + int(active["assistant"]) + int(active["reviewer"]) 
+        active['total'] = int(active['main']) + int(active['assistant']) + int(
+            active['reviewer'])
 
-        total = ProfileAcademy.objects.filter(role__slug__in=['teacher', 'assistant'])
+        total = ProfileAcademy.objects.filter(
+            role__slug__in=['teacher', 'assistant'])
         return {
-            "total": total.count(),
-            "active": active,
+            'total': total.count(),
+            'active': active,
         }
