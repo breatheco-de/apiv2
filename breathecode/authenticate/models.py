@@ -189,8 +189,9 @@ class ProfileAcademy(models.Model):
 
         if self.__old_status != self.status and self.status == 'ACTIVE':
             invite_accepted.send(instance=self, sender=ProfileAcademy)
-        
+
         super().save(*args, **kwargs)  # Call the "real" save() method.
+
 
 class CredentialsGithub(models.Model):
     github_id = models.IntegerField(primary_key=True)
@@ -269,8 +270,9 @@ class CredentialsQuickBooks(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+
 class CredentialsGoogle(models.Model):
-    
+
     token = models.CharField(max_length=255)
     refresh_token = models.CharField(max_length=255)
     expires_at = models.DateTimeField()
@@ -310,12 +312,13 @@ class Token(rest_framework.authtoken.models.Token):
     def get_or_create(user, **kwargs):
 
         utc_now = timezone.now()
-        if "token_type" not in kwargs:
-            kwargs["token_type"] = 'temporal'
+        if 'token_type' not in kwargs:
+            kwargs['token_type'] = 'temporal'
 
-        if "hours_length" in kwargs:
-            kwargs["expires_at"] = utc_now + timezone.timedelta(hours=kwargs["hours_length"])
-            del kwargs["hours_length"]
+        if 'hours_length' in kwargs:
+            kwargs['expires_at'] = utc_now + timezone.timedelta(
+                hours=kwargs['hours_length'])
+            del kwargs['hours_length']
 
         token, created = Token.objects.get_or_create(user=user, **kwargs)
 

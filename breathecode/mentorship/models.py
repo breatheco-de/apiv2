@@ -4,7 +4,6 @@ from django.contrib.auth.models import User
 from django.db import models
 from slugify import slugify
 
-
 # class MentorProfile(models.Model):
 #     slug = models.SlugField(max_length=150, unique=True)
 #     name = models.CharField(max_length=150)

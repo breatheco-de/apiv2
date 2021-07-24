@@ -21,7 +21,7 @@ class ProfileAcademy(models.Model):
 
         if self.__old_status != self.status and self.status == 'ACTIVE':
             invite_accepted.send(instance=self, sender=ProfileAcademy)
-        
+
         super().save(*args, **kwargs)  # Call the "real" save() method.
 ```
 
@@ -44,4 +44,3 @@ def post_save_profileacademy(sender, instance, **kwargs):
         entry.user = instance.user
         entry.save()
 ```
-
