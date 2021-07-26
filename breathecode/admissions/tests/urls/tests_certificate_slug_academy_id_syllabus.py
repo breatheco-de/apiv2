@@ -1,16 +1,8 @@
 """
 Test /certificate
 """
-from unittest.mock import patch
-from breathecode.services import datetime_to_iso_format
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
 from ..mixins import AdmissionsTestCase
 
 
@@ -72,9 +64,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_specialty_mode_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_slug_academy_id_syllabus_without_syllabus(self):
         """Test /certificate without auth"""
         model = self.generate_models(authenticate=True,
@@ -96,9 +85,6 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(self.all_syllabus_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_slug_academy_id_syllabus(self):
         """Test /certificate without auth"""
         model = self.generate_models(authenticate=True,
@@ -137,9 +123,6 @@ class CertificateTestSuite(AdmissionsTestCase):
             'version': model['syllabus'].version
         }])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_slug_academy_id_syllabus_post_without_capabilities(self):
         """Test /certificate without auth"""
         model = self.generate_models(authenticate=True)
@@ -161,9 +144,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_syllabus_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_slug_academy_id_syllabus_post_with_bad_slug(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
@@ -185,9 +165,9 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_syllabus_dict(), [])
 
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    #
+    #
+    #
     # def test_certificate_slug_academy_id_syllabus__post__without_time_slot(self):
     #     """Test /certificate without auth"""
     #     self.headers(academy=1)
@@ -207,9 +187,6 @@ class CertificateTestSuite(AdmissionsTestCase):
     #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
     #     self.assertEqual(self.all_syllabus_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_slug_academy_id_syllabus_post_without_required_fields(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
@@ -233,9 +210,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_syllabus_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_slug_academy_id_syllabus_post(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
@@ -283,9 +257,6 @@ class CertificateTestSuite(AdmissionsTestCase):
             'version': 1,
         }])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_slug_academy_id_syllabus__post__with_cohort_and_syllabus(self):
         """Test /certificate without auth"""
         self.headers(academy=1)

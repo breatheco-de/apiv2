@@ -2,16 +2,8 @@
 Test /cohort/user
 """
 import re
-from random import choice
-from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
 from ..mixins import AdmissionsTestCase
 
 
@@ -20,9 +12,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__without_auth(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -41,9 +30,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Post method
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__post(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -109,9 +95,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Add the same teacher to two cohors
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__post__same_teacher_in_two_cohorts(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -200,9 +183,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__put(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -238,9 +218,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put teacher
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__put__teacher_with_role_student(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -271,9 +248,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
                              'role': 'STUDENT',
                          }])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_user__put__teacher(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
@@ -301,101 +275,59 @@ class CohortUserTestSuite(AdmissionsTestCase):
                              'role': 'TEACHER',
                          }])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_staff(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('staff', update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_teacher(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('teacher', update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_syllabus_coordinator(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('syllabus_coordinator', update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_homework_reviewer(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('homework_reviewer', update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_growth_manager(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('growth_manager', update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_culture_and_recruitment(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('culture_and_recruitment',
                                                                          update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_country_manager(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('country_manager', update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_community_manager(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('community_manager', update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_career_support(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('career_support', update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_assistant(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('assistant', update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_admissions_developer(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('admissions_developer', update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_admin(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('admin', update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_academy_token(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('academy_token', update=True)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_academy_coordinator(self):
         """Test /cohort/:id/user without auth"""
         self.check_cohort_user_that_not_have_role_student_can_be_teacher('academy_coordinator', update=True)

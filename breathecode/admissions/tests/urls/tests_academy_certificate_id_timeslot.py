@@ -1,18 +1,8 @@
 """
 Test /cohort/user
 """
-from datetime import time
-from random import choice
-import re
-from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
 from ..mixins import AdmissionsTestCase
 
 
@@ -85,9 +75,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With data
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_specialty_mode_time_slot__with_data(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -121,9 +108,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Post
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_specialty_mode_time_slot__post__without_academy_certificate(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -143,9 +127,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_specialty_mode_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_specialty_mode_time_slot__post__without_ending_at_and_starting_at(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -166,9 +147,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_specialty_mode_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_specialty_mode_time_slot__post(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,

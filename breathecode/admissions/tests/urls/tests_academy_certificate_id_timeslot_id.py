@@ -1,17 +1,8 @@
 """
 Test /cohort/user
 """
-from datetime import datetime, time
-from django.utils import timezone
-from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
 from ..mixins import AdmissionsTestCase
 
 
@@ -103,9 +94,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With data
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_specialty_mode_time_slot__with_data(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -142,9 +130,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_specialty_mode_time_slot__put__without_academy_certificate(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -168,9 +153,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_specialty_mode_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_specialty_mode_time_slot__put__without_time_slot(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -195,9 +177,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_specialty_mode_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_specialty_mode_time_slot__put__without_ending_at_and_starting_at(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -226,9 +205,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'specialty_mode_time_slot'),
         }])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_specialty_mode_time_slot__put(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -274,9 +250,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Delete
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_specialty_mode_time_slot__delete__without_time_slot(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -299,9 +272,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_specialty_mode_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_specialty_mode_time_slot__delete(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,

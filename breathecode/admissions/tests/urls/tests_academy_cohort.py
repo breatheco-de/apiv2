@@ -3,21 +3,12 @@ Test /academy/cohort
 """
 from django.utils import timezone
 from breathecode.admissions.caches import CohortCache
-from django.core.validators import BaseValidator
-from breathecode.utils import Cache
 from breathecode.services import datetime_to_iso_format
 import re
 from random import choice
 from datetime import datetime, timedelta
-from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
 from ..mixins import AdmissionsTestCase
 
 
@@ -28,9 +19,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__post__without_authorization(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -44,9 +35,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__without_capability(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -67,9 +58,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Post
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__post__without_profile_academy(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -93,9 +84,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__post__with_bad_fields(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -122,9 +113,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__post__with_bad_current_day(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -151,9 +142,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__post__without_ending_date_or_never_ends(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -186,9 +177,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__post__with_ending_date_and_never_ends_true(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -223,9 +214,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__post__without_ending_date_and_never_ends_false(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -259,9 +250,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__post(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -337,9 +328,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Without data
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_without_data(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -363,9 +354,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With data
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__with_data(self, models=None):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -433,9 +424,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__put__without_id(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -457,9 +448,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Get
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__with_data__with_upcoming_false(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -517,9 +508,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__with_data__with_upcoming_true__without_data(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -544,9 +535,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__with_data__with_upcoming_true(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -609,9 +600,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__with_data__with_bad_academy(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -637,9 +628,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_data_with_academy(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -698,9 +689,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_data_with_academy_with_comma(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -759,9 +750,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_ten_datas_with_academy_with_comma(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -832,9 +823,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Sort in querystring
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort__with_data__with_sort(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -897,9 +888,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'cohort')
         } for model in models])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_data_with_bad_location(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -924,9 +915,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_data_with_location(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -985,9 +976,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_data_with_location_with_comma(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -1046,9 +1037,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_ten_datas_with_location_with_comma(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -1115,9 +1106,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_ten_datas_with_location_with_comma_just_get_100(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -1184,9 +1175,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_first_five(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -1267,9 +1258,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_last_five(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -1350,9 +1341,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_after_last_five(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -1395,9 +1386,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), models_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_delete_without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -1417,9 +1408,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         }])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_delete_in_bulk_with_students(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -1449,9 +1440,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
             self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_delete_in_bulk_with_one(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -1482,9 +1473,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             self.assertEqual(self.count_cohort_user(), 0)
             self.assertEqual(self.count_cohort_stage(model['cohort'].id), 'DELETED')
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_delete_in_bulk_with_two(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -1532,9 +1523,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             self.assertEqual(self.count_cohort_stage(model1['cohort'].id), 'DELETED')
             self.assertEqual(self.count_cohort_stage(model2['cohort'].id), 'DELETED')
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_data_testing_cache(self):
         """Test /cohort without auth"""
         cache_keys = [
@@ -1551,9 +1542,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.cache.keys(), cache_keys)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+
+
+
     def test_academy_cohort_with_data_testing_cache_and_remove_in_post(self):
         """Test /cohort without auth"""
         cache_keys = [
