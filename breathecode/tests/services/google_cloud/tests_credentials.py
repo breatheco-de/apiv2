@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 
 from unittest.mock import MagicMock, call, patch, mock_open
 from breathecode.services.google_cloud.credentials import resolve_credentials
@@ -31,6 +32,8 @@ class CredentialsTestCase(TestCase):
         self.assertEqual(logger_mock.mock_calls,
                          [call('GOOGLE_APPLICATION_CREDENTIALS is not set')])
 
+        self.assertTrue('GOOGLE_APPLICATION_CREDENTIALS' not in os.environ)
+
     @patch('builtins.open', mock_open(read_data='{}\n'))
     @patch('os.path.exists', MagicMock(return_value=False))
     @patch.object(logger, 'error')
@@ -47,10 +50,16 @@ class CredentialsTestCase(TestCase):
 
         self.assertEqual(result, False)
         self.assertEqual(open_mock.mock_calls, [])
-        self.assertEqual(exists_mock.mock_calls,
-                         [call('./.lacey_mosley.json')])
+        self.assertEqual(exists_mock.mock_calls, [
+            call(Path(os.path.join(os.getcwd(), '.lacey_mosley.json'))),
+        ])
+
         self.assertEqual(logger_mock.mock_calls,
                          [call('GOOGLE_SERVICE_KEY is not set')])
+
+        self.assertEqual(
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'],
+            str(Path(os.path.join(os.getcwd(), '.lacey_mosley.json'))))
 
     @patch('builtins.open', mock_open(read_data='{}\n'))
     @patch('os.path.exists', MagicMock(return_value=False))
@@ -67,16 +76,20 @@ class CredentialsTestCase(TestCase):
 
         self.assertEqual(result, True)
         self.assertEqual(open_mock.mock_calls, [
-            call('./.lacey_mosley.json', 'w'),
+            call(Path(os.path.join(os.getcwd(), '.lacey_mosley.json')), 'w'),
             call().__enter__(),
             call().write('{}\n'),
             call().__exit__(None, None, None),
         ])
 
-        self.assertEqual(exists_mock.mock_calls,
-                         [call('./.lacey_mosley.json')])
+        self.assertEqual(exists_mock.mock_calls, [
+            call(Path(os.path.join(os.getcwd(), '.lacey_mosley.json'))),
+        ])
 
         self.assertEqual(logger_mock.mock_calls, [])
+        self.assertEqual(
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'],
+            str(Path(os.path.join(os.getcwd(), '.lacey_mosley.json'))))
 
     @patch('builtins.open', mock_open(read_data='{}\n'))
     @patch('os.path.exists', MagicMock(return_value=True))
@@ -93,7 +106,11 @@ class CredentialsTestCase(TestCase):
 
         self.assertEqual(result, True)
         self.assertEqual(open_mock.mock_calls, [])
-        self.assertEqual(exists_mock.mock_calls,
-                         [call('./.lacey_mosley.json')])
+        self.assertEqual(exists_mock.mock_calls, [
+            call(Path(os.path.join(os.getcwd(), '.lacey_mosley.json'))),
+        ])
 
         self.assertEqual(logger_mock.mock_calls, [])
+        self.assertEqual(
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'],
+            str(Path(os.path.join(os.getcwd(), '.lacey_mosley.json'))))

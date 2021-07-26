@@ -4,6 +4,8 @@ Google Cloud Credentials
 import os
 import logging
 
+from pathlib import Path
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,6 +15,9 @@ def resolve_credentials():
     if not path:
         logger.error('GOOGLE_APPLICATION_CREDENTIALS is not set')
         return False
+
+    path = Path(os.path.join(os.getcwd(), path))
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = str(path)
 
     if os.path.exists(path):
         return True
