@@ -26,11 +26,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_academy_cohort_user__without_auth(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('admissions:academy_cohort_id_user_id',
-                           kwargs={
-                               'cohort_id': 1,
-                               'user_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_cohort_id_user_id', kwargs={'cohort_id': 1, 'user_id': 1})
         response = self.client.post(url, {})
         json = response.json()
 
@@ -58,11 +54,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='crud_cohort',
                                      role='potato')
 
-        url = reverse_lazy('admissions:academy_cohort_id_user_id',
-                           kwargs={
-                               'cohort_id': 1,
-                               'user_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_cohort_id_user_id', kwargs={'cohort_id': 1, 'user_id': 1})
         data = {
             'user': model['user'].id,
             'cohort': model['cohort'].id,
@@ -79,19 +71,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['user'].email,
             },
             'cohort': {
-                'id':
-                model['cohort'].id,
-                'slug':
-                model['cohort'].slug,
-                'name':
-                model['cohort'].name,
-                'never_ends':
-                False,
-                'kickoff_date':
-                re.sub(r'\+00:00$', 'Z',
-                       model['cohort'].kickoff_date.isoformat()),
-                'current_day':
-                model['cohort'].current_day,
+                'id': model['cohort'].id,
+                'slug': model['cohort'].slug,
+                'name': model['cohort'].name,
+                'never_ends': False,
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
+                'current_day': model['cohort'].current_day,
                 'academy': {
                     'id': model['cohort'].academy.id,
                     'name': model['cohort'].academy.name,
@@ -100,20 +85,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'syllabus':
-                None,
-                'ending_date':
-                model['cohort'].ending_date,
-                'stage':
-                model['cohort'].stage,
-                'language':
-                model['cohort'].language,
-                'created_at':
-                re.sub(r'\+00:00$', 'Z',
-                       model['cohort'].created_at.isoformat()),
-                'updated_at':
-                re.sub(r'\+00:00$', 'Z',
-                       model['cohort'].updated_at.isoformat()),
+                'syllabus_version': None,
+                'ending_date': model['cohort'].ending_date,
+                'stage': model['cohort'].stage,
+                'language': model['cohort'].language,
+                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
+                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
             },
         }
 
@@ -151,11 +128,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         del base['cohort']
 
         models = models + [self.generate_models(cohort=True, models=base)]
-        url = reverse_lazy('admissions:academy_cohort_id_user_id',
-                           kwargs={
-                               'cohort_id': 1,
-                               'user_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_cohort_id_user_id', kwargs={'cohort_id': 1, 'user_id': 1})
         data = {
             'user': 1,
             'cohort': 1,
@@ -168,11 +141,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'cohort': 2,
             'role': 'TEACHER',
         }
-        url = reverse_lazy('admissions:academy_cohort_id_user_id',
-                           kwargs={
-                               'cohort_id': 2,
-                               'user_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_cohort_id_user_id', kwargs={'cohort_id': 2, 'user_id': 1})
         response = self.client.post(url, data, format='json')
         json = response.json()
         model = models[1]
@@ -186,19 +155,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['user'].email,
             },
             'cohort': {
-                'id':
-                model['cohort'].id,
-                'slug':
-                model['cohort'].slug,
-                'name':
-                model['cohort'].name,
-                'never_ends':
-                False,
-                'kickoff_date':
-                re.sub(r'\+00:00$', 'Z',
-                       model['cohort'].kickoff_date.isoformat()),
-                'current_day':
-                model['cohort'].current_day,
+                'id': model['cohort'].id,
+                'slug': model['cohort'].slug,
+                'name': model['cohort'].name,
+                'never_ends': False,
+                'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
+                'current_day': model['cohort'].current_day,
                 'academy': {
                     'id': model['cohort'].academy.id,
                     'name': model['cohort'].academy.name,
@@ -207,20 +169,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'syllabus':
-                None,
-                'ending_date':
-                model['cohort'].ending_date,
-                'stage':
-                model['cohort'].stage,
-                'language':
-                model['cohort'].language,
-                'created_at':
-                re.sub(r'\+00:00$', 'Z',
-                       model['cohort'].created_at.isoformat()),
-                'updated_at':
-                re.sub(r'\+00:00$', 'Z',
-                       model['cohort'].updated_at.isoformat()),
+                'syllabus_version': None,
+                'ending_date': model['cohort'].ending_date,
+                'stage': model['cohort'].stage,
+                'language': model['cohort'].language,
+                'created_at': re.sub(r'\+00:00$', 'Z', model['cohort'].created_at.isoformat()),
+                'updated_at': re.sub(r'\+00:00$', 'Z', model['cohort'].updated_at.isoformat()),
             },
         }
 
@@ -252,11 +206,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_academy_cohort_user__put(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('admissions:academy_cohort_id_user_id',
-                           kwargs={
-                               'cohort_id': 1,
-                               'user_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_cohort_id_user_id', kwargs={'cohort_id': 1, 'user_id': 1})
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
@@ -278,12 +228,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.all_cohort_user_dict(),
-            [{
-                **self.model_to_dict(model, 'cohort_user'),
-                'role': 'STUDENT',
-            }])
+        self.assertEqual(self.all_cohort_user_dict(),
+                         [{
+                             **self.model_to_dict(model, 'cohort_user'),
+                             'role': 'STUDENT',
+                         }])
 
     """
     🔽🔽🔽 Put teacher
@@ -295,11 +244,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_academy_cohort_user__put__teacher_with_role_student(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('admissions:academy_cohort_id_user_id',
-                           kwargs={
-                               'cohort_id': 1,
-                               'user_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_cohort_id_user_id', kwargs={'cohort_id': 1, 'user_id': 1})
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
@@ -314,19 +259,17 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {
-            'detail':
-            'The user must be staff member to this academy before it can be a teacher',
+            'detail': 'The user must be staff member to this academy before it can be a teacher',
             'status_code': 400,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            self.all_cohort_user_dict(),
-            [{
-                **self.model_to_dict(model, 'cohort_user'),
-                'role': 'STUDENT',
-            }])
+        self.assertEqual(self.all_cohort_user_dict(),
+                         [{
+                             **self.model_to_dict(model, 'cohort_user'),
+                             'role': 'STUDENT',
+                         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -334,11 +277,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_academy_cohort_user__put__teacher(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('admissions:academy_cohort_id_user_id',
-                           kwargs={
-                               'cohort_id': 1,
-                               'user_id': 1
-                           })
+        url = reverse_lazy('admissions:academy_cohort_id_user_id', kwargs={'cohort_id': 1, 'user_id': 1})
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
@@ -352,142 +291,111 @@ class CohortUserTestSuite(AdmissionsTestCase):
         }
         response = self.client.put(url, data, format='json')
         json = response.json()
-        expected = {
-            'id': 1,
-            'role': 'TEACHER',
-            'educational_status': None,
-            'finantial_status': None
-        }
+        expected = {'id': 1, 'role': 'TEACHER', 'educational_status': None, 'finantial_status': None}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.all_cohort_user_dict(),
-            [{
-                **self.model_to_dict(model, 'cohort_user'),
-                'role': 'TEACHER',
-            }])
+        self.assertEqual(self.all_cohort_user_dict(),
+                         [{
+                             **self.model_to_dict(model, 'cohort_user'),
+                             'role': 'TEACHER',
+                         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_staff(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'staff', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('staff', update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_user__post__one_teacher__with_role_teacher(
-            self):
+    def test_academy_cohort_id_user__post__one_teacher__with_role_teacher(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'teacher', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('teacher', update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_user__post__one_teacher__with_role_syllabus_coordinator(
-            self):
+    def test_academy_cohort_id_user__post__one_teacher__with_role_syllabus_coordinator(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'syllabus_coordinator', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('syllabus_coordinator', update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_user__post__one_teacher__with_role_homework_reviewer(
-            self):
+    def test_academy_cohort_id_user__post__one_teacher__with_role_homework_reviewer(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'homework_reviewer', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('homework_reviewer', update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_user__post__one_teacher__with_role_growth_manager(
-            self):
+    def test_academy_cohort_id_user__post__one_teacher__with_role_growth_manager(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'growth_manager', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('growth_manager', update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_user__post__one_teacher__with_role_culture_and_recruitment(
-            self):
+    def test_academy_cohort_id_user__post__one_teacher__with_role_culture_and_recruitment(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'culture_and_recruitment', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('culture_and_recruitment',
+                                                                         update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_user__post__one_teacher__with_role_country_manager(
-            self):
+    def test_academy_cohort_id_user__post__one_teacher__with_role_country_manager(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'country_manager', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('country_manager', update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_user__post__one_teacher__with_role_community_manager(
-            self):
+    def test_academy_cohort_id_user__post__one_teacher__with_role_community_manager(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'community_manager', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('community_manager', update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_user__post__one_teacher__with_role_career_support(
-            self):
+    def test_academy_cohort_id_user__post__one_teacher__with_role_career_support(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'career_support', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('career_support', update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_user__post__one_teacher__with_role_assistant(
-            self):
+    def test_academy_cohort_id_user__post__one_teacher__with_role_assistant(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'assistant', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('assistant', update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_user__post__one_teacher__with_role_admissions_developer(
-            self):
+    def test_academy_cohort_id_user__post__one_teacher__with_role_admissions_developer(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'admissions_developer', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('admissions_developer', update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_user__post__one_teacher__with_role_admin(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'admin', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('admin', update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_user__post__one_teacher__with_role_academy_token(
-            self):
+    def test_academy_cohort_id_user__post__one_teacher__with_role_academy_token(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'academy_token', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('academy_token', update=True)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_user__post__one_teacher__with_role_academy_coordinator(
-            self):
+    def test_academy_cohort_id_user__post__one_teacher__with_role_academy_coordinator(self):
         """Test /cohort/:id/user without auth"""
-        self.check_cohort_user_that_not_have_role_student_can_be_teacher(
-            'academy_coordinator', update=True)
+        self.check_cohort_user_that_not_have_role_student_can_be_teacher('academy_coordinator', update=True)
