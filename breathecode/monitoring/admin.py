@@ -49,6 +49,7 @@ class ApplicationAdmin(admin.ModelAdmin):
             'OPERATIONAL': 'bg-success',
             'CRITICAL': 'bg-error',
             'MINOR': 'bg-warning',
+            'LOADING': 'bg-warning',
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
