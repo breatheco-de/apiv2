@@ -2,10 +2,8 @@
 Google Cloud Credentials
 """
 import os
-from ...decorators import run_once
 
 
-@run_once
 def resolve_credentials():
     """Resolve Google Cloud Credentials"""
     path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
