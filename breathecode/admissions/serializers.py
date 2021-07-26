@@ -219,7 +219,7 @@ class GETSpecialtyModeTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
     academy = serpy.MethodField()
-    certificate = serpy.MethodField()
+    specialty_mode = serpy.MethodField()
     starting_at = serpy.Field()
     ending_at = serpy.Field()
     recurrent = serpy.Field()
@@ -230,8 +230,8 @@ class GETSpecialtyModeTimeSlotSerializer(serpy.Serializer):
     def get_academy(self, obj):
         return obj.academy.id
 
-    def get_certificate(self, obj):
-        return obj.certificate.id
+    def get_specialty_mode(self, obj):
+        return obj.specialty_mode.id if obj.specialty_mode else None
 
 
 class GETCohortUserSmallSerializer(serpy.Serializer):
@@ -413,7 +413,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
-                  'syllabus_version', 'specialty_mode', 'never_ends', 'private')
+                  'syllabus', 'syllabus_version', 'specialty_mode', 'never_ends', 'private')
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
@@ -598,6 +598,12 @@ class CohortTimeSlotSerializer(serializers.ModelSerializer):
         fields = ['id', 'cohort', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type']
 
 
+class SpecialtyModeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SpecialtyMode
+        exclude = ()
+
+
 class SpecialtyModeTimeSlotSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpecialtyModeTimeSlot
@@ -619,12 +625,6 @@ class CohortUserPUTSerializer(CohortUserSerializerMixin):
         model = CohortUser
         fields = ['id', 'role', 'educational_status', 'finantial_status']
         list_serializer_class = CohortUserListSerializer
-
-
-class SpecialtyModeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SpecialtyMode
-        exclude = ()
 
 
 class SyllabusSerializer(serializers.ModelSerializer):

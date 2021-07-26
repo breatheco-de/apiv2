@@ -24,7 +24,6 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    skip_cohort=False,
                                    syllabus=False,
                                    academy_specialty_mode=False,
-                                   academy_certificate=False,
                                    cohort_time_slot=False,
                                    time_slot=False,
                                    syllabus_version=False,

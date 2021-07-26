@@ -25,9 +25,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__without_auth(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -42,9 +39,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_put__without_capability(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -64,9 +58,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put without cohort
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__put__without_cohort(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -88,9 +79,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put not have ending_date and never_ends
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__put__without_ending_date_or_never_ends(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -115,9 +103,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put with ending_date and never_ends=True
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__put__with_ending_date_and_never_ends_true(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -146,9 +131,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put with date
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__put(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -174,7 +156,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
-            'syllabus_version': None,
+            'syllabus_version': model['cohort'].syllabus_version,
+            'specialty_mode': model['cohort'].specialty_mode,
         }
 
         self.assertEqual(json, expected)
@@ -188,21 +171,16 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put syllabus with id instead of {slug}.v{id}
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__put__with_id__with_bad_syllabus_version_malformed(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
-        cohort_kwargs = {'never_ends': True}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
                                      syllabus=True,
-                                     syllabus_version=True,
-                                     cohort_kwargs=cohort_kwargs)
+                                     syllabus_version=True)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'syllabus': 1,
@@ -211,7 +189,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day + 1,
             'language': 'es',
         }
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {
             'detail': 'syllabus-field-marformed',
@@ -226,9 +204,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put syllabus but it doesn't exists
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__put__with_id__with_bad_syllabus_version(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -249,7 +224,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'detail': 'syllabus-doesnt-exist',
+            'detail': 'specialty-mode-not-found',
             'status_code': 400,
         }
 
@@ -261,9 +236,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put syllabus with bad slug {slug}.v{id}
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__put__with_id__with_bad_syllabus_version__with_bad_slug(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -273,6 +245,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      capability='crud_cohort',
                                      role='potato',
                                      specialty_mode=True,
+                                     syllabus_version=True,
                                      syllabus=True)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
@@ -285,7 +258,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'detail': 'syllabus-doesnt-exist',
+            'detail': 'specialty-mode-not-found',
             'status_code': 400,
         }
 
@@ -297,31 +270,30 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put syllabus with bad version {slug}.v{id}
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__put__with_id__with_bad_syllabus_version__with_bad_version(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
+        cohort_kwargs = {'never_ends': True}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
                                      specialty_mode=True,
-                                     syllabus=True)
+                                     syllabus=True,
+                                     cohort_kwargs=cohort_kwargs)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
-            'syllabus': model['specialty_mode'].slug + '.v1',
+            'syllabus': model['specialty_mode'].slug + '.v999',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'current_day': model['cohort'].current_day + 1,
             'language': 'es',
         }
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {
-            'detail': 'syllabus-doesnt-exist',
+            'detail': 'syllabus-version-not-found',
             'status_code': 400,
         }
 
@@ -333,9 +305,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put with some data
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__put__with_id__with_data_in_body(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -406,9 +375,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Get data
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__get__with_id(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -417,7 +383,9 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='read_cohort',
                                      role='potato',
-                                     syllabus=True)
+                                     specialty_mode=True,
+                                     syllabus=True,
+                                     syllabus_version=True)
         model_dict = self.remove_dinamics_fields(model['cohort'].__dict__)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         response = self.client.get(url)
@@ -466,9 +434,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Get with bad slug
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__get__with_bad_slug(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -488,9 +453,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Get with slug
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__get__with_slug(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -499,7 +461,9 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='read_cohort',
                                      role='potato',
-                                     syllabus=True)
+                                     specialty_mode=True,
+                                     syllabus=True,
+                                     syllabus_version=True)
         model_dict = self.remove_dinamics_fields(model['cohort'].__dict__)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].slug})
         response = self.client.get(url)
@@ -550,9 +514,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Delete with bad id
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__delete__with_bad_id(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -576,9 +537,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Delete with id
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id__delete__with_id(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
@@ -601,9 +559,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Cache
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id__with_data__testing_cache_and_remove_in_delete__1(self):
         """Test /cohort without auth"""
         cache_keys = [
@@ -635,9 +590,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.delete(url, data)
 
-        if response.status_code != 204:
-            print(response.json())
-
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.cache.keys(), [])
         self.assertEqual(self.all_cohort_dict(), [{
@@ -654,9 +606,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         AcademyCohortTestSuite.test_academy_cohort__with_data(self, base)
         self.assertEqual(self.cache.keys(), cache_keys)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id__with_data__testing_cache_and_remove_in_delete__2(self):
         """Test /cohort without auth"""
         cache_keys = [
@@ -687,9 +636,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 1})
         response = self.client.delete(url)
 
-        if response.status_code != 204:
-            print(response.json())
-
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.cache.keys(), [])
         self.assertEqual(self.all_cohort_dict(), [{
@@ -705,9 +651,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         AcademyCohortTestSuite.test_academy_cohort__with_data(self, base)
         self.assertEqual(self.cache.keys(), cache_keys)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id__delete__cohort_with_students(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
