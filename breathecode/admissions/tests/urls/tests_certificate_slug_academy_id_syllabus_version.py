@@ -73,7 +73,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      role='potato')
         response = self.client.get(url)
         json = response.json()
-        expected = {'status_code': 404, 'detail': 'Certificate slug not found'}
+        expected = {'status_code': 404, 'detail': 'specialty-mode-not-found'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
