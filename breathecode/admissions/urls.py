@@ -48,12 +48,11 @@ urlpatterns = [
     path('certificate/<str:certificate_slug>/syllabus/<int:version>',
          SyllabusView.as_view(),
          name="certificate_slug_syllabus_version"),
-    path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus/'
-         '<int:version>',
-         SyllabusView.as_view(),
-         name="certificate_slug_academy_id_syllabus_version"),
     path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus',
          SyllabusView.as_view(),
          name="certificate_slug_academy_id_syllabus"),
+    path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus/<int:version>',
+         SyllabusView.as_view(),
+         name="certificate_slug_academy_id_syllabus_version"),
     path('catalog/timezones', get_timezones, name="timezones_all"),
 ]

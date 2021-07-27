@@ -54,7 +54,7 @@ class CityAdmin(admin.ModelAdmin):
 
 @admin.register(SpecialtyMode)
 class SpecialtyModeAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'name', 'duration_in_hours')
+    list_display = ('slug', 'name')
 
 
 def make_assistant(modeladmin, request, queryset):
@@ -109,17 +109,11 @@ make_edu_stat_graduate.short_description = "Educational_status = GRADUATED"
 
 @admin.register(CohortUser)
 class CohortUserAdmin(admin.ModelAdmin):
-    search_fields = [
-        'user__email', 'user__first_name', 'user__last_name', 'cohort__name',
-        'cohort__slug'
-    ]
-    list_display = ('get_student', 'cohort', 'role', 'educational_status',
-                    'finantial_status', 'created_at')
+    search_fields = ['user__email', 'user__first_name', 'user__last_name', 'cohort__name', 'cohort__slug']
+    list_display = ('get_student', 'cohort', 'role', 'educational_status', 'finantial_status', 'created_at')
     list_filter = ['role', 'educational_status', 'finantial_status']
     raw_id_fields = ["user", "cohort"]
-    actions = [
-        make_assistant, make_teacher, make_student, make_edu_stat_active
-    ]
+    actions = [make_assistant, make_teacher, make_student, make_edu_stat_active]
 
     def get_student(self, obj):
         return obj.user.first_name + " " + obj.user.last_name + "(" + obj.user.email + ")"
@@ -165,9 +159,8 @@ def sync_timeslots(modeladmin, request, queryset):
         if len(ids) > 0:
             count += 1
 
-    messages.add_message(
-        request, messages.INFO,
-        f'{count} of {cohorts.count()} cohorts timeslots were updated')
+    messages.add_message(request, messages.INFO,
+                         f'{count} of {cohorts.count()} cohorts timeslots were updated')
 
 
 sync_timeslots.short_description = "Sync Timeslots With Certificate ⏱ "
@@ -184,16 +177,9 @@ class CohortForm(forms.ModelForm):
 class CohortAdmin(admin.ModelAdmin):
     form = CohortForm
     search_fields = ['slug', 'name', 'academy__city__name']
-    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date',
-                    'syllabus_version', 'specialty_mode')
-    list_filter = [
-        'stage', 'academy__slug', 'specialty_mode__slug',
-        'syllabus_version__version'
-    ]
-    actions = [
-        sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive,
-        sync_timeslots
-    ]
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'specialty_mode')
+    list_filter = ['stage', 'academy__slug', 'specialty_mode__slug', 'syllabus_version__version']
+    actions = [sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots]
 
     def academy_name(self, obj):
         return obj.academy.name
@@ -235,8 +221,7 @@ def sync_with_github(modeladmin, request, queryset):
                 headers=headers)
             if response.status_code == 200:
                 _file = response.json()
-                syl.json = json.loads(
-                    base64.b64decode(_file["content"]).decode())
+                syl.json = json.loads(base64.b64decode(_file["content"]).decode())
                 syl.save()
             else:
                 logger.error(
@@ -253,18 +238,15 @@ sync_with_github.short_description = "Sync from Github"
 
 @admin.register(Syllabus)
 class SyllabusAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'academy_owner', 'private')
+    list_display = ('academy_owner', 'private')
     actions = [sync_with_github]
 
 
 @admin.register(CohortTimeSlot)
 class CohortTimeSlotAdmin(admin.ModelAdmin):
-    list_display = ('cohort', 'starting_at', 'ending_at', 'recurrent',
-                    'recurrency_type')
+    list_display = ('cohort', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type')
     list_filter = ['cohort__academy__slug', 'recurrent', 'recurrency_type']
-    search_fields = [
-        'cohort__slug', 'cohort__name', 'cohort__academy__city__name'
-    ]
+    search_fields = ['cohort__slug', 'cohort__name', 'cohort__academy__city__name']
 
 
 def replicate_in_all(modeladmin, request, queryset):
@@ -275,8 +257,7 @@ def replicate_in_all(modeladmin, request, queryset):
         for c in cert_timeslot:
             # delete all timeslots for that academy and certificate ONLY the first time
             if c.certificate.slug not in to_filter:
-                SpecialtyModeTimeSlot.objects.filter(certificate=c.certificate,
-                                                     academy=a).delete()
+                SpecialtyModeTimeSlot.objects.filter(certificate=c.certificate, academy=a).delete()
                 to_filter[c.certificate.slug] = True
             # and then re add the timeslots one by one
             new_timeslot = SpecialtyModeTimeSlot(recurrent=c.recurrent,
@@ -288,8 +269,7 @@ def replicate_in_all(modeladmin, request, queryset):
 
         logger.info(f"All academies in sync with those timeslots")
 
-    messages.add_message(request, messages.INFO,
-                         f'All academies in sync with those timeslots')
+    messages.add_message(request, messages.INFO, f'All academies in sync with those timeslots')
 
 
 replicate_in_all.short_description = "Replicate same timeslots in all academies"
@@ -297,13 +277,8 @@ replicate_in_all.short_description = "Replicate same timeslots in all academies"
 
 @admin.register(SpecialtyModeTimeSlot)
 class SpecialtyModeTimeSlotAdmin(admin.ModelAdmin):
-    list_display = ('id', 'specialty_mode', 'starting_at', 'ending_at',
-                    'academy', 'recurrent', 'recurrency_type')
-    list_filter = [
-        'specialty_mode__slug', 'academy__slug', 'recurrent', 'recurrency_type'
-    ]
-    search_fields = [
-        'specialty_mode__slug', 'specialty_mode__name', 'academy__slug',
-        'academy__name'
-    ]
+    list_display = ('id', 'specialty_mode', 'starting_at', 'ending_at', 'academy', 'recurrent',
+                    'recurrency_type')
+    list_filter = ['specialty_mode__slug', 'academy__slug', 'recurrent', 'recurrency_type']
+    search_fields = ['specialty_mode__slug', 'specialty_mode__name', 'academy__slug', 'academy__name']
     actions = [replicate_in_all]

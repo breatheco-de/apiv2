@@ -124,7 +124,7 @@ class CertificateTestSuite(CertificateTestCase):
         """ Good Request """
         self.headers(academy=1)
 
-        specialty_mode_kwargs = {'duration_in_days': 543665478761}
+        syllabus_kwargs = {'duration_in_days': 543665478761}
         cohort_kwargs = {
             'current_day': 543665478761,
             'stage': 'ENDED',
@@ -148,7 +148,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      specialty_mode=True,
                                      cohort_kwargs=cohort_kwargs,
                                      cohort_user_kwargs=cohort_user_kwargs,
-                                     specialty_mode_kwargs=specialty_mode_kwargs)
+                                     syllabus_kwargs=syllabus_kwargs)
 
         base = model.copy()
         del base['user']
@@ -188,7 +188,6 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
-                    'duration_in_days': model['specialty_mode'].duration_in_days,
                 },
             },
             'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
@@ -245,7 +244,7 @@ class CertificateTestSuite(CertificateTestCase):
         """ Good Request """
         self.headers(academy=1)
 
-        specialty_mode_kwargs = {'duration_in_days': 543665478761}
+        syllabus_kwargs = {'duration_in_days': 543665478761}
         cohort_kwargs = {
             'current_day': 543665478761,
             'stage': 'ENDED',
@@ -263,8 +262,8 @@ class CertificateTestSuite(CertificateTestCase):
                                     syllabus_version=True,
                                     specialty=True,
                                     specialty_mode=True,
-                                    specialty_mode_kwargs=specialty_mode_kwargs,
                                     layout_design=True,
+                                    syllabus_kwargs=syllabus_kwargs,
                                     cohort_kwargs=cohort_kwargs)
 
         del base['user']
@@ -331,7 +330,6 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
                     'slug': models[0]['specialty_mode'].slug,
-                    'duration_in_days': models[0]['specialty_mode'].duration_in_days,
                 },
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
@@ -375,7 +373,6 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
                     'slug': models[0]['specialty_mode'].slug,
-                    'duration_in_days': models[0]['specialty_mode'].duration_in_days,
                 },
             },
             'created_at': self.datetime_to_iso(models[1].user_specialty.created_at),
@@ -513,7 +510,6 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
                     'slug': models[0]['specialty_mode'].slug,
-                    'duration_in_days': models[0]['specialty_mode'].duration_in_days,
                 },
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
@@ -620,7 +616,6 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
                     'slug': models[0]['specialty_mode'].slug,
-                    'duration_in_days': models[0]['specialty_mode'].duration_in_days,
                 },
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
@@ -723,7 +718,6 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
                     'slug': models[0]['specialty_mode'].slug,
-                    'duration_in_days': models[0]['specialty_mode'].duration_in_days,
                 },
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
@@ -827,7 +821,6 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
                     'slug': models[0]['specialty_mode'].slug,
-                    'duration_in_days': models[0]['specialty_mode'].duration_in_days,
                 },
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
@@ -861,6 +854,7 @@ class CertificateTestSuite(CertificateTestCase):
     """
     🔽🔽🔽 Delete
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())

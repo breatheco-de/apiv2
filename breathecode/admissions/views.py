@@ -1,3 +1,4 @@
+from breathecode.certificate.models import Specialty
 from breathecode.admissions.actions import sync_cohort_timeslots
 from breathecode.admissions.caches import CohortCache
 import logging
@@ -13,14 +14,13 @@ from rest_framework.views import APIView
 from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
-from .serializers import (AcademySerializer,
-                          SpecialtyModeTimeSlotSerializer, CohortSerializer, CohortTimeSlotSerializer,
-                          GETSpecialtyModeTimeSlotSerializer, GETCohortTimeSlotSerializer,
-                          GetCohortSerializer, SyllabusGetSerializer, SyllabusSerializer,
-                          CohortUserSerializer, GETCohortUserSerializer, CohortUserPUTSerializer,
-                          CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
-                          GetCertificateSerializer, SyllabusGetSerializer, SyllabusSerializer,
-                          GetBigAcademySerializer)
+from .serializers import (AcademySerializer, SpecialtyModeTimeSlotSerializer, CohortSerializer,
+                          CohortTimeSlotSerializer, GETSpecialtyModeTimeSlotSerializer,
+                          GETCohortTimeSlotSerializer, GetCohortSerializer, SyllabusGetSerializer,
+                          SyllabusSerializer, CohortUserSerializer, GETCohortUserSerializer,
+                          CohortUserPUTSerializer, CohortPUTSerializer, UserDJangoRestSerializer,
+                          UserMeSerializer, GetCertificateSerializer, SyllabusGetSerializer,
+                          SyllabusSerializer, GetBigAcademySerializer)
 from .models import (Academy, AcademySpecialtyMode, SpecialtyModeTimeSlot, CohortTimeSlot, CohortUser,
                      SpecialtyMode, Cohort, Country, STUDENT, DELETED, Syllabus, SyllabusVersion)
 from breathecode.authenticate.models import ProfileAcademy
@@ -865,10 +865,28 @@ class SyllabusView(APIView):
         if academy_id is None:
             raise ValidationException("Missing academy id")
 
-        certificate = SpecialtyMode.objects.filter(slug=certificate_slug).first()
+        certificate = Specialty.objects.filter(slug=certificate_slug).first()
         if certificate is None:
-            raise ValidationException("Certificate slug not found", code=404, slug='specialty-mode-not-found')
+            raise ValidationException("Certificate slug not found", code=404, slug='specialty-not-found')
 
+        if version:
+            syllabus = SyllabusVersion.objects.filter(Q(syllabus__academy_owner__id=academy_id)
+                                                      | Q(syllabus__private=False),
+                                                      specialty=certificate,
+                                                      version=version).first()
+
+            serializer = SyllabusGetSerializer(syllabus, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        syllabus = SyllabusVersion.objects.filter(Q(syllabus__academy_owner__id=academy_id)
+                                                  | Q(syllabus__private=False),
+                                                  specialty=certificate)
+
+        serializer = SyllabusGetSerializer(syllabus, many=True)
+        print('check this method')
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+        SyllabusVersion(syllabus__version)
         syllabus = certificate.syllabus
         if not syllabus:
             raise ValidationException('Syllabus not found', code=404, slug='syllabus-not-found')

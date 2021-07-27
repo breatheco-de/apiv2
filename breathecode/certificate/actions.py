@@ -114,10 +114,10 @@ def generate_certificate(user, cohort=None, layout=None):
                                       'status GRADUATED',
                                       slug='bad-educational-status')
 
-        if cohort.current_day != cohort.specialty_mode.duration_in_days:
+        if cohort.current_day != cohort.specialty_mode.syllabus.duration_in_days:
             raise ValidationException(
                 'Cohort current day should be '
-                f'{cohort.specialty_mode.duration_in_days}',
+                f'{cohort.specialty_mode.syllabus.duration_in_days}',
                 slug='cohort-not-finished')
 
         if cohort.stage != 'ENDED':
@@ -130,6 +130,8 @@ def generate_certificate(user, cohort=None, layout=None):
         uspe.save()
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         message = str(e)
         uspe.status = ERROR
         uspe.status_text = message

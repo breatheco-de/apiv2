@@ -64,6 +64,17 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      specialty=True,
                                      specialty_mode=True,
                                      layout_design=True)
+
+        base = model.copy()
+        del base['user']
+        del base['cohort_user']
+
+        cohort_user_kwargs = {'role': 'TEACHER'}
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
+
         try:
             self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
             assert False
@@ -550,7 +561,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     def test_generate_certificate(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
-        specialty_mode_kwargs = {'duration_in_days': 9545799}
+        syllabus_kwargs = {'duration_in_days': 9545799}
         model = self.generate_models(user=True,
                                      cohort=True,
                                      cohort_user=True,
@@ -561,7 +572,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs,
                                      cohort_user_kwargs=cohort_user_kwargs,
-                                     specialty_mode_kwargs=specialty_mode_kwargs)
+                                     syllabus_kwargs=syllabus_kwargs)
 
         base = model.copy()
         del base['user']
@@ -610,7 +621,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     def test_generate_certificate__lang_en(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799, 'language': 'en'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
-        specialty_mode_kwargs = {'duration_in_days': 9545799}
+        syllabus_kwargs = {'duration_in_days': 9545799}
         model = self.generate_models(user=True,
                                      cohort=True,
                                      cohort_user=True,
@@ -621,7 +632,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs,
                                      cohort_user_kwargs=cohort_user_kwargs,
-                                     specialty_mode_kwargs=specialty_mode_kwargs)
+                                     syllabus_kwargs=syllabus_kwargs)
 
         base = model.copy()
         del base['user']
@@ -666,7 +677,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     def test_generate_certificate__lang_es(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799, 'language': 'es'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
-        specialty_mode_kwargs = {'duration_in_days': 9545799}
+        syllabus_kwargs = {'duration_in_days': 9545799}
         model = self.generate_models(user=True,
                                      cohort=True,
                                      cohort_user=True,
@@ -677,7 +688,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs,
                                      cohort_user_kwargs=cohort_user_kwargs,
-                                     specialty_mode_kwargs=specialty_mode_kwargs)
+                                     syllabus_kwargs=syllabus_kwargs)
 
         base = model.copy()
         del base['user']
@@ -726,7 +737,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     def test_generate_certificate__retry_generate_certificate(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
-        specialty_mode_kwargs = {'duration_in_days': 9545799}
+        syllabus_kwargs = {'duration_in_days': 9545799}
         user_specialty_kwargs = {'status': 'PERSISTED'}
         model = self.generate_models(user=True,
                                      cohort=True,
@@ -739,7 +750,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      user_specialty=True,
                                      cohort_kwargs=cohort_kwargs,
                                      cohort_user_kwargs=cohort_user_kwargs,
-                                     specialty_mode_kwargs=specialty_mode_kwargs,
+                                     syllabus_kwargs=syllabus_kwargs,
                                      user_specialty_kwargs=user_specialty_kwargs)
 
         base = model.copy()

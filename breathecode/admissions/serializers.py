@@ -81,7 +81,6 @@ class GetSmallSpecialtyModeSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
-    duration_in_days = serpy.Field()
 
 
 class GetTinnyCertificateSerializer(serpy.Serializer):
@@ -641,19 +640,21 @@ class SyllabusSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        previous_syllabus = Syllabus.objects.filter(
-            academy_owner=self.context['academy'],
-            special=self.context['certificate']).order_by('-version').first()
+        previous_syllabus = SyllabusVersion.objects.filter(
+            syllabus__academy_owner=self.context['academy'],
+            specialty=self.context['certificate']).order_by('-version').first()
+
         version = 1
         if previous_syllabus is not None:
             version = previous_syllabus.version + 1
         return super(SyllabusSerializer, self).create({
-            **validated_data, "certificate":
+            **validated_data,
+            "certificate":
             self.context['certificate'],
             "academy_owner":
             self.context['academy'],
             "version":
-            version
+            version,
         })
 
 

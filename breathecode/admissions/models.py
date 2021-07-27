@@ -115,8 +115,11 @@ SCHEDULE_TYPE = (
 
 
 class Syllabus(models.Model):
-    json = models.JSONField()
     github_url = models.URLField(max_length=255, blank=True, null=True, default=None)
+    duration_in_hours = models.IntegerField(null=True, default=None)
+    duration_in_days = models.IntegerField(null=True, default=None)
+    week_hours = models.IntegerField(null=True, default=None)
+    logo = models.CharField(max_length=250, blank=True, null=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -132,6 +135,8 @@ class Syllabus(models.Model):
 
 
 class SyllabusVersion(models.Model):
+    json = models.JSONField()
+
     version = models.PositiveSmallIntegerField()
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
 
@@ -148,14 +153,9 @@ class SpecialtyMode(models.Model):
     slug = models.SlugField(max_length=100)
     name = models.CharField(max_length=150)
 
-    logo = models.CharField(max_length=250, blank=True, null=True, default=None)
-    duration_in_hours = models.IntegerField()
-    duration_in_days = models.IntegerField()
-    week_hours = models.IntegerField(null=True, default=None)
-
     schedule_type = models.CharField(max_length=15, choices=SCHEDULE_TYPE, default='PART-TIME')
-
     description = models.TextField(max_length=450)
+
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, default=None, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
