@@ -85,6 +85,8 @@ def generate_certificate(user, cohort=None, layout=None):
                 days=cohort.syllabus.certificate.specialty.expiration_day_delta
             )
 
+    layout = LayoutDesign.objects.filter(slug=layout).first()
+
     if layout is None:
         layout = LayoutDesign.objects.filter(is_default=True,
                                              academy=cohort.academy).first()
