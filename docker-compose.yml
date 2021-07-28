@@ -16,6 +16,21 @@ services:
       - postgres
       - redis
 
+  breathecode-environment:
+    image: breathecode-environment
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgres://user:pass@postgres:5432/breathecode
+      - CELERY_DISABLE_SCHEDULER=
+      - ALLOW_UNSAFE_CYPRESS_APP=True
+    depends_on:
+      - postgres
+      - redis
+
   redis:
     image: redis:alpine
     ports:

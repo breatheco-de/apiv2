@@ -1,0 +1,16 @@
+# alpine has very much issues with python
+FROM ubuntu:rolling
+
+RUN apt update
+RUN apt install python3 python3-pip -y
+RUN pip install pipenv yapf
+
+WORKDIR /usr/src
+
+COPY Pipfile Pipfile
+COPY Pipfile.lock Pipfile.lock
+
+RUN pipenv install --dev
+COPY . .
+
+CMD bash
