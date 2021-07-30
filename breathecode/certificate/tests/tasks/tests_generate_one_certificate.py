@@ -1,5 +1,5 @@
 """
-Tasks tests
+Tasks Tests
 """
 from unittest.mock import patch, call
 from ...tasks import generate_one_certificate
@@ -18,7 +18,8 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
         """generate_one_certificate cant create the certificate"""
         with patch('breathecode.certificate.actions.generate_certificate'
                    ) as mock:
-            generate_one_certificate(1, 1)
+            layout = 'vanilla'
+            generate_one_certificate(1, 1, layout)
 
         self.assertEqual(mock.call_args_list, [])
 
@@ -31,8 +32,10 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
                                      cohort_user_kwargs=cohort_user_kwargs)
         with patch('breathecode.certificate.actions.generate_certificate'
                    ) as mock:
-            generate_one_certificate(1, 1)
-        self.assertEqual(mock.call_args_list, [call(model.user, model.cohort)])
+            layout = 'vanilla'
+            generate_one_certificate(1, 1, layout)
+        self.assertEqual(mock.call_args_list,
+                         [call(model.user, model.cohort, 'vanilla')])
 
     def test_generate_one_certificate_with_user_role_teacher(self):
         """bad request with user role teacher"""
@@ -43,5 +46,6 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
                              cohort_user_kwargs=cohort_user_kwargs)
         with patch('breathecode.certificate.actions.generate_certificate'
                    ) as mock:
-            generate_one_certificate(1, 1)
+            layout = 'vanilla'
+            generate_one_certificate(1, 1, layout)
         self.assertEqual(mock.call_args_list, [])
