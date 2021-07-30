@@ -16,10 +16,15 @@ services:
       - postgres
       - redis
 
-  breathecode-environment:
-    image: breathecode-environment
+  bc-shell:
+    image: geeksacademy/breathecode:shell
     ports:
       - "8000:8000"
+    env_file:
+      - ./.env
+    volumes:
+      - ./:/usr/src
+    command: "/usr/bin/env bash"
     env_file:
       - ./.env
     environment:

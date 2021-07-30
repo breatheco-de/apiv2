@@ -7,7 +7,8 @@ import sys
 
 if __name__ == '__main__':
     exit_code = os.system(
-        'docker build ./ -t breathecode-environment --rm=false -f ./Dockerfile.environment')
+        'docker build ./ -t geeksacademy/breathecode:shell --rm=false -f ./.shell.Dockerfile'
+    )
 
     if exit_code:
         sys.exit(1)
