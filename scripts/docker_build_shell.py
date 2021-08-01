@@ -7,7 +7,7 @@ import sys
 
 if __name__ == '__main__':
     exit_code = os.system(
-        'docker build ./ -t geeksacademy/breathecode:shell --rm=false -f ./.shell.Dockerfile'
+        'docker build ./ -t geeksacademy/breathecode:shell -f ./.shell.Dockerfile'
     )
 
     if exit_code:

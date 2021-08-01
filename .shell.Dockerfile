@@ -1,31 +1,28 @@
 # alpine has very much issues with python
-# FROM ubuntu:rolling
-# FROM alpine
 FROM python:slim
 
-ENV PYTHONUNBUFFERED=1
+EXPOSE 8000
+ENV PYTHONUNBUFFERED 1
+ENV DATABASE_URL postgres://user:pass@postgres:5432/breathecode
+ENV REDIS_URL redis://redis:6379
 
-# RUN pacman -Syu --noconfirm python python-pip
-# RUN apk add python3 py3-pip gcc build-base --no-cache --update
-# RUN apt update
-# RUN apt install python3 python3-pip -y
-# RUN pip install pipenv yapf
+RUN echo breathecode > /etc/hostname
+RUN apt-get update && \
+    apt-get install gcc python3-psycopg2 libpq-dev python3-dev fish curl git sudo tmux -y && \
+    apt-get clean && \
+    rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
 
-# RUN useradd -ms /bin/bash breathecode
+WORKDIR /tmp
 
-# USER breathecode
-# WORKDIR /home/breathecode/apiv2
+RUN curl -L https://get.oh-my.fish > install && \
+    fish install --noninteractive --yes && \
+    rm install
+
 WORKDIR /usr/src
 
-COPY Pipfile Pipfile
-COPY Pipfile.lock Pipfile.lock
-
-RUN apt-get update
-RUN apt-get install gcc python3-psycopg2 libpq-dev python3-dev -y
-RUN pip install pipenv yapf
-RUN pipenv install --dev
-
 COPY . .
+COPY .git/ .git/
 
-# RUN ls -a
-# RUN ls -a; python -m .scripts.install
+RUN python -m scripts.install
+
+CMD ["fish"]
