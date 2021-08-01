@@ -2,9 +2,6 @@
 FROM python:slim
 
 EXPOSE 8000
-ENV PYTHONUNBUFFERED 1
-ENV DATABASE_URL postgres://user:pass@postgres:5432/breathecode
-ENV REDIS_URL redis://redis:6379
 
 RUN echo breathecode > /etc/hostname
 RUN apt-get update && \
@@ -18,11 +15,23 @@ RUN curl -L https://get.oh-my.fish > install && \
     fish install --noninteractive --yes && \
     rm install
 
-WORKDIR /usr/src
+# RUN useradd /usr/bin/fish shell
+RUN useradd shell
+
+USER shell
+WORKDIR /home/shell/apiv2
+
+ENV PYTHONUNBUFFERED=1
+ENV PATH="${PATH}:/home/shell/.local/bin"
+
+RUN curl -L https://get.oh-my.fish > install && \
+    fish install --noninteractive --yes && \
+    rm install
 
 COPY . .
 COPY .git/ .git/
 
-RUN python -m scripts.install
+RUN python -m scripts.install && \
+    rm .env
 
 CMD ["fish"]

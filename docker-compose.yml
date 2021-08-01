@@ -24,12 +24,7 @@ services:
       - ./:/usr/src/
       - fish_data:/root/.config/fish/
       - share_fish_data:/root/.local/share/fish
-    env_file:
-      - ./.env
     environment:
-      - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=postgres://user:pass@postgres:5432/breathecode
-      - CELERY_DISABLE_SCHEDULER=
       - ALLOW_UNSAFE_CYPRESS_APP=True
     depends_on:
       - postgres
