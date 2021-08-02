@@ -10,6 +10,23 @@
 6.You can create a login user with `docker-compose exec breathecode python manage.py createsuperuser`
 
 
+### ⚠️ Important!
+
+If you are planning to update the python code, please make sure the docker container python files are 
+pointing to your python project, open the docker-compose.json file and add the bc-shell.volumes property
+with the path to your apiv2 project inside your computer, for example if your python projecy is located
+at "./:/home/shell/apiv2" your docker-compose.json should be updated like this:
+
+```yml
+bc-shell:
+  image: geeksacademy/breathecode:shell
+  ports:
+    - "8000:8000"
+  volumes:
+    - ./:/home/shell/apiv2
+  ...
+```
+
 # Enable formatter in Visual Studio Code
 
 ```json
