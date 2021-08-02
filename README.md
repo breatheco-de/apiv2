@@ -1,5 +1,13 @@
 # BreatheCode API
 
+## Testing inside Docker (recomended)
+
+1. Check which dependencies you need install in you operating system `pipenv run doctor`.
+2. Instal [docker desktop](https://www.docker.com/products/docker-desktop) in you use Windows else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
+3. Generate the BreatheCode Shell image with `pipenv run docker_build_shell`.
+4. Run BreatheCode Shell with `docker-compose run bc-shell`
+5. Run `pipenv run test` or `pipenv run cov`.
+
 ## Setup & Installation with Docker (recomended)
 
 1. Check which dependencies you need install in you operating system `pipenv run doctor`.
@@ -9,14 +17,6 @@
 5. Congratulations!! You API must be running, with the migrations applied and everything.
 6. If you need to run any specific command always prepend `docker-compose exec breathecode` to it, followed by your command, for example:
    6.You can create a login user with `docker-compose exec breathecode python manage.py createsuperuser`
-
-# Enable formatter in Visual Studio Code
-
-```json
-  ...
-  "editor.formatOnSave": true,
-  "python.formatting.provider": "yapf"
-```
 
 # Setup & Installation (without Docker)
 

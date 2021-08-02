@@ -21,9 +21,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ./:/usr/src/
-      - fish_data:/root/.config/fish/
-      - share_fish_data:/root/.local/share/fish
+      - ./:/home/shell/apiv2
+      - fish_data:/shell/.config/fish/
+      - share_fish_data:/shell/.local/share/fish
     environment:
       - ALLOW_UNSAFE_CYPRESS_APP=True
     depends_on:
