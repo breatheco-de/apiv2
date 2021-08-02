@@ -333,7 +333,7 @@ class Command(BaseCommand):
             "Mentor in residence",
             "caps":
             extend(roles, ["teacher"]) +
-            ["crud_syllabus", "crud_cohort", "crud_student", "crud_survey", "read_won_lead"]
+            ["crud_syllabus", "crud_cohort", "crud_student", "crud_survey", "read_won_lead", "crud_member"]
         })
         roles.append({
             'slug':
