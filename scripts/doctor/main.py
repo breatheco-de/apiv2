@@ -22,21 +22,11 @@ def check_dependencies(dependencies):
 
 def port_is_open(host, port=80):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        result = sock.connect_ex(('localhost', 6379))
+        result = sock.connect_ex((host, port))
         if result == 0:
             return True
         else:
             return False
-
-
-def isOpen(ip, port):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        s.connect((ip, int(port)))
-        s.shutdown(2)
-        return True
-    except:
-        return False
 
 
 def main():
