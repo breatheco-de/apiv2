@@ -1,5 +1,6 @@
 import os
-# import sys
+
+from shutil import which
 
 __all__ = ['main']
 
@@ -19,7 +20,9 @@ def install():
     print('')
     print('--- Running pipenv install ---')
     print('')
-    os.system(f'pipenv install --dev')
+
+    python_path = which('python')
+    os.system(f'pipenv install --dev --python "{python_path}"')
 
 
 def postinstall_hook():
