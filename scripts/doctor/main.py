@@ -12,12 +12,16 @@ dependencies_path = Path(
     f'{api_path}/scripts/doctor/dependencies.json').resolve()
 
 
+def status(condition, true='yes', false='no'):
+    return true if condition else false
+
+
 def check_dependencies(dependencies):
     print('--- Check installation status ---\n')
 
     for dependency in dependencies:
-        result = 'installed' if which(dependency) else 'not installed'
-        print(f'{dependency} =>', result)
+        print(f'{dependency} =>',
+              status(which(dependency), 'installed', 'not installed'))
 
 
 def port_is_open(host, port=80):
@@ -29,12 +33,7 @@ def port_is_open(host, port=80):
             return False
 
 
-def main():
-    with open(dependencies_path, 'r') as file:
-        dependencies = json.load(file)
-
-    check_dependencies(dependencies)
-
+def check_conections():
     print('\n--- Check conection status ---\n')
 
     import subprocess
@@ -42,6 +41,15 @@ def main():
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
 
-    print(f'docker =>', 'up' if not result.stderr else 'down')
-    print(f'postgres =>', 'up' if port_is_open('localhost', 5432) else 'down')
-    print(f'redis =>', 'up' if port_is_open('localhost', 6379) else 'down')
+    print(f'docker =>', status(not result.stderr, 'up', 'down'))
+    print(f'postgres =>', status(port_is_open('localhost', 5432), 'up',
+                                 'down'))
+    print(f'redis =>', status(port_is_open('localhost', 6379), 'up', 'down'))
+
+
+def main():
+    with open(dependencies_path, 'r') as file:
+        dependencies = json.load(file)
+
+    check_dependencies(dependencies)
+    check_conections()
