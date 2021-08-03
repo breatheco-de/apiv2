@@ -198,11 +198,16 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_member')
-    def put(self, request, academy_id=None, user_id=None):
+    def put(self, request, academy_id=None, user_id_or_email=None):
 
-        already = ProfileAcademy.objects.filter(
-            user=user_id, academy__id=academy_id).first()
-        request_data = {**request.data, 'user': user_id, 'academy': academy_id}
+        already = None
+        if user_id_or_email.isnumeric():
+            already = ProfileAcademy.objects.filter(
+                user__id=user_id_or_email, academy_id=academy_id).first()
+        else:
+            raise ValidationException('User id must be a numeric value', 404)
+
+        request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id}
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
