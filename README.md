@@ -45,28 +45,17 @@ bc-shell:
 6. Make sure you can login into the django admin, you can create a login user with `python manage.py createsuperuser`
 7. Enable pre-commit library: `pipenv run pre-commit install` (this library helps prevent longer error wait times and get instant feedbackpipe)
 
-# Documentation for BreatheCode API Endpoints
+## Documentation for BreatheCode API Endpoints
 
 [Read the docs](https://documenter.getpostman.com/view/2432393/T1LPC6ef)
 
-# Signals
+## Signals
 
 [More about signals](./docs/references/SIGNALS.md)
 
-# Additional Resources
+## Additional Resources
 
 [Open this project on Gitpod](https://gitpod.io/#https://github.com/breatheco-de/apiv2) for a on-click installation.
-
-### Enable formatter in Visual Studio Code
-
-- Open `.vscode\settings.json`
-- Add the following inside the file:
-
-```json
-  ...
-  "editor.formatOnSave": true,
-  "python.formatting.provider": "yapf"
-```
 
 ### Run the tests
 
@@ -120,7 +109,7 @@ pip install yapf
 
 1. Get Dockerhub token
    ![Get Dockerhub token](images/dockerhub.PNG)
-2. Add the repo to Coveralls https://coveralls.io/repos/new
-3. Add the repo to Codecov https://app.codecov.io/gh/+
+2. Add the repo to Coveralls <https://coveralls.io/repos/new>
+3. Add the repo to Codecov <https://app.codecov.io/gh/+>
 4. Set up the secrets
    ![Set up the secrets](images/github-secrets.PNG)
