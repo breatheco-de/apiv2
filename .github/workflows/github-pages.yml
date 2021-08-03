@@ -21,7 +21,8 @@ jobs:
         run: |
           PYTHONUNBUFFERED=1
           python -m pip install --upgrade pip
-          python -m pip install mkdocs mkdocs-material mkdocstrings
+          python -m pip install pipenv
+          pipenv install --system --deploy --ignore-pipfile --dev
 
       - name: Deploy docs to Github Pages
-        run: mkdocs gh-deploy
+        run: pipenv run docs_deploy
