@@ -22,13 +22,8 @@ services:
       - "8000:8000"
     volumes:
       - ./:/home/shell/apiv2
-      - fish_data:/shell/.config/fish/
-      - share_fish_data:/shell/.local/share/fish
     environment:
       - ALLOW_UNSAFE_CYPRESS_APP=True
-    depends_on:
-      - postgres
-      - redis
 
   redis:
     image: redis:alpine
@@ -55,5 +50,7 @@ services:
 
 volumes:
   postgres_data:
-  fish_data:
-  share_fish_data:
+  user_fish_data:
+  user_share_fish_data:
+  root_fish_data:
+  root_share_fish_data:

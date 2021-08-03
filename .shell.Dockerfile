@@ -5,7 +5,7 @@ EXPOSE 8000
 
 RUN echo breathecode > /etc/hostname
 RUN apt-get update && \
-    apt-get install gcc python3-psycopg2 libpq-dev python3-dev fish curl git sudo tmux -y && \
+    apt-get install fish curl git sudo tmux vim nano -y && \
     apt-get clean && \
     rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
 
@@ -15,8 +15,10 @@ RUN curl -L https://get.oh-my.fish > install && \
     fish install --noninteractive --yes && \
     rm install
 
-# RUN useradd /usr/bin/fish shell
 RUN useradd shell
+RUN echo 'shell     ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+RUN usermod -s /usr/bin/fish root
+RUN usermod -s /usr/bin/fish shell
 
 USER shell
 WORKDIR /home/shell/apiv2

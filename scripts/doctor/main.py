@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 from pathlib import Path
 
 from shutil import which
@@ -19,6 +20,8 @@ def status(condition, true='yes', false='no'):
 def check_dependencies(dependencies):
     print('--- Check installation status ---\n')
 
+    is_python_outdated = sys.version_info[0] < 3 or sys.version_info[1] < 9
+    print('python =>', status(not is_python_outdated, 'updated', 'outdated'))
     for dependency in dependencies:
         print(f'{dependency} =>',
               status(which(dependency), 'installed', 'not installed'))
