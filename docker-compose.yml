@@ -1,4 +1,4 @@
-version: "3.2"
+version: "3.8"
 
 services:
   breathecode:
@@ -15,6 +15,15 @@ services:
     depends_on:
       - postgres
       - redis
+
+  bc-shell:
+    image: geeksacademy/breathecode:shell
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/home/shell/apiv2
+    environment:
+      - ALLOW_UNSAFE_CYPRESS_APP=True
 
   redis:
     image: redis:alpine

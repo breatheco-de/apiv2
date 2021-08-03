@@ -4,7 +4,7 @@ There is a new signals.py and receivers.py logic available to every app. Basical
 
 Let's say we want other applications to be notified when a user accepts a new invite, the first we need to do is create a custom signal on the breathecode.authenticate app:
 
-```
+```py
 # signals.py
 
 from django import dispatch
@@ -25,7 +25,7 @@ class ProfileAcademy(models.Model):
         super().save(*args, **kwargs)  # Call the "real" save() method.
 ```
 
-Now that the triggering of the signal is implemented we can make sure any previous breathecode.marketing.models.FormEntry's` can be connected to the new user that accepted the invite. We can do that by [implementing a receiver](https://github.com/breatheco-de/apiv2/blob/master/breathecode/marketing/receivers.py#L11) for that inside the `receiver.py` inside the marketing app:
+Now that the triggering of the signal is implemented we can make sure any previous breathecode.marketing.models.FormEntry's`can be connected to the new user that accepted the invite. We can do that by [implementing a receiver](https://github.com/breatheco-de/apiv2/blob/master/breathecode/marketing/receivers.py#L11) for that inside the`receiver.py` inside the marketing app:
 
 ```py
 # breathecode.marketing.receivers.py

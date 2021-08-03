@@ -1,0 +1,27 @@
+name: CI to Github Pages
+
+on:
+  push:
+    branches: [development]
+
+jobs:
+
+  docs:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'breatheco-de/apiv2' }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          PYTHONUNBUFFERED=1
+          python -m pip install --upgrade pip
+          python -m pip install mkdocs mkdocs-material mkdocstrings
+
+      - name: Deploy docs to Github Pages
+        run: mkdocs gh-deploy

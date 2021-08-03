@@ -1,20 +1,21 @@
 # Getting started
 
-## Setup & Installation
+## Setup & Installation with Docker (recomended)
 
-1. Install redis, postgress, python 3.8+ and node 14+
-2. Create environment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
-3. Make sure to get inside the environment: `pipenv shell`
-4. Install the dependencies including development packages: `pipenv install --dev`
-5. Run the migrations into your database `pipenv run migrate`
-6. Run the fixtures to add sample data: `pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json`
-7. Make sure you can login into the django admin, you can create a login user with `python manage.py createsuperuser`
-8. Enable pre-commit library: `pipenv run install_precommit` and install yapf globally `pip install yapf` (this library helps prevent longer error wait times and get instant feedbackpipe)
+1. Check which dependencies you need install in you operating system `pipenv run doctor` or `python -m scripts.doctor`.
+2. Instal [docker desktop](https://www.docker.com/products/docker-desktop) in your computer.
+3. Install packages and configure your development environment `python -m scripts.install` (this script replace your `.env`).
+4. Run containers with `docker-compose up -d redis postgres`
+5. Congratulations!! You API must be running, with the migrations applied and everything.
+6. If you need to run any specific command always prepend `docker-compose exec breathecode` to it, followed by your command, for example:
+   6.You can create a login user with `docker-compose exec breathecode python manage.py createsuperuser`
 
-## Setup & Installation with Docker
+## Setup & Installation (without Docker)
 
-1. Generate the Breathecode Docker image `pipenv run docker_build`
-2. Create environment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
-3. Run containers with `docker-compose up -d`
-4. Make sure you can login into the django admin, you can create a login user with `docker-compose exec breathecode python manage.py createsuperuser`
-5. Enable pre-commit library: `pipenv run install_precommit` and install yapf globally `pip install yapf` (this library helps prevent longer error wait times and get instant feedbackpipe)
+1. Check which dependencies you need install in you operating system `pipenv run doctor` or `python -m scripts.doctor`.
+2. Manually install redis, postgress, python 3.9+ and node 14+.
+3. Install packages and configure your development environment `python -m scripts.install` (this script replace your `.env`).
+4. Run the migrations into your database `pipenv run migrate`
+5. Run the fixtures to add sample data: `pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json`
+6. Make sure you can login into the django admin, you can create a login user with `python manage.py createsuperuser`
+7. Enable pre-commit library: `pipenv run pre-commit install` (this library helps prevent longer error wait times and get instant feedbackpipe)
