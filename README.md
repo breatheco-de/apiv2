@@ -35,15 +35,7 @@ bc-shell:
   ...
 ```
 
-# Enable formatter in Visual Studio Code
-
-```json
-  ...
-  "editor.formatOnSave": true,
-  "python.formatting.provider": "yapf"
-```
-
-# Setup & Installation (without Docker)
+## Setup & Installation (without Docker)
 
 1. Check which dependencies you need install in you operating system `pipenv run doctor` or `python -m scripts.doctor`.
 2. Manually install redis, postgress, python 3.9+ and node 14+.
