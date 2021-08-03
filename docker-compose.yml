@@ -50,7 +50,3 @@ services:
 
 volumes:
   postgres_data:
-  user_fish_data:
-  user_share_fish_data:
-  root_fish_data:
-  root_share_fish_data:
