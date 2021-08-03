@@ -102,7 +102,7 @@ pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json
 
 The following icons are being used for the slack integrations: <https://www.pngrepo.com/collection/soft-colored-ui-icons/1>
 
-# troubleshooting
+## troubleshooting
 
 - `` Executable `yapf\` not found ``: this appear because the pre-commit use the python that found in the $PATH, this project has `yapf` installed in a virtual environment
 
