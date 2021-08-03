@@ -9,7 +9,7 @@ pipenv run test ./breathecode/
 ## Run coverage
 
 ```bash
-pipenv run coverage breathecode
+pipenv run cov breathecode
 ```
 
 ## Testing inside Docker (fallback option)

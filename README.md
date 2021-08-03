@@ -18,7 +18,7 @@
 6. If you need to run any specific command always prepend `docker-compose exec breathecode` to it, followed by your command, for example:
    6.You can create a login user with `docker-compose exec breathecode python manage.py createsuperuser`
 
-# Setup & Installation (without Docker)
+## Setup & Installation (without Docker)
 
 1. Check which dependencies you need install in you operating system `pipenv run doctor` or `python -m scripts.doctor`.
 2. Manually install redis, postgress, python 3.9+ and node 14+.
