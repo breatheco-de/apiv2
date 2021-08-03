@@ -90,18 +90,17 @@ def get_cohorts(request, id=None):
 
 
 class AcademyReportView(APIView):
-
     @capable_of('academy_reporting')
     def get(self, request, academy_id=None):
 
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
-            raise ValidationError("Academy not found", slug='academy-not-found')
-
-        
+            raise ValidationError('Academy not found',
+                                  slug='academy-not-found')
 
         users = AcademyReportSerializer(academy)
         return Response(users.data)
+
 
 class UserMeView(APIView):
     def get(self, request, format=None):
@@ -741,9 +740,11 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination,
         if cohort_id is not None:
             item = None
             if cohort_id.isnumeric():
-                item = Cohort.objects.filter(id=int(cohort_id),academy__id=academy_id).first()
+                item = Cohort.objects.filter(id=int(cohort_id),
+                                             academy__id=academy_id).first()
             else:
-                item = Cohort.objects.filter(slug=cohort_id,academy__id=academy_id).first()
+                item = Cohort.objects.filter(slug=cohort_id,
+                                             academy__id=academy_id).first()
 
             if item is None:
                 return Response(status=status.HTTP_404_NOT_FOUND)
