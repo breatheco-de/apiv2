@@ -226,15 +226,15 @@ class Command(BaseCommand):
                 ]
             },
             {
-                'slug':
-                'staff',
-                'name':
-                'Staff (Base)',
-                'caps': [
-                    'read_member', 'read_syllabus', 'read_student',
-                    'read_cohort', 'read_media', 'read_my_academy',
-                    'read_invite', 'get_academy_token', 'crud_activity',
-                    'read_survey', 'read_layout', 'read_event'
+                "slug":
+                "staff",
+                "name":
+                "Staff (Base)",
+                "caps": [
+                    "read_member", "read_syllabus", "read_student",
+                    "read_cohort", "read_media", "read_my_academy",
+                    "read_invite", "get_academy_token", "crud_activity",
+                    "read_survey", "read_layout", "read_event", "academy_reporting"
                 ]
             },
             {
@@ -326,15 +326,13 @@ class Command(BaseCommand):
             'caps': extend(roles, ['assistant'])
         })
         roles.append({
-            'slug':
-            'academy_coordinator',
-            'name':
-            'Mentor in residence',
-            'caps':
-            extend(roles, ['teacher']) + [
-                'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey',
-                'read_won_lead'
-            ]
+            "slug":
+            "academy_coordinator",
+            "name":
+            "Mentor in residence",
+            "caps":
+            extend(roles, ["teacher"]) +
+            ["crud_syllabus", "crud_cohort", "crud_student", "crud_survey", "read_won_lead", "crud_member"]
         })
         roles.append({
             'slug':
