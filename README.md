@@ -56,7 +56,7 @@ The documentation is divided into several sections:
 
 ### `Build BreatheCode Dev docker image`
 
-Install [docker desktop](https://www.docker.com/products/docker-desktop) in you use Windows else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
+For mac and pc users install [docker desktop](https://www.docker.com/products/docker-desktop), else, for linux find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
 
 ```bash
 # Check which dependencies you need install in you operating system
