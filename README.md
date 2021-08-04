@@ -35,12 +35,6 @@
   </a>
 </p>
 
-<p align="center">
-  <a href="#key-features">Documentation</a> •
-  <a href="#key-features">Installation inside Docker</a> •
-  <a href="#how-to-use">Installation in your local machine</a>
-</p>
-
 ## Documentation
 
 You can find the development documentation [on the webside](https://breatheco-de.github.io/apiv2/).
