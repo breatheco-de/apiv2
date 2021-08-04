@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.repository == 'breatheco-de/apiv2' }}
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout main
+        uses: actions/checkout@v2
 
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
@@ -24,5 +25,12 @@ jobs:
           python -m pip install pipenv
           pipenv install --system --deploy --ignore-pipfile --dev
 
-      - name: Deploy docs to Github Pages
-        run: pipenv run docs_deploy
+      - name: Deploy docs
+        uses: mhausenblas/mkdocs-deploy-gh-pages@master
+        # Or use mhausenblas/mkdocs-deploy-gh-pages@nomaterial to build without the mkdocs-material theme
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # CUSTOM_DOMAIN: optionaldomain.com
+          # CONFIG_FILE: folder/mkdocs.yml
+          # EXTRA_PACKAGES: build-base
+          # GITHUB_DOMAIN: github.myenterprise.com
