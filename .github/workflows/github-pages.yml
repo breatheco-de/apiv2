@@ -24,6 +24,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pipenv
           pipenv install --system --deploy --ignore-pipfile --dev
+          pipenv lock -r > requirements.txt
 
       - name: Deploy docs
         uses: mhausenblas/mkdocs-deploy-gh-pages@master
@@ -32,5 +33,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # CUSTOM_DOMAIN: optionaldomain.com
           # CONFIG_FILE: folder/mkdocs.yml
-          EXTRA_PACKAGES: mkdocstrings
+          # EXTRA_PACKAGES: mkdocstrings
           # GITHUB_DOMAIN: github.myenterprise.com
