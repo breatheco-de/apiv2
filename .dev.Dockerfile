@@ -25,15 +25,20 @@ WORKDIR /home/shell/apiv2
 
 ENV PYTHONUNBUFFERED=1
 ENV PATH="${PATH}:/home/shell/.local/bin"
+ENV DOCKER=1
 
 RUN curl -L https://get.oh-my.fish > install && \
     fish install --noninteractive --yes && \
     rm install
 
-COPY . .
+COPY Pipfile Pipfile
+COPY Pipfile.lock Pipfile.lock
+COPY scripts scripts
 COPY .git/ .git/
+RUN touch .env
 
 RUN python -m scripts.install && \
     rm .env
 
-CMD ["fish"]
+COPY . .
+CMD python -m scripts.docker_entrypoint_dev
