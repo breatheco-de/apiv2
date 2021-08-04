@@ -43,16 +43,17 @@ Check out the [Postman docs](https://documenter.getpostman.com/view/2432393/T1LP
 
 The documentation is divided into several sections:
 
-- [Working inside Docker (slower)](#working-inside-docker-slower)
+- No instalation (with gitpod)
+- [Installarion inside Docker (easier)](#working-inside-docker-slower)
   - [Build BreatheCode Dev docker image](#build-breathecode-dev-docker-image)
   - [Testing inside BreatheCode Dev](#testing-inside-breathecode-dev)
   - [Run BreatheCode API as docker service](#run-breathecode-api-as-docker-service)
-- [Working in your local machine (recomended)](#working-in-your-local-machine-recomended)
+- [Instalation in your local machine (a bit harder but more performant)](#working-in-your-local-machine-recomended)
   - [Installation in your local machine](#installation-in-your-local-machine)
   - [Testing in your local machine](#testing-in-your-local-machine)
   - [Run BreatheCode API in your local machine](#run-breathecode-api-in-your-local-machine)
 
-## Working inside Docker (slower)
+## Working inside Docker (easier)
 
 ### `Build BreatheCode Dev docker image`
 
