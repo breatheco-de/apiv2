@@ -1,18 +1,26 @@
 # BreatheCode API
 
+## Testing inside Docker (fallback option)
+
+1. Check which dependencies you need install in you operating system `pipenv run doctor` or `python -m scripts.doctor`.
+2. Instal [docker desktop](https://www.docker.com/products/docker-desktop) in you use Windows else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
+3. Generate the BreatheCode Shell image with `pipenv run docker_build_shell`.
+4. Run BreatheCode Shell with `docker-compose run bc-shell`
+5. Run `pipenv run test` or `pipenv run cov`.
+
 ## Setup & Installation with Docker (recomended)
 
-1. Check which dependencies you need install in you operating system `pipenv run doctor`.
+1. Check which dependencies you need install in you operating system `pipenv run doctor` or `python -m scripts.doctor`.
 2. Instal [docker desktop](https://www.docker.com/products/docker-desktop) in your computer.
 3. Install packages and configure your development environment `python -m scripts.install` (this script replace your `.env`).
-4. Run containers with `docker-compose up -d`
+4. Run containers with `docker-compose up -d redis postgres`
 5. Congratulations!! You API must be running, with the migrations applied and everything.
 6. If you need to run any specific command always prepend `docker-compose exec breathecode` to it, followed by your command, for example:
    6.You can create a login user with `docker-compose exec breathecode python manage.py createsuperuser`
 
 ### ⚠️ Important!
 
-If you are planning to update the python code, please make sure the docker container python files are 
+If you are planning to update the python code, please make sure the docker container python files are
 pointing to your python project, open the docker-compose.json file and add the `bc-shell.volumes` property
 with the path to your apiv2 project inside your computer, for example if your python projecy is located
 at "./:/home/shell/apiv2" your docker-compose.json should be updated like this:
@@ -27,46 +35,27 @@ bc-shell:
   ...
 ```
 
-# Enable formatter in Visual Studio Code
+## Setup & Installation (without Docker)
 
-```json
-  ...
-  "editor.formatOnSave": true,
-  "python.formatting.provider": "yapf"
-```
-
-# Setup & Installation (without Docker)
-
-1. Check which dependencies you need install in you operating system `pipenv run doctor`.
-2. Manually install redis, postgress, python 3.8+ and node 14+.
+1. Check which dependencies you need install in you operating system `pipenv run doctor` or `python -m scripts.doctor`.
+2. Manually install redis, postgress, python 3.9+ and node 14+.
 3. Install packages and configure your development environment `python -m scripts.install` (this script replace your `.env`).
 4. Run the migrations into your database `pipenv run migrate`
 5. Run the fixtures to add sample data: `pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json`
 6. Make sure you can login into the django admin, you can create a login user with `python manage.py createsuperuser`
 7. Enable pre-commit library: `pipenv run pre-commit install` (this library helps prevent longer error wait times and get instant feedbackpipe)
 
-# Documentation for BreatheCode API Endpoints
+## Documentation for BreatheCode API Endpoints
 
 [Read the docs](https://documenter.getpostman.com/view/2432393/T1LPC6ef)
 
-# Signals
+## Signals
 
 [More about signals](./docs/references/SIGNALS.md)
 
-# Additional Resources
+## Additional Resources
 
 [Open this project on Gitpod](https://gitpod.io/#https://github.com/breatheco-de/apiv2) for a on-click installation.
-
-### Enable formatter in Visual Studio Code
-
-- Open `.vscode\settings.json`
-- Add the following inside the file:
-
-```json
-  ...
-  "editor.formatOnSave": true,
-  "python.formatting.provider": "yapf"
-```
 
 ### Run the tests
 
@@ -102,7 +91,7 @@ pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json
 
 The following icons are being used for the slack integrations: <https://www.pngrepo.com/collection/soft-colored-ui-icons/1>
 
-# troubleshooting
+## troubleshooting
 
 - `` Executable `yapf\` not found ``: this appear because the pre-commit use the python that found in the $PATH, this project has `yapf` installed in a virtual environment
 
@@ -120,7 +109,7 @@ pip install yapf
 
 1. Get Dockerhub token
    ![Get Dockerhub token](images/dockerhub.PNG)
-2. Add the repo to Coveralls https://coveralls.io/repos/new
-3. Add the repo to Codecov https://app.codecov.io/gh/+
+2. Add the repo to Coveralls <https://coveralls.io/repos/new>
+3. Add the repo to Codecov <https://app.codecov.io/gh/+>
 4. Set up the secrets
    ![Set up the secrets](images/github-secrets.PNG)

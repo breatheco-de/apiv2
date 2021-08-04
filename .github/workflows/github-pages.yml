@@ -1,16 +1,14 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
-name: Linter
+name: CI to Github Pages
 
 on:
-  push: {}
-  pull_request: {}
+  push:
+    branches: [development]
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
 
+  docs:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'breatheco-de/apiv2' }}
     steps:
       - uses: actions/checkout@v2
 
@@ -26,6 +24,5 @@ jobs:
           python -m pip install pipenv
           pipenv install --system --deploy --ignore-pipfile --dev
 
-      - name: Linter
-        run: |
-          pipenv run format
+      - name: Deploy docs to Github Pages
+        run: pipenv run docs_deploy

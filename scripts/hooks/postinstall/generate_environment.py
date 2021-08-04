@@ -1,4 +1,3 @@
-import json
 import os
 from pathlib import Path
 
@@ -23,10 +22,10 @@ for line in lines:
         key, value = line.split('=')
 
         if key == 'DATABASE_URL':
-            content += f'{key}=postgres://user:pass@localhost:5432/breathecode\n'
+            content += f'{key}=postgres://user:pass@postgres:5432/breathecode\n'
 
         elif key == 'REDIS_URL':
-            content += f'{key}=redis://localhost:6379\n'
+            content += f'{key}=redis://redis:6379\n'
 
         elif key == 'API_URL':
             content += f'{key}=http://localhost:8000\n'
