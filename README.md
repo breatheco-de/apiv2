@@ -47,7 +47,7 @@ The documentation is divided into several sections:
   - [Build BreatheCode Dev docker image](#build-breathecode-dev-docker-image)
   - [Testing inside BreatheCode Dev](#testing-inside-breathecode-dev)
   - [Run BreatheCode Dev docker service](#run-breathecode-dev-docker-service)
-- [Setup & Installation in your local machine (recomended)](#setup--installation-in-your-local-machine-recomended)
+- [Working in your local machine (recomended)](#working-in-your-local-machine-recomended)
   - [Installation in your local machine](#installation-in-your-local-machine)
   - [Testing in your local machine](#testing-in-your-local-machine)
   - [Run BreatheCode API in your local machine](#run-breathecode-api-in-your-local-machine)
@@ -101,7 +101,7 @@ docker-compose logs -f bc-dev
 # open localhost:8000/admin to view the admin
 ```
 
-## Setup & Installation in your local machine (recomended)
+## Working in your local machine (recomended)
 
 ### `Installation in your local machine`
 
