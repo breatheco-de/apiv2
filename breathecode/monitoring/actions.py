@@ -251,9 +251,13 @@ def run_script(script):
                 script.status_code = 0
                 script.status = 'OPERATIONAL'
                 results['severity_level'] = 5
-
+                script.response_text = s.getvalue()
             except ScriptNotification as e:
                 script.status_code = 1
+                script.response_text = s.getvalue()
+                if e.title is not None:
+                    script.special_status_text = e.title
+
                 if e.status is not None:
                     script.status = e.status
                     results[
@@ -264,6 +268,9 @@ def run_script(script):
                 results['error_slug'] = e.slug
                 print(e)
             except Exception as e:
+                import traceback
+                script.response_text = ''.join(
+                    traceback.format_exception(None, e, e.__traceback__))
                 script.status_code = 1
                 script.status = 'CRITICAL'
                 results['error_slug'] = 'uknown'
@@ -271,11 +278,11 @@ def run_script(script):
                 print(e)
 
         script.last_run = timezone.now()
-        script.response_text = s.getvalue()
         script.save()
 
         results['status'] = script.status
         results['text'] = script.response_text
+        results['title'] = script.special_status_text
         results['slack_payload'] = render_snooze_script(
             [script])  # converting to json to send to slack
 
