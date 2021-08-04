@@ -46,7 +46,7 @@ The documentation is divided into several sections:
 - [Working inside Docker (slower)](#working-inside-docker-slower)
   - [Build BreatheCode Dev docker image](#build-breathecode-dev-docker-image)
   - [Testing inside BreatheCode Dev](#testing-inside-breathecode-dev)
-  - [Run BreatheCode Dev docker service](#run-breathecode-dev-docker-service)
+  - [Run BreatheCode API as docker service](#run-breathecode-api-as-docker-service)
 - [Working in your local machine (recomended)](#working-in-your-local-machine-recomended)
   - [Installation in your local machine](#installation-in-your-local-machine)
   - [Testing in your local machine](#testing-in-your-local-machine)
@@ -79,7 +79,7 @@ pipenv run test ./breathecode/activity  # path
 pipenv run cov breathecode.activity  # python module path
 ```
 
-### `Run BreatheCode Dev docker service`
+### `Run BreatheCode API as docker service`
 
 ```bash
 # open BreatheCode API as a service and export the port 8000
