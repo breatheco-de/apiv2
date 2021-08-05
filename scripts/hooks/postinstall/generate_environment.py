@@ -8,6 +8,7 @@ __all__ = ['main']
 api_path = os.getcwd()
 env_path = Path(f'{api_path}/.env').resolve()
 env_example_path = Path(f'{api_path}/.env.example').resolve()
+where_in_docker = os.getenv('DOCKER') == '1'
 
 if which('gp'):
     copyfile(env_example_path, env_path)
@@ -22,10 +23,12 @@ for line in lines:
         key, value = line.split('=')
 
         if key == 'DATABASE_URL':
-            content += f'{key}=postgres://user:pass@postgres:5432/breathecode\n'
+            hostname = 'postgres' if where_in_docker else 'localhost'
+            content += f'{key}=postgres://user:pass@{hostname}:5432/breathecode\n'
 
         elif key == 'REDIS_URL':
-            content += f'{key}=redis://redis:6379\n'
+            hostname = 'redis' if where_in_docker else 'localhost'
+            content += f'{key}=redis://{hostname}:6379\n'
 
         elif key == 'API_URL':
             content += f'{key}=http://localhost:8000\n'

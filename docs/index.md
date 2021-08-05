@@ -1,21 +1,99 @@
 # Getting started
 
-## Setup & Installation with Docker (recomended)
+## Working inside Docker (slower)
 
-1. Check which dependencies you need install in you operating system `pipenv run doctor` or `python -m scripts.doctor`.
-2. Instal [docker desktop](https://www.docker.com/products/docker-desktop) in your computer.
-3. Install packages and configure your development environment `python -m scripts.install` (this script replace your `.env`).
-4. Run containers with `docker-compose up -d redis postgres`
-5. Congratulations!! You API must be running, with the migrations applied and everything.
-6. If you need to run any specific command always prepend `docker-compose exec breathecode` to it, followed by your command, for example:
-   6.You can create a login user with `docker-compose exec breathecode python manage.py createsuperuser`
+### `Build BreatheCode Dev docker image`
 
-## Setup & Installation (without Docker)
+Instal [docker desktop](https://www.docker.com/products/docker-desktop) in you use Windows else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
 
-1. Check which dependencies you need install in you operating system `pipenv run doctor` or `python -m scripts.doctor`.
-2. Manually install redis, postgress, python 3.9+ and node 14+.
-3. Install packages and configure your development environment `python -m scripts.install` (this script replace your `.env`).
-4. Run the migrations into your database `pipenv run migrate`
-5. Run the fixtures to add sample data: `pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json`
-6. Make sure you can login into the django admin, you can create a login user with `python manage.py createsuperuser`
-7. Enable pre-commit library: `pipenv run pre-commit install` (this library helps prevent longer error wait times and get instant feedbackpipe)
+```bash
+# Check which dependencies you need install in you operating system
+python -m scripts.doctor
+
+# Generate the BreatheCode Dev docker image
+docker-compose build bc-dev
+```
+
+### `Testing inside BreatheCode Dev`
+
+```bash
+# Open the BreatheCode Dev, this shell don't export the port 8000
+docker-compose run bc-dev fish
+
+# Testing
+pipenv run test ./breathecode/activity  # path
+
+# Coverage
+pipenv run cov breathecode.activity  # python module path
+```
+
+### `Run BreatheCode API as docker service`
+
+```bash
+# open BreatheCode API as a service and export the port 8000
+docker-compose up -d bc-dev
+
+# open the BreatheCode Dev, this shell don't export the port 8000
+docker-compose run bc-dev fish
+
+# create super user
+pipenv run python manage.py createsuperuser
+
+# Close the BreatheCode Dev
+exit
+
+# See the output of Django
+docker-compose logs -f bc-dev
+
+# open localhost:8000 to view the api
+# open localhost:8000/admin to view the admin
+```
+
+## Working in your local machine (recomended)
+
+### `Installation in your local machine`
+
+Instal [docker desktop](https://www.docker.com/products/docker-desktop) in you use Windows else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
+
+```bash
+# Check which dependencies you need install in you operating system
+python -m scripts.doctor
+
+# Setting up the redis and postgres database, you also can install manually in your local machine this databases
+docker-compose up -d redis postgres
+
+# Install and setting up your development environment (this command replace your .env file)
+python -m scripts.install
+```
+
+### `Testing in your local machine`
+
+```bash
+# Testing
+pipenv run test ./breathecode/activity  # path
+
+# Coverage
+pipenv run cov breathecode.activity  # python module path
+```
+
+### `Run BreatheCode API in your local machine`
+
+```bash
+# Collect statics
+pipenv run python manage.py collectstatic --noinput
+
+# Run migrations
+pipenv run python manage.py migrate
+
+# Load fixtures (populate the database)
+pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json
+
+# Create super user
+pipenv run python manage.py createsuperuser
+
+# Run server
+pipenv run start
+
+# open localhost:8000 to view the api
+# open localhost:8000/admin to view the admin
+```
