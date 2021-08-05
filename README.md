@@ -1,120 +1,152 @@
-# BreatheCode API
+<h1 align="center">
+  <br>
+  <a href="https://breatheco.de/"><img src="https://assets.breatheco.de/apis/img/images.php?blob&random&cat=icon&tags=breathecode,128" alt="BreatheCode" width="128"></a>
+  <br>
+  BreatheCode
+  <br>
+</h1>
 
+<h4 align="center">BreatheCode's mission is to <b>accelerate the way junior developers learn and evolve</b> using technology.</h4>
 
+<p align="center">
+  <a href="https://coveralls.io/github/breatheco-de/apiv2">
+    <img src="https://img.shields.io/coveralls/github/breatheco-de/apiv2"
+         alt="Coveralls">
+  </a>
 
-# Setup & Installation
+  <a href="https://github.com/breatheco-de/apiv2/actions/workflows/dockerhub.yml">
+    <img src="https://github.com/breatheco-de/apiv2/actions/workflows/dockerhub.yml/badge.svg"
+         alt="Docker Hub">
+  </a>
 
-1. Install redis, postgress, python 3.8+ and node 14+
-2. Create environment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
-3. Make sure to get inside the environment: `pipenv shell`
-4. Install the dependencies including development packages: `pipenv install --dev`
-5. Run the migrations into your database `pipenv run migrate`
-6. Run the fixtures to add sample data: `pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json`
-7. Make sure you can login into the django admin, you can create a login user with `python manage.py createsuperuser`
-8. Enable pre-commit library: `pipenv run pre-commit install` (this library helps prevent longer error wait times and get instant feedbackpipe)
+  <a href="https://github.com/breatheco-de/apiv2/actions/workflows/linter.yml">
+    <img src="https://github.com/breatheco-de/apiv2/actions/workflows/linter.yml/badge.svg"
+         alt="Linter">
+  </a>
 
-# Enable formatter in Visual Studio Code
+  <a href="https://github.com/breatheco-de/apiv2/actions/workflows/test.yml">
+    <img src="https://github.com/breatheco-de/apiv2/actions/workflows/test.yml/badge.svg"
+         alt="Test">
+  </a>
 
-```json
-  ...
-  "editor.formatOnSave": true,
-  "python.formatting.provider": "yapf"
-```
+  <a href="https://github.com/breatheco-de/apiv2/actions/workflows/github-pages.yml">
+    <img src="https://github.com/breatheco-de/apiv2/actions/workflows/github-pages.yml/badge.svg"
+         alt="Test">
+  </a>
+</p>
 
-## Setup & Installation
+## Documentation
 
-1. Install redis, postgress, python 3.8+ and node 14+
-2. Create environment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
-3. Make sure to get inside the environment: `pipenv shell`
-4. Install the dependencies including development packages: `pipenv install --dev`
-5. Run the migrations into your database `pipenv run migrate`
-6. Run the fixtures to add sample data: `pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json`
-7. Make sure you can login into the django admin, you can create a login user with `python manage.py createsuperuser`
+You can find the development documentation [on the webside](https://breatheco-de.github.io/apiv2/).
 
-## Setup & Installation with Docker
+Check out the [Postman docs](https://documenter.getpostman.com/view/2432393/T1LPC6ef), [Swagger](https://breathecode.herokuapp.com/swagger/) or [Redoc](https://breathecode.herokuapp.com/swagger/).
 
-1. Generate the Breathecode Docker image `pipenv run docker_build`
-2. Create environment variables `cp .env.example .env` (make sure to fill the variables with relevant values)
-3. Run containers with `docker-compose up -d`
-4. Make sure you can login into the django admin, you can create a login user with `docker-compose exec breathecode python manage.py createsuperuser`
+The documentation is divided into several sections:
 
-# Documentation for BreatheCode API Endpoints
+- No instalation (with gitpod)
+- [Installarion inside Docker (easier)](#working-inside-docker-slower)
+  - [Build BreatheCode Dev docker image](#build-breathecode-dev-docker-image)
+  - [Testing inside BreatheCode Dev](#testing-inside-breathecode-dev)
+  - [Run BreatheCode API as docker service](#run-breathecode-api-as-docker-service)
+- [Instalation in your local machine (a bit harder but more performant)](#working-in-your-local-machine-recomended)
+  - [Installation in your local machine](#installation-in-your-local-machine)
+  - [Testing in your local machine](#testing-in-your-local-machine)
+  - [Run BreatheCode API in your local machine](#run-breathecode-api-in-your-local-machine)
 
-[Read the docs](https://documenter.getpostman.com/view/2432393/T1LPC6ef)
+## Working inside Docker (easier)
 
-# Signals
+### `Build BreatheCode Dev docker image`
 
-[More about signals](./docs/references/SIGNALS.md)
-
-
-# Additional Resources
-
-[Open this project on Gitpod](https://gitpod.io/#https://github.com/breatheco-de/apiv2) for a on-click installation.
-
-### Enable formatter in Visual Studio Code
-
-- Open `.vscode\settings.json`
-- Add the following inside the file:
-
-```json
-  ...
-  "editor.formatOnSave": true,
-  "python.formatting.provider": "yapf"
-```
-
-### Run the tests
+For mac and pc users install [docker desktop](https://www.docker.com/products/docker-desktop), else, for linux find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
 
 ```bash
-pipenv run test ./breathecode/
+# Check which dependencies you need install in you operating system
+python -m scripts.doctor
+
+# Generate the BreatheCode Dev docker image
+docker-compose build bc-dev
 ```
 
-### Run coverage
-
-Report with HTML
+### `Testing inside BreatheCode Dev`
 
 ```bash
-pipenv run coverage breathecode
+# Open the BreatheCode Dev, this shell don't export the port 8000
+docker-compose run bc-dev fish
+
+# Testing
+pipenv run test ./breathecode/activity  # path
+
+# Coverage
+pipenv run cov breathecode.activity  # python module path
 ```
 
-### Fixtures
-
-Fixtures are fake data ideal for development.
-
-Saving new fixtures
+### `Run BreatheCode API as docker service`
 
 ```bash
-python manage.py dumpdata auth > ./breathecode/authenticate/fixtures/users.json
+# open BreatheCode API as a service and export the port 8000
+docker-compose up -d bc-dev
+
+# open the BreatheCode Dev, this shell don't export the port 8000
+docker-compose run bc-dev fish
+
+# create super user
+pipenv run python manage.py createsuperuser
+
+# Close the BreatheCode Dev
+exit
+
+# See the output of Django
+docker-compose logs -f bc-dev
+
+# open localhost:8000 to view the api
+# open localhost:8000/admin to view the admin
 ```
 
-Loading all fixtures
+## Working in your local machine (recomended)
+
+### `Installation in your local machine`
+
+Install [docker desktop](https://www.docker.com/products/docker-desktop) in you use Windows else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
 
 ```bash
+# Check which dependencies you need install in you operating system
+python -m scripts.doctor
+
+# Setting up the redis and postgres database, you also can install manually in your local machine this databases
+docker-compose up -d redis postgres
+
+# Install and setting up your development environment (this command replace your .env file)
+python -m scripts.install
+```
+
+### `Testing in your local machine`
+
+```bash
+# Testing
+pipenv run test ./breathecode/activity  # path
+
+# Coverage
+pipenv run cov breathecode.activity  # python module path
+```
+
+### `Run BreatheCode API in your local machine`
+
+```bash
+# Collect statics
+pipenv run python manage.py collectstatic --noinput
+
+# Run migrations
+pipenv run python manage.py migrate
+
+# Load fixtures (populate the database)
 pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json
+
+# Create super user
+pipenv run python manage.py createsuperuser
+
+# Run server
+pipenv run start
+
+# open localhost:8000 to view the api
+# open localhost:8000/admin to view the admin
 ```
-
-### Icons
-
-The following icons are being used for the slack integrations: <https://www.pngrepo.com/collection/soft-colored-ui-icons/1>
-
-# troubleshooting
-
-- `` Executable `yapf\` not found ``: this appear because the pre-commit use the python that found in the $PATH, this project has `yapf` installed in a virtual environment
-
-```bash
-# You should run the commands in the virtual environment
-pipenv shell
-git add .
-git commit -m "message"
-
-# You should install globally yapf if you want to commit using vscode
-pip install yapf
-```
-
-## Configuring the required tokens
-
-1. Get Dockerhub token
-   ![Get Dockerhub token](images/dockerhub.PNG)
-2. Add the repo to Coveralls https://coveralls.io/repos/new
-3. Add the repo to Codecov https://app.codecov.io/gh/+
-4. Set up the secrets
-   ![Set up the secrets](images/github-secrets.PNG)

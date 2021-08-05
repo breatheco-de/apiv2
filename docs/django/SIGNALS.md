@@ -26,7 +26,7 @@ from application import signals
 def do_some_task():
 	# did some thing
     signals.some_task_done.send(sender='abc_task_done', task_id=123)
-    
+
 # Here sender can be anything, same are the arguments.
 ```
 
@@ -42,7 +42,7 @@ from application import signals
 @receiver(signals.some_task_done)
 def my_task_done(sender, task_id, **kwargs):
     print(sender, task_id)
-    
+
 # prints 'abc_task_done', 123
 ```
 

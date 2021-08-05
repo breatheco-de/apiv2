@@ -26,7 +26,8 @@ from .authentication import ExpiringTokenAuthentication
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
 from .models import (
     Profile,
-    CredentialsGithub, CredentialsGoogle,
+    CredentialsGithub,
+    CredentialsGoogle,
     Token,
     CredentialsSlack,
     CredentialsFacebook,
@@ -56,7 +57,8 @@ class TemporalTokenView(ObtainAuthToken):
 
     def post(self, request):
 
-        token, created = Token.get_or_create(user=request.user, token_type='temporal')
+        token, created = Token.get_or_create(user=request.user,
+                                             token_type='temporal')
         return Response({
             'token': token.key,
             'token_type': token.token_type,
@@ -196,11 +198,16 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_member')
-    def put(self, request, academy_id=None, user_id=None):
+    def put(self, request, academy_id=None, user_id_or_email=None):
 
-        already = ProfileAcademy.objects.filter(
-            user=user_id, academy__id=academy_id).first()
-        request_data = {**request.data, 'user': user_id, 'academy': academy_id}
+        already = None
+        if user_id_or_email.isnumeric():
+            already = ProfileAcademy.objects.filter(
+                user__id=user_id_or_email, academy_id=academy_id).first()
+        else:
+            raise ValidationException('User id must be a numeric value', 404)
+
+        request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id}
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
@@ -462,8 +469,7 @@ class LoginView(ObtainAuthToken):
                                     context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-        token, created = Token.get_or_create(user=user,
-                                                     token_type='login')
+        token, created = Token.get_or_create(user=user, token_type='login')
         return Response({
             'token': token.key,
             'user_id': user.pk,
@@ -576,15 +582,16 @@ def get_roles(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_github_token(request, token=None):
-    
 
     url = request.query_params.get('url', None)
     if url == None:
-        raise ValidationException('No callback URL specified', slug='no-callback-url')
+        raise ValidationException('No callback URL specified',
+                                  slug='no-callback-url')
 
     if token is not None:
         if Token.get_valid(token) is None:
-            raise ValidationException('Invalid or missing token', slug='invalid-token')
+            raise ValidationException('Invalid or missing token',
+                                      slug='invalid-token')
         else:
             url = url + f'&user={token}'
 
@@ -674,7 +681,7 @@ def save_github_token(request):
                 raise ValidationError('Impossible to retrieve user email')
 
             # is a valid token??? if not valid it will become None
-            if token is not None and token != "":
+            if token is not None and token != '':
                 token = Token.get_valid(token)
                 if not token:
                     logger.debug(f'Token not found or is expired')
@@ -742,10 +749,11 @@ def save_github_token(request):
                     profile_academy.save()
 
             if not token:
-                token, created = Token.get_or_create(
-                    user=user, token_type='login')
+                token, created = Token.get_or_create(user=user,
+                                                     token_type='login')
 
-            return HttpResponseRedirect(redirect_to=url + '?token=' + token.key)
+            return HttpResponseRedirect(redirect_to=url + '?token=' +
+                                        token.key)
 
         else:
             raise APIException('Error from github')
@@ -1316,8 +1324,7 @@ def login_html_view(request):
                 msg = 'Must include "username" and "password".'
                 raise Exception(msg, code=403)
 
-            token, created = Token.get_or_create(user=user,
-                                                         token_type='login')
+            token, created = Token.get_or_create(user=user, token_type='login')
             return HttpResponseRedirect(url + '?token=' + str(token))
 
         except Exception as e:
@@ -1342,21 +1349,28 @@ def login_html_view(request):
 def get_google_token(request, token=None):
 
     if token == None:
-        raise ValidationException('No session token has been specified',slug='no-session-token')
+        raise ValidationException('No session token has been specified',
+                                  slug='no-session-token')
 
     url = request.query_params.get('url', None)
     if url == None:
-        raise ValidationException('No callback URL specified',slug='no-callback-url')
+        raise ValidationException('No callback URL specified',
+                                  slug='no-callback-url')
 
-    token = Token.get_valid(token) # IMPORTANT!! you can only connect to google with temporal short lasting tokens
-    if token is None or token.token_type != "temporal":
-        raise ValidationException('Invalid or inactive token', code=403, slug='invalid-token')
+    token = Token.get_valid(
+        token
+    )  # IMPORTANT!! you can only connect to google with temporal short lasting tokens
+    if token is None or token.token_type != 'temporal':
+        raise ValidationException('Invalid or inactive token',
+                                  code=403,
+                                  slug='invalid-token')
 
     params = {
         'response_type': 'code',
         'client_id': os.getenv('GOOGLE_CLIENT_ID', ''),
         'redirect_uri': os.getenv('GOOGLE_REDIRECT_URL', ''),
-        'access_type': 'offline', #we need offline access to receive refresh token and avoid total expiration
+        'access_type':
+        'offline',  #we need offline access to receive refresh token and avoid total expiration
         'scope': 'https://www.googleapis.com/auth/calendar.events',
         'state': f'token={token.key}&url={url}'
     }
@@ -1391,9 +1405,11 @@ def save_google_token(request):
     state = parse_qs(request.query_params.get('state', None))
 
     if state['url'] == None:
-        raise ValidationException('No callback URL specified',slug='no-callback-url')
+        raise ValidationException('No callback URL specified',
+                                  slug='no-callback-url')
     if state['token'] == None:
-        raise ValidationException('No user token specified',slug='no-user-token')
+        raise ValidationException('No user token specified',
+                                  slug='no-user-token')
 
     code = request.query_params.get('code', None)
     if code == None:
@@ -1429,7 +1445,7 @@ def save_google_token(request):
                 slug='token-not-found')
 
         user = token.user
-        refresh = ""
+        refresh = ''
         if 'refresh_token' in body:
             refresh = body['refresh_token']
 
@@ -1438,11 +1454,12 @@ def save_google_token(request):
             user=user,
             token=body['access_token'],
             refresh_token=refresh,
-            expires_at= timezone.now() + timedelta(seconds=body['expires_in']),
+            expires_at=timezone.now() + timedelta(seconds=body['expires_in']),
         )
         google_credentials.save()
 
-        return HttpResponseRedirect(redirect_to=state['url'][0] + '?token=' + token.key)
+        return HttpResponseRedirect(redirect_to=state['url'][0] + '?token=' +
+                                    token.key)
 
     else:
         logger.error(resp.json())
