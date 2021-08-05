@@ -87,6 +87,11 @@ class LayoutDesign(models.Model):
     html_content = models.TextField(null=True, default=None, blank=True)
     css_content = models.TextField(null=True, default=None, blank=True)
 
+    preview_url = models.CharField(max_length=250,
+                                   blank=False,
+                                   null=True,
+                                   default=None)
+
     background_url = models.CharField(max_length=250, blank=False, null=False)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 

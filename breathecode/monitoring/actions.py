@@ -254,7 +254,7 @@ def run_script(script):
                 script.response_text = s.getvalue()
             except ScriptNotification as e:
                 script.status_code = 1
-                script.response_text = s.getvalue()
+                script.response_text = str(e)
                 if e.title is not None:
                     script.special_status_text = e.title
 
