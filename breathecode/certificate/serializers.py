@@ -52,6 +52,7 @@ class LayoutDesignSerializer(serpy.Serializer):
     name = serpy.Field()
     is_default = serpy.Field()
     background_url = serpy.Field()
+    preview_url = serpy.Field()
 
 
 class CohortSmallSerializer(serpy.Serializer):
