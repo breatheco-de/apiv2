@@ -314,7 +314,7 @@ class Command(BaseCommand):
             'Growth Manager',
             'caps':
             extend(roles, ['staff', 'community_manager']) +
-            ['crud_media', 'read_activity', 'read_won_lead']
+            ['crud_media', 'read_activity', 'read_lead', 'read_won_lead']
         })
         roles.append({
             'slug': 'homework_reviewer',
