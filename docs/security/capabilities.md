@@ -1,4 +1,4 @@
-# BreatheCode Capabilities
+# Capabilities
 
 Authenticated users must belong to at least one academy with a specific role, each role has a series of capabilities that specify what any user with that role will be "capable" of doing.
 
