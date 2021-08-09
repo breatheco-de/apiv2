@@ -239,7 +239,7 @@ def sync_slack_team_channel(team_id):
 
     credentials = CredentialsSlack.objects.filter(
         team_id=team.slack_id).first()
-    if credentials is None:
+    if credentials is None or credentials.token is None:
         raise Exception(f'No credentials found for this team {team_id}')
 
     # Starting to sync, I need to reset the status
