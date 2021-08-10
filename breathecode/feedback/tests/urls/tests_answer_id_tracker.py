@@ -49,34 +49,38 @@ class AnswerIdTrackerTestSuite(FeedbackTestCase):
     def test_answer_id_tracker_with_data_without_status(self):
         """Test /answer/:id/tracker.png without auth"""
         model = self.generate_models(authenticate=True, answer=True)
-        db = self.model_to_dict(model, 'answer')
         url = reverse_lazy('feedback:answer_id_tracker',
                            kwargs={'answer_id': model['answer'].id})
         response = self.client.get(url)
 
-        # db['status'] = 'OPENED'
-
         self.assertEqual(response['content-type'], 'image/png')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(self.all_answer_dict(),
+                         [self.model_to_dict(model, 'answer')])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_id_tracker_with_data(self):
         """Test /answer/:id/tracker.png without auth"""
+        answer_kwargs = {'status': 'SENT'}
         model = self.generate_models(authenticate=True,
                                      answer=True,
-                                     answer_status='SENT')
-        db = self.model_to_dict(model, 'answer')
+                                     answer_kwargs=answer_kwargs)
         url = reverse_lazy('feedback:answer_id_tracker',
                            kwargs={'answer_id': model['answer'].id})
         response = self.client.get(url)
 
-        db['status'] = 'OPENED'
-
         self.assertEqual(response['content-type'], 'image/png')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        answers = self.all_answer_dict()
+        self.assertDatetime(answers[0]['opened_at'])
+        answers[0]['opened_at'] = None
+
         self.assertEqual(
-            self.check_all_opened_at_and_remove_it(self.all_answer_dict()),
-            [db])
+            answers,
+            [{
+                **self.model_to_dict(model, 'answer'),
+                'status': 'OPENED',
+            }])

@@ -1,7 +1,5 @@
-from .models import Badge, Specialty
-from rest_framework import serializers
 import serpy
-from breathecode.admissions.serializers import SyllabusSmallSerializer, SyllabusCertificateSerializer
+from breathecode.admissions.serializers import GetSmallSpecialtyModeSerializer
 
 
 class ProfileSmallSerializer(serpy.Serializer):
@@ -61,7 +59,8 @@ class CohortSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
-    syllabus = SyllabusCertificateSerializer()
+    specialty_mode = GetSmallSpecialtyModeSerializer(required=False,
+                                                     many=False)
 
 
 class SpecialtySerializer(serpy.Serializer):

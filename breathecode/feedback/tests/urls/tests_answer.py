@@ -11,7 +11,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins.new_feedback_test_case import FeedbackTestCase
+from ..mixins import FeedbackTestCase
 
 
 class AnswerTestSuite(FeedbackTestCase):

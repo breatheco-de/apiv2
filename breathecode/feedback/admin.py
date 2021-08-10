@@ -88,7 +88,8 @@ class CohortUserAdmin(CohortUserAdmin):
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
-    pass
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date',
+                    'syllabus_version', 'specialty_mode')
 
 
 def add_academy_to_answer(modeladmin, request, queryset):

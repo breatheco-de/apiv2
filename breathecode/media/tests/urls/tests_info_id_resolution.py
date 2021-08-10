@@ -1,7 +1,6 @@
 """
 Test /answer
 """
-import re, urllib
 from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
