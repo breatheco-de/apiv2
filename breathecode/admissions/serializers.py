@@ -263,6 +263,7 @@ class UserMeSerializer(serpy.Serializer):
 class GetSyllabusSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     github_url = serpy.Field()
     duration_in_hours = serpy.Field()
     duration_in_days = serpy.Field()
@@ -628,7 +629,11 @@ class CohortUserPUTSerializer(CohortUserSerializerMixin):
 
 class SyllabusSerializer(serializers.ModelSerializer):
     class Meta:
-        model = SyllabusVersion
+        model = Syllabus
+        fields = [
+            'id', 'academy_owner', 'duration_in_days', 'duration_in_hours', 'week_hours', 'github_url',
+            'logo', 'private'
+        ]
         exclude = ()
 
 

@@ -886,16 +886,15 @@ class SyllabusView(APIView):
             serializer = GetSyllabusSerializer(syllabus, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        syllabus = Syllabus.objects.filter(Q(academy_owner__id=academy_id) | Q(private=False)).first()
-        serializer = GetSyllabusVersionSerializer(syllabus, many=True)
+        syllabus = Syllabus.objects.filter(Q(academy_owner__id=academy_id) | Q(private=False))
+        serializer = GetSyllabusSerializer(syllabus, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_syllabus')
     def post(self, request, academy_id=None):
-        academy = Academy.objects.filter(id=academy_id).first()
         data = {
             **request.data,
-            'academy_owner': academy,
+            'academy_owner': academy_id,
         }
 
         serializer = SyllabusSerializer(data=data)
@@ -907,11 +906,10 @@ class SyllabusView(APIView):
 
     @capable_of('crud_syllabus')
     def put(self, request, syllabus_id=None, academy_id=None):
-        academy = Academy.objects.filter(id=academy_id).first()
         syllabus = Syllabus.objects.filter(id=syllabus_id, academy_owner__id=academy_id).first()
         data = {
             **request.data,
-            'academy_owner': academy,
+            'academy_owner': academy_id,
         }
 
         if not syllabus:
