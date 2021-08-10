@@ -16,42 +16,6 @@ class BaseTaskWithRetry(Task):
     retry_backoff = True
 
 
-# @shared_task(bind=True, base=BaseTaskWithRetry)
-# def monitor_app(self,app_id):
-#     logger.debug("Starting monitor_app")
-#     app = Application.objects.get(id=app_id)
-
-#     now = timezone.now()
-#     if app.paused_until is not None and app.paused_until > now:
-#         logger.debug(f"Ignoring App: {app.title} monitor because its paused")
-#         return True
-
-#     logger.debug(f"Running diagnostic for: {app.title} ")
-#     result = run_app_diagnostic(app)
-#     if result["status"] != "OPERATIONAL":
-#         if app.notify_email:
-#             send_email_message("diagnostic", app.notify_email, {
-#                 "subject": f"Errors have been found on {app.title} diagnostic",
-#                 "details": result["details"]
-#             })
-
-#         if (app.notify_slack_channel and app.academy and
-#                 hasattr(app.academy, 'slackteam') and
-#                 hasattr(app.academy.slackteam.owner, 'credentialsslack')):
-#             send_slack_raw(
-#                 "diagnostic",
-#                 app.academy.slackteam.owner.credentialsslack.token,
-#                 app.notify_slack_channel.slack_id, {
-#                     "subject": f"Errors have been found on {app.title} diagnostic",
-#                     **result,
-#                 }
-#             )
-
-#         return False
-
-#     return True
-
-
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def test_endpoint(self, endpoint_id):
     logger.debug('Starting monitor_app')
@@ -88,7 +52,7 @@ def test_endpoint(self, endpoint_id):
                 credentialsslack.token,
                 endpoint.application.notify_slack_channel.slack_id, {
                     'subject':
-                    f'Errors have been found on diagnostig of the app: {endpoint.application.title}',
+                    f'Errors found on app {endpoint.application.title} endpoint {endpoint.url}',
                     **result,
                 })
 
@@ -115,13 +79,17 @@ def execute_scripts(self, script_id):
 
     result = run_script(script)
     if result['status'] != 'OPERATIONAL':
+        subject = f'Errors have been found on {app.title} script {script.id} (slug: {script.script_slug})'
+        if 'title' in result and result[
+                'title'] is not None and result['title'] != '':
+            subject = result['title']
+
         if app.notify_email:
-            send_email_message(
-                'diagnostic', app.notify_email, {
-                    'subject':
-                    f'Errors have been found on {app.title} script {script.id} (slug: {script.script_slug})',
-                    'details': result['text']
-                })
+            send_email_message('diagnostic', app.notify_email, {
+                'subject': subject,
+                'details': result['text']
+            })
+
         if (app.notify_slack_channel and app.academy
                 and hasattr(app.academy, 'slackteam')
                 and hasattr(app.academy.slackteam.owner, 'credentialsslack')):
@@ -130,8 +98,7 @@ def execute_scripts(self, script_id):
                     'diagnostic',
                     app.academy.slackteam.owner.credentialsslack.token,
                     app.notify_slack_channel.slack_id, {
-                        'subject':
-                        f'Errors have been found on {app.title} script {script.id} (slug: {script.script_slug})',
+                        'subject': subject,
                         **result,
                     })
             except Exception:

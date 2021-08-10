@@ -234,7 +234,8 @@ class Command(BaseCommand):
                     'read_member', 'read_syllabus', 'read_student',
                     'read_cohort', 'read_media', 'read_my_academy',
                     'read_invite', 'get_academy_token', 'crud_activity',
-                    'read_survey', 'read_layout', 'read_event'
+                    'read_survey', 'read_layout', 'read_event',
+                    'academy_reporting'
                 ]
             },
             {
@@ -313,7 +314,7 @@ class Command(BaseCommand):
             'Growth Manager',
             'caps':
             extend(roles, ['staff', 'community_manager']) +
-            ['crud_media', 'read_activity', 'read_won_lead']
+            ['crud_media', 'read_activity', 'read_lead', 'read_won_lead']
         })
         roles.append({
             'slug': 'homework_reviewer',
@@ -333,7 +334,7 @@ class Command(BaseCommand):
             'caps':
             extend(roles, ['teacher']) + [
                 'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey',
-                'read_won_lead'
+                'read_won_lead', 'crud_member'
             ]
         })
         roles.append({

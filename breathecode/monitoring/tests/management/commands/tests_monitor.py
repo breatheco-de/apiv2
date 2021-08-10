@@ -1153,7 +1153,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_scripts,
             [{
                 **self.model_to_dict(model, 'monitor_script'),
-                'response_text': 'thus spoke kishibe rohan\n',
+                'response_text': monitor_scripts[0]["response_text"],
                 'status': 'MINOR',
                 'status_code': 1,
             }])
@@ -1201,7 +1201,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_scripts,
             [{
                 **self.model_to_dict(model, 'monitor_script'),
-                'response_text': 'thus spoke kishibe rohan\n',
+                'response_text': monitor_scripts[0]["response_text"],
                 'status': 'CRITICAL',
                 'status_code': 1,
             }])
@@ -1292,7 +1292,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_scripts,
             [{
                 **self.model_to_dict(model, 'monitor_script'),
-                'response_text': 'thus spoke kishibe rohan\n',
+                'response_text': monitor_scripts[0]["response_text"],
                 'status': 'MINOR',
                 'status_code': 1,
             }])
@@ -1340,7 +1340,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_scripts,
             [{
                 **self.model_to_dict(model, 'monitor_script'),
-                'response_text': 'thus spoke kishibe rohan\n',
+                'response_text': monitor_scripts[0]["response_text"],
                 'status': 'CRITICAL',
                 'status_code': 1,
             }])
@@ -1398,7 +1398,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_scripts,
             [{
                 **self.model_to_dict(model, 'monitor_script'),
-                'response_text': 'thus spoke kishibe rohan\n',
+                'response_text': monitor_scripts[0]["response_text"],
                 'status': 'CRITICAL',
                 'status_code': 1,
             }])

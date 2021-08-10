@@ -35,6 +35,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
             'severity_level': 5,
@@ -68,6 +69,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
             'severity_level': 5,
@@ -101,6 +103,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
             'severity_level': 5,
@@ -134,6 +137,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
             'severity_level': 5,
@@ -171,6 +175,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
             'severity_level': 5,
@@ -205,6 +210,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
             'severity_level': 5,
@@ -245,6 +251,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {'severity_level': 5, 'status': 'OPERATIONAL'}
 

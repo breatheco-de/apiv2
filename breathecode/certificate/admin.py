@@ -86,6 +86,10 @@ export_user_specialty_csv.short_description = '⬇️ Export Selected'
 
 @admin.register(UserSpecialty)
 class UserSpecialtyAdmin(admin.ModelAdmin):
+    search_fields = [
+        'user__email', 'user__first_name', 'user__last_name', 'cohort__name',
+        'cohort__slug'
+    ]
     list_display = ('user', 'specialty', 'expires_at', 'academy', 'cohort',
                     'pdf', 'preview')
     list_filter = ['specialty', 'academy__slug', 'cohort__slug']
