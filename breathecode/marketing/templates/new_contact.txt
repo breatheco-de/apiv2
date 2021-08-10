@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-    New contact from the website: 
-    
+    New contact from the website:
+
     Name: {{ full_mame }}
     Comments: {{ client_comments }}
 

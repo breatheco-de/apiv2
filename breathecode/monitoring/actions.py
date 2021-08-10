@@ -10,7 +10,7 @@ from breathecode.services.slack.actions.monitoring import render_snooze_text_end
 
 logger = logging.getLogger(__name__)
 
-USER_AGENT = "BreathecodeMonitoring/1.0"
+USER_AGENT = 'BreathecodeMonitoring/1.0'
 SCRIPT_HEADER = """
 # from django.conf import settings
 # import breathecode.settings as app_settings
@@ -29,7 +29,7 @@ def get_website_text(endp):
 
     url = endp.url
     status_code = 404
-    status_text = ""
+    status_text = ''
     payload = None
     try:
         r = requests.get(url, headers=headers, timeout=2)
@@ -47,45 +47,45 @@ def get_website_text(endp):
                 and int(length) > 3000):
             status_code = 400
             status_text = (
-                "Timeout: The payload of this request is too long "
-                "(more than 3 MB), remove the test_pattern to avoid timeout")
+                'Timeout: The payload of this request is too long '
+                '(more than 3 MB), remove the test_pattern to avoid timeout')
 
     except requests.Timeout:
         status_code = 500
-        status_text = "Connection Timeout"
+        status_text = 'Connection Timeout'
     except requests.ConnectionError:
         status_code = 404
-        status_text = "Connection Error"
+        status_text = 'Connection Error'
 
-    logger.debug(f"Tested {url} {status_code}")
+    logger.debug(f'Tested {url} {status_code}')
     endp.last_check = timezone.now()
 
     if status_code > 399:
         endp.status = 'CRITICAL'
         endp.severity_level = 100
-        endp.status_text = "Status above 399"
+        endp.status_text = 'Status above 399'
 
     elif status_code > 299:
         endp.status = 'MINOR'
         endp.severity_level = 5
-        endp.status_text = "Status in the 3xx range, maybe a cached reponse?"
+        endp.status_text = 'Status in the 3xx range, maybe a cached reponse?'
 
     elif status_code > 199:
         endp.severity_level = 5
         endp.status = 'OPERATIONAL'
-        endp.status_text = "Status withing the 2xx range"
+        endp.status_text = 'Status withing the 2xx range'
 
     else:
         endp.status = 'MINOR'
         endp.severity_level = 0
-        endp.status_text = "Uknown status code, lower than 200"
+        endp.status_text = 'Uknown status code, lower than 200'
 
     if endp.test_pattern and status_code == 200 and payload:
         if not re.search(endp.test_pattern, payload):
             endp.response_text = payload
             endp.status = 'MINOR'
             endp.severity_level = 5
-            endp.status_text = f"Status is 200 but regex {endp.test_pattern} was rejected"
+            endp.status_text = f'Status is 200 but regex {endp.test_pattern} was rejected'
         else:
             endp.response_text = None
 
@@ -103,57 +103,57 @@ def get_website_text(endp):
 def run_app_diagnostic(app, report=False):
 
     failed_endpoints = []  # data to be send to slack
-    results = {"severity_level": 0, "details": ""}
-    logger.debug(f"Testing application {app.title}")
+    results = {'severity_level': 0, 'details': ''}
+    logger.debug(f'Testing application {app.title}')
     now = timezone.now()
     _endpoints = app.endpoint_set.all()
     for endpoint in _endpoints:
         if endpoint.last_check is not None and endpoint.last_check > now - timezone.timedelta(
                 minutes=endpoint.frequency_in_minutes):
             logger.debug(
-                f"Ignoring {endpoint.url} because frequency hast not been met")
-            endpoint.status_text = "Ignored because its paused"
+                f'Ignoring {endpoint.url} because frequency hast not been met')
+            endpoint.status_text = 'Ignored because its paused'
             endpoint.save()
             continue
 
         if endpoint.paused_until is not None and endpoint.paused_until > now:
             logger.debug(
-                f"Ignoring endpoint:{endpoint.url} monitor because its paused")
-            endpoint.status_text = "Ignored because its paused"
+                f'Ignoring endpoint:{endpoint.url} monitor because its paused')
+            endpoint.status_text = 'Ignored because its paused'
             endpoint.save()
             continue
 
         # Starting the test
-        logger.debug(f"Testing endpoint: {endpoint.url}")
+        logger.debug(f'Testing endpoint: {endpoint.url}')
         endpoint.status = 'LOADING'
         endpoint.save()
 
         e = get_website_text(endpoint)
         if e.status != 'OPERATIONAL':
-            if e.severity_level > results["severity_level"]:
-                results["severity_level"] = e.severity_level
+            if e.severity_level > results['severity_level']:
+                results['severity_level'] = e.severity_level
             if e.special_status_text:
-                results["details"] += e.special_status_text
+                results['details'] += e.special_status_text
             if e.status not in results:
                 results[e.status] = []
             results[e.status].append(e.url)
             failed_endpoints.append(e)
 
-    if results["severity_level"] == 0:
-        results["status"] = 'OPERATIONAL'
-    elif results["severity_level"] > 10:
-        results["status"] = 'CRITICAL'
+    if results['severity_level'] == 0:
+        results['status'] = 'OPERATIONAL'
+    elif results['severity_level'] > 10:
+        results['status'] = 'CRITICAL'
     else:
-        results["status"] = 'MINOR'
+        results['status'] = 'MINOR'
 
-    results["slack_payload"] = render_snooze_text_endpoint(
+    results['slack_payload'] = render_snooze_text_endpoint(
         failed_endpoints)  # converting to json to send to slack
 
     # JSON Details to be shown on the error report
-    results["details"] = json.dumps(results, indent=4)
+    results['details'] = json.dumps(results, indent=4)
 
-    app.status = results["status"]
-    app.response_text = results["text"]
+    app.status = results['status']
+    app.response_text = results['text']
     app.save()
 
     return results
@@ -161,54 +161,54 @@ def run_app_diagnostic(app, report=False):
 
 def run_endpoint_diagnostic(endpoint_id):
     endpoint = Endpoint.objects.get(id=endpoint_id)
-    results = {"severity_level": 0, "details": "", "log": ""}
+    results = {'severity_level': 0, 'details': '', 'log': ''}
 
-    logger.debug(f"Testing endpoint {endpoint.url}")
+    logger.debug(f'Testing endpoint {endpoint.url}')
     now = timezone.now()
 
     if (endpoint.last_check and endpoint.last_check >
             now - timezone.timedelta(minutes=endpoint.frequency_in_minutes)):
         logger.debug(
-            f"Ignoring {endpoint.url} because frequency hast not been met")
-        endpoint.status_text = "Ignored because its paused"
+            f'Ignoring {endpoint.url} because frequency hast not been met')
+        endpoint.status_text = 'Ignored because its paused'
         endpoint.save()
         return False
 
     if endpoint.paused_until and endpoint.paused_until > now:
         logger.debug(
-            f"Ignoring endpoint:{endpoint.url} monitor because its paused")
-        endpoint.status_text = "Ignored because its paused"
+            f'Ignoring endpoint:{endpoint.url} monitor because its paused')
+        endpoint.status_text = 'Ignored because its paused'
         endpoint.save()
         return False
 
     # Starting the test
-    logger.debug(f"Testing endpoint: {endpoint.url}")
+    logger.debug(f'Testing endpoint: {endpoint.url}')
     endpoint.status = 'LOADING'
     endpoint.save()
 
     e = get_website_text(endpoint)
     results['text'] = e.response_text
     if e.status != 'OPERATIONAL':
-        if e.severity_level > results["severity_level"]:
-            results["severity_level"] = e.severity_level
+        if e.severity_level > results['severity_level']:
+            results['severity_level'] = e.severity_level
         if e.special_status_text:
-            results["details"] += e.special_status_text
+            results['details'] += e.special_status_text
         if e.status not in results:
             results[e.status] = []
         results[e.status].append(e.url)
 
-    if results["severity_level"] == 0:
-        results["status"] = 'OPERATIONAL'
-    elif results["severity_level"] > 10:
-        results["status"] = 'CRITICAL'
+    if results['severity_level'] == 0:
+        results['status'] = 'OPERATIONAL'
+    elif results['severity_level'] > 10:
+        results['status'] = 'CRITICAL'
     else:
-        results["status"] = 'MINOR'
+        results['status'] = 'MINOR'
 
-    results["slack_payload"] = render_snooze_text_endpoint(
+    results['slack_payload'] = render_snooze_text_endpoint(
         [endpoint])  # converting to json to send to slack
 
-    results["details"] = json.dumps(results, indent=4)
-    endpoint.response_text = results["text"]
+    results['details'] = json.dumps(results, indent=4)
+    endpoint.response_text = results['text']
 
     endpoint.save()
     return results
@@ -216,7 +216,7 @@ def run_endpoint_diagnostic(endpoint_id):
 
 def run_script(script):
     results = {
-        "severity_level": 0,
+        'severity_level': 0,
     }
 
     from io import StringIO
@@ -232,28 +232,32 @@ def run_script(script):
         sys.stdout = old
 
     content = None
-    if script.script_slug and script.script_slug != "other":
+    if script.script_slug and script.script_slug != 'other':
         dir_path = os.path.dirname(os.path.realpath(__file__))
         header = SCRIPT_HEADER
         content = header + \
-            open(f"{dir_path}/scripts/{script.script_slug}.py").read()
+            open(f'{dir_path}/scripts/{script.script_slug}.py').read()
     elif script.script_body:
         content = script.script_body
     else:
         raise Exception(
-            f"Script not found or its body is empty: {script.script_slug}")
+            f'Script not found or its body is empty: {script.script_slug}')
 
     if content:
-        local = {"result": {"status": "OPERATIONAL"}}
+        local = {'result': {'status': 'OPERATIONAL'}}
         with stdoutIO() as s:
             try:
-                exec(content, {"academy": script.application.academy}, local)
+                exec(content, {'academy': script.application.academy}, local)
                 script.status_code = 0
                 script.status = 'OPERATIONAL'
                 results['severity_level'] = 5
-
+                script.response_text = s.getvalue()
             except ScriptNotification as e:
                 script.status_code = 1
+                script.response_text = str(e)
+                if e.title is not None:
+                    script.special_status_text = e.title
+
                 if e.status is not None:
                     script.status = e.status
                     results[
@@ -264,19 +268,23 @@ def run_script(script):
                 results['error_slug'] = e.slug
                 print(e)
             except Exception as e:
+                import traceback
+                script.special_status_text = str(e)
+                script.response_text = ''.join(
+                    traceback.format_exception(None, e, e.__traceback__))
                 script.status_code = 1
                 script.status = 'CRITICAL'
-                results['error_slug'] = "uknown"
+                results['error_slug'] = 'uknown'
                 results['severity_level'] = 100
                 print(e)
 
         script.last_run = timezone.now()
-        script.response_text = s.getvalue()
         script.save()
 
         results['status'] = script.status
-        results["text"] = script.response_text
-        results["slack_payload"] = render_snooze_script(
+        results['text'] = script.response_text
+        results['title'] = script.special_status_text
+        results['slack_payload'] = render_snooze_script(
             [script])  # converting to json to send to slack
 
         return results

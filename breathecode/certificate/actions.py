@@ -13,14 +13,14 @@ from ..services.google_cloud import Storage
 
 logger = logging.getLogger(__name__)
 ENVIRONMENT = os.getenv('ENV', None)
-BUCKET_NAME = "certificates-breathecode"
+BUCKET_NAME = 'certificates-breathecode'
 
 strings = {
-    "es": {
-        "Main Instructor": "Instructor Principal",
+    'es': {
+        'Main Instructor': 'Instructor Principal',
     },
-    "en": {
-        "Main Instructor": "Main Instructor",
+    'en': {
+        'Main Instructor': 'Main Instructor',
     }
 }
 
@@ -72,6 +72,8 @@ def generate_certificate(user, cohort=None, layout=None):
         if specialty.expiration_day_delta is not None:
             uspe.expires_at = utc_now + timezone.timedelta(days=specialty.expiration_day_delta)
 
+    layout = LayoutDesign.objects.filter(slug=layout).first()
+
     if layout is None:
         layout = LayoutDesign.objects.filter(is_default=True, academy=cohort.academy).first()
 
@@ -91,7 +93,7 @@ def generate_certificate(user, cohort=None, layout=None):
                                   slug='without-main-teacher')
 
     main_teacher = main_teacher.user
-    uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
+    uspe.signed_by = main_teacher.first_name + ' ' + main_teacher.last_name
 
     try:
         uspe.academy = cohort.academy
@@ -126,7 +128,7 @@ def generate_certificate(user, cohort=None, layout=None):
                 slug='cohort-without-status-ended')
 
         uspe.status = PERSISTED
-        uspe.status_text = "Certificate successfully queued for PDF generation"
+        uspe.status_text = 'Certificate successfully queued for PDF generation'
         uspe.save()
 
     except ValidationException as e:
@@ -141,7 +143,7 @@ def generate_certificate(user, cohort=None, layout=None):
 def certificate_screenshot(certificate_id: int):
 
     certificate = UserSpecialty.objects.get(id=certificate_id)
-    if certificate.preview_url is None or certificate.preview_url == "":
+    if certificate.preview_url is None or certificate.preview_url == '':
         file_name = f'{certificate.token}'
 
         storage = Storage()
@@ -160,7 +162,7 @@ def certificate_screenshot(certificate_id: int):
             if r.status_code == 200:
                 file.upload(r.content, public=True)
             else:
-                print("Invalid reponse code: ", r.status_code)
+                print('Invalid reponse code: ', r.status_code)
 
         # after created, lets save the URL
         if file.blob is not None:
@@ -170,7 +172,7 @@ def certificate_screenshot(certificate_id: int):
 
 def remove_certificate_screenshot(certificate_id):
     certificate = UserSpecialty.objects.get(id=certificate_id)
-    if certificate.preview_url is None or certificate.preview_url == "":
+    if certificate.preview_url is None or certificate.preview_url == '':
         return False
 
     file_name = certificate.token
@@ -178,7 +180,7 @@ def remove_certificate_screenshot(certificate_id):
     file = storage.file(BUCKET_NAME, file_name)
     file.delete()
 
-    certificate.preview_url = ""
+    certificate.preview_url = ''
     certificate.save()
 
     return True

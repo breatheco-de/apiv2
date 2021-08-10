@@ -26,10 +26,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
         url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': 9999})
         response = self.client.get(url)
         json = response.json()
-        expected = {
-            'detail': 'Authentication credentials were not provided.',
-            'status_code': 401
-        }
+        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -61,14 +58,10 @@ class AnswerIdTestSuite(FeedbackTestCase):
         self.generate_models(authenticate=True)
         model = self.generate_models(answer=True)
         db = self.model_to_dict(model, 'answer')
-        url = reverse_lazy('feedback:answer_id',
-                           kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
         response = self.client.get(url)
         json = response.json()
-        expected = {
-            'detail': 'answer-of-other-user-or-not-exists',
-            'status_code': 404
-        }
+        expected = {'detail': 'answer-of-other-user-or-not-exists', 'status_code': 404}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -80,14 +73,10 @@ class AnswerIdTestSuite(FeedbackTestCase):
     def test_answer_id_with_data(self):
         """Test /answer/:id without auth"""
         answer_kwargs = {'status': 'SENT'}
-        model = self.generate_models(authenticate=True,
-                                     answer=True,
-                                     user=True,
-                                     answer_kwargs=answer_kwargs)
+        model = self.generate_models(authenticate=True, answer=True, user=True, answer_kwargs=answer_kwargs)
 
         db = self.model_to_dict(model, 'answer')
-        url = reverse_lazy('feedback:answer_id',
-                           kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
         response = self.client.get(url)
         json = response.json()
         expected = {
@@ -144,21 +133,16 @@ class AnswerIdTestSuite(FeedbackTestCase):
     def test_answer_id_put_without_score(self):
         """Test /answer/:id without auth"""
         answer_kwargs = {'status': 'SENT'}
-        model = self.generate_models(authenticate=True,
-                                     answer=True,
-                                     user=True,
-                                     answer_kwargs=answer_kwargs)
+        model = self.generate_models(authenticate=True, answer=True, user=True, answer_kwargs=answer_kwargs)
         db = self.model_to_dict(model, 'answer')
         data = {
             'comment': 'They killed kenny',
         }
-        url = reverse_lazy('feedback:answer_id',
-                           kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
         response = self.client.put(url, data)
         json = response.json()
 
-        self.assertEqual(
-            json, {'non_field_errors': ['Score must be between 1 and 10']})
+        self.assertEqual(json, {'non_field_errors': ['Score must be between 1 and 10']})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_answer_dict(), [db])
 
@@ -168,13 +152,9 @@ class AnswerIdTestSuite(FeedbackTestCase):
     def test_answer_id_put_with_score_less_of_1(self):
         """Test /answer/:id without auth"""
         answer_kwargs = {'status': 'SENT'}
-        model = self.generate_models(authenticate=True,
-                                     answer=True,
-                                     user=True,
-                                     answer_kwargs=answer_kwargs)
+        model = self.generate_models(authenticate=True, answer=True, user=True, answer_kwargs=answer_kwargs)
         db = self.model_to_dict(model, 'answer')
-        url = reverse_lazy('feedback:answer_id',
-                           kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
         data = {
             'comment': 'They killed kenny',
             'score': 0,
@@ -182,8 +162,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
         response = self.client.put(url, data)
         json = response.json()
 
-        self.assertEqual(
-            json, {'non_field_errors': ['Score must be between 1 and 10']})
+        self.assertEqual(json, {'non_field_errors': ['Score must be between 1 and 10']})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_answer_dict(), [db])
 
@@ -193,13 +172,9 @@ class AnswerIdTestSuite(FeedbackTestCase):
     def test_answer_id_put_with_score_more_of_10(self):
         """Test /answer/:id without auth"""
         answer_kwargs = {'status': 'SENT'}
-        model = self.generate_models(authenticate=True,
-                                     answer=True,
-                                     user=True,
-                                     answer_kwargs=answer_kwargs)
+        model = self.generate_models(authenticate=True, answer=True, user=True, answer_kwargs=answer_kwargs)
         db = self.model_to_dict(model, 'answer')
-        url = reverse_lazy('feedback:answer_id',
-                           kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
         data = {
             'comment': 'They killed kenny',
             'score': 11,
@@ -207,8 +182,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
         response = self.client.put(url, data)
         json = response.json()
 
-        self.assertEqual(
-            json, {'non_field_errors': ['Score must be between 1 and 10']})
+        self.assertEqual(json, {'non_field_errors': ['Score must be between 1 and 10']})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_answer_dict(), [db])
 
@@ -219,17 +193,15 @@ class AnswerIdTestSuite(FeedbackTestCase):
         """Test /answer/:id without auth"""
         answer_kwargs = {'status': 'SENT'}
 
-        for number in range(1, 10):
+        for score in range(1, 10):
             self.remove_all_answer()
             model = self.generate_models(authenticate=True,
                                          answer=True,
                                          user=True,
                                          answer_kwargs=answer_kwargs)
             db = self.model_to_dict(model, 'answer')
-            url = reverse_lazy('feedback:answer_id',
-                               kwargs={'answer_id': model['answer'].id})
+            url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
 
-            score = str(number)
             data = {
                 'comment': 'They killed kenny',
                 'score': score,
@@ -247,8 +219,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
                 'comment': data['comment'],
                 'status': 'ANSWERED',
                 'opened_at': model['answer'].opened_at,
-                'created_at':
-                datetime_to_iso_format(model['answer'].created_at),
+                'created_at': datetime_to_iso_format(model['answer'].created_at),
                 'cohort': model['answer'].cohort,
                 'academy': model['answer'].academy,
                 'survey': None,
@@ -262,10 +233,8 @@ class AnswerIdTestSuite(FeedbackTestCase):
             self.assertEqual(json, expected)
 
             dicts = [
-                answer for answer in self.all_answer_dict()
-                if not 'updated_at' in answer
-                or isinstance(answer['updated_at'], datetime)
-                and answer.pop('updated_at')
+                answer for answer in self.all_answer_dict() if not 'updated_at' in answer
+                or isinstance(answer['updated_at'], datetime) and answer.pop('updated_at')
             ]
 
             self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -309,16 +278,12 @@ class AnswerIdTestSuite(FeedbackTestCase):
     def test_answer_id_put_twice_same_score(self):
         """Test /answer/:id without auth"""
         answer_kwargs = {'status': 'SENT', 'score': 3}
-        model = self.generate_models(authenticate=True,
-                                     answer=True,
-                                     user=True,
-                                     answer_kwargs=answer_kwargs)
+        model = self.generate_models(authenticate=True, answer=True, user=True, answer_kwargs=answer_kwargs)
         db = self.model_to_dict(model, 'answer')
-        url = reverse_lazy('feedback:answer_id',
-                           kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
         data = {
             'comment': 'They killed kenny',
-            'score': '3',
+            'score': 3,
         }
         self.client.put(url, data)
 

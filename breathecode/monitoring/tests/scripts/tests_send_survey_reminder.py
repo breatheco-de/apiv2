@@ -22,7 +22,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def tests_send_survey__reminder_no_survey(self):
 
-        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
+        monitor_script_kwargs = {'script_slug': 'send_survey_reminder'}
 
         model = self.generate_models(
             academy=True,
@@ -34,10 +34,11 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
-            "severity_level": 5,
-            "status": 'OPERATIONAL',
+            'severity_level': 5,
+            'status': 'OPERATIONAL',
         }
 
         self.assertEqual(script, expected)
@@ -51,7 +52,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def tests_send_survey__ending_date_less_than_now(self):
 
-        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
+        monitor_script_kwargs = {'script_slug': 'send_survey_reminder'}
         ending_date = timezone.now() - timedelta(weeks=1)
         sent_at = timezone.now() - timedelta(weeks=5)
         model = self.generate_models(
@@ -66,10 +67,11 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
-            "severity_level": 5,
-            "status": 'OPERATIONAL',
+            'severity_level': 5,
+            'status': 'OPERATIONAL',
         }
         self.assertEqual(script, expected)
 
@@ -82,7 +84,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def tests_send_survey__kickoff_date_greater_than_now(self):
 
-        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
+        monitor_script_kwargs = {'script_slug': 'send_survey_reminder'}
         kickoff_date = timezone.now() + timedelta(weeks=1)
         sent_at = timezone.now() - timedelta(weeks=5)
         model = self.generate_models(
@@ -97,8 +99,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
-        expected = {"severity_level": 5, "status": 'OPERATIONAL'}
+        expected = {'severity_level': 5, 'status': 'OPERATIONAL'}
         self.assertEqual(script, expected)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -106,8 +109,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def tests_send_survey__latest_survey_less_four_weeks(self):
 
-        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
-        ending_date = timezone.now() + timedelta(weeks=2)
+        monitor_script_kwargs = {'script_slug': 'send_survey_reminder'}
+        ending_date = timezone.now() + timedelta(weeks=4)
         kickoff_date = timezone.now() - timedelta(weeks=12)
 
         base = self.generate_models(
@@ -117,9 +120,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_script_kwargs=monitor_script_kwargs,
             cohort_kwargs={
                 'ending_date': ending_date,
-                "kickoff_date": kickoff_date
+                'kickoff_date': kickoff_date
             })
-        sent_at = timezone.now() - timedelta(weeks=2)
+        sent_at = timezone.now() - timedelta(weeks=1)
         models = [
             self.generate_models(survey=True,
                                  survey_kwargs={'sent_at': sent_at},
@@ -130,10 +133,11 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
-            "severity_level": 5,
-            "status": 'OPERATIONAL',
+            'severity_level': 5,
+            'status': 'OPERATIONAL',
         }
         self.assertEqual(script, expected)
 
@@ -146,9 +150,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def tests_send_survey__latest_survey_greater_four_weeks(self):
 
-        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
+        monitor_script_kwargs = {'script_slug': 'send_survey_reminder'}
         ending_date = timezone.now() + timedelta(days=2)
-        kickoff_date = timezone.now() - timedelta(days=2)
+        kickoff_date = timezone.now() - timedelta(weeks=8)
 
         base = self.generate_models(
             academy=True,
@@ -157,7 +161,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_script_kwargs=monitor_script_kwargs,
             cohort_kwargs={
                 'ending_date': ending_date,
-                "kickoff_date": kickoff_date
+                'kickoff_date': kickoff_date
             })
 
         sent_at = timezone.now() - timedelta(weeks=6)
@@ -172,6 +176,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
             'severity_level': 5,
@@ -187,9 +192,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     def tests_send_survey__latest_survey_greater_four_weeks__two_cohorts__two_survey(
             self):
 
-        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
+        monitor_script_kwargs = {'script_slug': 'send_survey_reminder'}
         ending_date = timezone.now() + timedelta(days=2)
-        kickoff_date = timezone.now() - timedelta(days=2)
+        kickoff_date = timezone.now() - timedelta(weeks=12)
 
         base = self.generate_models(
             academy=True,
@@ -206,18 +211,19 @@ class AcademyCohortTestSuite(MonitoringTestCase):
                                  models=base,
                                  cohort_kwargs={
                                      'ending_date': ending_date,
-                                     "kickoff_date": kickoff_date
+                                     'kickoff_date': kickoff_date
                                  }) for _ in range(0, 2)
         ]
 
         script = run_script(models[1].monitor_script)
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
             'severity_level': 5,
-            'status': 'MINOR',
             'error_slug': 'cohort-have-pending-surveys',
+            'status': 'MINOR',
         }
 
         self.assertEqual(script, expected)
@@ -232,7 +238,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     def tests_send_survey__latest_survey_greater_four_weeks__cohort_never_ends(
             self):
 
-        monitor_script_kwargs = {"script_slug": "send_survey_reminder"}
+        monitor_script_kwargs = {'script_slug': 'send_survey_reminder'}
         ending_date = timezone.now() + timedelta(days=2)
         kickoff_date = timezone.now() - timedelta(days=2)
 
@@ -243,7 +249,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_script_kwargs=monitor_script_kwargs,
             cohort_kwargs={
                 'ending_date': ending_date,
-                "kickoff_date": kickoff_date,
+                'kickoff_date': kickoff_date,
                 'never_ends': True
             })
 
@@ -259,6 +265,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
             'severity_level': 5,

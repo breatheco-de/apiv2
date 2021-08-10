@@ -102,12 +102,12 @@ class MediaTestSuite(MediaTestCase):
                              role='potato')
 
         url = reverse_lazy('activity:type_slug',
-                           kwargs={'activity_slug': 'academy-registration'})
+                           kwargs={'activity_slug': 'academy_registration'})
         response = self.client.get(url)
         json = response.json()
         expected = {
             'description': 'When student successfuly join to academy',
-            'slug': 'academy-registration',
+            'slug': 'academy_registration',
         }
 
         self.assertEqual(json, expected)

@@ -5,8 +5,8 @@ from rest_framework.test import APITestCase
 from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin, DatetimeMixin
 
 
-class CertificateTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
-                          TokenMixin, GenerateQueriesMixin, DatetimeMixin):
+class CertificateTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
+                          DatetimeMixin):
     """CertificateTestCase with auth methods"""
     def setUp(self):
         self.generate_queries()

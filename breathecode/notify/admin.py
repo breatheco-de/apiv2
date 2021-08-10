@@ -21,23 +21,23 @@ class DeviceAdmin(admin.ModelAdmin):
 
 
 def sync_channels(modeladmin, request, queryset):
-    logger.debug(f"Bulk sync channels")
+    logger.debug(f'Bulk sync channels')
     teams = queryset.all()
     for team in teams:
         sync_slack_team_channel(team.id)
 
 
-sync_channels.short_description = "Import channels from slack"
+sync_channels.short_description = 'Import channels from slack'
 
 
 def sync_users(modeladmin, request, queryset):
-    logger.debug(f"Bulk sync channels")
+    logger.debug(f'Bulk sync channels')
     teams = queryset.all()
     for team in teams:
         async_slack_team_users.delay(team.id)
 
 
-sync_users.short_description = "Import users from slack"
+sync_users.short_description = 'Import users from slack'
 
 
 @admin.register(SlackTeam)
@@ -53,7 +53,7 @@ class SlackUserAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'slack_id', 'display_name', 'real_name', 'email', 'user__email',
         'user__first_name', 'user__last_name'
     ]
-    raw_id_fields = ["user"]
+    raw_id_fields = ['user']
     list_display = ('slack_id', 'user_link', 'display_name', 'real_name',
                     'email', 'updated_at')
     actions = ['export_as_csv']
@@ -61,9 +61,9 @@ class SlackUserAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     def user_link(self, obj):
         if obj.user is not None:
             return format_html('<a href="%s">%s</a>' % (reverse(
-                "admin:auth_user_change", args=(obj.user.id, )), escape(obj)))
+                'admin:auth_user_change', args=(obj.user.id, )), escape(obj)))
         else:
-            return "Missing BC user"
+            return 'Missing BC user'
 
 
 @admin.register(SlackUserTeam)
@@ -72,7 +72,7 @@ class SlackUserTeamAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'slack_user__email', 'slack_user__user__first_name',
         'slack_user__user__last_name', 'slack_team__id', 'slack_team__name'
     ]
-    raw_id_fields = ["slack_user"]
+    raw_id_fields = ['slack_user']
     list_display = ('slack_user', 'sync_status', 'breathecode_user',
                     'slack_team', 'created_at')
     list_filter = [
@@ -83,10 +83,10 @@ class SlackUserTeamAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     def breathecode_user(self, obj):
         if obj.slack_user.user is not None:
             return format_html('<a href="%s">%s</a>' % (reverse(
-                "admin:auth_user_change",
+                'admin:auth_user_change',
                 args=(obj.slack_user.user.id, )), escape(obj.slack_user.user)))
         else:
-            return "Missing BC user"
+            return 'Missing BC user'
 
 
 @admin.register(SlackChannel)
@@ -100,23 +100,23 @@ class SlackChannelAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     def cohort_link(self, obj):
         if obj.cohort is not None:
             return format_html('<a href="%s">%s</a>' %
-                               (reverse("admin:auth_user_change",
+                               (reverse('admin:auth_user_change',
                                         args=(obj.cohort.id, )), escape(obj)))
         else:
-            return "No BC cohort"
+            return 'No BC cohort'
 
 
 def test_user_notification(modeladmin, request, queryset):
 
     users = queryset.all()
     for u in users:
-        logger.debug(f"Testing slack notification for {u.id}")
-        send_slack("test_message",
+        logger.debug(f'Testing slack notification for {u.id}')
+        send_slack('test_message',
                    slackuser=u.slackuser,
-                   data={"MESSAGE": "Hello World"})
+                   data={'MESSAGE': 'Hello World'})
 
 
-test_user_notification.short_description = "💬 Send slack test notification"
+test_user_notification.short_description = '💬 Send slack test notification'
 
 
 @admin.register(UserProxy)
@@ -129,13 +129,13 @@ def test_cohort_notification(modeladmin, request, queryset):
 
     cohorts = queryset.all()
     for c in cohorts:
-        logger.debug(f"Testing slack notification for cohort {c.id}")
-        send_slack("test_message",
+        logger.debug(f'Testing slack notification for cohort {c.id}')
+        send_slack('test_message',
                    slackchannel=c.slackchannel,
-                   data={"MESSAGE": "Hello World"})
+                   data={'MESSAGE': 'Hello World'})
 
 
-test_cohort_notification.short_description = "💬 Send slack test notification"
+test_cohort_notification.short_description = '💬 Send slack test notification'
 
 
 @admin.register(CohortProxy)

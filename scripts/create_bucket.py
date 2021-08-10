@@ -37,7 +37,7 @@ def create_bucket(name: str):
     storage_client = storage.Client()
     bucket = storage_client.create_bucket(name)
 
-    print(f"Bucket {bucket.name} created.")
+    print(f'Bucket {bucket.name} created.')
 
 
 if __name__ == '__main__':

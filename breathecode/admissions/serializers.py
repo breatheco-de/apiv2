@@ -290,11 +290,7 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
         return obj.syllabus.id if obj.syllabus else None
 
 
-"""
-            ↓ EDIT SERIALIZERS ↓
-"""
-
-
+#        ↓ EDIT SERIALIZERS ↓
 class AcademySerializer(serializers.ModelSerializer):
     country = CountrySerializer(required=True)
     city = CitySerializer(required=True)
@@ -305,7 +301,7 @@ class AcademySerializer(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        if "slug" in data and data["slug"] != self.instance.slug:
+        if 'slug' in data and data['slug'] != self.instance.slug:
             raise ValidationException('Academy slug cannot be updated')
 
         return data
@@ -360,9 +356,9 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             if 'syllabus' in data:
                 del data['syllabus']
 
-        if "slug" in data:
-            cohort = Cohort.objects.filter(slug=data["slug"]).first()
-            if cohort is not None and self.instance.slug != data["slug"]:
+        if 'slug' in data:
+            cohort = Cohort.objects.filter(slug=data['slug']).first()
+            if cohort is not None and self.instance.slug != data['slug']:
                 raise ValidationException('Slug already exists for another cohort',
                                           slug='slug-already-exists')
 
@@ -474,7 +470,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             ids = CohortUser.objects.filter(id=id).values_list('user_id', 'cohort_id').first()
 
             if not ids:
-                raise ValidationException("Invalid id", code=400)
+                raise ValidationException('Invalid id', code=400)
             user_id = ids[0]
             cohort_id = ids[1]
 
@@ -482,20 +478,20 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             user_id = request_item.get('user')
 
         if not is_many and (cohort_id is None or user_id is None):
-            raise ValidationException("Missing cohort_id or user_id", code=400)
+            raise ValidationException('Missing cohort_id or user_id', code=400)
 
         if User.objects.filter(id=user_id).count() == 0:
-            raise ValidationException("invalid user_id", code=400)
+            raise ValidationException('invalid user_id', code=400)
 
         cohort = Cohort.objects.filter(id=cohort_id)
         if not cohort:
-            raise ValidationException("invalid cohort_id", code=400)
+            raise ValidationException('invalid cohort_id', code=400)
 
         # only from this academy
         cohort = localize_query(cohort, request).first()
 
         if cohort is None:
-            logger.debug(f"Cohort not be found in related academies")
+            logger.debug(f'Cohort not be found in related academies')
             raise ValidationException('Specified cohort not be found')
 
         if not disable_cohort_user_just_once and CohortUser.objects.filter(user_id=user_id,
@@ -683,4 +679,50 @@ class SyllabusVersionPutSerializer(serializers.ModelSerializer):
             'version': {
                 'read_only': True
             },
+        }
+
+
+class AcademyReportSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    name = serpy.Field()
+    slug = serpy.Field()
+    logo_url = serpy.Field()
+    website_url = serpy.Field()
+    street_address = serpy.Field()
+    latitude = serpy.Field()
+    longitude = serpy.Field()
+    status = serpy.Field()
+
+    students = serpy.MethodField()
+
+    def get_students(self, obj):
+
+        query = CohortUser.objects.filter(cohort__academy__id=obj.id, role='STUDENT')
+        return {
+            'total': query.count(),
+            'active': query.filter(educational_status='ACTIVE').count(),
+            'suspended': query.filter(educational_status='SUSPENDED').count(),
+            'graduated': query.filter(educational_status='GRADUATED').count(),
+            'dropped': query.filter(educational_status='DROPPED').count(),
+        }
+
+    teachers = serpy.MethodField()
+
+    def get_teachers(self, obj):
+
+        query = CohortUser.objects.filter(cohort__academy__id=obj.id,
+                                          cohort__stage__in=['STARTED', 'FINAL_PROJECT'])
+        active = {
+            'main': query.filter(role='TEACHER').count(),
+            'assistant': query.filter(role='ASSISTANT').count(),
+            'reviewer': query.filter(role='REVIEWER').count(),
+        }
+        active['total'] = int(active['main']) + int(active['assistant']) + int(active['reviewer'])
+
+        total = ProfileAcademy.objects.filter(role__slug__in=['teacher', 'assistant'])
+        return {
+            'total': total.count(),
+            'active': active,
         }

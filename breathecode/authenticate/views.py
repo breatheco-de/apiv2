@@ -1,4 +1,5 @@
 import os, requests, base64, logging
+from datetime import timezone, timedelta
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import update_session_auth_hash
@@ -26,6 +27,7 @@ from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm
 from .models import (
     Profile,
     CredentialsGithub,
+    CredentialsGoogle,
     Token,
     CredentialsSlack,
     CredentialsFacebook,
@@ -55,16 +57,14 @@ class TemporalTokenView(ObtainAuthToken):
 
     def post(self, request):
 
-        user = request.user
-        Token.objects.filter(token_type='temporal').delete()
-        token = Token.objects.create(user=user, token_type='temporal')
-        token.save()
+        token, created = Token.get_or_create(user=request.user,
+                                             token_type='temporal')
         return Response({
             'token': token.key,
             'token_type': token.token_type,
             'expires_at': token.expires_at,
-            'user_id': user.pk,
-            'email': user.email
+            'user_id': token.user.pk,
+            'email': token.user.email
         })
 
 
@@ -78,15 +78,15 @@ class AcademyTokenView(ObtainAuthToken):
         academy_user = User.objects.filter(username=academy.slug).first()
         if academy_user is None:
             raise ValidationException(
-                "No academy token has been generated yet",
-                slug="academy-token-not-found")
+                'No academy token has been generated yet',
+                slug='academy-token-not-found')
 
         token = Token.objects.filter(user=academy_user,
                                      token_type='permanent').first()
         if token is None:
             raise ValidationException(
-                "No academy token has been generated yet",
-                slug="academy-token-not-found")
+                'No academy token has been generated yet',
+                slug='academy-token-not-found')
 
         return Response({
             'token': token.key,
@@ -101,16 +101,16 @@ class AcademyTokenView(ObtainAuthToken):
         academy_user = User.objects.filter(username=academy.slug).first()
         if academy_user is None:
             academy_user = User(username=academy.slug,
-                                email=f"{academy.slug}@token.com")
+                                email=f'{academy.slug}@token.com')
             academy_user.save()
 
-            role = Role.objects.get(slug="academy_token")
+            role = Role.objects.get(slug='academy_token')
             # this profile is for tokens, that is why we need no  email validation status=ACTIVE, role must be academy_token
             # and the email is empty
             profile_academy = ProfileAcademy(user=academy_user,
                                              academy=academy,
                                              role=role,
-                                             status="ACTIVE")
+                                             status='ACTIVE')
             profile_academy.save()
 
         Token.objects.filter(user=academy_user).delete()
@@ -131,7 +131,7 @@ class LogoutView(APIView):
         Token.objects.filter(token_type='login').delete()
         request.auth.delete()
         return Response({
-            'message': "User tokens successfully deleted",
+            'message': 'User tokens successfully deleted',
         })
 
 
@@ -158,11 +158,11 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             return Response(serializer.data)
 
         items = ProfileAcademy.objects.filter(academy__id=academy_id).exclude(
-            role__slug="student")
+            role__slug='student')
 
         roles = request.GET.get('roles', None)
         if is_many and roles is not None:
-            items = items.filter(role__in=roles.split(","))
+            items = items.filter(role__in=roles.split(','))
 
         status = request.GET.get('status', None)
         if is_many and status is not None:
@@ -172,7 +172,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if like is not None:
             items = query_like_by_full_name(like=like, items=items)
 
-        items = items.exclude(user__email__contains="@token.com")
+        items = items.exclude(user__email__contains='@token.com')
 
         if not is_many:
             items = items.first()
@@ -190,7 +190,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         serializer = MemberPOSTSerializer(data=request.data,
                                           context={
                                               'academy_id': academy_id,
-                                              "request": request
+                                              'request': request
                                           })
         if serializer.is_valid():
             serializer.save()
@@ -198,11 +198,16 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_member')
-    def put(self, request, academy_id=None, user_id=None):
+    def put(self, request, academy_id=None, user_id_or_email=None):
 
-        already = ProfileAcademy.objects.filter(
-            user=user_id, academy__id=academy_id).first()
-        request_data = {**request.data, "user": user_id, "academy": academy_id}
+        already = None
+        if user_id_or_email.isnumeric():
+            already = ProfileAcademy.objects.filter(
+                user__id=user_id_or_email, academy_id=academy_id).first()
+        else:
+            raise ValidationException('User id must be a numeric value', 404)
+
+        request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id}
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
@@ -224,7 +229,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def delete(self, request, academy_id=None, user_id=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
-        print("printing items", lookups)
+        print('printing items', lookups)
 
         if lookups and user_id:
             raise ValidationException(
@@ -235,7 +240,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if lookups:
             items = ProfileAcademy.objects.filter(
                 **lookups,
-                academy__id=academy_id).exclude(role__slug="student")
+                academy__id=academy_id).exclude(role__slug='student')
 
             for item in items:
 
@@ -245,9 +250,9 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         member = ProfileAcademy.objects.filter(
             user=user_id,
-            academy__id=academy_id).exclude(role__slug="student").first()
+            academy__id=academy_id).exclude(role__slug='student').first()
         if member is None:
-            raise ValidationException("Member not found", 404)
+            raise ValidationException('Member not found', 404)
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
@@ -256,12 +261,12 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def get(self, request):
 
         if request.user is None:
-            raise ValidationException("User not found", 404)
+            raise ValidationException('User not found', 404)
 
         invite = UserInvite.objects.filter(email=request.user.email,
                                            status='PENDING').first()
         if invite is None:
-            raise ValidationException("No pending invite was found", 404)
+            raise ValidationException('No pending invite was found', 404)
 
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
@@ -285,7 +290,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     profile_academy = ProfileAcademy(
                         academy=item.academy,
                         role=item.role,
-                        status="ACTIVE",
+                        status='ACTIVE',
                         email=item.email,
                         first_name=item.first_name,
                         last_name=item.last_name)
@@ -295,9 +300,9 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         else:
-            raise ValidationException("Invite ids were not provided",
+            raise ValidationException('Invite ids were not provided',
                                       404,
-                                      slug="missing_ids")
+                                      slug='missing_ids')
 
 
 class ProfileInviteView(APIView, HeaderLimitOffsetPagination,
@@ -308,14 +313,14 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination,
         profile = ProfileAcademy.objects.filter(academy__id=academy_id,
                                                 id=profileacademy_id).first()
         if profile is None:
-            raise ValidationException("Profile not found", 404)
+            raise ValidationException('Profile not found', 404)
 
         invite = UserInvite.objects.filter(academy__id=academy_id,
                                            email=profile.email,
                                            status='PENDING').first()
 
         if invite is None:
-            raise ValidationException("No pending invite was found", 404)
+            raise ValidationException('No pending invite was found', 404)
 
         serializer = UserInviteSerializer(invite, many=False)
         return Response(serializer.data)
@@ -331,9 +336,9 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination,
                 item.delete()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
         else:
-            raise ValidationException("Invite ids were not provided",
+            raise ValidationException('Invite ids were not provided',
                                       404,
-                                      slug="missing_ids")
+                                      slug='missing_ids')
 
 
 class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -350,7 +355,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                     user__email=user_id_or_email).first()
 
             if profile is None:
-                raise ValidationException("Profile not found", 404)
+                raise ValidationException('Profile not found', 404)
 
             serializer = GETProfileAcademy(profile, many=False)
             return Response(serializer.data)
@@ -379,7 +384,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         serializer = StudentPOSTSerializer(data=request.data,
                                            context={
                                                'academy_id': academy_id,
-                                               "request": request
+                                               'request': request
                                            })
         if serializer.is_valid():
             serializer.save()
@@ -387,28 +392,28 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_student')
-    def put(self, request, academy_id=None, user_id=None):
+    def put(self, request, academy_id=None, user_id_or_email=None):
 
-        already = ProfileAcademy.objects.filter(
-            user=user_id, academy__id=academy_id).first()
+        student = ProfileAcademy.objects.filter(
+            user=user_id_or_email, academy__id=academy_id).first()
 
-        if already and already.role.slug != "student":
+        if student and student.role.slug != 'student':
             raise ValidationException(
-                f"This endpoint can only update student profiles (not {already.role.slug})"
+                f'This endpoint can only update student profiles (not {student.role.slug})'
             )
 
         request_data = {
-            **request.data, "user": user_id,
-            "academy": academy_id,
-            "role": "student"
+            **request.data, 'user': student.user.id,
+            'academy': academy_id,
+            'role': 'student'
         }
-        if "role" in request.data:
+        if 'role' in request.data:
             raise ValidationException(
-                "The student role cannot be updated with this endpoint, user /member instead."
+                'The student role cannot be updated with this endpoint, user /member instead.'
             )
 
-        if already:
-            serializer = MemberPUTSerializer(already, data=request_data)
+        if student:
+            serializer = MemberPUTSerializer(student, data=request_data)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data,
@@ -417,13 +422,13 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                             status=status.HTTP_400_BAD_REQUEST)
         else:
             raise ValidationException(
-                "The user is not a student in this academy")
+                'The user is not a student in this academy')
 
     @capable_of('crud_student')
-    def delete(self, request, academy_id=None, user_id=None):
+    def delete(self, request, academy_id=None, user_id_or_email=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
-        if lookups and user_id:
+        if lookups and user_id_or_email:
             raise ValidationException(
                 'user_id was provided in url '
                 'in bulk mode request, use querystring style instead',
@@ -440,12 +445,12 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        if academy_id is None or user_id is None:
-            raise serializers.ValidationError("Missing user_id or academy_id",
+        if academy_id is None or user_id_or_email is None:
+            raise serializers.ValidationError('Missing user_id or academy_id',
                                               code=400)
 
         profile = ProfileAcademy.objects.filter(academy__id=academy_id,
-                                                user__id=user_id,
+                                                user__id=user_id_or_email,
                                                 role__slug='student').first()
         if profile is None:
             raise serializers.ValidationError(
@@ -459,16 +464,12 @@ class LoginView(ObtainAuthToken):
     schema = AutoSchema()
 
     def post(self, request, *args, **kwargs):
-        # delete expired tokens
-        utc_now = timezone.now()
-        Token.objects.filter(expires_at__lt=utc_now).delete()
 
         serializer = AuthSerializer(data=request.data,
                                     context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
-        token, created = Token.objects.get_or_create(user=user,
-                                                     token_type="login")
+        token, created = Token.get_or_create(user=user, token_type='login')
         return Response({
             'token': token.key,
             'user_id': user.pk,
@@ -483,7 +484,7 @@ def get_token_info(request, token):
     token = Token.objects.filter(key=token).first()
 
     if token is None or token.expires_at < timezone.now():
-        raise PermissionDenied("Expired or invalid token")
+        raise PermissionDenied('Expired or invalid token')
 
     return Response({
         'token': token.key,
@@ -498,7 +499,7 @@ class UserMeView(APIView):
 
         try:
             if isinstance(request.user, AnonymousUser):
-                raise PermissionDenied("There is not user")
+                raise PermissionDenied('There is not user')
 
         except User.DoesNotExist:
             raise PermissionDenied("You don't have a user")
@@ -510,14 +511,14 @@ class UserMeView(APIView):
 
         try:
             if isinstance(request.user, AnonymousUser):
-                raise PermissionDenied("There is not user")
+                raise PermissionDenied('There is not user')
 
         except User.DoesNotExist:
             raise PermissionDenied("You don't have a user")
 
         serializer = UserMeSerializer(request.user,
                                       data=request.data,
-                                      context={"request": request})
+                                      context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -544,7 +545,7 @@ def get_users(request):
             Q(first_name__icontains=like) | Q(last_name__icontains=like)
             | Q(email__icontains=like))
 
-    query = query.exclude(email__contains="@token.com")
+    query = query.exclude(email__contains='@token.com')
     query = query.order_by('-date_joined')
     users = UserSmallSerializer(query, many=True)
     return Response(users.data)
@@ -560,8 +561,8 @@ def get_user_by_id_or_email(request, id_or_email):
         query = User.objects.filter(email=id_or_email).first()
 
     if query is None:
-        raise ValidationException("User with that id or email does not exists",
-                                  slug="user-dont-exists",
+        raise ValidationException('User with that id or email does not exists',
+                                  slug='user-dont-exists',
                                   code=404)
 
     users = UserSmallSerializer(query, many=False)
@@ -580,38 +581,27 @@ def get_roles(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def get_github_token(request, user_id=None):
+def get_github_token(request, token=None):
 
     url = request.query_params.get('url', None)
     if url == None:
-        raise ValidationException("No callback URL specified",
-                                  slug="no-callback-url")
+        raise ValidationException('No callback URL specified',
+                                  slug='no-callback-url')
 
-    url_name = resolve(request.path).url_name
-
-    if url_name == 'github_me':
-        try:
-            if isinstance(request.user, AnonymousUser):
-                raise ValidationException("There is not user",
-                                          code=403,
-                                          slug="not-user")
-
-        except User.DoesNotExist:
-            raise ValidationException("You don't have a user",
-                                      code=403,
-                                      slug="you-not-user")
-
-        user, created = Token.objects.get_or_create(user=request.user,
-                                                    token_type='login')
-        url = url + f"&user={user.key}"
+    if token is not None:
+        if Token.get_valid(token) is None:
+            raise ValidationException('Invalid or missing token',
+                                      slug='invalid-token')
+        else:
+            url = url + f'&user={token}'
 
     params = {
-        "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
-        "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "") + f"?url={url}",
-        "scope": 'user repo read:org',
+        'client_id': os.getenv('GITHUB_CLIENT_ID', ''),
+        'redirect_uri': os.getenv('GITHUB_REDIRECT_URL', '') + f'?url={url}',
+        'scope': 'user repo read:org',
     }
 
-    logger.debug("Redirecting to github")
+    logger.debug('Redirecting to github')
     logger.debug(params)
 
     redirect = f'https://github.com/login/oauth/authorize?{urlencode(params)}'
@@ -630,28 +620,28 @@ def get_github_token(request, user_id=None):
 @permission_classes([AllowAny])
 def save_github_token(request):
 
-    logger.debug("Github callback just landed")
+    logger.debug('Github callback just landed')
     logger.debug(request.query_params)
 
     error = request.query_params.get('error', False)
     error_description = request.query_params.get('error_description', '')
     if error:
-        raise APIException("Github: " + error_description)
+        raise APIException('Github: ' + error_description)
 
     url = request.query_params.get('url', None)
     if url == None:
-        raise ValidationException("No callback URL specified",
-                                  slug="no-callback-url")
+        raise ValidationException('No callback URL specified',
+                                  slug='no-callback-url')
     code = request.query_params.get('code', None)
     if code == None:
-        raise ValidationException("No github code specified", slug="no-code")
+        raise ValidationException('No github code specified', slug='no-code')
 
     token = request.query_params.get('user', None)
 
     payload = {
-        'client_id': os.getenv('GITHUB_CLIENT_ID', ""),
-        'client_secret': os.getenv('GITHUB_SECRET', ""),
-        'redirect_uri': os.getenv('GITHUB_REDIRECT_URL', ""),
+        'client_id': os.getenv('GITHUB_CLIENT_ID', ''),
+        'client_secret': os.getenv('GITHUB_SECRET', ''),
+        'redirect_uri': os.getenv('GITHUB_REDIRECT_URL', ''),
         'code': code,
     }
     headers = {'Accept': 'application/json'}
@@ -660,7 +650,7 @@ def save_github_token(request):
                          headers=headers)
     if resp.status_code == 200:
 
-        logger.debug("Github responded with 200")
+        logger.debug('Github responded with 200')
 
         body = resp.json()
         if 'access_token' not in body:
@@ -680,32 +670,37 @@ def save_github_token(request):
                 if resp.status_code == 200:
                     emails = resp.json()
                     primary_emails = [
-                        x for x in emails if x["primary"] == True
+                        x for x in emails if x['primary'] == True
                     ]
                     if len(primary_emails) > 0:
-                        github_user['email'] = primary_emails[0]["email"]
+                        github_user['email'] = primary_emails[0]['email']
                     elif len(emails) > 0:
-                        github_user['email'] = emails[0]["email"]
+                        github_user['email'] = emails[0]['email']
 
             if github_user['email'] is None:
-                raise ValidationError("Impossible to retrieve user email")
+                raise ValidationError('Impossible to retrieve user email')
 
-            if token and not Token.objects.filter(key=token).exists():
-                logger.debug(f'Token not found')
-                raise ValidationException(
-                    'Token was not found, please input different token',
-                    code=404,
-                    slug='token-not-found')
-
-            if token:
-                user_token = Token.objects.filter(key=token).first()
-                user = User.objects.filter(auth_token=user_token.id).first()
-
+            # is a valid token??? if not valid it will become None
+            if token is not None and token != '':
+                token = Token.get_valid(token)
+                if not token:
+                    logger.debug(f'Token not found or is expired')
+                    raise ValidationException(
+                        'Token was not found or is expired, please use a different token',
+                        code=404,
+                        slug='token-not-found')
+                user = User.objects.filter(auth_token=token.id).first()
             else:
+                # for the token to become null for easier management
+                token = None
+
+            # user can't be found thru token, lets try thru the github credentials
+            if token is None:
                 user = User.objects.filter(
                     Q(credentialsgithub__github_id=github_user['id'])
                     | Q(email__iexact=github_user['email'])).first()
 
+            # create the user if not exists
             if user is None:
                 user = User(username=github_user['email'],
                             email=github_user['email'])
@@ -737,8 +732,8 @@ def save_github_token(request):
                     twitter_username=github_user['twitter_username'])
                 profile.save()
 
-            student_role = Role.objects.get(slug="student")
-            cus = CohortUser.objects.filter(user=user, role="STUDENT")
+            student_role = Role.objects.get(slug='student')
+            cus = CohortUser.objects.filter(user=user, role='STUDENT')
             for cu in cus:
                 profile_academy = ProfileAcademy.objects.filter(
                     user=cu.user, academy=cu.cohort.academy).first()
@@ -754,14 +749,14 @@ def save_github_token(request):
                     profile_academy.save()
 
             if not token:
-                token, created = Token.objects.get_or_create(
-                    user=user, token_type='login')
-                token = token.key
+                token, created = Token.get_or_create(user=user,
+                                                     token_type='login')
 
-            return HttpResponseRedirect(redirect_to=url + '?token=' + token)
+            return HttpResponseRedirect(redirect_to=url + '?token=' +
+                                        token.key)
 
         else:
-            raise APIException("Error from github")
+            raise APIException('Error from github')
 
 
 # Create your views here.
@@ -771,36 +766,36 @@ def get_slack_token(request):
     """Generate stack redirect url for authorize"""
     url = request.query_params.get('url', None)
     if url is None:
-        raise ValidationError("No callback URL specified")
+        raise ValidationError('No callback URL specified')
 
     user_id = request.query_params.get('user', None)
     if user_id is None:
-        raise ValidationError("No user specified on the URL")
+        raise ValidationError('No user specified on the URL')
 
     academy = request.query_params.get('a', None)
     if academy is None:
-        raise ValidationError("No academy specified on the URL")
+        raise ValidationError('No academy specified on the URL')
 
-    url = base64.b64decode(url).decode("utf-8")
+    url = base64.b64decode(url).decode('utf-8')
     # Missing scopes!! admin.invites:write, identify
-    scopes = ("app_mentions:read", "channels:history", "channels:join",
-              "channels:read", "chat:write", "chat:write.customize",
-              "commands", "files:read", "files:write", "groups:history",
-              "groups:read", "groups:write", "incoming-webhook", "team:read",
-              "users:read", "users:read.email", "users.profile:read",
-              "users:read")
+    scopes = ('app_mentions:read', 'channels:history', 'channels:join',
+              'channels:read', 'chat:write', 'chat:write.customize',
+              'commands', 'files:read', 'files:write', 'groups:history',
+              'groups:read', 'groups:write', 'incoming-webhook', 'team:read',
+              'users:read', 'users:read.email', 'users.profile:read',
+              'users:read')
 
-    query_string = f'a={academy}&url={url}&user={user_id}'.encode("utf-8")
-    payload = str(base64.urlsafe_b64encode(query_string), "utf-8")
+    query_string = f'a={academy}&url={url}&user={user_id}'.encode('utf-8')
+    payload = str(base64.urlsafe_b64encode(query_string), 'utf-8')
     params = {
-        "client_id": os.getenv('SLACK_CLIENT_ID', ""),
-        "redirect_uri":
-        os.getenv('SLACK_REDIRECT_URL', "") + "?payload=" + payload,
-        "scope": ",".join(scopes)
+        'client_id': os.getenv('SLACK_CLIENT_ID', ''),
+        'redirect_uri':
+        os.getenv('SLACK_REDIRECT_URL', '') + '?payload=' + payload,
+        'scope': ','.join(scopes)
     }
-    redirect = "https://slack.com/oauth/v2/authorize?"
+    redirect = 'https://slack.com/oauth/v2/authorize?'
     for key in params:
-        redirect += f"{key}={params[key]}&"
+        redirect += f'{key}={params[key]}&'
 
     if settings.DEBUG:
         return HttpResponse(
@@ -816,68 +811,68 @@ def get_slack_token(request):
 @permission_classes([AllowAny])
 def save_slack_token(request):
     """Get Slack token and redirect to authorization route"""
-    logger.debug("Slack callback just landed")
+    logger.debug('Slack callback just landed')
 
     error = request.query_params.get('error', False)
     error_description = request.query_params.get('error_description', '')
     if error:
-        raise APIException("Slack: " + error_description)
+        raise APIException('Slack: ' + error_description)
 
     original_payload = request.query_params.get('payload', None)
     payload = request.query_params.get('payload', None)
     if payload is None:
-        raise ValidationError("No payload specified")
+        raise ValidationError('No payload specified')
     else:
         try:
-            payload = base64.b64decode(payload).decode("utf-8")
+            payload = base64.b64decode(payload).decode('utf-8')
             payload = parse_qs(payload)
         except:
-            raise ValidationError("Cannot decode payload in base64")
+            raise ValidationError('Cannot decode payload in base64')
 
-    if "url" not in payload:
+    if 'url' not in payload:
         logger.exception(payload)
-        raise ValidationError("No url specified from the slack payload")
+        raise ValidationError('No url specified from the slack payload')
 
-    if "user" not in payload:
+    if 'user' not in payload:
         logger.exception(payload)
-        raise ValidationError("No user id specified from the slack payload")
+        raise ValidationError('No user id specified from the slack payload')
 
-    if "a" not in payload:
+    if 'a' not in payload:
         logger.exception(payload)
-        raise ValidationError("No academy id specified from the slack payload")
+        raise ValidationError('No academy id specified from the slack payload')
 
     try:
-        academy = Academy.objects.get(id=payload["a"][0])
+        academy = Academy.objects.get(id=payload['a'][0])
     except Exception as e:
-        raise ValidationError("Not exist academy with that id") from e
+        raise ValidationError('Not exist academy with that id') from e
 
     user = None
     try:
-        user = User.objects.get(id=payload["user"][0])
+        user = User.objects.get(id=payload['user'][0])
     except Exception as e:
-        raise ValidationError("Not exist user with that id") from e
+        raise ValidationError('Not exist user with that id') from e
 
     code = request.query_params.get('code', None)
     if code is None:
-        raise ValidationError("No slack code specified")
+        raise ValidationError('No slack code specified')
 
     params = {
-        'client_id': os.getenv('SLACK_CLIENT_ID', ""),
-        'client_secret': os.getenv('SLACK_SECRET', ""),
+        'client_id': os.getenv('SLACK_CLIENT_ID', ''),
+        'client_secret': os.getenv('SLACK_SECRET', ''),
         'redirect_uri':
-        os.getenv('SLACK_REDIRECT_URL', "") + "?payload=" + original_payload,
+        os.getenv('SLACK_REDIRECT_URL', '') + '?payload=' + original_payload,
         'code': code,
     }
     # print("params", params)
     resp = requests.post('https://slack.com/api/oauth.v2.access', data=params)
     if resp.status_code == 200:
 
-        logger.debug("Slack responded with 200")
+        logger.debug('Slack responded with 200')
 
         slack_data = resp.json()
         if 'access_token' not in slack_data:
-            print("Slack response body", slack_data)
-            raise APIException("Slack error status: " + slack_data['error'])
+            print('Slack response body', slack_data)
+            raise APIException('Slack error status: ' + slack_data['error'])
 
         slack_data = resp.json()
         logger.debug(slack_data)
@@ -907,7 +902,7 @@ def save_slack_token(request):
         team.name = slack_data['team']['name']
         team.save()
 
-        return HttpResponseRedirect(redirect_to=payload["url"][0])
+        return HttpResponseRedirect(redirect_to=payload['url'][0])
 
 
 # Create your views here.
@@ -917,37 +912,37 @@ def get_facebook_token(request):
     """Generate stack redirect url for authorize"""
     url = request.query_params.get('url', None)
     if url is None:
-        raise ValidationError("No callback URL specified")
+        raise ValidationError('No callback URL specified')
 
     user_id = request.query_params.get('user', None)
     if user_id is None:
-        raise ValidationError("No user specified on the URL")
+        raise ValidationError('No user specified on the URL')
 
     academy = request.query_params.get('a', None)
     if academy is None:
-        raise ValidationError("No academy specified on the URL")
+        raise ValidationError('No academy specified on the URL')
 
-    url = base64.b64decode(url).decode("utf-8")
+    url = base64.b64decode(url).decode('utf-8')
     # Missing scopes!! admin.invites:write, identify
     scopes = (
-        "email",
-        "ads_read",
-        "business_management",
-        "leads_retrieval",
-        "pages_manage_metadata",
-        "pages_read_engagement",
+        'email',
+        'ads_read',
+        'business_management',
+        'leads_retrieval',
+        'pages_manage_metadata',
+        'pages_read_engagement',
     )
-    query_string = f'a={academy}&url={url}&user={user_id}'.encode("utf-8")
-    payload = str(base64.urlsafe_b64encode(query_string), "utf-8")
+    query_string = f'a={academy}&url={url}&user={user_id}'.encode('utf-8')
+    payload = str(base64.urlsafe_b64encode(query_string), 'utf-8')
     params = {
-        "client_id": os.getenv('FACEBOOK_CLIENT_ID', ""),
-        "redirect_uri": os.getenv('FACEBOOK_REDIRECT_URL', ""),
-        "scope": ",".join(scopes),
-        "state": payload
+        'client_id': os.getenv('FACEBOOK_CLIENT_ID', ''),
+        'redirect_uri': os.getenv('FACEBOOK_REDIRECT_URL', ''),
+        'scope': ','.join(scopes),
+        'state': payload
     }
-    redirect = "https://www.facebook.com/v8.0/dialog/oauth?"
+    redirect = 'https://www.facebook.com/v8.0/dialog/oauth?'
     for key in params:
-        redirect += f"{key}={params[key]}&"
+        redirect += f'{key}={params[key]}&'
 
     if settings.DEBUG:
         return HttpResponse(
@@ -961,45 +956,45 @@ def get_facebook_token(request):
 @permission_classes([AllowAny])
 def save_facebook_token(request):
     """Save facebook token"""
-    logger.debug("Facebook callback just landed")
+    logger.debug('Facebook callback just landed')
     print(request.GET)
     error = request.query_params.get('error_code', False)
     error_description = request.query_params.get('error_message', '')
     if error:
-        raise APIException("Facebook: " + error_description)
+        raise APIException('Facebook: ' + error_description)
 
     original_payload = request.query_params.get('state', None)
     payload = request.query_params.get('state', None)
     if payload is None:
-        raise ValidationError("No payload specified")
+        raise ValidationError('No payload specified')
     else:
         try:
-            payload = base64.b64decode(payload).decode("utf-8")
+            payload = base64.b64decode(payload).decode('utf-8')
             payload = parse_qs(payload)
         except:
-            raise ValidationError("Cannot decode payload in base64")
+            raise ValidationError('Cannot decode payload in base64')
 
-    if "url" not in payload:
+    if 'url' not in payload:
         logger.exception(payload)
-        raise ValidationError("No url specified from the slack payload")
+        raise ValidationError('No url specified from the slack payload')
 
-    if "user" not in payload:
+    if 'user' not in payload:
         logger.exception(payload)
-        raise ValidationError("No user id specified from the slack payload")
+        raise ValidationError('No user id specified from the slack payload')
 
-    if "a" not in payload:
+    if 'a' not in payload:
         logger.exception(payload)
-        raise ValidationError("No academy id specified from the slack payload")
+        raise ValidationError('No academy id specified from the slack payload')
 
     try:
-        academy = Academy.objects.get(id=payload["a"][0])
+        academy = Academy.objects.get(id=payload['a'][0])
     except Exception as e:
-        raise ValidationError("Not exist academy with that id") from e
+        raise ValidationError('Not exist academy with that id') from e
 
     try:
-        user = User.objects.get(id=payload["user"][0])
+        user = User.objects.get(id=payload['user'][0])
     except Exception as e:
-        raise ValidationError("Not exist user with that id") from e
+        raise ValidationError('Not exist user with that id') from e
 
     # token = request.query_params.get('token', None)
     # if token == None:
@@ -1007,25 +1002,25 @@ def save_facebook_token(request):
 
     code = request.query_params.get('code', None)
     if code is None:
-        raise ValidationError("No slack code specified")
+        raise ValidationError('No slack code specified')
 
     params = {
-        'client_id': os.getenv('FACEBOOK_CLIENT_ID', ""),
-        'client_secret': os.getenv('FACEBOOK_SECRET', ""),
-        'redirect_uri': os.getenv('FACEBOOK_REDIRECT_URL', ""),
+        'client_id': os.getenv('FACEBOOK_CLIENT_ID', ''),
+        'client_secret': os.getenv('FACEBOOK_SECRET', ''),
+        'redirect_uri': os.getenv('FACEBOOK_REDIRECT_URL', ''),
         'code': code,
     }
     resp = requests.post('https://graph.facebook.com/v8.0/oauth/access_token',
                          data=params)
     if resp.status_code == 200:
 
-        logger.debug("Facebook responded with 200")
+        logger.debug('Facebook responded with 200')
 
         facebook_data = resp.json()
         if 'access_token' not in facebook_data:
-            logger.debug("Facebook response body")
+            logger.debug('Facebook response body')
             logger.debug(facebook_data)
-            raise APIException("Facebook error status: " +
+            raise APIException('Facebook error status: ' +
                                facebook_data['error_message'])
 
         # delete all previous credentials for the same team
@@ -1049,15 +1044,15 @@ def save_facebook_token(request):
         }
         resp = requests.post('https://graph.facebook.com/me', data=params)
         if resp.status_code == 200:
-            logger.debug("Facebook responded with 200")
+            logger.debug('Facebook responded with 200')
             facebook_data = resp.json()
-            if "email" in facebook_data:
+            if 'email' in facebook_data:
                 credentials.email = facebook_data['email']
-            if "id" in facebook_data:
+            if 'id' in facebook_data:
                 credentials.facebook_id = facebook_data['id']
             credentials.save()
 
-        return HttpResponseRedirect(redirect_to=payload["url"][0])
+        return HttpResponseRedirect(redirect_to=payload['url'][0])
 
 
 def change_password(request, token):
@@ -1082,46 +1077,46 @@ def reset_password_view(request):
         _dict = request.POST.copy()
         form = PickPasswordForm(_dict)
 
-        if "email" not in _dict or _dict["email"] == "":
+        if 'email' not in _dict or _dict['email'] == '':
             messages.error(request, 'Email is required')
             return render(request, 'form.html', {'form': form})
 
-        users = User.objects.filter(email__iexact=_dict["email"])
+        users = User.objects.filter(email__iexact=_dict['email'])
         if (users.count() > 0):
             reset_password(users)
         else:
-            logger.debug("No users with " + _dict["email"] +
-                         " email to reset password")
+            logger.debug('No users with ' + _dict['email'] +
+                         ' email to reset password')
 
-        if "callback" in _dict and _dict["callback"] != "":
+        if 'callback' in _dict and _dict['callback'] != '':
             return HttpResponseRedirect(
-                redirect_to=_dict["callback"] +
-                "?msg=Check your email for a password reset!")
+                redirect_to=_dict['callback'] +
+                '?msg=Check your email for a password reset!')
         else:
             return render(
                 request, 'message.html',
                 {'message': 'Check your email for a password reset!'})
     else:
         _dict = request.GET.copy()
-        _dict["callback"] = request.GET.get("callback", '')
+        _dict['callback'] = request.GET.get('callback', '')
         form = ResetPasswordForm(_dict)
     return render(request, 'form.html', {'form': form})
 
 
 def pick_password(request, token):
     _dict = request.POST.copy()
-    _dict["token"] = token
-    _dict["callback"] = request.GET.get("callback", '')
+    _dict['token'] = token
+    _dict['callback'] = request.GET.get('callback', '')
 
     form = PickPasswordForm(_dict)
     if request.method == 'POST':
-        password1 = request.POST.get("password1", None)
-        password2 = request.POST.get("password2", None)
+        password1 = request.POST.get('password1', None)
+        password2 = request.POST.get('password2', None)
         if password1 != password2:
             messages.error(request, 'Passwords don\'t match')
             return render(request, 'form.html', {'form': form})
 
-        token = Token.get_valid(request.POST.get("token", None))
+        token = Token.get_valid(request.POST.get('token', None))
         if token is None:
             messages.error(request, 'Invalid or expired token ' + str(token))
 
@@ -1130,10 +1125,10 @@ def pick_password(request, token):
             user.set_password(password1)
             user.save()
             token.delete()
-            callback = request.POST.get("callback", None)
-            if callback is not None and callback != "":
+            callback = request.POST.get('callback', None)
+            if callback is not None and callback != '':
                 return HttpResponseRedirect(
-                    redirect_to=request.POST.get("callback"))
+                    redirect_to=request.POST.get('callback'))
             else:
                 return render(
                     request, 'message.html', {
@@ -1151,15 +1146,15 @@ class PasswordResetView(APIView):
         profile_academy = ProfileAcademy.objects.filter(
             id=profileacademy_id).first()
         if profile_academy is None:
-            raise ValidationException("Member not found", 400)
+            raise ValidationException('Member not found', 400)
 
         if reset_password([profile_academy.user]):
             token = Token.objects.filter(user=profile_academy.user,
-                                         token_type="temporal").first()
+                                         token_type='temporal').first()
             serializer = TokenSmallSerializer(token)
             return Response(serializer.data)
         else:
-            raise ValidationException("Reset password token could not be sent")
+            raise ValidationException('Reset password token could not be sent')
 
 
 class AcademyInviteView(APIView):
@@ -1169,19 +1164,19 @@ class AcademyInviteView(APIView):
             profile_academy = ProfileAcademy.objects.filter(id=pa_id).first()
 
             if profile_academy is None:
-                raise ValidationException("Member not found", 400)
+                raise ValidationException('Member not found', 400)
             invite = UserInvite.objects.filter(
                 academy__id=academy_id, email=profile_academy.email).first()
 
             if invite is None:
-                raise ValidationException("Invite not found", 400)
+                raise ValidationException('Invite not found', 400)
 
             if invite.sent_at is not None:
                 now = timezone.now()
                 minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
 
                 if minutes_diff < 2:
-                    raise ValidationException("Imposible to resend invitation",
+                    raise ValidationException('Imposible to resend invitation',
                                               400)
             resend_invite(invite.token, invite.email, invite.first_name)
 
@@ -1193,8 +1188,8 @@ class AcademyInviteView(APIView):
 
 def render_invite(request, token, member_id=None):
     _dict = request.POST.copy()
-    _dict["token"] = token
-    _dict["callback"] = request.GET.get("callback", '')
+    _dict['token'] = token
+    _dict['callback'] = request.GET.get('callback', '')
 
     if request.method == 'GET':
 
@@ -1218,8 +1213,8 @@ def render_invite(request, token, member_id=None):
 
     if request.method == 'POST':
         form = InviteForm(_dict)
-        password1 = request.POST.get("password1", None)
-        password2 = request.POST.get("password2", None)
+        password1 = request.POST.get('password1', None)
+        password2 = request.POST.get('password2', None)
 
         if password1 != password2:
             messages.error(request, 'Passwords don\'t match')
@@ -1234,9 +1229,9 @@ def render_invite(request, token, member_id=None):
                            'Invalid or expired invitation ' + str(token))
             return render(request, 'form_invite.html', {'form': form})
 
-        first_name = request.POST.get("first_name", None)
-        last_name = request.POST.get("last_name", None)
-        if first_name is None or first_name == "" or last_name is None or last_name == "":
+        first_name = request.POST.get('first_name', None)
+        last_name = request.POST.get('last_name', None)
+        if first_name is None or first_name == '' or last_name is None or last_name == '':
             messages.error(request, 'Invalid first or last name')
             return render(request, 'form_invite.html', {
                 'form': form,
@@ -1262,9 +1257,9 @@ def render_invite(request, token, member_id=None):
                                          role=invite.role,
                                          first_name=first_name,
                                          last_name=last_name)
-                if invite.first_name is not None and invite.first_name != "":
+                if invite.first_name is not None and invite.first_name != '':
                     profile.first_name = invite.first_name
-                if invite.last_name is not None and invite.last_name != "":
+                if invite.last_name is not None and invite.last_name != '':
                     profile.last_name = invite.last_name
 
             profile.user = user
@@ -1284,8 +1279,8 @@ def render_invite(request, token, member_id=None):
         invite.status = 'ACCEPTED'
         invite.save()
 
-        callback = str(request.POST.get("callback", None))
-        if callback is not None and callback != "" and callback != "['']":
+        callback = str(request.POST.get('callback', None))
+        if callback is not None and callback != '' and callback != "['']":
             return HttpResponseRedirect(redirect_to=callback[2:-2])
         else:
             return render(request, 'message.html', {
@@ -1303,14 +1298,14 @@ def login_html_view(request):
 
         try:
 
-            url = request.POST.get("url", None)
-            if url is None or url == "":
+            url = request.POST.get('url', None)
+            if url is None or url == '':
                 raise Exception(
-                    "Invalid redirect url, you must specify a url to redirect to"
+                    'Invalid redirect url, you must specify a url to redirect to'
                 )
 
-            email = request.POST.get("email", None)
-            password = request.POST.get("password", None)
+            email = request.POST.get('email', None)
+            password = request.POST.get('password', None)
 
             user = None
             if email and password:
@@ -1329,16 +1324,15 @@ def login_html_view(request):
                 msg = 'Must include "username" and "password".'
                 raise Exception(msg, code=403)
 
-            token, created = Token.objects.get_or_create(user=user,
-                                                         token_type='login')
-            return HttpResponseRedirect(url + "?token=" + str(token))
+            token, created = Token.get_or_create(user=user, token_type='login')
+            return HttpResponseRedirect(url + '?token=' + str(token))
 
         except Exception as e:
             messages.error(request, e.message if hasattr(e, 'message') else e)
             return render(request, 'login.html', {'form': form})
     else:
-        url = request.GET.get("url", None)
-        if url is None or url == "":
+        url = request.GET.get('url', None)
+        if url is None or url == '':
             messages.error(
                 request,
                 "You must specify a 'url' (querystring) to redirect to after successfull login"
@@ -1346,5 +1340,127 @@ def login_html_view(request):
 
     return render(request, 'login.html', {
         'form': form,
-        'redirect_url': request.GET.get("url", None)
+        'redirect_url': request.GET.get('url', None)
     })
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_google_token(request, token=None):
+
+    if token == None:
+        raise ValidationException('No session token has been specified',
+                                  slug='no-session-token')
+
+    url = request.query_params.get('url', None)
+    if url == None:
+        raise ValidationException('No callback URL specified',
+                                  slug='no-callback-url')
+
+    token = Token.get_valid(
+        token
+    )  # IMPORTANT!! you can only connect to google with temporal short lasting tokens
+    if token is None or token.token_type != 'temporal':
+        raise ValidationException('Invalid or inactive token',
+                                  code=403,
+                                  slug='invalid-token')
+
+    params = {
+        'response_type': 'code',
+        'client_id': os.getenv('GOOGLE_CLIENT_ID', ''),
+        'redirect_uri': os.getenv('GOOGLE_REDIRECT_URL', ''),
+        'access_type':
+        'offline',  #we need offline access to receive refresh token and avoid total expiration
+        'scope': 'https://www.googleapis.com/auth/calendar.events',
+        'state': f'token={token.key}&url={url}'
+    }
+
+    logger.debug('Redirecting to google')
+    logger.debug(params)
+
+    redirect = f'https://accounts.google.com/o/oauth2/v2/auth?{urlencode(params)}'
+
+    if settings.DEBUG:
+        return HttpResponse(
+            f"Redirect to: <a href='{redirect}'>{redirect}</a>")
+    else:
+        return HttpResponseRedirect(redirect_to=redirect)
+
+
+# Create your views here.
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def save_google_token(request):
+
+    logger.debug('Google callback just landed')
+    logger.debug(request.query_params)
+
+    error = request.query_params.get('error', False)
+    error_description = request.query_params.get('error_description', '')
+    if error:
+        raise APIException('Google OAuth: ' + error_description)
+
+    state = parse_qs(request.query_params.get('state', None))
+
+    if state['url'] == None:
+        raise ValidationException('No callback URL specified',
+                                  slug='no-callback-url')
+    if state['token'] == None:
+        raise ValidationException('No user token specified',
+                                  slug='no-user-token')
+
+    code = request.query_params.get('code', None)
+    if code == None:
+        raise ValidationException('No google code specified', slug='no-code')
+
+    payload = {
+        'client_id': os.getenv('GOOGLE_CLIENT_ID', ''),
+        'client_secret': os.getenv('GOOGLE_SECRET', ''),
+        'redirect_uri': os.getenv('GOOGLE_REDIRECT_URL', ''),
+        'grant_type': 'authorization_code',
+        'code': code,
+    }
+    headers = {'Accept': 'application/json'}
+    resp = requests.post('https://oauth2.googleapis.com/token',
+                         data=payload,
+                         headers=headers)
+    if resp.status_code == 200:
+
+        logger.debug('Google responded with 200')
+
+        body = resp.json()
+        if 'access_token' not in body:
+            raise APIException(body['error_description'])
+
+        logger.debug(body)
+
+        token = Token.get_valid(state['token'][0])
+        if not token:
+            logger.debug(f'Token {state["token"][0]} not found or is expired')
+            raise ValidationException(
+                'Token was not found or is expired, please use a different token',
+                code=404,
+                slug='token-not-found')
+
+        user = token.user
+        refresh = ''
+        if 'refresh_token' in body:
+            refresh = body['refresh_token']
+
+        CredentialsGoogle.objects.filter(user__id=user.id).delete()
+        google_credentials = CredentialsGoogle(
+            user=user,
+            token=body['access_token'],
+            refresh_token=refresh,
+            expires_at=timezone.now() + timedelta(seconds=body['expires_in']),
+        )
+        google_credentials.save()
+
+        return HttpResponseRedirect(redirect_to=state['url'][0] + '?token=' +
+                                    token.key)
+
+    else:
+        logger.error(resp.json())
+        raise APIException('Error from google credentials')

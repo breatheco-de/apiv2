@@ -67,7 +67,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {
-            'detail': "syllabus field is missing",
+            'detail': 'syllabus field is missing',
             'status_code': status.HTTP_400_BAD_REQUEST,
         }
 
@@ -1299,7 +1299,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:academy_cohort')
         response = self.client.delete(url)
         json = response.json()
-        expected = {'detail': "Missing cohort_id", 'status_code': 400}
+        expected = {'detail': 'Missing cohort_id', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

@@ -24,8 +24,8 @@ from slugify import slugify
 
 logger = logging.getLogger(__name__)
 MIME_ALLOW = [
-    "image/png", "image/svg+xml", "image/jpeg", "image/gif", "video/quicktime",
-    "video/mp4", "audio/mpeg", "application/pdf", "image/jpg"
+    'image/png', 'image/svg+xml', 'image/jpeg', 'image/gif', 'video/quicktime',
+    'video/mp4', 'audio/mpeg', 'application/pdf', 'image/jpg'
 ]
 
 
@@ -169,7 +169,7 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             if media.academy_id != int(academy_id):
                 raise ValidationException(
                     "You can't edit media belonging to other academies",
-                    slug="different-academy-media-put")
+                    slug='different-academy-media-put')
 
             current.append(media)
 
@@ -200,7 +200,7 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if current.academy_id != int(academy_id):
             raise ValidationException(
                 "You can't edit media belonging to other academies",
-                slug="different-academy-media-put")
+                slug='different-academy-media-put')
 
         serializer = MediaSerializer(current,
                                      data=request.data,

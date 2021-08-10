@@ -1,10 +1,8 @@
-version: "3.2"
+version: "3.8"
 
 services:
   breathecode:
     image: geeksacademy/breathecode:development
-    ports:
-      - "8000:8000"
     env_file:
       - ./.env
     environment:
@@ -12,6 +10,25 @@ services:
       - DATABASE_URL=postgres://user:pass@postgres:5432/breathecode
       - CELERY_DISABLE_SCHEDULER=
       - ALLOW_UNSAFE_CYPRESS_APP=True
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+
+  bc-dev:
+    build:
+      context: .
+      dockerfile: .dev.Dockerfile
+    volumes:
+      - ./:/home/shell/apiv2
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgres://user:pass@postgres:5432/breathecode
+      - CELERY_DISABLE_SCHEDULER=
+      - ALLOW_UNSAFE_CYPRESS_APP=True
+    ports:
+      - "8000:8000"
     depends_on:
       - postgres
       - redis
@@ -23,14 +40,14 @@ services:
 
   postgres:
     image: postgres:alpine
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
       - POSTGRES_USER=user
       - POSTGRES_PASSWORD=pass
       - POSTGRES_DB=breathecode
+    ports:
+      - "5432:5432"
 
   adminer:
     image: adminer

@@ -859,7 +859,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.delete(url)
         json = response.json()
         expected = {
-            'detail': "Missing user_id or cohort_id",
+            'detail': 'Missing user_id or cohort_id',
             'status_code': 400
         }
 

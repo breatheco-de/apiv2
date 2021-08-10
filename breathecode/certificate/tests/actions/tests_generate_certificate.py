@@ -341,8 +341,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                              models=base)
         result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
 
-        self.assertToken(result["token"])
-        result["token"] = None
+        self.assertToken(result['token'])
+        result['token'] = None
 
         expected = {
             'academy_id': 1,
@@ -395,8 +395,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                              models=base)
         result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
 
-        self.assertToken(result["token"])
-        result["token"] = None
+        self.assertToken(result['token'])
+        result['token'] = None
 
         expected = {
             'academy_id': 1,
@@ -503,8 +503,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                              models=base)
         result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
 
-        self.assertToken(result["token"])
-        result["token"] = None
+        self.assertToken(result['token'])
+        result['token'] = None
 
         expected = {
             'academy_id': 1,

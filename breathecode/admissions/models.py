@@ -4,14 +4,14 @@ from django.core.validators import RegexValidator
 from django.db import models
 from .actions import get_bucket_object
 
-GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", None)
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
 
 
 def get_user_label(self):
-    return f"{self.first_name} {self.last_name} ({self.email})"
+    return f'{self.first_name} {self.last_name} ({self.email})'
 
 
-User.add_to_class("__str__", get_user_label)
+User.add_to_class('__str__', get_user_label)
 
 
 class UserAdmissions(User):
@@ -24,7 +24,7 @@ class Country(models.Model):
     name = models.CharField(max_length=30)
 
     def __str__(self):
-        return f"{self.name} ({self.code})"
+        return f'{self.name} ({self.code})'
 
 
 class City(models.Model):
@@ -98,7 +98,7 @@ class Academy(models.Model):
     #     super(Image, self).delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-        if os.getenv('ENV', "") == 'production':
+        if os.getenv('ENV', '') == 'production':
             obj = get_bucket_object(f'location-{self.slug}')
             if obj is not None:
                 self.logo_url = obj.public_url
@@ -170,8 +170,8 @@ class SpecialtyMode(models.Model):
 
     def save(self, *args, **kwargs):
 
-        if GOOGLE_APPLICATION_CREDENTIALS is not None and GOOGLE_APPLICATION_CREDENTIALS != "":
-            obj = get_bucket_object("certificate-logo-" + self.slug)
+        if GOOGLE_APPLICATION_CREDENTIALS is not None and GOOGLE_APPLICATION_CREDENTIALS != '':
+            obj = get_bucket_object('certificate-logo-' + self.slug)
             if obj is not None:
                 self.logo = obj.public_url
 
@@ -227,7 +227,7 @@ class Cohort(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.name + "(" + self.slug + ")"
+        return self.name + '(' + self.slug + ')'
 
 
 TEACHER = 'TEACHER'

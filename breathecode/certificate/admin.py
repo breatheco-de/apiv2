@@ -33,9 +33,9 @@ class LayoutDesignAdmin(admin.ModelAdmin):
 
     def default(self, obj):
         if obj.is_default:
-            return "✅ default"
+            return '✅ default'
         else:
-            return "not default"
+            return 'not default'
 
 
 def screenshot(modeladmin, request, queryset):
@@ -44,10 +44,10 @@ def screenshot(modeladmin, request, queryset):
     certificate_ids = queryset.values_list('id', flat=True)
     for cert_id in certificate_ids:
         reset_screenshot.delay(cert_id)
-    messages.success(request, message="Screenshots scheduled correctly")
+    messages.success(request, message='Screenshots scheduled correctly')
 
 
-screenshot.short_description = "🔄 RETAKE Screenshot"
+screenshot.short_description = '🔄 RETAKE Screenshot'
 
 
 def delete_screenshot(modeladmin, request, queryset):
@@ -56,10 +56,10 @@ def delete_screenshot(modeladmin, request, queryset):
     certificate_ids = queryset.values_list('id', flat=True)
     for cert_id in certificate_ids:
         remove_screenshot.delay(cert_id)
-    messages.success(request, message="Screenshots scheduled for deletion")
+    messages.success(request, message='Screenshots scheduled for deletion')
 
 
-delete_screenshot.short_description = "⛔️ DELETE Screenshot"
+delete_screenshot.short_description = '⛔️ DELETE Screenshot'
 
 
 def export_user_specialty_csv(self, request, queryset):
@@ -74,22 +74,26 @@ def export_user_specialty_csv(self, request, queryset):
         row = writer.writerow([
             obj.user.first_name, obj.user.last_name, obj.specialty.name,
             obj.academy.name, obj.cohort.name,
-            f"https://certificate.breatheco.de/{obj.token}",
-            f"https://certificate.breatheco.de/pdf/{obj.token}"
+            f'https://certificate.breatheco.de/{obj.token}',
+            f'https://certificate.breatheco.de/pdf/{obj.token}'
         ])
 
     return response
 
 
-export_user_specialty_csv.short_description = "⬇️ Export Selected"
+export_user_specialty_csv.short_description = '⬇️ Export Selected'
 
 
 @admin.register(UserSpecialty)
 class UserSpecialtyAdmin(admin.ModelAdmin):
+    search_fields = [
+        'user__email', 'user__first_name', 'user__last_name', 'cohort__name',
+        'cohort__slug'
+    ]
     list_display = ('user', 'specialty', 'expires_at', 'academy', 'cohort',
                     'pdf', 'preview')
     list_filter = ['specialty', 'academy__slug', 'cohort__slug']
-    raw_id_fields = ["user"]
+    raw_id_fields = ['user']
     actions = [screenshot, delete_screenshot, export_user_specialty_csv]
 
     def pdf(self, obj):
@@ -98,8 +102,8 @@ class UserSpecialtyAdmin(admin.ModelAdmin):
         )
 
     def preview(self, obj):
-        if obj.preview_url is None or obj.preview_url == "":
-            return format_html("No available")
+        if obj.preview_url is None or obj.preview_url == '':
+            return format_html('No available')
 
         return format_html(
             "<a rel='noopener noreferrer' target='_blank' href='{url}'>preview</a>",
@@ -115,15 +119,15 @@ def user_bulk_certificate(modeladmin, request, queryset):
     users = queryset.all()
     try:
         for u in users:
-            logger.debug(f"Generating certificate for user {u.id}")
+            logger.debug(f'Generating certificate for user {u.id}')
             generate_certificate(u)
-        messages.success(request, message="Certificates generated sucessfully")
+        messages.success(request, message='Certificates generated sucessfully')
     except Exception as e:
-        logger.exception("Problem generating certificates")
+        logger.exception('Problem generating certificates')
         messages.error(request, message=str(e))
 
 
-user_bulk_certificate.short_description = "🎖 Generate Student Certificate"
+user_bulk_certificate.short_description = '🎖 Generate Student Certificate'
 
 
 @admin.register(UserProxy)
@@ -137,13 +141,13 @@ def cohort_bulk_certificate(modeladmin, request, queryset):
 
     cohort_ids = queryset.values_list('id', flat=True)
     for _id in cohort_ids:
-        logger.debug(f"Scheduling certificate generation for cohort {_id}")
+        logger.debug(f'Scheduling certificate generation for cohort {_id}')
         generate_cohort_certificates.delay(_id)
 
-    messages.success(request, message="Scheduled certificate generation")
+    messages.success(request, message='Scheduled certificate generation')
 
 
-cohort_bulk_certificate.short_description = "🥇 Generate Cohort Certificates"
+cohort_bulk_certificate.short_description = '🥇 Generate Cohort Certificates'
 
 
 @admin.register(CohortProxy)

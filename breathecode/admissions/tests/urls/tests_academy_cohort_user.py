@@ -869,7 +869,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:academy_cohort_user')
         response = self.client.delete(url)
         json = response.json()
-        expected = {'detail': "Missing user_id or cohort_id", 'status_code': 400}
+        expected = {'detail': 'Missing user_id or cohort_id', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

@@ -5,12 +5,12 @@ from .utils import Eventbrite
 from django.utils import timezone
 
 status_map = {
-    "draft": 'DRAFT',
-    "live": 'ACTIVE',
-    "completed": 'COMPLETED',
-    "started": 'ACTIVE',
-    "ended": 'ACTIVE',
-    "canceled": 'DELETED',
+    'draft': 'DRAFT',
+    'live': 'ACTIVE',
+    'completed': 'COMPLETED',
+    'started': 'ACTIVE',
+    'ended': 'ACTIVE',
+    'canceled': 'DELETED',
 }
 
 
@@ -46,8 +46,8 @@ def create_or_update_organizer(data, org, force_update=False):
             organizer.save()
     except Exception as e:
         print(
-            "Error saving organizer eventbrite_id: " + str(data['id']) +
-            " skipping to the next", e)
+            'Error saving organizer eventbrite_id: ' + str(data['id']) +
+            ' skipping to the next', e)
 
     return organizer
 
@@ -84,8 +84,8 @@ def create_or_update_venue(data, org, force_update=False):
             venue.eventbrite_url = data['resource_uri']
             venue.save()
     except:
-        print("Error saving venue eventbrite_id: " + str(data['id']) +
-              " skipping to the next")
+        print('Error saving venue eventbrite_id: ' + str(data['id']) +
+              ' skipping to the next')
 
     return venue
 
@@ -105,7 +105,7 @@ def sync_org_events(org):
     except Exception as e:
         if org is not None:
             org.sync_status = 'ERROR'
-            org.sync_desc = "Error: " + str(e)
+            org.sync_desc = 'Error: ' + str(e)
             org.save()
         raise e
 
@@ -115,13 +115,13 @@ def sync_org_events(org):
 def update_or_create_event(data, org):
 
     if data is None:  #skip if no data
-        print("Ignored event")
+        print('Ignored event')
         return False
 
     now = timezone.now()
 
     if data['status'] not in status_map:
-        raise Exception("Uknown eventbrite status " + data['status'])
+        raise Exception('Uknown eventbrite status ' + data['status'])
 
     event = Event.objects.filter(eventbrite_id=data['id'],
                                  organization__id=org.id).first()
@@ -135,7 +135,7 @@ def update_or_create_event(data, org):
                                                    org,
                                                    force_update=True)
         else:
-            print("Event without organizer", data)
+            print('Event without organizer', data)
 
         if event is None:
             event = Event(
@@ -169,11 +169,11 @@ def update_or_create_event(data, org):
             # event.organizer=organizer
             event.venue = venue
 
-        if "published" in data:
+        if 'published' in data:
             event.published_at = data['published']
-        if "logo" in data and data['logo'] is not None:
+        if 'logo' in data and data['logo'] is not None:
             event.banner = data['logo']['url']
-        if event.url is None or event.url == "":
+        if event.url is None or event.url == '':
             event.url = event.eventbrite_url
 
         # look for the academy ownership based on organizer first
@@ -189,7 +189,7 @@ def update_or_create_event(data, org):
         event.save()
     except Exception as e:
         if event is not None:
-            event.sync_desc = str(now) + " => " + str(e)
+            event.sync_desc = str(now) + ' => ' + str(e)
             event.sync_status = 'ERROR'
             event.save()
         raise e

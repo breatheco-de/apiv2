@@ -18,11 +18,11 @@ def sync_tasks(modeladmin, request, queryset):
             sync_student_tasks(u)
         except Exception as e:
             logger.exception(
-                f"There was a problem syncronizing tassks for student {u.email}"
+                f'There was a problem syncronizing tassks for student {u.email}'
             )
 
 
-sync_tasks.short_description = "Delete and sync Tasks"
+sync_tasks.short_description = 'Delete and sync Tasks'
 
 
 @admin.register(UserProxy)
@@ -41,7 +41,7 @@ def sync_cohort_tasks(modeladmin, request, queryset):
             pass
 
 
-sync_cohort_tasks.short_description = "Delete AND SYNC Tasks for all students of this cohort"
+sync_cohort_tasks.short_description = 'Delete AND SYNC Tasks for all students of this cohort'
 
 
 def delete_cohort_tasks(modeladmin, request, queryset):
@@ -53,7 +53,7 @@ def delete_cohort_tasks(modeladmin, request, queryset):
             pass
 
 
-delete_cohort_tasks.short_description = "Delete tasks for all students of this cohort"
+delete_cohort_tasks.short_description = 'Delete tasks for all students of this cohort'
 
 
 @admin.register(CohortProxy)
@@ -67,21 +67,21 @@ def mark_as_delivered(modeladmin, request, queryset):
     queryset.update(task_status='DONE')
 
 
-mark_as_delivered.short_description = "Mark task status as DONE"
+mark_as_delivered.short_description = 'Mark task status as DONE'
 
 
 def mark_as_approved(modeladmin, request, queryset):
     queryset.update(revision_status='APPROVED')
 
 
-mark_as_approved.short_description = "Mark revision status as APPROVED"
+mark_as_approved.short_description = 'Mark revision status as APPROVED'
 
 
 def mark_as_rejected(modeladmin, request, queryset):
     queryset.update(revision_status='REJECTED')
 
 
-mark_as_rejected.short_description = "Mark revision status as REJECTED"
+mark_as_rejected.short_description = 'Mark revision status as REJECTED'
 
 
 @admin.register(Task)

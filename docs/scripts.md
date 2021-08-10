@@ -83,6 +83,7 @@ from breathecode.monitoring.actions import run_script
 script = run_script(model.monitor_script)
 
 del script['slack_payload']
+del script['title']
 
 expected = {'details': script['details'],
             'severity_level': 5,

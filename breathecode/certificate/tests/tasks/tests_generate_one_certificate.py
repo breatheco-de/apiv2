@@ -1,5 +1,5 @@
 """
-Tasks tests
+Tasks Tests
 """
 from unittest.mock import patch, call
 from ...tasks import generate_one_certificate
@@ -16,32 +16,36 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
     """Tests action generate_one_certificate"""
     def test_generate_one_certificate_bad_request(self):
         """generate_one_certificate cant create the certificate"""
-        with patch("breathecode.certificate.actions.generate_certificate"
+        with patch('breathecode.certificate.actions.generate_certificate'
                    ) as mock:
-            generate_one_certificate(1, 1)
+            layout = 'vanilla'
+            generate_one_certificate(1, 1, layout)
 
         self.assertEqual(mock.call_args_list, [])
 
     def test_generate_one_certificate_with_user_role_student(self):
         """Good request for generate_one_certificate"""
-        cohort_user_kwargs = {"role": "STUDENT"}
+        cohort_user_kwargs = {'role': 'STUDENT'}
         model = self.generate_models(user=True,
                                      cohort=True,
                                      cohort_user=True,
                                      cohort_user_kwargs=cohort_user_kwargs)
-        with patch("breathecode.certificate.actions.generate_certificate"
+        with patch('breathecode.certificate.actions.generate_certificate'
                    ) as mock:
-            generate_one_certificate(1, 1)
-        self.assertEqual(mock.call_args_list, [call(model.user, model.cohort)])
+            layout = 'vanilla'
+            generate_one_certificate(1, 1, layout)
+        self.assertEqual(mock.call_args_list,
+                         [call(model.user, model.cohort, 'vanilla')])
 
     def test_generate_one_certificate_with_user_role_teacher(self):
         """bad request with user role teacher"""
-        cohort_user_kwargs = {"role": "TEACHER"}
+        cohort_user_kwargs = {'role': 'TEACHER'}
         self.generate_models(user=True,
                              cohort=True,
                              cohort_user=True,
                              cohort_user_kwargs=cohort_user_kwargs)
-        with patch("breathecode.certificate.actions.generate_certificate"
+        with patch('breathecode.certificate.actions.generate_certificate'
                    ) as mock:
-            generate_one_certificate(1, 1)
+            layout = 'vanilla'
+            generate_one_certificate(1, 1, layout)
         self.assertEqual(mock.call_args_list, [])

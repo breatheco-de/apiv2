@@ -51,7 +51,7 @@ def get_certificate(request, token):
 
 @receiver(post_save, sender=UserSpecialty)
 def post_save_course_dosomething(sender, instance, **kwargs):
-    if instance.preview_url is None or instance.preview_url == "" and instance.status == 'PERSISTED':
+    if instance.preview_url is None or instance.preview_url == '' and instance.status == 'PERSISTED':
         take_screenshot.delay(instance.id)
 
 
@@ -79,7 +79,7 @@ class CertificateView(APIView):
                                             user__id=student_id,
                                             cohort__academy__id=academy_id).first()
         if cert is None:
-            raise serializers.ValidationError("Certificate not found", code=404)
+            raise serializers.ValidationError('Certificate not found', code=404)
 
         serializer = UserSpecialtySerializer(cert, many=False)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -87,15 +87,20 @@ class CertificateView(APIView):
     @capable_of('crud_certificate')
     def post(self, request, cohort_id, student_id, academy_id=None):
 
+        layout_slug = None
+
+        if 'layout_slug' in request.data:
+            layout_slug = request.data['layout_slug']
+
         cu = CohortUser.objects.filter(cohort__id=cohort_id,
                                        user__id=student_id,
-                                       role="STUDENT",
+                                       role='STUDENT',
                                        cohort__academy__id=academy_id).first()
 
         if cu is None:
-            raise serializers.ValidationError(f"Student not found for this cohort", code=404)
+            raise ValidationException('Student not found for this cohort', code=404, slug='student-not-found')
 
-        cert = generate_certificate(cu.user, cu.cohort)
+        cert = generate_certificate(cu.user, cu.cohort, layout_slug)
         serializer = UserSpecialtySerializer(cert, many=False)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -115,6 +120,10 @@ class CertificateCohortView(APIView):
     @capable_of('crud_certificate')
     def post(self, request, cohort_id, academy_id=None):
 
+        layout_slug = None
+        if 'layout_slug' in request.data:
+            layout_slug = request.data['layout_slug']
+
         cohort_users = CohortUser.objects.filter(cohort__id=cohort_id,
                                                  role='STUDENT',
                                                  cohort__academy__id=academy_id)
@@ -122,16 +131,16 @@ class CertificateCohortView(APIView):
         cohort__users = []
 
         if cohort_users.count() == 0:
-            raise ValidationException("There are no users with STUDENT role in this cohort",
+            raise ValidationException('There are no users with STUDENT role in this cohort',
                                       code=400,
-                                      slug="no-user-with-student-role")
+                                      slug='no-user-with-student-role')
 
         for cohort_user in cohort_users:
             cohort = cohort_user.cohort
-            if cohort.stage != "ENDED" or cohort.never_ends != False:
-                raise ValidationException("Cohort stage must be ENDED or never ends",
+            if cohort.stage != 'ENDED' or cohort.never_ends != False:
+                raise ValidationException('Cohort stage must be ENDED or never ends',
                                           code=400,
-                                          slug="cohort-stage-must-be-ended")
+                                          slug='cohort-stage-must-be-ended')
 
             if not cohort.syllabus_version:
                 raise ValidationException(
@@ -152,7 +161,7 @@ class CertificateCohortView(APIView):
                 cohort__users.append(cohort_user)
 
         for cu in cohort__users:
-            cert = generate_certificate(cu.user, cu.cohort)
+            cert = generate_certificate(cu.user, cu.cohort, layout_slug)
             serializer = UserSpecialtySerializer(cert, many=False)
             all_certs.append(serializer.data)
 
@@ -168,15 +177,15 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
         items = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
 
         like = request.GET.get('like', None)
-        if like is not None and like != "":
+        if like is not None and like != '':
             items = query_like_by_full_name(like=like, items=items, prefix='user__')
             if items.count() == 0:
                 items = UserSpecialty.objects.filter(cohort__academy__id=academy_id)
                 items = query_like_by_full_name(like=like, items=items, prefix='user__profileacademy__')
 
         sort = request.GET.get('sort', None)
-        if sort is None or sort == "":
-            sort = "-created_at"
+        if sort is None or sort == '':
+            sort = '-created_at'
 
         items = items.order_by(sort)
         page = self.paginate_queryset(items, request)
@@ -193,7 +202,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
         try:
             ids = lookups['id__in']
         except:
-            raise ValidationException("User specialties ids were not provided", 404, slug="missing_ids")
+            raise ValidationException('User specialties ids were not provided', 404, slug='missing_ids')
 
         if lookups and (user_id or cohort_id):
             raise ValidationException(
@@ -208,7 +217,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
                 raise ValidationException(
                     f"No user specialties for deletion were found with following id: {','.join(ids)}",
                     code=404,
-                    slug="specialties_not_found")
+                    slug='specialties_not_found')
 
             for item in items:
                 item.delete()
@@ -219,6 +228,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
     def post(self, request, academy_id=None):
         if isinstance(request.data, list):
             data = request.data
+
         else:
             data = [request.data]
 
@@ -226,8 +236,8 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
 
         if len(data) > 0:
             for items in data:
-                cohort__slug = items.get("cohort_slug")
-                user__id = items.get("user_id")
+                cohort__slug = items.get('cohort_slug')
+                user__id = items.get('user_id')
                 cohort_user = CohortUser.objects.filter(cohort__slug=cohort__slug,
                                                         user_id=user__id,
                                                         role='STUDENT',
@@ -242,9 +252,9 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
                     raise ValidationException(
                         f'No student with id {str(student.first_name)} {str(student.last_name)} was found for cohort {str(cohort__slug)}',
                         code=404,
-                        slug="student-not-found-in-cohort")
+                        slug='student-not-found-in-cohort')
         else:
-            raise ValidationException("You did not send anything to reattemps")
+            raise ValidationException('You did not send anything to reattemps')
 
         certs = []
         for cu in cohort_users:
@@ -252,14 +262,14 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
                                                 user__id=cu.user_id,
                                                 cohort__academy__id=academy_id).first()
             if cert is not None:
-                cert.status = "PENDING"
+                cert.status = 'PENDING'
                 cert.save()
                 certs.append(cert)
             else:
-                raise ValidationException('There is no certificate for this student and cohor',
+                raise ValidationException('There is no certificate for this student and cohort',
                                           code=404,
-                                          slug="no-user-specialty")
-            generate_one_certificate.delay(cu.cohort_id, cu.user_id)
+                                          slug='no-user-specialty')
+            generate_one_certificate.delay(cu.cohort_id, cu.user_id, layout='default')
 
         serializer = UserSpecialtySerializer(certs, many=True)
 

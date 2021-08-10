@@ -39,8 +39,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         try:
             send_question(model['user'])
         except Exception as e:
-            self.assertEquals(str(e),
-                              'without-cohort-or-cannot-determine-cohort')
+            self.assertEquals(str(e), 'without-cohort-or-cannot-determine-cohort')
 
         self.assertEqual(self.all_answer_dict(), [])
         self.assertEqual(mock_mailgun.call_args_list, [])
@@ -75,8 +74,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         try:
             send_question(model1['user'])
         except Exception as e:
-            self.assertEquals(str(e),
-                              'without-cohort-or-cannot-determine-cohort')
+            self.assertEquals(str(e), 'without-cohort-or-cannot-determine-cohort')
 
         self.assertEqual(self.all_answer_dict(), [])
         self.assertEqual(mock_mailgun.call_args_list, [])
@@ -152,9 +150,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        model = self.generate_models(user=True,
-                                     cohort_user=True,
-                                     syllabus_version=True)
+        model = self.generate_models(user=True, cohort_user=True, syllabus_version=True)
 
         try:
             send_question(model['user'])
@@ -205,10 +201,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        model = self.generate_models(user=True,
-                                     cohort_user=True,
-                                     syllabus_version=True,
-                                     specialty_mode=True)
+        model = self.generate_models(user=True, cohort_user=True, syllabus_version=True, specialty_mode=True)
 
         certificate = model['cohort'].specialty_mode.name
         send_question(model['user'])
@@ -227,8 +220,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
             'score': None,
             'status': 'SENT',
             'survey_id': None,
-            'title':
-            f'How has been your experience studying {certificate} so far?',
+            'title': f'How has been your experience studying {certificate} so far?',
             'token_id': 1,
             'user_id': 1,
         }]
@@ -236,8 +228,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         dicts = self.all_answer_dict()
         self.assertEqual(dicts, expected)
         self.assertEqual(self.count_token(), 1)
-        self.check_email_contain_a_correct_token('en', dicts, mock_mailgun,
-                                                 model)
+        self.check_email_contain_a_correct_token('en', dicts, mock_mailgun, model)
         self.assertEqual(mock_slack.call_args_list, [])
 
         mock_mailgun.call_args_list = []
@@ -275,8 +266,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
         expected = [{
             'id': 1,
-            'title':
-            f'How has been your experience studying {certificate} so far?',
+            'title': f'How has been your experience studying {certificate} so far?',
             'lowest': 'not good',
             'highest': 'very good',
             'lang': 'en',
@@ -296,10 +286,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
         dicts = [answer for answer in self.all_answer_dict()]
         self.assertEqual(dicts, expected)
 
-        self.check_email_contain_a_correct_token('en', dicts, mock_mailgun,
-                                                 model)
-        self.check_slack_contain_a_correct_token('en', dicts, mock_slack,
-                                                 model)
+        self.check_email_contain_a_correct_token('en', dicts, mock_mailgun, model)
+        self.check_slack_contain_a_correct_token('en', dicts, mock_slack, model)
 
     """
     🔽🔽🔽 Send question in english
@@ -334,8 +322,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
         expected = [{
             'id': 1,
-            'title':
-            f'How has been your experience studying {certificate} so far?',
+            'title': f'How has been your experience studying {certificate} so far?',
             'lowest': 'not good',
             'highest': 'very good',
             'lang': 'en',
@@ -355,10 +342,8 @@ class SendSurveyTestSuite(FeedbackTestCase):
         dicts = self.all_answer_dict()
         self.assertEqual(dicts, expected)
 
-        self.check_email_contain_a_correct_token('en', dicts, mock_mailgun,
-                                                 model)
-        self.check_slack_contain_a_correct_token('en', dicts, mock_slack,
-                                                 model)
+        self.check_email_contain_a_correct_token('en', dicts, mock_mailgun, model)
+        self.check_slack_contain_a_correct_token('en', dicts, mock_slack, model)
 
     """
     🔽🔽🔽 Send question in spanish
@@ -414,7 +399,5 @@ class SendSurveyTestSuite(FeedbackTestCase):
         self.assertEqual(dicts, expected)
         self.assertEqual(self.count_token(), 1)
 
-        self.check_email_contain_a_correct_token('es', dicts, mock_mailgun,
-                                                 model)
-        self.check_slack_contain_a_correct_token('es', dicts, mock_slack,
-                                                 model)
+        self.check_email_contain_a_correct_token('es', dicts, mock_mailgun, model)
+        self.check_slack_contain_a_correct_token('es', dicts, mock_slack, model)

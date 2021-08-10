@@ -59,7 +59,7 @@ def get_root_schema_view(elements, extend={}):
                 raise ValidationException(f'Unhandled {element}',
                                           500,
                                           slug='unhandled-app')
-            content = response.content.decode("utf-8")
+            content = response.content.decode('utf-8')
 
             schema_dicts.append(yaml.load(content, Loader=FullLoader))
 

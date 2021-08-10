@@ -7,8 +7,8 @@ from ...tasks import async_slack_team_users, async_slack_team_channel
 from breathecode.admissions.models import CohortUser
 from django.db.models import Count
 
-HOST = os.environ.get("OLD_BREATHECODE_API")
-DATETIME_FORMAT = "%Y-%m-%d"
+HOST = os.environ.get('OLD_BREATHECODE_API')
+DATETIME_FORMAT = '%Y-%m-%d'
 
 
 class Command(BaseCommand):

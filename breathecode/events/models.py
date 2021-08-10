@@ -29,7 +29,7 @@ class Organization(models.Model):
         choices=SYNC_STATUS,
         default=PENDING,
         help_text=
-        "One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status"
+        'One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status'
     )
     sync_desc = models.TextField(max_length=255,
                                  null=True,
@@ -41,9 +41,9 @@ class Organization(models.Model):
 
     def __str__(self):
         if self.name is not None:
-            return self.name + "(" + str(self.id) + ")"
+            return self.name + '(' + str(self.id) + ')'
         else:
-            return "Organization " + str(self.id)
+            return 'Organization ' + str(self.id)
 
 
 class Organizer(models.Model):
@@ -68,9 +68,9 @@ class Organizer(models.Model):
 
     def __str__(self):
         if self.name is not None:
-            return self.name + "(" + str(self.id) + ")"
+            return self.name + '(' + str(self.id) + ')'
         else:
-            return "Organizer " + str(self.id)
+            return 'Organizer ' + str(self.id)
 
 
 ACTIVE = 'ACTIVE'
@@ -133,9 +133,9 @@ class Venue(models.Model):
 
     def __str__(self):
         if self.title is not None:
-            return self.title + "(" + str(self.id) + ")"
+            return self.title + '(' + str(self.id) + ')'
         else:
-            return "Venue " + str(self.id)
+            return 'Venue ' + str(self.id)
 
 
 class EventType(models.Model):
@@ -150,7 +150,7 @@ class EventType(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.name + "(" + str(self.id) + ")"
+        return self.name + '(' + str(self.id) + ')'
 
 
 EVENT_STATUS = (
@@ -232,7 +232,7 @@ class Event(models.Model):
                               blank=True)
     eventbrite_status = models.CharField(
         max_length=9,
-        help_text="One of: draft, live, started, ended, completed and canceled",
+        help_text='One of: draft, live, started, ended, completed and canceled',
         blank=True,
         default=None,
         null=True)
@@ -242,7 +242,7 @@ class Event(models.Model):
         choices=SYNC_STATUS,
         default=PENDING,
         help_text=
-        "One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status"
+        'One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status'
     )
     sync_desc = models.TextField(max_length=255,
                                  null=True,
@@ -255,9 +255,9 @@ class Event(models.Model):
 
     def __str__(self):
         if self.title is not None:
-            return self.title + "(" + str(self.id) + ")"
+            return self.title + '(' + str(self.id) + ')'
         else:
-            return "Event " + str(self.id)
+            return 'Event ' + str(self.id)
 
 
 PENDING = 'PENDING'

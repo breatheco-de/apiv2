@@ -74,7 +74,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
-                                     role="STUDENT",
+                                     role='STUDENT',
                                      capability='crud_certificate')
 
         url = reverse_lazy('certificate:root')
@@ -100,7 +100,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
-                                     role="STUDENT",
+                                     role='STUDENT',
                                      capability='crud_certificate',
                                      cohort_user=True)
 
@@ -268,8 +268,8 @@ class CertificateTestSuite(CertificateTestCase):
 
         del base['user']
 
-        user_specialty_1_kwargs = {"token": "qwerrty"}
-        user_specialty_2_kwargs = {"token": "huhuhuhuhu"}
+        user_specialty_1_kwargs = {'token': 'qwerrty'}
+        user_specialty_2_kwargs = {'token': 'huhuhuhuhu'}
 
         models = [
             self.generate_models(user=True,
@@ -471,8 +471,8 @@ class CertificateTestSuite(CertificateTestCase):
             'first_name': 'Michael',
             'last_name': 'Jordan',
         }
-        user_specialty_kwargs_1 = {"token": "123dfefef1123rerf346g"}
-        user_specialty_kwargs_2 = {"token": "jojfsdknjbs1123rerf346g"}
+        user_specialty_kwargs_1 = {'token': '123dfefef1123rerf346g'}
+        user_specialty_kwargs_2 = {'token': 'jojfsdknjbs1123rerf346g'}
         models = [
             self.generate_models(user=True,
                                  user_specialty=True,
@@ -577,8 +577,8 @@ class CertificateTestSuite(CertificateTestCase):
             'first_name': 'Michael',
             'last_name': 'Jordan',
         }
-        user_specialty_kwargs_1 = {"token": "123dfefef1123rerf346g"}
-        user_specialty_kwargs_2 = {"token": "jojfsdknjbs1123rerf346g"}
+        user_specialty_kwargs_1 = {'token': '123dfefef1123rerf346g'}
+        user_specialty_kwargs_2 = {'token': 'jojfsdknjbs1123rerf346g'}
         models = [
             self.generate_models(user=True,
                                  user_specialty=True,
@@ -679,8 +679,8 @@ class CertificateTestSuite(CertificateTestCase):
             'first_name': 'Michael',
             'last_name': 'Jordan',
         }
-        user_specialty_kwargs_1 = {"token": "123dfefef1123rerf346g"}
-        user_specialty_kwargs_2 = {"token": "jojfsdknjbs1123rerf346g"}
+        user_specialty_kwargs_1 = {'token': '123dfefef1123rerf346g'}
+        user_specialty_kwargs_2 = {'token': 'jojfsdknjbs1123rerf346g'}
         models = [
             self.generate_models(user=True,
                                  user_specialty=True,
@@ -782,8 +782,8 @@ class CertificateTestSuite(CertificateTestCase):
             'first_name': 'Michael',
             'last_name': 'Jordan',
         }
-        user_specialty_kwargs_1 = {"token": "123dfefef1123rerf346g"}
-        user_specialty_kwargs_2 = {"token": "jojfsdknjbs1123rerf346g"}
+        user_specialty_kwargs_1 = {'token': '123dfefef1123rerf346g'}
+        user_specialty_kwargs_2 = {'token': 'jojfsdknjbs1123rerf346g'}
         models = [
             self.generate_models(user=True,
                                  user_specialty=True,

@@ -49,7 +49,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
         }
 
-        slug = "missing_ids"
+        slug = 'missing_ids'
 
         model = self.generate_models(academy=True,
                                      capability='crud_invite',
@@ -77,9 +77,9 @@ class AuthenticateTestSuite(AuthTestCase):
                                     user_kwargs={'email': 'a@a.com'})
 
         invite_kwargs = {
-            'status': "ACCEPTED",
+            'status': 'ACCEPTED',
             'email': 'a@a.com',
-            "id": 1,
+            'id': 1,
         }
 
         model1 = self.generate_models(authenticate=True,
@@ -87,7 +87,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                       user_invite=True,
                                       user_invite_kwargs=invite_kwargs,
                                       models=base)
-        invite_kwargs["id"] = 2
+        invite_kwargs['id'] = 2
 
         model2 = self.generate_models(authenticate=True,
                                       profile_academy=True,
@@ -159,7 +159,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                     role='potato',
                                     user_kwards={'email': 'a@a.com'})
 
-        invite_kwargs = {'status': "ACCEPTED", 'email': 'a@a.com'}
+        invite_kwargs = {'status': 'ACCEPTED', 'email': 'a@a.com'}
 
         model1 = self.generate_models(authenticate=True,
                                       profile_academy=True,

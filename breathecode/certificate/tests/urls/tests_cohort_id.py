@@ -126,8 +126,8 @@ class CertificateTestSuite(CertificateTestCase):
                              user=True,
                              profile_academy=True,
                              capability='crud_certificate',
-                             role="STUDENT",
-                             cohort_stage="ENDED")
+                             role='STUDENT',
+                             cohort_stage='ENDED')
 
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
@@ -215,7 +215,7 @@ class CertificateTestSuite(CertificateTestCase):
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
-        expected = {'detail': "no-default-layout", 'status_code': 400}
+        expected = {'detail': 'no-default-layout', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -241,7 +241,7 @@ class CertificateTestSuite(CertificateTestCase):
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
-        expected = {'detail': "cohort-stage-must-be-ended", 'status_code': 400}
+        expected = {'detail': 'cohort-stage-must-be-ended', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -601,7 +601,8 @@ class CertificateTestSuite(CertificateTestCase):
                                              models=base)
 
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
-        response = self.client.post(url, format='json')
+        data = {'layout_slug': 'vanilla'}
+        response = self.client.post(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json[0]['updated_at'])

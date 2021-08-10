@@ -182,7 +182,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:academy_certificate')
         response = self.client.delete(url)
         json = response.json()
-        expected = {'detail': "Missing parameters in the querystring", 'status_code': 400}
+        expected = {'detail': 'Missing parameters in the querystring', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

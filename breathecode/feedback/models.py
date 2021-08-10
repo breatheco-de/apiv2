@@ -21,12 +21,6 @@ class CohortProxy(Cohort):
         proxy = True
 
 
-"""
-Multiple questions/answers for one single person, survays can only be send to entire cohorts and they will ask all the possible questions involved in a cohort
-1. How is your teacher?
-2. How is the academy?
-3. How is the blabla..
-"""
 PENDING = 'PENDING'
 SENT = 'SENT'
 PARTIAL = 'PARTIAL'
@@ -40,6 +34,12 @@ SURVEY_STATUS = (
 
 
 class Survey(models.Model):
+    """
+    Multiple questions/answers for one single person, survays can only be send to entire cohorts and they will ask all the possible questions involved in a cohort
+    1. How is your teacher?
+    2. How is the academy?
+    3. How is the blabla..
+    """
 
     lang = models.CharField(max_length=3, blank=True, default='en')
 
@@ -53,7 +53,7 @@ class Survey(models.Model):
         default=None,
         blank=True,
         null=True,
-        help_text="The avg from all the answers taken under this survey",
+        help_text='The avg from all the answers taken under this survey',
         editable=False)
 
     status = models.CharField(max_length=15,
@@ -63,13 +63,13 @@ class Survey(models.Model):
 
     duration = models.DurationField(
         default=datetime.timedelta(hours=24),
-        help_text="No one will be able to answer after this period of time")
+        help_text='No one will be able to answer after this period of time')
     created_at = models.DateTimeField(auto_now_add=True, editable=True)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     sent_at = models.DateTimeField(default=None, null=True, blank=True)
 
     def __str__(self):
-        return "Survey for " + self.cohort.name
+        return 'Survey for ' + self.cohort.name
 
 
 PENDING = 'PENDING'
@@ -119,10 +119,7 @@ class Answer(models.Model):
                                  blank=True,
                                  null=True)
 
-    score = models.CharField(max_length=250,
-                             default=None,
-                             blank=True,
-                             null=True)
+    score = models.IntegerField(default=None, blank=True, null=True)
     comment = models.TextField(max_length=1000,
                                default=None,
                                blank=True,
