@@ -203,6 +203,14 @@ class ActivityClassroomView(APIView):
 
         datastore = Datastore()
         #academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
+        limit = request.GET.get('limit')
+        if limit:
+            kwargs['limit'] = int(limit)
+
+        offset = request.GET.get('offset')
+        if offset:
+            kwargs['offset'] = int(offset)
+
         public_iter = datastore.fetch(
             **kwargs
         )  # TODO: remove this in the future because the academy_id was not present brefore and students didn't have it
