@@ -25,8 +25,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         """Test /answer without auth"""
         request = HttpRequest()
 
-        self.assertEqual(
-            send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
+        self.assertEqual(send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -35,20 +34,18 @@ class SendSurveyTestSuite(FeedbackTestCase):
         """Test /answer without auth"""
         request = HttpRequest()
 
+        cohort_kwargs = {'language': 'en'}
+        cohort_user_kwargs = {'role': 'STUDENT', 'educational_status': 'ACTIVE'}
         models = [
             self.generate_models(user=True,
                                  cohort_user=True,
                                  profile_academy=True,
-                                 cohort_user_role='STUDENT',
-                                 educational_status='ACTIVE',
-                                 lang='en') for _ in range(0, 3)
+                                 cohort_user_kwargs=cohort_user_kwargs,
+                                 cohort_kwargs=cohort_kwargs) for _ in range(0, 3)
         ]
-        academies = [(models[key]['cohort'].academy.name, key + 1)
-                     for key in range(0, 3)]
-        _cohorts = [(models[key]['cohort'].certificate.name, key + 1)
-                    for key in range(0, 3)]
-        self.assertEqual(
-            send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
+        academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
+        _cohorts = [(models[key]['cohort'].certificate.name, key + 1) for key in range(0, 3)]
+        self.assertEqual(send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
         expected = [{
             'academy_id': None,
             'cohort_id': key,
@@ -70,8 +67,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
         dicts = [
             answer for answer in self.all_answer_dict()
-            if isinstance(answer['created_at'], datetime)
-            and answer.pop('created_at')
+            if isinstance(answer['created_at'], datetime) and answer.pop('created_at')
         ]
         self.assertEqual(dicts, expected)
 
@@ -82,20 +78,19 @@ class SendSurveyTestSuite(FeedbackTestCase):
         """Test /answer without auth"""
         request = HttpRequest()
 
+        cohort_kwargs = {'language': 'en'}
+        cohort_user_kwargs = {'role': 'STUDENT', 'educational_status': 'GRADUATED'}
         models = [
             self.generate_models(user=True,
                                  cohort_user=True,
                                  profile_academy=True,
-                                 cohort_user_role='STUDENT',
-                                 educational_status='GRADUATED',
-                                 lang='en') for _ in range(0, 3)
+                                 cohort_kwargs=cohort_kwargs,
+                                 cohort_user_kwargs=cohort_user_kwargs) for _ in range(0, 3)
         ]
-        academies = [(models[key]['cohort'].academy.name, key + 1)
-                     for key in range(0, 3)]
+        academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
         cohorts = Cohort.objects.all()
         self.assertEqual(send_cohort_bulk_survey(None, request, cohorts), None)
-        _cohorts = [(models[key]['cohort'].certificate.name, key + 1)
-                    for key in range(0, 3)]
+        _cohorts = [(models[key]['cohort'].certificate.name, key + 1) for key in range(0, 3)]
         expected = [{
             'academy_id': None,
             'cohort_id': key,
@@ -117,8 +112,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
         dicts = [
             answer for answer in self.all_answer_dict()
-            if isinstance(answer['created_at'], datetime)
-            and answer.pop('created_at')
+            if isinstance(answer['created_at'], datetime) and answer.pop('created_at')
         ]
         self.assertEqual(dicts, expected)
 
@@ -129,25 +123,23 @@ class SendSurveyTestSuite(FeedbackTestCase):
         """Test /answer without auth"""
         request = HttpRequest()
 
+        cohort_kwargs = {'language': 'en'}
+        cohort_user_kwargs = {'role': 'STUDENT', 'educational_status': 'POSTPONED'}
         models = [
             self.generate_models(user=True,
                                  cohort_user=True,
                                  profile_academy=True,
-                                 cohort_user_role='STUDENT',
-                                 educational_status='POSTPONED',
-                                 lang='en') for _ in range(0, 3)
+                                 cohort_kwargs=cohort_kwargs,
+                                 cohort_user_kwargs=cohort_user_kwargs) for _ in range(0, 3)
         ]
-        academies = [(models[key]['cohort'].academy.name, key + 1)
-                     for key in range(0, 3)]
+        academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
 
-        self.assertEqual(
-            send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
+        self.assertEqual(send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
         expected = []
 
         dicts = [
             answer for answer in self.all_answer_dict()
-            if isinstance(answer['created_at'], datetime)
-            and answer.pop('created_at')
+            if isinstance(answer['created_at'], datetime) and answer.pop('created_at')
         ]
         self.assertEqual(dicts, expected)
 
@@ -158,25 +150,23 @@ class SendSurveyTestSuite(FeedbackTestCase):
         """Test /answer without auth"""
         request = HttpRequest()
 
+        cohort_kwargs = {'language': 'en'}
+        cohort_user_kwargs = {'role': 'STUDENT', 'educational_status': 'SUSPENDED'}
         models = [
             self.generate_models(user=True,
                                  cohort_user=True,
                                  profile_academy=True,
-                                 cohort_user_role='STUDENT',
-                                 educational_status='SUSPENDED',
-                                 lang='en') for _ in range(0, 3)
+                                 cohort_kwargs=cohort_kwargs,
+                                 cohort_user_kwargs=cohort_user_kwargs) for _ in range(0, 3)
         ]
-        academies = [(models[key]['cohort'].academy.name, key + 1)
-                     for key in range(0, 3)]
+        academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
 
-        self.assertEqual(
-            send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
+        self.assertEqual(send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
         expected = []
 
         dicts = [
             answer for answer in self.all_answer_dict()
-            if isinstance(answer['created_at'], datetime)
-            and answer.pop('created_at')
+            if isinstance(answer['created_at'], datetime) and answer.pop('created_at')
         ]
         self.assertEqual(dicts, expected)
 
@@ -187,24 +177,22 @@ class SendSurveyTestSuite(FeedbackTestCase):
         """Test /answer without auth"""
         request = HttpRequest()
 
+        cohort_kwargs = {'language': 'en'}
+        cohort_user_kwargs = {'role': 'STUDENT', 'educational_status': 'DROPPED'}
         models = [
             self.generate_models(user=True,
                                  cohort_user=True,
                                  profile_academy=True,
-                                 cohort_user_role='STUDENT',
-                                 educational_status='DROPPED',
-                                 lang='en') for _ in range(0, 3)
+                                 cohort_kwargs=cohort_kwargs,
+                                 cohort_user_kwargs=cohort_user_kwargs) for _ in range(0, 3)
         ]
-        academies = [(models[key]['cohort'].academy.name, key + 1)
-                     for key in range(0, 3)]
+        academies = [(models[key]['cohort'].academy.name, key + 1) for key in range(0, 3)]
 
-        self.assertEqual(
-            send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
+        self.assertEqual(send_cohort_bulk_survey(None, request, Cohort.objects.all()), None)
         expected = []
 
         dicts = [
             answer for answer in self.all_answer_dict()
-            if isinstance(answer['created_at'], datetime)
-            and answer.pop('created_at')
+            if isinstance(answer['created_at'], datetime) and answer.pop('created_at')
         ]
         self.assertEqual(dicts, expected)

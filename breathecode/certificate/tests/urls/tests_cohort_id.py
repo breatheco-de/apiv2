@@ -316,6 +316,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
+                'description': model['specialty'].description,
                 'id': 1,
                 'logo_url': None,
                 'name': model['specialty'].name,
@@ -422,6 +423,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
+                'description': model['specialty'].description,
                 'id': 1,
                 'logo_url': None,
                 'name': model['specialty'].name,
@@ -528,6 +530,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
+                'description': model['specialty'].description,
                 'id': 1,
                 'logo_url': None,
                 'name': model['specialty'].name,
@@ -639,6 +642,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
+                'description': model['specialty'].description,
                 'id': 1,
                 'logo_url': None,
                 'name': model['specialty'].name,

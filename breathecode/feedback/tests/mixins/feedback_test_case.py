@@ -83,6 +83,7 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin,
                 '\n'
                 '\n'
                 'The BreatheCode Team'
+                '\n'
             })
         self.assertToken(token)
         self.assertTrue(link in html)
