@@ -19,9 +19,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
-
-
-
     def test_academy_cohort__post__without_authorization(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -34,9 +31,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort__without_capability(self):
         """Test /cohort/:id without auth"""
@@ -57,9 +51,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Post
     """
-
-
-
 
     def test_academy_cohort__post__without_profile_academy(self):
         """Test /academy/cohort without auth"""
@@ -83,9 +74,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort__post__with_bad_fields(self):
         """Test /academy/cohort without auth"""
@@ -113,9 +101,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-
-
-
     def test_academy_cohort__post__with_bad_current_day(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -141,9 +126,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort__post__without_ending_date_or_never_ends(self):
         """Test /academy/cohort without auth"""
@@ -176,9 +158,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort__post__with_ending_date_and_never_ends_true(self):
         """Test /academy/cohort without auth"""
@@ -214,9 +193,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-
-
-
     def test_academy_cohort__post__without_ending_date_and_never_ends_false(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
@@ -249,9 +225,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort__post(self):
         """Test /academy/cohort without auth"""
@@ -328,9 +301,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Without data
     """
 
-
-
-
     def test_academy_cohort_without_data(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -353,9 +323,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 With data
     """
-
-
-
 
     def test_academy_cohort__with_data(self, models=None):
         """Test /cohort without auth"""
@@ -395,7 +362,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].specialty_mode.id,
                 'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
-                'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
             },
             'syllabus_version': {
                 'version': model['cohort'].syllabus_version.version,
@@ -424,9 +390,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Put
     """
 
-
-
-
     def test_academy_cohort__put__without_id(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -447,9 +410,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Get
     """
-
-
-
 
     def test_academy_cohort__with_data__with_upcoming_false(self):
         """Test /cohort without auth"""
@@ -482,7 +442,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].specialty_mode.id,
                 'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
-                'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
             },
             'syllabus_version': {
                 'version': model['cohort'].syllabus_version.version,
@@ -508,9 +467,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-
-
-
     def test_academy_cohort__with_data__with_upcoming_true__without_data(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -534,9 +490,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort__with_data__with_upcoming_true(self):
         """Test /cohort without auth"""
@@ -574,7 +527,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].specialty_mode.id,
                 'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
-                'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
             },
             'syllabus_version': {
                 'version': model['cohort'].syllabus_version.version,
@@ -600,9 +552,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-
-
-
     def test_academy_cohort__with_data__with_bad_academy(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -627,9 +576,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort_with_data_with_academy(self):
         """Test /cohort without auth"""
@@ -663,7 +609,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].specialty_mode.id,
                 'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
-                'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
             },
             'syllabus_version': {
                 'version': model['cohort'].syllabus_version.version,
@@ -688,9 +633,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort_with_data_with_academy_with_comma(self):
         """Test /cohort without auth"""
@@ -724,7 +666,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].specialty_mode.id,
                 'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
-                'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
             },
             'syllabus_version': {
                 'version': model['cohort'].syllabus_version.version,
@@ -749,9 +690,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort_with_ten_datas_with_academy_with_comma(self):
         """Test /cohort without auth"""
@@ -794,7 +732,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].specialty_mode.id,
                 'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
-                'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
             },
             'syllabus_version': {
                 'version': model['cohort'].syllabus_version.version,
@@ -822,9 +759,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Sort in querystring
     """
-
-
-
 
     def test_academy_cohort__with_data__with_sort(self):
         """Test /cohort without auth"""
@@ -862,7 +796,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].specialty_mode.id,
                 'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
-                'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
             },
             'syllabus_version': {
                 'version': model['cohort'].syllabus_version.version,
@@ -888,9 +821,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'cohort')
         } for model in models])
 
-
-
-
     def test_academy_cohort_with_data_with_bad_location(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -914,9 +844,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort_with_data_with_location(self):
         """Test /cohort without auth"""
@@ -950,7 +877,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].specialty_mode.id,
                 'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
-                'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
             },
             'syllabus_version': {
                 'version': model['cohort'].syllabus_version.version,
@@ -975,9 +901,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort_with_data_with_location_with_comma(self):
         """Test /cohort without auth"""
@@ -1011,7 +934,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].specialty_mode.id,
                 'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
-                'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
             },
             'syllabus_version': {
                 'version': model['cohort'].syllabus_version.version,
@@ -1036,9 +958,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.count_cohort(), 1)
         self.assertEqual(self.get_cohort_dict(1), model_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort_with_ten_datas_with_location_with_comma(self):
         """Test /cohort without auth"""
@@ -1081,7 +1000,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].specialty_mode.id,
                 'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
-                'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
             },
             'syllabus_version': {
                 'version': model['cohort'].syllabus_version.version,
@@ -1105,9 +1023,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort_with_ten_datas_with_location_with_comma_just_get_100(self):
         """Test /cohort without auth"""
@@ -1150,7 +1065,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'id': model['cohort'].specialty_mode.id,
                 'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
-                'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
             },
             'syllabus_version': {
                 'version': model['cohort'].syllabus_version.version,
@@ -1174,9 +1088,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_first_five(self):
         """Test /cohort without auth"""
@@ -1232,7 +1143,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'id': model['cohort'].specialty_mode.id,
                     'slug': model['cohort'].specialty_mode.slug,
                     'name': model['cohort'].specialty_mode.name,
-                    'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
                 },
                 'syllabus_version': {
                     'version': model['cohort'].syllabus_version.version,
@@ -1257,9 +1167,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_last_five(self):
         """Test /cohort without auth"""
@@ -1315,7 +1222,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                     'id': model['cohort'].specialty_mode.id,
                     'slug': model['cohort'].specialty_mode.slug,
                     'name': model['cohort'].specialty_mode.name,
-                    'duration_in_days': model['cohort'].specialty_mode.duration_in_days,
                 },
                 'syllabus_version': {
                     'version': model['cohort'].syllabus_version.version,
@@ -1340,9 +1246,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_after_last_five(self):
         """Test /cohort without auth"""
@@ -1386,9 +1289,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), models_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-
-
-
     def test_academy_cohort_delete_without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -1407,9 +1307,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'cohort'),
         }])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort_delete_in_bulk_with_students(self):
         """Test /cohort/:id/user without auth"""
@@ -1440,9 +1337,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
             self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
 
-
-
-
     def test_academy_cohort_delete_in_bulk_with_one(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -1466,15 +1360,9 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             url = (reverse_lazy('admissions:academy_cohort') + f'?{field}=' + str(value))
             response = self.client.delete(url)
 
-            if response.status_code != 204:
-                print(response.json())
-
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.count_cohort_user(), 0)
             self.assertEqual(self.count_cohort_stage(model['cohort'].id), 'DELETED')
-
-
-
 
     def test_academy_cohort_delete_in_bulk_with_two(self):
         """Test /cohort/:id/user without auth"""
@@ -1514,17 +1402,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             url = (reverse_lazy('admissions:academy_cohort') + f'?{field}=' + str(value1) + ',' + str(value2))
             response = self.client.delete(url)
 
-            if response.status_code != 204:
-                print(response.json())
-
             self.assertEqual(self.count_cohort_user(), 0)
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
             self.assertEqual(self.count_cohort_stage(model1['cohort'].id), 'DELETED')
             self.assertEqual(self.count_cohort_stage(model2['cohort'].id), 'DELETED')
-
-
-
 
     def test_academy_cohort_with_data_testing_cache(self):
         """Test /cohort without auth"""
@@ -1541,9 +1423,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.test_academy_cohort__with_data(old_models)
         self.assertEqual(self.cache.keys(), cache_keys)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-
-
 
     def test_academy_cohort_with_data_testing_cache_and_remove_in_post(self):
         """Test /cohort without auth"""

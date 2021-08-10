@@ -266,7 +266,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
         return Response(serializer.data)
 
 
-# class SyllabusView(APIView):
+# class SyllabusVersionView(APIView):
 #     """
 #     List all snippets, or create a new snippet.
 #     """
@@ -286,7 +286,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
 #         if syl is None:
 #             raise serializers.ValidationError("Syllabus not found", code=404)
 
-#         serializer = SyllabusGetSerializer(syl, many=False)
+#         serializer = GetSyllabusVersionSerializer(syl, many=False)
 #         return Response(serializer.data, status=status.HTTP_200_OK)
 #     def post(self, request, course_slug=None):
 #         version = 1
@@ -299,7 +299,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
 #         if item is not None:
 #             version = item.version + 1
 
-#         serializer = SyllabusSerializer(data=request.data, context={"course": course})
+#         serializer = SyllabusVersionSerializer(data=request.data, context={"course": course})
 #         if serializer.is_valid():
 #             serializer.save()
 #             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -313,7 +313,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
 #         if item is None:
 #             raise serializers.ValidationError("Syllabus version not found", code=404)
 
-#         serializer = SyllabusSerializer(item, data=request.data, many=False)
+#         serializer = SyllabusVersionSerializer(item, data=request.data, many=False)
 #         if serializer.is_valid():
 #             serializer.save()
 #             return Response(serializer.data, status=status.HTTP_201_CREATED)

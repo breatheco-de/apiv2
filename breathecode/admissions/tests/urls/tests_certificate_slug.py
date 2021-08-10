@@ -57,8 +57,6 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'id': model['specialty_mode'].id,
                 'name': model['specialty_mode'].name,
                 'slug': model['specialty_mode'].slug,
-                'logo': model['specialty_mode'].logo,
-                'duration_in_days': model['specialty_mode'].duration_in_days,
                 'description': model['specialty_mode'].description,
             })
         self.assertEqual(response.status_code, status.HTTP_200_OK)

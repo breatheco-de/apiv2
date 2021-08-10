@@ -129,9 +129,7 @@ def generate_certificate(user, cohort=None, layout=None):
         uspe.status_text = "Certificate successfully queued for PDF generation"
         uspe.save()
 
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
+    except ValidationException as e:
         message = str(e)
         uspe.status = ERROR
         uspe.status_text = message

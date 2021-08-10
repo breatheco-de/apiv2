@@ -24,7 +24,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     def test_generate_certificate__with_user_without_cohort(self):
         model = self.generate_models(user=True)
         try:
-            self.assertEqual(generate_certificate(model['user']), None)
+            generate_certificate(model['user'])
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'missing-cohort-user')
@@ -41,7 +41,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     def test_generate_certificate__without_cohort_user(self):
         model = self.generate_models(user=True, cohort=True)
         try:
-            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
+            generate_certificate(model['user'], model['cohort'])
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'missing-cohort-user')
@@ -56,6 +56,16 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_generate_certificate__cohort_not_ended(self):
+        cohort_user_kwargs = {
+            'finantial_status': 'FULLY_PAID',
+            'educational_status': 'GRADUATED',
+        }
+        cohort_kwargs = {
+            'current_day': 43877965,
+        }
+        syllabus_kwargs = {
+            'duration_in_days': 43877965,
+        }
         model = self.generate_models(user=True,
                                      cohort=True,
                                      cohort_user=True,
@@ -63,7 +73,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      syllabus_version=True,
                                      specialty=True,
                                      specialty_mode=True,
-                                     layout_design=True)
+                                     layout_design=True,
+                                     cohort_user_kwargs=cohort_user_kwargs,
+                                     cohort_kwargs=cohort_kwargs,
+                                     syllabus_kwargs=syllabus_kwargs)
 
         base = model.copy()
         del base['user']
@@ -75,13 +88,31 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                              cohort_user_kwargs=cohort_user_kwargs,
                                              models=base)
 
-        try:
-            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
-            assert False
-        except Exception as e:
-            self.assertEqual(str(e), 'cohort-without-status-ended')
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
 
-        self.assertEqual(self.all_user_specialty_dict(), [])
+        self.assertToken(result['token'])
+        result['token'] = None
+
+        translation = strings[model['cohort'].language]
+        expected = {
+            'academy_id': 1,
+            'cohort_id': 1,
+            'expires_at': None,
+            'id': 1,
+            'layout_id': 1,
+            'preview_url': None,
+            'signed_by': (teacher_model['user'].first_name + " " + teacher_model['user'].last_name),
+            'signed_by_role': translation["Main Instructor"],
+            'specialty_id': 1,
+            'status': 'ERROR',
+            'token': None,
+            'status_text': 'cohort-without-status-ended',
+            'user_id': 1,
+        }
+
+        self.assertEqual(result, expected)
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),
+                         [expected])
 
     """
     🔽🔽🔽 without SyllabusVersion
@@ -94,7 +125,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True, cohort=True, cohort_user=True, cohort_kwargs=cohort_kwargs)
         try:
-            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
+            generate_certificate(model['user'], model['cohort'])
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'missing-syllabus-version')
@@ -116,7 +147,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      syllabus_version=True,
                                      cohort_kwargs=cohort_kwargs)
         try:
-            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
+            generate_certificate(model['user'], model['cohort'])
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'missing-specialty-mode')
@@ -139,7 +170,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      syllabus_version=True,
                                      cohort_kwargs=cohort_kwargs)
         try:
-            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
+            generate_certificate(model['user'], model['cohort'])
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'missing-specialty')
@@ -163,7 +194,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      specialty=True,
                                      cohort_kwargs=cohort_kwargs)
         try:
-            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
+            generate_certificate(model['user'], model['cohort'])
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'missing-specialty')
@@ -188,7 +219,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      specialty=True,
                                      cohort_kwargs=cohort_kwargs)
         try:
-            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
+            generate_certificate(model['user'], model['cohort'])
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'no-default-layout')
@@ -214,7 +245,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs)
         try:
-            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
+            generate_certificate(model['user'], model['cohort'])
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'without-main-teacher')
@@ -761,7 +792,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.generate_models(user=True, cohort_user=True, cohort_user_kwargs=cohort_user_kwargs, models=base)
 
         try:
-            self.assertEqual(generate_certificate(model['user'], model['cohort']), None)
+            generate_certificate(model['user'], model['cohort'])
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'already-exists')

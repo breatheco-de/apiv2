@@ -301,7 +301,6 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
-                    'duration_in_days': model['specialty_mode'].duration_in_days,
                 },
             },
             'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
@@ -408,7 +407,6 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
-                    'duration_in_days': model['specialty_mode'].duration_in_days,
                 },
             },
             'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
@@ -515,7 +513,6 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
-                    'duration_in_days': model['specialty_mode'].duration_in_days,
                 },
             },
             'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
@@ -575,7 +572,7 @@ class CertificateTestSuite(CertificateTestCase):
         self.headers(academy=1)
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
-        specialty_mode_kwargs = {'duration_in_days': 9545799}
+        syllabus_kwargs = {'duration_in_days': 9545799}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
@@ -591,7 +588,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs,
                                      cohort_user_kwargs=cohort_user_kwargs,
-                                     specialty_mode_kwargs=specialty_mode_kwargs)
+                                     syllabus_kwargs=syllabus_kwargs)
 
         base = model.copy()
         del base['user']
@@ -626,7 +623,6 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
-                    'duration_in_days': model['specialty_mode'].duration_in_days,
                 },
             },
             'created_at': self.datetime_to_iso(model['user_specialty'].created_at),

@@ -72,9 +72,7 @@ class GetCertificateSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
-    duration_in_days = serpy.Field()
     description = serpy.Field()
-    logo = serpy.Field()
 
 
 class GetSmallSpecialtyModeSerializer(serpy.Serializer):
@@ -125,18 +123,6 @@ class GetBigAcademySerializer(serpy.Serializer):
     github_handle = serpy.Field()
     linkedin_url = serpy.Field()
     youtube_url = serpy.Field()
-
-
-class GetSyllabusSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
-    json = serpy.Field()
-    github_url = serpy.Field()
-    private = serpy.Field()
-    academy_owner = serpy.MethodField()
-
-    def get_academy_owner(self, obj):
-        return obj.academy_owner.id if obj.academy_owner else None
 
 
 class SyllabusVersionSmallSerializer(serpy.Serializer):
@@ -274,20 +260,38 @@ class UserMeSerializer(serpy.Serializer):
         return GETCohortUserSmallSerializer(cohorts, many=True).data
 
 
-class SyllabusGetSerializer(serpy.Serializer):
+class GetSyllabusSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
-    version = serpy.MethodField()
+    github_url = serpy.Field()
+    duration_in_hours = serpy.Field()
+    duration_in_days = serpy.Field()
+    week_hours = serpy.Field()
+    logo = serpy.Field()
+    private = serpy.Field()
+    academy_owner = serpy.MethodField()
+    created_at = serpy.Field()
     updated_at = serpy.Field()
-    json = serpy.Field()
 
-    def get_version(self, obj):
-        result = obj.syllabusversion_set.filter(syllabus=obj).first()
-        return result.version if result else None
+    def get_academy_owner(self, obj):
+        return obj.academy_owner.id if obj.academy_owner else None
+
+
+class GetSyllabusVersionSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    json = serpy.Field()
+    version = serpy.Field()
+    updated_at = serpy.Field()
+    syllabus = serpy.MethodField()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+    def get_syllabus(self, obj):
+        return obj.syllabus.id if obj.syllabus else None
 
 
 """
-            ↓ EDIT SERLIZERS ↓
+            ↓ EDIT SERIALIZERS ↓
 """
 
 
@@ -628,7 +632,16 @@ class CohortUserPUTSerializer(CohortUserSerializerMixin):
 
 class SyllabusSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Syllabus
+        model = SyllabusVersion
+        exclude = ()
+
+
+class SyllabusVersionSerializer(serializers.ModelSerializer):
+    json = serializers.JSONField()
+
+    class Meta:
+        model = SyllabusVersion
+        fields = ['json', 'version', 'syllabus']
         exclude = ()
         extra_kwargs = {
             'certificate': {
@@ -640,30 +653,31 @@ class SyllabusSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
+        certificate = self.context['certificate']
+
         previous_syllabus = SyllabusVersion.objects.filter(
-            syllabus__academy_owner=self.context['academy'],
-            specialty=self.context['certificate']).order_by('-version').first()
+            syllabus=certificate.syllabus).order_by('-version').first()
 
         version = 1
         if previous_syllabus is not None:
             version = previous_syllabus.version + 1
-        return super(SyllabusSerializer, self).create({
+
+        return super(SyllabusVersionSerializer, self).create({
             **validated_data,
-            "certificate":
-            self.context['certificate'],
-            "academy_owner":
-            self.context['academy'],
-            "version":
-            version,
+            "syllabus": certificate.syllabus,
+            "version": version,
         })
 
 
-class SyllabusUpdateSerializer(serializers.ModelSerializer):
+class SyllabusVersionPutSerializer(serializers.ModelSerializer):
+    json = serializers.JSONField()
+
     class Meta:
-        model = Syllabus
+        model = SyllabusVersion
+        fields = ['json', 'version', 'syllabus']
         exclude = ()
         extra_kwargs = {
-            'course': {
+            'syllabus': {
                 'read_only': True
             },
             'version': {

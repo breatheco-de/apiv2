@@ -1,8 +1,9 @@
 from django.urls import path
-from .views import (AcademyView, CohortUserView, AcademyCohortView, get_timezones, UserView, UserMeView,
-                    AcademyCohortUserView, get_single_course, SyllabusView, CertificateView,
-                    CertificateAllView, get_all_academies, get_cohorts, AcademyCohortTimeSlotView,
-                    AcademySpecialtyModeTimeSlotView, AcademySyncCohortTimeSlotView)
+from .views import (AcademyView, CohortUserView, AcademyCohortView, SyllabusView, get_timezones, UserView,
+                    UserMeView, AcademyCohortUserView, get_single_course, SyllabusVersionView,
+                    CertificateView, CertificateAllView, get_all_academies, get_cohorts,
+                    AcademyCohortTimeSlotView, AcademySpecialtyModeTimeSlotView,
+                    AcademySyncCohortTimeSlotView)
 
 app_name = 'admissions'
 urlpatterns = [
@@ -42,17 +43,19 @@ urlpatterns = [
     path('certificate', CertificateAllView.as_view(), name="certificate"),
     path('certificate/<str:certificate_slug>/', get_single_course, name="certificate_slug"),
     path('academy/certificate', CertificateView.as_view(), name="academy_certificate"),
+    path('syllabus/details', SyllabusView.as_view(), name="syllabus_details"),
+    path('syllabus/details/<int:syllabus_id>', SyllabusView.as_view(), name="syllabus_details_id"),
     path('certificate/<str:certificate_slug>/syllabus',
-         SyllabusView.as_view(),
+         SyllabusVersionView.as_view(),
          name="certificate_slug_syllabus"),
     path('certificate/<str:certificate_slug>/syllabus/<int:version>',
-         SyllabusView.as_view(),
+         SyllabusVersionView.as_view(),
          name="certificate_slug_syllabus_version"),
     path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus',
-         SyllabusView.as_view(),
+         SyllabusVersionView.as_view(),
          name="certificate_slug_academy_id_syllabus"),
     path('certificate/<str:certificate_slug>/academy/<int:academy_id>/syllabus/<int:version>',
-         SyllabusView.as_view(),
+         SyllabusVersionView.as_view(),
          name="certificate_slug_academy_id_syllabus_version"),
     path('catalog/timezones', get_timezones, name="timezones_all"),
 ]

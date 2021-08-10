@@ -83,7 +83,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-        self.assertEqual(self.all_syllabus_dict(), [])
+        self.assertEqual(self.all_syllabus_version_dict(), [])
 
     def test_certificate_slug_academy_id_syllabus(self):
         """Test /certificate without auth"""
@@ -101,16 +101,20 @@ class CertificateTestSuite(AdmissionsTestCase):
                            })
         response = self.client.get(url)
         json = response.json()
-        expected = {
+        expected = [{
+            'json': model.syllabus_version.json,
             'version': model.syllabus_version.version,
-            'updated_at': self.datetime_to_iso(model.syllabus.updated_at),
-            'json': model.syllabus.json,
-        }
+            'created_at': self.datetime_to_iso(model.syllabus_version.created_at),
+            'updated_at': self.datetime_to_iso(model.syllabus_version.updated_at),
+            'syllabus': model.syllabus.id,
+        }]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
+        self.assertEqual(self.all_syllabus_version_dict(), [{
+            **self.model_to_dict(model, 'syllabus_version')
+        }])
 
     def test_certificate_slug_academy_id_syllabus_post_without_capabilities(self):
         """Test /certificate without auth"""
@@ -131,7 +135,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.all_syllabus_dict(), [])
+        self.assertEqual(self.all_syllabus_version_dict(), [])
 
     def test_certificate_slug_academy_id_syllabus_post_with_bad_slug(self):
         """Test /certificate without auth"""
@@ -148,32 +152,13 @@ class CertificateTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'detail': 'Invalid certificates slug they-killed-kenny', 'status_code': 404}
+        expected = {'detail': 'specialty-mode-not-found', 'status_code': 404}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.all_syllabus_dict(), [])
+        self.assertEqual(self.all_syllabus_version_dict(), [])
 
-    # def test_certificate_slug_academy_id_syllabus__post__without_time_slot(self):
-    #     """Test /certificate without auth"""
-    #     self.headers(academy=1)
-    #     model = self.generate_models(authenticate=True, profile_academy=True,
-    #         capability='crud_syllabus', role='potato', specialty_mode=True)
-    #     url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus', kwargs={
-    #         'certificate_slug': model['specialty_mode'].slug, 'academy_id': 1})
-    #     data = {}
-    #     response = self.client.post(url, data)
-    #     json = response.json()
-    #     expected = {
-    #         'detail': 'certificate-not-have-time-slots',
-    #         'status_code': 400,
-    #     }
-
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-    #     self.assertEqual(self.all_syllabus_dict(), [])
-
-    def test_certificate_slug_academy_id_syllabus_post_without_required_fields(self):
+    def test_certificate_slug_academy_id_syllabus_post_without_syllabus(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -190,13 +175,37 @@ class CertificateTestSuite(AdmissionsTestCase):
         data = {}
         response = self.client.post(url, data)
         json = response.json()
+        expected = {'detail': 'missing-syllabus-in-request', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_syllabus_version_dict(), [])
+
+    def test_certificate_slug_academy_id_syllabus_post_without_required_fields(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_syllabus',
+                                     role='potato',
+                                     syllabus=True,
+                                     specialty_mode=True,
+                                     specialty_mode_time_slot=True)
+        url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus',
+                           kwargs={
+                               'certificate_slug': model['specialty_mode'].slug,
+                               'academy_id': 1
+                           })
+        data = {'syllabus': 1}
+        response = self.client.post(url, data)
+        json = response.json()
         expected = {'json': ['This field is required.']}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_syllabus_dict(), [])
+        self.assertEqual(self.all_syllabus_version_dict(), [])
 
-    def test_certificate_slug_academy_id_syllabus_post(self):
+    def test_certificate_slug_academy_id_syllabus__post__without_syllabus(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -210,86 +219,105 @@ class CertificateTestSuite(AdmissionsTestCase):
                                'certificate_slug': model['specialty_mode'].slug,
                                'academy_id': 1
                            })
-        data = {'certificate': model['specialty_mode'].id, 'json': {'slug': 'they-killed-kenny'}}
+        data = {
+            'certificate': model['specialty_mode'].id,
+            'json': {
+                'slug': 'they-killed-kenny'
+            },
+            'syllabus': 1,
+        }
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {'detail': 'syllabus-field-missing', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_syllabus_version_dict(), [])
+
+    def test_certificate_slug_academy_id_syllabus_post(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_syllabus',
+                                     role='potato',
+                                     syllabus=True,
+                                     specialty_mode=True,
+                                     specialty_mode_time_slot=True)
+        url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus',
+                           kwargs={
+                               'certificate_slug': model['specialty_mode'].slug,
+                               'academy_id': 1
+                           })
+        data = {
+            'certificate': model['specialty_mode'].id,
+            'json': {
+                'slug': 'they-killed-kenny'
+            },
+            'syllabus': 1,
+        }
         response = self.client.post(url, data, format='json')
         json = response.json()
 
-        self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
-        del json['created_at']
-        del json['updated_at']
-
         expected = {
-            'academy_owner': 1,
-            'certificate': 1,
-            'github_url': None,
-            'id': 1,
             'json': data['json'],
-            'private': False,
+            'syllabus': 1,
             'version': 1,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_syllabus_dict(), [{
-            'academy_owner_id': 1,
-            'certificate_id': 1,
-            'github_url': None,
+        self.assertEqual(self.all_syllabus_version_dict(), [{
             'id': 1,
             'json': {
                 'slug': 'they-killed-kenny'
             },
-            'private': False,
             'version': 1,
+            'syllabus_id': 1,
         }])
 
-    # def test_certificate_slug_academy_id_syllabus__post__with_cohort_and_syllabus(self):
-    #     """Test /certificate without auth"""
-    #     self.headers(academy=1)
-    #     model = self.generate_models(authenticate=True,
-    #                                  profile_academy=True,
-    #                                  capability='crud_syllabus',
-    #                                  role='potato',
-    #                                  specialty_mode=True,
-    #                                  specialty_mode_time_slot=True,
-    #                                  cohort=True,
-    #                                  syllabus=True)
-    #     url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus',
-    #                        kwargs={
-    #                            'certificate_slug': model['specialty_mode'].slug,
-    #                            'academy_id': 1
-    #                        })
-    #     data = {'certificate': model['specialty_mode'].id, 'json': {'slug': 'they-killed-kenny'}}
-    #     response = self.client.post(url, data, format='json')
-    #     json = response.json()
+    def test_certificate_slug_academy_id_syllabus__post__with_cohort_and_syllabus(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_syllabus',
+                                     role='potato',
+                                     specialty_mode=True,
+                                     specialty_mode_time_slot=True,
+                                     cohort=True,
+                                     syllabus=True,
+                                     syllabus_version=True)
+        url = reverse_lazy('admissions:certificate_slug_academy_id_syllabus',
+                           kwargs={
+                               'certificate_slug': model['specialty_mode'].slug,
+                               'academy_id': 1
+                           })
+        data = {
+            'certificate': model['specialty_mode'].id,
+            'json': {
+                'slug': 'they-killed-kenny'
+            },
+            'syllabus': 1,
+        }
+        response = self.client.post(url, data, format='json')
+        json = response.json()
 
-    #     self.assertDatetime(json['created_at'])
-    #     self.assertDatetime(json['updated_at'])
-    #     del json['created_at']
-    #     del json['updated_at']
+        expected = {
+            'json': data['json'],
+            'syllabus': 1,
+            'version': model.syllabus_version.version + 1,
+        }
 
-    #     expected = {
-    #         'academy_owner': 1,
-    #         'certificate': 1,
-    #         'github_url': None,
-    #         'id': 2,
-    #         'json': data['json'],
-    #         'private': False,
-    #         'version': model.syllabus.version + 1,
-    #     }
-
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-    #     self.assertEqual(self.all_syllabus_dict(), [{
-    #         **self.model_to_dict(model, 'syllabus')
-    #     }, {
-    #         'academy_owner_id': 1,
-    #         'certificate_id': 1,
-    #         'github_url': None,
-    #         'id': 2,
-    #         'json': {
-    #             'slug': 'they-killed-kenny'
-    #         },
-    #         'private': False,
-    #         'version': model.syllabus.version + 1,
-    #     }])
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_syllabus_version_dict(), [{
+            **self.model_to_dict(model, 'syllabus_version')
+        }, {
+            'id': 2,
+            'json': {
+                'slug': 'they-killed-kenny'
+            },
+            'syllabus_id': 1,
+            'version': model.syllabus_version.version + 1,
+        }])
