@@ -5,7 +5,6 @@ from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
 from .models import Academy, Certificate, Cohort, CohortUser, Country, City, UserAdmissions, Syllabus, AcademyCertificate, CohortTimeSlot, CertificateTimeSlot
-from .actions import sync_cohort_timeslots
 from breathecode.assignments.actions import sync_student_tasks
 
 logger = logging.getLogger(__name__)

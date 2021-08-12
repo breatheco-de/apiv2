@@ -49,6 +49,7 @@ def get_timezones(request, id=None):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def get_all_academies(request, id=None):
     items = Academy.objects.all()
     serializer = AcademySerializer(items, many=True)

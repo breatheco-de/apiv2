@@ -35,7 +35,7 @@ from .models import (
     Role,
     ProfileAcademy,
 )
-from .actions import reset_password, resend_invite
+from .actions import reset_password, resend_invite, generate_academy_token
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
 from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
@@ -97,25 +97,7 @@ class AcademyTokenView(ObtainAuthToken):
     @capable_of('generate_academy_token')
     def post(self, request, academy_id):
 
-        academy = Academy.objects.get(id=academy_id)
-        academy_user = User.objects.filter(username=academy.slug).first()
-        if academy_user is None:
-            academy_user = User(username=academy.slug,
-                                email=f'{academy.slug}@token.com')
-            academy_user.save()
-
-            role = Role.objects.get(slug='academy_token')
-            # this profile is for tokens, that is why we need no  email validation status=ACTIVE, role must be academy_token
-            # and the email is empty
-            profile_academy = ProfileAcademy(user=academy_user,
-                                             academy=academy,
-                                             role=role,
-                                             status='ACTIVE')
-            profile_academy.save()
-
-        Token.objects.filter(user=academy_user).delete()
-        token = Token.objects.create(user=academy_user, token_type='permanent')
-        token.save()
+        token = generate_academy_token(academy_id, True)
         return Response({
             'token': token.key,
             'token_type': token.token_type,
@@ -207,7 +189,10 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         else:
             raise ValidationException('User id must be a numeric value', 404)
 
-        request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id}
+        request_data = {
+            **request.data, 'user': user_id_or_email,
+            'academy': academy_id
+        }
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
