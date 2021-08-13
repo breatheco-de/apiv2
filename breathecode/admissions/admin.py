@@ -6,10 +6,10 @@ import requests
 import base64
 from django.contrib import admin
 from django import forms
-from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
-from .models import Academy, SpecialtyMode, AcademySpecialtyMode, Cohort, CohortUser, Country, City, UserAdmissions, Syllabus, CohortTimeSlot, SpecialtyModeTimeSlot
+from .models import (Academy, SpecialtyMode, AcademySpecialtyMode, Cohort, CohortUser, Country, City,
+                     SyllabusVersion, UserAdmissions, Syllabus, CohortTimeSlot, SpecialtyModeTimeSlot)
 from .actions import sync_cohort_timeslots
 from breathecode.assignments.actions import sync_student_tasks
 
@@ -210,13 +210,11 @@ def sync_with_github(modeladmin, request, queryset):
             matches = re.findall(regex, syl.github_url)
 
             if matches is None:
-                logger.error(
-                    f'Invalid github url, make sure it follows this format: https://github.com/:user/:repo/blob/:branch/:path'
-                )
+                logger.error('Invalid github url, make sure it follows this format: '
+                             'https://github.com/:user/:repo/blob/:branch/:path')
                 messages.error(
-                    request,
-                    'Invalid github url, make sure it follows this format: https://github.com/:user/:repo/blob/:branch/:path'
-                )
+                    request, 'Invalid github url, make sure it follows this format: '
+                    'https://github.com/:user/:repo/blob/:branch/:path')
                 continue
 
             headers = {'Authorization': f'token {credentials.token}'}
@@ -230,12 +228,12 @@ def sync_with_github(modeladmin, request, queryset):
                 syl.save()
             else:
                 logger.error(
-                    f'Error {response.status_code} updating syllabus from github, make sure you have the correct access rights to the repository'
-                )
+                    f'Error {response.status_code} updating syllabus from github, make sure you have the '
+                    'correct access rights to the repository')
                 messages.error(
                     request,
-                    f'Error {response.status_code} updating syllabus from github, make sure you have the correct access rights to the repository'
-                )
+                    f'Error {response.status_code} updating syllabus from github, make sure you have the '
+                    'correct access rights to the repository')
 
 
 sync_with_github.short_description = 'Sync from Github'
@@ -243,8 +241,14 @@ sync_with_github.short_description = 'Sync from Github'
 
 @admin.register(Syllabus)
 class SyllabusAdmin(admin.ModelAdmin):
-    list_display = ('academy_owner', 'private')
+    list_display = ('academy_owner', 'private', 'github_url', 'duration_in_hours', 'duration_in_days',
+                    'week_hours', 'logo')
     actions = [sync_with_github]
+
+
+@admin.register(SyllabusVersion)
+class SyllabusAdmin(admin.ModelAdmin):
+    list_display = ('json', 'version', 'syllabus')
 
 
 @admin.register(CohortTimeSlot)
