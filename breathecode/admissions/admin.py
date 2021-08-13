@@ -248,7 +248,7 @@ class SyllabusAdmin(admin.ModelAdmin):
 
 @admin.register(SyllabusVersion)
 class SyllabusAdmin(admin.ModelAdmin):
-    list_display = ('json', 'version', 'syllabus')
+    list_display = ('version', 'syllabus')
 
 
 @admin.register(CohortTimeSlot)
