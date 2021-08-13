@@ -8,9 +8,9 @@ from ..mixins import AdmissionsTestCase
 
 class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
-    def test_syllabus_details_without_auth(self):
+    def test_syllabus_without_auth(self):
         """Test /certificate without auth"""
-        url = reverse_lazy('admissions:syllabus_details')
+        url = reverse_lazy('admissions:syllabus')
         response = self.client.get(url)
         json = response.json()
 
@@ -22,10 +22,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_specialty_mode_dict(), [])
 
-    def test_syllabus_details_without_capability(self):
+    def test_syllabus_without_capability(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('admissions:syllabus_details')
+        url = reverse_lazy('admissions:syllabus')
         self.generate_models(authenticate=True)
         response = self.client.get(url)
         json = response.json()
@@ -38,7 +38,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_specialty_mode_dict(), [])
 
-    def test_syllabus_details_without_syllabus(self):
+    def test_syllabus_without_syllabus(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -46,7 +46,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato')
-        url = reverse_lazy('admissions:syllabus_details')
+        url = reverse_lazy('admissions:syllabus')
         response = self.client.get(url)
         json = response.json()
         expected = []
@@ -55,7 +55,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_syllabus_dict(), [])
 
-    def test_syllabus_details(self):
+    def test_syllabus(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -64,10 +64,12 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      capability='read_syllabus',
                                      role='potato',
                                      syllabus=True)
-        url = reverse_lazy('admissions:syllabus_details')
+        url = reverse_lazy('admissions:syllabus')
         response = self.client.get(url)
         json = response.json()
         expected = [{
+            'slug': model.syllabus.slug,
+            'name': model.syllabus.name,
             'academy_owner': model.syllabus.academy_owner.id,
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,
@@ -84,11 +86,11 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
 
-    def test_syllabus_details_post_without_capabilities(self):
+    def test_syllabus_post_without_capabilities(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True)
-        url = reverse_lazy('admissions:syllabus_details')
+        url = reverse_lazy('admissions:syllabus')
         data = {}
         response = self.client.post(url, data)
         json = response.json()
@@ -102,16 +104,55 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_syllabus_dict(), [])
 
-    def test_syllabus_details__post(self):
+    def test_syllabus__post__missing_slug_in_request(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato')
-        url = reverse_lazy('admissions:syllabus_details')
+        url = reverse_lazy('admissions:syllabus')
         data = {}
-        response = self.client.post(url, data)
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'missing-slug', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_syllabus_dict(), [])
+
+    def test_syllabus__post__missing_name_in_request(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_syllabus',
+                                     role='potato')
+        url = reverse_lazy('admissions:syllabus')
+        data = {'slug': 'they-killed-kenny'}
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'missing-name', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_syllabus_dict(), [])
+
+    def test_syllabus__post(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_syllabus',
+                                     role='potato')
+        url = reverse_lazy('admissions:syllabus')
+        data = {
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+        }
+        response = self.client.post(url, data, format='json')
         json = response.json()
 
         expected = {
@@ -123,6 +164,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'logo': None,
             'private': False,
             'week_hours': None,
+            **data,
         }
 
         self.assertEqual(json, expected)
@@ -136,4 +178,5 @@ class CertificateTestSuite(AdmissionsTestCase):
             'logo': None,
             'private': False,
             'week_hours': None,
+            **data,
         }])

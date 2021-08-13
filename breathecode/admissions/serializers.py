@@ -264,6 +264,8 @@ class GetSyllabusSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
     github_url = serpy.Field()
     duration_in_hours = serpy.Field()
     duration_in_days = serpy.Field()
@@ -328,31 +330,20 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
             if len(strings) != 2:
                 raise ValidationException(
-                    'Syllabus field marformed(`${certificate.slug}.v{syllabus.version}`)',
+                    'Syllabus field marformed(`${syllabus.slug}.v{syllabus_version.version}`)',
                     slug='syllabus-field-marformed')
 
-            [certificate_slug, syllabus_version] = strings
-
-            certificate = SpecialtyMode.objects.filter(
-                Q(syllabus__private=False) | Q(syllabus__academy_owner__id=self.context['academy'].id),
-                slug=certificate_slug).first()
-
-            if not certificate:
-                raise ValidationException('Syllabus doesn\'t exist', slug='specialty-mode-not-found')
+            [syllabus_slug, syllabus_version] = strings
 
             syllabus_version = SyllabusVersion.objects.filter(
                 Q(syllabus__private=False) | Q(syllabus__academy_owner__id=self.context['academy'].id),
+                syllabus__slug=syllabus_slug,
                 version=syllabus_version).first()
 
             if not syllabus_version:
                 raise ValidationException('Syllabus doesn\'t exist', slug='syllabus-version-not-found')
 
-            if syllabus_version.id != certificate.id:
-                raise ValidationException('The cohort have a certificate that don\'t match with the syllabus',
-                                          slug='syllabus-ids-of-version-and-specialty-mode-dont-match')
-
             data['syllabus_version'] = syllabus_version
-            data['specialty_mode'] = certificate
 
             if 'syllabus' in data:
                 del data['syllabus']
@@ -389,8 +380,8 @@ class CohortSerializer(CohortSerializerMixin):
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus',
-                  'syllabus_version', 'ending_date', 'stage', 'language', 'created_at', 'updated_at',
-                  'never_ends')
+                  'specialty_mode', 'syllabus_version', 'ending_date', 'stage', 'language', 'created_at',
+                  'updated_at', 'never_ends')
 
     def create(self, validated_data):
         del self.context['request']
@@ -631,8 +622,8 @@ class SyllabusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Syllabus
         fields = [
-            'id', 'academy_owner', 'duration_in_days', 'duration_in_hours', 'week_hours', 'github_url',
-            'logo', 'private'
+            'id', 'slug', 'name', 'academy_owner', 'duration_in_days', 'duration_in_hours', 'week_hours',
+            'github_url', 'logo', 'private'
         ]
         exclude = ()
 
@@ -665,8 +656,8 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
 
         return super(SyllabusVersionSerializer, self).create({
             **validated_data,
-            "syllabus": certificate.syllabus,
-            "version": version,
+            'syllabus': certificate.syllabus,
+            'version': version,
         })
 
 
