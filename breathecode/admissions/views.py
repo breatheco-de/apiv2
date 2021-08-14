@@ -956,6 +956,39 @@ class SyllabusVersionView(APIView):
     List all snippets, or create a new snippet.
     """
     @capable_of('read_syllabus')
+    def get(self, request, syllabus_id=None, syllabus_slug=None, version=None, academy_id=None):
+        if academy_id is None:
+            raise ValidationException('Missing academy id', slug='missing-academy-id')
+
+        if version:
+            syllabus_version = SyllabusVersion.objects.filter(
+                Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+                Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+                version=version,
+            ).first()
+
+            if syllabus_version is None:
+                raise ValidationException('It syllabus version not found',
+                                          code=404,
+                                          slug='syllabus-version-not-found')
+
+            serializer = GetSyllabusVersionSerializer(syllabus_version, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        syllabus_version = SyllabusVersion.objects.filter(
+            Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+            Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+        )
+
+        serializer = GetSyllabusVersionSerializer(syllabus_version, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CertificateSyllabusVersionView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('read_syllabus')
     def get(self, request, certificate_slug=None, version=None, academy_id=None):
         if academy_id is None:
             raise ValidationException('Missing academy id', slug='missing-academy-id')

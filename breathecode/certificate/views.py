@@ -144,18 +144,18 @@ class CertificateCohortView(APIView):
 
             if not cohort.syllabus_version:
                 raise ValidationException(
-                    f"The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}",
+                    f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}',
                     slug='cohort-has-no-syllabus-version-assigned')
 
             if cohort.specialty_mode and not cohort.specialty_mode.syllabus:
                 raise ValidationException('SpecialtyMode has no Syllabus',
                                           code=400,
-                                          slug="specialty-mode-has-no-syllabus-assigned")
+                                          slug='specialty-mode-has-no-syllabus-assigned')
 
             if not cohort.specialty_mode:
                 raise ValidationException('Cohort has no SpecialtyMode',
                                           code=400,
-                                          slug="cohort-has-no-specialty-mode-assigned")
+                                          slug='cohort-has-no-specialty-mode-assigned')
 
             else:
                 cohort__users.append(cohort_user)
@@ -276,7 +276,7 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
         return Response(serializer.data)
 
 
-# class SyllabusVersionView(APIView):
+# class CertificateSyllabusVersionView(APIView):
 #     """
 #     List all snippets, or create a new snippet.
 #     """
