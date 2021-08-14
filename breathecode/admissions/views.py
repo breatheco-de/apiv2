@@ -686,18 +686,22 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
     @capable_of('crud_cohort')
     def post(self, request, academy_id=None):
         if request.data.get('academy') or request.data.get('academy_id'):
-            raise ParseError(detail='academy and academy_id field is not allowed')
+            raise ParseError(detail='academy and academy_id field is not allowed', slug='academy-in-body')
 
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
-            raise ValidationError(f'Academy {academy_id} not found')
+            raise ValidationException(f'Academy {academy_id} not found', slug='academy-not-found')
 
         syllabus = request.data.get('syllabus')
         if syllabus is None:
-            raise ParseError(detail='syllabus field is missing')
+            raise ValidationException('syllabus field is missing', slug='missing-syllabus-field')
+
+        specialty_mode = request.data.get('specialty_mode')
+        if specialty_mode is None:
+            raise ValidationException('specialty mode field is missing', slug='specialty-mode-field')
 
         if request.data.get('current_day'):
-            raise ParseError(detail='current_day field is not allowed')
+            raise ValidationException('current_day field is not allowed', slug='current-day-not-allowed')
 
         data = {
             'academy': academy,
@@ -710,10 +714,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if 'syllabus_version' in data:
             del data['syllabus_version']
 
-        if 'specialty_mode' in data:
-            del data['specialty_mode']
-
-        serializer = CohortSerializer(data=data, context={"request": request, "academy": academy})
+        serializer = CohortSerializer(data=data, context={'request': request, 'academy': academy})
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
@@ -753,9 +754,9 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         serializer = CohortPUTSerializer(cohort,
                                          data=data,
                                          context={
-                                             "request": request,
-                                             "cohort_id": cohort_id,
-                                             "academy": academy,
+                                             'request': request,
+                                             'cohort_id': cohort_id,
+                                             'academy': academy,
                                          })
         if serializer.is_valid():
             self.cache.clear()
@@ -874,14 +875,27 @@ class SyllabusView(APIView):
     List all snippets, or create a new snippet.
     """
     @capable_of('read_syllabus')
-    def get(self, request, syllabus_id=None, academy_id=None):
+    def get(self, request, syllabus_id=None, syllabus_slug=None, academy_id=None):
         if syllabus_id:
-            syllabus = Syllabus.objects.filter(Q(academy_owner__id=academy_id)
-                                               | Q(private=False),
-                                               id=syllabus_id).first()
+            syllabus = Syllabus.objects.filter(
+                Q(academy_owner__id=academy_id) | Q(private=False),
+                id=syllabus_id,
+            ).first()
 
             if not syllabus:
-                raise ValidationException('Syllabus details not found', code=404, slug='syllabus-not-found')
+                raise ValidationException('Syllabus not found', code=404, slug='syllabus-not-found')
+
+            serializer = GetSyllabusSerializer(syllabus, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        if syllabus_slug:
+            syllabus = Syllabus.objects.filter(
+                Q(academy_owner__id=academy_id) | Q(private=False),
+                slug=syllabus_slug,
+            ).first()
+
+            if not syllabus:
+                raise ValidationException('Syllabus not found', code=404, slug='syllabus-not-found')
 
             serializer = GetSyllabusSerializer(syllabus, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -892,6 +906,12 @@ class SyllabusView(APIView):
 
     @capable_of('crud_syllabus')
     def post(self, request, academy_id=None):
+        if not request.data.get('slug'):
+            raise ValidationException('Missing slug in request', slug='missing-slug')
+
+        if not request.data.get('name'):
+            raise ValidationException('Missing name in request', slug='missing-name')
+
         data = {
             **request.data,
             'academy_owner': academy_id,
@@ -905,8 +925,17 @@ class SyllabusView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_syllabus')
-    def put(self, request, syllabus_id=None, academy_id=None):
-        syllabus = Syllabus.objects.filter(id=syllabus_id, academy_owner__id=academy_id).first()
+    def put(self, request, syllabus_id=None, syllabus_slug=None, academy_id=None):
+        if 'slug' in request.data and not request.data['slug']:
+            raise ValidationException('slug can\'t be empty', slug='empty-slug')
+
+        if 'name' in request.data and not request.data['name']:
+            raise ValidationException('name can\'t be empty', slug='empty-name')
+
+        syllabus = Syllabus.objects.filter(
+            Q(id=syllabus_id) | Q(slug=syllabus_slug),
+            academy_owner__id=academy_id,
+        ).first()
         data = {
             **request.data,
             'academy_owner': academy_id,
@@ -967,7 +996,7 @@ class SyllabusVersionView(APIView):
     def post(self, request, certificate_slug=None, academy_id=None):
         certificate = SpecialtyMode.objects.filter(slug=certificate_slug).first()
         if certificate is None:
-            raise ValidationException(f"Invalid certificate slug {certificate_slug}",
+            raise ValidationException(f'Invalid certificate slug {certificate_slug}',
                                       code=404,
                                       slug='specialty-mode-not-found')
 
@@ -979,12 +1008,12 @@ class SyllabusVersionView(APIView):
 
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
-            raise ValidationException(f"Invalid academy {str(academy_id)}")
+            raise ValidationException(f'Invalid academy {str(academy_id)}')
 
         serializer = SyllabusVersionSerializer(data=request.data,
                                                context={
-                                                   "certificate": certificate,
-                                                   "academy": academy
+                                                   'certificate': certificate,
+                                                   'academy': academy
                                                })
 
         if serializer.is_valid():
@@ -999,12 +1028,12 @@ class SyllabusVersionView(APIView):
 
         certificate = SpecialtyMode.objects.filter(slug=certificate_slug).first()
         if certificate is None:
-            raise ValidationException(f"Invalid certificate slug {certificate_slug}",
+            raise ValidationException(f'Invalid certificate slug {certificate_slug}',
                                       code=404,
                                       slug='specialty-mode-not-found')
 
         if not certificate.syllabus:
-            raise ValidationException(f"Certificate without syllabus details",
+            raise ValidationException(f'Certificate without syllabus details',
                                       code=404,
                                       slug='specialty-mode-without-syllabus')
 
@@ -1015,17 +1044,17 @@ class SyllabusVersionView(APIView):
         ).first()
 
         if not syllabus_version:
-            raise ValidationException("Syllabus version not found for this academy",
+            raise ValidationException('Syllabus version not found for this academy',
                                       code=404,
                                       slug='syllabus-version-not-found')
 
         syllabus = syllabus_version.syllabus
 
         if syllabus is None:
-            raise ValidationException("Syllabus not found", code=404, slug='syllabus-not-found')
+            raise ValidationException('Syllabus not found', code=404, slug='syllabus-not-found')
 
         if not syllabus.specialtymode_set.filter(slug=certificate_slug).exists():
-            raise ValidationException("Not exist a syllabus with this certificate",
+            raise ValidationException('Not exist a syllabus with this certificate',
                                       code=404,
                                       slug='certificate-not-found')
 

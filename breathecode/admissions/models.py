@@ -115,6 +115,9 @@ SCHEDULE_TYPE = (
 
 
 class Syllabus(models.Model):
+    slug = models.SlugField(max_length=100, blank=True, null=True, default=None)
+    name = models.CharField(max_length=150, blank=True, null=True, default=None)
+
     github_url = models.URLField(max_length=255, blank=True, null=True, default=None)
     duration_in_hours = models.IntegerField(null=True, default=None)
     duration_in_days = models.IntegerField(null=True, default=None)
@@ -131,7 +134,7 @@ class Syllabus(models.Model):
     academy_owner = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
 
     def __str__(self):
-        return self.github_url
+        return self.slug
 
 
 class SyllabusVersion(models.Model):
@@ -144,9 +147,7 @@ class SyllabusVersion(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        certificate_slug = SpecialtyMode.objects.filter(syllabus=self.syllabus).values_list(
-            'slug', flat=True).first()
-        return f'{certificate_slug}.v{self.version}' if certificate_slug else 'Syllabus without certificate'
+        return f'{self.syllabus.slug}.v{self.version}'
 
 
 class SpecialtyMode(models.Model):

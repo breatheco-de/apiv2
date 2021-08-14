@@ -8,10 +8,10 @@ from ..mixins import AdmissionsTestCase
 
 class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
-    def test_syllabus_details_id_without_auth(self):
+    def test_syllabus_id_without_auth(self):
         """Test /certificate without auth"""
-        url = reverse_lazy('admissions:syllabus_details_id', kwargs={
-            'syllabus_id': 1,
+        url = reverse_lazy('admissions:syllabus_slug', kwargs={
+            'syllabus_slug': 'they_killed_kenny',
         })
         response = self.client.get(url)
         json = response.json()
@@ -24,11 +24,11 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_specialty_mode_dict(), [])
 
-    def test_syllabus_details_id_without_capability(self):
+    def test_syllabus_id_without_capability(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('admissions:syllabus_details_id', kwargs={
-            'syllabus_id': 1,
+        url = reverse_lazy('admissions:syllabus_slug', kwargs={
+            'syllabus_slug': 'they_killed_kenny',
         })
         self.generate_models(authenticate=True)
         response = self.client.get(url)
@@ -42,11 +42,11 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_specialty_mode_dict(), [])
 
-    def test_syllabus_details_id_without_data(self):
+    def test_syllabus_id_without_data(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('admissions:syllabus_details_id', kwargs={
-            'syllabus_id': 1,
+        url = reverse_lazy('admissions:syllabus_slug', kwargs={
+            'syllabus_slug': 'they_killed_kenny',
         })
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
@@ -60,20 +60,24 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_specialty_mode_dict(), [])
 
-    def test_syllabus_details_id(self):
+    def test_syllabus_id(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
                                      specialty_mode=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato',
                                      syllabus_version=True,
-                                     syllabus=True)
-        url = reverse_lazy('admissions:syllabus_details_id', kwargs={'syllabus_id': 1})
+                                     syllabus=True,
+                                     syllabus_kwargs=syllabus_kwargs)
+        url = reverse_lazy('admissions:syllabus_slug', kwargs={'syllabus_slug': 'they-killed-kenny'})
         response = self.client.get(url)
         json = response.json()
         expected = {
+            'slug': model.syllabus.slug,
+            'name': model.syllabus.name,
             'academy_owner': model.syllabus.academy_owner.id,
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,
@@ -91,12 +95,12 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
 
-    def test_syllabus_details_id__put__without_capabilities(self):
+    def test_syllabus_id__put__without_capabilities(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True)
-        url = reverse_lazy('admissions:syllabus_details_id', kwargs={
-            'syllabus_id': 1,
+        url = reverse_lazy('admissions:syllabus_slug', kwargs={
+            'syllabus_slug': 'they_killed_kenny',
         })
         data = {}
         response = self.client.put(url, data)
@@ -111,15 +115,53 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_syllabus_dict(), [])
 
-    def test_syllabus_details_id__put__with_bad_slug(self):
+    def test_syllabus_id__put__setting_slug_as_empty(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato')
-        url = reverse_lazy('admissions:syllabus_details_id', kwargs={
-            'syllabus_id': 1,
+        url = reverse_lazy('admissions:syllabus_slug', kwargs={
+            'syllabus_slug': 'they_killed_kenny',
+        })
+        data = {'slug': ''}
+        response = self.client.put(url, data)
+        json = response.json()
+        expected = {'detail': 'empty-slug', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_syllabus_dict(), [])
+
+    def test_syllabus_id__put__setting_name_as_empty(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_syllabus',
+                                     role='potato')
+        url = reverse_lazy('admissions:syllabus_slug', kwargs={
+            'syllabus_slug': 'they_killed_kenny',
+        })
+        data = {'name': ''}
+        response = self.client.put(url, data)
+        json = response.json()
+        expected = {'detail': 'empty-name', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_syllabus_dict(), [])
+
+    def test_syllabus_id__put__not_found(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_syllabus',
+                                     role='potato')
+        url = reverse_lazy('admissions:syllabus_slug', kwargs={
+            'syllabus_slug': 'they_killed_kenny',
         })
         data = {}
         response = self.client.put(url, data)
@@ -130,7 +172,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_syllabus_dict(), [])
 
-    def test_syllabus_details_id_post_without_syllabus(self):
+    def test_syllabus_id__put__not_founds2(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -139,7 +181,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      specialty_mode=True,
                                      specialty_mode_time_slot=True)
-        url = reverse_lazy('admissions:syllabus_details_id', kwargs={'syllabus_id': 1})
+        url = reverse_lazy('admissions:syllabus_slug', kwargs={'syllabus_slug': 'they-killed-kenny'})
         data = {}
         response = self.client.put(url, data)
         json = response.json()
@@ -149,21 +191,25 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_syllabus_dict(), [])
 
-    def test_syllabus_details_id__put(self):
+    def test_syllabus_id__put(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
                                      syllabus=True,
                                      specialty_mode=True,
-                                     specialty_mode_time_slot=True)
-        url = reverse_lazy('admissions:syllabus_details_id', kwargs={'syllabus_id': 1})
+                                     specialty_mode_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs)
+        url = reverse_lazy('admissions:syllabus_slug', kwargs={'syllabus_slug': 'they-killed-kenny'})
         data = {}
         response = self.client.put(url, data)
         json = response.json()
         expected = {
+            'slug': model.syllabus.slug,
+            'name': model.syllabus.name,
             'academy_owner': model.syllabus.academy_owner.id,
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,
@@ -178,17 +224,19 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
 
-    def test_syllabus_details_id__put__change_values(self):
+    def test_syllabus_id__put__change_values(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
                                      syllabus=True,
                                      specialty_mode=True,
-                                     specialty_mode_time_slot=True)
-        url = reverse_lazy('admissions:syllabus_details_id', kwargs={'syllabus_id': 1})
+                                     specialty_mode_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs)
+        url = reverse_lazy('admissions:syllabus_slug', kwargs={'syllabus_slug': 'they-killed-kenny'})
         data = {
             'duration_in_days': 9,
             'duration_in_hours': 99,
@@ -202,6 +250,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         expected = {
             'academy_owner': model.syllabus.academy_owner.id,
             'id': model.syllabus.id,
+            'slug': model.syllabus.slug,
+            'name': model.syllabus.name,
             **data,
         }
 

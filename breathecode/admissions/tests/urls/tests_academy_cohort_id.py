@@ -144,7 +144,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.put(url, data)
         json = response.json()
-        del json['academy']
+
         expected = {
             'id': model['cohort'].id,
             'slug': model['cohort'].slug,
@@ -158,6 +158,19 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'language': model['cohort'].language,
             'syllabus_version': model['cohort'].syllabus_version,
             'specialty_mode': model['cohort'].specialty_mode,
+            'academy': {
+                'id': model.academy.id,
+                'slug': model.academy.slug,
+                'name': model.academy.name,
+                'country': {
+                    'code': model.academy.country.code,
+                    'name': model.academy.country.name,
+                },
+                'city': {
+                    'name': model.academy.city.name,
+                },
+                'logo_url': model.academy.logo_url,
+            }
         }
 
         self.assertEqual(json, expected)
@@ -224,7 +237,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'detail': 'specialty-mode-not-found',
+            'detail': 'syllabus-version-not-found',
             'status_code': 400,
         }
 
@@ -239,6 +252,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     def test_cohort_id__put__with_id__with_bad_syllabus_version__with_bad_slug(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'x'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
@@ -246,10 +260,11 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      specialty_mode=True,
                                      syllabus_version=True,
-                                     syllabus=True)
+                                     syllabus=True,
+                                     syllabus_kwargs=syllabus_kwargs)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
-            'syllabus': 'they-killed-kenny.v' + str(model['syllabus_version'].version),
+            'syllabus': f'they-killed-kenny.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'current_day': model['cohort'].current_day + 1,
@@ -258,7 +273,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'detail': 'specialty-mode-not-found',
+            'detail': 'syllabus-version-not-found',
             'status_code': 400,
         }
 
@@ -309,6 +324,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         cohort_kwargs = {'ending_date': timezone.now()}
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
@@ -318,10 +334,11 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      syllabus_version=True,
                                      specialty_mode=True,
                                      cohort_kwargs=cohort_kwargs,
-                                     specialty_mode_time_slot=True)
+                                     specialty_mode_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
-            'syllabus': model['specialty_mode'].slug + '.v' + str(model['syllabus_version'].version),
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'current_day': model['cohort'].current_day + 1,
@@ -329,7 +346,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.put(url, data)
         json = response.json()
-        del json['academy']
+
         expected = {
             'id': model['cohort'].id,
             'slug': data['slug'],
@@ -349,6 +366,19 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'version': model['cohort'].syllabus_version.version,
             },
+            'academy': {
+                'id': model.academy.id,
+                'slug': model.academy.slug,
+                'name': model.academy.name,
+                'country': {
+                    'code': model.academy.country.code,
+                    'name': model.academy.country.name,
+                },
+                'city': {
+                    'name': model.academy.city.name,
+                },
+                'logo_url': model.academy.logo_url,
+            }
         }
 
         self.assertEqual(json, expected)

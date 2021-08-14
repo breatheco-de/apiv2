@@ -67,7 +67,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {
-            'detail': 'syllabus field is missing',
+            'detail': 'missing-syllabus-field',
             'status_code': status.HTTP_400_BAD_REQUEST,
         }
 
@@ -78,16 +78,20 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_academy_cohort__post__with_bad_fields(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
-                                     syllabus=True)
+                                     specialty_mode=True,
+                                     syllabus=True,
+                                     syllabus_kwargs=syllabus_kwargs)
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus': model['syllabus'].id,
+            'specialty_mode': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
@@ -104,13 +108,16 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_academy_cohort__post__with_bad_current_day(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
-                                     syllabus=True)
+                                     syllabus=True,
+                                     specialty_mode=True,
+                                     syllabus_kwargs=syllabus_kwargs)
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus': model['syllabus'].id,
@@ -118,16 +125,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
+            'specialty_mode': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'detail': 'current_day field is not allowed', 'status_code': 400}
+        expected = {'detail': 'current-day-not-allowed', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    def test_academy_cohort__post__without_ending_date_or_never_ends(self):
+    def test_academy_cohort__post__without_specialty_mode(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
@@ -142,10 +150,45 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      specialty_mode_time_slot=True)
         url = reverse_lazy('admissions:academy_cohort')
         data = {
-            'syllabus': model['specialty_mode'].slug + '.v' + str(model['syllabus_version'].version),
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {
+            'detail': 'specialty-mode-field',
+            'status_code': 400,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+
+    def test_academy_cohort__post__without_ending_date_or_never_ends(self):
+        """Test /academy/cohort without auth"""
+        self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        model = self.generate_models(authenticate=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato',
+                                     specialty_mode=True,
+                                     syllabus=True,
+                                     syllabus_version=True,
+                                     skip_cohort=True,
+                                     specialty_mode_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs)
+        url = reverse_lazy('admissions:academy_cohort')
+        data = {
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'kickoff_date': datetime.today().isoformat(),
+            'specialty_mode': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
@@ -162,6 +205,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_academy_cohort__post__with_ending_date_and_never_ends_true(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
                                      user=True,
                                      profile_academy=True,
@@ -171,15 +215,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      syllabus=True,
                                      syllabus_version=True,
                                      skip_cohort=True,
-                                     specialty_mode_time_slot=True)
+                                     specialty_mode_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs)
         url = reverse_lazy('admissions:academy_cohort')
         data = {
-            'syllabus': model['specialty_mode'].slug + '.v' + str(model['syllabus_version'].version),
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
             'ending_date': datetime.today().isoformat(),
             'never_ends': True,
+            'specialty_mode': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
@@ -196,6 +242,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_academy_cohort__post__without_ending_date_and_never_ends_false(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
                                      user=True,
                                      profile_academy=True,
@@ -205,14 +252,16 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      syllabus=True,
                                      syllabus_version=True,
                                      skip_cohort=True,
-                                     specialty_mode_time_slot=True)
+                                     specialty_mode_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs)
         url = reverse_lazy('admissions:academy_cohort')
         data = {
-            'syllabus': model['specialty_mode'].slug + '.v' + str(model['syllabus_version'].version),
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
             'never_ends': False,
+            'specialty_mode': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
@@ -229,6 +278,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_academy_cohort__post(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
                                      user=True,
                                      profile_academy=True,
@@ -238,15 +288,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      syllabus=True,
                                      syllabus_version=True,
                                      skip_cohort=True,
-                                     specialty_mode_time_slot=True)
+                                     specialty_mode_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs)
         models_dict = self.all_cohort_dict()
         url = reverse_lazy('admissions:academy_cohort')
         data = {
-            'syllabus': model['specialty_mode'].slug + '.v' + str(model['syllabus_version'].version),
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
             'never_ends': True,
+            'specialty_mode': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
@@ -258,6 +310,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'never_ends': True,
             'kickoff_date': self.datetime_to_iso(cohort.kickoff_date),
             'current_day': cohort.current_day,
+            'specialty_mode': cohort.specialty_mode.id,
             'academy': {
                 'id': cohort.academy.id,
                 'slug': cohort.academy.slug,
@@ -266,7 +319,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'country': cohort.academy.country.code,
                 'city': cohort.academy.city.id,
             },
-            'syllabus_version': model['specialty_mode'].slug + '.v' + str(model['syllabus_version'].version),
+            'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
             'language': cohort.language,
@@ -278,6 +331,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_two = cohort.__dict__.copy()
         cohort_two.update(data)
         del cohort_two['syllabus']
+        del cohort_two['specialty_mode']
 
         models_dict.append(self.remove_dinamics_fields({**cohort_two}))
 
@@ -329,6 +383,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
 
         if models is None:
+            syllabus_kwargs = {'slug': 'they-killed-kenny'}
             models = [
                 self.generate_models(authenticate=True,
                                      cohort=True,
@@ -338,7 +393,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      syllabus=True,
                                      syllabus_version=True,
                                      specialty_mode=True,
-                                     specialty_mode_time_slot=True)
+                                     specialty_mode_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs)
             ]
 
         models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
@@ -1445,6 +1501,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         del base['role']
         del base['user']
 
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
@@ -1453,15 +1510,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      syllabus_version=True,
                                      specialty_mode=True,
                                      specialty_mode_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs,
                                      models=base)
 
         url = reverse_lazy('admissions:academy_cohort')
         data = {
-            'syllabus': model['specialty_mode'].slug + '.v' + str(model['syllabus_version'].version),
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'kickoff_date': self.datetime_to_iso(datetime.today()),
             'never_ends': True,
+            'specialty_mode': 1,
         }
 
         response = self.client.post(url, data)
