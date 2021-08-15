@@ -20,7 +20,7 @@ from .serializers import (AcademySerializer, GetSyllabusSerializer, SpecialtyMod
                           SyllabusSerializer, SyllabusVersionPutSerializer, SyllabusVersionSerializer,
                           CohortUserSerializer, GETCohortUserSerializer, CohortUserPUTSerializer,
                           CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
-                          GetCertificateSerializer, GetSyllabusVersionSerializer, SyllabusVersionSerializer,
+                          GetSpecialtyModeSerializer, GetSyllabusVersionSerializer, SyllabusVersionSerializer,
                           GetBigAcademySerializer, AcademyReportSerializer)
 from .models import (Academy, AcademySpecialtyMode, SpecialtyModeTimeSlot, CohortTimeSlot, CohortUser,
                      SpecialtyMode, Cohort, Country, STUDENT, DELETED, Syllabus, SyllabusVersion)
@@ -820,7 +820,7 @@ class CertificateAllView(APIView, HeaderLimitOffsetPagination):
     def get(self, request):
         items = SpecialtyMode.objects.all()
         page = self.paginate_queryset(items, request)
-        serializer = GetCertificateSerializer(page, many=True)
+        serializer = GetSpecialtyModeSerializer(page, many=True)
 
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
@@ -831,12 +831,18 @@ class CertificateAllView(APIView, HeaderLimitOffsetPagination):
 class CertificateView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('read_certificate')
     def get(self, request, academy_id=None):
-        cert_ids = AcademySpecialtyMode.objects.filter(academy__id=academy_id).values_list('certificate_id',
-                                                                                           flat=True)
-        items = SpecialtyMode.objects.filter(id__in=cert_ids)
+        items = SpecialtyMode.objects.filter(syllabus__academy_owner__id=academy_id)
+
+        syllabus_id = request.GET.get('syllabus_id')
+        if syllabus_id:
+            items = items.filter(syllabus__id__in=syllabus_id.split(','))
+
+        syllabus_slug = request.GET.get('syllabus_slug')
+        if syllabus_slug:
+            items = items.filter(syllabus__slug__in=syllabus_slug.split(','))
 
         page = self.paginate_queryset(items, request)
-        serializer = GetCertificateSerializer(page, many=True)
+        serializer = GetSpecialtyModeSerializer(page, many=True)
 
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
@@ -866,7 +872,7 @@ def get_single_course(request, certificate_slug):
     certificates = SpecialtyMode.objects.filter(slug=certificate_slug).first()
     if certificates is None:
         raise ValidationException('Certificate slug not found', code=404)
-    serializer = GetCertificateSerializer(certificates, many=False)
+    serializer = GetSpecialtyModeSerializer(certificates, many=False)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 

@@ -68,7 +68,7 @@ class UserSerializer(serpy.Serializer):
     profile = ProfileSerializer(required=False)
 
 
-class GetCertificateSerializer(serpy.Serializer):
+class GetSpecialtyModeSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
