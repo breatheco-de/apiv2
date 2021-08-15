@@ -134,7 +134,7 @@ class Syllabus(models.Model):
     academy_owner = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
 
     def __str__(self):
-        return self.slug
+        return self.slug if self.slug else 'unknown'
 
 
 class SyllabusVersion(models.Model):
