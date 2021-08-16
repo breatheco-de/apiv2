@@ -35,7 +35,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
     def test_certificate_with_data(self):
         """Test /certificate without auth"""
-        model = self.generate_models(authenticate=True, specialty_mode=True)
+        model = self.generate_models(authenticate=True, syllabus=True, specialty_mode=True)
         url = reverse_lazy('admissions:certificate')
         response = self.client.get(url)
         json = response.json()
@@ -45,6 +45,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'name': model['specialty_mode'].name,
             'slug': model['specialty_mode'].slug,
             'description': model['specialty_mode'].description,
+            'syllabus': model['specialty_mode'].syllabus.id,
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -55,7 +56,9 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_certificate_with_data_without_pagination_get_just_100(self):
         """Test /certificate without auth"""
         base = self.generate_models(authenticate=True)
-        models = [self.generate_models(specialty_mode=True, models=base) for _ in range(0, 105)]
+        models = [
+            self.generate_models(specialty_mode=True, syllabus=True, models=base) for _ in range(0, 105)
+        ]
         url = reverse_lazy('admissions:certificate')
         response = self.client.get(url)
         json = response.json()
@@ -65,6 +68,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'name': model['specialty_mode'].name,
             'slug': model['specialty_mode'].slug,
             'description': model['specialty_mode'].description,
+            'syllabus': model['specialty_mode'].syllabus.id,
         } for model in models if model['specialty_mode'].id <= 100])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -75,7 +79,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_certificate_with_data_with_pagination_first_five(self):
         """Test /certificate without auth"""
         base = self.generate_models(authenticate=True)
-        models = [self.generate_models(specialty_mode=True, models=base) for _ in range(0, 10)]
+        models = [self.generate_models(specialty_mode=True, syllabus=True, models=base) for _ in range(0, 10)]
         url = reverse_lazy('admissions:certificate') + '?limit=5&offset=0'
         response = self.client.get(url)
         json = response.json()
@@ -97,6 +101,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
                     'description': model['specialty_mode'].description,
+                    'syllabus': model['specialty_mode'].syllabus.id,
                 } for model in models if model['specialty_mode'].id <= 5]
             })
 
@@ -108,7 +113,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_certificate_with_data_with_pagination_last_five(self):
         """Test /certificate without auth"""
         base = self.generate_models(authenticate=True)
-        models = [self.generate_models(specialty_mode=True, models=base) for _ in range(0, 10)]
+        models = [self.generate_models(specialty_mode=True, syllabus=True, models=base) for _ in range(0, 10)]
         url = reverse_lazy('admissions:certificate') + '?limit=5&offset=5'
         response = self.client.get(url)
         json = response.json()
@@ -130,7 +135,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
                     'description': model['specialty_mode'].description,
-                } for model in models if model['specialty_mode'].id > 5]
+                    'syllabus': model['specialty_mode'].syllabus.id,
+                } for model in models if model['specialty_mode'].id > 5],
             })
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

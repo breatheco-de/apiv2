@@ -146,6 +146,7 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': 1,
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
+                    'syllabus': model['specialty_mode'].syllabus.id,
                 },
             },
             'created_at': self.datetime_to_iso(model['user_specialty'].created_at),

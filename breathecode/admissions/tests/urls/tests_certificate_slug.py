@@ -46,7 +46,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_certificate_with_data(self):
         """Test /certificate without auth"""
-        model = self.generate_models(authenticate=True, specialty_mode=True)
+        model = self.generate_models(authenticate=True, specialty_mode=True, syllabus=True)
         url = reverse_lazy('admissions:certificate_slug',
                            kwargs={'certificate_slug': model['specialty_mode'].slug})
         response = self.client.get(url)
@@ -58,6 +58,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'name': model['specialty_mode'].name,
                 'slug': model['specialty_mode'].slug,
                 'description': model['specialty_mode'].description,
+                'syllabus': model['specialty_mode'].syllabus.id,
             })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_specialty_mode_dict(), [{

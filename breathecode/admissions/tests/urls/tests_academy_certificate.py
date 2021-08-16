@@ -82,6 +82,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'slug': model.specialty_mode.slug,
             'name': model.specialty_mode.name,
             'description': model.specialty_mode.description,
+            'syllabus': model.specialty_mode.syllabus.id,
         }]
 
         self.assertEqual(json, expected)
@@ -127,6 +128,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'slug': model.specialty_mode.slug,
             'name': model.specialty_mode.name,
             'description': model.specialty_mode.description,
+            'syllabus': model.specialty_mode.syllabus.id,
         }]
 
         self.assertEqual(json, expected)
@@ -175,6 +177,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'slug': model.specialty_mode.slug,
             'name': model.specialty_mode.name,
             'description': model.specialty_mode.description,
+            'syllabus': model.specialty_mode.syllabus.id,
         }]
 
         self.assertEqual(json, expected)

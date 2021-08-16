@@ -159,7 +159,7 @@ class CertificateTestSuite(CertificateTestCase):
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
-        expected = {'detail': "specialty-mode-has-no-syllabus-assigned", 'status_code': 400}
+        expected = {'detail': 'specialty-mode-has-no-syllabus-assigned', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -186,7 +186,7 @@ class CertificateTestSuite(CertificateTestCase):
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
-        expected = {'detail': "cohort-has-no-specialty-mode-assigned", 'status_code': 400}
+        expected = {'detail': 'cohort-has-no-specialty-mode-assigned', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -301,6 +301,7 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
+                    'syllabus': model['specialty_mode'].syllabus.id,
                 },
             },
             'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
@@ -312,7 +313,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'slug': model['layout_design'].slug
             },
             'preview_url': model['user_specialty'].preview_url,
-            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
@@ -343,13 +344,13 @@ class CertificateTestSuite(CertificateTestCase):
                 'id': 1,
                 'layout_id': 1,
                 'preview_url': model['user_specialty'].preview_url,
-                'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+                'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'ERROR',
                 'status_text': 'bad-finantial-status',
                 'user_id': 1,
-                'token': "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
             }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -408,6 +409,7 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
+                    'syllabus': model['specialty_mode'].syllabus.id,
                 },
             },
             'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
@@ -419,7 +421,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'slug': model['layout_design'].slug
             },
             'preview_url': model['user_specialty'].preview_url,
-            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
@@ -450,13 +452,13 @@ class CertificateTestSuite(CertificateTestCase):
                 'id': 1,
                 'layout_id': 1,
                 'preview_url': model['user_specialty'].preview_url,
-                'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+                'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'ERROR',
                 'status_text': 'bad-educational-status',
                 'user_id': 1,
-                'token': "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
             }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -515,6 +517,7 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
+                    'syllabus': model['specialty_mode'].syllabus.id,
                 },
             },
             'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
@@ -526,7 +529,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'slug': model['layout_design'].slug
             },
             'preview_url': model['user_specialty'].preview_url,
-            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
@@ -557,13 +560,13 @@ class CertificateTestSuite(CertificateTestCase):
                 'id': 1,
                 'layout_id': 1,
                 'preview_url': model['user_specialty'].preview_url,
-                'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+                'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'ERROR',
                 'status_text': 'cohort-not-finished',
                 'user_id': 1,
-                'token': "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
             }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -627,6 +630,7 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
+                    'syllabus': model['specialty_mode'].syllabus.id,
                 },
             },
             'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
@@ -638,7 +642,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'slug': model['layout_design'].slug
             },
             'preview_url': model['user_specialty'].preview_url,
-            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(model['specialty'].created_at),
@@ -669,11 +673,11 @@ class CertificateTestSuite(CertificateTestCase):
                 'id': 1,
                 'layout_id': 1,
                 'preview_url': model['user_specialty'].preview_url,
-                'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+                'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'PERSISTED',
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 1,
-                'token': "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
             }])
