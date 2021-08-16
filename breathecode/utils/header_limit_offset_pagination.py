@@ -9,7 +9,16 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
         self.use_envelope = True
         if str(request.GET.get('envelope')).lower() in ['false', '0']:
             self.use_envelope = False
-        return super().paginate_queryset(queryset, request, view)
+        result = super().paginate_queryset(queryset, request, view)
+        if hasattr(queryset, 'filter'):
+            return result
+        return queryset
+
+    def get_count(self, queryset):
+        try:
+            return queryset.count()
+        except (AttributeError, TypeError):
+            return len(queryset)
 
     def __parse_comma__(self, string: str):
         if not string:

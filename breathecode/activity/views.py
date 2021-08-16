@@ -6,6 +6,9 @@ from rest_framework.views import APIView
 
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.utils import ValidationException, capable_of
+from breathecode.utils import HeaderLimitOffsetPagination
+
+from .actions import paginated_datastore
 
 from .utils import (generate_created_at, validate_activity_fields,
                     validate_activity_have_correct_data_field,
@@ -100,6 +103,15 @@ class ActivityMeView(APIView):
                                       slug='user-not-exists')
 
         datastore = Datastore()
+
+        limit = request.GET.get('limit')
+        if limit:
+            kwargs['limit'] = int(limit)
+
+        offset = request.GET.get('offset')
+        if offset:
+            kwargs['offset'] = int(offset)
+
         academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
         public_iter = datastore.fetch(**kwargs, academy_id=0)
 
@@ -119,7 +131,7 @@ class ActivityMeView(APIView):
         return Response(fields, status=status.HTTP_201_CREATED)
 
 
-class ActivityClassroomView(APIView):
+class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
     @capable_of('classroom_activity')
     def post(self, request, cohort_id=None, academy_id=None):
 
@@ -203,6 +215,9 @@ class ActivityClassroomView(APIView):
 
         datastore = Datastore()
         #academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
+
+        # count = len(datastore.fetch(**kwargs))
+
         limit = request.GET.get('limit')
         if limit:
             kwargs['limit'] = int(limit)
@@ -218,7 +233,15 @@ class ActivityClassroomView(APIView):
         # query_iter = academy_iter + public_iter
         public_iter.sort(key=lambda x: x['created_at'], reverse=True)
 
-        return Response(public_iter)
+        page = self.paginate_queryset(public_iter, request)
+
+        if self.is_paginate(request):
+
+            return self.get_paginated_response(page)
+        else:
+            return Response(page, status=status.HTTP_200_OK)
+
+        # return Response(paginated_datastore(public_iter))
 
 
 def add_student_activity(user, data, academy_id):
