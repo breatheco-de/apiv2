@@ -188,6 +188,7 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
                     'slug': model['specialty_mode'].slug,
+                    'syllabus': model['specialty_mode'].syllabus.id,
                 },
             },
             'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
@@ -228,13 +229,13 @@ class CertificateTestSuite(CertificateTestCase):
                 'id': 1,
                 'layout_id': 1,
                 'preview_url': model['user_specialty'].preview_url,
-                'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+                'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'PERSISTED',
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 1,
-                'token': "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
             }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -331,6 +332,7 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
                     'slug': models[0]['specialty_mode'].slug,
+                    'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
@@ -375,6 +377,7 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
                     'slug': models[0]['specialty_mode'].slug,
+                    'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
             },
             'created_at': self.datetime_to_iso(models[1].user_specialty.created_at),
@@ -414,13 +417,13 @@ class CertificateTestSuite(CertificateTestCase):
                 'id': 1,
                 'layout_id': 1,
                 'preview_url': models[0].user_specialty.preview_url,
-                'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+                'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'PERSISTED',
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 2,
-                'token': "huhuhuhuhu"
+                'token': 'huhuhuhuhu'
             },
             {
                 'academy_id': 1,
@@ -429,13 +432,13 @@ class CertificateTestSuite(CertificateTestCase):
                 'id': 2,
                 'layout_id': 1,
                 'preview_url': models[1].user_specialty.preview_url,
-                'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
+                'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'PERSISTED',
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 3,
-                'token': "qwerrty"
+                'token': 'qwerrty'
             },
         ])
 
@@ -460,6 +463,7 @@ class CertificateTestSuite(CertificateTestCase):
                                     specialty=True,
                                     specialty_mode=True,
                                     specialty_mode_kwargs=specialty_mode_kwargs,
+                                    syllabus=True,
                                     cohort_kwargs=cohort_kwargs)
 
         del base['user']
@@ -513,6 +517,7 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
                     'slug': models[0]['specialty_mode'].slug,
+                    'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
@@ -567,6 +572,7 @@ class CertificateTestSuite(CertificateTestCase):
                                     specialty=True,
                                     specialty_mode=True,
                                     specialty_mode_kwargs=specialty_mode_kwargs,
+                                    syllabus=True,
                                     cohort_kwargs=cohort_kwargs)
 
         del base['user']
@@ -620,6 +626,7 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
                     'slug': models[0]['specialty_mode'].slug,
+                    'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
@@ -670,6 +677,7 @@ class CertificateTestSuite(CertificateTestCase):
                                     specialty=True,
                                     specialty_mode=True,
                                     specialty_mode_kwargs=specialty_mode_kwargs,
+                                    syllabus=True,
                                     cohort_kwargs=cohort_kwargs)
 
         del base['user']
@@ -723,6 +731,7 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
                     'slug': models[0]['specialty_mode'].slug,
+                    'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
@@ -774,6 +783,7 @@ class CertificateTestSuite(CertificateTestCase):
                                     specialty=True,
                                     specialty_mode=True,
                                     specialty_mode_kwargs=specialty_mode_kwargs,
+                                    syllabus=True,
                                     cohort_kwargs=cohort_kwargs)
 
         del base['user']
@@ -827,6 +837,7 @@ class CertificateTestSuite(CertificateTestCase):
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
                     'slug': models[0]['specialty_mode'].slug,
+                    'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
@@ -877,19 +888,19 @@ class CertificateTestSuite(CertificateTestCase):
                                     capability='crud_certificate',
                                     cohort_user=True,
                                     specialty=True,
-                                    role="potato")
+                                    role='potato')
         del base['user']
 
         model1 = self.generate_models(user=True,
                                       profile_academy=True,
                                       user_specialty=True,
-                                      user_specialty_kwargs={'token': "hitman3000"},
+                                      user_specialty_kwargs={'token': 'hitman3000'},
                                       models=base)
 
         model2 = self.generate_models(user=True,
                                       profile_academy=True,
                                       user_specialty=True,
-                                      user_specialty_kwargs={'token': "batman2000"},
+                                      user_specialty_kwargs={'token': 'batman2000'},
                                       models=base)
 
         url = reverse_lazy('certificate:root') + '?id=1,2'
@@ -913,17 +924,17 @@ class CertificateTestSuite(CertificateTestCase):
                                     capability='crud_certificate',
                                     cohort_user=True,
                                     specialty=True,
-                                    role="potato")
+                                    role='potato')
         del base['user']
 
         model1 = self.generate_models(user=True,
                                       user_specialty=True,
-                                      user_specialty_kwargs={'token': "hitman3000"},
+                                      user_specialty_kwargs={'token': 'hitman3000'},
                                       models=base)
 
         model2 = self.generate_models(user=True,
                                       user_specialty=True,
-                                      user_specialty_kwargs={'token': "batman2000"},
+                                      user_specialty_kwargs={'token': 'batman2000'},
                                       models=base)
 
         url = reverse_lazy('certificate:root') + '?id=3,4'
@@ -948,17 +959,17 @@ class CertificateTestSuite(CertificateTestCase):
                                     capability='crud_certificate',
                                     cohort_user=True,
                                     specialty=True,
-                                    role="potato")
+                                    role='potato')
         del base['user']
 
         model1 = self.generate_models(user=True,
                                       user_specialty=True,
-                                      user_specialty_kwargs={'token': "hitman3000"},
+                                      user_specialty_kwargs={'token': 'hitman3000'},
                                       models=base)
 
         model2 = self.generate_models(user=True,
                                       user_specialty=True,
-                                      user_specialty_kwargs={'token': "batman2000"},
+                                      user_specialty_kwargs={'token': 'batman2000'},
                                       models=base)
 
         url = reverse_lazy('certificate:root')
