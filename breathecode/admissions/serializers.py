@@ -73,12 +73,20 @@ class GetSpecialtyModeSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     description = serpy.Field()
+    syllabus = serpy.MethodField()
+
+    def get_syllabus(self, obj):
+        return obj.syllabus.id if obj.syllabus else None
 
 
 class GetSmallSpecialtyModeSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    syllabus = serpy.MethodField()
+
+    def get_syllabus(self, obj):
+        return obj.syllabus.id if obj.syllabus else None
 
 
 class GetTinnyCertificateSerializer(serpy.Serializer):
@@ -129,6 +137,10 @@ class SyllabusVersionSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     version = serpy.Field()
+    syllabus = serpy.MethodField()
+
+    def get_syllabus(self, obj):
+        return obj.syllabus.id if obj.syllabus else None
 
 
 class GetCohortSerializer(serpy.Serializer):
@@ -285,9 +297,9 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
     json = serpy.Field()
     version = serpy.Field()
     updated_at = serpy.Field()
-    syllabus = serpy.MethodField()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+    syllabus = serpy.MethodField()
 
     def get_syllabus(self, obj):
         return obj.syllabus.id if obj.syllabus else None
