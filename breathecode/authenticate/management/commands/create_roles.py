@@ -334,7 +334,7 @@ class Command(BaseCommand):
             'caps':
             extend(roles, ['teacher']) + [
                 'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey',
-                'read_won_lead', 'crud_member'
+                'read_won_lead', 'crud_member', 'send_reset_password'
             ]
         })
         roles.append({
