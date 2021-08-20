@@ -216,6 +216,7 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
         datastore = Datastore()
         #academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
 
+        # get the the total entities on db
         # count = len(datastore.fetch(**kwargs))
 
         limit = request.GET.get('limit')
@@ -234,10 +235,10 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
         public_iter.sort(key=lambda x: x['created_at'], reverse=True)
 
         page = self.paginate_queryset(public_iter, request)
+        count = len(page)
 
         if self.is_paginate(request):
-
-            return self.get_paginated_response(page)
+            return self.get_paginated_response(page, count)
         else:
             return Response(page, status=status.HTTP_200_OK)
 
