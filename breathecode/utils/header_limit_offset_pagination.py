@@ -37,9 +37,8 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
         headers['x-total-count'] = self.count
 
         if self.use_envelope:
-            data = OrderedDict([('count', self.count), ('first', first_url),
-                                ('next', next_url), ('previous', previous_url),
-                                ('last', last_url), ('results', data)])
+            data = OrderedDict([('count', self.count), ('first', first_url), ('next', next_url),
+                                ('previous', previous_url), ('last', last_url), ('results', data)])
 
         if cache:
             cache.set(data, **cache_kwargs)
@@ -63,8 +62,7 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
         return replace_query_param(url, self.offset_query_param, offset)
 
     def is_paginate(self, request):
-        return (request.GET.get(self.limit_query_param)
-                or request.GET.get(self.offset_query_param))
+        return (request.GET.get(self.limit_query_param) or request.GET.get(self.offset_query_param))
 
     def pagination_params(self, request):
         return {

@@ -648,7 +648,7 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
         fields = ['json', 'version', 'syllabus']
         exclude = ()
         extra_kwargs = {
-            'certificate': {
+            'syllabus': {
                 'read_only': True
             },
             'version': {
@@ -657,10 +657,9 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
         }
 
     def create(self, validated_data):
-        certificate = self.context['certificate']
+        syllabus = self.context['syllabus']
 
-        previous_syllabus = SyllabusVersion.objects.filter(
-            syllabus=certificate.syllabus).order_by('-version').first()
+        previous_syllabus = SyllabusVersion.objects.filter(syllabus=syllabus).order_by('-version').first()
 
         version = 1
         if previous_syllabus is not None:
@@ -668,7 +667,7 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
 
         return super(SyllabusVersionSerializer, self).create({
             **validated_data,
-            'syllabus': certificate.syllabus,
+            'syllabus': syllabus,
             'version': version,
         })
 
