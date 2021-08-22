@@ -991,17 +991,35 @@ class SyllabusVersionView(APIView):
 
     @capable_of('crud_syllabus')
     def post(self, request, syllabus_id=None, syllabus_slug=None, academy_id=None):
-        if 'syllabus' not in request.data:
+        syllabus = None
+        if syllabus_id or syllabus_slug:
+            syllabus = Syllabus.objects.filter(Q(id=syllabus_id)
+                                               | Q(slug=syllabus_slug, slug__isnull=False)).first()
+
+            if not syllabus:
+                raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
+
+        if not syllabus and 'syllabus' not in request.data:
             raise ValidationException(f'Missing syllabus in the request', slug='missing-syllabus-in-request')
 
-        if not Syllabus.objects.filter(id=request.data['syllabus']):
-            raise ValidationException(f'Syllabus field not found', slug='syllabus-field-missing')
+        if not syllabus:
+            syllabus = Syllabus.objects.filter(id=request.data['syllabus']).first()
+
+        if not syllabus:
+            raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
 
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
             raise ValidationException(f'Invalid academy {str(academy_id)}')
 
-        serializer = SyllabusVersionSerializer(data=request.data, context={'academy': academy})
+        if syllabus:
+            request.data['syllabus'] = syllabus.id
+
+        serializer = SyllabusVersionSerializer(data=request.data,
+                                               context={
+                                                   'academy': academy,
+                                                   'syllabus': syllabus
+                                               })
 
         if serializer.is_valid():
             serializer.save()
