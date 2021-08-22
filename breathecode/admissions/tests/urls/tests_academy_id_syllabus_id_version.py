@@ -121,3 +121,128 @@ class CertificateTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'syllabus_version')
         }])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_syllabus_id_version__post__bad_syllabus_id(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     specialty_mode=True,
+                                     profile_academy=True,
+                                     capability='crud_syllabus',
+                                     role='potato',
+                                     syllabus=True)
+        url = reverse_lazy('admissions:academy_id_syllabus_id_version',
+                           kwargs={
+                               'academy_id': 1,
+                               'syllabus_id': 9999,
+                           })
+        data = {}
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {'detail': 'syllabus-not-found', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.all_syllabus_version_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_syllabus_id_version__post__without_json_field(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     specialty_mode=True,
+                                     profile_academy=True,
+                                     capability='crud_syllabus',
+                                     role='potato',
+                                     syllabus=True)
+        url = reverse_lazy('admissions:academy_id_syllabus_id_version',
+                           kwargs={
+                               'academy_id': 1,
+                               'syllabus_id': 1,
+                           })
+        data = {}
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {'json': ['This field is required.']}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_syllabus_version_dict(), [])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_syllabus_id_version__post(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     specialty_mode=True,
+                                     profile_academy=True,
+                                     capability='crud_syllabus',
+                                     role='potato',
+                                     syllabus=True)
+        url = reverse_lazy('admissions:academy_id_syllabus_id_version',
+                           kwargs={
+                               'academy_id': 1,
+                               'syllabus_id': 1,
+                           })
+        data = {'json': {}}
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {
+            'syllabus': 1,
+            'version': 1,
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_syllabus_version_dict(), [{
+            'id': 1,
+            'json': {},
+            'syllabus_id': 1,
+            'version': 1
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_syllabus_id_version__post__autoincrement_version(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     specialty_mode=True,
+                                     profile_academy=True,
+                                     capability='crud_syllabus',
+                                     role='potato',
+                                     syllabus=True,
+                                     syllabus_version=True)
+        url = reverse_lazy('admissions:academy_id_syllabus_id_version',
+                           kwargs={
+                               'academy_id': 1,
+                               'syllabus_id': 1,
+                           })
+        data = {'json': {}}
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {
+            'syllabus': 1,
+            'version': model.syllabus_version.version + 1,
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_syllabus_version_dict(), [{
+            **self.model_to_dict(model, 'syllabus_version')
+        }, {
+            'id': 2,
+            'json': {},
+            'syllabus_id': 1,
+            'version': model.syllabus_version.version + 1,
+        }])
