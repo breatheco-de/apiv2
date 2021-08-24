@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'breathecode.media',
     'breathecode.assessment',
     'breathecode.registry',
+    'explorer',
 ]
 
 if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
@@ -335,3 +336,22 @@ DATABASES = {
     'default': dj_database_url.config(default=DATABASE_URL),
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+# SQL Explorer
+EXPLORER_CONNECTIONS = {'Default': 'default'}
+EXPLORER_DEFAULT_CONNECTION = 'default'
+
+EXPLORER_SQL_BLACKLIST = (
+    'ALTER',
+    'CREATE TABLE',
+    'DELETE',
+    'DROP',
+    'GRANT',
+    'INSERT INTO',
+    'OWNER TO'
+    'RENAME ',
+    'REPLACE',
+    'SCHEMA',
+    'TRUNCATE',
+    'UPDATE',
+)

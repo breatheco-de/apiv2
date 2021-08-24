@@ -48,6 +48,7 @@ python-slugify = "*"
 pyyaml = "*"
 uritemplate = "*"
 psycopg2-binary = "*"
+django-sql-explorer = {extras = ["xls"], version = "*"}
 
 [requires]
 python_version = "3.9"
