@@ -75,6 +75,9 @@ class MarketingModelsMixin(ModelsMixin):
             if 'active_campaign_academy' in models or active_campaign_academy:
                 kargs['ac_academy'] = models['active_campaign_academy']
 
+            if 'automation' in models or automation:
+                kargs['automation'] = models['automation']
+
             kargs = {**kargs, **tag_kwargs}
             models['tag'] = mixer.blend('marketing.Tag', **kargs)
 
