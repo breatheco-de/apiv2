@@ -37,9 +37,6 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': self.user.email,
             'first_name': self.user.first_name,
             'last_name': self.user.last_name,
-            'github': {
-                'avatar_url': None,
-                'name': None,
-                'username': None
-            },
+            'github': None,
+            'profile': None,
         }])

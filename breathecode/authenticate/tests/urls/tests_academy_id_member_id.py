@@ -113,6 +113,77 @@ class AuthenticateTestSuite(AuthTestCase):
                     'id': model['user'].id,
                     'last_name': model['user'].last_name,
                     'github': None,
+                    'profile': None,
+                },
+            })
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            'academy_id': 1,
+            'address': None,
+            'email': None,
+            'first_name': None,
+            'id': 1,
+            'last_name': None,
+            'phone': '',
+            'role_id': role,
+            'status': 'INVITED',
+            'user_id': 2,
+        }])
+
+    """
+    🔽🔽🔽 With profile ans github
+    """
+
+    def test_academy_id_member_id__with_profile__with_github(self):
+        """Test /academy/:id/member/:id"""
+        role = 'konan'
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='read_member',
+                                     profile_academy=True,
+                                     credentials_github=True,
+                                     profile=True)
+        url = reverse_lazy('authenticate:academy_id_member_id',
+                           kwargs={
+                               'academy_id': 1,
+                               'user_id_or_email': '2'
+                           })
+        response = self.client.get(url)
+        json = response.json()
+
+        profile_academy = self.get_profile_academy(1)
+
+        self.assertEqual(
+            json, {
+                'academy': {
+                    'id': model['academy'].id,
+                    'name': model['academy'].name,
+                    'slug': model['academy'].slug,
+                },
+                'address': None,
+                'created_at': datetime_to_iso_format(
+                    profile_academy.created_at),
+                'email': None,
+                'first_name': None,
+                'id': 1,
+                'last_name': None,
+                'phone': '',
+                'role': {
+                    'name': role,
+                    'slug': role,
+                },
+                'status': 'INVITED',
+                'user': {
+                    'email': model['user'].email,
+                    'first_name': model['user'].first_name,
+                    'id': model['user'].id,
+                    'last_name': model['user'].last_name,
+                    'github': {
+                        'avatar_url': model['user'],
+                        'name': None,
+                        'username': None
+                    },
+                    'profile': None,
                 },
             })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -172,11 +243,8 @@ class AuthenticateTestSuite(AuthTestCase):
                     'first_name': model['user'].first_name,
                     'id': model['user'].id,
                     'last_name': model['user'].last_name,
-                    'github': {
-                        'avatar_url': None,
-                        'name': None,
-                        'username': None
-                    },
+                    'github': None,
+                    'profile': None,
                 },
             })
         self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -1,14 +1,11 @@
 from breathecode.authenticate.models import ProfileAcademy
 import logging
-from django.shortcuts import render
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.contrib.auth.models import User
 from .models import Specialty, Badge, UserSpecialty, LayoutDesign
-from django.db.models import Q
 from breathecode.admissions.models import CohortUser
-from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, APIException, GenerateLookupsMixin
-from .serializers import SpecialtySerializer, UserSpecialtySerializer, UserSmallSerializer, LayoutDesignSerializer
+from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
+from .serializers import SpecialtySerializer, UserSpecialtySerializer, LayoutDesignSerializer
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response

@@ -82,6 +82,8 @@ class AuthTestCase(APITestCase, ModelsMixin):
                         capability='',
                         profile_academy_status='',
                         credentials_github=False,
+                        profile=False,
+                        profile_kwargs={},
                         models={}):
         """Generate models"""
         # TODO: rewrite authenticate tests to use the global generate_models
@@ -93,6 +95,15 @@ class AuthTestCase(APITestCase, ModelsMixin):
             models['user'] = mixer.blend('auth.User')
             models['user'].set_password(self.password)
             models['user'].save()
+
+        if not 'profile' in models and profile:
+            kargs = {}
+
+            if 'user' in models:
+                kargs['user'] = models['user']
+
+            kargs = {**kargs, **profile_kwargs}
+            models['profile'] = mixer.blend('authenticate.Profile', **kargs)
 
         if not 'credentials_github' in models and credentials_github:
             kargs = {'user': models['user']}

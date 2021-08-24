@@ -50,6 +50,12 @@ class GithubSmallSerializer(serpy.Serializer):
     username = serpy.Field()
 
 
+class GetProfileSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    avatar_url = serpy.Field()
+
+
 class UserInviteSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -105,21 +111,62 @@ class UserSmallSerializer(serpy.Serializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     github = serpy.MethodField()
+    profile = serpy.MethodField()
 
     def get_github(self, obj):
-        github = CredentialsGithub.objects.filter(user=obj.id).first()
-        if github is None:
+        if not hasattr(obj, 'profile'):
             return None
-        return GithubSmallSerializer(github).data
+
+        return GithubSmallSerializer(obj.credentialsgithub).data
+
+    def get_profile(self, obj):
+        if not hasattr(obj, 'profile'):
+            return None
+
+        return GetProfileSmallSerializer(obj.profile).data
 
 
-class GETProfileAcademy(serpy.Serializer):
+class UserSuperSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    email = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    profile = serpy.MethodField()
+
+    def get_profile(self, obj):
+        if not hasattr(obj, 'profile'):
+            return None
+
+        return GetProfileSmallSerializer(obj.profile).data
+
+
+class GetProfileAcademySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
     user = UserSmallSerializer(required=False)
+    academy = AcademySmallSerializer()
+    role = RoleSmallSerializer()
+    created_at = serpy.Field()
+    email = serpy.Field()
+    address = serpy.Field()
+    phone = serpy.Field()
+    status = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+
+
+class GetProfileAcademySmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    user = UserSuperSmallSerializer(required=False)
     academy = AcademySmallSerializer()
     role = RoleSmallSerializer()
     created_at = serpy.Field()
