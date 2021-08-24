@@ -1,7 +1,6 @@
 # from breathecode.media.schemas import MediaSchema
 from breathecode.media.schemas import FileSchema, MediaSchema
 import os, hashlib, requests, logging
-
 from breathecode.services.google_cloud.function import Function
 from django.shortcuts import redirect
 from breathecode.media.models import Media, Category, MediaResolution
