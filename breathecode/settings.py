@@ -14,6 +14,7 @@ import sys
 import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +29,7 @@ ENVIRONMENT = os.environ.get('ENV')
 SECRET_KEY = '5ar3h@ha%y*dc72z=8-ju7@4xqm0o59*@k*c2i=xacmy2r=%4a'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = (ENVIRONMENT == "development")
+DEBUG = (ENVIRONMENT == 'development')
 
 ALLOWED_HOSTS = []
 
@@ -44,9 +45,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django.contrib.postgres',
+    'django.contrib.admindocs',
     'rest_framework',
     'phonenumber_field',
-    'drf_yasg',
     'corsheaders',
     'breathecode.authenticate',
     'breathecode.admissions',
@@ -63,7 +64,12 @@ INSTALLED_APPS = [
     'breathecode.registry',
 ]
 
+if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
+    INSTALLED_APPS.append('breathecode.cypress')
+
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS':
+    'rest_framework.schemas.openapi.AutoSchema',
     'DEFAULT_VERSIONING_CLASS':
     'rest_framework.versioning.NamespaceVersioning',
     'DEFAULT_PAGINATION_CLASS':
@@ -217,7 +223,7 @@ logging.config.dictConfig({
 
 ROLLBAR = {
     'access_token':
-    os.getenv('ROLLBAR_ACCESS_TOKEN', ""),
+    os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
     'environment':
     'development' if DEBUG else 'production',
     'branch':
@@ -270,19 +276,19 @@ STATICFILES_DIRS = [
 CORS_ORIGIN_ALLOW_ALL = True
 
 CORS_ALLOW_HEADERS = [
-    "accept",
-    "academy",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "dnt",
-    "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
-    "cache-control",
-    "credentials",
-    "http-access-control-request-method",
+    'accept',
+    'academy',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'cache-control',
+    'credentials',
+    'http-access-control-request-method',
 ]
 
 REDIS_URL = os.getenv('REDIS_URL', '')
@@ -294,8 +300,8 @@ def cache_opts(is_test_env):
     else:
         return {
             'OPTIONS': {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-                "PARSER_CLASS": "redis.connection.HiredisParser",
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'PARSER_CLASS': 'redis.connection.HiredisParser',
             }
         }
 

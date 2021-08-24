@@ -52,6 +52,7 @@ class LayoutDesignSerializer(serpy.Serializer):
     name = serpy.Field()
     is_default = serpy.Field()
     background_url = serpy.Field()
+    preview_url = serpy.Field()
 
 
 class CohortSmallSerializer(serpy.Serializer):
@@ -70,6 +71,7 @@ class SpecialtySerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     logo_url = serpy.Field()
+    description = serpy.Field()
 
     updated_at = serpy.Field()
     created_at = serpy.Field()

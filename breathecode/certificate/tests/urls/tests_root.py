@@ -78,7 +78,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
-                                     role="STUDENT",
+                                     role='STUDENT',
                                      capability='crud_certificate')
 
         url = reverse_lazy('certificate:root')
@@ -107,7 +107,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
-                                     role="STUDENT",
+                                     role='STUDENT',
                                      capability='crud_certificate',
                                      cohort_user=True)
 
@@ -142,7 +142,7 @@ class CertificateTestSuite(CertificateTestCase):
             syllabus=True,
             specialty=True,
             layout_design=True,
-            cohort_stage="ENDED",
+            cohort_stage='ENDED',
             cohort_user_finantial_status='UP_TO_DATE',
             cohort_user_educational_status='GRADUATED',
             user_specialty=True,
@@ -204,6 +204,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': None,
                 'created_at':
                 self.datetime_to_iso(model['specialty'].created_at),
                 'id': 1,
@@ -239,7 +240,7 @@ class CertificateTestSuite(CertificateTestCase):
             'preview_url':
             model['user_specialty'].preview_url,
             'signed_by':
-            teacher_model['user'].first_name + " " +
+            teacher_model['user'].first_name + ' ' +
             teacher_model['user'].last_name,
             'signed_by_role':
             'Director',
@@ -252,7 +253,140 @@ class CertificateTestSuite(CertificateTestCase):
             'user_id':
             1,
             'token':
-            "9e76a2ab3bd55454c384e0a5cdb5298d17285949"
+            '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
+        }])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_certificate_re_attemps_dict_data(self):
+        """Test /root with auth"""
+        """ Good Request with dict as data """
+        self.headers(academy=1)
+
+        model = self.generate_models(
+            authenticate=True,
+            cohort=True,
+            user=True,
+            profile_academy=True,
+            capability='crud_certificate',
+            role='STUDENT',
+            cohort_user=True,
+            syllabus=True,
+            specialty=True,
+            layout_design=True,
+            cohort_stage='ENDED',
+            cohort_user_finantial_status='UP_TO_DATE',
+            cohort_user_educational_status='GRADUATED',
+            user_specialty=True,
+            cohort_finished=True)
+
+        base = model.copy()
+        del base['user']
+        del base['cohort_user']
+
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_role='TEACHER',
+                                             models=base)
+
+        url = reverse_lazy('certificate:root')
+        data = {
+            'cohort_slug': model['cohort'].slug,
+            'user_id': model['user'].id,
+        }
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+
+        self.assertDatetime(json[0]['updated_at'])
+        del json[0]['updated_at']
+        del json[0]['signed_by']
+
+        expected = [{
+            'academy': {
+                'id': 1,
+                'logo_url': model['academy'].logo_url,
+                'name': model['academy'].name,
+                'slug': model['academy'].slug,
+                'website_url': None
+            },
+            'cohort': {
+                'id': 1,
+                'name': model['cohort'].name,
+                'slug': model['cohort'].slug,
+                'syllabus': {
+                    'certificate': {
+                        'duration_in_hours':
+                        model['certificate'].duration_in_hours
+                    }
+                }
+            },
+            'created_at':
+            self.datetime_to_iso(model['user_specialty'].created_at),
+            'expires_at':
+            model['user_specialty'].expires_at,
+            'id':
+            1,
+            'layout': {
+                'name': model['layout_design'].name,
+                'slug': model['layout_design'].slug,
+                'background_url': model['layout_design'].background_url
+            },
+            'preview_url':
+            model['user_specialty'].preview_url,
+            'signed_by_role':
+            'Director',
+            'specialty': {
+                'description': None,
+                'created_at':
+                self.datetime_to_iso(model['specialty'].created_at),
+                'id': 1,
+                'logo_url': None,
+                'name': model['specialty'].name,
+                'slug': model['specialty'].slug,
+                'updated_at':
+                self.datetime_to_iso(model['specialty'].updated_at),
+            },
+            'status':
+            'PENDING',
+            'status_text':
+            None,
+            'user': {
+                'first_name': model['user'].first_name,
+                'id': 1,
+                'last_name': model['user'].last_name
+            }
+        }]
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_user_specialty_dict(), [{
+            'academy_id':
+            1,
+            'cohort_id':
+            1,
+            'expires_at':
+            None,
+            'id':
+            1,
+            'layout_id':
+            1,
+            'preview_url':
+            model['user_specialty'].preview_url,
+            'signed_by':
+            teacher_model['user'].first_name + ' ' +
+            teacher_model['user'].last_name,
+            'signed_by_role':
+            'Director',
+            'specialty_id':
+            1,
+            'status':
+            'PERSISTED',
+            'status_text':
+            'Certificate successfully queued for PDF generation',
+            'user_id':
+            1,
+            'token':
+            '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -272,12 +406,12 @@ class CertificateTestSuite(CertificateTestCase):
                                     syllabus=True,
                                     specialty=True,
                                     layout_design=True,
-                                    cohort_stage="ENDED")
+                                    cohort_stage='ENDED')
 
         del base['user']
 
-        user_specialty_1_kwargs = {"token": "qwerrty"}
-        user_specialty_2_kwargs = {"token": "huhuhuhuhu"}
+        user_specialty_1_kwargs = {'token': 'qwerrty'}
+        user_specialty_2_kwargs = {'token': 'huhuhuhuhu'}
 
         models = [
             self.generate_models(user=True,
@@ -358,6 +492,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': models[0].specialty.description,
                 'created_at':
                 self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
@@ -411,6 +546,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': models[0].specialty.description,
                 'created_at':
                 self.datetime_to_iso(models[1].specialty.created_at),
                 'id': 1,
@@ -447,7 +583,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'preview_url':
                 models[0].user_specialty.preview_url,
                 'signed_by':
-                teacher_model['user'].first_name + " " +
+                teacher_model['user'].first_name + ' ' +
                 teacher_model['user'].last_name,
                 'signed_by_role':
                 'Director',
@@ -460,7 +596,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'user_id':
                 2,
                 'token':
-                "huhuhuhuhu"
+                'huhuhuhuhu'
             },
             {
                 'academy_id':
@@ -476,7 +612,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'preview_url':
                 models[1].user_specialty.preview_url,
                 'signed_by':
-                teacher_model['user'].first_name + " " +
+                teacher_model['user'].first_name + ' ' +
                 teacher_model['user'].last_name,
                 'signed_by_role':
                 'Director',
@@ -489,7 +625,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'user_id':
                 3,
                 'token':
-                "qwerrty"
+                'qwerrty'
             },
         ])
 
@@ -521,8 +657,8 @@ class CertificateTestSuite(CertificateTestCase):
             'first_name': 'Michael',
             'last_name': 'Jordan',
         }
-        user_specialty_kwargs_1 = {"token": "123dfefef1123rerf346g"}
-        user_specialty_kwargs_2 = {"token": "jojfsdknjbs1123rerf346g"}
+        user_specialty_kwargs_1 = {'token': '123dfefef1123rerf346g'}
+        user_specialty_kwargs_2 = {'token': 'jojfsdknjbs1123rerf346g'}
         models = [
             self.generate_models(user=True,
                                  user_specialty=True,
@@ -573,6 +709,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': None,
                 'created_at':
                 self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
@@ -628,8 +765,8 @@ class CertificateTestSuite(CertificateTestCase):
             'first_name': 'Michael',
             'last_name': 'Jordan',
         }
-        user_specialty_kwargs_1 = {"token": "123dfefef1123rerf346g"}
-        user_specialty_kwargs_2 = {"token": "jojfsdknjbs1123rerf346g"}
+        user_specialty_kwargs_1 = {'token': '123dfefef1123rerf346g'}
+        user_specialty_kwargs_2 = {'token': 'jojfsdknjbs1123rerf346g'}
         models = [
             self.generate_models(user=True,
                                  user_specialty=True,
@@ -680,6 +817,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': None,
                 'created_at':
                 self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
@@ -731,8 +869,8 @@ class CertificateTestSuite(CertificateTestCase):
             'first_name': 'Michael',
             'last_name': 'Jordan',
         }
-        user_specialty_kwargs_1 = {"token": "123dfefef1123rerf346g"}
-        user_specialty_kwargs_2 = {"token": "jojfsdknjbs1123rerf346g"}
+        user_specialty_kwargs_1 = {'token': '123dfefef1123rerf346g'}
+        user_specialty_kwargs_2 = {'token': 'jojfsdknjbs1123rerf346g'}
         models = [
             self.generate_models(user=True,
                                  user_specialty=True,
@@ -783,6 +921,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': None,
                 'created_at':
                 self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,
@@ -834,8 +973,8 @@ class CertificateTestSuite(CertificateTestCase):
             'first_name': 'Michael',
             'last_name': 'Jordan',
         }
-        user_specialty_kwargs_1 = {"token": "123dfefef1123rerf346g"}
-        user_specialty_kwargs_2 = {"token": "jojfsdknjbs1123rerf346g"}
+        user_specialty_kwargs_1 = {'token': '123dfefef1123rerf346g'}
+        user_specialty_kwargs_2 = {'token': 'jojfsdknjbs1123rerf346g'}
         models = [
             self.generate_models(user=True,
                                  user_specialty=True,
@@ -886,6 +1025,7 @@ class CertificateTestSuite(CertificateTestCase):
             'signed_by_role':
             'Director',
             'specialty': {
+                'description': None,
                 'created_at':
                 self.datetime_to_iso(models[0].specialty.created_at),
                 'id': 1,

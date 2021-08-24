@@ -23,7 +23,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     def tests_check_cohort__status_ended_date_greater_than_now(self):
 
         monitor_script_kwargs = {
-            "script_slug": "check_cohort_status_ended_cohort"
+            'script_slug': 'check_cohort_status_ended_cohort'
         }
         ending_date = timezone.now() + timedelta(weeks=2)
         model = self.generate_models(
@@ -37,6 +37,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
             'severity_level': 5,
@@ -55,7 +56,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     def tests_check_cohort__ending_date_passed_with_status_ended(self):
 
         monitor_script_kwargs = {
-            "script_slug": "check_cohort_status_ended_cohort"
+            'script_slug': 'check_cohort_status_ended_cohort'
         }
         ending_date = timezone.now() - timedelta(weeks=2)
         model = self.generate_models(
@@ -72,6 +73,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {'severity_level': 5, 'status': 'OPERATIONAL'}
 
@@ -87,7 +89,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     def tests_check_cohort__ending_date_passed_with_status_final_project(self):
 
         monitor_script_kwargs = {
-            "script_slug": "check_cohort_status_ended_cohort"
+            'script_slug': 'check_cohort_status_ended_cohort'
         }
         ending_date = timezone.now() - timedelta(weeks=2)
         model = self.generate_models(
@@ -104,6 +106,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         del script['slack_payload']
         del script['text']
+        del script['title']
 
         expected = {
             'severity_level': 5,

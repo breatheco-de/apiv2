@@ -6,7 +6,7 @@ from ...models import Asset
 
 logger = logging.getLogger(__name__)
 
-HOST_ASSETS = "https://assets.breatheco.de/apis"
+HOST_ASSETS = 'https://assets.breatheco.de/apis'
 
 
 class Command(BaseCommand):

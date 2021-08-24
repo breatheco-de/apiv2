@@ -8,12 +8,12 @@
                 {{ message }}
             </div>
         {% endfor %}
-    {% endif %} 
+    {% endif %}
     {% csrf_token %}
     {{ form }}
     <button class="btn btn-primary" type="submit">SEND</button>
     <ul style="text-align: center;">
-        <li><a href="/v1/auth/password/reset?url={{ redirect_url }}"">Forgot your password?</a></li> 
+        <li><a href="/v1/auth/password/reset?url={{ redirect_url }}"">Forgot your password?</a></li>
         <li><a class="btn" href="/v1/auth/github/?url={{ redirect_url }}">Login with github</a></li>
     </ul>
 </form>

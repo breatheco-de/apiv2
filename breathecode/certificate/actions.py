@@ -13,14 +13,14 @@ from ..services.google_cloud import Storage
 
 logger = logging.getLogger(__name__)
 ENVIRONMENT = os.getenv('ENV', None)
-BUCKET_NAME = "certificates-breathecode"
+BUCKET_NAME = 'certificates-breathecode'
 
 strings = {
-    "es": {
-        "Main Instructor": "Instructor Principal",
+    'es': {
+        'Main Instructor': 'Instructor Principal',
     },
-    "en": {
-        "Main Instructor": "Main Instructor",
+    'en': {
+        'Main Instructor': 'Main Instructor',
     }
 }
 
@@ -44,7 +44,7 @@ def generate_certificate(user, cohort=None, layout=None):
         cohort = cohort_user.cohort
 
     if cohort.syllabus is None:
-        message = f"The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}"
+        message = f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}'
         logger.error(message)
         raise ValidationException(message)
 
@@ -66,7 +66,7 @@ def generate_certificate(user, cohort=None, layout=None):
     uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
 
     if (uspe is not None and uspe.status == 'PERSISTED' and uspe.preview_url):
-        message = "This user already has a certificate created"
+        message = 'This user already has a certificate created'
         logger.error(message)
         raise ValidationException(message)
 
@@ -76,24 +76,26 @@ def generate_certificate(user, cohort=None, layout=None):
             user=user,
             cohort=cohort,
             token=hashlib.sha1(
-                (str(user.id) + str(utc_now)).encode("UTF-8")).hexdigest(),
+                (str(user.id) + str(utc_now)).encode('UTF-8')).hexdigest(),
             specialty=cohort.syllabus.certificate.specialty,
-            signed_by_role=strings[cohort.language]["Main Instructor"],
+            signed_by_role=strings[cohort.language]['Main Instructor'],
         )
         if cohort.syllabus.certificate.specialty.expiration_day_delta is not None:
             uspe.expires_at = utc_now + timezone.timedelta(
                 days=cohort.syllabus.certificate.specialty.expiration_day_delta
             )
 
+    layout = LayoutDesign.objects.filter(slug=layout).first()
+
     if layout is None:
         layout = LayoutDesign.objects.filter(is_default=True,
                                              academy=cohort.academy).first()
     if layout is None:
-        layout = LayoutDesign.objects.filter(slug="default").first()
+        layout = LayoutDesign.objects.filter(slug='default').first()
     if layout is None:
-        message = "No layout was specified and there is no default layout for this academy"
+        message = 'No layout was specified and there is no default layout for this academy'
         logger.error(message)
-        raise ValidationException(message, slug="no-default-layout")
+        raise ValidationException(message, slug='no-default-layout')
 
     uspe.layout = layout
 
@@ -101,12 +103,12 @@ def generate_certificate(user, cohort=None, layout=None):
     main_teacher = CohortUser.objects.filter(cohort__id=cohort.id,
                                              role='TEACHER').first()
     if main_teacher is None or main_teacher.user is None:
-        message = "This cohort does not have a main teacher, please assign it first"
+        message = 'This cohort does not have a main teacher, please assign it first'
         logger.error(message)
         raise ValidationException(message)
 
     main_teacher = main_teacher.user
-    uspe.signed_by = main_teacher.first_name + " " + main_teacher.last_name
+    uspe.signed_by = main_teacher.first_name + ' ' + main_teacher.last_name
 
     try:
         uspe.academy = cohort.academy
@@ -138,7 +140,7 @@ def generate_certificate(user, cohort=None, layout=None):
             raise ValidationException(message)
 
         uspe.status = PERSISTED
-        uspe.status_text = "Certificate successfully queued for PDF generation"
+        uspe.status_text = 'Certificate successfully queued for PDF generation'
         uspe.save()
 
     except Exception as e:
@@ -154,7 +156,7 @@ def generate_certificate(user, cohort=None, layout=None):
 def certificate_screenshot(certificate_id: int):
 
     certificate = UserSpecialty.objects.get(id=certificate_id)
-    if certificate.preview_url is None or certificate.preview_url == "":
+    if certificate.preview_url is None or certificate.preview_url == '':
         file_name = f'{certificate.token}'
 
         storage = Storage()
@@ -180,7 +182,7 @@ def certificate_screenshot(certificate_id: int):
             if r.status_code == 200:
                 file.upload(r.content, public=True)
             else:
-                print("Invalid reponse code: ", r.status_code)
+                print('Invalid reponse code: ', r.status_code)
 
         # after created, lets save the URL
         if file.blob is not None:
@@ -190,7 +192,7 @@ def certificate_screenshot(certificate_id: int):
 
 def remove_certificate_screenshot(certificate_id):
     certificate = UserSpecialty.objects.get(id=certificate_id)
-    if certificate.preview_url is None or certificate.preview_url == "":
+    if certificate.preview_url is None or certificate.preview_url == '':
         return False
 
     file_name = certificate.token
@@ -198,7 +200,7 @@ def remove_certificate_screenshot(certificate_id):
     file = storage.file(BUCKET_NAME, file_name)
     file.delete()
 
-    certificate.preview_url = ""
+    certificate.preview_url = ''
     certificate.save()
 
     return True

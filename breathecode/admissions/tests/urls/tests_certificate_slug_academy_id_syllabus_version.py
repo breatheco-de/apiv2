@@ -241,7 +241,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         expected = {
             'detail':
             "You (user: 1) don't have this capability: crud_syllabus "
-            "for academy 1",
+            'for academy 1',
             'status_code': 403
         }
 

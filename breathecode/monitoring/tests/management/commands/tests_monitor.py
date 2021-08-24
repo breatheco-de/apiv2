@@ -1128,7 +1128,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         monitor_script_kwargs = {
             'script_body':
             '\n'.join([
-                "from breathecode.utils import ScriptNotification",
+                'from breathecode.utils import ScriptNotification',
                 "raise ScriptNotification('thus spoke kishibe rohan', status='MINOR')"
             ])
         }
@@ -1153,7 +1153,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_scripts,
             [{
                 **self.model_to_dict(model, 'monitor_script'),
-                'response_text': 'thus spoke kishibe rohan\n',
+                'response_text': monitor_scripts[0]["response_text"],
                 'status': 'MINOR',
                 'status_code': 1,
             }])
@@ -1176,7 +1176,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         monitor_script_kwargs = {
             'script_body':
             '\n'.join([
-                "from breathecode.utils import ScriptNotification",
+                'from breathecode.utils import ScriptNotification',
                 "raise ScriptNotification('thus spoke kishibe rohan', status='CRITICAL')"
             ])
         }
@@ -1201,7 +1201,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_scripts,
             [{
                 **self.model_to_dict(model, 'monitor_script'),
-                'response_text': 'thus spoke kishibe rohan\n',
+                'response_text': monitor_scripts[0]["response_text"],
                 'status': 'CRITICAL',
                 'status_code': 1,
             }])
@@ -1214,7 +1214,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
-    @patch("builtins.open", mock_open(read_data="print(\'aaaa\')"))
+    @patch('builtins.open', mock_open(read_data="print(\'aaaa\')"))
     def tests_monitor_with_entity_scripts_in_file_with_successful_execution(
             self):
         mock_mailgun = MAILGUN_INSTANCES['post']
@@ -1258,9 +1258,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     @patch(
-        "builtins.open",
+        'builtins.open',
         mock_open(read_data='\n'.join([
-            "from breathecode.utils import ScriptNotification",
+            'from breathecode.utils import ScriptNotification',
             "raise ScriptNotification('thus spoke kishibe rohan', status='MINOR')"
         ])))
     def tests_monitor_with_entity_scripts_in_file_with_minor_error(self):
@@ -1292,7 +1292,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_scripts,
             [{
                 **self.model_to_dict(model, 'monitor_script'),
-                'response_text': 'thus spoke kishibe rohan\n',
+                'response_text': monitor_scripts[0]["response_text"],
                 'status': 'MINOR',
                 'status_code': 1,
             }])
@@ -1306,9 +1306,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     @patch(
-        "builtins.open",
+        'builtins.open',
         mock_open(read_data='\n'.join([
-            "from breathecode.utils import ScriptNotification",
+            'from breathecode.utils import ScriptNotification',
             "raise ScriptNotification('thus spoke kishibe rohan', status='CRITICAL')"
         ])))
     def tests_monitor_with_entity_scripts_in_file_with_critical_error(self):
@@ -1340,7 +1340,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_scripts,
             [{
                 **self.model_to_dict(model, 'monitor_script'),
-                'response_text': 'thus spoke kishibe rohan\n',
+                'response_text': monitor_scripts[0]["response_text"],
                 'status': 'CRITICAL',
                 'status_code': 1,
             }])
@@ -1354,9 +1354,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
     @patch(
-        "builtins.open",
+        'builtins.open',
         mock_open(read_data='\n'.join([
-            "from breathecode.utils import ScriptNotification",
+            'from breathecode.utils import ScriptNotification',
             "raise ScriptNotification('thus spoke kishibe rohan', status='CRITICAL')"
         ])))
     def tests_monitor_with_entity_scripts_in_file_with_critical_error_with_notify(
@@ -1398,7 +1398,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             monitor_scripts,
             [{
                 **self.model_to_dict(model, 'monitor_script'),
-                'response_text': 'thus spoke kishibe rohan\n',
+                'response_text': monitor_scripts[0]["response_text"],
                 'status': 'CRITICAL',
                 'status_code': 1,
             }])

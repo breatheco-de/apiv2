@@ -11,8 +11,8 @@ class Command(BaseCommand):
         academies = ActiveCampaignAcademy.objects.all()
         for a in academies:
             sync_tags(a)
-            self.stdout.write(self.style.SUCCESS("Successfully sync tags"))
+            self.stdout.write(self.style.SUCCESS('Successfully sync tags'))
 
             sync_automations(a)
             self.stdout.write(
-                self.style.SUCCESS("Successfully sync automations"))
+                self.style.SUCCESS('Successfully sync automations'))

@@ -9,24 +9,24 @@ def capable_of(capability=None):
         def wrapper(*args, **kwargs):
 
             if isinstance(capability, str) == False:
-                raise Exception("Capability must be a string")
+                raise Exception('Capability must be a string')
 
             request = None
             try:
                 request = args[1]
             except IndexError:
                 raise Exception(
-                    "Missing request information, please apply this decorator to view class methods only"
+                    'Missing request information, please apply this decorator to view class methods only'
                 )
 
             academy_id = None
-            if "academy_id" not in kwargs and ('Academy' not in request.headers
+            if 'academy_id' not in kwargs and ('Academy' not in request.headers
                                                or 'academy'
                                                not in request.headers):
                 raise PermissionDenied(
                     "Missing academy_id parameter expected for the endpoint url or 'Academy' header"
                 )
-            elif "academy_id" in kwargs:
+            elif 'academy_id' in kwargs:
                 academy_id = kwargs['academy_id']
             else:
                 if 'Academy' in request.headers:
@@ -36,11 +36,11 @@ def capable_of(capability=None):
 
             if not str(academy_id).isdigit():
                 raise ValidationException(
-                    f"Academy ID needs to be an integer: {str(academy_id)}",
-                    slug="invalid-academy-id")
+                    f'Academy ID needs to be an integer: {str(academy_id)}',
+                    slug='invalid-academy-id')
 
             if isinstance(request.user, AnonymousUser):
-                raise PermissionDenied("Invalid user")
+                raise PermissionDenied('Invalid user')
 
             capable = ProfileAcademy.objects.filter(
                 user=request.user.id,

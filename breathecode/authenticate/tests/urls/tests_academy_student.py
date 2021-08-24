@@ -37,7 +37,7 @@ class AuthenticateTestSuite(AuthTestCase):
             json, {
                 'detail':
                 "You (user: 1) don't have this capability: read_student "
-                "for academy 1",
+                'for academy 1',
                 'status_code':
                 403
             })
@@ -58,7 +58,7 @@ class AuthenticateTestSuite(AuthTestCase):
             json, {
                 'detail':
                 "You (user: 1) don't have this capability: read_student "
-                "for academy 1",
+                'for academy 1',
                 'status_code':
                 403
             })
@@ -490,7 +490,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.delete(url)
         json = response.json()
         expected = {
-            'details': "Missing user_id or academy_id",
+            'details': 'Missing user_id or academy_id',
             'status_code': 400
         }
 

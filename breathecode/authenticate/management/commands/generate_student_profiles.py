@@ -11,8 +11,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        student_role = Role.objects.get(slug="student")
-        cus = CohortUser.objects.filter(role="STUDENT")
+        student_role = Role.objects.get(slug='student')
+        cus = CohortUser.objects.filter(role='STUDENT')
         count = 0
         for cu in cus:
             profile = ProfileAcademy.objects.filter(
@@ -27,4 +27,4 @@ class Command(BaseCommand):
                                          last_name=cu.user.last_name,
                                          status='ACTIVE')
                 profile.save()
-        print(f"{count} student AcademyProfiles were created")
+        print(f'{count} student AcademyProfiles were created')

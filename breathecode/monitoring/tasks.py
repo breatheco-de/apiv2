@@ -16,66 +16,30 @@ class BaseTaskWithRetry(Task):
     retry_backoff = True
 
 
-# @shared_task(bind=True, base=BaseTaskWithRetry)
-# def monitor_app(self,app_id):
-#     logger.debug("Starting monitor_app")
-#     app = Application.objects.get(id=app_id)
-
-#     now = timezone.now()
-#     if app.paused_until is not None and app.paused_until > now:
-#         logger.debug(f"Ignoring App: {app.title} monitor because its paused")
-#         return True
-
-#     logger.debug(f"Running diagnostic for: {app.title} ")
-#     result = run_app_diagnostic(app)
-#     if result["status"] != "OPERATIONAL":
-#         if app.notify_email:
-#             send_email_message("diagnostic", app.notify_email, {
-#                 "subject": f"Errors have been found on {app.title} diagnostic",
-#                 "details": result["details"]
-#             })
-
-#         if (app.notify_slack_channel and app.academy and
-#                 hasattr(app.academy, 'slackteam') and
-#                 hasattr(app.academy.slackteam.owner, 'credentialsslack')):
-#             send_slack_raw(
-#                 "diagnostic",
-#                 app.academy.slackteam.owner.credentialsslack.token,
-#                 app.notify_slack_channel.slack_id, {
-#                     "subject": f"Errors have been found on {app.title} diagnostic",
-#                     **result,
-#                 }
-#             )
-
-#         return False
-
-#     return True
-
-
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def test_endpoint(self, endpoint_id):
-    logger.debug("Starting monitor_app")
+    logger.debug('Starting monitor_app')
     endpoint = Endpoint.objects.get(id=endpoint_id)
 
     now = timezone.now()
     if endpoint.paused_until is not None and endpoint.paused_until > now:
         logger.debug(
-            f"Ignoring App: {endpoint.url} monitor because its paused")
+            f'Ignoring App: {endpoint.url} monitor because its paused')
         return True
 
-    logger.debug(f"Running diagnostic for: {endpoint.url} ")
+    logger.debug(f'Running diagnostic for: {endpoint.url} ')
     result = run_endpoint_diagnostic(endpoint.id)
     if not result:
         # the endpoint diganostic did not run.
         return False
 
-    if result["status"] != "OPERATIONAL":
+    if result['status'] != 'OPERATIONAL':
         if endpoint.application.notify_email:
             send_email_message(
-                "diagnostic", endpoint.application.notify_email, {
-                    "subject":
-                    f"Errors found on app {endpoint.application.title} endpoint {endpoint.url}",
-                    "details": result["details"]
+                'diagnostic', endpoint.application.notify_email, {
+                    'subject':
+                    f'Errors found on app {endpoint.application.title} endpoint {endpoint.url}',
+                    'details': result['details']
                 })
 
         if (endpoint.application.notify_slack_channel
@@ -84,18 +48,18 @@ def test_endpoint(self, endpoint_id):
                 and hasattr(endpoint.application.academy.slackteam.owner,
                             'credentialsslack')):
             send_slack_raw(
-                "diagnostic", endpoint.application.academy.slackteam.owner.
+                'diagnostic', endpoint.application.academy.slackteam.owner.
                 credentialsslack.token,
                 endpoint.application.notify_slack_channel.slack_id, {
-                    "subject":
-                    f"Errors have been found on diagnostig of the app: {endpoint.application.title}",
+                    'subject':
+                    f'Errors found on app {endpoint.application.title} endpoint {endpoint.url}',
                     **result,
                 })
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def monitor_app(self, app_id):
-    logger.debug("Starting monitor_app")
+    logger.debug('Starting monitor_app')
     endpoints = Endpoint.objects.filter(application__id=app_id).values_list(
         'id', flat=True)
     for endpoint_id in endpoints:
@@ -104,34 +68,37 @@ def monitor_app(self, app_id):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def execute_scripts(self, script_id):
-    logger.debug("Starting execute_scripts")
+    logger.debug('Starting execute_scripts')
     script = MonitorScript.objects.get(id=script_id)
     app = script.application
 
     now = timezone.now()
     if script.paused_until is not None and script.paused_until > now:
-        logger.debug("Ignoring script ex because its paused")
+        logger.debug('Ignoring script ex because its paused')
         return True
 
     result = run_script(script)
-    if result["status"] != "OPERATIONAL":
+    if result['status'] != 'OPERATIONAL':
+        subject = f'Errors have been found on {app.title} script {script.id} (slug: {script.script_slug})'
+        if 'title' in result and result[
+                'title'] is not None and result['title'] != '':
+            subject = result['title']
+
         if app.notify_email:
-            send_email_message(
-                "diagnostic", app.notify_email, {
-                    "subject":
-                    f"Errors have been found on {app.title} script {script.id} (slug: {script.script_slug})",
-                    "details": result["text"]
-                })
+            send_email_message('diagnostic', app.notify_email, {
+                'subject': subject,
+                'details': result['text']
+            })
+
         if (app.notify_slack_channel and app.academy
                 and hasattr(app.academy, 'slackteam')
                 and hasattr(app.academy.slackteam.owner, 'credentialsslack')):
             try:
                 send_slack_raw(
-                    "diagnostic",
+                    'diagnostic',
                     app.academy.slackteam.owner.credentialsslack.token,
                     app.notify_slack_channel.slack_id, {
-                        "subject":
-                        f"Errors have been found on {app.title} script {script.id} (slug: {script.script_slug})",
+                        'subject': subject,
                         **result,
                     })
             except Exception:

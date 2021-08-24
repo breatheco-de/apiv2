@@ -13,9 +13,9 @@ def pull_eventbrite_venues(modeladmin, request, queryset):
         for entry in entries:
             sync_org_venues(entry)
     except Exception as e:
-        print("error", str(e))
+        print('error', str(e))
         messages.error(request,
-                       f"There was an error retriving the venues {str(e)}")
+                       f'There was an error retriving the venues {str(e)}')
 
 
 def pull_eventbrite_events(modeladmin, request, queryset):
@@ -48,11 +48,11 @@ class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = ('sync_status', 'title', 'eventbrite_status', 'starting_at',
                     'ending_at', 'sync_desc')
     list_filter = ['eventbrite_status', 'sync_status']
-    actions = ["export_as_csv"]
+    actions = ['export_as_csv']
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == "author":
-            kwargs["queryset"] = User.objects.filter(is_staff=True)
+        if db_field.name == 'author':
+            kwargs['queryset'] = User.objects.filter(is_staff=True)
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 

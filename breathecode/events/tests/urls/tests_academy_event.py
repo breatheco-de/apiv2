@@ -57,7 +57,7 @@ class AcademyEventTestSuite(EventTestCase):
                                      syllabus=True,
                                      venue=True,
                                      event=True)
-        url = reverse_lazy('events:academy_all_events') + "?city=patata"
+        url = reverse_lazy('events:academy_all_events') + '?city=patata'
 
         response = self.client.get(url)
         json = response.json()
@@ -68,7 +68,7 @@ class AcademyEventTestSuite(EventTestCase):
 
     def test_all_academy_events_correct_city(self):
         self.headers(academy=1)
-        venue_kwargs = {"city": "santiago"}
+        venue_kwargs = {'city': 'santiago'}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='read_event',
@@ -77,7 +77,7 @@ class AcademyEventTestSuite(EventTestCase):
                                      venue_kwargs=venue_kwargs,
                                      venue=True,
                                      event=True)
-        url = reverse_lazy('events:academy_all_events') + "?city=santiago"
+        url = reverse_lazy('events:academy_all_events') + '?city=santiago'
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -125,7 +125,7 @@ class AcademyEventTestSuite(EventTestCase):
                                      syllabus=True,
                                      venue=True,
                                      event=True)
-        url = reverse_lazy('events:academy_all_events') + "?country=patata"
+        url = reverse_lazy('events:academy_all_events') + '?country=patata'
 
         response = self.client.get(url)
         json = response.json()
@@ -136,7 +136,7 @@ class AcademyEventTestSuite(EventTestCase):
 
     def test_all_academy_events_correct_country(self):
         self.headers(academy=1)
-        venue_kwargs = {"country": "chile"}
+        venue_kwargs = {'country': 'chile'}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='read_event',
@@ -145,7 +145,7 @@ class AcademyEventTestSuite(EventTestCase):
                                      venue_kwargs=venue_kwargs,
                                      venue=True,
                                      event=True)
-        url = reverse_lazy('events:academy_all_events') + "?country=chile"
+        url = reverse_lazy('events:academy_all_events') + '?country=chile'
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -194,7 +194,7 @@ class AcademyEventTestSuite(EventTestCase):
                                      venue=True,
                                      event=True)
         url = reverse_lazy(
-            'events:academy_all_events') + "?zip_code=12345678965412"
+            'events:academy_all_events') + '?zip_code=12345678965412'
 
         response = self.client.get(url)
         json = response.json()
@@ -205,7 +205,7 @@ class AcademyEventTestSuite(EventTestCase):
 
     def test_all_academy_events_correct_zip_code(self):
         self.headers(academy=1)
-        venue_kwargs = {"zip_code": "33178"}
+        venue_kwargs = {'zip_code': '33178'}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='read_event',
@@ -214,7 +214,7 @@ class AcademyEventTestSuite(EventTestCase):
                                      venue_kwargs=venue_kwargs,
                                      venue=True,
                                      event=True)
-        url = reverse_lazy('events:academy_all_events') + "?zip_code=33178"
+        url = reverse_lazy('events:academy_all_events') + '?zip_code=33178'
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -255,7 +255,7 @@ class AcademyEventTestSuite(EventTestCase):
 
     def test_all_academy_events_upcoming(self):
         self.headers(academy=1)
-        event_kwargs = {"starting_at": timezone.now()}
+        event_kwargs = {'starting_at': timezone.now()}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='read_event',
@@ -264,7 +264,7 @@ class AcademyEventTestSuite(EventTestCase):
                                      venue=True,
                                      event=True,
                                      event_kwargs=event_kwargs)
-        url = reverse_lazy('events:academy_all_events') + "?past=true"
+        url = reverse_lazy('events:academy_all_events') + '?past=true'
 
         response = self.client.get(url)
         json = response.json()
@@ -969,10 +969,10 @@ class AcademyEventTestSuite(EventTestCase):
         self.headers(academy=1)
         url = reverse_lazy('events:type')
         event_type_kwargs = {
-            "slug": "potato",
-            "name": "Potato",
-            "created_at": timezone.now(),
-            "updated_at": timezone.now()
+            'slug': 'potato',
+            'name': 'Potato',
+            'created_at': timezone.now(),
+            'updated_at': timezone.now()
         }
         model = self.generate_models(authenticate=True,
                                      event=True,
@@ -1002,10 +1002,10 @@ class AcademyEventTestSuite(EventTestCase):
         self.headers(academy=1)
         url = reverse_lazy('events:type') + '?academy=banana'
         event_type_kwargs = {
-            "slug": "potato",
-            "name": "Potato",
-            "created_at": timezone.now(),
-            "updated_at": timezone.now()
+            'slug': 'potato',
+            'name': 'Potato',
+            'created_at': timezone.now(),
+            'updated_at': timezone.now()
         }
         model = self.generate_models(authenticate=True,
                                      event=True,
