@@ -2,6 +2,7 @@
 Collections of mixins used to login in authorize microservice
 """
 import os
+import re
 from breathecode.authenticate.models import Token
 from unittest.mock import call
 from breathecode.notify.actions import get_template_content
@@ -86,9 +87,20 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         self.assertToken(token)
         self.assertTrue(link in html)
 
-    # This function is incompleted
     def check_old_breathecode_calls(self, mock, model):
         self.assertEqual(mock.call_args_list, [
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/admin/api.php',
+                 params=[('api_action', 'contact_sync'),
+                         ('api_key', model['active_campaign_academy'].ac_key),
+                         ('api_output', 'json')],
+                 data={
+                     'email': 'pokemon@potato.io',
+                     'first_name': 'Konan',
+                     'last_name': 'Amegakure',
+                     'phone': '123123123',
+                     'field[18,0]': model['academy'].slug
+                 }),
             call(
                 'POST',
                 'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
@@ -100,7 +112,20 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
                 json={
                     'contactAutomation': {
                         'contact': 1,
-                        'automation': 1938270575
+                        'automation': model['automation'].acp_id
                     }
-                })
+                }),
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/api/3/contactTags',
+                 headers={
+                     'Accept': 'application/json',
+                     'Content-Type': 'application/json',
+                     'Api-Token': model['active_campaign_academy'].ac_key
+                 },
+                 json={
+                     'contactTag': {
+                         'contact': 1,
+                         'tag': model['tag'].acp_id
+                     }
+                 })
         ])
