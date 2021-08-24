@@ -91,6 +91,13 @@ def datastore_fetch_mock(first_fetch=[]):
     return MagicMock(side_effect=fetch)
 
 
+def datastore_count_mock(how_many):
+    def count(**kwargs):
+        return how_many
+
+    return MagicMock(side_effect=count)
+
+
 class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 With data
@@ -99,6 +106,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore,
                   'fetch',
                   new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
+    @patch.object(Datastore, 'count', new=datastore_count_mock(7957599))
     def test_get_activities_slug_filtered(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -146,6 +154,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore,
                   'fetch',
                   new=datastore_fetch_mock(first_fetch=generate_data(100)))
+    @patch.object(Datastore, 'count', new=datastore_count_mock(7957599))
     def test_get_activities_without_pagination(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -182,6 +191,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore,
                   'fetch',
                   new=datastore_fetch_mock(first_fetch=generate_data(10)))
+    @patch.object(Datastore, 'count', new=datastore_count_mock(7957599))
     def test_get_activities_limit(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -217,6 +227,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore,
                   'fetch',
                   new=datastore_fetch_mock(first_fetch=generate_data(10)))
+    @patch.object(Datastore, 'count', new=datastore_count_mock(7957599))
     def test_get_activities_offset(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -253,6 +264,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore,
                   'fetch',
                   new=datastore_fetch_mock(first_fetch=generate_data(20)))
+    @patch.object(Datastore, 'count', new=datastore_count_mock(7957599))
     def test_get_activities_with_limit_and_offset(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []

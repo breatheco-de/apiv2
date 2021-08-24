@@ -14,12 +14,6 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
             return result
         return queryset
 
-    # def get_count(self, queryset):
-    #     try:
-    #         return queryset.count()
-    #     except (AttributeError, TypeError):
-    #         return 50
-
     def __parse_comma__(self, string: str):
         if not string:
             return None
