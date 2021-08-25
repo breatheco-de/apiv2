@@ -8,8 +8,6 @@ from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.utils import ValidationException, capable_of
 from breathecode.utils import HeaderLimitOffsetPagination
 
-from .actions import paginated_datastore
-
 from .utils import (generate_created_at, validate_activity_fields,
                     validate_activity_have_correct_data_field,
                     validate_if_activity_need_field_cohort,
@@ -216,9 +214,6 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
         datastore = Datastore()
         #academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
 
-        # get the the total entities on db by kind
-        count = datastore.count(**kwargs)
-
         limit = request.GET.get('limit')
         if limit:
             kwargs['limit'] = int(limit)
@@ -226,6 +221,10 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
         offset = request.GET.get('offset')
         if offset:
             kwargs['offset'] = int(offset)
+
+        # get the the total entities on db by kind
+        if limit is not None or offset is not None:
+            count = datastore.count(**kwargs)
 
         public_iter = datastore.fetch(
             **kwargs

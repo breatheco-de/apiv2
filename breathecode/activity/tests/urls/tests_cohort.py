@@ -11,6 +11,9 @@ from rest_framework import status
 from breathecode.services.google_cloud import Datastore
 
 from ..mixins import MediaTestCase
+import random
+
+RANDOM_COUNT = random.randint(1, 1000)
 
 DATASTORE_SEED = [{
     'academy_id':
@@ -59,13 +62,6 @@ def generate_data(num_objs):
     return DATASTORE_SEED
 
 
-# def datastore_fetch_mock(first_fetch=[]):
-#     def fetch(**kwargs):
-#         return first_fetch
-
-#     return MagicMock(side_effect=fetch)
-
-
 def datastore_fetch_mock(first_fetch=[]):
     class Vars():
         fetch_call_counter = 0
@@ -106,7 +102,6 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore,
                   'fetch',
                   new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
-    @patch.object(Datastore, 'count', new=datastore_count_mock(7957599))
     def test_get_activities_slug_filtered(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -153,8 +148,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore,
                   'fetch',
-                  new=datastore_fetch_mock(first_fetch=generate_data(100)))
-    @patch.object(Datastore, 'count', new=datastore_count_mock(7957599))
+                  new=datastore_fetch_mock(first_fetch=generate_data(3)))
     def test_get_activities_without_pagination(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -173,7 +167,37 @@ class MediaTestSuite(MediaTestCase):
 
         json = response.json()
 
-        self.assertEqual(len(json), 100)
+        for v in json:
+            del v['created_at']
+
+        self.assertEqual(json, [{
+            'academy_id': 0,
+            'cohort': None,
+            'data': None,
+            'day': 13,
+            'email': 'konan@naruto.io',
+            'slug': 'breathecode_login',
+            'user_agent': 'bc/test',
+            'user_id': 1
+        }, {
+            'academy_id': 0,
+            'cohort': None,
+            'data': None,
+            'day': 13,
+            'email': 'konan@naruto.io',
+            'slug': 'breathecode_login',
+            'user_agent': 'bc/test',
+            'user_id': 1
+        }, {
+            'academy_id': 0,
+            'cohort': None,
+            'data': None,
+            'day': 13,
+            'email': 'konan@naruto.io',
+            'slug': 'breathecode_login',
+            'user_agent': 'bc/test',
+            'user_id': 1
+        }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(mock.fetch.call_args_list, [
@@ -191,7 +215,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore,
                   'fetch',
                   new=datastore_fetch_mock(first_fetch=generate_data(10)))
-    @patch.object(Datastore, 'count', new=datastore_count_mock(7957599))
+    @patch.object(Datastore, 'count', new=datastore_count_mock(RANDOM_COUNT))
     def test_get_activities_limit(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -205,18 +229,139 @@ class MediaTestSuite(MediaTestCase):
                              cohort_kwargs=cohort_kwargs)
 
         url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1}) + '?limit=10'
+                           kwargs={'cohort_id': 1}) + '?limit=5'
         response = self.client.get(url)
 
         json = response.json()
         results = len(json['results'])
 
+        wrapper = {
+            'count':
+            RANDOM_COUNT,
+            'first':
+            None,
+            'next':
+            'http://testserver/v1/activity/academy/cohort/1?limit=5&offset=5',
+            'previous':
+            None,
+            'last':
+            'http://testserver/v1/activity/academy/cohort/1?limit=5&offset=5',
+            'results': [{
+                'academy_id': 0,
+                'cohort': None,
+                'created_at': '2021-08-26T15:22:18.434155+00:00Z',
+                'data': None,
+                'day': 13,
+                'email': 'konan@naruto.io',
+                'slug': 'breathecode_login',
+                'user_agent': 'bc/test',
+                'user_id': 1
+            }, {
+                'academy_id': 0,
+                'cohort': None,
+                'created_at': '2021-08-26T15:22:18.434142+00:00Z',
+                'data': None,
+                'day': 13,
+                'email': 'konan@naruto.io',
+                'slug': 'breathecode_login',
+                'user_agent': 'bc/test',
+                'user_id': 1
+            }, {
+                'academy_id': 0,
+                'cohort': None,
+                'created_at': '2021-08-26T15:22:18.434126+00:00Z',
+                'data': None,
+                'day': 13,
+                'email': 'konan@naruto.io',
+                'slug': 'breathecode_login',
+                'user_agent': 'bc/test',
+                'user_id': 1
+            }, {
+                'academy_id': 0,
+                'cohort': None,
+                'created_at': '2021-08-26T15:22:18.434089+00:00Z',
+                'data': None,
+                'day': 13,
+                'email': 'konan@naruto.io',
+                'slug': 'breathecode_login',
+                'user_agent': 'bc/test',
+                'user_id': 1
+            }, {
+                'academy_id': 0,
+                'cohort': None,
+                'created_at': '2021-08-26T15:22:18.434079+00:00Z',
+                'data': None,
+                'day': 13,
+                'email': 'konan@naruto.io',
+                'slug': 'breathecode_login',
+                'user_agent': 'bc/test',
+                'user_id': 1
+            }, {
+                'academy_id': 0,
+                'cohort': None,
+                'created_at': '2021-08-26T15:22:18.434068+00:00Z',
+                'data': None,
+                'day': 13,
+                'email': 'konan@naruto.io',
+                'slug': 'breathecode_login',
+                'user_agent': 'bc/test',
+                'user_id': 1
+            }, {
+                'academy_id': 0,
+                'cohort': None,
+                'created_at': '2021-08-26T15:22:18.434055+00:00Z',
+                'data': None,
+                'day': 13,
+                'email': 'konan@naruto.io',
+                'slug': 'breathecode_login',
+                'user_agent': 'bc/test',
+                'user_id': 1
+            }, {
+                'academy_id': 0,
+                'cohort': None,
+                'created_at': '2021-08-26T15:22:18.434025+00:00Z',
+                'data': None,
+                'day': 13,
+                'email': 'konan@naruto.io',
+                'slug': 'breathecode_login',
+                'user_agent': 'bc/test',
+                'user_id': 1
+            }, {
+                'academy_id': 0,
+                'cohort': None,
+                'created_at': '2021-08-26T15:22:18.433983+00:00Z',
+                'data': None,
+                'day': 13,
+                'email': 'konan@naruto.io',
+                'slug': 'breathecode_login',
+                'user_agent': 'bc/test',
+                'user_id': 1
+            }, {
+                'academy_id': 0,
+                'cohort': None,
+                'created_at': '2021-08-26T15:22:18.433874+00:00Z',
+                'data': None,
+                'day': 13,
+                'email': 'konan@naruto.io',
+                'slug': 'breathecode_login',
+                'user_agent': 'bc/test',
+                'user_id': 1
+            }]
+        }
+
+        for r in wrapper['results']:
+            del r['created_at']
+        for r in json['results']:
+            del r['created_at']
+
         self.assertEqual(results, 10)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json, wrapper)
+        self.assertEqual(json['count'], RANDOM_COUNT)
         self.assertEqual(mock.fetch.call_args_list, [
             call(kind='student_activity',
                  cohort='miami-downtown-pt-xx',
-                 limit=10),
+                 limit=5),
         ])
 
     """
@@ -227,7 +372,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore,
                   'fetch',
                   new=datastore_fetch_mock(first_fetch=generate_data(10)))
-    @patch.object(Datastore, 'count', new=datastore_count_mock(7957599))
+    @patch.object(Datastore, 'count', new=datastore_count_mock(RANDOM_COUNT))
     def test_get_activities_offset(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -249,6 +394,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(results, 5)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json['count'], RANDOM_COUNT)
         self.assertEqual(mock.fetch.call_args_list, [
             call(kind='student_activity',
                  cohort='miami-downtown-pt-xx',
@@ -264,7 +410,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore,
                   'fetch',
                   new=datastore_fetch_mock(first_fetch=generate_data(20)))
-    @patch.object(Datastore, 'count', new=datastore_count_mock(7957599))
+    @patch.object(Datastore, 'count', new=datastore_count_mock(RANDOM_COUNT))
     def test_get_activities_with_limit_and_offset(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -287,6 +433,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(results, 0)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(json['count'], RANDOM_COUNT)
         self.assertEqual(mock.fetch.call_args_list, [
             call(kind='student_activity',
                  cohort='miami-downtown-pt-xx',
