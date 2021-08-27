@@ -82,6 +82,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
             },
+            'profile_academy': {
+                'id': model['profile_academy'].id,
+                'first_name': model['profile_academy'].first_name,
+                'last_name': model['profile_academy'].last_name,
+                'email': model['profile_academy'].email,
+                'phone': model['profile_academy'].phone,
+            },
         }]
 
         self.assertEqual(json, expected)
@@ -145,6 +152,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
             },
+            'profile_academy': {
+                'id': model['profile_academy'].id,
+                'first_name': model['profile_academy'].first_name,
+                'last_name': model['profile_academy'].last_name,
+                'email': model['profile_academy'].email,
+                'phone': model['profile_academy'].phone,
+            },
         }]
 
         self.assertEqual(json, expected)
@@ -173,6 +187,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+            },
+            'profile_academy': {
+                'id': model['profile_academy'].id,
+                'first_name': model['profile_academy'].first_name,
+                'last_name': model['profile_academy'].last_name,
+                'email': model['profile_academy'].email,
+                'phone': model['profile_academy'].phone,
             },
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
@@ -251,6 +272,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
             },
+            'profile_academy': {
+                'id': model['profile_academy'].id,
+                'first_name': model['profile_academy'].first_name,
+                'last_name': model['profile_academy'].last_name,
+                'email': model['profile_academy'].email,
+                'phone': model['profile_academy'].phone,
+            },
         }]
 
         self.assertEqual(json, expected)
@@ -283,6 +311,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+            },
+            'profile_academy': {
+                'id': model['profile_academy'].id,
+                'first_name': model['profile_academy'].first_name,
+                'last_name': model['profile_academy'].last_name,
+                'email': model['profile_academy'].email,
+                'phone': model['profile_academy'].phone,
             },
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
@@ -349,6 +384,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
             },
+            'profile_academy': {
+                'id': model['profile_academy'].id,
+                'first_name': model['profile_academy'].first_name,
+                'last_name': model['profile_academy'].last_name,
+                'email': model['profile_academy'].email,
+                'phone': model['profile_academy'].phone,
+            },
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
@@ -391,6 +433,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+            },
+            'profile_academy': {
+                'id': model['profile_academy'].id,
+                'first_name': model['profile_academy'].first_name,
+                'last_name': model['profile_academy'].last_name,
+                'email': model['profile_academy'].email,
+                'phone': model['profile_academy'].phone,
             },
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
@@ -438,6 +487,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
             },
+            'profile_academy': {
+                'id': model['profile_academy'].id,
+                'first_name': model['profile_academy'].first_name,
+                'last_name': model['profile_academy'].last_name,
+                'email': model['profile_academy'].email,
+                'phone': model['profile_academy'].phone,
+            },
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
@@ -479,6 +535,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+            },
+            'profile_academy': {
+                'id': model['profile_academy'].id,
+                'first_name': model['profile_academy'].first_name,
+                'last_name': model['profile_academy'].last_name,
+                'email': model['profile_academy'].email,
+                'phone': model['profile_academy'].phone,
             },
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
@@ -544,6 +607,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'first_name': model['cohort_user'].user.first_name,
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
+            },
+            'profile_academy': {
+                'id': model['profile_academy'].id,
+                'first_name': model['profile_academy'].first_name,
+                'last_name': model['profile_academy'].last_name,
+                'email': model['profile_academy'].email,
+                'phone': model['profile_academy'].phone,
             },
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
@@ -901,9 +971,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
                    str(getattr(model['cohort_user'], field)))
             response = self.client.delete(url)
 
-            if response.status_code != 204:
-                print(response.json())
-
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_cohort_user_dict(), [])
 
@@ -942,9 +1009,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
                    str(getattr(model1['cohort_user'], field)) + ',' +
                    str(getattr(model2['cohort_user'], field)))
             response = self.client.delete(url)
-
-            if response.status_code != 204:
-                print(response.json())
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_cohort_user_dict(), [])
