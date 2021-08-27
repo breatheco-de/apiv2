@@ -102,13 +102,13 @@ class ActivityMeView(APIView):
 
         datastore = Datastore()
 
-        limit = request.GET.get('limit')
-        if limit:
-            kwargs['limit'] = int(limit)
+        # limit = request.GET.get('limit')
+        # if limit:
+        #     kwargs['limit'] = int(limit)
 
-        offset = request.GET.get('offset')
-        if offset:
-            kwargs['offset'] = int(offset)
+        # offset = request.GET.get('offset')
+        # if offset:
+        #     kwargs['offset'] = int(offset)
 
         academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
         public_iter = datastore.fetch(**kwargs, academy_id=0)
@@ -215,16 +215,17 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
         #academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
 
         limit = request.GET.get('limit')
-        if limit:
-            kwargs['limit'] = int(limit)
-
         offset = request.GET.get('offset')
-        if offset:
-            kwargs['offset'] = int(offset)
 
         # get the the total entities on db by kind
         if limit is not None or offset is not None:
             count = datastore.count(**kwargs)
+
+        if limit:
+            kwargs['limit'] = int(limit)
+
+        if offset:
+            kwargs['offset'] = int(offset)
 
         public_iter = datastore.fetch(
             **kwargs

@@ -74,10 +74,10 @@ def datastore_fetch_mock(first_fetch=[]):
 
         if Vars.fetch_call_counter % 2 == 1:
             result = Vars.fetch_call_one
-            offset = 0
+            offset = kwargs['offset'] if 'offset' in kwargs else 0
             try:
                 limit = kwargs['limit']
-                offset = kwargs['offset']
+                # offset = kwargs['offset']
             except:
                 return result
             if limit is not None:
@@ -96,8 +96,45 @@ def datastore_count_mock(how_many):
 
 class MediaTestSuite(MediaTestCase):
     """
+    🔽🔽🔽 Auth
+    """
+    def test_type__without_auth(self):
+        url = reverse_lazy('activity:academy_cohort_id',
+                           kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_type__wrong_academy(self):
+        self.headers(academy=1)
+        url = reverse_lazy('activity:academy_cohort_id',
+                           kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_type__without_capability(self):
+        self.headers(academy=1)
+        url = reverse_lazy('activity:academy_cohort_id',
+                           kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
+        self.generate_models(authenticate=True)
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(
+            json, {
+                'detail':
+                ("You (user: 1) don't have this capability: classroom_activity for "
+                 'academy 1'),
+                'status_code':
+                403,
+            })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    """
     🔽🔽🔽 With data
     """
+
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore,
                   'fetch',
@@ -166,11 +203,11 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
 
         json = response.json()
-
         for v in json:
+            self.assertDatetime(v['created_at'])
             del v['created_at']
 
-        self.assertEqual(json, [{
+        data = {
             'academy_id': 0,
             'cohort': None,
             'data': None,
@@ -179,25 +216,8 @@ class MediaTestSuite(MediaTestCase):
             'slug': 'breathecode_login',
             'user_agent': 'bc/test',
             'user_id': 1
-        }, {
-            'academy_id': 0,
-            'cohort': None,
-            'data': None,
-            'day': 13,
-            'email': 'konan@naruto.io',
-            'slug': 'breathecode_login',
-            'user_agent': 'bc/test',
-            'user_id': 1
-        }, {
-            'academy_id': 0,
-            'cohort': None,
-            'data': None,
-            'day': 13,
-            'email': 'konan@naruto.io',
-            'slug': 'breathecode_login',
-            'user_agent': 'bc/test',
-            'user_id': 1
-        }])
+        }
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(mock.fetch.call_args_list, [
@@ -233,7 +253,6 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        results = len(json['results'])
         data = {
             'academy_id': 0,
             'cohort': None,
@@ -248,15 +267,14 @@ class MediaTestSuite(MediaTestCase):
         wrapper = {
             'count': RANDOM_COUNT,
             'first': None,
-            'next':
-            'http://testserver/v1/activity/academy/cohort/1?limit=5&offset=5',
+            'next': None,
             'previous': None,
-            'last':
-            'http://testserver/v1/activity/academy/cohort/1?limit=5&offset=5',
-            'results': [data for _ in range(0, 10)]
+            'last': None,
+            'results': [data for _ in range(0, 5)]
         }
 
         for r in json['results']:
+            self.assertDatetime(r['created_at'])
             del r['created_at']
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -266,6 +284,12 @@ class MediaTestSuite(MediaTestCase):
                  cohort='miami-downtown-pt-xx',
                  limit=5),
         ])
+        self.assertEqual(
+            mock.count.call_args_list,
+            [call(
+                kind='student_activity',
+                cohort='miami-downtown-pt-xx',
+            )])
 
     """
     🔽🔽🔽 With limit and offset
@@ -291,11 +315,33 @@ class MediaTestSuite(MediaTestCase):
         url = reverse_lazy('activity:academy_cohort_id',
                            kwargs={'cohort_id': 1}) + '?offset=5&limit=5'
         response = self.client.get(url)
-
         json = response.json()
-        results = len(json['results'])
+        data = {
+            'academy_id': 0,
+            'cohort': None,
+            'data': None,
+            'day': 13,
+            'email': 'konan@naruto.io',
+            'slug': 'breathecode_login',
+            'user_agent': 'bc/test',
+            'user_id': 1
+        }
 
-        self.assertEqual(results, 5)
+        wrapper = {
+            'count': RANDOM_COUNT,
+            'first': 'http://testserver/v1/activity/academy/cohort/1?limit=5',
+            'next': None,
+            'previous':
+            'http://testserver/v1/activity/academy/cohort/1?limit=5',
+            'last': None,
+            'results': [data for _ in range(0, 5)]
+        }
+
+        for r in json['results']:
+            self.assertDatetime(r['created_at'])
+            del r['created_at']
+
+        self.assertEqual(json, wrapper)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(json['count'], RANDOM_COUNT)
         self.assertEqual(mock.fetch.call_args_list, [
@@ -304,12 +350,12 @@ class MediaTestSuite(MediaTestCase):
                  limit=5,
                  offset=5),
         ])
-        self.assertEqual(mock.count.call_args_list, [
-            call(kind='student_activity',
-                 cohort='miami-downtown-pt-xx',
-                 limit=5,
-                 offset=5)
-        ])
+        self.assertEqual(
+            mock.count.call_args_list,
+            [call(
+                kind='student_activity',
+                cohort='miami-downtown-pt-xx',
+            )])
 
     """
     🔽🔽🔽 With offset above the total items
@@ -338,9 +384,28 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
 
         json = response.json()
-        results = len(json['results'])
+        data = {
+            'academy_id': 0,
+            'cohort': None,
+            'data': None,
+            'day': 13,
+            'email': 'konan@naruto.io',
+            'slug': 'breathecode_login',
+            'user_agent': 'bc/test',
+            'user_id': 1
+        }
 
-        self.assertEqual(results, 0)
+        wrapper = {
+            'count': RANDOM_COUNT,
+            'first': 'http://testserver/v1/activity/academy/cohort/1?limit=10',
+            'next': None,
+            'previous':
+            'http://testserver/v1/activity/academy/cohort/1?limit=10&offset=10',
+            'last': None,
+            'results': []
+        }
+
+        self.assertEqual(json, wrapper)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(json['count'], RANDOM_COUNT)
         self.assertEqual(mock.fetch.call_args_list, [
@@ -349,6 +414,12 @@ class MediaTestSuite(MediaTestCase):
                  limit=10,
                  offset=20),
         ])
+        self.assertEqual(
+            mock.count.call_args_list,
+            [call(
+                kind='student_activity',
+                cohort='miami-downtown-pt-xx',
+            )])
 
     """
     🔽🔽🔽 Without cohort
