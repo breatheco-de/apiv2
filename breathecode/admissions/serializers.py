@@ -48,6 +48,16 @@ class AcademySerializer(serpy.Serializer):
     slug = serpy.Field()
 
 
+class GetProfileAcademySmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    email = serpy.Field()
+    phone = serpy.Field()
+
+
 class ProfileAcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -186,7 +196,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     stage = serpy.Field()
 
 
-class GETCohortUserSerializer(serpy.Serializer):
+class GetCohortUserSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     user = UserSerializer()
@@ -195,6 +205,11 @@ class GETCohortUserSerializer(serpy.Serializer):
     finantial_status = serpy.Field()
     educational_status = serpy.Field()
     created_at = serpy.Field()
+    profile_academy = serpy.MethodField()
+
+    def get_profile_academy(self, obj):
+        profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
+        return GetProfileAcademySmallSerializer(profile).data if profile else None
 
 
 class GETCohortTimeSlotSerializer(serpy.Serializer):

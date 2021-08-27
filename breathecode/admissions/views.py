@@ -18,7 +18,7 @@ from .serializers import (AcademySerializer, GetSyllabusSerializer, SpecialtyMod
                           CohortSerializer, CohortTimeSlotSerializer, GETSpecialtyModeTimeSlotSerializer,
                           GETCohortTimeSlotSerializer, GetCohortSerializer, GetSyllabusVersionSerializer,
                           SyllabusSerializer, SyllabusVersionPutSerializer, SyllabusVersionSerializer,
-                          CohortUserSerializer, GETCohortUserSerializer, CohortUserPUTSerializer,
+                          CohortUserSerializer, GetCohortUserSerializer, CohortUserPUTSerializer,
                           CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
                           GetSpecialtyModeSerializer, GetSyllabusVersionSerializer, SyllabusVersionSerializer,
                           GetBigAcademySerializer, AcademyReportSerializer)
@@ -184,7 +184,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
         if users is not None:
             items = items.filter(user__id__in=users.split(','))
 
-        serializer = GETCohortUserSerializer(items, many=True)
+        serializer = GetCohortUserSerializer(items, many=True)
         return Response(serializer.data)
 
     def post(self, request, cohort_id=None, user_id=None):
@@ -279,7 +279,7 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
                                              cohort__id=cohort_id).first()
             if item is None:
                 raise ValidationException('Cohort user not found', 404)
-            serializer = GETCohortUserSerializer(item, many=False)
+            serializer = GetCohortUserSerializer(item, many=False)
             return Response(serializer.data)
 
         items = CohortUser.objects.filter(cohort__academy__id=academy_id)
@@ -309,7 +309,7 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
             raise ValidationException(str(e), 400)
 
         page = self.paginate_queryset(items, request)
-        serializer = GETCohortUserSerializer(page, many=True)
+        serializer = GetCohortUserSerializer(page, many=True)
 
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
