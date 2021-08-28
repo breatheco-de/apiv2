@@ -71,7 +71,7 @@ class AdmissionsModelsMixin(ModelsMixin):
             kargs = {**kargs, **academy_kwargs}
             models['academy'] = mixer.blend('admissions.Academy', **kargs)
 
-        if not 'syllabus' in models and syllabus:
+        if not 'syllabus' in models and (syllabus or syllabus_version):
             kargs = {}
 
             if 'academy' in models:

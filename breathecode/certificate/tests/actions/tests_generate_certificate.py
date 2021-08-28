@@ -101,8 +101,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'id': 1,
             'layout_id': 1,
             'preview_url': None,
-            'signed_by': (teacher_model['user'].first_name + " " + teacher_model['user'].last_name),
-            'signed_by_role': translation["Main Instructor"],
+            'signed_by': (teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name),
+            'signed_by_role': translation['Main Instructor'],
             'specialty_id': 1,
             'status': 'ERROR',
             'token': None,
@@ -111,7 +111,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
                          [expected])
 
     """
@@ -191,7 +191,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                      cohort_user=True,
                                      syllabus_version=True,
                                      specialty_mode=True,
-                                     specialty=True,
                                      cohort_kwargs=cohort_kwargs)
         try:
             generate_certificate(model['user'], model['cohort'])
@@ -293,8 +292,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'id': 1,
             'layout_id': 1,
             'preview_url': None,
-            'signed_by': (teacher_model['user'].first_name + " " + teacher_model['user'].last_name),
-            'signed_by_role': translation["Main Instructor"],
+            'signed_by': (teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name),
+            'signed_by_role': translation['Main Instructor'],
             'specialty_id': 1,
             'status': 'ERROR',
             'token': None,
@@ -303,7 +302,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
                          [expected])
 
     """
@@ -351,8 +350,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'id': 1,
             'layout_id': 1,
             'preview_url': None,
-            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
-            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
             'status': 'ERROR',
             'token': None,
@@ -360,7 +359,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'user_id': 1,
         }
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
                          [expected])
 
     """
@@ -405,8 +404,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'id': 1,
             'layout_id': 1,
             'preview_url': None,
-            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
-            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
             'status': 'ERROR',
             'status_text': 'bad-educational-status',
@@ -414,7 +413,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'user_id': 1,
         }
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
                          [expected])
 
     """
@@ -448,8 +447,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                              cohort_user_kwargs=cohort_user_kwargs,
                                              models=base)
         result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
-        self.assertToken(result["token"])
-        result["token"] = None
+        self.assertToken(result['token'])
+        result['token'] = None
 
         expected = {
             'academy_id': 1,
@@ -458,8 +457,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'id': 1,
             'layout_id': 1,
             'preview_url': None,
-            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
-            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
             'status': 'ERROR',
             'status_text': 'bad-educational-status',
@@ -468,7 +467,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
                          [expected])
 
     """
@@ -513,8 +512,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'id': 1,
             'layout_id': 1,
             'preview_url': None,
-            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
-            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
             'status': 'ERROR',
             'status_text': 'bad-educational-status',
@@ -523,7 +522,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         }
 
         self.assertEqual(result, expected)
-        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ["preview_url", "token"]),
+        self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
                          [expected])
 
     """
@@ -564,8 +563,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'id': 1,
             'layout_id': 1,
             'preview_url': None,
-            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
-            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
             'status': 'ERROR',
             'status_text': 'cohort-not-finished',
@@ -622,8 +621,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'id': 1,
             'layout_id': 1,
             'preview_url': None,
-            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
-            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
             'status': 'PERSISTED',
             'status_text': 'Certificate successfully queued for PDF generation',
@@ -682,8 +681,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'id': 1,
             'layout_id': 1,
             'preview_url': None,
-            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
-            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
             'status': 'PERSISTED',
             'status_text': 'Certificate successfully queued for PDF generation',
@@ -738,8 +737,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'id': 1,
             'layout_id': 1,
             'preview_url': None,
-            'signed_by': teacher_model['user'].first_name + " " + teacher_model['user'].last_name,
-            'signed_by_role': strings[model['cohort'].language]["Main Instructor"],
+            'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
+            'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
             'status': 'PERSISTED',
             'status_text': 'Certificate successfully queued for PDF generation',
