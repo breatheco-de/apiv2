@@ -73,6 +73,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'stage': model.cohort.stage,
             'language': model.cohort.language,
             'syllabus_version': {
+                'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
                 'version': model.cohort.syllabus_version.version,
             },
@@ -134,6 +135,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'language': model.cohort.language,
             'current_day': model.cohort.current_day,
             'syllabus_version': {
+                'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
                 'version': model.cohort.syllabus_version.version,
             },
@@ -193,6 +195,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'language': model.cohort.language,
             'current_day': model.cohort.current_day,
             'syllabus_version': {
+                'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
                 'version': model.cohort.syllabus_version.version,
             },
@@ -239,6 +242,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'language': model.cohort.language,
             'current_day': model.cohort.current_day,
             'syllabus_version': {
+                'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
                 'version': model.cohort.syllabus_version.version,
             },
@@ -285,6 +289,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'language': model.cohort.language,
             'current_day': model.cohort.current_day,
             'syllabus_version': {
+                'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
                 'version': model.cohort.syllabus_version.version,
             },
@@ -346,6 +351,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'language': model.cohort.language,
             'current_day': model.cohort.current_day,
             'syllabus_version': {
+                'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
                 'version': model.cohort.syllabus_version.version,
             },
@@ -391,6 +397,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
             'language': model.cohort.language,
             'current_day': model.cohort.current_day,
             'syllabus_version': {
+                'slug': model.syllabus.slug,
                 'syllabus': model.syllabus_version.syllabus.id,
                 'version': model.cohort.syllabus_version.version,
             },

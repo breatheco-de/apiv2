@@ -145,16 +145,20 @@ class CertificateTestSuite(CertificateTestCase):
         """ No syllabus """
         self.headers(academy=1)
         cohort_kwargs = {'stage': 'ENDED'}
-        self.generate_models(authenticate=True,
-                             cohort=True,
-                             user=True,
-                             profile_academy=True,
-                             capability='crud_certificate',
-                             role='STUDENT',
-                             syllabus_version=True,
-                             specialty_mode=True,
-                             cohort_user=True,
-                             cohort_kwargs=cohort_kwargs)
+        specialty_mode_kwargs = {'syllabus': None}
+        self.generate_models(
+            authenticate=True,
+            cohort=True,
+            user=True,
+            profile_academy=True,
+            capability='crud_certificate',
+            role='STUDENT',
+            syllabus_version=True,
+            specialty_mode=True,
+            cohort_user=True,
+            cohort_kwargs=cohort_kwargs,
+            specialty_mode_kwargs=specialty_mode_kwargs,
+        )
 
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
