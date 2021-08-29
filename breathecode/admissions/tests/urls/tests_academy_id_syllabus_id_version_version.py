@@ -113,6 +113,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'json': model['syllabus_version'].json,
             'created_at': datetime_to_iso_format(model['syllabus_version'].created_at),
             'updated_at': datetime_to_iso_format(model['syllabus_version'].updated_at),
+            'name': model.syllabus.name,
             'slug': model['syllabus'].slug,
             'syllabus': 1,
             'version': model['syllabus_version'].version,

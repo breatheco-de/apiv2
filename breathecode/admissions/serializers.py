@@ -148,10 +148,14 @@ class SyllabusVersionSmallSerializer(serpy.Serializer):
     # Use a Field subclass like IntField if you need more validation.
     version = serpy.Field()
     slug = serpy.MethodField()
+    name = serpy.MethodField()
     syllabus = serpy.MethodField()
 
     def get_slug(self, obj):
         return obj.syllabus.slug if obj.syllabus else None
+
+    def get_name(self, obj):
+        return obj.syllabus.name if obj.syllabus else None
 
     def get_syllabus(self, obj):
         return obj.syllabus.id if obj.syllabus else None
@@ -319,10 +323,14 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
     created_at = serpy.Field()
     updated_at = serpy.Field()
     slug = serpy.MethodField()
+    name = serpy.MethodField()
     syllabus = serpy.MethodField()
 
     def get_slug(self, obj):
         return obj.syllabus.slug if obj.syllabus else None
+
+    def get_name(self, obj):
+        return obj.syllabus.name if obj.syllabus else None
 
     def get_syllabus(self, obj):
         return obj.syllabus.id if obj.syllabus else None
