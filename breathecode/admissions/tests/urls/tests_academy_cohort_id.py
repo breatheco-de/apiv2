@@ -365,6 +365,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
             'syllabus_version': {
+                'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
@@ -440,6 +441,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
             'syllabus_version': {
+                'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
@@ -520,6 +522,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
             'syllabus_version': {
+                'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
