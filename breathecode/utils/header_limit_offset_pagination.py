@@ -9,7 +9,10 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
         self.use_envelope = True
         if str(request.GET.get('envelope')).lower() in ['false', '0']:
             self.use_envelope = False
-        return super().paginate_queryset(queryset, request, view)
+        result = super().paginate_queryset(queryset, request, view)
+        if hasattr(queryset, 'filter'):
+            return result
+        return queryset
 
     def __parse_comma__(self, string: str):
         if not string:
@@ -17,7 +20,11 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
 
         return string.replace('%2C', ',')
 
-    def get_paginated_response(self, data, cache=None, cache_kwargs={}):
+    def get_paginated_response(self,
+                               data,
+                               count=None,
+                               cache=None,
+                               cache_kwargs={}):
         next_url = self.__parse_comma__(self.get_next_link())
         previous_url = self.__parse_comma__(self.get_previous_link())
         first_url = self.__parse_comma__(self.get_first_link())
@@ -43,6 +50,9 @@ class HeaderLimitOffsetPagination(LimitOffsetPagination):
 
         if cache:
             cache.set(data, **cache_kwargs)
+
+        if count is not None:
+            data['count'] = count
 
         return Response(data, headers=headers)
 

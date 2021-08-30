@@ -38,6 +38,7 @@ class ProfileSerializer(serpy.Serializer):
     id = serpy.Field()
     avatar_url = serpy.Field()
     show_tutorial = serpy.Field()
+    github_username = serpy.Field()
 
 
 class AcademySerializer(serpy.Serializer):
