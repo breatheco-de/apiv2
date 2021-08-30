@@ -72,6 +72,7 @@ urlpatterns_docs = [
 
 urlpatterns_django = [
     path('admin/', admin.site.urls),
+    path('explorer/', include('explorer.urls')),
 ]
 
 urlpatterns = urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django
