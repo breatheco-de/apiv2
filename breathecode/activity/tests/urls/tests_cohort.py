@@ -139,6 +139,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore,
                   'fetch',
                   new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
+    @patch.object(Datastore, 'count', new=datastore_count_mock(RANDOM_COUNT))
     def test_get_activities_slug_filtered(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -177,6 +178,7 @@ class MediaTestSuite(MediaTestCase):
                  cohort='miami-downtown-pt-xx',
                  slug='breathecode_login'),
         ])
+        self.assertEqual(mock.count.call_args_list, [])
 
     """
     🔽🔽🔽 Without pagination
@@ -186,6 +188,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore,
                   'fetch',
                   new=datastore_fetch_mock(first_fetch=generate_data(3)))
+    @patch.object(Datastore, 'count', new=datastore_count_mock(RANDOM_COUNT))
     def test_get_activities_without_pagination(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -207,17 +210,6 @@ class MediaTestSuite(MediaTestCase):
             self.assertDatetime(v['created_at'])
             del v['created_at']
 
-        data = {
-            'academy_id': 0,
-            'cohort': None,
-            'data': None,
-            'day': 13,
-            'email': 'konan@naruto.io',
-            'slug': 'breathecode_login',
-            'user_agent': 'bc/test',
-            'user_id': 1
-        }
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(mock.fetch.call_args_list, [
@@ -226,6 +218,7 @@ class MediaTestSuite(MediaTestCase):
                 cohort='miami-downtown-pt-xx',
             ),
         ])
+        self.assertEqual(mock.count.call_args_list, [])
 
     """
     🔽🔽🔽 With limit
@@ -343,7 +336,6 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(json, wrapper)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(json['count'], RANDOM_COUNT)
         self.assertEqual(mock.fetch.call_args_list, [
             call(kind='student_activity',
                  cohort='miami-downtown-pt-xx',
