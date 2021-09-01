@@ -1,3 +1,5 @@
+from google.cloud.ndb.query import OR
+from breathecode.activity.models import Activity
 from django.contrib.auth.models import User
 from django.db.models import Q
 from rest_framework import status
@@ -59,64 +61,166 @@ class ActivityTypeView(APIView):
         return Response(res)
 
 
-class ActivityMeView(APIView):
-    @capable_of('read_activity')
-    def get(self, request, academy_id=None):
-        from breathecode.services.google_cloud import Datastore
+class ActivityViewMixin(APIView):
+    queryargs = []
 
-        kwargs = {'kind': 'student_activity'}
+    def filter_by_slugs(self):
+        slugs = self.request.GET.get('slug', [])
+        if slugs:
+            slugs = slugs.split(',')
 
-        slug = request.GET.get('slug')
-        if slug:
-            kwargs['slug'] = slug
+        for slug in slugs:
+            if slug and slug not in ACTIVITIES:
+                raise ValidationException(f'Activity type {slug} not found',
+                                          slug='activity-not-found')
 
-        if slug and slug not in ACTIVITIES:
-            raise ValidationException(f'Activity type {slug} not found',
-                                      slug='activity-not-found')
+        if len(slugs) > 1:
+            self.queryargs.append(
+                OR(*[Activity.slug == slug for slug in slugs]))
+        elif len(slugs) == 1:
+            self.queryargs.append(Activity.slug == slugs[0])
 
-        cohort = request.GET.get('cohort')
-        if cohort:
-            kwargs['cohort'] = cohort
+    def filter_by_cohorts(self, academy_id):
+        cohorts = self.request.GET.get('cohort', [])
+        if cohorts:
+            cohorts = cohorts.split(',')
 
-        if (cohort and not Cohort.objects.filter(
-                slug=cohort, academy__id=academy_id).exists()):
-            raise ValidationException('Cohort not found',
-                                      slug='cohort-not-found')
+        for cohort in cohorts:
+            if (cohort and not Cohort.objects.filter(
+                    slug=cohort, academy__id=academy_id).exists()):
+                raise ValidationException('Cohort not found',
+                                          slug='cohort-not-found')
 
-        user_id = request.GET.get('user_id')
-        if user_id:
+        if len(cohorts) > 1:
+            self.queryargs.append(
+                OR(*[Activity.cohort == cohort for cohort in cohorts]))
+        elif len(cohorts) == 1:
+            self.queryargs.append(Activity.cohort == cohorts[0])
+
+    def filter_by_user_ids(self):
+        user_ids = self.request.GET.get('user_id', [])
+        if user_ids:
+            user_ids = user_ids.split(',')
+
+        for user_id in user_ids:
             try:
-                kwargs['user_id'] = int(user_id)
+                int(user_id)
             except ValueError:
                 raise ValidationException('user_id is not a interger',
                                           slug='bad-user-id')
 
-        email = request.GET.get('email')
-        if email:
-            kwargs['email'] = email
+        for user_id in user_ids:
+            if not User.objects.filter(id=user_id).exists():
+                raise ValidationException('User not exists',
+                                          slug='user-not-exists')
 
-        user = User.objects.filter(Q(id=user_id) | Q(email=email))
-        if (user_id or email) and not user:
-            raise ValidationException('User not exists',
-                                      slug='user-not-exists')
+        if len(user_ids) > 1:
+            self.queryargs.append(
+                OR(*[Activity.user_id == int(user_id)
+                     for user_id in user_ids]))
+        elif len(user_ids) == 1:
+            self.queryargs.append(Activity.user_id == int(user_ids[0]))
 
-        datastore = Datastore()
+    def filter_by_emails(self):
+        emails = self.request.GET.get('email', [])
+        if emails:
+            emails = emails.split(',')
 
-        # limit = request.GET.get('limit')
-        # if limit:
-        #     kwargs['limit'] = int(limit)
+        for email in emails:
+            if not User.objects.filter(email=email).exists():
+                raise ValidationException('User not exists',
+                                          slug='user-not-exists')
 
-        # offset = request.GET.get('offset')
-        # if offset:
-        #     kwargs['offset'] = int(offset)
+        if len(emails) > 1:
+            self.queryargs.append(
+                OR(*[Activity.email == email for email in emails]))
+        elif len(emails) == 1:
+            self.queryargs.append(Activity.email == emails[0])
 
-        academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
-        public_iter = datastore.fetch(**kwargs, academy_id=0)
+    def get_limit_from_query(self):
+        limit = self.request.GET.get('limit')
 
-        query_iter = academy_iter + public_iter
-        query_iter.sort(key=lambda x: x['created_at'], reverse=True)
+        if limit is not None:
+            limit = int(limit)
 
-        return Response(query_iter)
+        return limit
+
+    def get_offset_from_query(self):
+        offset = self.request.GET.get('offset')
+
+        if offset is not None:
+            offset = int(offset)
+
+        return offset
+
+
+class ActivityView(ActivityViewMixin, HeaderLimitOffsetPagination):
+    @capable_of('read_activity')
+    def get(self, request, academy_id=None):
+        from google.cloud import ndb
+        client = ndb.Client()
+
+        self.filter_by_slugs()
+        self.filter_by_cohorts(academy_id)
+        self.filter_by_emails()
+
+        self.queryargs.append(Activity.user_id == request.user.id)
+
+        limit = self.get_limit_from_query()
+        offset = self.get_offset_from_query()
+
+        with client.context():
+            query = Activity.query().filter(
+                OR(Activity.academy_id == int(academy_id),
+                   Activity.academy_id == 0),
+                *self.queryargs,
+            )
+            count = None
+            if limit or offset:
+                count = query.count()
+
+            elements = query.fetch(limit=limit, offset=offset)
+
+        page = self.paginate_queryset([x.to_dict() for x in elements], request)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(page, count)
+        else:
+            return Response(page, status=status.HTTP_200_OK)
+
+
+class ActivityMeView(ActivityViewMixin, HeaderLimitOffsetPagination):
+    @capable_of('read_activity')
+    def get(self, request, academy_id=None):
+        from google.cloud import ndb
+        client = ndb.Client()
+
+        self.filter_by_slugs()
+        self.filter_by_cohorts(academy_id)
+        self.filter_by_user_ids()
+        self.filter_by_emails()
+
+        limit = self.get_limit_from_query()
+        offset = self.get_offset_from_query()
+
+        with client.context():
+            query = Activity.query().filter(
+                OR(Activity.academy_id == int(academy_id),
+                   Activity.academy_id == 0),
+                *self.queryargs,
+            )
+            count = None
+            if limit or offset:
+                count = query.count()
+
+            elements = query.fetch(limit=limit, offset=offset)
+
+        page = self.paginate_queryset([x.to_dict() for x in elements], request)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(page, count)
+        else:
+            return Response(page, status=status.HTTP_200_OK)
 
     @capable_of('crud_activity')
     def post(self, request, academy_id=None):
