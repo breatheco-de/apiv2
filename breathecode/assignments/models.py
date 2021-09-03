@@ -2,6 +2,8 @@ from django.contrib.auth.models import User
 from django.db import models
 from breathecode.admissions.models import Cohort
 
+__all__ = ['UserProxy', 'CohortProxy', 'Task']
+
 PENDING = 'PENDING'
 DONE = 'DONE'
 TASK_STATUS = (

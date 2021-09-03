@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 
+__all__ = ['AssetTranslation', 'AssetTechnology', 'Asset', 'AssetAlias']
+
 
 class AssetTranslation(models.Model):
     slug = models.SlugField(max_length=2, primary_key=True)

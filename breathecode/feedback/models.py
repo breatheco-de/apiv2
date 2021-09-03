@@ -5,6 +5,8 @@ from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.events.models import Event
 from breathecode.authenticate.models import Token
 
+__all__ = ['UserProxy', 'CohortUserProxy', 'CohortProxy', 'Survey', 'Answer']
+
 
 class UserProxy(User):
     class Meta:

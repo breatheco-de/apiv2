@@ -11,6 +11,11 @@ SYNC_STATUS = (
     (ERROR, 'Error'),
 )
 
+__all__ = [
+    'Organization', 'Organizer', 'Venue', 'EventType', 'Event', 'EventCheckin',
+    'EventbriteWebhook'
+]
+
 
 class Organization(models.Model):
     eventbrite_id = models.CharField(unique=True, max_length=30, blank=True)
