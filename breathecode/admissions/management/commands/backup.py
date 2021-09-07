@@ -10,6 +10,7 @@ from django.db.models import Model
 from django.core.management.base import BaseCommand
 from breathecode.settings import INSTALLED_APPS
 from pathlib import Path
+from decimal import Decimal
 
 PROJECT = 'breathecode'
 MODULES = [
@@ -128,12 +129,16 @@ class Command(BaseCommand, DatetimeMixin):
         data = vars(model)
         private_attrs = [x for x in data if x.startswith('_')]
         datetime_attrs = [x for x in data if isinstance(data[x], datetime)]
+        decimal_attrs = [x for x in data if isinstance(data[x], Decimal)]
 
         for key in private_attrs:
             del data[key]
 
         for key in datetime_attrs:
             data[key] = self.datetime_to_iso(data[key])
+
+        for key in decimal_attrs:
+            data[key] = float(data[key])
 
         return data
 
