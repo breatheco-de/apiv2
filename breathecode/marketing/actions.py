@@ -13,8 +13,8 @@ from breathecode.services.activecampaign import AC_Old_Client
 
 logger = logging.getLogger(__name__)
 
-SAVE_LEADS = os.getenv('SAVE_LEADS', None)
-GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY', None)
+SAVE_LEADS = os.getenv('SAVE_LEADS')
+GOOGLE_CLOUD_KEY = os.getenv('GOOGLE_CLOUD_KEY')
 
 acp_ids = {
     # "strong": "49",

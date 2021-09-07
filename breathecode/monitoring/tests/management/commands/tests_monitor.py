@@ -1149,14 +1149,15 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **x, 'last_run': None
         } for x in self.all_monitor_script_dict()
                            if self.assertDatetime(x['last_run'])]
-        self.assertEqual(
-            monitor_scripts,
-            [{
-                **self.model_to_dict(model, 'monitor_script'),
-                'response_text': monitor_scripts[0]["response_text"],
-                'status': 'MINOR',
-                'status_code': 1,
-            }])
+        self.assertEqual(monitor_scripts, [{
+            **self.model_to_dict(model, 'monitor_script'),
+            'response_text':
+            monitor_scripts[0]['response_text'],
+            'status':
+            'MINOR',
+            'status_code':
+            1,
+        }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
@@ -1197,14 +1198,15 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **x, 'last_run': None
         } for x in self.all_monitor_script_dict()
                            if self.assertDatetime(x['last_run'])]
-        self.assertEqual(
-            monitor_scripts,
-            [{
-                **self.model_to_dict(model, 'monitor_script'),
-                'response_text': monitor_scripts[0]["response_text"],
-                'status': 'CRITICAL',
-                'status_code': 1,
-            }])
+        self.assertEqual(monitor_scripts, [{
+            **self.model_to_dict(model, 'monitor_script'),
+            'response_text':
+            monitor_scripts[0]['response_text'],
+            'status':
+            'CRITICAL',
+            'status_code':
+            1,
+        }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
@@ -1288,14 +1290,15 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **x, 'last_run': None
         } for x in self.all_monitor_script_dict()
                            if self.assertDatetime(x['last_run'])]
-        self.assertEqual(
-            monitor_scripts,
-            [{
-                **self.model_to_dict(model, 'monitor_script'),
-                'response_text': monitor_scripts[0]["response_text"],
-                'status': 'MINOR',
-                'status_code': 1,
-            }])
+        self.assertEqual(monitor_scripts, [{
+            **self.model_to_dict(model, 'monitor_script'),
+            'response_text':
+            monitor_scripts[0]['response_text'],
+            'status':
+            'MINOR',
+            'status_code':
+            1,
+        }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
@@ -1336,14 +1339,15 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **x, 'last_run': None
         } for x in self.all_monitor_script_dict()
                            if self.assertDatetime(x['last_run'])]
-        self.assertEqual(
-            monitor_scripts,
-            [{
-                **self.model_to_dict(model, 'monitor_script'),
-                'response_text': monitor_scripts[0]["response_text"],
-                'status': 'CRITICAL',
-                'status_code': 1,
-            }])
+        self.assertEqual(monitor_scripts, [{
+            **self.model_to_dict(model, 'monitor_script'),
+            'response_text':
+            monitor_scripts[0]['response_text'],
+            'status':
+            'CRITICAL',
+            'status_code':
+            1,
+        }])
 
         self.assertEqual(mock_mailgun.call_args_list, [])
         self.assertEqual(mock_slack.call_args_list, [])
@@ -1394,14 +1398,15 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             **x, 'last_run': None
         } for x in self.all_monitor_script_dict()
                            if self.assertDatetime(x['last_run'])]
-        self.assertEqual(
-            monitor_scripts,
-            [{
-                **self.model_to_dict(model, 'monitor_script'),
-                'response_text': monitor_scripts[0]["response_text"],
-                'status': 'CRITICAL',
-                'status_code': 1,
-            }])
+        self.assertEqual(monitor_scripts, [{
+            **self.model_to_dict(model, 'monitor_script'),
+            'response_text':
+            monitor_scripts[0]['response_text'],
+            'status':
+            'CRITICAL',
+            'status_code':
+            1,
+        }])
 
         self.assertEqual(len(mock_mailgun.call_args_list), 1)
         self.assertEqual(len(mock_slack.call_args_list), 1)

@@ -19,12 +19,12 @@ from django.urls import path
 from .views import (get_users, get_user_by_id_or_email, UserMeView, LoginView,
                     LogoutView, TemporalTokenView, get_github_token,
                     save_github_token, get_slack_token, save_slack_token,
-                    pick_password, change_password, get_token_info,
-                    get_facebook_token, save_facebook_token, MemberView,
-                    reset_password_view, login_html_view, StudentView,
-                    get_roles, render_invite, AcademyInviteView,
-                    ProfileInviteView, MeInviteView, AcademyTokenView,
-                    PasswordResetView, get_google_token, save_google_token)
+                    pick_password, get_token_info, get_facebook_token,
+                    save_facebook_token, MemberView, reset_password_view,
+                    login_html_view, StudentView, get_roles, render_invite,
+                    AcademyInviteView, ProfileInviteView, MeInviteView,
+                    AcademyTokenView, PasswordResetView, get_google_token,
+                    save_google_token)
 
 app_name = 'authenticate'
 urlpatterns = [

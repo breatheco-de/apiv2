@@ -15,6 +15,7 @@ class AcademyCohortTestSuite(MarketingTestCase):
         response = self.client.get(url)
 
         expected = '\r\n'.join([
+            'Parameters:TimeZone=US/Eastern',
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\r\n'
         ])
 
@@ -31,6 +32,7 @@ class AcademyCohortTestSuite(MarketingTestCase):
         url = reverse_lazy('marketing:googleads_csv')
         response = self.client.get(url)
         expected = '\r\n'.join([
+            'Parameters:TimeZone=US/Eastern',
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\r\n'
         ])
 
@@ -47,6 +49,7 @@ class AcademyCohortTestSuite(MarketingTestCase):
         url = reverse_lazy('marketing:googleads_csv')
         response = self.client.get(url)
         expected = '\r\n'.join([
+            'Parameters:TimeZone=US/Eastern',
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\r\n'
         ])
 
@@ -60,6 +63,7 @@ class AcademyCohortTestSuite(MarketingTestCase):
         url = reverse_lazy('marketing:googleads_csv')
         response = self.client.get(url)
         expected = '\r\n'.join([
+            'Parameters:TimeZone=US/Eastern',
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\r\n'
         ])
 
@@ -77,6 +81,7 @@ class AcademyCohortTestSuite(MarketingTestCase):
         response = self.client.get(url)
         print(model['form_entry'].gclid)
         expected = '\r\n'.join([
+            'Parameters:TimeZone=US/Eastern',
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency\r\n'
         ])
 
@@ -95,9 +100,10 @@ class AcademyCohortTestSuite(MarketingTestCase):
         gclid = model['form_entry'].gclid
         timezone = pytz.timezone('US/Eastern')
         convertion_time = model['form_entry'].created_at.astimezone(timezone)
-        conversion_time = convertion_time.strftime('%Y-%m-%d %H-%M-%S%z')
+        conversion_time = convertion_time.strftime('%Y-%m-%d %H:%M:%S')
 
         expected = '\r\n'.join([
+            'Parameters:TimeZone=US/Eastern',
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
             f'{gclid},,{conversion_time},,\r\n'
         ])
@@ -120,12 +126,13 @@ class AcademyCohortTestSuite(MarketingTestCase):
 
         timezone = pytz.timezone('US/Eastern')
         convertion_time = model['form_entry'].created_at.astimezone(timezone)
-        conversion_time = convertion_time.strftime('%Y-%m-%d %H-%M-%S%z')
+        conversion_time = convertion_time.strftime('%Y-%m-%d %H:%M:%S')
 
         convertion_time2 = model2['form_entry'].created_at.astimezone(timezone)
-        conversion_time2 = convertion_time2.strftime('%Y-%m-%d %H-%M-%S%z')
+        conversion_time2 = convertion_time2.strftime('%Y-%m-%d %H:%M:%S')
 
         expected = '\r\n'.join([
+            'Parameters:TimeZone=US/Eastern',
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
             f"{model['form_entry'].gclid},,{conversion_time},,",
             f"{model2['form_entry'].gclid},,{conversion_time2},,\r\n"
@@ -152,12 +159,13 @@ class AcademyCohortTestSuite(MarketingTestCase):
         response = self.client.get(url)
         timezone = pytz.timezone('US/Eastern')
         convertion_time = model['form_entry'].created_at.astimezone(timezone)
-        conversion_time = convertion_time.strftime('%Y-%m-%d %H-%M-%S%z')
+        conversion_time = convertion_time.strftime('%Y-%m-%d %H:%M:%S')
 
         convertion_time2 = model3['form_entry'].created_at.astimezone(timezone)
-        conversion_time2 = convertion_time2.strftime('%Y-%m-%d %H-%M-%S%z')
+        conversion_time2 = convertion_time2.strftime('%Y-%m-%d %H:%M:%S')
 
         expected = '\r\n'.join([
+            'Parameters:TimeZone=US/Eastern',
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
             f"{model['form_entry'].gclid},,{conversion_time},,",
             f"{model3['form_entry'].gclid},,{conversion_time2},,\r\n"
@@ -186,9 +194,10 @@ class AcademyCohortTestSuite(MarketingTestCase):
 
         timezone = pytz.timezone('US/Eastern')
         convertion_time = model['form_entry'].created_at.astimezone(timezone)
-        conversion_time = convertion_time.strftime('%Y-%m-%d %H-%M-%S%z')
+        conversion_time = convertion_time.strftime('%Y-%m-%d %H:%M:%S')
 
         expected = '\r\n'.join([
+            'Parameters:TimeZone=US/Eastern',
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
             f"{model['form_entry'].gclid},,{conversion_time},,\r\n",
         ])
@@ -214,9 +223,10 @@ class AcademyCohortTestSuite(MarketingTestCase):
 
         timezone = pytz.timezone('US/Eastern')
         convertion_time = model['form_entry'].created_at.astimezone(timezone)
-        conversion_time = convertion_time.strftime('%Y-%m-%d %H-%M-%S%z')
+        conversion_time = convertion_time.strftime('%Y-%m-%d %H:%M:%S')
 
         expected = '\r\n'.join([
+            'Parameters:TimeZone=US/Eastern',
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
             f"{model['form_entry'].gclid},,{conversion_time},,\r\n",
         ])
@@ -248,12 +258,13 @@ class AcademyCohortTestSuite(MarketingTestCase):
 
         timezone = pytz.timezone('US/Eastern')
         convertion_time = model['form_entry'].created_at.astimezone(timezone)
-        conversion_time = convertion_time.strftime('%Y-%m-%d %H-%M-%S%z')
+        conversion_time = convertion_time.strftime('%Y-%m-%d %H:%M:%S')
 
         convertion_time2 = model2['form_entry'].created_at.astimezone(timezone)
-        conversion_time2 = convertion_time2.strftime('%Y-%m-%d %H-%M-%S%z')
+        conversion_time2 = convertion_time2.strftime('%Y-%m-%d %H:%M:%S')
 
         expected = '\r\n'.join([
+            'Parameters:TimeZone=US/Eastern',
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
             f"{model['form_entry'].gclid},,{conversion_time},,",
             f"{model2['form_entry'].gclid},,{conversion_time2},,\r\n"
@@ -283,12 +294,13 @@ class AcademyCohortTestSuite(MarketingTestCase):
 
         timezone = pytz.timezone('US/Eastern')
         convertion_time = model['form_entry'].created_at.astimezone(timezone)
-        conversion_time = convertion_time.strftime('%Y-%m-%d %H-%M-%S%z')
+        conversion_time = convertion_time.strftime('%Y-%m-%d %H:%M:%S')
 
         convertion_time2 = model2['form_entry'].created_at.astimezone(timezone)
-        conversion_time2 = convertion_time2.strftime('%Y-%m-%d %H-%M-%S%z')
+        conversion_time2 = convertion_time2.strftime('%Y-%m-%d %H:%M:%S')
 
         expected = '\r\n'.join([
+            'Parameters:TimeZone=US/Eastern',
             'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency',
             f"{model['form_entry'].gclid},,{conversion_time},,",
             f"{model2['form_entry'].gclid},,{conversion_time2},,\r\n"

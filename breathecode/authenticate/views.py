@@ -207,7 +207,10 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         else:
             raise ValidationException('User id must be a numeric value', 404)
 
-        request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id}
+        request_data = {
+            **request.data, 'user': user_id_or_email,
+            'academy': academy_id
+        }
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():

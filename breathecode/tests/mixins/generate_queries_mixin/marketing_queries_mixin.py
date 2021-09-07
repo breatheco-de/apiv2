@@ -11,6 +11,6 @@ class MarketingQueriesMixin():
             'marketing',
             'models': [
                 'ActiveCampaignAcademy', 'Automation', 'Tag', 'Contact',
-                'FormEntry', 'ShortLink'
+                'FormEntry', 'ShortLink', 'AcademyAlias'
             ]
         }
