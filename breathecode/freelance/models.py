@@ -3,6 +3,8 @@ from django.db import models
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.admissions.models import Academy
 
+__all__ = ['Freelancer', 'Bill', 'Issue']
+
 
 class Freelancer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

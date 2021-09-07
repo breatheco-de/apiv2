@@ -1,8 +1,12 @@
-import string, datetime
 from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy
 from django.core.validators import RegexValidator
+
+__all__ = [
+    'ActiveCampaignAcademy', 'AcademyAlias', 'Automation', 'Tag', 'Contact',
+    'FormEntry', 'ShortLink', 'ActiveCampaignWebhook'
+]
 
 INCOMPLETED = 'INCOMPLETED'
 COMPLETED = 'COMPLETED'
