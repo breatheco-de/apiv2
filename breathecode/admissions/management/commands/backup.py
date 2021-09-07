@@ -2,6 +2,7 @@ import inspect
 import os
 import json
 import importlib
+import traceback
 
 from breathecode.tests.mixins import DatetimeMixin
 from datetime import datetime
@@ -108,14 +109,20 @@ class Command(BaseCommand, DatetimeMixin):
         results = CurrentModel.objects.all()
         dicts = [self.prepare_data(x) for x in results]
 
-        if self.mode == 'storage':
-            self.backup_in_storage(json.dumps(dicts))
+        try:
+            if self.mode == 'storage':
+                self.backup_in_storage(json.dumps(dicts))
 
-        elif self.mode == 'console':
-            self.backup_in_console(json.dumps(dicts))
+            elif self.mode == 'console':
+                self.backup_in_console(json.dumps(dicts))
 
-        elif self.mode == 'bucket':
-            self.backup_in_bucket(json.dumps(dicts))
+            elif self.mode == 'bucket':
+                self.backup_in_bucket(json.dumps(dicts))
+
+        except Exception as e:
+            print(dicts)
+            traceback.print_exc()
+            raise Exception(str(e))
 
     def prepare_data(self, model):
         data = vars(model)
