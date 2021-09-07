@@ -148,5 +148,7 @@ class Command(BaseCommand, DatetimeMixin):
         from ....services.google_cloud import Storage
 
         storage = Storage()
-        cloud_file = storage.file(db_backup_bucket(), hash)
+        name = f'{self.module_name}.{self.model_name.lower()}'
+
+        cloud_file = storage.file(db_backup_bucket(), name)
         cloud_file.upload(data)
