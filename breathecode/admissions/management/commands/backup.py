@@ -5,7 +5,7 @@ import importlib
 import traceback
 
 from breathecode.tests.mixins import DatetimeMixin
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.db.models import Model
 from django.core.management.base import BaseCommand
 from breathecode.settings import INSTALLED_APPS
@@ -130,6 +130,7 @@ class Command(BaseCommand, DatetimeMixin):
         private_attrs = [x for x in data if x.startswith('_')]
         datetime_attrs = [x for x in data if isinstance(data[x], datetime)]
         decimal_attrs = [x for x in data if isinstance(data[x], Decimal)]
+        timedelta_attrs = [x for x in data if isinstance(data[x], timedelta)]
 
         for key in private_attrs:
             del data[key]
@@ -139,6 +140,9 @@ class Command(BaseCommand, DatetimeMixin):
 
         for key in decimal_attrs:
             data[key] = float(data[key])
+
+        for key in timedelta_attrs:
+            data[key] = str(data[key])
 
         return data
 
