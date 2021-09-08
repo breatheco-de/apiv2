@@ -348,23 +348,32 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # def test_cohort_id_user__post__twice(self):
-    #     """Test /cohort/:id/user without auth"""
-    #     model = self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True)
-    #     url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
-    #     data = {
-    #         'user':  model['user'].id,
-    #     }
-    #     self.client.post(url, data)
-    #     response = self.client.post(url, data)
-    #     json = response.json()
-    #     expected = {'detail': 'That user already exists in this cohort', 'status_code': 400}
+    """
+    🔽🔽🔽 Post adding the same user twice
+    """
 
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_cohort_id_user__post__twice(self):
+        """Test /cohort/:id/user without auth"""
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     cohort_user=True)
+        url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
+        data = {
+            'user': model['user'].id,
+        }
+        # self.client.post(url, data)
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {'detail': 'That user already exists in this cohort', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     """
     🔽🔽🔽 Post one teacher
     """

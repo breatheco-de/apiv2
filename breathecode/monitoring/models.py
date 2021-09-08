@@ -1,8 +1,9 @@
 from django.db import models
-from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy
 from breathecode.notify.models import SlackChannel
 from datetime import timedelta
+
+__all__ = ['Application', 'Endpoint', 'MonitorScript']
 
 LOADING = 'LOADING'
 OPERATIONAL = 'OPERATIONAL'
