@@ -3,7 +3,7 @@ import os
 import json
 from django.core.management.base import BaseCommand
 from pathlib import Path
-from breathecode.admissions.models import Cohort, SpecialtyMode, Syllabus, SyllabusVersion
+from breathecode.admissions.models import Academy, Cohort, SpecialtyMode, Syllabus, SyllabusVersion
 
 
 def db_backup_bucket():
@@ -138,12 +138,17 @@ class Command(BaseCommand):
         for certificate in self.certificates:
             syllabus_versions = [x for x in self.syllabus if certificate['id'] == x['certificate_id']]
             kwargs = {}
+            academies = {}
             if syllabus_versions:
                 kwargs = {
-                    'academy_owner__id': syllabus_versions[0]['academy_owner_id'],
+                    'academy_owner': None,
                     'private': syllabus_versions[0]['private'],
                     'github_url': syllabus_versions[0]['github_url'],
                 }
+
+                academy_id = syllabus_versions[0]['academy_owner_id']
+                if academy_id:
+                    kwargs['academy_owner'] = Academy.objects.filter(id=academy_id).first()
 
             syllabus = Syllabus(
                 slug=certificate['slug'],
