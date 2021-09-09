@@ -34,4 +34,5 @@ class File:
 
     def download(self) -> str:
         """Delete Blob from Bucker"""
-        return self.blob.download_as_string()
+        if self.blob:
+            return self.blob.download_as_string()
