@@ -54,12 +54,10 @@ class Command(BaseCommand):
         return self.root_path
 
     def get_backups(self):
-        root_path = self.get_root_path()
-
-        self.cohorts = self.get_json_model_from_bucket(root_path, 'admissions', 'cohort')
-        self.syllabus = self.get_json_model_from_bucket(root_path, 'admissions', 'syllabus')
-        self.certificates = self.get_json_model_from_bucket(root_path, 'admissions', 'certificate')
-        self.specialties = self.get_json_model_from_bucket(root_path, 'certificate', 'specialty')
+        self.cohorts = self.get_json_model_from_bucket('admissions', 'cohort')
+        self.syllabus = self.get_json_model_from_bucket('admissions', 'syllabus')
+        self.certificates = self.get_json_model_from_bucket('admissions', 'certificate')
+        self.specialties = self.get_json_model_from_bucket('certificate', 'specialty')
 
     def get_json_model_from_bucket(self, module_name, model_name):
         from breathecode.services import Storage
