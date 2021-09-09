@@ -64,6 +64,7 @@ class Command(BaseCommand):
         storage = Storage()
 
         file_name = f'{module_name}.{model_name.lower()}.json'
+        print('--->', db_backup_bucket(), file_name)
         file = storage.file(db_backup_bucket(), file_name)
         content = file.download()
 
