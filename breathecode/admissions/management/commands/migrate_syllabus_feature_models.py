@@ -172,9 +172,7 @@ class Command(BaseCommand):
         syllabus_version_instances = {}
 
         for certificate in self.certificates:
-            syllabus_versions = [
-                x for x in self.syllabus if certificate['id'] == self.syllabus['certificate']['id']
-            ]
+            syllabus_versions = [x for x in self.syllabus if certificate['id'] == x['certificate_id']]
 
             for syllabus_version in syllabus_versions:
                 SyllabusVersion(
