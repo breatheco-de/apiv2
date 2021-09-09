@@ -139,8 +139,8 @@ class Command(BaseCommand):
             syllabus_versions = [x for x in self.syllabus if certificate['id'] == x['certificate_id']]
             kwargs = {}
             if syllabus_versions:
-                syllabus.academy_owner = syllabus_versions['academy_owner_id']
-                syllabus.private = syllabus_versions['private']
+                syllabus.academy_owner = syllabus_versions[0]['academy_owner_id']
+                syllabus.private = syllabus_versions[0]['private']
                 kwargs = {
                     'academy_owner__id': syllabus_versions[0]['academy_owner_id'],
                     'private': syllabus_versions[0]['private'],
