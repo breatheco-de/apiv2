@@ -18,10 +18,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.get_backups()
-        self.fix_cohorts()
-        self.fix_specialties()
         self.fix_certificates()
         self.fix_syllabus()
+        self.fix_specialties()
+        self.fix_cohorts()
 
     def print_debug_info(self):
         from pprint import pprint
