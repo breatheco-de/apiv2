@@ -136,9 +136,7 @@ class Command(BaseCommand):
         syllabus_instances = {}
 
         for certificate in self.certificates:
-            syllabus_versions = [
-                x for x in self.syllabus if certificate['id'] == self.syllabus['certificate_id']
-            ]
+            syllabus_versions = [x for x in self.syllabus if certificate['id'] == x['certificate_id']]
             kwargs = {}
             if syllabus_versions:
                 syllabus.academy_owner = syllabus_versions['academy_owner_id']
