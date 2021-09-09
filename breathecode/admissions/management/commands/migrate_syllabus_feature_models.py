@@ -137,7 +137,7 @@ class Command(BaseCommand):
 
         for certificate in self.certificates:
             syllabus_versions = [
-                x for x in self.syllabus if certificate['id'] == self.syllabus['certificate']['id']
+                x for x in self.syllabus if certificate['id'] == self.syllabus['certificate_id']
             ]
             kwargs = {}
             if syllabus_versions:
