@@ -62,10 +62,16 @@ class ActivityViewMixin(APIView):
         elif len(slugs) == 1:
             self.queryargs.append(Activity.slug == slugs[0])
 
-    # TODO:cohort should be filtered with id or slug
-    def filter_by_cohort(self, cohort_id):
-        cohort = Cohort.objects.filter(slug=cohort_id)
-        self.queryargs.append(Activity.cohort == cohort)
+    def filter_by_cohort(self, cohort):
+
+        query_cohort = Cohort.objects.filter(slug=cohort)
+
+        if query_cohort.count() > 0:
+            self.queryargs.append(Activity.cohort == cohort)
+        else:
+            cohort_id = int(cohort)
+            query_cohort = Cohort.objects.get(pk=cohort_id)
+            self.queryargs.append(Activity.cohort == query_cohort.slug)
 
     def filter_by_cohorts(self, academy_id):
         cohorts = self.request.GET.get('cohort', [])
@@ -166,14 +172,12 @@ class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
         client = ndb.Client()
 
         self.filter_by_slugs()
+        self.filter_by_cohort(cohort_id)
         limit = self.get_limit_from_query()
         offset = self.get_offset_from_query()
 
         with client.context():
-            query = Activity.query().filter(
-                OR(Activity.cohort == cohort_id),
-                *self.queryargs,
-            )
+            query = Activity.query().filter(*self.queryargs, )
 
             elements = query.fetch(limit=limit, offset=offset)
             activities = [c.to_dict() for c in elements]
