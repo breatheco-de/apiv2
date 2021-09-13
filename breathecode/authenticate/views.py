@@ -665,6 +665,7 @@ def save_github_token(request):
             if github_user['email'] is None:
                 raise ValidationError('Impossible to retrieve user email')
 
+            user = None # assuming by default that its a new user
             # is a valid token??? if not valid it will become None
             if token is not None and token != '':
                 token = Token.get_valid(token)
