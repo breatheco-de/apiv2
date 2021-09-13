@@ -1,13 +1,19 @@
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User
 from django.conf import settings
 from django.db import models
-from rest_framework import serializers
 from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
 from django.core.validators import RegexValidator
 from .signals import invite_accepted
 from breathecode.admissions.models import Academy, Cohort
+
+__all__ = [
+    'User', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
+    'ProfileAcademy', 'CredentialsGithub', 'CredentialsSlack',
+    'CredentialsFacebook', 'CredentialsQuickBooks', 'CredentialsGoogle',
+    'DeviceId', 'Token'
+]
 
 
 class UserProxy(User):

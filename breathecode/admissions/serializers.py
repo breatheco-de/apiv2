@@ -38,6 +38,7 @@ class ProfileSerializer(serpy.Serializer):
     id = serpy.Field()
     avatar_url = serpy.Field()
     show_tutorial = serpy.Field()
+    github_username = serpy.Field()
 
 
 class AcademySerializer(serpy.Serializer):
@@ -484,8 +485,10 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             logger.debug(f'Cohort not be found in related academies')
             raise ValidationException('Specified cohort not be found')
 
-        if not disable_cohort_user_just_once and CohortUser.objects.filter(
-                user_id=user_id, cohort_id=cohort_id).count():
+        count_cohort_users = CohortUser.objects.filter(
+            user_id=user_id, cohort_id=cohort_id).count()
+
+        if is_post_method and count_cohort_users:
             raise ValidationException(
                 'That user already exists in this cohort')
 

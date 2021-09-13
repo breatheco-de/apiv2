@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import ActivityTypeView, ActivityMeView, ActivityClassroomView
+from .views import ActivityCohortView, ActivityTypeView, ActivityMeView, ActivityClassroomView
 
 app_name = 'activity'
 urlpatterns = [
@@ -14,4 +14,7 @@ urlpatterns = [
     path('academy/student/<str:student_id>',
          ActivityClassroomView.as_view(),
          name='academy_student_id'),
+    path('cohort/<str:cohort_id>',
+         ActivityCohortView.as_view(),
+         name='cohort_id')
 ]

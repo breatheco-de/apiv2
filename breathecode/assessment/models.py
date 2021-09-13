@@ -1,7 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User
-from breathecode.admissions.models import Academy, Cohort
-from breathecode.events.models import Event
+from breathecode.admissions.models import Academy
+
+__all__ = [
+    'UserProxy', 'Assessment', 'Question', 'Option', 'UserAssessment', 'Answer'
+]
 
 
 class UserProxy(User):

@@ -1,3 +1,4 @@
+from breathecode.activity.models import Activity
 from django.contrib.auth.models import User
 from django.db.models import Q
 from rest_framework import status
@@ -6,12 +7,15 @@ from rest_framework.views import APIView
 
 from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.utils import ValidationException, capable_of
+from breathecode.utils import HeaderLimitOffsetPagination
 
 from .utils import (generate_created_at, validate_activity_fields,
                     validate_activity_have_correct_data_field,
                     validate_if_activity_need_field_cohort,
                     validate_if_activity_need_field_data,
                     validate_require_activity_fields)
+
+from google.cloud.ndb.query import OR
 
 # Create your views here.
 
@@ -39,6 +43,110 @@ ACTIVITY_PUBLIC_SLUGS = [
 ]
 
 
+class ActivityViewMixin(APIView):
+    queryargs = []
+
+    def filter_by_slugs(self):
+        slugs = self.request.GET.get('slug', [])
+        if slugs:
+            slugs = slugs.split(',')
+
+        for slug in slugs:
+            if slug and slug not in ACTIVITIES:
+                raise ValidationException(f'Activity type {slug} not found',
+                                          slug='activity-not-found')
+
+        if len(slugs) > 1:
+            self.queryargs.append(
+                OR(*[Activity.slug == slug for slug in slugs]))
+        elif len(slugs) == 1:
+            self.queryargs.append(Activity.slug == slugs[0])
+
+    def filter_by_cohort(self, cohort):
+
+        query_cohort = Cohort.objects.filter(slug=cohort)
+
+        if query_cohort.count() > 0:
+            self.queryargs.append(Activity.cohort == cohort)
+        else:
+            cohort_id = int(cohort)
+            query_cohort = Cohort.objects.get(pk=cohort_id)
+            self.queryargs.append(Activity.cohort == query_cohort.slug)
+
+    def filter_by_cohorts(self, academy_id):
+        cohorts = self.request.GET.get('cohort', [])
+        if cohorts:
+            cohorts = cohorts.split(',')
+
+        for cohort in cohorts:
+            if (cohort and not Cohort.objects.filter(
+                    slug=cohort, academy__id=academy_id).exists()):
+                raise ValidationException('Cohort not found',
+                                          slug='cohort-not-found')
+
+        if len(cohorts) > 1:
+            self.queryargs.append(
+                OR(*[Activity.cohort == cohort for cohort in cohorts]))
+        elif len(cohorts) == 1:
+            self.queryargs.append(Activity.cohort == cohorts[0])
+
+    def filter_by_user_ids(self):
+        user_ids = self.request.GET.get('user_id', [])
+        if user_ids:
+            user_ids = user_ids.split(',')
+
+        for user_id in user_ids:
+            try:
+                int(user_id)
+            except ValueError:
+                raise ValidationException('user_id is not a interger',
+                                          slug='bad-user-id')
+
+        for user_id in user_ids:
+            if not User.objects.filter(id=user_id).exists():
+                raise ValidationException('User not exists',
+                                          slug='user-not-exists')
+
+        if len(user_ids) > 1:
+            self.queryargs.append(
+                OR(*[Activity.user_id == int(user_id)
+                     for user_id in user_ids]))
+        elif len(user_ids) == 1:
+            self.queryargs.append(Activity.user_id == int(user_ids[0]))
+
+    def filter_by_emails(self):
+        emails = self.request.GET.get('email', [])
+        if emails:
+            emails = emails.split(',')
+
+        for email in emails:
+            if not User.objects.filter(email=email).exists():
+                raise ValidationException('User not exists',
+                                          slug='user-not-exists')
+
+        if len(emails) > 1:
+            self.queryargs.append(
+                OR(*[Activity.email == email for email in emails]))
+        elif len(emails) == 1:
+            self.queryargs.append(Activity.email == emails[0])
+
+    def get_limit_from_query(self):
+        limit = self.request.GET.get('limit')
+
+        if limit is not None:
+            limit = int(limit)
+
+        return limit
+
+    def get_offset_from_query(self):
+        offset = self.request.GET.get('offset')
+
+        if offset is not None:
+            offset = int(offset)
+
+        return offset
+
+
 class ActivityTypeView(APIView):
     def get_activity_object(self, slug):
         return {'slug': slug, 'description': ACTIVITIES[slug]}
@@ -56,6 +164,25 @@ class ActivityTypeView(APIView):
 
         res = [self.get_activity_object(slug) for slug in ACTIVITIES.keys()]
         return Response(res)
+
+
+class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
+    def get(self, request, cohort_id=None):
+        from google.cloud import ndb
+        client = ndb.Client()
+
+        self.filter_by_slugs()
+        self.filter_by_cohort(cohort_id)
+        limit = self.get_limit_from_query()
+        offset = self.get_offset_from_query()
+
+        with client.context():
+            query = Activity.query().filter(*self.queryargs, )
+
+            elements = query.fetch(limit=limit, offset=offset)
+            activities = [c.to_dict() for c in elements]
+
+        return Response(activities, status=status.HTTP_200_OK)
 
 
 class ActivityMeView(APIView):
@@ -100,6 +227,15 @@ class ActivityMeView(APIView):
                                       slug='user-not-exists')
 
         datastore = Datastore()
+
+        # limit = request.GET.get('limit')
+        # if limit:
+        #     kwargs['limit'] = int(limit)
+
+        # offset = request.GET.get('offset')
+        # if offset:
+        #     kwargs['offset'] = int(offset)
+
         academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
         public_iter = datastore.fetch(**kwargs, academy_id=0)
 
@@ -119,7 +255,7 @@ class ActivityMeView(APIView):
         return Response(fields, status=status.HTTP_201_CREATED)
 
 
-class ActivityClassroomView(APIView):
+class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
     @capable_of('classroom_activity')
     def post(self, request, cohort_id=None, academy_id=None):
 
@@ -203,6 +339,20 @@ class ActivityClassroomView(APIView):
 
         datastore = Datastore()
         #academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
+
+        limit = request.GET.get('limit')
+        offset = request.GET.get('offset')
+
+        # get the the total entities on db by kind
+        if limit is not None or offset is not None:
+            count = datastore.count(**kwargs)
+
+        if limit:
+            kwargs['limit'] = int(limit)
+
+        if offset:
+            kwargs['offset'] = int(offset)
+
         public_iter = datastore.fetch(
             **kwargs
         )  # TODO: remove this in the future because the academy_id was not present brefore and students didn't have it
@@ -210,7 +360,12 @@ class ActivityClassroomView(APIView):
         # query_iter = academy_iter + public_iter
         public_iter.sort(key=lambda x: x['created_at'], reverse=True)
 
-        return Response(public_iter)
+        page = self.paginate_queryset(public_iter, request)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(page, count)
+        else:
+            return Response(page, status=status.HTTP_200_OK)
 
 
 def add_student_activity(user, data, academy_id):

@@ -48,11 +48,14 @@ python-slugify = "*"
 pyyaml = "*"
 uritemplate = "*"
 psycopg2-binary = "*"
+django-sql-explorer = {extras = ["xls"], version = "*"}
+google-cloud-ndb = "*"
 
 [requires]
 python_version = "3.9"
 
 [scripts]
+backup_syllabus_models="python -m scripts.backup_syllabus_models"
 dev="heroku local"
 create_bucket="python -m scripts.create_bucket"
 test="python -m scripts.test"
