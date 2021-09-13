@@ -680,7 +680,7 @@ def save_github_token(request):
                 token = None
 
             # user can't be found thru token, lets try thru the github credentials
-            if token is None:
+            if token is None and user is None:
                 user = User.objects.filter(
                     Q(credentialsgithub__github_id=github_user['id'])
                     | Q(email__iexact=github_user['email'])).first()
