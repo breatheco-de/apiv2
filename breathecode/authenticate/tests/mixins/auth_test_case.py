@@ -70,6 +70,19 @@ class AuthTestCase(APITestCase, ModelsMixin):
     def get_profile_academy(self, id: int):
         return ProfileAcademy.objects.filter(id=id).first()
 
+    def headers(self, **kargs):
+        headers = {}
+
+        items = [
+            index for index in kargs if kargs[index] and (
+                isinstance(kargs[index], str) or isinstance(kargs[index], int))
+        ]
+
+        for index in items:
+            headers[f'HTTP_{index.upper()}'] = str(kargs[index])
+
+        self.client.credentials(**headers)
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())

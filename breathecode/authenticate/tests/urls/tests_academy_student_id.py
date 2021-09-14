@@ -9,13 +9,10 @@ from ..mixins import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
-    def test_academy_id_member_id_without_auth(self):
+    def test_academy_student_id_without_auth(self):
         """Test /academy/:id/member/:id without auth"""
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '2'
-                           })
+        url = reverse_lazy('authenticate:academy_student_id',
+                           kwargs={'user_id_or_email': '2'})
         data = {'email': self.email, 'password': self.password}
         response = self.client.post(url, data)
         json = response.json()
@@ -27,61 +24,36 @@ class AuthenticateTestSuite(AuthTestCase):
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_academy_id_member_id_without_capability(self):
+    def test_academy_student_id_without_capability(self):
         """Test /academy/:id/member/:id"""
+        self.headers(academy=1)
+
         self.generate_models(authenticate=True)
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '2'
-                           })
+        url = reverse_lazy('authenticate:academy_student_id',
+                           kwargs={'user_id_or_email': '2'})
         response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(
             json, {
                 'detail':
-                "You (user: 2) don't have this capability: read_member "
+                "You (user: 2) don't have this capability: read_student "
                 'for academy 1',
-                'status_code': 403
+                'status_code':
+                403
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_academy_id_member_id_without_academy(self):
+    def test_academy_student_id(self):
         """Test /academy/:id/member/:id"""
-        role = 'konan'
-        self.generate_models(authenticate=True,
-                             role=role,
-                             capability='read_member')
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '2'
-                           })
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(
-            json, {
-                'detail':
-                "You (user: 2) don't have this capability: read_member "
-                'for academy 1',
-                'status_code': 403
-            })
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_academy_id_member_id(self):
-        """Test /academy/:id/member/:id"""
+        self.headers(academy=1)
         role = 'konan'
         model = self.generate_models(authenticate=True,
                                      role=role,
-                                     capability='read_member',
+                                     capability='read_student',
                                      profile_academy=True)
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '2'
-                           })
+        url = reverse_lazy('authenticate:academy_student_id',
+                           kwargs={'user_id_or_email': '2'})
         response = self.client.get(url)
         json = response.json()
 
@@ -134,20 +106,18 @@ class AuthenticateTestSuite(AuthTestCase):
     🔽🔽🔽 With profile ans github
     """
 
-    def test_academy_id_member_id__with_profile__with_github(self):
+    def test_academy_student_id__with_profile__with_github(self):
         """Test /academy/:id/member/:id"""
+        self.headers(academy=1)
         role = 'konan'
         model = self.generate_models(authenticate=True,
                                      role=role,
-                                     capability='read_member',
+                                     capability='read_student',
                                      profile_academy=True,
                                      credentials_github=True,
                                      profile=True)
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '2'
-                           })
+        url = reverse_lazy('authenticate:academy_student_id',
+                           kwargs={'user_id_or_email': '2'})
         response = self.client.get(url)
         json = response.json()
 
@@ -203,19 +173,17 @@ class AuthenticateTestSuite(AuthTestCase):
             'user_id': 2,
         }])
 
-    def test_academy_id_member_id_with_github(self):
+    def test_academy_student_id_with_github(self):
         """Test /academy/:id/member/:id"""
+        self.headers(academy=1)
         role = 'konan'
         model = self.generate_models(authenticate=True,
                                      role=role,
-                                     capability='read_member',
+                                     capability='read_student',
                                      profile_academy=True,
                                      credentials_github=True)
-        url = reverse_lazy('authenticate:academy_id_member_id',
-                           kwargs={
-                               'academy_id': 1,
-                               'user_id_or_email': '2'
-                           })
+        url = reverse_lazy('authenticate:academy_student_id',
+                           kwargs={'user_id_or_email': '2'})
         response = self.client.get(url)
         json = response.json()
 
