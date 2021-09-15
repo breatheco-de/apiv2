@@ -1,8 +1,9 @@
 import os, string, logging, urllib.parse, random
 from django.contrib.auth.models import User, Group
 from django.utils import timezone
-from .models import DeviceId, Token, CredentialsSlack, UserInvite
+from .models import DeviceId, Token, CredentialsSlack, UserInvite, Role, ProfileAcademy
 from breathecode.notify.actions import send_email_message
+from breathecode.admissions.models import Academy
 from random import randint
 
 logger = logging.getLogger(__name__)
@@ -91,3 +92,32 @@ def server_id():
     device.save()
 
     return key
+
+
+def generate_academy_token(academy_id, force=False):
+
+    academy = Academy.objects.get(id=academy_id)
+    academy_user = User.objects.filter(username=academy.slug).first()
+    if academy_user is None:
+        academy_user = User(username=academy.slug,
+                            email=f'{academy.slug}@token.com')
+        academy_user.save()
+
+        role = Role.objects.get(slug='academy_token')
+        # this profile is for tokens, that is why we need no  email validation status=ACTIVE, role must be academy_token
+        # and the email is empty
+        profile_academy = ProfileAcademy(user=academy_user,
+                                         academy=academy,
+                                         role=role,
+                                         status='ACTIVE')
+        profile_academy.save()
+
+    if force:
+        Token.objects.filter(user=academy_user).delete()
+
+    token = Token.objects.filter(user=academy_user).first()
+    if token is None:
+        token = Token.objects.create(user=academy_user, token_type='permanent')
+        token.save()
+
+    return token

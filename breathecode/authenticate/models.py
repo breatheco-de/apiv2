@@ -21,6 +21,11 @@ class UserProxy(User):
         proxy = True
 
 
+class AcademyProxy(Academy):
+    class Meta:
+        proxy = True
+
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     avatar_url = models.CharField(max_length=255,
