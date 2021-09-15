@@ -34,8 +34,7 @@ class AuthenticateTestSuite(AuthTestCase):
         model = self.generate_models(role=True, role_kwargs=role_kwargs)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' +
-                                   original_url_callback.replace('.', r'\.') +
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
                                    r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
@@ -47,8 +46,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
         users = [
-            x for x in self.all_user_dict()
-            if self.assertDatetime(x['date_joined']) and x.pop('date_joined')
+            x for x in self.all_user_dict() if self.assertDatetime(x['date_joined']) and x.pop('date_joined')
         ]
 
         self.assertEqual(users, [{
@@ -97,14 +95,10 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
         role_kwargs = {'slug': 'student', 'name': 'Student'}
-        model = self.generate_models(role=True,
-                                     user=True,
-                                     user_kwargs=user_kwargs,
-                                     role_kwargs=role_kwargs)
+        model = self.generate_models(role=True, user=True, user_kwargs=user_kwargs, role_kwargs=role_kwargs)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' +
-                                   original_url_callback.replace('.', r'\.') +
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
                                    r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
@@ -115,9 +109,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.all_user_dict(), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.all_credentials_github_dict(), [{
             'avatar_url':
@@ -152,14 +144,10 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /github/callback"""
         user_kwargs = {'email': 'JDEFREITASPINTO@GMAIL.COM'}
         role_kwargs = {'slug': 'student', 'name': 'Student'}
-        model = self.generate_models(role=True,
-                                     user=True,
-                                     user_kwargs=user_kwargs,
-                                     role_kwargs=role_kwargs)
+        model = self.generate_models(role=True, user=True, user_kwargs=user_kwargs, role_kwargs=role_kwargs)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' +
-                                   original_url_callback.replace('.', r'\.') +
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
                                    r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
@@ -170,9 +158,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.all_user_dict(), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.all_credentials_github_dict(), [{
             'avatar_url':
@@ -225,9 +211,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.all_user_dict(), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, 'user')}])
         self.assertEqual(self.all_credentials_github_dict(), [])
 
     @mock.patch('requests.get', GithubRequestsMock.apply_get_requests_mock())
@@ -244,8 +228,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      token=True)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' +
-                                   original_url_callback.replace('.', r'\.') +
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
                                    r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
@@ -258,9 +241,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.all_user_dict(), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.all_credentials_github_dict(), [{
             'avatar_url':
@@ -303,8 +284,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      token=True)
 
         original_url_callback = 'https://google.co.ve'
-        token_pattern = re.compile('^' +
-                                   original_url_callback.replace('.', r'\.') +
+        token_pattern = re.compile('^' + original_url_callback.replace('.', r'\.') +
                                    r'\?token=[0-9a-zA-Z]{,40}$')
         code = 'Konan'
 
@@ -317,9 +297,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(bool(token_pattern.match(response.url)), True)
 
-        self.assertEqual(self.all_user_dict(), [{
-            **self.model_to_dict(model, 'user')
-        }])
+        self.assertEqual(self.all_user_dict(), [{**self.model_to_dict(model, 'user')}])
 
         self.assertEqual(self.all_credentials_github_dict(), [{
             'avatar_url':

@@ -49,12 +49,10 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail':
-                "You (user: 1) don't have this capability: read_media for academy 1",
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_media for academy 1",
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -71,10 +69,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'Category not found',
-            'status_code': 404
-        })
+        self.assertEqual(json, {'detail': 'Category not found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_category_dict(), [])
 
@@ -93,17 +88,14 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'id': 1,
-                'medias': 0,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            })
+        self.assertEqual(json, {
+            'id': 1,
+            'medias': 0,
+            'name': model['category'].name,
+            'slug': model['category'].slug,
+        })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_category_dict(), [{
-            **self.model_to_dict(model, 'category')
-        }])
+        self.assertEqual(self.all_category_dict(), [{**self.model_to_dict(model, 'category')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -121,14 +113,11 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'id': 1,
-                'medias': 1,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            })
+        self.assertEqual(json, {
+            'id': 1,
+            'medias': 1,
+            'name': model['category'].name,
+            'slug': model['category'].slug,
+        })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_category_dict(), [{
-            **self.model_to_dict(model, 'category')
-        }])
+        self.assertEqual(self.all_category_dict(), [{**self.model_to_dict(model, 'category')}])

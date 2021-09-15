@@ -11,8 +11,7 @@ def localize_query(query, request, matcher=None):
     if isinstance(request.user, AnonymousUser):
         return None
 
-    academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list(
-        'academy__id', flat=True)
+    academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list('academy__id', flat=True)
 
     kwargs = {}
     if matcher is None:
@@ -20,8 +19,7 @@ def localize_query(query, request, matcher=None):
     else:
         kwargs[matcher] = academy_ids
 
-    logger.debug(
-        f"Localizing academies: [{','.join([ str(i) for i in academy_ids])}]")
+    logger.debug(f"Localizing academies: [{','.join([ str(i) for i in academy_ids])}]")
     # only cohorts from that academy
     query = query.filter(**kwargs)
 

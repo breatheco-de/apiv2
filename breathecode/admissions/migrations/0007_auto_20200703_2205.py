@@ -13,10 +13,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='cohortuser',
             name='educational_status',
-            field=models.CharField(choices=[('ACTIVE', 'Active'),
-                                            ('POSTPONED', 'Postponed'),
-                                            ('GRADUATED', 'Graduated'),
-                                            ('SUSPENDED', 'Suspended'),
+            field=models.CharField(choices=[('ACTIVE', 'Active'), ('POSTPONED', 'Postponed'),
+                                            ('GRADUATED', 'Graduated'), ('SUSPENDED', 'Suspended'),
                                             ('DROPPED', 'Dropped')],
                                    default=None,
                                    max_length=15,

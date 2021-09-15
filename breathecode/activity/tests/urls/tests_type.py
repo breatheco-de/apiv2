@@ -6,10 +6,8 @@ from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
-from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH,
-                                     apply_google_cloud_blob_mock,
-                                     apply_google_cloud_bucket_mock,
-                                     apply_google_cloud_client_mock)
+from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_blob_mock,
+                                     apply_google_cloud_bucket_mock, apply_google_cloud_client_mock)
 
 from ..mixins import MediaTestCase
 
@@ -53,8 +51,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(
             json, {
-                'detail':
-                "You (user: 1) don't have this capability: read_activity for academy 1",
+                'detail': "You (user: 1) don't have this capability: read_activity for academy 1",
                 'status_code': 403,
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -103,8 +100,7 @@ class MediaTestSuite(MediaTestCase):
                 'slug': 'lesson_opened',
             },
             {
-                'description':
-                ('When the office raspberry pi detects the student'),
+                'description': ('When the office raspberry pi detects the student'),
                 'slug': 'office_attendance',
             },
             {

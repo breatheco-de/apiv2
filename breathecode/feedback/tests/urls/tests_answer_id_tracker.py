@@ -21,8 +21,7 @@ class AnswerIdTrackerTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_id_tracker_without_auth(self):
         """Test /answer/:id/tracker.png without auth"""
-        url = reverse_lazy('feedback:answer_id_tracker',
-                           kwargs={'answer_id': 9999})
+        url = reverse_lazy('feedback:answer_id_tracker', kwargs={'answer_id': 9999})
         response = self.client.get(url)
 
         self.assertEqual(response['content-type'], 'image/png')
@@ -35,8 +34,7 @@ class AnswerIdTrackerTestSuite(FeedbackTestCase):
     def test_answer_id_tracker_without_data(self):
         """Test /answer/:id/tracker.png without auth"""
         self.generate_models(authenticate=True)
-        url = reverse_lazy('feedback:answer_id_tracker',
-                           kwargs={'answer_id': 9999})
+        url = reverse_lazy('feedback:answer_id_tracker', kwargs={'answer_id': 9999})
         response = self.client.get(url)
 
         self.assertEqual(response['content-type'], 'image/png')
@@ -49,14 +47,12 @@ class AnswerIdTrackerTestSuite(FeedbackTestCase):
     def test_answer_id_tracker_with_data_without_status(self):
         """Test /answer/:id/tracker.png without auth"""
         model = self.generate_models(authenticate=True, answer=True)
-        url = reverse_lazy('feedback:answer_id_tracker',
-                           kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:answer_id_tracker', kwargs={'answer_id': model['answer'].id})
         response = self.client.get(url)
 
         self.assertEqual(response['content-type'], 'image/png')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(),
-                         [self.model_to_dict(model, 'answer')])
+        self.assertEqual(self.all_answer_dict(), [self.model_to_dict(model, 'answer')])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -64,11 +60,8 @@ class AnswerIdTrackerTestSuite(FeedbackTestCase):
     def test_answer_id_tracker_with_data(self):
         """Test /answer/:id/tracker.png without auth"""
         answer_kwargs = {'status': 'SENT'}
-        model = self.generate_models(authenticate=True,
-                                     answer=True,
-                                     answer_kwargs=answer_kwargs)
-        url = reverse_lazy('feedback:answer_id_tracker',
-                           kwargs={'answer_id': model['answer'].id})
+        model = self.generate_models(authenticate=True, answer=True, answer_kwargs=answer_kwargs)
+        url = reverse_lazy('feedback:answer_id_tracker', kwargs={'answer_id': model['answer'].id})
         response = self.client.get(url)
 
         self.assertEqual(response['content-type'], 'image/png')
@@ -78,9 +71,7 @@ class AnswerIdTrackerTestSuite(FeedbackTestCase):
         self.assertDatetime(answers[0]['opened_at'])
         answers[0]['opened_at'] = None
 
-        self.assertEqual(
-            answers,
-            [{
-                **self.model_to_dict(model, 'answer'),
-                'status': 'OPENED',
-            }])
+        self.assertEqual(answers, [{
+            **self.model_to_dict(model, 'answer'),
+            'status': 'OPENED',
+        }])

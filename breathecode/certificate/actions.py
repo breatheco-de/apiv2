@@ -42,7 +42,7 @@ def generate_certificate(user, cohort=None, layout=None):
 
     if cohort.syllabus_version is None:
         raise ValidationException(
-            f"The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}",
+            f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}',
             slug='missing-syllabus-version')
 
     if cohort.specialty_mode is None:
@@ -58,16 +58,16 @@ def generate_certificate(user, cohort=None, layout=None):
     uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
 
     if (uspe is not None and uspe.status == 'PERSISTED' and uspe.preview_url):
-        raise ValidationException("This user already has a certificate created", slug='already-exists')
+        raise ValidationException('This user already has a certificate created', slug='already-exists')
 
     if uspe is None:
         utc_now = timezone.now()
         uspe = UserSpecialty(
             user=user,
             cohort=cohort,
-            token=hashlib.sha1((str(user.id) + str(utc_now)).encode("UTF-8")).hexdigest(),
+            token=hashlib.sha1((str(user.id) + str(utc_now)).encode('UTF-8')).hexdigest(),
             specialty=specialty,
-            signed_by_role=strings[cohort.language]["Main Instructor"],
+            signed_by_role=strings[cohort.language]['Main Instructor'],
         )
         if specialty.expiration_day_delta is not None:
             uspe.expires_at = utc_now + timezone.timedelta(days=specialty.expiration_day_delta)
@@ -78,18 +78,18 @@ def generate_certificate(user, cohort=None, layout=None):
         layout = LayoutDesign.objects.filter(is_default=True, academy=cohort.academy).first()
 
     if layout is None:
-        layout = LayoutDesign.objects.filter(slug="default").first()
+        layout = LayoutDesign.objects.filter(slug='default').first()
 
     if layout is None:
-        raise ValidationException("No layout was specified and there is no default layout for this academy",
-                                  slug="no-default-layout")
+        raise ValidationException('No layout was specified and there is no default layout for this academy',
+                                  slug='no-default-layout')
 
     uspe.layout = layout
 
     # validate for teacher
     main_teacher = CohortUser.objects.filter(cohort__id=cohort.id, role='TEACHER').first()
     if main_teacher is None or main_teacher.user is None:
-        raise ValidationException("This cohort does not have a main teacher, please assign it first",
+        raise ValidationException('This cohort does not have a main teacher, please assign it first',
                                   slug='without-main-teacher')
 
     main_teacher = main_teacher.user

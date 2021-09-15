@@ -32,8 +32,7 @@ class CleanView(APIView):
 
     def delete(self, request, model_name=None):
         if not get_cypress_env():
-            raise ValidationException('Nothing to clean',
-                                      slug='is-not-allowed')
+            raise ValidationException('Nothing to clean', slug='is-not-allowed')
 
         if model_name:
             try:

@@ -25,9 +25,7 @@ class Eventbrite(object):
         if query_string is not None:
             _query_string = '?' + urllib.parse.urlencode(query_string)
 
-        response = requests.request(_type,
-                                    self.host + url + _query_string,
-                                    headers=_headers)
+        response = requests.request(_type, self.host + url + _query_string, headers=_headers)
         result = response.json()
         if 'status_code' in result and result['status_code'] >= 400:
             raise Exception(result['error_description'])
@@ -36,13 +34,12 @@ class Eventbrite(object):
             print('has more items?', result['pagination']['has_more_items'])
             if result['pagination']['has_more_items']:
                 print('Continuation: ', result['pagination']['continuation'])
-                new_result = self.request(
-                    _type,
-                    url,
-                    query_string={
-                        **query_string, 'continuation':
-                        result['pagination']['continuation']
-                    })
+                new_result = self.request(_type,
+                                          url,
+                                          query_string={
+                                              **query_string, 'continuation':
+                                              result['pagination']['continuation']
+                                          })
                 for key in new_result:
                     print(key, type(new_result[key]) == 'list')
                     if type(new_result[key]) == 'list':
@@ -63,6 +60,5 @@ class Eventbrite(object):
         return data
 
     def get_organization_venues(self, organization_id):
-        data = self.request('GET',
-                            f'/organizations/{str(organization_id)}/venues/')
+        data = self.request('GET', f'/organizations/{str(organization_id)}/venues/')
         return data

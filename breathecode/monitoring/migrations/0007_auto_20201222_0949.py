@@ -15,10 +15,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='application',
             name='notify_email',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   max_length=255,
-                                   null=True),
+            field=models.CharField(blank=True, default=None, max_length=255, null=True),
         ),
         migrations.AlterField(
             model_name='application',

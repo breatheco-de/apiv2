@@ -22,21 +22,12 @@ class GenerateLookupsMixin(APIException):
             value = value.split(',')
         return value
 
-    def __bulk_generator__(self,
-                           request,
-                           fields: list[str],
-                           pk=False,
-                           many=False):
-        return [(self.__field_name__(field, pk=pk, many=many),
-                 self.__field_value__(request, field, many=many))
+    def __bulk_generator__(self, request, fields: list[str], pk=False, many=False):
+        return [(self.__field_name__(field, pk=pk, many=many), self.__field_value__(request, field,
+                                                                                    many=many))
                 for field in fields if self.__field_exists__(request, field)]
 
-    def generate_lookups(self,
-                         request,
-                         fields=[],
-                         relationships=[],
-                         many_fields=[],
-                         many_relationships=[]):
+    def generate_lookups(self, request, fields=[], relationships=[], many_fields=[], many_relationships=[]):
         """
         This method get the variables through of querystring, returns one list
         ready to be used by the filter method
@@ -45,8 +36,7 @@ class GenerateLookupsMixin(APIException):
         founds = (self.__bulk_generator__(request, fields) +
                   self.__bulk_generator__(request, many_fields, many=True) +
                   self.__bulk_generator__(request, relationships, pk=True) +
-                  self.__bulk_generator__(
-                      request, many_relationships, pk=True, many=True))
+                  self.__bulk_generator__(request, many_relationships, pk=True, many=True))
 
         for field, value in founds:
             kwargs[field] = value

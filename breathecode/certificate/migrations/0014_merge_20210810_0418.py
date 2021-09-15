@@ -10,5 +10,4 @@ class Migration(migrations.Migration):
         ('certificate', '0013_remove_userspecialty_issued_at'),
     ]
 
-    operations = [
-    ]
+    operations = []

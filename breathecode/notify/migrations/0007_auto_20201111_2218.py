@@ -15,11 +15,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='slackteam',
             name='credentials',
-            field=models.OneToOneField(
-                blank=True,
-                default=None,
-                null=True,
-                on_delete=django.db.models.deletion.SET_NULL,
-                to='authenticate.credentialsslack'),
+            field=models.OneToOneField(blank=True,
+                                       default=None,
+                                       null=True,
+                                       on_delete=django.db.models.deletion.SET_NULL,
+                                       to='authenticate.credentialsslack'),
         ),
     ]

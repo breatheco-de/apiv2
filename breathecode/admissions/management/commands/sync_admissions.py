@@ -60,7 +60,7 @@ class Command(BaseCommand):
         syllabus = response.json()
 
         for syl in syllabus:
-            certificate_slug, version = syl['slug'].split(".")
+            certificate_slug, version = syl['slug'].split('.')
             cert = SpecialtyMode.objects.filter(slug=certificate_slug).first()
             if cert is None:
                 self.stdout.write(
@@ -119,7 +119,7 @@ class Command(BaseCommand):
         syllabus = response.json()
 
         for syl in syllabus:
-            certificate_slug, version = syl['slug'].split(".")
+            certificate_slug, version = syl['slug'].split('.')
             cert = SpecialtyMode.objects.filter(slug=certificate_slug).first()
             if cert is None:
                 self.stdout.write(

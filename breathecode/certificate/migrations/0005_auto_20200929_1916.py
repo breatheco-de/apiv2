@@ -29,9 +29,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='specialty',
             name='description',
-            field=models.TextField(blank=True,
-                                   default=None,
-                                   max_length=500,
-                                   null=True),
+            field=models.TextField(blank=True, default=None, max_length=500, null=True),
         ),
     ]

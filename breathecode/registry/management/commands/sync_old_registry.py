@@ -34,8 +34,7 @@ class Command(BaseCommand):
         func(options)
 
     def _exists(self, slug):
-        aa = AssetAlias.objects.filter(Q(slug=slug)
-                                       | Q(asset__slug=slug)).first()
+        aa = AssetAlias.objects.filter(Q(slug=slug) | Q(asset__slug=slug)).first()
         return aa is not None
 
     def exercises(self, *args, **options):
@@ -43,8 +42,7 @@ class Command(BaseCommand):
         items = response.json()
         for slug in items:
             if self._exists(slug):
-                print('Skipping: Asset with this alias ' + slug +
-                      ' already exists')
+                print('Skipping: Asset with this alias ' + slug + ' already exists')
                 continue
             data = items[slug]
             create_asset(data, asset_type='EXERCISE')
@@ -54,8 +52,7 @@ class Command(BaseCommand):
         items = response.json()
         for slug in items:
             if self._exists(slug):
-                print('Skipping: Asset with this alias ' + slug +
-                      ' already exists')
+                print('Skipping: Asset with this alias ' + slug + ' already exists')
                 continue
             data = items[slug]
             create_asset(data, asset_type='PROJECT')

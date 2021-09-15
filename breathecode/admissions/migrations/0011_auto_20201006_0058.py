@@ -18,8 +18,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='certificate',
             name='schedule_type',
-            field=models.CharField(choices=[('PART-TIME', 'Part-Time'),
-                                            ('FULL-TIME', 'Full-Time')],
+            field=models.CharField(choices=[('PART-TIME', 'Part-Time'), ('FULL-TIME', 'Full-Time')],
                                    default='PART-TIME',
                                    max_length=15),
         ),

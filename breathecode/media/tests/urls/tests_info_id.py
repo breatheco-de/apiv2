@@ -64,12 +64,10 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail':
-                "You (user: 1) don't have this capability: read_media for academy 1",
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_media for academy 1",
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -86,10 +84,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'Media not found',
-            'status_code': 404
-        })
+        self.assertEqual(json, {'detail': 'Media not found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_media_dict(), [])
 
@@ -121,9 +116,7 @@ class MediaTestSuite(MediaTestCase):
                 'url': model['media'].url
             })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -167,9 +160,7 @@ class MediaTestSuite(MediaTestCase):
                 model['media'].url
             })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -208,12 +199,10 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.put(url, data)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail':
-                "You (user: 1) don't have this capability: crud_media for academy 1",
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: crud_media for academy 1",
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -231,10 +220,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.put(url, data)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'media-not-found',
-            'status_code': 404
-        })
+        self.assertEqual(json, {'detail': 'media-not-found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_media_dict(), [])
 
@@ -254,10 +240,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.put(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'different-academy-media-put',
-            'status_code': 400
-        })
+        self.assertEqual(json, {'detail': 'different-academy-media-put', 'status_code': 400})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_media_dict(), [{
             **self.model_to_dict(model, 'media')
@@ -323,10 +306,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.delete(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'Media not found',
-            'status_code': 404
-        })
+        self.assertEqual(json, {'detail': 'Media not found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_media_dict(), [])
 
@@ -346,10 +326,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.delete(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'academy-different-than-media-academy',
-            'status_code': 400
-        })
+        self.assertEqual(json, {'detail': 'academy-different-than-media-academy', 'status_code': 400})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_media_dict(), [{
             **self.model_to_dict(model, 'media')
@@ -429,19 +406,13 @@ class MediaTestSuite(MediaTestCase):
                                     role='potato',
                                     category=True)
 
-        media_kwargs = {
-            'hash': '1234567890123456789012345678901234567890123456'
-        }
+        media_kwargs = {'hash': '1234567890123456789012345678901234567890123456'}
         models = [
-            self.generate_models(media=True,
-                                 media_kwargs=media_kwargs,
-                                 models=base) for _ in range(0, 2)
+            self.generate_models(media=True, media_kwargs=media_kwargs, models=base) for _ in range(0, 2)
         ]
         url = reverse_lazy('media:info_id', kwargs={'media_id': 1})
         response = self.client.delete(url)
         self.assertEqual(storage_mock.call_args_list, [])
         self.assertEqual(file_mock.delete.call_args_list, [])
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(models[1], 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(models[1], 'media')}])

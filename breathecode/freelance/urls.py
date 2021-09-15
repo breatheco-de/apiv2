@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import (BillView, sync_user_issues, SingleBillView,
-                    get_latest_bill, get_issues, render_html_bill)
+from .views import (BillView, sync_user_issues, SingleBillView, get_latest_bill, get_issues, render_html_bill)
 from rest_framework.authtoken import views
 
 app_name = 'freelance'

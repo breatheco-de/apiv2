@@ -36,8 +36,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         result = check_app(None, request, Application.objects.all())
 
         self.assertEqual(result, None)
-        self.assertEqual(mock.call_args_list,
-                         [call(model['application'].id) for model in models])
+        self.assertEqual(mock.call_args_list, [call(model['application'].id) for model in models])
 
     @patch(CURRENT_PATH, CURRENT_MOCK)
     def tests_test_app_length_3(self):
@@ -50,5 +49,4 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         result = check_app(None, request, Application.objects.all())
 
         self.assertEqual(result, None)
-        self.assertEqual(mock.call_args_list,
-                         [call(model['application'].id) for model in models])
+        self.assertEqual(mock.call_args_list, [call(model['application'].id) for model in models])
