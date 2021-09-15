@@ -8,12 +8,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
 
-        academy = ActiveCampaignAcademy.objects.filter(
-            academy__slug='downtown-miami').first()
+        academy = ActiveCampaignAcademy.objects.filter(academy__slug='downtown-miami').first()
         if academy is not None:
             Tag.objects.update(ac_academy=academy)
             Automation.objects.update(ac_academy=academy)
-            self.stdout.write(
-                self.style.SUCCESS('Successfully sync tags and academies'))
+            self.stdout.write(self.style.SUCCESS('Successfully sync tags and academies'))
         else:
             self.stdout.write(self.style.ERROR('AC Academy not found'))

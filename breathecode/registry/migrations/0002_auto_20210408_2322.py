@@ -22,9 +22,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='asset',
             name='status',
-            field=models.CharField(choices=[('OK', 'Ok'),
-                                            ('WARNING', 'Warning'),
-                                            ('ERROR', 'Error')],
+            field=models.CharField(choices=[('OK', 'Ok'), ('WARNING', 'Warning'), ('ERROR', 'Error')],
                                    default='OK',
                                    max_length=20),
         ),

@@ -9,8 +9,7 @@ from django.contrib.auth.models import User
 from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatterMixin
 
 
-class AuthenticateMixin(APITestCase, DevelopmentEnvironment,
-                        DateFormatterMixin):
+class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
     """CapacitiesTestCase with auth methods"""
     def remove_model_state(self, dict):
         result = None
@@ -51,36 +50,24 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment,
 
     def get_capability_dict(self, id):
         data = Capability.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(
-            data.__dict__.copy()) if data else None
+        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
 
     def get_role_dict(self, id):
         data = Role.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(
-            data.__dict__.copy()) if data else None
+        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
 
     def get_profile_academy_dict(self, id):
         data = ProfileAcademy.objects.filter(id=id).first()
-        return self.remove_dinamics_fields(
-            data.__dict__.copy()) if data else None
+        return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
 
     def all_capability_dict(self):
-        return [
-            self.remove_dinamics_fields(data.__dict__.copy())
-            for data in Capability.objects.filter()
-        ]
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in Capability.objects.filter()]
 
     def all_role_dict(self):
-        return [
-            self.remove_dinamics_fields(data.__dict__.copy())
-            for data in Role.objects.filter()
-        ]
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in Role.objects.filter()]
 
     def all_profile_academy_dict(self):
-        return [
-            self.remove_dinamics_fields(data.__dict__.copy())
-            for data in ProfileAcademy.objects.filter()
-        ]
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in ProfileAcademy.objects.filter()]
 
     def generate_credentials(self,
                              profile_academy=False,
@@ -100,8 +87,7 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment,
                 'description': capability,
             }
 
-            models['capability'] = mixer.blend('authenticate.Capability',
-                                               **kargs)
+            models['capability'] = mixer.blend('authenticate.Capability', **kargs)
 
         if role:
             kargs = {
@@ -133,7 +119,6 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment,
             if 'academy' in models:
                 kargs['academy'] = external_models['academy']
 
-            models['profile_academy'] = mixer.blend(
-                'authenticate.ProfileAcademy', **kargs)
+            models['profile_academy'] = mixer.blend('authenticate.ProfileAcademy', **kargs)
 
         return models

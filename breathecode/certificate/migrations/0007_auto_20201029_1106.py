@@ -25,12 +25,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='specialty',
             name='certificate',
-            field=models.OneToOneField(
-                blank=True,
-                default=None,
-                help_text='This specialty represents only one certificate',
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                to='admissions.certificate'),
+            field=models.OneToOneField(blank=True,
+                                       default=None,
+                                       help_text='This specialty represents only one certificate',
+                                       null=True,
+                                       on_delete=django.db.models.deletion.CASCADE,
+                                       to='admissions.certificate'),
         ),
     ]

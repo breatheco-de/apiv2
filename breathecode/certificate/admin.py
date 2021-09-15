@@ -28,8 +28,7 @@ class LayoutDesignAdmin(admin.ModelAdmin):
 
     def template(self, obj):
         return format_html(
-            f"<a rel='noopener noreferrer' target='_blank' href='{obj.background_url}'>view template</a>"
-        )
+            f"<a rel='noopener noreferrer' target='_blank' href='{obj.background_url}'>view template</a>")
 
     def default(self, obj):
         if obj.is_default:
@@ -66,14 +65,10 @@ def export_user_specialty_csv(self, request, queryset):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename=certificates.csv'
     writer = csv.writer(response)
-    writer.writerow([
-        'First Name', 'Last Name', 'Specialty', 'Academy', 'Cohort',
-        'Certificate', 'PDF'
-    ])
+    writer.writerow(['First Name', 'Last Name', 'Specialty', 'Academy', 'Cohort', 'Certificate', 'PDF'])
     for obj in queryset:
         row = writer.writerow([
-            obj.user.first_name, obj.user.last_name, obj.specialty.name,
-            obj.academy.name, obj.cohort.name,
+            obj.user.first_name, obj.user.last_name, obj.specialty.name, obj.academy.name, obj.cohort.name,
             f'https://certificate.breatheco.de/{obj.token}',
             f'https://certificate.breatheco.de/pdf/{obj.token}'
         ])
@@ -86,12 +81,8 @@ export_user_specialty_csv.short_description = '⬇️ Export Selected'
 
 @admin.register(UserSpecialty)
 class UserSpecialtyAdmin(admin.ModelAdmin):
-    search_fields = [
-        'user__email', 'user__first_name', 'user__last_name', 'cohort__name',
-        'cohort__slug'
-    ]
-    list_display = ('user', 'specialty', 'expires_at', 'academy', 'cohort',
-                    'pdf', 'preview')
+    search_fields = ['user__email', 'user__first_name', 'user__last_name', 'cohort__name', 'cohort__slug']
+    list_display = ('user', 'specialty', 'expires_at', 'academy', 'cohort', 'pdf', 'preview')
     list_filter = ['specialty', 'academy__slug', 'cohort__slug']
     raw_id_fields = ['user']
     actions = [screenshot, delete_screenshot, export_user_specialty_csv]
@@ -105,9 +96,8 @@ class UserSpecialtyAdmin(admin.ModelAdmin):
         if obj.preview_url is None or obj.preview_url == '':
             return format_html('No available')
 
-        return format_html(
-            "<a rel='noopener noreferrer' target='_blank' href='{url}'>preview</a>",
-            url=obj.preview_url)
+        return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>preview</a>",
+                           url=obj.preview_url)
 
     def get_readonly_fields(self, request, obj=None):
         return ['token', 'expires_at']
@@ -152,6 +142,5 @@ cohort_bulk_certificate.short_description = '🥇 Generate Cohort Certificates'
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
-    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date',
-                    'syllabus_version', 'specialty_mode')
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'specialty_mode')
     actions = [cohort_bulk_certificate]

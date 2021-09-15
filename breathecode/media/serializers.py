@@ -99,8 +99,7 @@ class MediaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Media
-        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime',
-                  'name', 'categories', 'academy')
+        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime', 'name', 'categories', 'academy')
         exclude = ()
         list_serializer_class = MediaListSerializer
 
@@ -116,18 +115,15 @@ class MediaPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Media
-        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime',
-                  'name', 'categories', 'academy')
+        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime', 'name', 'categories', 'academy')
         exclude = ()
         list_serializer_class = MediaListSerializer
 
     def validate(self, data):
-        if 'hash' in data and 'academy' in data and isinstance(
-                data['academy'], Academy):
-            data['id'] = Media.objects.filter(
-                hash=data['hash'],
-                academy__id=data['academy'].id).values_list('id',
-                                                            flat=True).first()
+        if 'hash' in data and 'academy' in data and isinstance(data['academy'], Academy):
+            data['id'] = Media.objects.filter(hash=data['hash'],
+                                              academy__id=data['academy'].id).values_list('id',
+                                                                                          flat=True).first()
 
         return data
 

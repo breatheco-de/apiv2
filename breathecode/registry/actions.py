@@ -41,8 +41,7 @@ def create_asset(data, asset_type):
     if 'graded' in data:
         a.graded = data['graded']
     if 'video-id' in data:
-        a.solution_video_url = 'https://www.youtube.com/watch?v=' + str(
-            data['video-id'])
+        a.solution_video_url = 'https://www.youtube.com/watch?v=' + str(data['video-id'])
     if 'preview' in data:
         a.preview = data['preview']
     if 'video-solutions' in data:
@@ -59,9 +58,7 @@ def create_asset(data, asset_type):
                 if a.translations.filter(slug=lan).first() is None:
                     a.translations.add(l)
             else:
-                logger.debug(
-                    f'Ignoring language {lan} because its not added as a possible AssetTranslation'
-                )
+                logger.debug(f'Ignoring language {lan} because its not added as a possible AssetTranslation')
 
     aa = AssetAlias(slug=slug, asset=a)
     aa.save()
@@ -73,9 +70,7 @@ def sync_with_github(asset_slug, author_id=None):
 
         asset = Asset.objects.filter(slug=asset_slug).first()
         if asset is None:
-            raise Exception(
-                f'Asset with slug {asset_slug} not found when attempting to sync with github'
-            )
+            raise Exception(f'Asset with slug {asset_slug} not found when attempting to sync with github')
 
         if asset.author is not None:
             author_id = asset.author.id
@@ -87,12 +82,10 @@ def sync_with_github(asset_slug, author_id=None):
 
         org_name, repo_name = get_url_info(asset.url)
 
-        credentials = CredentialsGithub.objects.filter(
-            user__id=author_id).first()
+        credentials = CredentialsGithub.objects.filter(user__id=author_id).first()
         if credentials is None:
             raise Exception(
-                f'Github credentials for this user {author_id} not found when sync asset {asset_slug}'
-            )
+                f'Github credentials for this user {author_id} not found when sync asset {asset_slug}')
 
         g = Github(credentials.token)
         repo = g.get_repo(f'{org_name}/{repo_name}')
@@ -111,9 +104,7 @@ def sync_with_github(asset_slug, author_id=None):
                     try:
                         learn_file = repo.get_contents('.learn/bc.json')
                     except:
-                        raise Exception(
-                            'No configuration learn.json or bc.json file was found'
-                        )
+                        raise Exception('No configuration learn.json or bc.json file was found')
 
         asset.readme = str(readme_file.content)
 
@@ -131,8 +122,7 @@ def sync_with_github(asset_slug, author_id=None):
                 raise Exception(f'Missing preview URL')
 
             if 'video-id' in config:
-                asset.solution_video_url = 'https://www.youtube.com/watch?v=' + str(
-                    config['video-id'])
+                asset.solution_video_url = 'https://www.youtube.com/watch?v=' + str(config['video-id'])
                 asset.with_video = True
 
             if 'duration' in config:
@@ -150,8 +140,7 @@ def sync_with_github(asset_slug, author_id=None):
 
             if 'translations' in config:
                 for lang in config['translations']:
-                    language = AssetTranslation.objects.filter(
-                        slug__iexact=lang).first()
+                    language = AssetTranslation.objects.filter(slug__iexact=lang).first()
                     if language is None:
                         raise Exception(f"Language '{lang}' not found")
                     asset.translations.add(language)
@@ -159,11 +148,9 @@ def sync_with_github(asset_slug, author_id=None):
             if 'technologies' in config:
                 for tech_slug in config['technologies']:
                     _slug = slugify(tech_slug)
-                    technology = AssetTechnology.objects.filter(
-                        slug__iexact=_slug).first()
+                    technology = AssetTechnology.objects.filter(slug__iexact=_slug).first()
                     if technology is None:
-                        technology = AssetTechnology(slug=_slug,
-                                                     title=tech_slug)
+                        technology = AssetTechnology(slug=_slug, title=tech_slug)
                         technology.save()
                     asset.technologies.add(technology)
 

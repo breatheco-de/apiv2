@@ -288,21 +288,18 @@ EVENTBRITE_ORDER = {
             'Music',
             'subcategories': [{
                 'id': '1',
-                'resource_uri':
-                'https://www.eventbriteapi.com/v3/subcategories/1/',
+                'resource_uri': 'https://www.eventbriteapi.com/v3/subcategories/1/',
                 'name': 'Classical',
                 'parent_category': {}
             }]
         },
         'subcategory': {
             'id': '1',
-            'resource_uri':
-            'https://www.eventbriteapi.com/v3/subcategories/1/',
+            'resource_uri': 'https://www.eventbriteapi.com/v3/subcategories/1/',
             'name': 'Classical',
             'parent_category': {
                 'id': '1',
-                'resource_uri':
-                'https://www.eventbriteapi.com/v3/categories/1/',
+                'resource_uri': 'https://www.eventbriteapi.com/v3/categories/1/',
                 'name': 'Music',
                 'name_localized': 'Music',
                 'short_name': 'Music',
@@ -619,8 +616,7 @@ EVENTBRITE_ORDER = {
                     'edge_color': '#6a7c8b',
                     'edge_color_set': True
                 },
-                'resource_uri':
-                'https://www.eventbriteapi.com/v3/organizers/1/',
+                'resource_uri': 'https://www.eventbriteapi.com/v3/organizers/1/',
                 'id': '1',
                 'url': 'https://www.eventbrite.com/o/1/',
                 'num_past_events': 5,
@@ -692,21 +688,18 @@ EVENTBRITE_ORDER = {
                 'Music',
                 'subcategories': [{
                     'id': '1',
-                    'resource_uri':
-                    'https://www.eventbriteapi.com/v3/subcategories/1/',
+                    'resource_uri': 'https://www.eventbriteapi.com/v3/subcategories/1/',
                     'name': 'Classical',
                     'parent_category': {}
                 }]
             },
             'subcategory': {
                 'id': '1',
-                'resource_uri':
-                'https://www.eventbriteapi.com/v3/subcategories/1/',
+                'resource_uri': 'https://www.eventbriteapi.com/v3/subcategories/1/',
                 'name': 'Classical',
                 'parent_category': {
                     'id': '1',
-                    'resource_uri':
-                    'https://www.eventbriteapi.com/v3/categories/1/',
+                    'resource_uri': 'https://www.eventbriteapi.com/v3/categories/1/',
                     'name': 'Music',
                     'name_localized': 'Music',
                     'short_name': 'Music',
@@ -797,22 +790,16 @@ EVENTBRITE_ORDER = {
                 }
             },
             'checkout_settings': {
-                'created':
-                '2018-01-31T13:00:00Z',
-                'changed':
-                '2018-01-31T13:00:00Z',
-                'country_code':
-                '',
-                'currency_code':
-                '',
-                'checkout_method':
-                'paypal',
+                'created': '2018-01-31T13:00:00Z',
+                'changed': '2018-01-31T13:00:00Z',
+                'country_code': '',
+                'currency_code': '',
+                'checkout_method': 'paypal',
                 'offline_settings': [{
                     'payment_method': 'CASH',
                     'instructions': ''
                 }],
-                'user_instrument_vault_id':
-                ''
+                'user_instrument_vault_id': ''
             }
         },
         'order_id':

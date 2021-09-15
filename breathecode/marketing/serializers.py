@@ -79,13 +79,11 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
 
         academy = None
         if 'location' in validated_data:
-            alias = AcademyAlias.objects.filter(
-                active_campaign_slug=validated_data['location']).first()
+            alias = AcademyAlias.objects.filter(active_campaign_slug=validated_data['location']).first()
             if alias is not None:
                 academy = alias.academy
             else:
-                academy = Academy.objects.filter(
-                    active_campaign_slug=validated_data['location']).first()
+                academy = Academy.objects.filter(active_campaign_slug=validated_data['location']).first()
 
         result = super().create({**validated_data, 'academy': academy})
         return result

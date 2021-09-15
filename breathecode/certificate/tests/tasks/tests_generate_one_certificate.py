@@ -16,8 +16,7 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
     """Tests action generate_one_certificate"""
     def test_generate_one_certificate_bad_request(self):
         """generate_one_certificate cant create the certificate"""
-        with patch('breathecode.certificate.actions.generate_certificate'
-                   ) as mock:
+        with patch('breathecode.certificate.actions.generate_certificate') as mock:
             layout = 'vanilla'
             generate_one_certificate(1, 1, layout)
 
@@ -30,22 +29,16 @@ class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
                                      cohort=True,
                                      cohort_user=True,
                                      cohort_user_kwargs=cohort_user_kwargs)
-        with patch('breathecode.certificate.actions.generate_certificate'
-                   ) as mock:
+        with patch('breathecode.certificate.actions.generate_certificate') as mock:
             layout = 'vanilla'
             generate_one_certificate(1, 1, layout)
-        self.assertEqual(mock.call_args_list,
-                         [call(model.user, model.cohort, 'vanilla')])
+        self.assertEqual(mock.call_args_list, [call(model.user, model.cohort, 'vanilla')])
 
     def test_generate_one_certificate_with_user_role_teacher(self):
         """bad request with user role teacher"""
         cohort_user_kwargs = {'role': 'TEACHER'}
-        self.generate_models(user=True,
-                             cohort=True,
-                             cohort_user=True,
-                             cohort_user_kwargs=cohort_user_kwargs)
-        with patch('breathecode.certificate.actions.generate_certificate'
-                   ) as mock:
+        self.generate_models(user=True, cohort=True, cohort_user=True, cohort_user_kwargs=cohort_user_kwargs)
+        with patch('breathecode.certificate.actions.generate_certificate') as mock:
             layout = 'vanilla'
             generate_one_certificate(1, 1, layout)
         self.assertEqual(mock.call_args_list, [])

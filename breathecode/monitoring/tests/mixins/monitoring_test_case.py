@@ -2,15 +2,13 @@
 Collections of mixins used to login in authorize microservice
 """
 from rest_framework.test import APITestCase
-from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin,
-                                      GenerateQueriesMixin, HeadersMixin,
+from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin,
                                       DatetimeMixin, ExceptionMixin)
 from breathecode.authenticate.models import Token
 
 
-class MonitoringTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
-                         GenerateQueriesMixin, HeadersMixin, DatetimeMixin,
-                         ExceptionMixin):
+class MonitoringTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin,
+                         DatetimeMixin, ExceptionMixin):
     """AdmissionsTestCase with auth methods"""
     def setUp(self):
         self.generate_queries()
@@ -22,8 +20,7 @@ class MonitoringTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         kwargs = {}
         if id:
             kwargs['id'] = id
-        return Token.objects.filter(**kwargs).values_list('key',
-                                                          flat=True).first()
+        return Token.objects.filter(**kwargs).values_list('key', flat=True).first()
 
     def check_email_contain_a_correct_token(self, lang, dicts, mock, model):
         token = self.get_token_key()
@@ -44,17 +41,15 @@ class MonitoringTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
             }, ['email'])
 
         self.assertEqual(args_list, [
-            call(
-                f'https://api.mailgun.net/v3/{os.environ.get("MAILGUN_DOMAIN")}/messages',
-                auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
-                data={
-                    'from':
-                    f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
-                    'to': model['user'].email,
-                    'subject': template['subject'],
-                    'text': template['text'],
-                    'html': template['html']
-                })
+            call(f'https://api.mailgun.net/v3/{os.environ.get("MAILGUN_DOMAIN")}/messages',
+                 auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
+                 data={
+                     'from': f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
+                     'to': model['user'].email,
+                     'subject': template['subject'],
+                     'text': template['text'],
+                     'html': template['html']
+                 })
         ])
 
         html = template['html']
@@ -115,15 +110,13 @@ class MonitoringTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
                          'type':
                          'actions',
                          'elements': [{
-                             'type':
-                             'button',
+                             'type': 'button',
                              'text': {
                                  'type': 'plain_text',
                                  'text': answer,
                                  'emoji': True
                              },
-                             'url':
-                             f'https://nps.breatheco.de/1?token={token}'
+                             'url': f'https://nps.breatheco.de/1?token={token}'
                          }]
                      }],
                      'parse':

@@ -21,8 +21,7 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_info_id_without_auth(self):
         """Test /answer without auth"""
-        url = reverse_lazy('media:info_name',
-                           kwargs={'media_name': 'they-killed-kenny.exe'})
+        url = reverse_lazy('media:info_name', kwargs={'media_name': 'they-killed-kenny.exe'})
         response = self.client.get(url)
         json = response.json()
 
@@ -33,8 +32,7 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_info_id_wrong_academy(self):
         """Test /answer without auth"""
-        url = reverse_lazy('media:info_name',
-                           kwargs={'media_name': 'they-killed-kenny.exe'})
+        url = reverse_lazy('media:info_name', kwargs={'media_name': 'they-killed-kenny.exe'})
         response = self.client.get(url, **{'HTTP_Academy': 1})
         json = response.json()
 
@@ -46,18 +44,15 @@ class MediaTestSuite(MediaTestCase):
     def test_info_id_without_capability(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('media:info_name',
-                           kwargs={'media_name': 'they-killed-kenny.exe'})
+        url = reverse_lazy('media:info_name', kwargs={'media_name': 'they-killed-kenny.exe'})
         self.generate_models(authenticate=True)
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail':
-                "You (user: 1) don't have this capability: read_media for academy 1",
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_media for academy 1",
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -70,15 +65,11 @@ class MediaTestSuite(MediaTestCase):
                                       profile_academy=True,
                                       capability='read_media',
                                       role='potato')
-        url = reverse_lazy('media:info_name',
-                           kwargs={'media_name': 'they-killed-kenny.exe'})
+        url = reverse_lazy('media:info_name', kwargs={'media_name': 'they-killed-kenny.exe'})
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'Media not found',
-            'status_code': 404
-        })
+        self.assertEqual(json, {'detail': 'Media not found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_media_dict(), [])
 
@@ -93,8 +84,7 @@ class MediaTestSuite(MediaTestCase):
                                      capability='read_media',
                                      role='potato',
                                      media=True)
-        url = reverse_lazy('media:info_name',
-                           kwargs={'media_name': model['media'].name})
+        url = reverse_lazy('media:info_name', kwargs={'media_name': model['media'].name})
         response = self.client.get(url)
         json = response.json()
 
@@ -111,9 +101,7 @@ class MediaTestSuite(MediaTestCase):
                 'url': model['media'].url
             })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -127,8 +115,7 @@ class MediaTestSuite(MediaTestCase):
                                      role='potato',
                                      media=True,
                                      category=True)
-        url = reverse_lazy('media:info_name',
-                           kwargs={'media_name': model['media'].name})
+        url = reverse_lazy('media:info_name', kwargs={'media_name': model['media'].name})
         response = self.client.get(url)
         json = response.json()
 
@@ -158,6 +145,4 @@ class MediaTestSuite(MediaTestCase):
                 model['media'].url
             })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])

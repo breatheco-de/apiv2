@@ -58,21 +58,17 @@ def reset_password(users=None):
 def resend_invite(token=None, email=None, first_name=None):
     params = {'callback': 'https://admin.breatheco.de'}
     querystr = urllib.parse.urlencode(params)
-    url = os.getenv(
-        'API_URL',
-        '') + '/v1/auth/member/invite/' + str(token) + '?' + querystr
-    send_email_message(
-        'welcome_academy', email, {
-            'email': email,
-            'subject': 'Invitation',
-            'LINK': url,
-            'FIST_NAME': first_name
-        })
+    url = os.getenv('API_URL', '') + '/v1/auth/member/invite/' + str(token) + '?' + querystr
+    send_email_message('welcome_academy', email, {
+        'email': email,
+        'subject': 'Invitation',
+        'LINK': url,
+        'FIST_NAME': first_name
+    })
 
 
 def server_id():
-    key = DeviceId.objects.filter(name='server').values_list(
-        'key', flat=True).first()
+    key = DeviceId.objects.filter(name='server').values_list('key', flat=True).first()
 
     if key:
         return key
@@ -99,17 +95,13 @@ def generate_academy_token(academy_id, force=False):
     academy = Academy.objects.get(id=academy_id)
     academy_user = User.objects.filter(username=academy.slug).first()
     if academy_user is None:
-        academy_user = User(username=academy.slug,
-                            email=f'{academy.slug}@token.com')
+        academy_user = User(username=academy.slug, email=f'{academy.slug}@token.com')
         academy_user.save()
 
         role = Role.objects.get(slug='academy_token')
         # this profile is for tokens, that is why we need no  email validation status=ACTIVE, role must be academy_token
         # and the email is empty
-        profile_academy = ProfileAcademy(user=academy_user,
-                                         academy=academy,
-                                         role=role,
-                                         status='ACTIVE')
+        profile_academy = ProfileAcademy(user=academy_user, academy=academy, role=role, status='ACTIVE')
         profile_academy.save()
 
     if force:

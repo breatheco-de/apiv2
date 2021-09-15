@@ -51,7 +51,7 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin,
 
         self.assertEqual(args_list, [
             call(f'https://api.mailgun.net/v3/{os.environ.get("MAILGUN_DOMAIN")}/messages',
-                 auth=('api', os.environ.get('MAILGUN_API_KEY', "")),
+                 auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
                  data={
                      'from': f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
                      'to': model['user'].email,
@@ -94,7 +94,7 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin,
         slack_id = model['slack_user'].slack_id
         args_list = mock.call_args_list
         question = dicts[0]['title']
-        answer = strings[lang]["button_label"]
+        answer = strings[lang]['button_label']
 
         expected = [
             call(method='POST',

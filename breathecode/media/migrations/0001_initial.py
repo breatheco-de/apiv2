@@ -18,10 +18,7 @@ class Migration(migrations.Migration):
             name='Category',
             fields=[
                 ('id',
-                 models.AutoField(auto_created=True,
-                                  primary_key=True,
-                                  serialize=False,
-                                  verbose_name='ID')),
+                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(max_length=150, unique=True)),
                 ('name', models.CharField(max_length=150)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
@@ -32,10 +29,7 @@ class Migration(migrations.Migration):
             name='Media',
             fields=[
                 ('id',
-                 models.AutoField(auto_created=True,
-                                  primary_key=True,
-                                  serialize=False,
-                                  verbose_name='ID')),
+                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(max_length=150, unique=True)),
                 ('name', models.CharField(max_length=150)),
                 ('mime', models.CharField(max_length=60)),

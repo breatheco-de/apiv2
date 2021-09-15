@@ -27,9 +27,7 @@ class Command(BaseCommand, DatetimeMixin):
     help = 'Backup models'
 
     def add_arguments(self, parser):
-        parser.add_argument('mode',
-                            type=str,
-                            choices=['storage', 'console', 'bucket'])
+        parser.add_argument('mode', type=str, choices=['storage', 'console', 'bucket'])
         parser.add_argument('module', nargs='?', type=str, default='')
         parser.add_argument('model', nargs='?', type=str, default='')
 
@@ -37,8 +35,7 @@ class Command(BaseCommand, DatetimeMixin):
         self.all_model_names = []
 
         if not 'mode' in options:
-            return self.stderr.write(
-                self.style.ERROR(f'missing mode arguments'))
+            return self.stderr.write(self.style.ERROR(f'missing mode arguments'))
 
         module_name = options['module']
         model_name = options['model']
@@ -69,13 +66,11 @@ class Command(BaseCommand, DatetimeMixin):
             if not issubclass(CurrentModel, Model):
                 continue
 
-            if (hasattr(CurrentModel, 'Meta')
-                    and hasattr(CurrentModel.Meta, 'abstract')
+            if (hasattr(CurrentModel, 'Meta') and hasattr(CurrentModel.Meta, 'abstract')
                     and CurrentModel.__name__ != 'User'):
                 continue
 
-            if (hasattr(CurrentModel, 'Meta')
-                    and hasattr(CurrentModel.Meta, 'proxy')
+            if (hasattr(CurrentModel, 'Meta') and hasattr(CurrentModel.Meta, 'proxy')
                     and CurrentModel.__name__ != 'User'):
                 continue
 
@@ -96,15 +91,11 @@ class Command(BaseCommand, DatetimeMixin):
             module = importlib.import_module(path)
         except ModuleNotFoundError:
             return self.stderr.write(
-                self.style.ERROR(
-                    f'module `{self.module_name}` not found or it not have models too'
-                ))
+                self.style.ERROR(f'module `{self.module_name}` not found or it not have models too'))
 
         if not hasattr(module, self.model_name):
             return self.stderr.write(
-                self.style.ERROR(
-                    f'module `{self.module_name}` not have a model called `{self.model_name}`'
-                ))
+                self.style.ERROR(f'module `{self.module_name}` not have a model called `{self.model_name}`'))
 
         CurrentModel = getattr(module, self.model_name)
         results = CurrentModel.objects.all()

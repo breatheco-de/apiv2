@@ -56,8 +56,7 @@ class Command(BaseCommand):
                 if limit and limit > 0 and total > limit:
                     self.stdout.write(
                         self.style.SUCCESS(
-                            f'Stopped at {total} because there was a limit on the command arguments'
-                        ))
+                            f'Stopped at {total} because there was a limit on the command arguments'))
                     return
 
                 user = User.objects.filter(email=email).first()
@@ -66,33 +65,24 @@ class Command(BaseCommand):
 
                 sync_student_tasks(user)
         else:
-            users = CohortUser.objects.filter(
-                role='STUDENT').values('user').annotate(dcount=Count('user'))
-            self.stdout.write(
-                self.style.NOTICE(f'Analyzing {users.count()} cohort users'))
+            users = CohortUser.objects.filter(role='STUDENT').values('user').annotate(dcount=Count('user'))
+            self.stdout.write(self.style.NOTICE(f'Analyzing {users.count()} cohort users'))
             for u in users:
                 if limit and limit > 0 and total > limit:
                     self.stdout.write(
                         self.style.SUCCESS(
-                            f'Stopped at {total} because there was a limit on the command arguments'
-                        ))
+                            f'Stopped at {total} because there was a limit on the command arguments'))
                     return
 
                 user = User.objects.get(id=u['user'])
                 if user.task_set.count() == 0:
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            f'Fetching tasks for student {user.email}'))
+                    self.stdout.write(self.style.SUCCESS(f'Fetching tasks for student {user.email}'))
                 else:
-                    self.stdout.write(
-                        self.style.NOTICE(
-                            f'Tasks already fetched for {user.email}'))
+                    self.stdout.write(self.style.NOTICE(f'Tasks already fetched for {user.email}'))
                     continue
 
                 total += 1
                 try:
                     sync_student_tasks(user)
                 except Exception as e:
-                    self.stdout.write(
-                        self.style.NOTICE(
-                            f'Error synching student stasks for {user.email}'))
+                    self.stdout.write(self.style.NOTICE(f'Error synching student stasks for {user.email}'))

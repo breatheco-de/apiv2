@@ -13,8 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='capability',
             name='slug',
-            field=models.SlugField(max_length=40,
-                                   primary_key=True,
-                                   serialize=False),
+            field=models.SlugField(max_length=40, primary_key=True, serialize=False),
         ),
     ]

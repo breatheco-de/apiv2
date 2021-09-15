@@ -13,18 +13,13 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='venue',
             name='status',
-            field=models.CharField(choices=[('ACTIVE', 'Active'),
-                                            ('DRAFT', 'Draft'),
-                                            ('DELETED', 'Deleted')],
+            field=models.CharField(choices=[('ACTIVE', 'Active'), ('DRAFT', 'Draft'), ('DELETED', 'Deleted')],
                                    default='DRAFT',
                                    max_length=9),
         ),
         migrations.AlterField(
             model_name='venue',
             name='street_address',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   max_length=250,
-                                   null=True),
+            field=models.CharField(blank=True, default=None, max_length=250, null=True),
         ),
     ]

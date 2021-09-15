@@ -13,7 +13,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='AcademySpecialtyMode',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
             ],
@@ -21,10 +22,14 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SpecialtyMode',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(max_length=100)),
                 ('name', models.CharField(max_length=150)),
-                ('schedule_type', models.CharField(choices=[('PART-TIME', 'Part-Time'), ('FULL-TIME', 'Full-Time')], default='PART-TIME', max_length=15)),
+                ('schedule_type',
+                 models.CharField(choices=[('PART-TIME', 'Part-Time'), ('FULL-TIME', 'Full-Time')],
+                                  default='PART-TIME',
+                                  max_length=15)),
                 ('description', models.TextField(max_length=450)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
@@ -33,11 +38,15 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SpecialtyModeTimeSlot',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('starting_at', models.DateTimeField()),
                 ('ending_at', models.DateTimeField()),
                 ('recurrent', models.BooleanField(default=True)),
-                ('recurrency_type', models.CharField(choices=[('DAILY', 'Daily'), ('WEEKLY', 'Weekly'), ('MONTHLY', 'Monthly')], default='WEEKLY', max_length=10)),
+                ('recurrency_type',
+                 models.CharField(choices=[('DAILY', 'Daily'), ('WEEKLY', 'Weekly'), ('MONTHLY', 'Monthly')],
+                                  default='WEEKLY',
+                                  max_length=10)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
             ],
@@ -48,7 +57,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='SyllabusVersion',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('json', models.JSONField()),
                 ('version', models.PositiveSmallIntegerField()),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
@@ -99,7 +109,5 @@ class Migration(migrations.Migration):
             name='week_hours',
             field=models.IntegerField(default=None, null=True),
         ),
-        migrations.DeleteModel(
-            name='AcademyCertificate',
-        ),
+        migrations.DeleteModel(name='AcademyCertificate', ),
     ]

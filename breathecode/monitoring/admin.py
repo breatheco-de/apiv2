@@ -26,20 +26,16 @@ class CustomAppModelForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(CustomAppModelForm, self).__init__(*args, **kwargs)
-        if hasattr(self.instance,
-                   'academy') and self.instance.academy is not None:
-            self.fields[
-                'notify_slack_channel'].queryset = SlackChannel.objects.filter(
-                    team__academy__id=self.instance.academy.id
-                )  # or something else
+        if hasattr(self.instance, 'academy') and self.instance.academy is not None:
+            self.fields['notify_slack_channel'].queryset = SlackChannel.objects.filter(
+                team__academy__id=self.instance.academy.id)  # or something else
 
 
 # Register your models here.
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):
     form = CustomAppModelForm
-    list_display = ('title', 'current_status', 'academy', 'paused_until',
-                    'status_text')
+    list_display = ('title', 'current_status', 'academy', 'paused_until', 'status_text')
     actions = [test_app]
     list_filter = ['status', 'academy__slug']
     raw_id_fields = ['notify_slack_channel']
@@ -53,11 +49,9 @@ class ApplicationAdmin(admin.ModelAdmin):
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
-            return format_html(
-                f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
+            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
 
-        return format_html(
-            f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
 
 def test_endpoint(modeladmin, request, queryset):
@@ -83,8 +77,7 @@ pause_for_one_day.short_description = 'PAUSE for 1 day'
 # Register your models here.
 @admin.register(Endpoint)
 class EndpointAdmin(admin.ModelAdmin):
-    list_display = ('url', 'current_status', 'test_pattern', 'status_code',
-                    'paused_until', 'last_check')
+    list_display = ('url', 'current_status', 'test_pattern', 'status_code', 'paused_until', 'last_check')
     actions = [test_endpoint, pause_for_one_day]
     list_filter = ['status', 'application__title']
 
@@ -99,11 +92,9 @@ class EndpointAdmin(admin.ModelAdmin):
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
-            return format_html(
-                f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
+            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
 
-        return format_html(
-            f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
 
 def run_single_script(modeladmin, request, queryset):
@@ -140,9 +131,8 @@ class CustomForm(forms.ModelForm):
 @admin.register(MonitorScript)
 class MonitorScriptAdmin(admin.ModelAdmin):
     form = CustomForm
-    list_display = ('script_slug', 'application', 'current_status',
-                    'frequency_delta', 'status_code', 'paused_until',
-                    'last_run')
+    list_display = ('script_slug', 'application', 'current_status', 'frequency_delta', 'status_code',
+                    'paused_until', 'last_run')
     actions = [run_single_script]
     list_filter = ['status', 'application__title']
 
@@ -154,8 +144,6 @@ class MonitorScriptAdmin(admin.ModelAdmin):
         }
         now = timezone.now()
         if obj.paused_until is not None and obj.paused_until > now:
-            return format_html(
-                f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
+            return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
 
-        return format_html(
-            f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")

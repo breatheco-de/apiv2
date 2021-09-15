@@ -34,9 +34,9 @@ def build_question(answer):
         question['lowest'] = strings[answer.lang]['mentor']['lowest']
         question['highest'] = strings[answer.lang]['mentor']['highest']
     elif answer.cohort is not None:
-        question["title"] = strings[answer.lang]["cohort"]["title"].format(answer.cohort.specialty_mode.name)
-        question["lowest"] = strings[answer.lang]["cohort"]["lowest"]
-        question["highest"] = strings[answer.lang]["cohort"]["highest"]
+        question['title'] = strings[answer.lang]['cohort']['title'].format(answer.cohort.specialty_mode.name)
+        question['lowest'] = strings[answer.lang]['cohort']['lowest']
+        question['highest'] = strings[answer.lang]['cohort']['highest']
     elif answer.academy is not None:
         question['title'] = strings[answer.lang]['academy']['title'].format(answer.academy.name)
         question['lowest'] = strings[answer.lang]['academy']['lowest']

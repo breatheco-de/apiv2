@@ -12,12 +12,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.DeleteModel(
-            name='Certificate',
-        ),
-        migrations.DeleteModel(
-            name='CertificateTimeSlot',
-        ),
+        migrations.DeleteModel(name='Certificate', ),
+        migrations.DeleteModel(name='CertificateTimeSlot', ),
         migrations.AddField(
             model_name='syllabusversion',
             name='syllabus',
@@ -31,7 +27,8 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='specialtymodetimeslot',
             name='specialty_mode',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.specialtymode'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
+                                    to='admissions.specialtymode'),
         ),
         migrations.AddField(
             model_name='academyspecialtymode',
@@ -41,16 +38,23 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='academyspecialtymode',
             name='specialty_mode',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.specialtymode'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
+                                    to='admissions.specialtymode'),
         ),
         migrations.AddField(
             model_name='cohort',
             name='specialty_mode',
-            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to='admissions.specialtymode'),
+            field=models.ForeignKey(default=None,
+                                    null=True,
+                                    on_delete=django.db.models.deletion.CASCADE,
+                                    to='admissions.specialtymode'),
         ),
         migrations.AddField(
             model_name='cohort',
             name='syllabus_version',
-            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to='admissions.syllabusversion'),
+            field=models.ForeignKey(default=None,
+                                    null=True,
+                                    on_delete=django.db.models.deletion.CASCADE,
+                                    to='admissions.syllabusversion'),
         ),
     ]

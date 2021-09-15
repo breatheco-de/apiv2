@@ -13,8 +13,7 @@ class ResetPasswordForm(forms.Form):
 
     def __init__(self, params, *args, **kwargs):
         super(forms.Form, self).__init__(params, *args, **kwargs)
-        self.fields['callback'].widget.attrs.update(
-            {'initial': params.get('callback')})
+        self.fields['callback'].widget.attrs.update({'initial': params.get('callback')})
 
 
 class LoginForm(forms.Form):
@@ -23,12 +22,11 @@ class LoginForm(forms.Form):
         'label': 'email',
         'class': 'form-control',
     }), )
-    password = forms.CharField(
-        min_length=8,
-        widget=forms.PasswordInput(attrs={
-            'type': 'password',
-            'class': 'form-control',
-        }))
+    password = forms.CharField(min_length=8,
+                               widget=forms.PasswordInput(attrs={
+                                   'type': 'password',
+                                   'class': 'form-control',
+                               }))
 
     def __init__(self, params, *args, **kwargs):
         super(forms.Form, self).__init__(params, *args, **kwargs)
@@ -46,19 +44,16 @@ class PickPasswordForm(forms.Form):
             'class': 'form-control',
         }),
     )
-    password2 = forms.CharField(
-        min_length=8,
-        widget=forms.PasswordInput(attrs={
-            'type': 'password',
-            'class': 'form-control',
-        }))
+    password2 = forms.CharField(min_length=8,
+                                widget=forms.PasswordInput(attrs={
+                                    'type': 'password',
+                                    'class': 'form-control',
+                                }))
 
     def __init__(self, params, *args, **kwargs):
         super(forms.Form, self).__init__(params, *args, **kwargs)
-        self.fields['token'].widget.attrs.update(
-            {'initial': params.get('token')})
-        self.fields['callback'].widget.attrs.update(
-            {'initial': params.get('callback')})
+        self.fields['token'].widget.attrs.update({'initial': params.get('token')})
+        self.fields['callback'].widget.attrs.update({'initial': params.get('callback')})
 
 
 class InviteForm(forms.Form):
@@ -96,12 +91,11 @@ class InviteForm(forms.Form):
             'class': 'form-control',
         }),
     )
-    password2 = forms.CharField(
-        min_length=8,
-        widget=forms.PasswordInput(attrs={
-            'type': 'password',
-            'class': 'form-control',
-        }))
+    password2 = forms.CharField(min_length=8,
+                                widget=forms.PasswordInput(attrs={
+                                    'type': 'password',
+                                    'class': 'form-control',
+                                }))
 
     def __init__(self, params, *args, **kwargs):
         super(forms.Form, self).__init__(params, *args, **kwargs)
