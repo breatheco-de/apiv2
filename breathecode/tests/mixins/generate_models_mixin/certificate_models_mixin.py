@@ -13,13 +13,13 @@ class CertificateModelsMixin(ModelsMixin):
     def generate_certificate_models(self,
                                     layout_design=False,
                                     specialty=False,
-                                    certificate=False,
+                                    syllabus=False,
                                     user_specialty=False,
                                     layout_design_slug='',
                                     user_specialty_preview_url='',
                                     user_specialty_token='',
                                     badge=False,
-                                    specialty_kwargs={},
+                                    syllabus_kwargs={},
                                     badge_kwargs={},
                                     layout_design_kwargs={},
                                     user_specialty_kwargs={},
@@ -31,10 +31,10 @@ class CertificateModelsMixin(ModelsMixin):
         if not 'specialty' in models and specialty:
             kargs = {}
 
-            if 'certificate' in models or certificate:
-                kargs['certificate'] = models['certificate']
+            if 'syllabus' in models or syllabus:
+                kargs['syllabus'] = models['syllabus']
 
-            kargs = {**kargs, **specialty_kwargs}
+            kargs = {**kargs, **syllabus_kwargs}
             models['specialty'] = mixer.blend('certificate.Specialty', **kargs)
 
         if not 'badge' in models and badge:
@@ -53,8 +53,7 @@ class CertificateModelsMixin(ModelsMixin):
                 kargs['slug'] = layout_design_slug
 
             kargs = {**kargs, **layout_design_kwargs}
-            models['layout_design'] = mixer.blend('certificate.LayoutDesign',
-                                                  **kargs)
+            models['layout_design'] = mixer.blend('certificate.LayoutDesign', **kargs)
 
         if not 'user_specialty' in models and user_specialty:
             kargs = {
@@ -84,7 +83,6 @@ class CertificateModelsMixin(ModelsMixin):
                 kargs['cohort'] = models['cohort']
 
             kargs = {**kargs, **user_specialty_kwargs}
-            models['user_specialty'] = mixer.blend('certificate.UserSpecialty',
-                                                   **kargs)
+            models['user_specialty'] = mixer.blend('certificate.UserSpecialty', **kargs)
 
         return models

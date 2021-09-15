@@ -22,11 +22,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='asset',
             name='asset_type',
-            field=models.CharField(choices=[('PROJECT', 'Project'),
-                                            ('EXERCISE', 'Exercise'),
-                                            ('QUIZ', 'Quiz'),
-                                            ('LESSON', 'Lesson'),
-                                            ('LESSON', 'Video')],
+            field=models.CharField(choices=[('PROJECT', 'Project'), ('EXERCISE', 'Exercise'),
+                                            ('QUIZ', 'Quiz'), ('LESSON', 'Lesson'), ('LESSON', 'Video')],
                                    max_length=20),
         ),
         migrations.AlterField(

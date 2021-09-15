@@ -16,23 +16,15 @@ import random
 RANDOM_COUNT = random.randint(1, 1000)
 
 DATASTORE_SEED = [{
-    'academy_id':
-    0,
-    'cohort':
-    None,
+    'academy_id': 0,
+    'cohort': None,
     'created_at': (timezone.now() + timedelta(days=1)).isoformat() + 'Z',
-    'data':
-    None,
-    'day':
-    13,
-    'email':
-    'konan@naruto.io',
-    'slug':
-    'breathecode_login',
-    'user_agent':
-    'bc/test',
-    'user_id':
-    1,
+    'data': None,
+    'day': 13,
+    'email': 'konan@naruto.io',
+    'slug': 'breathecode_login',
+    'user_agent': 'bc/test',
+    'user_id': 1,
 }]
 
 
@@ -40,24 +32,15 @@ def generate_data(num_objs):
     DATASTORE_SEED = []
     for x in range(num_objs):
         DATASTORE_SEED.append({
-            'academy_id':
-            0,
-            'cohort':
-            None,
-            'created_at':
-            (timezone.now() + timedelta(days=1)).isoformat() + 'Z',
-            'data':
-            None,
-            'day':
-            13,
-            'email':
-            'konan@naruto.io',
-            'slug':
-            'breathecode_login',
-            'user_agent':
-            'bc/test',
-            'user_id':
-            1,
+            'academy_id': 0,
+            'cohort': None,
+            'created_at': (timezone.now() + timedelta(days=1)).isoformat() + 'Z',
+            'data': None,
+            'day': 13,
+            'email': 'konan@naruto.io',
+            'slug': 'breathecode_login',
+            'user_agent': 'bc/test',
+            'user_id': 1,
         })
     return DATASTORE_SEED
 
@@ -99,35 +82,30 @@ class MediaTestSuite(MediaTestCase):
     🔽🔽🔽 Auth
     """
     def test_type__without_auth(self):
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_type__wrong_academy(self):
         self.headers(academy=1)
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_type__without_capability(self):
         self.headers(academy=1)
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
         self.generate_models(authenticate=True)
         response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(
             json, {
-                'detail':
-                ("You (user: 1) don't have this capability: classroom_activity for "
-                 'academy 1'),
-                'status_code':
-                403,
+                'detail': ("You (user: 1) don't have this capability: classroom_activity for "
+                           'academy 1'),
+                'status_code': 403,
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -136,9 +114,7 @@ class MediaTestSuite(MediaTestCase):
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
     @patch.object(Datastore, 'count', new=datastore_count_mock(RANDOM_COUNT))
     def test_get_activities_slug_filtered(self):
         from breathecode.services.google_cloud import Datastore as mock
@@ -152,8 +128,7 @@ class MediaTestSuite(MediaTestCase):
                              role='potato',
                              cohort_kwargs=cohort_kwargs)
 
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
         response = self.client.get(url)
 
         json = response.json()
@@ -174,9 +149,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(kind='student_activity',
-                 cohort='miami-downtown-pt-xx',
-                 slug='breathecode_login'),
+            call(kind='student_activity', cohort='miami-downtown-pt-xx', slug='breathecode_login'),
         ])
         self.assertEqual(mock.count.call_args_list, [])
 
@@ -185,9 +158,7 @@ class MediaTestSuite(MediaTestCase):
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=generate_data(3)))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=generate_data(3)))
     @patch.object(Datastore, 'count', new=datastore_count_mock(RANDOM_COUNT))
     def test_get_activities_without_pagination(self):
         from breathecode.services.google_cloud import Datastore as mock
@@ -201,8 +172,7 @@ class MediaTestSuite(MediaTestCase):
                              role='potato',
                              cohort_kwargs=cohort_kwargs)
 
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1})
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1})
         response = self.client.get(url)
 
         json = response.json()
@@ -225,9 +195,7 @@ class MediaTestSuite(MediaTestCase):
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=generate_data(10)))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=generate_data(10)))
     @patch.object(Datastore, 'count', new=datastore_count_mock(RANDOM_COUNT))
     def test_get_activities_limit(self):
         from breathecode.services.google_cloud import Datastore as mock
@@ -241,8 +209,7 @@ class MediaTestSuite(MediaTestCase):
                              role='potato',
                              cohort_kwargs=cohort_kwargs)
 
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1}) + '?limit=5'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1}) + '?limit=5'
         response = self.client.get(url)
 
         json = response.json()
@@ -273,25 +240,20 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(json, wrapper)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(kind='student_activity',
-                 cohort='miami-downtown-pt-xx',
-                 limit=5),
+            call(kind='student_activity', cohort='miami-downtown-pt-xx', limit=5),
         ])
-        self.assertEqual(
-            mock.count.call_args_list,
-            [call(
-                kind='student_activity',
-                cohort='miami-downtown-pt-xx',
-            )])
+        self.assertEqual(mock.count.call_args_list,
+                         [call(
+                             kind='student_activity',
+                             cohort='miami-downtown-pt-xx',
+                         )])
 
     """
     🔽🔽🔽 With limit and offset
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=generate_data(10)))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=generate_data(10)))
     @patch.object(Datastore, 'count', new=datastore_count_mock(RANDOM_COUNT))
     def test_get_activities_offset(self):
         from breathecode.services.google_cloud import Datastore as mock
@@ -305,8 +267,7 @@ class MediaTestSuite(MediaTestCase):
                              role='potato',
                              cohort_kwargs=cohort_kwargs)
 
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1}) + '?offset=5&limit=5'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1}) + '?offset=5&limit=5'
         response = self.client.get(url)
         json = response.json()
         data = {
@@ -324,8 +285,7 @@ class MediaTestSuite(MediaTestCase):
             'count': RANDOM_COUNT,
             'first': 'http://testserver/v1/activity/academy/cohort/1?limit=5',
             'next': None,
-            'previous':
-            'http://testserver/v1/activity/academy/cohort/1?limit=5',
+            'previous': 'http://testserver/v1/activity/academy/cohort/1?limit=5',
             'last': None,
             'results': [data for _ in range(0, 5)]
         }
@@ -337,26 +297,20 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, wrapper)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(kind='student_activity',
-                 cohort='miami-downtown-pt-xx',
-                 limit=5,
-                 offset=5),
+            call(kind='student_activity', cohort='miami-downtown-pt-xx', limit=5, offset=5),
         ])
-        self.assertEqual(
-            mock.count.call_args_list,
-            [call(
-                kind='student_activity',
-                cohort='miami-downtown-pt-xx',
-            )])
+        self.assertEqual(mock.count.call_args_list,
+                         [call(
+                             kind='student_activity',
+                             cohort='miami-downtown-pt-xx',
+                         )])
 
     """
     🔽🔽🔽 With offset above the total items
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=generate_data(20)))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=generate_data(20)))
     @patch.object(Datastore, 'count', new=datastore_count_mock(RANDOM_COUNT))
     def test_get_activities_with_limit_and_offset(self):
         from breathecode.services.google_cloud import Datastore as mock
@@ -371,8 +325,7 @@ class MediaTestSuite(MediaTestCase):
                              role='potato',
                              cohort_kwargs=cohort_kwargs)
 
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1}) + '?offset=20&limit=10'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1}) + '?offset=20&limit=10'
         response = self.client.get(url)
 
         json = response.json()
@@ -391,8 +344,7 @@ class MediaTestSuite(MediaTestCase):
             'count': RANDOM_COUNT,
             'first': 'http://testserver/v1/activity/academy/cohort/1?limit=10',
             'next': None,
-            'previous':
-            'http://testserver/v1/activity/academy/cohort/1?limit=10&offset=10',
+            'previous': 'http://testserver/v1/activity/academy/cohort/1?limit=10&offset=10',
             'last': None,
             'results': []
         }
@@ -401,26 +353,20 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(json['count'], RANDOM_COUNT)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(kind='student_activity',
-                 cohort='miami-downtown-pt-xx',
-                 limit=10,
-                 offset=20),
+            call(kind='student_activity', cohort='miami-downtown-pt-xx', limit=10, offset=20),
         ])
-        self.assertEqual(
-            mock.count.call_args_list,
-            [call(
-                kind='student_activity',
-                cohort='miami-downtown-pt-xx',
-            )])
+        self.assertEqual(mock.count.call_args_list,
+                         [call(
+                             kind='student_activity',
+                             cohort='miami-downtown-pt-xx',
+                         )])
 
     """
     🔽🔽🔽 Without cohort
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
     def test_get_activities_slug_filtered(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -433,8 +379,7 @@ class MediaTestSuite(MediaTestCase):
                              role='potato',
                              cohort_kwargs=cohort_kwargs)
 
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
         response = self.client.get(url)
 
         json = response.json()
@@ -455,9 +400,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(kind='student_activity',
-                 cohort='miami-downtown-pt-xx',
-                 slug='breathecode_login'),
+            call(kind='student_activity', cohort='miami-downtown-pt-xx', slug='breathecode_login'),
         ])
 
     """
@@ -465,9 +408,7 @@ class MediaTestSuite(MediaTestCase):
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
     def test_get_activities_without_valid_cohort(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -480,16 +421,12 @@ class MediaTestSuite(MediaTestCase):
                              role='potato',
                              cohort_kwargs=cohort_kwargs)
 
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 'potato300'
-                                   }) + '?slug=breathecode_login'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 'potato300'
+                                                                 }) + '?slug=breathecode_login'
         response = self.client.get(url)
 
         json = response.json()
-        self.assertEqual(json, {
-            'detail': 'cohort-not-found',
-            'status_code': 400
-        })
+        self.assertEqual(json, {'detail': 'cohort-not-found', 'status_code': 400})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     """
@@ -497,9 +434,7 @@ class MediaTestSuite(MediaTestCase):
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
     def test_get_activities_without_valid_activity(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -512,15 +447,11 @@ class MediaTestSuite(MediaTestCase):
                              role='potato',
                              cohort_kwargs=cohort_kwargs)
 
-        url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={'cohort_id': 1}) + '?slug=logout'
+        url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1}) + '?slug=logout'
         response = self.client.get(url)
 
         json = response.json()
-        self.assertEqual(json, {
-            'detail': 'activity-not-found',
-            'status_code': 400
-        })
+        self.assertEqual(json, {'detail': 'activity-not-found', 'status_code': 400})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     """
@@ -528,9 +459,7 @@ class MediaTestSuite(MediaTestCase):
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
     def test_get_activities_invalid_user_id(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -544,9 +473,7 @@ class MediaTestSuite(MediaTestCase):
                              cohort_kwargs=cohort_kwargs)
 
         url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={
-                               'cohort_id': 1
-                           }) + '?slug=breathecode_login' + '&user_id=batman'
+                           kwargs={'cohort_id': 1}) + '?slug=breathecode_login' + '&user_id=batman'
         response = self.client.get(url)
 
         json = response.json()
@@ -558,9 +485,7 @@ class MediaTestSuite(MediaTestCase):
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=DATASTORE_SEED))
     def test_get_activities_user_no_exists(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -574,14 +499,9 @@ class MediaTestSuite(MediaTestCase):
                              cohort_kwargs=cohort_kwargs)
 
         url = reverse_lazy('activity:academy_cohort_id',
-                           kwargs={
-                               'cohort_id': 1
-                           }) + '?slug=breathecode_login' + '&user_id=300'
+                           kwargs={'cohort_id': 1}) + '?slug=breathecode_login' + '&user_id=300'
         response = self.client.get(url)
 
         json = response.json()
-        self.assertEqual(json, {
-            'detail': 'user-not-exists',
-            'status_code': 400
-        })
+        self.assertEqual(json, {'detail': 'user-not-exists', 'status_code': 400})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

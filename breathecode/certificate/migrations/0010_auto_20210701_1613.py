@@ -15,10 +15,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='layoutdesign',
             name='academy',
-            field=models.ForeignKey(
-                default=4,
-                on_delete=django.db.models.deletion.CASCADE,
-                to='admissions.academy'),
+            field=models.ForeignKey(default=4,
+                                    on_delete=django.db.models.deletion.CASCADE,
+                                    to='admissions.academy'),
             preserve_default=False,
         ),
         migrations.AddField(

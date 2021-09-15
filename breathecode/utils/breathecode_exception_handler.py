@@ -19,15 +19,9 @@ def breathecode_exception_handler(exc, context):
     if response is not None:
         if isinstance(response.data, list):
             if response.data[0].code != 'invalid':
-                response.data = {
-                    'status_code': response.data[0].code,
-                    'details': str(response.data[0])
-                }
+                response.data = {'status_code': response.data[0].code, 'details': str(response.data[0])}
             else:
-                response.data = {
-                    'status_code': 500,
-                    'details': str(response.data[0])
-                }
+                response.data = {'status_code': 500, 'details': str(response.data[0])}
         else:
             response.data['status_code'] = response.status_code
 

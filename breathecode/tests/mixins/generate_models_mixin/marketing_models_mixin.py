@@ -35,8 +35,7 @@ class MarketingModelsMixin(ModelsMixin):
                 kargs['academy'] = models['academy']
 
             kargs = {**kargs, **active_campaign_academy_kwargs}
-            models['active_campaign_academy'] = mixer.blend(
-                'marketing.ActiveCampaignAcademy', **kargs)
+            models['active_campaign_academy'] = mixer.blend('marketing.ActiveCampaignAcademy', **kargs)
 
         if not 'automation' in models and automation:
             kargs = {}
@@ -54,15 +53,12 @@ class MarketingModelsMixin(ModelsMixin):
                 kargs['academy'] = models['academy']
 
             kargs = {**kargs, **academy_alias_kwargs}
-            models['academy_alias'] = mixer.blend('marketing.AcademyAlias',
-                                                  **kargs)
+            models['academy_alias'] = mixer.blend('marketing.AcademyAlias', **kargs)
 
         # OneToOneField
         if 'active_campaign_academy' in models and active_campaign_academy:
             if 'automation' in models or automation:
-                models[
-                    'active_campaign_academy'].event_attendancy_automation = models[
-                        'automation']
+                models['active_campaign_academy'].event_attendancy_automation = models['automation']
 
             models['active_campaign_academy'].save()
 

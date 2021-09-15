@@ -9,8 +9,6 @@ class EventsQueriesMixin():
         return {
             'module':
             'events',
-            'models': [
-                'Organization', 'Organizer', 'Venue', 'EventType', 'Event',
-                'EventCheckin', 'EventbriteWebhook'
-            ]
+            'models':
+            ['Organization', 'Organizer', 'Venue', 'EventType', 'Event', 'EventCheckin', 'EventbriteWebhook']
         }

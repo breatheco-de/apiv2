@@ -31,3 +31,8 @@ class File:
         """Delete Blob from Bucker"""
         # TODO Private url
         return self.blob.public_url
+
+    def download(self) -> str:
+        """Delete Blob from Bucker"""
+        if self.blob:
+            return self.blob.download_as_string()

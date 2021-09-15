@@ -26,30 +26,25 @@ def send_email_message(template_slug, to, data={}):
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE':
         template = get_template_content(template_slug, data, ['email'])
 
-        result = requests.post(
-            f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
-            auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
-            data={
-                'from':
-                f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
-                'to': to,
-                'subject': template['subject'],
-                'text': template['text'],
-                'html': template['html']
-            })
+        result = requests.post(f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages",
+                               auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
+                               data={
+                                   'from': f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
+                                   'to': to,
+                                   'subject': template['subject'],
+                                   'text': template['text'],
+                                   'html': template['html']
+                               })
 
         if result.status_code != 200:
-            logger.error(
-                f'Error sending email, mailgun status code: {str(result.status_code)}'
-            )
+            logger.error(f'Error sending email, mailgun status code: {str(result.status_code)}')
             logger.error(result.text)
         else:
             logger.debug('Email notification  ' + template_slug + ' sent')
 
         return result.status_code == 200
     else:
-        logger.warning(
-            'Email not sent because EMAIL_NOTIFICATIONS_ENABLED != TRUE')
+        logger.warning('Email not sent because EMAIL_NOTIFICATIONS_ENABLED != TRUE')
         return True
 
 
@@ -63,9 +58,7 @@ def send_sms(slug, phone_number, data={}):
     client = Client(TWILLIO_SID, TWILLIO_SECRET)
 
     try:
-        message = client.messages.create(body=template['sms'],
-                                         from_='+15017122661',
-                                         to='+1' + phone_number)
+        message = client.messages.create(body=template['sms'], from_='+15017122661', to='+1' + phone_number)
         return True
     except Exception:
         return False
@@ -126,13 +119,12 @@ def send_slack_raw(slug, token, channel_id, data={}):
             meta = payload['private_metadata']
 
         api = client.Slack(token)
-        data = api.post(
-            'chat.postMessage', {
-                'channel': channel_id,
-                'private_metadata': meta,
-                'blocks': payload,
-                'parse': 'full'
-            })
+        data = api.post('chat.postMessage', {
+            'channel': channel_id,
+            'private_metadata': meta,
+            'blocks': payload,
+            'parse': 'full'
+        })
         logger.debug(f'Notification to {str(channel_id)} sent')
         return True
     except Exception as e:
@@ -147,8 +139,7 @@ def send_fcm(slug, registration_ids, data={}):
         template = get_template_content(slug, data, ['email', 'fms'])
 
         if 'fms' not in template:
-            raise APIException('The template ' + slug +
-                               ' does not seem to have a valid FMS version')
+            raise APIException('The template ' + slug + ' does not seem to have a valid FMS version')
 
         message_title = template['subject']
         message_body = template['fms']
@@ -156,11 +147,10 @@ def send_fcm(slug, registration_ids, data={}):
             raise Exception('There is no data for the notification')
         message_data = data['DATA']
 
-        result = push_service.notify_multiple_devices(
-            registration_ids=registration_ids,
-            message_title=message_title,
-            message_body=message_body,
-            data_message=message_data)
+        result = push_service.notify_multiple_devices(registration_ids=registration_ids,
+                                                      message_title=message_title,
+                                                      message_body=message_body,
+                                                      data_message=message_data)
 
         # if(result["failure"] or not result["success"]):
         #     raise APIException("Problem sending the notification")
@@ -237,8 +227,7 @@ def sync_slack_team_channel(team_id):
     if team is None:
         raise Exception('Invalid team id: ' + str(team_id))
 
-    credentials = CredentialsSlack.objects.filter(
-        team_id=team.slack_id).first()
+    credentials = CredentialsSlack.objects.filter(team_id=team.slack_id).first()
     if credentials is None or credentials.token is None:
         raise Exception(f'No credentials found for this team {team_id}')
 
@@ -255,8 +244,7 @@ def sync_slack_team_channel(team_id):
 
     channels = data['channels']
     while 'response_metadata' in data and 'next_cursor' in data[
-            'response_metadata'] and data['response_metadata'][
-                'next_cursor'] != '':
+            'response_metadata'] and data['response_metadata']['next_cursor'] != '':
         print('Next cursor: ', data['response_metadata']['next_cursor'])
         data = api.get(
             'conversations.list', {
@@ -270,8 +258,7 @@ def sync_slack_team_channel(team_id):
     for channel in channels:
 
         # only sync channels
-        if channel['is_channel'] == False and channel[
-                'is_group'] == False and channel['is_general'] == False:
+        if channel['is_channel'] == False and channel['is_group'] == False and channel['is_general'] == False:
             continue
 
         # will raise exception if it fails
@@ -292,8 +279,7 @@ def sync_slack_team_users(team_id):
     if team is None:
         raise Exception('Invalid team id: ' + str(team_id))
 
-    credentials = CredentialsSlack.objects.filter(
-        team_id=team.slack_id).first()
+    credentials = CredentialsSlack.objects.filter(team_id=team.slack_id).first()
     if credentials is None:
         raise Exception(f'No credentials found for this team {team_id}')
 
@@ -307,13 +293,9 @@ def sync_slack_team_users(team_id):
 
     members = data['members']
     while 'response_metadata' in data and 'next_cursor' in data[
-            'response_metadata'] and data['response_metadata'][
-                'next_cursor'] != '':
+            'response_metadata'] and data['response_metadata']['next_cursor'] != '':
         print('Next cursor: ', data['response_metadata']['next_cursor'])
-        data = api.get('users.list', {
-            'limit': 300,
-            'cursor': data['response_metadata']['next_cursor']
-        })
+        data = api.get('users.list', {'limit': 300, 'cursor': data['response_metadata']['next_cursor']})
         members = members + data['members']
 
     logger.debug(f'Found {str(len(members))} members, starting to sync')
@@ -351,12 +333,10 @@ def sync_slack_user(payload, team=None):
         if 'email' not in payload['profile']:
             logger.fatal('User without email')
             logger.fatal(payload)
-            raise Exception(
-                'Slack users are not coming with emails from the API')
+            raise Exception('Slack users are not coming with emails from the API')
 
-    cohort_user = CohortUser.objects.filter(
-        user__email=payload['profile']['email'],
-        cohort__academy__id=team.academy.id).first()
+    cohort_user = CohortUser.objects.filter(user__email=payload['profile']['email'],
+                                            cohort__academy__id=team.academy.id).first()
     if cohort_user is not None:
         user = cohort_user.user
     else:
@@ -365,8 +345,7 @@ def sync_slack_user(payload, team=None):
         )
         return False
 
-    user_team = SlackUserTeam.objects.filter(slack_team=team,
-                                             slack_user=slack_user).first()
+    user_team = SlackUserTeam.objects.filter(slack_team=team, slack_user=slack_user).first()
     if user_team is None:
         user_team = SlackUserTeam(
             slack_team=team,
@@ -412,8 +391,7 @@ def sync_slack_channel(payload, team=None):
         cohort = Cohort.objects.filter(slug=payload['name_normalized']).first()
         if cohort is None:
             logger.warning(
-                f"Slack channel {payload['name_normalized']} has no corresponding cohort in breathecode"
-            )
+                f"Slack channel {payload['name_normalized']} has no corresponding cohort in breathecode")
 
         slack_channel = SlackChannel(
             slack_id=payload['id'],

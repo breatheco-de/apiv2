@@ -33,10 +33,7 @@ class UserAdmin(UserAdmin):
 # Register your models here.
 @admin.register(Assessment)
 class AssessmentAdmin(admin.ModelAdmin):
-    search_fields = [
-        'title', 'user__first_name', 'user__last_name', 'user__email',
-        'academy__slug'
-    ]
+    search_fields = ['title', 'user__first_name', 'user__last_name', 'user__email', 'academy__slug']
     list_display = ('title', 'academy', 'comment', 'created_at')
     list_filter = ['private', 'academy__slug']
     # def entity(self, object):
@@ -63,7 +60,5 @@ class OptionAdmin(admin.ModelAdmin):
 @admin.register(UserAssessment)
 class UserAssessmentAdmin(admin.ModelAdmin):
     search_fields = ['title', 'question__assessment__title']
-    list_display = [
-        'title', 'status', 'lang', 'owner', 'total_score', 'assessment'
-    ]
+    list_display = ['title', 'status', 'lang', 'owner', 'total_score', 'assessment']
     list_filter = ['lang']

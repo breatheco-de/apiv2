@@ -30,9 +30,7 @@ if __name__ == '__main__':
 
     print('')
     print('Load fixtures')
-    execute(
-        'pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json'
-    )
+    execute('pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json')
 
     print('')
     print('Run server')

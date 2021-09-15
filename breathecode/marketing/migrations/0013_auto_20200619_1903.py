@@ -16,8 +16,7 @@ class Migration(migrations.Migration):
             name='automation',
             field=models.ForeignKey(
                 default=None,
-                help_text=
-                'Leads that contain this tag will be asociated to this automation',
+                help_text='Leads that contain this tag will be asociated to this automation',
                 null=True,
                 on_delete=django.db.models.deletion.CASCADE,
                 to='marketing.Automation'),
@@ -25,9 +24,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='automation',
             name='status',
-            field=models.CharField(choices=[('1', 'Active'),
-                                            ('2', 'Innactive'),
-                                            ('0', 'Uknown')],
+            field=models.CharField(choices=[('1', 'Active'), ('2', 'Innactive'), ('0', 'Uknown')],
                                    default='0',
                                    help_text='2 = inactive, 1=active',
                                    max_length=1),

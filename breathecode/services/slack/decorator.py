@@ -18,8 +18,7 @@ def command(only=None):
             if only == 'staff':
                 profiles = ProfileAcademy.objects.filter(
                     user__slackuser__slack_id=context['user_id'],
-                    academy__slackteam__slack_id=context['team_id']
-                ).values_list('academy__id', flat=True)
+                    academy__slackteam__slack_id=context['team_id']).values_list('academy__id', flat=True)
                 if len(profiles) == 0:
                     raise Exception(
                         f"Your user {context['user_id']} don't have permissions to query this student, are you a staff on this academy?"
@@ -50,12 +49,10 @@ def action(only=None):
             if only == 'staff':
                 profiles = ProfileAcademy.objects.filter(
                     user__slackuser__slack_id=context['user']['id'],
-                    academy__slackteam__slack_id=context['team']
-                    ['id']).values_list('academy__id', flat=True)
+                    academy__slackteam__slack_id=context['team']['id']).values_list('academy__id', flat=True)
                 if len(profiles) == 0:
                     raise Exception(
-                        f"Your user {context['user']['id']} don't have permissions execute this action"
-                    )
+                        f"Your user {context['user']['id']} don't have permissions execute this action")
 
             kwargs['academies'] = profiles
             kwargs['user_id'] = context['user']['id']

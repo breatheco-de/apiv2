@@ -47,18 +47,14 @@ def get_root_schema_view(elements, extend={}):
         if hasattr(Cache, 'openapi'):
             return Response(Cache.openapi)
 
-        schema_urls = [
-            reverse(f'{element}-openapi-schema') for element in elements
-        ]
+        schema_urls = [reverse(f'{element}-openapi-schema') for element in elements]
 
         schema_dicts = []
         for element in schema_urls:
             response = requests.get(host + element)
 
             if response.status_code >= 300:
-                raise ValidationException(f'Unhandled {element}',
-                                          500,
-                                          slug='unhandled-app')
+                raise ValidationException(f'Unhandled {element}', 500, slug='unhandled-app')
             content = response.content.decode('utf-8')
 
             schema_dicts.append(yaml.load(content, Loader=FullLoader))
@@ -67,9 +63,7 @@ def get_root_schema_view(elements, extend={}):
             for key in element['paths']:
                 result['paths'][key] = element['paths'][key]
                 for key2 in result['paths'][key]:
-                    result['paths'][key][key2]['security'] = [{
-                        'ApiKeyAuth': []
-                    }]
+                    result['paths'][key][key2]['security'] = [{'ApiKeyAuth': []}]
 
         setattr(Cache, 'openapi', result)
 

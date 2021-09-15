@@ -4,8 +4,7 @@ from .models import Media, MediaResolution, Category
 
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'name', 'mime', 'url', 'thumbnail', 'hash', 'hits',
-                    'academy')
+    list_display = ('slug', 'name', 'mime', 'url', 'thumbnail', 'hash', 'hits', 'academy')
     list_filter = ['name', 'slug', 'hash', 'categories']
 
 

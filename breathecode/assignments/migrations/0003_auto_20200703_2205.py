@@ -18,9 +18,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='task',
             name='task_type',
-            field=models.CharField(choices=[('PROJECT', 'project'),
-                                            ('QUIZ', 'quiz'),
-                                            ('LESSON', 'lesson'),
+            field=models.CharField(choices=[('PROJECT', 'project'), ('QUIZ', 'quiz'), ('LESSON', 'lesson'),
                                             ('EXERCISE', 'Exercise')],
                                    max_length=15),
         ),

@@ -27,8 +27,7 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
     logger.debug('Starting async_eventbrite_webhook')
     status = 'ok'
 
-    webhook = EventbriteWebhook.objects.filter(
-        id=eventbrite_webhook_id).first()
+    webhook = EventbriteWebhook.objects.filter(id=eventbrite_webhook_id).first()
     organization_id = webhook.organization_id
     organization = Organization.objects.filter(id=organization_id).first()
 
