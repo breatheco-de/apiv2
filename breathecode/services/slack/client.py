@@ -49,9 +49,7 @@ class Slack:
                 logger.debug(f'Successfull call {method_name}: /{action_name}')
                 return data
         else:
-            raise Exception(
-                f'Unable to communicate with Slack API, error: {resp.status_code}'
-            )
+            raise Exception(f'Unable to communicate with Slack API, error: {resp.status_code}')
 
     def execute_command(self, context):
 
@@ -71,8 +69,7 @@ class Slack:
         if hasattr(commands, _commands[0]):
             return getattr(commands, _commands[0]).execute(**response)
         else:
-            raise Exception(
-                'No implementation has been found for this command')
+            raise Exception('No implementation has been found for this command')
 
     def execute_action(self, context):
 
@@ -90,8 +87,7 @@ class Slack:
 
         except:
             raise Exception(
-                'Invalid slack action format, must be ajson with class and method properties at least'
-            )
+                'Invalid slack action format, must be ajson with class and method properties at least')
 
         logger.debug(f'Executing {action_class} => {method}')
         if hasattr(actions, action_class):
@@ -99,18 +95,13 @@ class Slack:
             _module = getattr(actions, action_class)  #get action module
 
             if not hasattr(_module, action_class.capitalize()):
-                raise Exception(
-                    f'Class {action_class.capitalize()} not found in module {action_class}'
-                )
-            _class = getattr(_module, action_class.capitalize())(
-                payload)  #factory the class
+                raise Exception(f'Class {action_class.capitalize()} not found in module {action_class}')
+            _class = getattr(_module, action_class.capitalize())(payload)  #factory the class
 
             if not hasattr(_class, method):
                 raise Exception(
-                    f'Method {method} not found in slack action class {action_class.capitalize()}'
-                )
-            response = getattr(_class,
-                               method)(payload=payload)  # call action method
+                    f'Method {method} not found in slack action class {action_class.capitalize()}')
+            response = getattr(_class, method)(payload=payload)  # call action method
 
             if 'response_url' in payload and response:
                 resp = requests.post(payload['response_url'], json=response)
@@ -118,6 +109,4 @@ class Slack:
             else:
                 return True
         else:
-            raise Exception(
-                f'No implementation has been found for this action: {action_class}'
-            )
+            raise Exception(f'No implementation has been found for this action: {action_class}')

@@ -1,8 +1,7 @@
 strings = {
     'es': {
         'event': {
-            'title':
-            '¿Que tan probable es que recomiendes eventos como estos a tus familiares y amigos?',
+            'title': '¿Que tan probable es que recomiendes eventos como estos a tus familiares y amigos?',
             'highest': 'muy probable',
             'lowest': 'poco probable',
         },
@@ -17,8 +16,7 @@ strings = {
             'lowest': 'mala',
         },
         'academy': {
-            'title':
-            '¿Qué tan probable es que recomiendes {} a tus amigos y familiares?',
+            'title': '¿Qué tan probable es que recomiendes {} a tus amigos y familiares?',
             'highest': 'muy probable',
             'lowest': 'poco probable',
         },
@@ -31,14 +29,12 @@ strings = {
     },
     'en': {
         'event': {
-            'title':
-            'How likely are you to recommend upcomint events to your friends and family?',
+            'title': 'How likely are you to recommend upcomint events to your friends and family?',
             'highest': 'very likely',
             'lowest': 'not likely',
         },
         'mentor': {
-            'title':
-            'How has been your experience with your mentor {} so far?',
+            'title': 'How has been your experience with your mentor {} so far?',
             'highest': 'very good',
             'lowest': 'not good',
         },
@@ -48,8 +44,7 @@ strings = {
             'lowest': 'not good',
         },
         'academy': {
-            'title':
-            'How likely are you to recommend {} to your friends and family?',
+            'title': 'How likely are you to recommend {} to your friends and family?',
             'highest': 'very likely',
             'lowest': 'not likely',
         },

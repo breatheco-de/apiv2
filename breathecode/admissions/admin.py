@@ -8,10 +8,8 @@ from django.contrib import admin
 from django import forms
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
-from .models import (
-    Academy, SpecialtyMode, AcademySpecialtyMode, Cohort, CohortUser, Country, City, UserAdmissions,
-    Syllabus, SyllabusVersion, CohortTimeSlot, SpecialtyModeTimeSlot, 
-)
+from .models import (Academy, SpecialtyMode, AcademySpecialtyMode, Cohort, CohortUser, Country, City,
+                     SyllabusVersion, UserAdmissions, Syllabus, CohortTimeSlot, SpecialtyModeTimeSlot)
 from .actions import sync_cohort_timeslots
 from breathecode.assignments.actions import sync_student_tasks
 

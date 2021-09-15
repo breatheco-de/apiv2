@@ -39,16 +39,12 @@ class Command(BaseCommand):
 
         for quiz in quizzes:
             if 'slug' not in quiz['info']:
-                self.stdout.write(
-                    self.style.ERROR(
-                        f'Ignoring quiz because it does not have a slug'))
+                self.stdout.write(self.style.ERROR(f'Ignoring quiz because it does not have a slug'))
                 continue
 
             name = 'No name yet'
             if 'name' not in quiz['info']:
-                self.stdout.write(
-                    self.style.ERROR(
-                        f"Quiz f{quiz['info']['slug']} needs a name"))
+                self.stdout.write(self.style.ERROR(f"Quiz f{quiz['info']['slug']} needs a name"))
             else:
                 name = quiz['info']['name']
 
@@ -80,6 +76,4 @@ class Command(BaseCommand):
                     )
                     o.save()
 
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f"Created assesment {quiz['info']['slug']}"))
+            self.stdout.write(self.style.SUCCESS(f"Created assesment {quiz['info']['slug']}"))

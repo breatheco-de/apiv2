@@ -47,8 +47,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(
             json, {
-                'detail':
-                "You (user: 1) don't have this capability: read_media_resolution for academy 1",
+                'detail': "You (user: 1) don't have this capability: read_media_resolution for academy 1",
                 'status_code': 403
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -67,10 +66,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'media-not-found',
-            'status_code': 404
-        })
+        self.assertEqual(json, {'detail': 'media-not-found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_media_dict(), [])
 
@@ -88,10 +84,8 @@ class MediaTestSuite(MediaTestCase):
                                      profile_academy=True,
                                      media_kwargs={'hash': 'abc'},
                                      media_resolution_kwargs={'hash': 'abc'})
-        model_dict = self.remove_dinamics_fields(
-            model['media_resolution'].__dict__)
-        url = reverse_lazy('media:info_id_resolution',
-                           kwargs={'media_id': model['media'].id})
+        model_dict = self.remove_dinamics_fields(model['media_resolution'].__dict__)
+        url = reverse_lazy('media:info_id_resolution', kwargs={'media_id': model['media'].id})
         response = self.client.get(url)
         json = response.json()
         expected = [{

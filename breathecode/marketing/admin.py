@@ -68,26 +68,22 @@ class CustomForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(CustomForm, self).__init__(*args, **kwargs)
-        self.fields[
-            'event_attendancy_automation'].queryset = Automation.objects.filter(
-                ac_academy=self.instance.id)  # or something else
+        self.fields['event_attendancy_automation'].queryset = Automation.objects.filter(
+            ac_academy=self.instance.id)  # or something else
 
 
 @admin.register(ActiveCampaignAcademy)
 class ACAcademyAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     form = CustomForm
     search_fields = ['academy__name', 'academy__slug']
-    list_display = ('id', 'academy', 'ac_url', 'sync_status',
-                    'last_interaction_at', 'sync_message')
+    list_display = ('id', 'academy', 'ac_url', 'sync_status', 'last_interaction_at', 'sync_message')
     list_filter = ['academy__slug', 'sync_status']
     actions = [test_ac, sync_ac_tags, sync_ac_automations]
 
 
 @admin.register(AcademyAlias)
 class AcademyAliasAdmin(admin.ModelAdmin):
-    search_fields = [
-        'slug', 'active_campaign_slug', 'academy__slug', 'academy__title'
-    ]
+    search_fields = ['slug', 'active_campaign_slug', 'academy__slug', 'academy__title']
     list_display = ('slug', 'active_campaign_slug', 'academy')
 
 
@@ -141,17 +137,13 @@ class PPCFilter(SimpleListFilter):
 @admin.register(FormEntry)
 class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['email', 'first_name', 'last_name', 'phone']
-    list_display = ('storage_status', 'created_at', 'first_name', 'last_name',
-                    'email', 'location', 'course', 'academy', 'country',
-                    'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
+    list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course',
+                    'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
     list_filter = [
-        'storage_status', 'location', 'course', 'deal_status', PPCFilter,
-        'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium',
-        'country'
+        'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'tag_objects__tag_type',
+        'automation_objects__slug', 'utm_medium', 'country'
     ]
-    actions = [
-        send_to_ac, get_geoinfo, fetch_more_facebook_info, 'export_as_csv'
-    ]
+    actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'export_as_csv']
 
 
 def mark_tag_as_strong(modeladmin, request, queryset):
@@ -201,16 +193,14 @@ class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = ('id', 'slug', 'tag_type', 'acp_id', 'subscribers')
     list_filter = ['tag_type', 'ac_academy__academy__slug']
     actions = [
-        mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery,
-        mark_tag_as_other, 'export_as_csv'
+        mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery, mark_tag_as_other, 'export_as_csv'
     ]
 
 
 @admin.register(Automation)
 class AutomationAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['slug', 'name']
-    list_display = ('id', 'acp_id', 'slug', 'name', 'status', 'entered',
-                    'exited')
+    list_display = ('id', 'acp_id', 'slug', 'name', 'status', 'entered', 'exited')
     list_filter = ['status', 'ac_academy__academy__slug']
     actions = ['export_as_csv']
 
@@ -218,8 +208,7 @@ class AutomationAdmin(admin.ModelAdmin, AdminExportCsvMixin):
 @admin.register(ShortLink)
 class ShortLinkAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['slug', 'destination']
-    list_display = ('id', 'slug', 'hits', 'active', 'destination_status',
-                    'destination')
+    list_display = ('id', 'slug', 'hits', 'active', 'destination_status', 'destination')
     list_filter = ['destination_status', 'active']
     actions = ['export_as_csv']
 
@@ -237,8 +226,7 @@ run_hook.short_description = 'Process Hook'
 
 @admin.register(ActiveCampaignWebhook)
 class ActiveCampaignWebhookAdmin(admin.ModelAdmin):
-    list_display = ('id', 'webhook_type', 'current_status', 'run_at',
-                    'initiated_by', 'created_at')
+    list_display = ('id', 'webhook_type', 'current_status', 'run_at', 'initiated_by', 'created_at')
     actions = [run_hook]
 
     def current_status(self, obj):
@@ -247,5 +235,4 @@ class ActiveCampaignWebhookAdmin(admin.ModelAdmin):
             'ERROR': 'bg-error',
             'PENDING': 'bg-warning',
         }
-        return format_html(
-            f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")

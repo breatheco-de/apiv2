@@ -49,10 +49,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'resolution-not-found',
-            'status_code': 404
-        })
+        self.assertEqual(json, {'detail': 'resolution-not-found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_media_resolution_dict(), [])
 
@@ -70,8 +67,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(
             json, {
-                'detail':
-                "You (user: 1) don't have this capability: crud_media_resolution for academy 1",
+                'detail': "You (user: 1) don't have this capability: crud_media_resolution for academy 1",
                 'status_code': 403
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -91,10 +87,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'resolution-media-not-found',
-            'status_code': 404
-        })
+        self.assertEqual(json, {'detail': 'resolution-media-not-found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_media_resolution_dict(), [])
 
@@ -113,10 +106,7 @@ class MediaTestSuite(MediaTestCase):
         url = reverse_lazy('media:resolution_id', kwargs={'resolution_id': 1})
         response = self.client.delete(url)
         json = response.json()
-        self.assertEqual(json, {
-            'detail': 'resolution-not-found',
-            'status_code': 404
-        })
+        self.assertEqual(json, {'detail': 'resolution-not-found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_media_resolution_dict(), [])
 
@@ -135,10 +125,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.delete(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'resolution-media-not-found',
-            'status_code': 404
-        })
+        self.assertEqual(json, {'detail': 'resolution-media-not-found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_media_resolution_dict(), [])
 

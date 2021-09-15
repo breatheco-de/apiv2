@@ -17,9 +17,7 @@ def sync_tasks(modeladmin, request, queryset):
             Task.objects.filter(user_id=u.id).delete()
             sync_student_tasks(u)
         except Exception as e:
-            logger.exception(
-                f'There was a problem syncronizing tassks for student {u.email}'
-            )
+            logger.exception(f'There was a problem syncronizing tassks for student {u.email}')
 
 
 sync_tasks.short_description = 'Delete and sync Tasks'
@@ -58,8 +56,7 @@ delete_cohort_tasks.short_description = 'Delete tasks for all students of this c
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
-    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date',
-                    'syllabus_version', 'specialty_mode')
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'specialty_mode')
     actions = [sync_cohort_tasks, delete_cohort_tasks]
 
 
@@ -86,11 +83,7 @@ mark_as_rejected.short_description = 'Mark revision status as REJECTED'
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    search_fields = [
-        'title', 'associated_slug', 'user__first_name', 'user__last_name',
-        'user__email'
-    ]
-    list_display = ('title', 'task_type', 'associated_slug', 'task_status',
-                    'revision_status', 'user')
+    search_fields = ['title', 'associated_slug', 'user__first_name', 'user__last_name', 'user__email']
+    list_display = ('title', 'task_type', 'associated_slug', 'task_status', 'revision_status', 'user')
     list_filter = ['task_type', 'task_status', 'revision_status']
     actions = [mark_as_delivered, mark_as_approved, mark_as_rejected]

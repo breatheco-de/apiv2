@@ -13,6 +13,6 @@ urlpatterns = [
     path('cohort/<int:cohort_id>/student/<int:student_id>',
          CertificateView.as_view(),
          name='cohort_id_student_id'),
-    path('cohort/<int:cohort_id>', CertificateCohortView.as_view(), name="cohort_id"),
-    path('', CertificateAcademyView.as_view(), name="root"),
+    path('cohort/<int:cohort_id>', CertificateCohortView.as_view(), name='cohort_id'),
+    path('', CertificateAcademyView.as_view(), name='root'),
 ]

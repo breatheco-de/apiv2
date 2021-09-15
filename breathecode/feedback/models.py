@@ -50,22 +50,18 @@ class Survey(models.Model):
     max_assistants_to_ask = models.IntegerField(default=2)
     max_teachers_to_ask = models.IntegerField(default=1)
 
-    avg_score = models.CharField(
-        max_length=250,
-        default=None,
-        blank=True,
-        null=True,
-        help_text='The avg from all the answers taken under this survey',
-        editable=False)
+    avg_score = models.CharField(max_length=250,
+                                 default=None,
+                                 blank=True,
+                                 null=True,
+                                 help_text='The avg from all the answers taken under this survey',
+                                 editable=False)
 
-    status = models.CharField(max_length=15,
-                              choices=SURVEY_STATUS,
-                              default=PENDING)
+    status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=PENDING)
     status_json = models.JSONField(default=None, null=True, blank=True)
 
-    duration = models.DurationField(
-        default=datetime.timedelta(hours=24),
-        help_text='No one will be able to answer after this period of time')
+    duration = models.DurationField(default=datetime.timedelta(hours=24),
+                                    help_text='No one will be able to answer after this period of time')
     created_at = models.DateTimeField(auto_now_add=True, editable=True)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
     sent_at = models.DateTimeField(default=None, null=True, blank=True)
@@ -94,38 +90,19 @@ class Answer(models.Model):
     highest = models.CharField(max_length=50, default='very likely')
     lang = models.CharField(max_length=3, blank=True, default='en')
 
-    event = models.ForeignKey(Event,
-                              on_delete=models.SET_NULL,
-                              default=None,
-                              blank=True,
-                              null=True)
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, default=None, blank=True, null=True)
     mentor = models.ForeignKey(User,
                                related_name='mentor_set',
                                on_delete=models.SET_NULL,
                                default=None,
                                blank=True,
                                null=True)
-    cohort = models.ForeignKey(Cohort,
-                               on_delete=models.SET_NULL,
-                               default=None,
-                               blank=True,
-                               null=True)
-    academy = models.ForeignKey(Academy,
-                                on_delete=models.SET_NULL,
-                                default=None,
-                                blank=True,
-                                null=True)
-    token = models.OneToOneField(Token,
-                                 on_delete=models.SET_NULL,
-                                 default=None,
-                                 blank=True,
-                                 null=True)
+    cohort = models.ForeignKey(Cohort, on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    academy = models.ForeignKey(Academy, on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    token = models.OneToOneField(Token, on_delete=models.SET_NULL, default=None, blank=True, null=True)
 
     score = models.IntegerField(default=None, blank=True, null=True)
-    comment = models.TextField(max_length=1000,
-                               default=None,
-                               blank=True,
-                               null=True)
+    comment = models.TextField(max_length=1000, default=None, blank=True, null=True)
 
     survey = models.ForeignKey(
         Survey,
@@ -137,15 +114,9 @@ class Answer(models.Model):
         'You can group one or more answers in one survey, the survey does not belong to any student in particular but answers belong to the student that answered'
     )
 
-    status = models.CharField(max_length=15,
-                              choices=SURVEY_STATUS,
-                              default=PENDING)
+    status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=PENDING)
 
-    user = models.ForeignKey(User,
-                             on_delete=models.CASCADE,
-                             default=None,
-                             blank=True,
-                             null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, default=None, blank=True, null=True)
 
     opened_at = models.DateTimeField(default=None, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

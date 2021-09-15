@@ -9,10 +9,8 @@ def send_assestment(user_assessment):
 
     token, created = Token.get_or_create(user_assessment.user, hours_length=48)
     data = {
-        'SUBJECT':
-        user_assessment.assessment.title,
-        'LINK':
-        f'https://assessment.breatheco.de/{user_assessment.id}?token={token.key}'
+        'SUBJECT': user_assessment.assessment.title,
+        'LINK': f'https://assessment.breatheco.de/{user_assessment.id}?token={token.key}'
     }
     send_email_message('assessment', user_assessment.user.email, data)
 

@@ -18,8 +18,7 @@ from PIL import Image
 @permission_classes([AllowAny])
 def track_assesment_open(request, user_assessment_id=None):
 
-    ass = UserAssessment.objects.filter(id=user_assessment_id,
-                                        status='SENT').first()
+    ass = UserAssessment.objects.filter(id=user_assessment_id, status='SENT').first()
     if ass is not None:
         ass.status = 'OPENED'
         ass.opened_at = timezone.now()
@@ -52,9 +51,8 @@ class GetAssessmentView(APIView):
             if lang is not None and item.lang != lang:
                 item = item.translations.filter(lang=lang).first()
                 if item is None:
-                    raise ValidationException(
-                        f"Language '{lang}' not found for assesment {assessment_slug}",
-                        404)
+                    raise ValidationException(f"Language '{lang}' not found for assesment {assessment_slug}",
+                                              404)
 
             serializer = GetAssessmentBigSerializer(item, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)

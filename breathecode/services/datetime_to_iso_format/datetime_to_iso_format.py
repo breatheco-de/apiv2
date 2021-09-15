@@ -11,5 +11,4 @@ class simple_utc(tzinfo):
 
 
 def datetime_to_iso_format(date=datetime.utcnow()) -> str:
-    return re.sub(r'\+00:00$', 'Z',
-                  date.replace(tzinfo=simple_utc()).isoformat())
+    return re.sub(r'\+00:00$', 'Z', date.replace(tzinfo=simple_utc()).isoformat())
