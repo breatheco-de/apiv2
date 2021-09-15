@@ -13,6 +13,7 @@ def answer_received(sender, instance, **kwargs):
     # look for the email on the formentry list and bind it
     logger.debug('Answer received, updating survey avg score')
     if instance.survey is not None:
-        instance.survey.avg_score = Answer.objects.filter(
+        survey_score = Answer.objects.filter(
             survey=instance.survey).aggregate(Avg('score'))
+        instance.survey.avg_score = survey_score['score__avg']
         instance.survey.save()
