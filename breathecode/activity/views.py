@@ -177,7 +177,7 @@ class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
         offset = self.get_offset_from_query()
 
         with client.context():
-            query = Activity.query().filter(*self.queryargs, )
+            query = Activity.query().filter(*self.queryargs)
 
             elements = query.fetch(limit=limit, offset=offset)
             activities = [c.to_dict() for c in elements]
