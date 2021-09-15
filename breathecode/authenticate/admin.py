@@ -2,12 +2,12 @@ import base64, os, urllib.parse, logging
 from django.contrib import admin
 from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
-from .actions import delete_tokens
+from .actions import delete_tokens, generate_academy_token
 from django.utils.html import format_html
 from .models import (CredentialsGithub, Token, UserProxy, Profile,
                      CredentialsSlack, ProfileAcademy, Role,
                      CredentialsFacebook, Capability, UserInvite,
-                     CredentialsGoogle)
+                     CredentialsGoogle, AcademyProxy)
 from .actions import reset_password
 
 logger = logging.getLogger(__name__)
@@ -188,3 +188,30 @@ class ProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone', 'github_username', 'avatar_url')
     search_fields = ['user__first_name', 'user__last_name', 'user__email']
     # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
+
+
+def generate_token(modeladmin, request, queryset):
+    academies = queryset.all()
+    for a in academies:
+        token = generate_academy_token(a.id)
+
+
+generate_token.short_description = 'Generate academy token'
+
+
+def reset_token(modeladmin, request, queryset):
+    academies = queryset.all()
+    for a in academies:
+        token = generate_academy_token(a.id, force=True)
+
+
+reset_token.short_description = 'RESET academy token'
+
+
+@admin.register(AcademyProxy)
+class AcademyAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name', 'token')
+    actions = [generate_token, reset_token]
+
+    def token(self, obj):
+        return Token.objects.filter(user__username=obj.slug).first()

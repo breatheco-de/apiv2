@@ -35,7 +35,7 @@ from .models import (
     Role,
     ProfileAcademy,
 )
-from .actions import reset_password, resend_invite
+from .actions import reset_password, resend_invite, generate_academy_token
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
 from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
@@ -97,25 +97,7 @@ class AcademyTokenView(ObtainAuthToken):
     @capable_of('generate_academy_token')
     def post(self, request, academy_id):
 
-        academy = Academy.objects.get(id=academy_id)
-        academy_user = User.objects.filter(username=academy.slug).first()
-        if academy_user is None:
-            academy_user = User(username=academy.slug,
-                                email=f'{academy.slug}@token.com')
-            academy_user.save()
-
-            role = Role.objects.get(slug='academy_token')
-            # this profile is for tokens, that is why we need no  email validation status=ACTIVE, role must be academy_token
-            # and the email is empty
-            profile_academy = ProfileAcademy(user=academy_user,
-                                             academy=academy,
-                                             role=role,
-                                             status='ACTIVE')
-            profile_academy.save()
-
-        Token.objects.filter(user=academy_user).delete()
-        token = Token.objects.create(user=academy_user, token_type='permanent')
-        token.save()
+        token = generate_academy_token(academy_id, True)
         return Response({
             'token': token.key,
             'token_type': token.token_type,
@@ -683,6 +665,7 @@ def save_github_token(request):
             if github_user['email'] is None:
                 raise ValidationError('Impossible to retrieve user email')
 
+            user = None # assuming by default that its a new user
             # is a valid token??? if not valid it will become None
             if token is not None and token != '':
                 token = Token.get_valid(token)
@@ -698,7 +681,7 @@ def save_github_token(request):
                 token = None
 
             # user can't be found thru token, lets try thru the github credentials
-            if token is None:
+            if token is None and user is None:
                 user = User.objects.filter(
                     Q(credentialsgithub__github_id=github_user['id'])
                     | Q(email__iexact=github_user['email'])).first()

@@ -8,18 +8,13 @@ from ..mixins import AdmissionsTestCase
 
 class academyTestSuite(AdmissionsTestCase):
     """Test /academy"""
-    def test_academy_without_auth(self):
+    def test_academy_without_auth_should_be_ok(self):
         """Test /academy without auth"""
         url = reverse_lazy('admissions:academy')
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': 'Authentication credentials were not provided.',
-                'status_code': status.HTTP_401_UNAUTHORIZED
-            })
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_academy_without_data(self):
         """Test /academy without auth"""
