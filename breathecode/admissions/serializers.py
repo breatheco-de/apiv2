@@ -151,6 +151,12 @@ class SyllabusVersionSmallSerializer(serpy.Serializer):
     slug = serpy.MethodField()
     name = serpy.MethodField()
     syllabus = serpy.MethodField()
+    duration_in_hours = serpy.MethodField()
+    duration_in_days = serpy.MethodField()
+    week_hours = serpy.MethodField()
+    github_url = serpy.MethodField()
+    logo = serpy.MethodField()
+    private = serpy.MethodField()
 
     def get_slug(self, obj):
         return obj.syllabus.slug if obj.syllabus else None
@@ -160,6 +166,69 @@ class SyllabusVersionSmallSerializer(serpy.Serializer):
 
     def get_syllabus(self, obj):
         return obj.syllabus.id if obj.syllabus else None
+
+    def get_duration_in_hours(self, obj):
+        return obj.syllabus.duration_in_hours if obj.syllabus else None
+
+    def get_duration_in_days(self, obj):
+        return obj.syllabus.duration_in_days if obj.syllabus else None
+
+    def get_week_hours(self, obj):
+        return obj.syllabus.week_hours if obj.syllabus else None
+
+    def get_logo(self, obj):
+        return obj.syllabus.logo if obj.syllabus else None
+
+    def get_private(self, obj):
+        return obj.syllabus.private if obj.syllabus else None
+
+    def get_github_url(self, obj):
+        return obj.syllabus.github_url if obj.syllabus else None
+
+
+class GetSyllabusVersionSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    json = serpy.Field()
+    version = serpy.Field()
+    updated_at = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+    slug = serpy.MethodField()
+    name = serpy.MethodField()
+    syllabus = serpy.MethodField()
+    duration_in_hours = serpy.MethodField()
+    duration_in_days = serpy.MethodField()
+    week_hours = serpy.MethodField()
+    github_url = serpy.MethodField()
+    logo = serpy.MethodField()
+    private = serpy.MethodField()
+
+    def get_slug(self, obj):
+        return obj.syllabus.slug if obj.syllabus else None
+
+    def get_name(self, obj):
+        return obj.syllabus.name if obj.syllabus else None
+
+    def get_syllabus(self, obj):
+        return obj.syllabus.id if obj.syllabus else None
+
+    def get_duration_in_hours(self, obj):
+        return obj.syllabus.duration_in_hours if obj.syllabus else None
+
+    def get_duration_in_days(self, obj):
+        return obj.syllabus.duration_in_days if obj.syllabus else None
+
+    def get_week_hours(self, obj):
+        return obj.syllabus.week_hours if obj.syllabus else None
+
+    def get_logo(self, obj):
+        return obj.syllabus.logo if obj.syllabus else None
+
+    def get_private(self, obj):
+        return obj.syllabus.private if obj.syllabus else None
+
+    def get_github_url(self, obj):
+        return obj.syllabus.github_url if obj.syllabus else None
 
 
 class GetCohortSerializer(serpy.Serializer):
@@ -314,51 +383,6 @@ class GetSyllabusSerializer(serpy.Serializer):
 
     def get_academy_owner(self, obj):
         return obj.academy_owner.id if obj.academy_owner else None
-
-
-class GetSyllabusVersionSerializer(serpy.Serializer):
-    """The serializer schema definition."""
-    json = serpy.Field()
-    version = serpy.Field()
-    updated_at = serpy.Field()
-    created_at = serpy.Field()
-    updated_at = serpy.Field()
-    slug = serpy.MethodField()
-    name = serpy.MethodField()
-    syllabus = serpy.MethodField()
-    duration_in_hours = serpy.MethodField()
-    duration_in_days = serpy.MethodField()
-    week_hours = serpy.MethodField()
-    github_url = serpy.MethodField()
-    logo = serpy.MethodField()
-    private = serpy.MethodField()
-
-    def get_slug(self, obj):
-        return obj.syllabus.slug if obj.syllabus else None
-
-    def get_name(self, obj):
-        return obj.syllabus.name if obj.syllabus else None
-
-    def get_syllabus(self, obj):
-        return obj.syllabus.id if obj.syllabus else None
-
-    def get_duration_in_hours(self, obj):
-        return obj.syllabus.duration_in_hours if obj.syllabus else None
-
-    def get_duration_in_days(self, obj):
-        return obj.syllabus.duration_in_days if obj.syllabus else None
-
-    def get_week_hours(self, obj):
-        return obj.syllabus.week_hours if obj.syllabus else None
-
-    def get_logo(self, obj):
-        return obj.syllabus.logo if obj.syllabus else None
-
-    def get_private(self, obj):
-        return obj.syllabus.private if obj.syllabus else None
-
-    def get_github_url(self, obj):
-        return obj.syllabus.github_url if obj.syllabus else None
 
 
 #        ↓ EDIT SERIALIZERS ↓
