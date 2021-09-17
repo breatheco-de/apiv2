@@ -115,6 +115,12 @@ class CertificateTestSuite(AdmissionsTestCase):
             'slug': model['syllabus'].slug,
             'syllabus': 1,
             'version': model['syllabus_version'].version,
+            'duration_in_days': model.syllabus.duration_in_days,
+            'duration_in_hours': model.syllabus.duration_in_hours,
+            'github_url': model.syllabus.github_url,
+            'logo': model.syllabus.logo,
+            'private': model.syllabus.private,
+            'week_hours': model.syllabus.week_hours,
         }
 
         self.assertEqual(json, expected)
