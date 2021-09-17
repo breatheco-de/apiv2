@@ -749,9 +749,6 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if 'syllabus_version' in data:
             del data['syllabus_version']
 
-        if 'specialty_mode' in data:
-            del data['specialty_mode']
-
         serializer = CohortPUTSerializer(cohort,
                                          data=data,
                                          context={
