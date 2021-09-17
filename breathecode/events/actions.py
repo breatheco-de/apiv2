@@ -17,9 +17,7 @@ status_map = {
 def sync_org_venues(org):
 
     if org.academy is None:
-        raise Exception(
-            'First you must specify to which academy this organization belongs'
-        )
+        raise Exception('First you must specify to which academy this organization belongs')
     # client.get_my_organizations()
     # self.stdout.write(self.style.SUCCESS("Successfully sync organizations"))
     client = Eventbrite(org.eventbrite_key)
@@ -45,16 +43,13 @@ def create_or_update_organizer(data, org, force_update=False):
             organizer.description = data['description']['text']
             organizer.save()
     except Exception as e:
-        print(
-            'Error saving organizer eventbrite_id: ' + str(data['id']) +
-            ' skipping to the next', e)
+        print('Error saving organizer eventbrite_id: ' + str(data['id']) + ' skipping to the next', e)
 
     return organizer
 
 
 def create_or_update_venue(data, org, force_update=False):
-    venue = Venue.objects.filter(eventbrite_id=data['id'],
-                                 academy__id=org.academy.id).first()
+    venue = Venue.objects.filter(eventbrite_id=data['id'], academy__id=org.academy.id).first()
 
     try:
         if venue is None:
@@ -84,8 +79,7 @@ def create_or_update_venue(data, org, force_update=False):
             venue.eventbrite_url = data['resource_uri']
             venue.save()
     except:
-        print('Error saving venue eventbrite_id: ' + str(data['id']) +
-              ' skipping to the next')
+        print('Error saving venue eventbrite_id: ' + str(data['id']) + ' skipping to the next')
 
     return venue
 
@@ -123,17 +117,14 @@ def update_or_create_event(data, org):
     if data['status'] not in status_map:
         raise Exception('Uknown eventbrite status ' + data['status'])
 
-    event = Event.objects.filter(eventbrite_id=data['id'],
-                                 organization__id=org.id).first()
+    event = Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).first()
     try:
         venue = None
         if 'venue' in data:
             venue = create_or_update_venue(data['venue']['id'], org)
         organizer = None
         if 'organizer' in data:
-            organizer = create_or_update_organizer(data['organizer'],
-                                                   org,
-                                                   force_update=True)
+            organizer = create_or_update_organizer(data['organizer'], org, force_update=True)
         else:
             print('Event without organizer', data)
 

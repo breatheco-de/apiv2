@@ -1,3 +1,5 @@
+from breathecode.authenticate.models import Token
+from breathecode.utils import ValidationException
 import logging
 from celery import shared_task, Task
 from django.utils import timezone
@@ -27,18 +29,16 @@ def build_question(answer):
         question['lowest'] = strings[answer.lang]['event']['lowest']
         question['highest'] = strings[answer.lang]['event']['highest']
     elif answer.mentor is not None:
-        question['title'] = strings[answer.lang]['mentor']['title'].format(
-            answer.mentor.first_name + ' ' + answer.mentor.last_name)
+        question['title'] = strings[answer.lang]['mentor']['title'].format(answer.mentor.first_name + ' ' +
+                                                                           answer.mentor.last_name)
         question['lowest'] = strings[answer.lang]['mentor']['lowest']
         question['highest'] = strings[answer.lang]['mentor']['highest']
     elif answer.cohort is not None:
-        question['title'] = strings[answer.lang]['cohort']['title'].format(
-            answer.cohort.syllabus.certificate.name)
+        question['title'] = strings[answer.lang]['cohort']['title'].format(answer.cohort.specialty_mode.name)
         question['lowest'] = strings[answer.lang]['cohort']['lowest']
         question['highest'] = strings[answer.lang]['cohort']['highest']
     elif answer.academy is not None:
-        question['title'] = strings[answer.lang]['academy']['title'].format(
-            answer.academy.name)
+        question['title'] = strings[answer.lang]['academy']['title'].format(answer.academy.name)
         question['lowest'] = strings[answer.lang]['academy']['lowest']
         question['highest'] = strings[answer.lang]['academy']['highest']
 
@@ -47,12 +47,9 @@ def build_question(answer):
 
 def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
 
-    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort,
-                                               role='TEACHER')
+    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort, role='TEACHER')
     if cohort_teacher.count() == 0:
-        raise ValidationException(
-            'This cohort must have a teacher assigned to be able to survey it',
-            400)
+        raise ValidationException('This cohort must have a teacher assigned to be able to survey it', 400)
 
     def new_answer(answer):
         question = build_question(answer)
@@ -71,9 +68,7 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
         _answers = []
 
         # ask for the cohort in general
-        answer = Answer(cohort=survey.cohort,
-                        academy=survey.cohort.academy,
-                        lang=survey.lang)
+        answer = Answer(cohort=survey.cohort, academy=survey.cohort.academy, lang=survey.lang)
         _answers.append(new_answer(answer))
 
         # ask for each teacher, with a max of 2 teachers
@@ -89,8 +84,7 @@ def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
             cont = cont + 1
 
         # ask for the first TA
-        cohort_assistant = CohortUser.objects.filter(cohort=survey.cohort,
-                                                     role='ASSISTANT')
+        cohort_assistant = CohortUser.objects.filter(cohort=survey.cohort, role='ASSISTANT')
         cont = 0
         for ca in cohort_assistant:
             if cont >= survey.max_assistants_to_ask:
@@ -127,12 +121,9 @@ def send_cohort_survey(self, user_id, survey_id):
         logger.error('This survey has already expired')
         return False
 
-    cu = CohortUser.objects.filter(cohort=survey.cohort,
-                                   role='STUDENT',
-                                   user=user).first()
+    cu = CohortUser.objects.filter(cohort=survey.cohort, role='STUDENT', user=user).first()
     if cu is None:
-        raise ValidationException(
-            'This student does not belong to this cohort', 400)
+        raise ValidationException('This student does not belong to this cohort', 400)
 
     answers = generate_user_cohort_survey_answers(user, survey, status='SENT')
 
@@ -148,17 +139,12 @@ def send_cohort_survey(self, user_id, survey_id):
         'MESSAGE': strings[survey.lang]['survey_message'],
         'SURVEY_ID': survey_id,
         'BUTTON': strings[survey.lang]['button_label'],
-        'LINK':
-        f'https://nps.breatheco.de/survey/{survey_id}?token={token.key}',
+        'LINK': f'https://nps.breatheco.de/survey/{survey_id}?token={token.key}',
     }
 
     if user.email:
         send_email_message('nps_survey', user.email, data)
         survey.sent_at = timezone.now()
 
-    if hasattr(user, 'slackuser') and hasattr(survey.cohort.academy,
-                                              'slackteam'):
-        send_slack('nps_survey',
-                   user.slackuser,
-                   survey.cohort.academy.slackteam,
-                   data=data)
+    if hasattr(user, 'slackuser') and hasattr(survey.cohort.academy, 'slackteam'):
+        send_slack('nps_survey', user.slackuser, survey.cohort.academy.slackteam, data=data)

@@ -20,10 +20,7 @@ class AcademyVenueTestSuite(EventTestCase):
 
         response = self.client.get(url)
         json = response.json()
-        expected = {
-            'detail': 'Authentication credentials were not provided.',
-            'status_code': 401
-        }
+        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 401)
@@ -36,8 +33,7 @@ class AcademyVenueTestSuite(EventTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = {
-            'detail':
-            "You (user: 1) don't have this capability: read_event for academy 1",
+            'detail': "You (user: 1) don't have this capability: read_event for academy 1",
             'status_code': 403
         }
 
@@ -47,10 +43,7 @@ class AcademyVenueTestSuite(EventTestCase):
     def test_academy_venues_with_capability(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_venues')
-        self.generate_models(authenticate=True,
-                             profile_academy=True,
-                             capability='read_event',
-                             role='potato')
+        self.generate_models(authenticate=True, profile_academy=True, capability='read_event', role='potato')
 
         response = self.client.get(url)
         json = response.json()

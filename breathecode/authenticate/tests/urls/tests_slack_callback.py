@@ -15,10 +15,7 @@ class AuthenticateTestSuite(AuthTestCase, SlackTestCase):
     def test_slack_callback_with_error(self):
         """Test /slack/callback without auth"""
         url = reverse_lazy('authenticate:slack_callback')
-        params = {
-            'error': 'Oh my god',
-            'error_description': 'They killed kenny'
-        }
+        params = {'error': 'Oh my god', 'error_description': 'They killed kenny'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
 
         data = response.data
@@ -28,8 +25,7 @@ class AuthenticateTestSuite(AuthTestCase, SlackTestCase):
         self.assertEqual(2, len(data))
         self.assertEqual(detail, 'Slack: They killed kenny')
         self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
-        self.assertEqual(response.status_code,
-                         status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def test_slack_callback_without_callback(self):
         """Test /slack/callback without auth"""
@@ -88,8 +84,7 @@ class AuthenticateTestSuite(AuthTestCase, SlackTestCase):
         url = reverse_lazy('authenticate:slack_callback')
         academy = 2
 
-        query_string = f'a={academy}&url={original_url_callback}'.encode(
-            'utf-8')
+        query_string = f'a={academy}&url={original_url_callback}'.encode('utf-8')
         payload = str(base64.urlsafe_b64encode(query_string), 'utf-8')
         params = {'payload': payload}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
@@ -99,8 +94,7 @@ class AuthenticateTestSuite(AuthTestCase, SlackTestCase):
         status_code = data['status_code']
 
         self.assertEqual(2, len(data))
-        self.assertEqual(details,
-                         'No user id specified from the slack payload')
+        self.assertEqual(details, 'No user id specified from the slack payload')
         self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -112,8 +106,7 @@ class AuthenticateTestSuite(AuthTestCase, SlackTestCase):
         url = reverse_lazy('authenticate:slack_callback')
         user = 1
 
-        query_string = f'user={user}&url={original_url_callback}'.encode(
-            'utf-8')
+        query_string = f'user={user}&url={original_url_callback}'.encode('utf-8')
         payload = str(base64.urlsafe_b64encode(query_string), 'utf-8')
         params = {'payload': payload}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
@@ -123,8 +116,7 @@ class AuthenticateTestSuite(AuthTestCase, SlackTestCase):
         status_code = data['status_code']
 
         self.assertEqual(2, len(data))
-        self.assertEqual(details,
-                         'No academy id specified from the slack payload')
+        self.assertEqual(details, 'No academy id specified from the slack payload')
         self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -137,8 +129,7 @@ class AuthenticateTestSuite(AuthTestCase, SlackTestCase):
         academy = 2
         user = 1
 
-        query_string = f'user={user}&a={academy}&url={original_url_callback}'.encode(
-            'utf-8')
+        query_string = f'user={user}&a={academy}&url={original_url_callback}'.encode('utf-8')
         payload = str(base64.urlsafe_b64encode(query_string), 'utf-8')
         params = {'payload': payload}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
@@ -161,8 +152,7 @@ class AuthenticateTestSuite(AuthTestCase, SlackTestCase):
         academy = 1
         user = 2
 
-        query_string = f'user={user}&a={academy}&url={original_url_callback}'.encode(
-            'utf-8')
+        query_string = f'user={user}&a={academy}&url={original_url_callback}'.encode('utf-8')
         payload = str(base64.urlsafe_b64encode(query_string), 'utf-8')
         params = {'payload': payload}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
@@ -185,8 +175,7 @@ class AuthenticateTestSuite(AuthTestCase, SlackTestCase):
         academy = 1
         user = 1
 
-        query_string = f'user={user}&a={academy}&url={original_url_callback}'.encode(
-            'utf-8')
+        query_string = f'user={user}&a={academy}&url={original_url_callback}'.encode('utf-8')
         payload = str(base64.urlsafe_b64encode(query_string), 'utf-8')
         params = {'payload': payload}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
@@ -210,8 +199,7 @@ class AuthenticateTestSuite(AuthTestCase, SlackTestCase):
         academy = 1
         user = 1
 
-        query_string = f'user={user}&a={academy}&url={original_url_callback}'.encode(
-            'utf-8')
+        query_string = f'user={user}&a={academy}&url={original_url_callback}'.encode('utf-8')
         payload = str(base64.urlsafe_b64encode(query_string), 'utf-8')
         params = {'payload': payload, 'code': 'haha'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')

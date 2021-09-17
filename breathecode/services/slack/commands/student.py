@@ -22,10 +22,9 @@ def execute(users, academies, **context):
     if len(users) == 0:
         raise Exception('No usernames found on the command')
 
-    cohort_users = CohortUser.objects.filter(
-        user__slackuser__slack_id=users[0],
-        role='STUDENT',
-        cohort__academy__id__in=[academies])
+    cohort_users = CohortUser.objects.filter(user__slackuser__slack_id=users[0],
+                                             role='STUDENT',
+                                             cohort__academy__id__in=[academies])
     user = cohort_users.first()
     if user is None:
         raise Exception(

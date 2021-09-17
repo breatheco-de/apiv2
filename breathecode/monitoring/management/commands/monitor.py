@@ -15,9 +15,7 @@ class BaseSQL(object):
 
 class DurationAgr(BaseSQL, DM.Aggregate):
     def __init__(self, expression, **extra):
-        super(DurationAgr, self).__init__(expression,
-                                          output_field=DM.DateTimeField(),
-                                          **extra)
+        super(DurationAgr, self).__init__(expression, output_field=DM.DateTimeField(), **extra)
 
 
 class Command(BaseCommand):
@@ -41,9 +39,7 @@ class Command(BaseCommand):
         try:
             func = getattr(self, options['entity'], None)
         except TypeError:
-            self.stderr.write(
-                self.style.ERROR(
-                    f'Sync method for {options["entity"]} no Found!'))
+            self.stderr.write(self.style.ERROR(f'Sync method for {options["entity"]} no Found!'))
             return
         except KeyError:
             self.stderr.write(self.style.ERROR('Entity arguments is not set'))
@@ -61,8 +57,7 @@ class Command(BaseCommand):
         for app_id in apps:
             monitor_app.delay(app_id)
 
-        self.stdout.write(
-            self.style.SUCCESS(f'Enqueued {len(apps)} apps for diagnostic'))
+        self.stdout.write(self.style.SUCCESS(f'Enqueued {len(apps)} apps for diagnostic'))
 
     def scripts(self, options):
         now = timezone.now()
@@ -74,6 +69,4 @@ class Command(BaseCommand):
         for script_id in scripts:
             execute_scripts.delay(script_id)
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f'Enqueued {len(scripts)} scripts for execution'))
+        self.stdout.write(self.style.SUCCESS(f'Enqueued {len(scripts)} scripts for execution'))

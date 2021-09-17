@@ -14,8 +14,7 @@ def pull_eventbrite_venues(modeladmin, request, queryset):
             sync_org_venues(entry)
     except Exception as e:
         print('error', str(e))
-        messages.error(request,
-                       f'There was an error retriving the venues {str(e)}')
+        messages.error(request, f'There was an error retriving the venues {str(e)}')
 
 
 def pull_eventbrite_events(modeladmin, request, queryset):
@@ -45,8 +44,7 @@ class OrganizerAdmin(admin.ModelAdmin):
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['title']
-    list_display = ('sync_status', 'title', 'eventbrite_status', 'starting_at',
-                    'ending_at', 'sync_desc')
+    list_display = ('sync_status', 'title', 'eventbrite_status', 'starting_at', 'ending_at', 'sync_desc')
     list_filter = ['eventbrite_status', 'sync_status']
     actions = ['export_as_csv']
 
@@ -76,6 +74,5 @@ class EventCheckinAdmin(admin.ModelAdmin):
 
 @admin.register(EventbriteWebhook)
 class EventbriteWebhookAdmin(admin.ModelAdmin):
-    list_display = ('api_url', 'user_id', 'action', 'webhook_id',
-                    'organization_id', 'endpoint_url', 'status', 'status_text',
-                    'created_at')
+    list_display = ('api_url', 'user_id', 'action', 'webhook_id', 'organization_id', 'endpoint_url', 'status',
+                    'status_text', 'created_at')

@@ -1,3 +1,4 @@
+from breathecode.activity.models import Activity
 from django.contrib.auth.models import User
 from django.db.models import Q
 from rest_framework import status
@@ -8,11 +9,11 @@ from breathecode.admissions.models import Cohort, CohortUser
 from breathecode.utils import ValidationException, capable_of
 from breathecode.utils import HeaderLimitOffsetPagination
 
-from .utils import (generate_created_at, validate_activity_fields,
-                    validate_activity_have_correct_data_field,
-                    validate_if_activity_need_field_cohort,
-                    validate_if_activity_need_field_data,
+from .utils import (generate_created_at, validate_activity_fields, validate_activity_have_correct_data_field,
+                    validate_if_activity_need_field_cohort, validate_if_activity_need_field_data,
                     validate_require_activity_fields)
+
+from google.cloud.ndb.query import OR
 
 # Create your views here.
 
@@ -40,6 +41,99 @@ ACTIVITY_PUBLIC_SLUGS = [
 ]
 
 
+class ActivityViewMixin(APIView):
+    queryargs = []
+
+    def filter_by_slugs(self):
+        slugs = self.request.GET.get('slug', [])
+        if slugs:
+            slugs = slugs.split(',')
+
+        for slug in slugs:
+            if slug and slug not in ACTIVITIES:
+                raise ValidationException(f'Activity type {slug} not found', slug='activity-not-found')
+
+        if len(slugs) > 1:
+            self.queryargs.append(OR(*[Activity.slug == slug for slug in slugs]))
+        elif len(slugs) == 1:
+            self.queryargs.append(Activity.slug == slugs[0])
+
+    def filter_by_cohort(self, cohort):
+
+        query_cohort = Cohort.objects.filter(slug=cohort)
+
+        if query_cohort.count() > 0:
+            self.queryargs.append(Activity.cohort == cohort)
+        else:
+            cohort_id = int(cohort)
+            query_cohort = Cohort.objects.get(pk=cohort_id)
+            self.queryargs.append(Activity.cohort == query_cohort.slug)
+
+    def filter_by_cohorts(self, academy_id):
+        cohorts = self.request.GET.get('cohort', [])
+        if cohorts:
+            cohorts = cohorts.split(',')
+
+        for cohort in cohorts:
+            if (cohort and not Cohort.objects.filter(slug=cohort, academy__id=academy_id).exists()):
+                raise ValidationException('Cohort not found', slug='cohort-not-found')
+
+        if len(cohorts) > 1:
+            self.queryargs.append(OR(*[Activity.cohort == cohort for cohort in cohorts]))
+        elif len(cohorts) == 1:
+            self.queryargs.append(Activity.cohort == cohorts[0])
+
+    def filter_by_user_ids(self):
+        user_ids = self.request.GET.get('user_id', [])
+        if user_ids:
+            user_ids = user_ids.split(',')
+
+        for user_id in user_ids:
+            try:
+                int(user_id)
+            except ValueError:
+                raise ValidationException('user_id is not a interger', slug='bad-user-id')
+
+        for user_id in user_ids:
+            if not User.objects.filter(id=user_id).exists():
+                raise ValidationException('User not exists', slug='user-not-exists')
+
+        if len(user_ids) > 1:
+            self.queryargs.append(OR(*[Activity.user_id == int(user_id) for user_id in user_ids]))
+        elif len(user_ids) == 1:
+            self.queryargs.append(Activity.user_id == int(user_ids[0]))
+
+    def filter_by_emails(self):
+        emails = self.request.GET.get('email', [])
+        if emails:
+            emails = emails.split(',')
+
+        for email in emails:
+            if not User.objects.filter(email=email).exists():
+                raise ValidationException('User not exists', slug='user-not-exists')
+
+        if len(emails) > 1:
+            self.queryargs.append(OR(*[Activity.email == email for email in emails]))
+        elif len(emails) == 1:
+            self.queryargs.append(Activity.email == emails[0])
+
+    def get_limit_from_query(self):
+        limit = self.request.GET.get('limit')
+
+        if limit is not None:
+            limit = int(limit)
+
+        return limit
+
+    def get_offset_from_query(self):
+        offset = self.request.GET.get('offset')
+
+        if offset is not None:
+            offset = int(offset)
+
+        return offset
+
+
 class ActivityTypeView(APIView):
     def get_activity_object(self, slug):
         return {'slug': slug, 'description': ACTIVITIES[slug]}
@@ -48,15 +142,33 @@ class ActivityTypeView(APIView):
     def get(self, request, activity_slug=None, academy_id=None):
         if activity_slug:
             if activity_slug not in ACTIVITIES:
-                raise ValidationException(
-                    f'Activity type {activity_slug} not found',
-                    slug='activity-not-found')
+                raise ValidationException(f'Activity type {activity_slug} not found',
+                                          slug='activity-not-found')
 
             res = self.get_activity_object(activity_slug)
             return Response(res)
 
         res = [self.get_activity_object(slug) for slug in ACTIVITIES.keys()]
         return Response(res)
+
+
+class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
+    def get(self, request, cohort_id=None):
+        from google.cloud import ndb
+        client = ndb.Client()
+
+        self.filter_by_slugs()
+        self.filter_by_cohort(cohort_id)
+        limit = self.get_limit_from_query()
+        offset = self.get_offset_from_query()
+
+        with client.context():
+            query = Activity.query().filter(*self.queryargs, )
+
+            elements = query.fetch(limit=limit, offset=offset)
+            activities = [c.to_dict() for c in elements]
+
+        return Response(activities, status=status.HTTP_200_OK)
 
 
 class ActivityMeView(APIView):
@@ -71,25 +183,21 @@ class ActivityMeView(APIView):
             kwargs['slug'] = slug
 
         if slug and slug not in ACTIVITIES:
-            raise ValidationException(f'Activity type {slug} not found',
-                                      slug='activity-not-found')
+            raise ValidationException(f'Activity type {slug} not found', slug='activity-not-found')
 
         cohort = request.GET.get('cohort')
         if cohort:
             kwargs['cohort'] = cohort
 
-        if (cohort and not Cohort.objects.filter(
-                slug=cohort, academy__id=academy_id).exists()):
-            raise ValidationException('Cohort not found',
-                                      slug='cohort-not-found')
+        if (cohort and not Cohort.objects.filter(slug=cohort, academy__id=academy_id).exists()):
+            raise ValidationException('Cohort not found', slug='cohort-not-found')
 
         user_id = request.GET.get('user_id')
         if user_id:
             try:
                 kwargs['user_id'] = int(user_id)
             except ValueError:
-                raise ValidationException('user_id is not a interger',
-                                          slug='bad-user-id')
+                raise ValidationException('user_id is not a interger', slug='bad-user-id')
 
         email = request.GET.get('email')
         if email:
@@ -97,8 +205,7 @@ class ActivityMeView(APIView):
 
         user = User.objects.filter(Q(id=user_id) | Q(email=email))
         if (user_id or email) and not user:
-            raise ValidationException('User not exists',
-                                      slug='user-not-exists')
+            raise ValidationException('User not exists', slug='user-not-exists')
 
         datastore = Datastore()
 
@@ -133,8 +240,8 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
     @capable_of('classroom_activity')
     def post(self, request, cohort_id=None, academy_id=None):
 
-        cu = CohortUser.objects.filter(user__id=request.user.id).filter(
-            Q(role='TEACHER') | Q(role='ASSISTANT'))
+        cu = CohortUser.objects.filter(
+            user__id=request.user.id).filter(Q(role='TEACHER') | Q(role='ASSISTANT'))
 
         if cohort_id.isnumeric():
             cu = cu.filter(cohort__id=cohort_id)
@@ -155,15 +262,13 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
         for activity in data:
             student_id = activity['user_id']
             del activity['user_id']
-            cohort_user = CohortUser.objects.filter(
-                role='STUDENT', user__id=student_id,
-                cohort__id=cu.cohort.id).first()
+            cohort_user = CohortUser.objects.filter(role='STUDENT',
+                                                    user__id=student_id,
+                                                    cohort__id=cu.cohort.id).first()
             if cohort_user is None:
-                raise ValidationException('Student not found in this cohort',
-                                          slug='not-found-in-cohort')
+                raise ValidationException('Student not found in this cohort', slug='not-found-in-cohort')
 
-            new_activities.append(
-                add_student_activity(cohort_user.user, activity, academy_id))
+            new_activities.append(add_student_activity(cohort_user.user, activity, academy_id))
 
         return Response(new_activities, status=status.HTTP_201_CREATED)
 
@@ -181,9 +286,8 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
             cohort = cohort.filter(slug=cohort_id)
         cohort = cohort.first()
         if cohort is None:
-            raise ValidationException(
-                f'Cohort {cohort_id} not found at this academy {academy_id}',
-                slug='cohort-not-found')
+            raise ValidationException(f'Cohort {cohort_id} not found at this academy {academy_id}',
+                                      slug='cohort-not-found')
         kwargs['cohort'] = cohort.slug
 
         slug = request.GET.get('slug')
@@ -191,16 +295,14 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
             kwargs['slug'] = slug
 
         if slug and slug not in ACTIVITIES:
-            raise ValidationException(f'Activity type {slug} not found',
-                                      slug='activity-not-found')
+            raise ValidationException(f'Activity type {slug} not found', slug='activity-not-found')
 
         user_id = request.GET.get('user_id')
         if user_id:
             try:
                 kwargs['user_id'] = int(user_id)
             except ValueError:
-                raise ValidationException('user_id is not a interger',
-                                          slug='bad-user-id')
+                raise ValidationException('user_id is not a interger', slug='bad-user-id')
 
         email = request.GET.get('email')
         if email:
@@ -208,8 +310,7 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
 
         user = User.objects.filter(Q(id=user_id) | Q(email=email))
         if (user_id or email) and not user:
-            raise ValidationException('User not exists',
-                                      slug='user-not-exists')
+            raise ValidationException('User not exists', slug='user-not-exists')
 
         datastore = Datastore()
         #academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
@@ -252,8 +353,7 @@ def add_student_activity(user, data, academy_id):
     academy_id = academy_id if slug not in ACTIVITY_PUBLIC_SLUGS else 0
 
     if slug not in ACTIVITIES:
-        raise ValidationException(f'Activity type {slug} not found',
-                                  slug='activity-not-found')
+        raise ValidationException(f'Activity type {slug} not found', slug='activity-not-found')
 
     validate_if_activity_need_field_cohort(data)
     validate_if_activity_need_field_data(data)
@@ -267,9 +367,7 @@ def add_student_activity(user, data, academy_id):
             _query = _query.filter(slug=data['cohort'])
 
         if not _query.exists():
-            raise ValidationException(
-                f"Cohort {str(data['cohort'])} doesn't exist",
-                slug='cohort-not-exists')
+            raise ValidationException(f"Cohort {str(data['cohort'])} doesn't exist", slug='cohort-not-exists')
 
     fields = {
         **data,

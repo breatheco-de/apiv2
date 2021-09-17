@@ -14,26 +14,17 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='academy',
             name='facebook_handle',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   max_length=30,
-                                   null=True),
+            field=models.CharField(blank=True, default=None, max_length=30, null=True),
         ),
         migrations.AddField(
             model_name='academy',
             name='github_handle',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   max_length=20,
-                                   null=True),
+            field=models.CharField(blank=True, default=None, max_length=20, null=True),
         ),
         migrations.AddField(
             model_name='academy',
             name='instagram_handle',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   max_length=30,
-                                   null=True),
+            field=models.CharField(blank=True, default=None, max_length=30, null=True),
         ),
         migrations.AddField(
             model_name='academy',
@@ -43,10 +34,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='academy',
             name='marketing_email',
-            field=models.EmailField(blank=True,
-                                    default=None,
-                                    max_length=254,
-                                    null=True),
+            field=models.EmailField(blank=True, default=None, max_length=254, null=True),
         ),
         migrations.AddField(
             model_name='academy',
@@ -66,10 +54,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='academy',
             name='twitter_handle',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   max_length=15,
-                                   null=True),
+            field=models.CharField(blank=True, default=None, max_length=15, null=True),
         ),
         migrations.AddField(
             model_name='academy',

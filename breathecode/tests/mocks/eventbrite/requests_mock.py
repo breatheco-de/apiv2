@@ -1,10 +1,9 @@
 """
 Requests mock
 """
-from .constants import (EVENTBRITE_ORDER, EVENTBRITE_EVENT,
-                        EVENTBRITE_ATTENDEE, EVENTBRITE_TICKET_CLASS,
-                        EVENTBRITE_ORDER_URL, EVENTBRITE_EVENT_URL,
-                        EVENTBRITE_ATTENDEE_URL, EVENTBRITE_TICKET_CLASS_URL)
+from .constants import (EVENTBRITE_ORDER, EVENTBRITE_EVENT, EVENTBRITE_ATTENDEE, EVENTBRITE_TICKET_CLASS,
+                        EVENTBRITE_ORDER_URL, EVENTBRITE_EVENT_URL, EVENTBRITE_ATTENDEE_URL,
+                        EVENTBRITE_TICKET_CLASS_URL)
 
 
 class ResponseMock():
@@ -26,13 +25,7 @@ class ResponseMock():
         return self.data
 
 
-def request_mock(url: str,
-                 auth=None,
-                 data=None,
-                 method=None,
-                 headers=None,
-                 params=None,
-                 json=None):
+def request_mock(url: str, auth=None, data=None, method=None, headers=None, params=None, json=None):
     """Requests get mock"""
     if url == EVENTBRITE_ORDER_URL:
         return ResponseMock(data=EVENTBRITE_ORDER, status_code=200)
@@ -46,8 +39,4 @@ def request_mock(url: str,
     if url == EVENTBRITE_TICKET_CLASS_URL:
         return ResponseMock(data=EVENTBRITE_TICKET_CLASS, status_code=200)
 
-    return ResponseMock(data={
-        'ok': False,
-        'status': 'not found'
-    },
-                        status_code=404)
+    return ResponseMock(data={'ok': False, 'status': 'not found'}, status_code=404)

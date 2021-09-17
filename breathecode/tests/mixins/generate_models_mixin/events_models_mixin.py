@@ -35,8 +35,7 @@ class EventsModelsMixin(ModelsMixin):
                 kargs['academy'] = models['academy']
 
             kargs = {**kargs, **organization_kwargs}
-            models['organization'] = mixer.blend('events.Organization',
-                                                 **kargs)
+            models['organization'] = mixer.blend('events.Organization', **kargs)
 
         if not 'organizer' in models or organizer:
             kargs = {}
@@ -105,14 +104,12 @@ class EventsModelsMixin(ModelsMixin):
                 kargs['event'] = models['event']
 
             kargs = {**kargs, **event_checkin_kwargs}
-            models['event_checkin'] = mixer.blend('events.EventCheckin',
-                                                  **kargs)
+            models['event_checkin'] = mixer.blend('events.EventCheckin', **kargs)
 
         if not 'eventbrite_webhook' in models and eventbrite_webhook:
             kargs = {}
 
             kargs = {**kargs, **eventbrite_webhook_kwargs}
-            models['eventbrite_webhook'] = mixer.blend(
-                'events.EventbriteWebhook', **kargs)
+            models['eventbrite_webhook'] = mixer.blend('events.EventbriteWebhook', **kargs)
 
         return models

@@ -13,9 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='profileacademy',
             name='address',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   max_length=255,
-                                   null=True),
+            field=models.CharField(blank=True, default=None, max_length=255, null=True),
         ),
     ]

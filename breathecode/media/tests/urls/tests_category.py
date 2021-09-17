@@ -49,12 +49,10 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail':
-                "You (user: 1) don't have this capability: read_media for academy 1",
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_media for academy 1",
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -97,9 +95,7 @@ class MediaTestSuite(MediaTestCase):
             'slug': model['category'].slug,
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_category_dict(), [{
-            **self.model_to_dict(model, 'category')
-        }])
+        self.assertEqual(self.all_category_dict(), [{**self.model_to_dict(model, 'category')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -123,9 +119,7 @@ class MediaTestSuite(MediaTestCase):
             'name': model['category'].name,
             'slug': model['category'].slug,
         }])
-        self.assertEqual(self.all_category_dict(), [{
-            **self.model_to_dict(model, 'category')
-        }])
+        self.assertEqual(self.all_category_dict(), [{**self.model_to_dict(model, 'category')}])
 
     def test_category_pagination_with_105(self):
         """Test /academy/student"""
@@ -136,10 +130,7 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     profile_academy=True)
 
-        models = [
-            self.generate_models(category=True, models=base)
-            for _ in range(0, 105)
-        ]
+        models = [self.generate_models(category=True, models=base) for _ in range(0, 105)]
         url = reverse_lazy('media:category')
         response = self.client.get(url)
         json = response.json()
@@ -164,10 +155,7 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     profile_academy=True)
 
-        models = [
-            self.generate_models(category=True, models=base)
-            for _ in range(0, 10)
-        ]
+        models = [self.generate_models(category=True, models=base) for _ in range(0, 10)]
         url = reverse_lazy('media:category') + '?limit=5&offset=0'
         response = self.client.get(url)
         json = response.json()
@@ -204,10 +192,7 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     profile_academy=True)
 
-        models = [
-            self.generate_models(category=True, models=base)
-            for _ in range(0, 10)
-        ]
+        models = [self.generate_models(category=True, models=base) for _ in range(0, 10)]
         url = reverse_lazy('media:category') + '?limit=5&offset=5'
         response = self.client.get(url)
         json = response.json()
@@ -244,10 +229,7 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     profile_academy=True)
 
-        models = [
-            self.generate_models(category=True, models=base)
-            for _ in range(0, 10)
-        ]
+        models = [self.generate_models(category=True, models=base) for _ in range(0, 10)]
         url = reverse_lazy('media:category') + '?limit=5&offset=10'
         response = self.client.get(url)
         json = response.json()

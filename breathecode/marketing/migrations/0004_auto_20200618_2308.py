@@ -16,13 +16,9 @@ class Migration(migrations.Migration):
             name='Contact',
             fields=[
                 ('id',
-                 models.AutoField(auto_created=True,
-                                  primary_key=True,
-                                  serialize=False,
-                                  verbose_name='ID')),
+                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('first_name', models.CharField(max_length=150)),
-                ('last_name',
-                 models.CharField(default=None, max_length=150, null=True)),
+                ('last_name', models.CharField(default=None, max_length=150, null=True)),
                 ('email', models.CharField(max_length=150, unique=True)),
                 ('phone',
                  phonenumber_field.modelfields.PhoneNumberField(blank=True,
@@ -40,10 +36,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='formentry',
             name='contact',
-            field=models.ForeignKey(
-                default=None,
-                null=True,
-                on_delete=django.db.models.deletion.CASCADE,
-                to='marketing.Contact'),
+            field=models.ForeignKey(default=None,
+                                    null=True,
+                                    on_delete=django.db.models.deletion.CASCADE,
+                                    to='marketing.Contact'),
         ),
     ]

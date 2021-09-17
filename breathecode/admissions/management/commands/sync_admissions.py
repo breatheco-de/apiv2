@@ -1,7 +1,7 @@
 import os, requests, sys, pytz
 from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
-from ...models import Academy, Certificate, Cohort, User, CohortUser, Syllabus
+from ...models import Academy, SpecialtyMode, Cohort, User, CohortUser, Syllabus
 from breathecode.authenticate.models import Profile
 
 HOST_ASSETS = 'https://assets.breatheco.de/apis'
@@ -50,11 +50,9 @@ class Command(BaseCommand):
                     street_address=loc['address'],
                 )
                 a.save()
-                self.stdout.write(
-                    self.style.SUCCESS(f'Academy {a.slug} added'))
+                self.stdout.write(self.style.SUCCESS(f'Academy {a.slug} added'))
             else:
-                self.stdout.write(
-                    self.style.NOTICE(f'Academy {aca.slug} skipped'))
+                self.stdout.write(self.style.NOTICE(f'Academy {aca.slug} skipped'))
 
     def syllabus(self, options):
 
@@ -63,7 +61,7 @@ class Command(BaseCommand):
 
         for syl in syllabus:
             certificate_slug, version = syl['slug'].split('.')
-            cert = Certificate.objects.filter(slug=certificate_slug).first()
+            cert = SpecialtyMode.objects.filter(slug=certificate_slug).first()
             if cert is None:
                 self.stdout.write(
                     self.style.NOTICE(
@@ -72,18 +70,14 @@ class Command(BaseCommand):
                 continue
 
             if version[1:].isnumeric() == False:
-                self.stdout.write(
-                    self.style.NOTICE(
-                        f'Ignoring syllabus invalid version {version}'))
+                self.stdout.write(self.style.NOTICE(f'Ignoring syllabus invalid version {version}'))
                 continue
             #remove letter "v" at the beginning of version number
             version = version[1:]
-            _syl = Syllabus.objects.filter(version=version,
-                                           certificate=cert).first()
+            _syl = Syllabus.objects.filter(version=version, certificate=cert).first()
             if _syl is None:
 
-                response = requests.get(
-                    f'{HOST_ASSETS}/syllabus/{certificate_slug}?v={version}')
+                response = requests.get(f'{HOST_ASSETS}/syllabus/{certificate_slug}?v={version}')
 
                 _syl = Syllabus(
                     version=version,
@@ -93,13 +87,9 @@ class Command(BaseCommand):
                 )
 
                 _syl.save()
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f'Syllabus {certificate_slug}{version} added'))
+                self.stdout.write(self.style.SUCCESS(f'Syllabus {certificate_slug}{version} added'))
             else:
-                self.stdout.write(
-                    self.style.NOTICE(
-                        f'Syllabus {certificate_slug}{version} skipped'))
+                self.stdout.write(self.style.NOTICE(f'Syllabus {certificate_slug}{version} skipped'))
 
     def certificates(self, options):
 
@@ -107,9 +97,9 @@ class Command(BaseCommand):
         profiles = response.json()
 
         for pro in profiles['data']:
-            cert = Certificate.objects.filter(slug=pro['slug']).first()
+            cert = SpecialtyMode.objects.filter(slug=pro['slug']).first()
             if cert is None:
-                cert = Certificate(
+                cert = SpecialtyMode(
                     slug=pro['slug'],
                     name=pro['name'],
                     description=pro['description'],
@@ -119,11 +109,9 @@ class Command(BaseCommand):
                     logo=pro['logo'],
                 )
                 cert.save()
-                self.stdout.write(
-                    self.style.SUCCESS(f"Certificate {pro['slug']} added"))
+                self.stdout.write(self.style.SUCCESS(f"Certificate {pro['slug']} added"))
             else:
-                self.stdout.write(
-                    self.style.NOTICE(f"Certificate {pro['slug']} skipped"))
+                self.stdout.write(self.style.NOTICE(f"Certificate {pro['slug']} skipped"))
 
     def syllabus(self, options):
 
@@ -132,7 +120,7 @@ class Command(BaseCommand):
 
         for syl in syllabus:
             certificate_slug, version = syl['slug'].split('.')
-            cert = Certificate.objects.filter(slug=certificate_slug).first()
+            cert = SpecialtyMode.objects.filter(slug=certificate_slug).first()
             if cert is None:
                 self.stdout.write(
                     self.style.NOTICE(
@@ -142,17 +130,12 @@ class Command(BaseCommand):
             #remove letter "v" at the beginning of version number
             version = version[1:]
             if not version.isnumeric():
-                self.stdout.write(
-                    self.style.NOTICE(
-                        f'Syllabus version {version} must be number: skipping')
-                )
+                self.stdout.write(self.style.NOTICE(f'Syllabus version {version} must be number: skipping'))
                 continue
 
-            _syl = Syllabus.objects.filter(version=version,
-                                           certificate=cert).first()
+            _syl = Syllabus.objects.filter(version=version, certificate=cert).first()
             if _syl is None:
-                response = requests.get(
-                    f'{HOST_ASSETS}/syllabus/{certificate_slug}?v={version}')
+                response = requests.get(f'{HOST_ASSETS}/syllabus/{certificate_slug}?v={version}')
                 _syl = Syllabus(
                     version=version,
                     certificate=cert,
@@ -160,13 +143,9 @@ class Command(BaseCommand):
                     private=False,
                 )
                 _syl.save()
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f'Syllabus {certificate_slug}{version} added'))
+                self.stdout.write(self.style.SUCCESS(f'Syllabus {certificate_slug}{version} added'))
             else:
-                self.stdout.write(
-                    self.style.NOTICE(
-                        f'Certificate {certificate_slug}{version} skipped'))
+                self.stdout.write(self.style.NOTICE(f'Certificate {certificate_slug}{version} skipped'))
 
     def cohorts(self, options):
 
@@ -179,34 +158,22 @@ class Command(BaseCommand):
                 try:
                     self.add_cohort(_cohort)
                     self.stdout.write(
-                        self.style.SUCCESS(
-                            f"Cohort {_cohort['slug']} with syllabus {_cohort['slug']} added"
-                        ))
+                        self.style.SUCCESS(f"Cohort {_cohort['slug']} with syllabus {_cohort['slug']} added"))
                 except Exception as e:
-                    self.stdout.write(
-                        self.style.NOTICE(
-                            f"Error adding cohort {_cohort['slug']}: {str(e)}")
-                    )
+                    self.stdout.write(self.style.NOTICE(f"Error adding cohort {_cohort['slug']}: {str(e)}"))
                     # raise e
             else:
                 try:
                     self.update_cohort(co, _cohort)
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            f"Cohort found, updated info for {_cohort['slug']}"
-                        ))
+                    self.stdout.write(self.style.SUCCESS(f"Cohort found, updated info for {_cohort['slug']}"))
                 except Exception as e:
-                    self.stdout.write(
-                        self.style.NOTICE(
-                            f"Error updating cohort {_cohort['slug']}: {str(e)}"
-                        ))
+                    self.stdout.write(self.style.NOTICE(f"Error updating cohort {_cohort['slug']}: {str(e)}"))
                     # raise e
 
     def students(self, options):
 
         if options['override']:
-            ids = CohortUser.objects.filter(role='STUDENT').values_list(
-                'user__id', flat=True)
+            ids = CohortUser.objects.filter(role='STUDENT').values_list('user__id', flat=True)
             User.objects.filter(id__in=ids).delete()
 
         limit = False
@@ -223,28 +190,21 @@ class Command(BaseCommand):
             if limit and limit > 0 and total > limit:
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f'Stopped at {total} because there was a limit on the command arguments'
-                    ))
+                        f'Stopped at {total} because there was a limit on the command arguments'))
                 return
 
             user = User.objects.filter(email=_student['email']).first()
             if user is None:
                 try:
                     user = self.add_user(_student)
-                    self.stdout.write(
-                        self.style.SUCCESS(f"User {_student['email']} added"))
+                    self.stdout.write(self.style.SUCCESS(f"User {_student['email']} added"))
                 except Exception as e:
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            f"Error adding user {_student['email']}: {str(e)}")
-                    )
+                    self.stdout.write(self.style.SUCCESS(f"Error adding user {_student['email']}: {str(e)}"))
 
             if user is not None:
                 try:
                     self.add_student_cohorts(_student, user)
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            f"Synched cohorts for user {_student['email']}"))
+                    self.stdout.write(self.style.SUCCESS(f"Synched cohorts for user {_student['email']}"))
                 except Exception as e:
                     raise e
 
@@ -256,17 +216,15 @@ class Command(BaseCommand):
                     profile = Profile(user=user)
                     profile.avatar_url = API_URL + '/static/img/avatar.png'
                     profile.bio = _student['bio']
-                    profile.phone = _student['phone'] if _student[
-                        'phone'] is not None else ''
+                    profile.phone = _student['phone'] if _student['phone'] is not None else ''
                     profile.github_username = _student['github']
                     profile.save()
 
     def teachers(self, options):
 
         if options['override']:
-            ids = CohortUser.objects.filter(
-                role__in=['STUDENT', 'ASSISTANT']).values_list('user__id',
-                                                               flat=True)
+            ids = CohortUser.objects.filter(role__in=['STUDENT', 'ASSISTANT']).values_list('user__id',
+                                                                                           flat=True)
             User.objects.filter(id__in=ids).delete()
 
         limit = False
@@ -284,8 +242,7 @@ class Command(BaseCommand):
             if limit and limit > 0 and total > limit:
                 self.stdout.write(
                     self.style.SUCCESS(
-                        f'Stopped at {total} because there was a limit on the command arguments'
-                    ))
+                        f'Stopped at {total} because there was a limit on the command arguments'))
                 return
 
             user = User.objects.filter(email=_teacher['email']).first()
@@ -294,8 +251,7 @@ class Command(BaseCommand):
 
             try:
                 self.add_teacher_cohorts(_teacher, user)
-                self.stdout.write(
-                    self.style.SUCCESS(f"User {_teacher['email']} synched"))
+                self.stdout.write(self.style.SUCCESS(f"User {_teacher['email']} synched"))
             except Exception as e:
                 raise e
                 # self.stdout.write(self.style.SUCCESS(f"Error adding cohort {_cohort['slug']}: {str(e)}"))
@@ -303,15 +259,11 @@ class Command(BaseCommand):
     def add_cohort(self, _cohort):
         academy = Academy.objects.filter(slug=_cohort['location_slug']).first()
         if academy is None:
-            raise CommandError(
-                f"Academy {_cohort['location_slug']} does not exist")
+            raise CommandError(f"Academy {_cohort['location_slug']} does not exist")
         syllabus = Syllabus.objects.filter(
-            certificate__slug=_cohort['profile_slug']).order_by(
-                '-version').first()
+            certificate__slug=_cohort['profile_slug']).order_by('-version').first()
         if syllabus is None:
-            raise CommandError(
-                f"syllabus for certificate {_cohort['profile_slug']} does not exist"
-            )
+            raise CommandError(f"syllabus for certificate {_cohort['profile_slug']} does not exist")
 
         stages = {
             'finished': 'ENDED',
@@ -326,9 +278,8 @@ class Command(BaseCommand):
         co = Cohort(
             slug=_cohort['slug'],
             name=_cohort['name'],
-            kickoff_date=datetime.strptime(
-                _cohort['kickoff_date'],
-                DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC')),
+            kickoff_date=datetime.strptime(_cohort['kickoff_date'],
+                                           DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC')),
             current_day=_cohort['current_day'],
             stage=stages[_cohort['stage']],
             language=_cohort['language'],
@@ -336,9 +287,8 @@ class Command(BaseCommand):
             syllabus=syllabus,
         )
         if _cohort['ending_date'] is not None:
-            co.ending_date = datetime.strptime(
-                _cohort['ending_date'],
-                DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
+            co.ending_date = datetime.strptime(_cohort['ending_date'],
+                                               DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
         co.save()
         return co
 
@@ -356,24 +306,19 @@ class Command(BaseCommand):
 
         cohort.name = data['name']
         if 'kickoff_date' in data and data['kickoff_date'] is not None:
-            cohort.kickoff_date = datetime.strptime(
-                data['kickoff_date'],
-                DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
+            cohort.kickoff_date = datetime.strptime(data['kickoff_date'],
+                                                    DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
         cohort.current_day = data['current_day']
         cohort.stage = stages[data['stage']]
         cohort.language = data['language']
         if 'kickoff_date' in data and data['ending_date'] is not None:
-            cohort.ending_date = datetime.strptime(
-                data['ending_date'],
-                DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
+            cohort.ending_date = datetime.strptime(data['ending_date'],
+                                                   DATETIME_FORMAT).replace(tzinfo=pytz.timezone('UTC'))
 
         syllabus = Syllabus.objects.filter(
-            certificate__slug=data['profile_slug']).order_by(
-                '-version').first()
+            certificate__slug=data['profile_slug']).order_by('-version').first()
         if syllabus is None:
-            raise CommandError(
-                f"syllabus for certificate {data['profile_slug']} does not exist"
-            )
+            raise CommandError(f"syllabus for certificate {data['profile_slug']} does not exist")
         cohort.syllabus = syllabus
 
         cohort.save()
@@ -384,8 +329,7 @@ class Command(BaseCommand):
             username=_user['email'],
             first_name=_user['first_name'],
         )
-        if 'last_name' in _user and _user[
-                'last_name'] is not None and _user['last_name'] != '':
+        if 'last_name' in _user and _user['last_name'] is not None and _user['last_name'] != '':
             us.last_name = _user['last_name']
         us.save()
         return us
@@ -394,8 +338,7 @@ class Command(BaseCommand):
 
         for cohort_slug in _teacher['cohorts']:
             cohort = Cohort.objects.filter(slug=cohort_slug).first()
-            if cohort and not CohortUser.objects.filter(user=us,
-                                                        cohort=cohort).count():
+            if cohort and not CohortUser.objects.filter(user=us, cohort=cohort).count():
                 cohort_user = CohortUser(
                     user=us,
                     cohort=cohort,
@@ -411,8 +354,7 @@ class Command(BaseCommand):
             'uknown': None,
         }
         if _student['financial_status'] not in financial_status:
-            raise CommandError(
-                f"Invalid finantial status {_student['financial_status']}")
+            raise CommandError(f"Invalid finantial status {_student['financial_status']}")
 
         educational_status = {
             'under_review': 'ACTIVE',
@@ -423,18 +365,14 @@ class Command(BaseCommand):
             'student_dropped': 'DROPPED',
         }
         if _student['status'] not in educational_status:
-            raise CommandError(
-                f"Invalid educational_status {_student['status']}")
+            raise CommandError(f"Invalid educational_status {_student['status']}")
 
         for cohort_slug in _student['cohorts']:
             cohort = Cohort.objects.filter(slug=cohort_slug).first()
-            if cohort and not CohortUser.objects.filter(user=us,
-                                                        cohort=cohort).count():
-                cohort_user = CohortUser(
-                    user=us,
-                    cohort=cohort,
-                    role='STUDENT',
-                    finantial_status=financial_status[
-                        _student['financial_status']],
-                    educational_status=educational_status[_student['status']])
+            if cohort and not CohortUser.objects.filter(user=us, cohort=cohort).count():
+                cohort_user = CohortUser(user=us,
+                                         cohort=cohort,
+                                         role='STUDENT',
+                                         finantial_status=financial_status[_student['financial_status']],
+                                         educational_status=educational_status[_student['status']])
                 cohort_user.save()

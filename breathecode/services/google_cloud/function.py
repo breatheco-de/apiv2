@@ -40,9 +40,7 @@ class Function:
             headers['Accept'] = 'application/json'
             data = json.dumps(data)
 
-        request = requests.post('https://' + self.service_url,
-                                data=data,
-                                headers=headers)
+        request = requests.post('https://' + self.service_url, data=data, headers=headers)
 
         logger.info(f'Cloud function {self.service_url}')
         logger.info(request.content.decode('utf-8'))

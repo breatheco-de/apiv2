@@ -38,35 +38,26 @@ apps = [
     ('s/', 'breathecode.marketing.urls_shortner', 'shortner'),
 ]
 
-urlpatterns_apps = [
-    path(url, include(urlconf, namespace=namespace))
-    for url, urlconf, namespace in apps
-]
+urlpatterns_apps = [path(url, include(urlconf, namespace=namespace)) for url, urlconf, namespace in apps]
 
-urlpatterns_app_openapi = [
-    mount_app_openapi(url, urlconf, namespace)
-    for url, urlconf, namespace in apps
-]
+urlpatterns_app_openapi = [mount_app_openapi(url, urlconf, namespace) for url, urlconf, namespace in apps]
 
 urlpatterns_docs = [
-    path(
-        'openapi.json',
-        get_root_schema_view(
-            [namespace for _, _, namespace in apps if namespace != 'shortner'],
-            extend={
-                'title': 'BreatheCode API',
-                'description': 'Technology for Learning',
-                'version': 'v1.0.0',
-            }),
-        name='openapi-schema'),
+    path('openapi.json',
+         get_root_schema_view([namespace for _, _, namespace in apps if namespace != 'shortner'],
+                              extend={
+                                  'title': 'BreatheCode API',
+                                  'description': 'Technology for Learning',
+                                  'version': 'v1.0.0',
+                              }),
+         name='openapi-schema'),
     path('admin/doc/', include('django.contrib.admindocs.urls')),
     path('swagger/',
-         TemplateView.as_view(template_name='swagger-ui.html',
-                              extra_context={'schema_url': 'openapi-schema'}),
+         TemplateView.as_view(template_name='swagger-ui.html', extra_context={'schema_url':
+                                                                              'openapi-schema'}),
          name='swagger-ui'),
     path('redoc/',
-         TemplateView.as_view(template_name='redoc.html',
-                              extra_context={'schema_url': 'openapi-schema'}),
+         TemplateView.as_view(template_name='redoc.html', extra_context={'schema_url': 'openapi-schema'}),
          name='redoc'),
 ]
 
@@ -77,6 +68,4 @@ urlpatterns_django = [
 
 urlpatterns = urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django
 if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or os.environ.get('ENV') == 'test':
-    urlpatterns.append(
-        path('v1/cypress/',
-             include('breathecode.cypress.urls', namespace='cypress')))
+    urlpatterns.append(path('v1/cypress/', include('breathecode.cypress.urls', namespace='cypress')))

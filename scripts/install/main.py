@@ -10,8 +10,7 @@ def preinstall_hook():
 
     for script_name in scripts:
         print('')
-        print('--- Running preinstall script ---',
-              os.path.basename(script_name), '---')
+        print('--- Running preinstall script ---', os.path.basename(script_name), '---')
         print('')
         os.system(f'python {script_name}')
 
@@ -30,8 +29,7 @@ def postinstall_hook():
 
     for script_name in scripts:
         print('')
-        print('--- Running postinstall script ---',
-              os.path.basename(script_name), '---')
+        print('--- Running postinstall script ---', os.path.basename(script_name), '---')
         print('')
         os.system(f'python {script_name}')
 

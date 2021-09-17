@@ -9,8 +9,8 @@ class HeadersMixin():
         headers = {}
 
         items = [
-            index for index in kargs if kargs[index] and (
-                isinstance(kargs[index], str) or isinstance(kargs[index], int))
+            index for index in kargs
+            if kargs[index] and (isinstance(kargs[index], str) or isinstance(kargs[index], int))
         ]
 
         for index in items:

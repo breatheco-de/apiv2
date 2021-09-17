@@ -65,8 +65,7 @@ class NotifyModelsMixin(ModelsMixin):
                 kargs['slack_team'] = models['slack_team']
 
             kargs = {**kargs, **slack_user_team_kwargs}
-            models['slack_user_team'] = mixer.blend('notify.SlackUserTeam',
-                                                    **kargs)
+            models['slack_user_team'] = mixer.blend('notify.SlackUserTeam', **kargs)
 
         if not 'slack_channel' in models and slack_channel:
             kargs = {}
@@ -78,7 +77,6 @@ class NotifyModelsMixin(ModelsMixin):
                 kargs['team'] = models['slack_team']
 
             kargs = {**kargs, **slack_channel_kwargs}
-            models['slack_channel'] = mixer.blend('notify.SlackChannel',
-                                                  **kargs)
+            models['slack_channel'] = mixer.blend('notify.SlackChannel', **kargs)
 
         return models

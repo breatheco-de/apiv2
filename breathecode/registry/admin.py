@@ -64,15 +64,12 @@ author_aalejo.short_description = 'Make myself the author of these assets'
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug', 'author__email', 'url']
-    list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type',
-                    'url_path')
+    list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'url_path')
     list_filter = ['asset_type', 'lang']
     actions = [add_gitpod, remove_gitpod, sync_github, author_aalejo]
 
     def url_path(self, obj):
-        return format_html(
-            f"<a rel='noopener noreferrer' target='_blank' href='{obj.url}'>open</a>"
-        )
+        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{obj.url}'>open</a>")
 
     def current_status(self, obj):
         colors = {
@@ -81,8 +78,7 @@ class AssetAdmin(admin.ModelAdmin):
             'WARNING': 'bg-warning',
             'DRAFT': '',
         }
-        return format_html(
-            f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
 
 # Register your models here.
