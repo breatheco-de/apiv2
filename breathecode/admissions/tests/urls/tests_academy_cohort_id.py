@@ -336,11 +336,14 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      cohort_kwargs=cohort_kwargs,
                                      specialty_mode_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs)
+
+        model2 = self.generate_models(specialty_mode=True, syllabus=model.syllabus)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
+            'specialty_mode': 2,
             'current_day': model['cohort'].current_day + 1,
             'language': 'es',
         }
@@ -359,16 +362,22 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'current_day': data['current_day'],
             'stage': model['cohort'].stage,
             'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'slug': model['cohort'].specialty_mode.slug,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+                'id': model2.specialty_mode.id,
+                'name': model2.specialty_mode.name,
+                'slug': model2.specialty_mode.slug,
+                'syllabus': model2.specialty_mode.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
+                'duration_in_days': model.syllabus.duration_in_days,
+                'duration_in_hours': model.syllabus.duration_in_hours,
+                'github_url': model.syllabus.github_url,
+                'logo': model.syllabus.logo,
+                'private': model.syllabus.private,
+                'week_hours': model.syllabus.week_hours,
             },
             'academy': {
                 'id': model.academy.id,
@@ -400,7 +409,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': data['slug'],
             'stage': model['cohort'].stage,
             'syllabus_version_id': model['cohort'].syllabus_version.id,
-            'specialty_mode_id': model['cohort'].specialty_mode.id,
+            'specialty_mode_id': model2.specialty_mode.id,
             'timezone': None,
         }])
 
@@ -445,6 +454,12 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                 'slug': model.syllabus.slug,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
+                'duration_in_days': model.syllabus.duration_in_days,
+                'duration_in_hours': model.syllabus.duration_in_hours,
+                'github_url': model.syllabus.github_url,
+                'logo': model.syllabus.logo,
+                'private': model.syllabus.private,
+                'week_hours': model.syllabus.week_hours,
             },
             'academy': {
                 'id': model['cohort'].academy.id,
@@ -526,6 +541,12 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                 'slug': model.syllabus.slug,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
+                'duration_in_days': model.syllabus.duration_in_days,
+                'duration_in_hours': model.syllabus.duration_in_hours,
+                'github_url': model.syllabus.github_url,
+                'logo': model.syllabus.logo,
+                'private': model.syllabus.private,
+                'week_hours': model.syllabus.week_hours,
             },
             'academy': {
                 'id': model['cohort'].academy.id,

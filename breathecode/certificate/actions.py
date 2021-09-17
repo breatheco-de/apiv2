@@ -47,8 +47,7 @@ def generate_certificate(user, cohort=None, layout=None):
 
     if cohort.specialty_mode is None:
         raise ValidationException(
-            'The cohort has no certificate assigned, please set a '
-            f'certificate for cohort: {cohort.name}',
+            'The cohort has no schedule assigned, please edit the cohort to specify a schedule',
             slug='missing-specialty-mode')
 
     specialty = Specialty.objects.filter(syllabus__id=cohort.syllabus_version.syllabus_id).first()
