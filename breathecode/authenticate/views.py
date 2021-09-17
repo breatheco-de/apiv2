@@ -1075,18 +1075,18 @@ def change_password(request, token):
 
 
 class GenerateTokenResetGithubLink(APIView):
-    # @capable_of('generate_token')
+    @capable_of('generate_token')
     def post(self, request, profile_academy_id=None, academy_id=None):
-        print(profile_academy_id)
         profile_academy = ProfileAcademy.objects.filter(
             id=profile_academy_id).first()
         if profile_academy is None:
-            raise ValidationException('Member not found', 400)
+            raise ValidationException('Member not found', 404)
 
         token, created = Token.get_or_create(user=profile_academy.user,
                                              token_type='temporal')
         serializer = TokenSmallSerializer(token)
-        return Response(serializer.data)
+        return Response(
+            {'reset_github_url': serializer.data['reset_github_url']})
 
 
 def reset_password_view(request):

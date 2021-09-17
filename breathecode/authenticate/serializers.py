@@ -30,9 +30,14 @@ class TokenSmallSerializer(serpy.Serializer):
     user = UserTinySerializer()
     key = serpy.Field()
     reset_password_url = serpy.MethodField()
+    reset_github_url = serpy.MethodField()
 
     def get_reset_password_url(self, obj):
         return os.getenv('API_URL') + '/v1/auth/password/' + str(obj.key)
+
+    def get_reset_github_url(self, obj):
+        return os.getenv('API_URL') + '/v1/auth/github/' + str(
+            obj.key) + '?url=https://learn.breatheco.de/login'
 
 
 class RoleSmallSerializer(serpy.Serializer):
