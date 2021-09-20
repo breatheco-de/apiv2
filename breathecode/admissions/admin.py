@@ -259,20 +259,22 @@ class CohortTimeSlotAdmin(admin.ModelAdmin):
 
 
 def replicate_in_all(modeladmin, request, queryset):
+    from django.contrib import messages
+
     cert_timeslot = queryset.all()
     academies = Academy.objects.all()
     for a in academies:
         to_filter = {}
         for c in cert_timeslot:
-            # delete all timeslots for that academy and certificate ONLY the first time
-            if c.certificate.slug not in to_filter:
-                SpecialtyModeTimeSlot.objects.filter(certificate=c.certificate, academy=a).delete()
-                to_filter[c.certificate.slug] = True
+            # delete all timeslots for that academy and specialty mode ONLY the first time
+            if c.specialty_mode.slug not in to_filter:
+                SpecialtyModeTimeSlot.objects.filter(specialty_mode=c.specialty_mode, academy=a).delete()
+                to_filter[c.specialty_mode.slug] = True
             # and then re add the timeslots one by one
             new_timeslot = SpecialtyModeTimeSlot(recurrent=c.recurrent,
                                                  starting_at=c.starting_at,
                                                  ending_at=c.ending_at,
-                                                 certificate=c.certificate,
+                                                 specialty_mode=c.specialty_mode,
                                                  academy=a)
             new_timeslot.save()
 
