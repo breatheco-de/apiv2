@@ -979,7 +979,8 @@ class GenerateTokenResetGithubLink(APIView):
 
         token, created = Token.get_or_create(user=profile_academy.user, token_type='temporal')
         serializer = TokenSmallSerializer(token)
-        return Response({'reset_github_url': serializer.data['reset_github_url']})
+        # return Response({'reset_github_url': serializer.data['reset_github_url']})
+        return Response(serializer.data)
 
 
 def reset_password_view(request):

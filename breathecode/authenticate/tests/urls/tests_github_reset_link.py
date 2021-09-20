@@ -70,6 +70,14 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(
             json, {
+                'user': {
+                    'id': 1,
+                    'email': profile_academy.user.email
+                },
+                'key':
+                f'{token}',
+                'reset_password_url':
+                f'http://localhost:8000/v1/auth/password/{token}',
                 'reset_github_url':
                 f'http://localhost:8000/v1/auth/github/{token}?url=https://learn.breatheco.de/login'
             })
