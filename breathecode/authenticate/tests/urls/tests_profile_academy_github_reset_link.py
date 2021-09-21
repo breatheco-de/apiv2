@@ -31,7 +31,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(
             json, {
-                'detail': "You (user: 1) don't have this capability: generate_token "
+                'detail': "You (user: 1) don't have this capability: generate_temporal_token "
                 'for academy 1',
                 'status_code': 403
             })
@@ -41,7 +41,10 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /auth/member/<profile_academy_id>/token"""
         role = 'pikachu'
         self.headers(academy=1)
-        self.generate_models(authenticate=True, capability='generate_token', profile_academy=True, role=role)
+        self.generate_models(authenticate=True,
+                             capability='generate_temporal_token',
+                             profile_academy=True,
+                             role=role)
         url = reverse_lazy('authenticate:profile_academy_reset_github_link', kwargs={'profile_academy_id': 3})
         response = self.client.post(url)
         json = response.json()
@@ -56,7 +59,7 @@ class AuthenticateTestSuite(AuthTestCase):
         profile_academy_kwargs = {'id': 3}
         self.generate_models(authenticate=True,
                              user=True,
-                             capability='generate_token',
+                             capability='generate_temporal_token',
                              profile_academy=True,
                              role=role,
                              profile_academy_kwargs=profile_academy_kwargs)
@@ -74,11 +77,8 @@ class AuthenticateTestSuite(AuthTestCase):
                     'id': 1,
                     'email': profile_academy.user.email
                 },
-                'key':
-                f'{token}',
-                'reset_password_url':
-                f'http://localhost:8000/v1/auth/password/{token}',
-                'reset_github_url':
-                f'http://localhost:8000/v1/auth/github/{token}?url=https://learn.breatheco.de/login'
+                'key': f'{token}',
+                'reset_password_url': f'http://localhost:8000/v1/auth/password/{token}',
+                'reset_github_url': f'http://localhost:8000/v1/auth/github/{token}'
             })
         self.assertEqual(response.status_code, status.HTTP_200_OK)

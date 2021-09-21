@@ -971,7 +971,7 @@ def change_password(request, token):
 
 
 class GenerateTokenResetGithubLink(APIView):
-    @capable_of('generate_token')
+    @capable_of('generate_temporal_token')
     def post(self, request, profile_academy_id=None, academy_id=None):
         profile_academy = ProfileAcademy.objects.filter(id=profile_academy_id).first()
         if profile_academy is None:

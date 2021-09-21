@@ -36,8 +36,7 @@ class TokenSmallSerializer(serpy.Serializer):
         return os.getenv('API_URL') + '/v1/auth/password/' + str(obj.key)
 
     def get_reset_github_url(self, obj):
-        return os.getenv('API_URL') + '/v1/auth/github/' + str(
-            obj.key) + '?url=https://learn.breatheco.de/login'
+        return os.getenv('API_URL') + '/v1/auth/github/' + str(obj.key)
 
 
 class RoleSmallSerializer(serpy.Serializer):
