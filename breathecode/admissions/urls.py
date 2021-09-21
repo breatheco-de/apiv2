@@ -30,13 +30,10 @@ urlpatterns = [
          AcademySyncCohortTimeSlotView.as_view(),
          name='academy_cohort_sync_timeslot'),
     # 🔽 this endpoint is deprecated 🔽
-    path('academy/certificate/<int:certificate_id>/timeslot',
-         AcademySpecialtyModeTimeSlotView.as_view(),
-         name='academy_schedule_id_timeslot'),
+    path('academy/certificate/<int:certificate_id>/timeslot', AcademySpecialtyModeTimeSlotView.as_view()),
     # 🔽 this endpoint is deprecated 🔽
     path('academy/certificate/<int:certificate_id>/timeslot/<int:timeslot_id>',
-         AcademySpecialtyModeTimeSlotView.as_view(),
-         name='academy_schedule_id_timeslot_id'),
+         AcademySpecialtyModeTimeSlotView.as_view()),
     path('academy/schedule/<int:certificate_id>/timeslot',
          AcademySpecialtyModeTimeSlotView.as_view(),
          name='academy_schedule_id_timeslot'),
@@ -49,13 +46,13 @@ urlpatterns = [
     path('user/me', UserMeView.as_view(), name='user_me'),
     path('user', UserView.as_view(), name='user'),
     # 🔽 this endpoint is deprecated 🔽
-    path('certificate', SpecialtyModeView.as_view(), name='schedule'),
+    path('certificate', SpecialtyModeView.as_view()),
     # 🔽 this endpoint is deprecated 🔽
-    path('certificate/<str:certificate_slug>/', get_single_course, name='schedule_slug'),
+    path('certificate/<str:certificate_slug>/', get_single_course),
     path('schedule', SpecialtyModeView.as_view(), name='schedule'),
     path('schedule/<str:certificate_slug>/', get_single_course, name='schedule_slug'),
     # 🔽 this endpoint is deprecated 🔽
-    path('academy/certificate', AcademySpecialtyModeView.as_view(), name='academy_schedule'),
+    path('academy/certificate', AcademySpecialtyModeView.as_view()),
     path('academy/schedule', AcademySpecialtyModeView.as_view(), name='academy_schedule'),
     path('syllabus', SyllabusView.as_view(), name='syllabus'),
     path('syllabus/<int:syllabus_id>', SyllabusView.as_view(), name='syllabus_id'),
