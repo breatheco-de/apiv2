@@ -975,7 +975,7 @@ class GenerateTokenResetGithubLink(APIView):
     def post(self, request, profile_academy_id=None, academy_id=None):
         profile_academy = ProfileAcademy.objects.filter(id=profile_academy_id).first()
         if profile_academy is None:
-            raise ValidationException('Member not found', 404)
+            raise ValidationException('Member not found', code=404, slug='member-not-found')
 
         token, created = Token.get_or_create(user=profile_academy.user, token_type='temporal')
         serializer = TokenSmallSerializer(token)

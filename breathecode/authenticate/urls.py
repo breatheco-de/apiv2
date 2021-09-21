@@ -33,7 +33,7 @@ urlpatterns = [
     path('member/invite/<str:token>', render_invite, name='academy_invite'),
     path('member/<int:profile_academy_id>/token',
          GenerateTokenResetGithubLink.as_view(),
-         name='reset_github_link'),
+         name='profile_academy_reset_github_link'),
     path('academy/member', MemberView.as_view(), name='academy_member'),
     path('academy/<int:academy_id>/member', MemberView.as_view(), name='academy_id_member'),
     path('academy/<int:academy_id>/member/<str:user_id_or_email>',
