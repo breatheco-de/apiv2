@@ -12,7 +12,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Auth
     """
     def test_specialty_mode_time_slot__without_auth(self):
-        url = reverse_lazy('admissions:academy_certificate_id_timeslot', kwargs={'certificate_id': 1})
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
         response = self.client.get(url)
         json = response.json()
 
@@ -25,7 +25,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
     def test_specialty_mode_time_slot__without_academy_header(self):
         model = self.generate_models(authenticate=True)
-        url = reverse_lazy('admissions:academy_certificate_id_timeslot', kwargs={'certificate_id': 1})
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
         response = self.client.get(url)
         json = response.json()
 
@@ -40,7 +40,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_specialty_mode_time_slot__without_capabilities(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True)
-        url = reverse_lazy('admissions:academy_certificate_id_timeslot', kwargs={'certificate_id': 1})
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
         response = self.client.get(url)
         json = response.json()
 
@@ -63,7 +63,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='read_certificate',
                                      role='potato',
                                      specialty_mode=True)
-        url = reverse_lazy('admissions:academy_certificate_id_timeslot', kwargs={'certificate_id': 1})
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
         response = self.client.get(url)
         json = response.json()
 
@@ -83,7 +83,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      specialty_mode_time_slot=True)
         model_dict = self.remove_dinamics_fields(model['specialty_mode_time_slot'].__dict__)
-        url = reverse_lazy('admissions:academy_certificate_id_timeslot', kwargs={'certificate_id': 1})
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -114,7 +114,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato')
-        url = reverse_lazy('admissions:academy_certificate_id_timeslot', kwargs={'certificate_id': 1})
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
         data = {}
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -134,7 +134,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='crud_certificate',
                                      role='potato',
                                      academy_specialty_mode=True)
-        url = reverse_lazy('admissions:academy_certificate_id_timeslot', kwargs={'certificate_id': 1})
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
         data = {}
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -154,7 +154,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='crud_certificate',
                                      role='potato',
                                      academy_specialty_mode=True)
-        url = reverse_lazy('admissions:academy_certificate_id_timeslot', kwargs={'certificate_id': 1})
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
 
         starting_at = self.datetime_now()
         ending_at = self.datetime_now()

@@ -17,7 +17,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
     def test_certificate_without_auth(self):
         """Test /certificate without auth"""
-        url = reverse_lazy('admissions:certificate_slug', kwargs={'certificate_slug': 'they-killed-kenny'})
+        url = reverse_lazy('admissions:schedule_slug', kwargs={'certificate_slug': 'they-killed-kenny'})
         response = self.client.get(url)
         json = response.json()
 
@@ -31,7 +31,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
     def test_certificate_without_data(self):
         """Test /certificate without auth"""
-        url = reverse_lazy('admissions:certificate_slug', kwargs={'certificate_slug': 'they-killed-kenny'})
+        url = reverse_lazy('admissions:schedule_slug', kwargs={'certificate_slug': 'they-killed-kenny'})
         self.generate_models(authenticate=True)
         response = self.client.get(url)
         json = response.json()
@@ -47,7 +47,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_certificate_with_data(self):
         """Test /certificate without auth"""
         model = self.generate_models(authenticate=True, specialty_mode=True, syllabus=True)
-        url = reverse_lazy('admissions:certificate_slug',
+        url = reverse_lazy('admissions:schedule_slug',
                            kwargs={'certificate_slug': model['specialty_mode'].slug})
         response = self.client.get(url)
         json = response.json()
