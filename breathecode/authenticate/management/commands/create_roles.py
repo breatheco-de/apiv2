@@ -189,7 +189,7 @@ class Command(BaseCommand):
             },
             {
                 'slug': 'generate_temporal_token',
-                'description': 'Generate a temporal token to reset github'
+                'description': 'Generate a temporal token to reset github credential or forgot password'
             },
         ]
 
