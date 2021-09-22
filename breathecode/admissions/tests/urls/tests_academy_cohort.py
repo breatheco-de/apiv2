@@ -135,37 +135,37 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    def test_academy_cohort__post__without_specialty_mode(self):
-        """Test /academy/cohort without auth"""
-        self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     specialty_mode=True,
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     skip_cohort=True,
-                                     specialty_mode_time_slot=True)
-        url = reverse_lazy('admissions:academy_cohort')
-        data = {
-            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
-            'slug': 'they-killed-kenny',
-            'name': 'They killed kenny',
-            'kickoff_date': datetime.today().isoformat(),
-        }
-        response = self.client.post(url, data)
-        json = response.json()
-        expected = {
-            'detail': 'specialty-mode-field',
-            'status_code': 400,
-        }
+    # def test_academy_cohort__post__without_specialty_mode(self):
+    #     """Test /academy/cohort without auth"""
+    #     self.headers(academy=1)
+    #     model = self.generate_models(authenticate=True,
+    #                                  user=True,
+    #                                  profile_academy=True,
+    #                                  capability='crud_cohort',
+    #                                  role='potato',
+    #                                  specialty_mode=True,
+    #                                  syllabus=True,
+    #                                  syllabus_version=True,
+    #                                  skip_cohort=True,
+    #                                  specialty_mode_time_slot=True)
+    #     url = reverse_lazy('admissions:academy_cohort')
+    #     data = {
+    #         'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+    #         'slug': 'they-killed-kenny',
+    #         'name': 'They killed kenny',
+    #         'kickoff_date': datetime.today().isoformat(),
+    #     }
+    #     response = self.client.post(url, data)
+    #     json = response.json()
+    #     expected = {
+    #         'detail': 'specialty-mode-field',
+    #         'status_code': 400,
+    #     }
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [])
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    #     self.assertEqual(self.all_cohort_dict(), [])
+    #     self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     def test_academy_cohort__post__without_ending_date_or_never_ends(self):
         """Test /academy/cohort without auth"""
