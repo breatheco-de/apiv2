@@ -970,7 +970,7 @@ def change_password(request, token):
     return render(request, 'form.html', {'form': form})
 
 
-class TemporalTokenView(APIView):
+class TokenTemporalView(APIView):
     @capable_of('generate_temporal_token')
     def post(self, request, profile_academy_id=None, academy_id=None):
         profile_academy = ProfileAcademy.objects.filter(id=profile_academy_id).first()
