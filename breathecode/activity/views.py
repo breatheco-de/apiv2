@@ -301,8 +301,7 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
 
         if user_id:
             try:
-                user_id_int = int(user_id)
-                kwargs['user_id'] = user_id
+                kwargs['user_id'] = int(user_id)
             except ValueError:
                 raise ValidationException('user_id is not a interger', slug='bad-user-id')
 
