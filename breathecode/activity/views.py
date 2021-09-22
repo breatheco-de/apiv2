@@ -298,9 +298,11 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
             raise ValidationException(f'Activity type {slug} not found', slug='activity-not-found')
 
         user_id = request.GET.get('user_id')
+
         if user_id:
             try:
-                kwargs['user_id'] = int(user_id)
+                user_id_int = int(user_id)
+                kwargs['user_id'] = user_id
             except ValueError:
                 raise ValidationException('user_id is not a interger', slug='bad-user-id')
 

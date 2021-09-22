@@ -162,10 +162,6 @@ class Command(BaseCommand):
                 'description': 'Generate a temporal token and resend forgot password link'
             },
             {
-                'slug': 'generate_temporal_token',
-                'description': 'Generate a temporal token to reset github'
-            },
-            {
                 'slug': 'read_activity',
                 'description': 'List all the user activities'
             },
@@ -190,6 +186,10 @@ class Command(BaseCommand):
             {
                 'slug': 'academy_reporting',
                 'description': 'Get detailed reports about the academy activity'
+            },
+            {
+                'slug': 'generate_temporal_token',
+                'description': 'Generate a temporal token to reset github'
             },
         ]
 

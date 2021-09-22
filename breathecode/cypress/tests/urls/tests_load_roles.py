@@ -266,4 +266,8 @@ class AcademyEventTestSuite(CypressTestCase):
                 'slug': 'academy_reporting',
                 'description': 'Get detailed reports about the academy activity'
             },
+            {
+                'slug': 'generate_temporal_token',
+                'description': 'Generate a temporal token to reset github'
+            },
         ])
