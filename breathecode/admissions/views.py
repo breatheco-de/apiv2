@@ -697,9 +697,9 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if syllabus is None:
             raise ValidationException('syllabus field is missing', slug='missing-syllabus-field')
 
-        specialty_mode = request.data.get('specialty_mode')
-        if specialty_mode is None:
-            raise ValidationException('specialty mode field is missing', slug='specialty-mode-field')
+        # specialty_mode = request.data.get('specialty_mode')
+        # if specialty_mode is None:
+        #     raise ValidationException('specialty mode field is missing', slug='specialty-mode-field')
 
         if request.data.get('current_day'):
             raise ValidationException('current_day field is not allowed', slug='current-day-not-allowed')

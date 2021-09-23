@@ -1,3 +1,4 @@
+import os
 import pytz
 import json
 import logging
@@ -12,6 +13,8 @@ from .models import (Academy, SpecialtyMode, AcademySpecialtyMode, Cohort, Cohor
                      SyllabusVersion, UserAdmissions, Syllabus, CohortTimeSlot, SpecialtyModeTimeSlot)
 from .actions import sync_cohort_timeslots
 from breathecode.assignments.actions import sync_student_tasks
+from random import choice
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -178,13 +181,72 @@ class CohortForm(forms.ModelForm):
             self.fields['timezone'] = forms.ChoiceField(choices=timezones)
 
 
+cohort_actions = [sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots]
+
+if os.getenv('ENVIRONMENT') == 'DEVELOPMENT':
+    pass
+
+
+def link_randomly_relations_to_cohorts(modeladmin, request, queryset):
+    academies_instances = {}
+    specialty_modes_instances = {}
+    cohorts = queryset.all()
+
+    if not cohorts:
+        return
+
+    for cohort in cohorts:
+
+        if not cohort.syllabus_version:
+            if cohort.academy.id in academies_instances and 'syllabus_versions' in academies_instances[
+                    cohort.academy.id]:
+                syllabus_versions = academies_instances[cohort.academy.id]['syllabus_versions']
+            else:
+                syllabus_versions = SyllabusVersion.objects.filter(
+                    Q(syllabus__academy_owner=cohort.academy) | Q(syllabus__private=False))
+
+            if not syllabus_versions:
+                continue
+
+            syllabus_version = choice(list(syllabus_versions))
+
+            x = Cohort.objects.filter(id=cohort.id).first()
+            x.syllabus_version = syllabus_version
+            x.save()
+
+        else:
+            syllabus_version = cohort.syllabus_version
+
+        if not cohort.specialty_mode:
+            if syllabus_version.syllabus.id in specialty_modes_instances:
+                specialty_modes = specialty_modes_instances[syllabus_version.syllabus.id]
+            else:
+                specialty_modes = SpecialtyMode.objects.filter(syllabus=syllabus_version.syllabus)
+
+            if not specialty_modes:
+                continue
+
+            specialty_mode = choice(list(specialty_modes))
+
+            x = Cohort.objects.filter(id=cohort.id).first()
+            x.specialty_mode = specialty_mode
+            x.save()
+
+
+link_randomly_relations_to_cohorts.short_description = 'Link randomly relations to cohorts'
+
+
 @admin.register(Cohort)
 class CohortAdmin(admin.ModelAdmin):
     form = CohortForm
     search_fields = ['slug', 'name', 'academy__city__name']
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'specialty_mode')
     list_filter = ['stage', 'academy__slug', 'specialty_mode__slug', 'syllabus_version__version']
-    actions = [sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots]
+
+    if os.getenv('ENV') == 'development':
+        actions = cohort_actions + [link_randomly_relations_to_cohorts]
+    else:
+        actions = cohort_actions
 
     def academy_name(self, obj):
         return obj.academy.name

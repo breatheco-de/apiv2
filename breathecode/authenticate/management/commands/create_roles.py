@@ -187,6 +187,10 @@ class Command(BaseCommand):
                 'slug': 'academy_reporting',
                 'description': 'Get detailed reports about the academy activity'
             },
+            {
+                'slug': 'generate_temporal_token',
+                'description': 'Generate a temporal token to reset github credential or forgot password'
+            },
         ]
 
         for c in caps:
@@ -309,7 +313,7 @@ class Command(BaseCommand):
             'caps':
             extend(roles, ['teacher']) + [
                 'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
-                'send_reset_password', 'crud_certificate'
+                'send_reset_password', 'generate_temporal_token', 'crud_certificate'
             ]
         })
         roles.append({
@@ -321,7 +325,10 @@ class Command(BaseCommand):
             extend(roles, [
                 'academy_coordinator', 'student', 'career_support', 'growth_manager', 'admissions_developer',
                 'syllabus_coordinator'
-            ]) + ['crud_member', 'crud_my_academy', 'generate_academy_token', 'send_reset_password']
+            ]) + [
+                'crud_member', 'crud_my_academy', 'generate_academy_token', 'send_reset_password',
+                'generate_temporal_token'
+            ]
         })
 
         for r in roles:
