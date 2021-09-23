@@ -34,8 +34,8 @@ ACTIVITIES = {
     'exercise_success': 'When student successfuly tests exercise',
     'registration': 'When student successfuly joins breathecode',
     'educational_status_change': 'Student cohort changes like: starts, drop, pospone, etc',
-    'educational_note': 'Student cohort changes like: starts, drop, pospone, etc',
-    'career_note': 'Student cohort changes like: starts, drop, pospone, etc',
+    'educational_note': 'Notes that can be added by teachers, TA\'s or anyone involved in the student education',
+    'career_note': 'Notes related to the student career',
 }
 
 ACTIVITY_PUBLIC_SLUGS = [
