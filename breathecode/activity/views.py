@@ -298,6 +298,7 @@ class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
             raise ValidationException(f'Activity type {slug} not found', slug='activity-not-found')
 
         user_id = request.GET.get('user_id')
+
         if user_id:
             try:
                 kwargs['user_id'] = int(user_id)

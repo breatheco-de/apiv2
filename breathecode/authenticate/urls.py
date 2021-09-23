@@ -16,12 +16,12 @@ Including another URLconf
 # from django.contrib import admin
 # from rest_framework.authtoken import views
 from django.urls import path
-from .views import (get_users, get_user_by_id_or_email, UserMeView, LoginView, LogoutView, TemporalTokenView,
-                    get_github_token, save_github_token, get_slack_token, save_slack_token, pick_password,
-                    get_token_info, get_facebook_token, save_facebook_token, MemberView, reset_password_view,
-                    login_html_view, StudentView, get_roles, render_invite, AcademyInviteView,
-                    ProfileInviteView, MeInviteView, AcademyTokenView, PasswordResetView, get_google_token,
-                    save_google_token)
+from .views import (TokenTemporalView, get_users, get_user_by_id_or_email, UserMeView, LoginView, LogoutView,
+                    TemporalTokenView, get_github_token, save_github_token, get_slack_token, save_slack_token,
+                    pick_password, get_token_info, get_facebook_token, save_facebook_token, MemberView,
+                    reset_password_view, login_html_view, StudentView, get_roles, render_invite,
+                    AcademyInviteView, ProfileInviteView, MeInviteView, AcademyTokenView, PasswordResetView,
+                    get_google_token, save_google_token)
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -31,6 +31,9 @@ urlpatterns = [
     path('role', get_roles, name='role'),
     path('member/invite/resend/<int:pa_id>', AcademyInviteView.as_view(), name='academy_resent_invite'),
     path('member/invite/<str:token>', render_invite, name='academy_invite'),
+    path('member/<int:profile_academy_id>/token',
+         TokenTemporalView.as_view(),
+         name='profile_academy_reset_github_link'),
     path('academy/member', MemberView.as_view(), name='academy_member'),
     path('academy/<int:academy_id>/member', MemberView.as_view(), name='academy_id_member'),
     path('academy/<int:academy_id>/member/<str:user_id_or_email>',
