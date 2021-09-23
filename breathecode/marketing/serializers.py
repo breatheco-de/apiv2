@@ -85,5 +85,12 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
             else:
                 academy = Academy.objects.filter(active_campaign_slug=validated_data['location']).first()
 
-        result = super().create({**validated_data, 'academy': academy})
+        # copy the validated data just to do small last minute corrections
+        data = validated_data.copy()
+        
+        # "us" language will become "en" language, its the right lang code
+        if "utm_language" in data and data["utm_language"] == "us":
+            data["utm_language"] = "en"
+
+        result = super().create({**data, 'academy': academy})
         return result
