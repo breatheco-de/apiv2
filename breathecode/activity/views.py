@@ -32,7 +32,10 @@ ACTIVITIES = {
     'office_attendance': 'When the office raspberry pi detects the student',
     'nps_survey_answered': 'When a nps survey is answered by the student',
     'exercise_success': 'When student successfuly tests exercise',
-    'academy_registration': 'When student successfuly join to academy',
+    'registration': 'When student successfuly joins breathecode',
+    'educational_status_change': 'Student cohort changes like: starts, drop, pospone, etc',
+    'educational_note': 'Student cohort changes like: starts, drop, pospone, etc',
+    'career_note': 'Student cohort changes like: starts, drop, pospone, etc',
 }
 
 ACTIVITY_PUBLIC_SLUGS = [
