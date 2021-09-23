@@ -749,9 +749,6 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if 'syllabus_version' in data:
             del data['syllabus_version']
 
-        if 'specialty_mode' in data:
-            del data['specialty_mode']
-
         serializer = CohortPUTSerializer(cohort,
                                          data=data,
                                          context={
@@ -817,9 +814,18 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class CertificateAllView(APIView, HeaderLimitOffsetPagination):
+class SpecialtyModeView(APIView, HeaderLimitOffsetPagination):
     def get(self, request):
-        items = SpecialtyMode.objects.all()
+        items = SpecialtyMode.objects.filter()
+
+        syllabus_id = request.GET.get('syllabus_id')
+        if syllabus_id:
+            items = items.filter(syllabus__id__in=syllabus_id.split(','))
+
+        syllabus_slug = request.GET.get('syllabus_slug')
+        if syllabus_slug:
+            items = items.filter(syllabus__slug__in=syllabus_slug.split(','))
+
         page = self.paginate_queryset(items, request)
         serializer = GetSpecialtyModeSerializer(page, many=True)
 
@@ -829,7 +835,7 @@ class CertificateAllView(APIView, HeaderLimitOffsetPagination):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class CertificateView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class AcademySpecialtyModeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('read_certificate')
     def get(self, request, academy_id=None):
         items = SpecialtyMode.objects.filter(syllabus__academy_owner__id=academy_id)
