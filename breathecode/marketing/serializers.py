@@ -47,6 +47,7 @@ class FormEntrySerializer(serpy.Serializer):
     country = serpy.Field()
     lead_type = serpy.Field()
     academy = AcademySmallSerializer(required=False)
+    client_comments = serpy.Field(required=False)
     created_at = serpy.Field()
 
 

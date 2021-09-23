@@ -233,6 +233,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'country': model.form_entry.country,
             'course': model.form_entry.course,
             'email': model.form_entry.email,
+            'client_comments': model.form_entry.client_comments,
             'first_name': model.form_entry.first_name,
             'gclid': model.form_entry.gclid,
             'id': model.form_entry.id,

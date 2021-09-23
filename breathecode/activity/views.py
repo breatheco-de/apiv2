@@ -383,3 +383,94 @@ def add_student_activity(user, data, academy_id):
     datastore.update('student_activity', fields)
 
     return fields
+
+
+class StudentActivityView(APIView, HeaderLimitOffsetPagination):
+    @capable_of('student_activity')
+    def post(self, request, student_id=None, academy_id=None):
+
+        cu = CohortUser.objects.filter(user__id=student_id).filter(role='STUDENT')
+
+        if cohort_id.isnumeric():
+            cu = cu.filter(cohort__id=cohort_id)
+        else:
+            cu = cu.filter(cohort__slug=cohort_id)
+
+        data = request.data
+        if isinstance(data, list) == False:
+            data = [data]
+
+        new_activities = []
+        for activity in data:
+
+            if "cohort" not in activity:
+                raise ValidationException('Every activity specified for each student must have a cohort (slug)', slug='missing-cohort')
+
+            student_id = activity['user_id']
+            del activity['user_id']
+            cohort_user = CohortUser.objects.filter(role='STUDENT',
+                                                    user__id=student_id,
+                                                    cohort__slug=activity["cohort"]).first()
+            if cohort_user is None:
+                raise ValidationException('Student not found in this cohort', slug='not-found-in-cohort')
+
+            new_activities.append(add_student_activity(cohort_user.user, activity, academy_id))
+
+        return Response(new_activities, status=status.HTTP_201_CREATED)
+
+    @capable_of('student_activity')
+    def get(self, request, student_id=None, academy_id=None):
+        from breathecode.services.google_cloud import Datastore
+
+        kwargs = {'kind': 'student_activity'}
+
+        slug = request.GET.get('slug')
+        if slug:
+            kwargs['slug'] = slug
+
+        if slug and slug not in ACTIVITIES:
+            raise ValidationException(f'Activity type {slug} not found', slug='activity-not-found')
+
+        if student_id:
+            try:
+                kwargs['user_id'] = int(student_id)
+            except ValueError:
+                raise ValidationException('student_id is not a interger', slug='bad-student-id')
+
+        email = request.GET.get('email')
+        if email:
+            kwargs['email'] = email
+
+        user = User.objects.filter(Q(id=user_id) | Q(email=email))
+        if (user_id or email) and not user:
+            raise ValidationException('User not exists', slug='user-not-exists')
+
+        datastore = Datastore()
+        #academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
+
+        limit = request.GET.get('limit')
+        offset = request.GET.get('offset')
+
+        # get the the total entities on db by kind
+        if limit is not None or offset is not None:
+            count = datastore.count(**kwargs)
+
+        if limit:
+            kwargs['limit'] = int(limit)
+
+        if offset:
+            kwargs['offset'] = int(offset)
+
+        public_iter = datastore.fetch(
+            **kwargs
+        )  # TODO: remove this in the future because the academy_id was not present brefore and students didn't have it
+
+        # query_iter = academy_iter + public_iter
+        public_iter.sort(key=lambda x: x['created_at'], reverse=True)
+
+        page = self.paginate_queryset(public_iter, request)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(page, count)
+        else:
+            return Response(page, status=status.HTTP_200_OK)
