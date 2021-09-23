@@ -197,6 +197,10 @@ def register_new_lead(form_entry=None):
     contact = set_optional(contact, 'gclid', form_entry)
     contact = set_optional(contact, 'referral_key', form_entry)
 
+    # Quick fix because contacts are coming in with "us" as language and its supposed to be "en"
+    if "utm_language" in contact and contact["utm_language"] == "us":
+        contact["utm_language"] = "en"
+
     entry = FormEntry.objects.filter(id=form_entry['id']).first()
 
     if not entry:

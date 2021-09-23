@@ -22,7 +22,7 @@ class Application(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     status_text = models.CharField(max_length=255, default=None, null=True, blank=True)
-    notify_email = models.CharField(max_length=255, blank=True, default=None, null=True)
+    notify_email = models.CharField(max_length=255, blank=True, default=None, null=True, help_text="Comma separated list of emails")
     notify_slack_channel = models.ForeignKey(
         SlackChannel,
         on_delete=models.SET_NULL,
@@ -91,6 +91,7 @@ class MonitorScript(models.Model):
         help_text='How long to wait for the next execution, defaults to 30 minutes')
     status_code = models.IntegerField(default=200)
     severity_level = models.IntegerField(default=0)
+    notify_email = models.CharField(max_length=255, blank=True, default=None, null=True, help_text="Only specify if need to override the application.notify_email, you can add many comma separated.")
     status_text = models.CharField(max_length=255, default=None, null=True, blank=True, editable=False)
     special_status_text = models.CharField(max_length=255,
                                            default=None,

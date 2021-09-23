@@ -227,7 +227,7 @@ class Command(BaseCommand):
                 'caps': [
                     'read_member', 'read_syllabus', 'read_student', 'read_cohort', 'read_media',
                     'read_my_academy', 'read_invite', 'get_academy_token', 'crud_activity', 'read_survey',
-                    'read_layout', 'read_event', 'read_certificate', 'academy_reporting', 'read_won_lead'
+                    'read_layout', 'read_event', 'read_certificate', 'academy_reporting', 'read_won_lead', 'read_eventcheckin'
                 ]
             },
             {
@@ -267,7 +267,7 @@ class Command(BaseCommand):
             'Admissions Developer',
             'caps':
             extend(roles, ['staff']) +
-            ['crud_lead', 'crud_student', 'crud_cohort', 'read_cohort', 'read_lead', 'read_eventcheckin']
+            ['crud_lead', 'crud_student', 'crud_cohort', 'read_cohort', 'read_lead']
         })
         roles.append({
             'slug': 'syllabus_coordinator',
@@ -313,7 +313,7 @@ class Command(BaseCommand):
             'caps':
             extend(roles, ['teacher']) + [
                 'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
-                'send_reset_password', 'generate_temporal_token'
+                'send_reset_password', 'generate_temporal_token', 'crud_certificate'
             ]
         })
         roles.append({

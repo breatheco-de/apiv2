@@ -76,7 +76,12 @@ def execute_scripts(self, script_id):
         if 'title' in result and result['title'] is not None and result['title'] != '':
             subject = result['title']
 
-        if app.notify_email:
+        if script.notify_email:
+            send_email_message('diagnostic', script.notify_email, {
+                'subject': subject,
+                'details': result['text']
+            })
+        elif app.notify_email:
             send_email_message('diagnostic', app.notify_email, {
                 'subject': subject,
                 'details': result['text']
