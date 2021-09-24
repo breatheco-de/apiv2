@@ -367,6 +367,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'course': model.form_entry.course,
             'email': model.form_entry.email,
             'first_name': model.form_entry.first_name,
+            'client_comments': model.form_entry.client_comments,
             'gclid': model.form_entry.gclid,
             'id': model.form_entry.id,
             'language': model.form_entry.language,
