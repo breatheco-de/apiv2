@@ -227,7 +227,8 @@ class Command(BaseCommand):
                 'caps': [
                     'read_member', 'read_syllabus', 'read_student', 'read_cohort', 'read_media',
                     'read_my_academy', 'read_invite', 'get_academy_token', 'crud_activity', 'read_survey',
-                    'read_layout', 'read_event', 'read_certificate', 'academy_reporting', 'read_won_lead', 'read_eventcheckin'
+                    'read_layout', 'read_event', 'read_certificate', 'academy_reporting', 'read_won_lead',
+                    'read_eventcheckin'
                 ]
             },
             {

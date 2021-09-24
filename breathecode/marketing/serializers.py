@@ -5,6 +5,7 @@ from rest_framework import serializers
 
 logger = logging.getLogger(__name__)
 
+
 class AcademySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -88,10 +89,10 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
 
         # copy the validated data just to do small last minute corrections
         data = validated_data.copy()
-        
+
         # "us" language will become "en" language, its the right lang code
-        if "language" in data and data["language"] == "us":
-            data["language"] = "en"
+        if 'language' in data and data['language'] == 'us':
+            data['language'] = 'en'
 
         result = super().create({**data, 'academy': academy})
         return result
