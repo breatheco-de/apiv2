@@ -1,8 +1,9 @@
-import serpy
+import serpy, logging
 from .models import FormEntry, AcademyAlias
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 
+logger = logging.getLogger(__name__)
 
 class AcademySmallSerializer(serpy.Serializer):
     id = serpy.Field()
@@ -85,5 +86,12 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
             else:
                 academy = Academy.objects.filter(active_campaign_slug=validated_data['location']).first()
 
-        result = super().create({**validated_data, 'academy': academy})
+        # copy the validated data just to do small last minute corrections
+        data = validated_data.copy()
+        
+        # "us" language will become "en" language, its the right lang code
+        if "language" in data and data["language"] == "us":
+            data["language"] = "en"
+
+        result = super().create({**data, 'academy': academy})
         return result
