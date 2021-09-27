@@ -8,9 +8,10 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+from pathlib import Path
 import django_heroku
 import dj_database_url
-import sys
+import json
 import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
@@ -144,20 +145,16 @@ WSGI_APPLICATION = 'breathecode.wsgi.application'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME':
-        'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME':
-        'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
-        'NAME':
-        'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
-        'NAME':
-        'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
 
@@ -223,17 +220,12 @@ logging.config.dictConfig({
 })
 
 ROLLBAR = {
-    'access_token':
-    os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
-    'environment':
-    'development' if DEBUG else 'production',
-    'branch':
-    'master',
-    'root':
-    BASE_DIR,
+    'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
+    'environment': 'development' if DEBUG else 'production',
+    'branch': 'master',
+    'root': BASE_DIR,
     # parsed POST variables placed in your output for exception handling
-    'EXCEPTION_HANDLER':
-    'rollbar.contrib.django_rest_framework.post_exception_handler',
+    'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler',
 }
 
 MESSAGE_TAGS = {
@@ -311,10 +303,8 @@ is_test_env = os.getenv('ENV') == 'test'
 CACHES = {
     'default': {
         'BACKEND':
-        'django.core.cache.backends.locmem.LocMemCache'
-        if is_test_env else 'django_redis.cache.RedisCache',
-        'LOCATION':
-        'breathecode' if is_test_env else [REDIS_URL],
+        'django.core.cache.backends.locmem.LocMemCache' if is_test_env else 'django_redis.cache.RedisCache',
+        'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
         # **cache_opts(is_test_env),
     },
 }
@@ -341,47 +331,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 EXPLORER_CONNECTIONS = {'Default': 'default'}
 EXPLORER_DEFAULT_CONNECTION = 'default'
 
-# # https://www.postgresql.org/docs/8.1/sql-keywords-appendix.html
-SQL_BLACKLIST = [
-    'ALTER',
-    'CREATE TABLE',
-    'DELETE',
-    'DROP',
-    'GRANT',
-    'INSERT INTO',
-    'OWNER TO'
-    'RENAME ',
-    'REPLACE',
-    'SCHEMA',
-    'TRUNCATE',
-    'UPDATE',
-    'BEGIN',
-    'BREAK',
-    'CHECKPOINT',
-    'COMMIT',
-    'CREATE',
-    'CURSOR',
-    'DBCC',
-    'DENY`',
-    'EXEC',
-    'EXECUTE',
-    'INSERT',
-    'GO',
-    'GRANT',
-    'OPENDATASOURCE',
-    'OPENQUERY',
-    'OPENROWSET',
-    'SHUTDOWN',
-    'SP_',
-    'TRAN',
-    'TRANSACTION',
-    'UPDATE',
-    'WHILE',
-    ';',
-    '—',
-    'XP_',
-    'DECLARE',
-]
+sql_keywords_path = Path(os.getcwd()) / 'breathecode' / 'sql_keywords.json'
+with open(sql_keywords_path, 'r') as f:
+    sql_keywords = json.load(f)
 
-EXPLORER_SQL_BLACKLIST = tuple(SQL_BLACKLIST +
-                               [word.lower() for word in SQL_BLACKLIST])
+    # https://www.postgresql.org/docs/8.1/sql-keywords-appendix.html
+    # scripts/update_sql_keywords_json.py
+    # breathecode/sql_keywords.json
+
+    EXPLORER_SQL_BLACKLIST = tuple(sql_keywords['blacklist'])
