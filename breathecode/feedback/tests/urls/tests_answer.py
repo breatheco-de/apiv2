@@ -114,6 +114,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': model['answer'].mentor.first_name,
                 'id': model['answer'].mentor.id,
                 'last_name': model['answer'].mentor.last_name,
+                'profile': None,
             },
             'score': model['answer'].score,
             'status': model['answer'].status,
@@ -122,6 +123,68 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': model['user'].first_name,
                 'id': model['user'].id,
                 'last_name': model['user'].last_name,
+                'profile': None,
+            },
+        }])
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_answer_dict(), [db])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_answer__with_data__with_profile(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     answer=True,
+                                     profile_academy=True,
+                                     profile=True,
+                                     capability='read_nps_answers',
+                                     role='potato')
+        db = self.model_to_dict(model, 'answer')
+        url = reverse_lazy('feedback:answer')
+        response = self.client.get(url)
+        json = response.json()
+
+        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
+
+        self.assertEqual(json, [{
+            'created_at': None,
+            'academy': {
+                'id': model['answer'].academy.id,
+                'name': model['answer'].academy.name,
+                'slug': model['answer'].academy.slug,
+            },
+            'cohort': {
+                'id': model['answer'].cohort.id,
+                'name': model['answer'].cohort.name,
+                'slug': model['answer'].cohort.slug,
+            },
+            'comment': model['answer'].comment,
+            'event': model['answer'].event,
+            'highest': model['answer'].highest,
+            'id': model['answer'].id,
+            'lang': model['answer'].lang,
+            'lowest': model['answer'].lowest,
+            'mentor': {
+                'first_name': model['answer'].mentor.first_name,
+                'id': model['answer'].mentor.id,
+                'last_name': model['answer'].mentor.last_name,
+                'profile': {
+                    'avatar_url': None,
+                },
+            },
+            'score': model['answer'].score,
+            'status': model['answer'].status,
+            'title': model['answer'].title,
+            'user': {
+                'first_name': model['user'].first_name,
+                'id': model['user'].id,
+                'last_name': model['user'].last_name,
+                'profile': {
+                    'avatar_url': None,
+                },
             },
         }])
 
@@ -196,6 +259,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': model['answer'].mentor.first_name,
                 'id': model['answer'].mentor.id,
                 'last_name': model['answer'].mentor.last_name,
+                'profile': None,
             },
             'score': model['answer'].score,
             'status': model['answer'].status,
@@ -204,6 +268,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': model['user'].first_name,
                 'id': model['user'].id,
                 'last_name': model['user'].last_name,
+                'profile': None,
             },
         }])
 
@@ -282,6 +347,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': model['answer'].mentor.first_name,
                 'id': model['answer'].mentor.id,
                 'last_name': model['answer'].mentor.last_name,
+                'profile': None,
             },
             'score': model['answer'].score,
             'status': model['answer'].status,
@@ -290,6 +356,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': model['user'].first_name,
                 'id': model['user'].id,
                 'last_name': model['user'].last_name,
+                'profile': None,
             },
         }])
 
@@ -343,6 +410,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': model['answer'].mentor.first_name,
                 'id': model['answer'].mentor.id,
                 'last_name': model['answer'].mentor.last_name,
+                'profile': None,
             },
             'score': model['answer'].score,
             'status': model['answer'].status,
@@ -351,6 +419,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': model['user'].first_name,
                 'id': model['user'].id,
                 'last_name': model['user'].last_name,
+                'profile': None,
             },
         }])
 
@@ -431,6 +500,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': model['user'].first_name,
                 'id': model['user'].id,
                 'last_name': model['user'].last_name,
+                'profile': None,
             },
             'score': model['answer'].score,
             'status': model['answer'].status,
@@ -439,6 +509,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': model['user'].first_name,
                 'id': model['user'].id,
                 'last_name': model['user'].last_name,
+                'profile': None,
             },
         }])
 
@@ -527,6 +598,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': model['user'].first_name,
                 'id': model['user'].id,
                 'last_name': model['user'].last_name,
+                'profile': None,
             },
             'score': model['answer'].score,
             'status': model['answer'].status,
@@ -535,6 +607,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': model['user'].first_name,
                 'id': model['user'].id,
                 'last_name': model['user'].last_name,
+                'profile': None,
             },
         }])
 
@@ -635,6 +708,7 @@ class AnswerTestSuite(FeedbackTestCase):
                     'first_name': model['user'].first_name,
                     'id': model['user'].id,
                     'last_name': model['user'].last_name,
+                    'profile': None,
                 },
                 'score': score,
                 'status': model['answer'].status,
@@ -643,6 +717,7 @@ class AnswerTestSuite(FeedbackTestCase):
                     'first_name': model['user'].first_name,
                     'id': model['user'].id,
                     'last_name': model['user'].last_name,
+                    'profile': None,
                 },
             }])
 
@@ -685,6 +760,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'id': model['user'].id,
                 'first_name': model['user'].first_name,
                 'last_name': model['user'].last_name,
+                'profile': None,
             },
             'academy': {
                 'id': model['answer'].academy.id,
@@ -700,6 +776,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'id': model['answer'].mentor.id,
                 'first_name': model['answer'].mentor.first_name,
                 'last_name': model['answer'].mentor.last_name,
+                'profile': None,
             },
             'event': model['answer'].event,
         } for model in ordened_models][:100]
@@ -747,6 +824,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'id': model['user'].id,
                 'first_name': model['user'].first_name,
                 'last_name': model['user'].last_name,
+                'profile': None,
             },
             'academy': {
                 'id': model['answer'].academy.id,
@@ -762,6 +840,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'id': model['answer'].mentor.id,
                 'first_name': model['answer'].mentor.first_name,
                 'last_name': model['answer'].mentor.last_name,
+                'profile': None,
             },
             'event': model['answer'].event,
         } for model in ordened_models][:5]
@@ -820,6 +899,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'id': model['user'].id,
                 'first_name': model['user'].first_name,
                 'last_name': model['user'].last_name,
+                'profile': None,
             },
             'academy': {
                 'id': model['answer'].academy.id,
@@ -835,6 +915,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'id': model['answer'].mentor.id,
                 'first_name': model['answer'].mentor.first_name,
                 'last_name': model['answer'].mentor.last_name,
+                'profile': None,
             },
             'event': model['answer'].event,
         } for model in ordened_models][5:]
@@ -944,6 +1025,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': models[0].answer.mentor.first_name,
                 'id': models[0].answer.mentor.id,
                 'last_name': models[0].answer.mentor.last_name,
+                'profile': None,
             },
             'score': models[0].answer.score,
             'status': models[0].answer.status,
@@ -952,6 +1034,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': 'Rene',
                 'id': 2,
                 'last_name': 'Descartes',
+                'profile': None,
             },
         }]
 
@@ -1011,6 +1094,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': models[0].answer.mentor.first_name,
                 'id': models[0].answer.mentor.id,
                 'last_name': models[0].answer.mentor.last_name,
+                'profile': None,
             },
             'score': models[0].answer.score,
             'status': models[0].answer.status,
@@ -1019,6 +1103,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': 'Rene',
                 'id': 2,
                 'last_name': 'Descartes',
+                'profile': None,
             },
         }]
 
@@ -1078,6 +1163,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': models[0].answer.mentor.first_name,
                 'id': models[0].answer.mentor.id,
                 'last_name': models[0].answer.mentor.last_name,
+                'profile': None,
             },
             'score': models[0].answer.score,
             'status': models[0].answer.status,
@@ -1086,6 +1172,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': 'Rene',
                 'id': 2,
                 'last_name': 'Descartes',
+                'profile': None,
             },
         }]
 
@@ -1145,6 +1232,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': models[0].answer.mentor.first_name,
                 'id': models[0].answer.mentor.id,
                 'last_name': models[0].answer.mentor.last_name,
+                'profile': None,
             },
             'score': models[0].answer.score,
             'status': models[0].answer.status,
@@ -1153,6 +1241,7 @@ class AnswerTestSuite(FeedbackTestCase):
                 'first_name': 'Rene',
                 'id': 2,
                 'last_name': 'Descartes',
+                'profile': None,
             },
         }]
 
