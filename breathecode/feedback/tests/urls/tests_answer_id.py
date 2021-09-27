@@ -97,11 +97,13 @@ class AnswerIdTestSuite(FeedbackTestCase):
                 'first_name': model['answer'].mentor.first_name,
                 'id': model['answer'].mentor.id,
                 'last_name': model['answer'].mentor.last_name,
+                'profile': None,
             },
             'user': {
                 'first_name': model['answer'].user.first_name,
                 'id': model['answer'].user.id,
                 'last_name': model['answer'].user.last_name,
+                'profile': None,
             },
             'event': model['answer'].event,
         }
