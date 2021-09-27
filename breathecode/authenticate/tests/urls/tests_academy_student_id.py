@@ -11,8 +11,7 @@ class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
     def test_academy_student_id_without_auth(self):
         """Test /academy/:id/member/:id without auth"""
-        url = reverse_lazy('authenticate:academy_student_id',
-                           kwargs={'user_id_or_email': '2'})
+        url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '2'})
         data = {'email': self.email, 'password': self.password}
         response = self.client.post(url, data)
         json = response.json()
@@ -29,18 +28,15 @@ class AuthenticateTestSuite(AuthTestCase):
         self.headers(academy=1)
 
         self.generate_models(authenticate=True)
-        url = reverse_lazy('authenticate:academy_student_id',
-                           kwargs={'user_id_or_email': '2'})
+        url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '2'})
         response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(
             json, {
-                'detail':
-                "You (user: 2) don't have this capability: read_student "
+                'detail': "You (user: 2) don't have this capability: read_student "
                 'for academy 1',
-                'status_code':
-                403
+                'status_code': 403
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -52,8 +48,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      role=role,
                                      capability='read_student',
                                      profile_academy=True)
-        url = reverse_lazy('authenticate:academy_student_id',
-                           kwargs={'user_id_or_email': '2'})
+        url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '2'})
         response = self.client.get(url)
         json = response.json()
 
@@ -67,8 +62,7 @@ class AuthenticateTestSuite(AuthTestCase):
                     'slug': model['academy'].slug,
                 },
                 'address': None,
-                'created_at': datetime_to_iso_format(
-                    profile_academy.created_at),
+                'created_at': datetime_to_iso_format(profile_academy.created_at),
                 'email': None,
                 'first_name': None,
                 'id': 1,
@@ -116,8 +110,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      profile_academy=True,
                                      credentials_github=True,
                                      profile=True)
-        url = reverse_lazy('authenticate:academy_student_id',
-                           kwargs={'user_id_or_email': '2'})
+        url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '2'})
         response = self.client.get(url)
         json = response.json()
 
@@ -131,8 +124,7 @@ class AuthenticateTestSuite(AuthTestCase):
                     'slug': model['academy'].slug,
                 },
                 'address': None,
-                'created_at': datetime_to_iso_format(
-                    profile_academy.created_at),
+                'created_at': datetime_to_iso_format(profile_academy.created_at),
                 'email': None,
                 'first_name': None,
                 'id': 1,
@@ -149,8 +141,7 @@ class AuthenticateTestSuite(AuthTestCase):
                     'id': model['user'].id,
                     'last_name': model['user'].last_name,
                     'github': {
-                        'avatar_url':
-                        model['user'].credentialsgithub.avatar_url,
+                        'avatar_url': model['user'].credentialsgithub.avatar_url,
                         'name': model['user'].credentialsgithub.name,
                         'username': model['user'].credentialsgithub.username,
                     },
@@ -182,8 +173,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      capability='read_student',
                                      profile_academy=True,
                                      credentials_github=True)
-        url = reverse_lazy('authenticate:academy_student_id',
-                           kwargs={'user_id_or_email': '2'})
+        url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '2'})
         response = self.client.get(url)
         json = response.json()
 
@@ -197,8 +187,7 @@ class AuthenticateTestSuite(AuthTestCase):
                     'slug': model['academy'].slug,
                 },
                 'address': None,
-                'created_at': datetime_to_iso_format(
-                    profile_academy.created_at),
+                'created_at': datetime_to_iso_format(profile_academy.created_at),
                 'email': None,
                 'first_name': None,
                 'id': 1,
