@@ -42,13 +42,10 @@ def get_website_text(endp):
         # if status is one error, we should need see the status text
         payload = r.text
 
-        if (endp.test_pattern
-                and not (status_code >= 200 and status_code <= 299)
-                and int(length) > 3000):
+        if (endp.test_pattern and not (status_code >= 200 and status_code <= 299) and int(length) > 3000):
             status_code = 400
-            status_text = (
-                'Timeout: The payload of this request is too long '
-                '(more than 3 MB), remove the test_pattern to avoid timeout')
+            status_text = ('Timeout: The payload of this request is too long '
+                           '(more than 3 MB), remove the test_pattern to avoid timeout')
 
     except requests.Timeout:
         status_code = 500
@@ -110,15 +107,13 @@ def run_app_diagnostic(app, report=False):
     for endpoint in _endpoints:
         if endpoint.last_check is not None and endpoint.last_check > now - timezone.timedelta(
                 minutes=endpoint.frequency_in_minutes):
-            logger.debug(
-                f'Ignoring {endpoint.url} because frequency hast not been met')
+            logger.debug(f'Ignoring {endpoint.url} because frequency hast not been met')
             endpoint.status_text = 'Ignored because its paused'
             endpoint.save()
             continue
 
         if endpoint.paused_until is not None and endpoint.paused_until > now:
-            logger.debug(
-                f'Ignoring endpoint:{endpoint.url} monitor because its paused')
+            logger.debug(f'Ignoring endpoint:{endpoint.url} monitor because its paused')
             endpoint.status_text = 'Ignored because its paused'
             endpoint.save()
             continue
@@ -166,17 +161,15 @@ def run_endpoint_diagnostic(endpoint_id):
     logger.debug(f'Testing endpoint {endpoint.url}')
     now = timezone.now()
 
-    if (endpoint.last_check and endpoint.last_check >
-            now - timezone.timedelta(minutes=endpoint.frequency_in_minutes)):
-        logger.debug(
-            f'Ignoring {endpoint.url} because frequency hast not been met')
+    if (endpoint.last_check
+            and endpoint.last_check > now - timezone.timedelta(minutes=endpoint.frequency_in_minutes)):
+        logger.debug(f'Ignoring {endpoint.url} because frequency hast not been met')
         endpoint.status_text = 'Ignored because its paused'
         endpoint.save()
         return False
 
     if endpoint.paused_until and endpoint.paused_until > now:
-        logger.debug(
-            f'Ignoring endpoint:{endpoint.url} monitor because its paused')
+        logger.debug(f'Ignoring endpoint:{endpoint.url} monitor because its paused')
         endpoint.status_text = 'Ignored because its paused'
         endpoint.save()
         return False
@@ -204,8 +197,7 @@ def run_endpoint_diagnostic(endpoint_id):
     else:
         results['status'] = 'MINOR'
 
-    results['slack_payload'] = render_snooze_text_endpoint(
-        [endpoint])  # converting to json to send to slack
+    results['slack_payload'] = render_snooze_text_endpoint([endpoint])  # converting to json to send to slack
 
     results['details'] = json.dumps(results, indent=4)
     endpoint.response_text = results['text']
@@ -240,8 +232,7 @@ def run_script(script):
     elif script.script_body:
         content = script.script_body
     else:
-        raise Exception(
-            f'Script not found or its body is empty: {script.script_slug}')
+        raise Exception(f'Script not found or its body is empty: {script.script_slug}')
 
     if content:
         local = {'result': {'status': 'OPERATIONAL'}}
@@ -260,8 +251,7 @@ def run_script(script):
 
                 if e.status is not None:
                     script.status = e.status
-                    results[
-                        'severity_level'] = 5 if e.status != 'CRITICAL' else 100
+                    results['severity_level'] = 5 if e.status != 'CRITICAL' else 100
                 else:
                     script.status = 'MINOR'
                     results['severity_level'] = 5
@@ -270,8 +260,7 @@ def run_script(script):
             except Exception as e:
                 import traceback
                 script.special_status_text = str(e)
-                script.response_text = ''.join(
-                    traceback.format_exception(None, e, e.__traceback__))
+                script.response_text = ''.join(traceback.format_exception(None, e, e.__traceback__))
                 script.status_code = 1
                 script.status = 'CRITICAL'
                 results['error_slug'] = 'uknown'
@@ -284,8 +273,7 @@ def run_script(script):
         results['status'] = script.status
         results['text'] = script.response_text
         results['title'] = script.special_status_text
-        results['slack_payload'] = render_snooze_script(
-            [script])  # converting to json to send to slack
+        results['slack_payload'] = render_snooze_script([script])  # converting to json to send to slack
 
         return results
 

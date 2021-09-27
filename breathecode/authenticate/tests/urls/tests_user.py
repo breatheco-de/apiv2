@@ -18,8 +18,7 @@ class AuthenticateTestSuite(AuthTestCase):
         status_code = int(response.data['status_code'])
 
         self.assertEqual(len(response.data), 2)
-        self.assertEqual(detail,
-                         'Authentication credentials were not provided.')
+        self.assertEqual(detail, 'Authentication credentials were not provided.')
         self.assertEqual(status_code, 401)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
@@ -37,9 +36,6 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': self.user.email,
             'first_name': self.user.first_name,
             'last_name': self.user.last_name,
-            'github': {
-                'avatar_url': None,
-                'name': None,
-                'username': None
-            },
+            'github': None,
+            'profile': None,
         }])

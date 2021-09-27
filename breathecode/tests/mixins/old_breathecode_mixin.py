@@ -28,9 +28,7 @@ class OldBreathecodeMixin():
         return call('POST',
                     f'{self.old_breathecode_host}/admin/api.php',
                     params=[('api_action', 'contact_sync'),
-                            ('api_key',
-                             model['active_campaign_academy'].ac_key),
-                            ('api_output', 'json')],
+                            ('api_key', model['active_campaign_academy'].ac_key), ('api_output', 'json')],
                     data=data)
 
     def __contact_automations_call__(self, model):
@@ -41,12 +39,10 @@ class OldBreathecodeMixin():
                         'Content-Type': 'application/json',
                         'Api-Token': model['active_campaign_academy'].ac_key,
                     },
-                    json={
-                        'contactAutomation': {
-                            'contact': 1,
-                            'automation': model['automation'].acp_id,
-                        }
-                    })
+                    json={'contactAutomation': {
+                        'contact': 1,
+                        'automation': model['automation'].acp_id,
+                    }})
 
     def reset_old_breathecode_calls(self):
         mock = OLD_BREATHECODE_INSTANCES['request']

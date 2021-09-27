@@ -30,11 +30,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(
             json, {
-                'detail':
-                "You (user: 1) don't have this capability: get_academy_token "
+                'detail': "You (user: 1) don't have this capability: get_academy_token "
                 'for academy 1',
-                'status_code':
-                403
+                'status_code': 403
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -85,11 +83,9 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(
             json, {
-                'detail':
-                "You (user: 1) don't have this capability: generate_academy_token "
+                'detail': "You (user: 1) don't have this capability: generate_academy_token "
                 'for academy 1',
-                'status_code':
-                403
+                'status_code': 403
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -110,15 +106,14 @@ class AuthenticateTestSuite(AuthTestCase):
         token = self.get_token(1)
         user = self.get_user(2)
 
-        self.assertEqual(self.all_token_dict(),
-                         [{
-                             'created': token.created,
-                             'expires_at': json['expires_at'],
-                             'id': 1,
-                             'key': json['token'],
-                             'token_type': json['token_type'],
-                             'user_id': 2
-                         }])
+        self.assertEqual(self.all_token_dict(), [{
+            'created': token.created,
+            'expires_at': json['expires_at'],
+            'id': 1,
+            'key': json['token'],
+            'token_type': json['token_type'],
+            'user_id': 2
+        }])
         self.assertEqual(bool(token_pattern.match(json['token'])), True)
         del json['token']
         self.assertEqual(json, expected)
@@ -139,21 +134,20 @@ class AuthenticateTestSuite(AuthTestCase):
             'password': '',
             'is_active': True
         }])
-        self.assertEqual(self.all_profile_academy_dict(),
-                         [{
-                             **self.model_to_dict(model, 'profile_academy'),
-                         }, {
-                             'academy_id': model['academy'].id,
-                             'address': None,
-                             'email': None,
-                             'first_name': None,
-                             'last_name': None,
-                             'id': 2,
-                             'phone': '',
-                             'role_id': role,
-                             'status': 'ACTIVE',
-                             'user_id': 2
-                         }])
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            **self.model_to_dict(model, 'profile_academy'),
+        }, {
+            'academy_id': model['academy'].id,
+            'address': None,
+            'email': None,
+            'first_name': None,
+            'last_name': None,
+            'id': 2,
+            'phone': '',
+            'role_id': role,
+            'status': 'ACTIVE',
+            'user_id': 2
+        }])
         self.assertEqual(self.all_role_dict(), [{
             **self.model_to_dict(model, 'role'),
         }])
@@ -182,15 +176,14 @@ class AuthenticateTestSuite(AuthTestCase):
 
         token = self.get_token(2)
 
-        self.assertEqual(self.all_token_dict(),
-                         [{
-                             'created': token.created,
-                             'expires_at': json['expires_at'],
-                             'id': 2,
-                             'key': json['token'],
-                             'token_type': json['token_type'],
-                             'user_id': model['user'].id
-                         }])
+        self.assertEqual(self.all_token_dict(), [{
+            'created': token.created,
+            'expires_at': json['expires_at'],
+            'id': 2,
+            'key': json['token'],
+            'token_type': json['token_type'],
+            'user_id': model['user'].id
+        }])
         self.assertEqual(bool(token_pattern.match(json['token'])), True)
         del json['token']
         self.assertEqual(json, expected)
@@ -257,9 +250,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        }])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
     def test_academy_no_token_with_other_endpoints(self):
         """Test /academy/:id/member/:id without auth"""
@@ -285,16 +276,11 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        expected = {
-            'detail': 'Authentication credentials were not provided.',
-            'status_code': 401
-        }
+        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        }])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
     def test_academy_token_showing_on_other_endpoints(self):
         """Test /academy/:id/member/:id without auth"""
@@ -322,4 +308,5 @@ class AuthenticateTestSuite(AuthTestCase):
             'first_name': model['user'].first_name,
             'last_name': model['user'].last_name,
             'github': None,
+            'profile': None,
         }])

@@ -17,8 +17,7 @@ class Command(BaseCommand):
 
     def mock_application(self):
 
-        academy = Academy.objects.filter(
-            slug='fake-sample-academy-delete-me-wililii').first()
+        academy = Academy.objects.filter(slug='fake-sample-academy-delete-me-wililii').first()
         if academy is None:
             academy = Academy(slug='fake-sample-academy-delete-me-wililii')
             academy.save()
@@ -36,13 +35,10 @@ class Command(BaseCommand):
         print('Attempting to run script: ' + self.style.WARNING(script_slug))
         script = MonitorScript.objects.filter(script_slug=script_slug).first()
         if script is None:
-            script = MonitorScript(script_slug=script_slug,
-                                   application=self.mock_application())
+            script = MonitorScript(script_slug=script_slug, application=self.mock_application())
         result = run_script(script)
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                'The script was tested with the following outcome:'))
+        self.stdout.write(self.style.SUCCESS('The script was tested with the following outcome:'))
 
         stdout = result['text']
         del result['text']

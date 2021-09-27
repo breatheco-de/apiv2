@@ -15,9 +15,8 @@ def python_module_to_dir(module: str) -> str:
 
 def help_command():
     print('Usage:')
-    print(
-        '   `pipenv run cov breathecode.events` where events is the name of module and accept '
-        'add submodules using the dot(.) character as delimiter.')
+    print('   `pipenv run cov breathecode.events` where events is the name of module and accept '
+          'add submodules using the dot(.) character as delimiter.')
     print('')
     print('commands:')
     print('   --help see this help message.')
@@ -42,13 +41,9 @@ if __name__ == '__main__':
     if os.path.exists(htmlcov_path):
         shutil.rmtree(htmlcov_path)
 
-    exit_code = os.system(
-        f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report html'
-    )
+    exit_code = os.system(f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report html')
 
-    webbrowser.open(
-        'file://' +
-        os.path.realpath(os.path.join(os.getcwd(), 'htmlcov', 'index.html')))
+    webbrowser.open('file://' + os.path.realpath(os.path.join(os.getcwd(), 'htmlcov', 'index.html')))
 
     # python don't return 256
     if exit_code:

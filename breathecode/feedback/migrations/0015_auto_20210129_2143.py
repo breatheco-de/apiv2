@@ -18,9 +18,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='survey',
             name='status',
-            field=models.CharField(choices=[('SENT', 'Sent'),
-                                            ('PENDING', 'Pending'),
-                                            ('PARTIAL', 'Partial'),
+            field=models.CharField(choices=[('SENT', 'Sent'), ('PENDING', 'Pending'), ('PARTIAL', 'Partial'),
                                             ('FATAL', 'FATAL')],
                                    default='PENDING',
                                    max_length=15),

@@ -6,10 +6,8 @@ from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
-from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH,
-                                     apply_google_cloud_blob_mock,
-                                     apply_google_cloud_bucket_mock,
-                                     apply_google_cloud_client_mock)
+from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_blob_mock,
+                                     apply_google_cloud_bucket_mock, apply_google_cloud_client_mock)
 
 from ..mixins import MediaTestCase
 
@@ -24,8 +22,7 @@ class MediaTestSuite(MediaTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_type_slug__without_auth(self):
         """Test /answer without auth"""
-        url = reverse_lazy('activity:type_slug',
-                           kwargs={'activity_slug': 'they-killed-kenny'})
+        url = reverse_lazy('activity:type_slug', kwargs={'activity_slug': 'they-killed-kenny'})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -36,8 +33,7 @@ class MediaTestSuite(MediaTestCase):
     def test_type_slug__wrong_academy(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('activity:type_slug',
-                           kwargs={'activity_slug': 'they-killed-kenny'})
+        url = reverse_lazy('activity:type_slug', kwargs={'activity_slug': 'they-killed-kenny'})
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -48,16 +44,14 @@ class MediaTestSuite(MediaTestCase):
     def test_type_slug__without_capability(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('activity:type_slug',
-                           kwargs={'activity_slug': 'they-killed-kenny'})
+        url = reverse_lazy('activity:type_slug', kwargs={'activity_slug': 'they-killed-kenny'})
         self.generate_models(authenticate=True)
         response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(
             json, {
-                'detail':
-                "You (user: 1) don't have this capability: read_activity for academy 1",
+                'detail': "You (user: 1) don't have this capability: read_activity for academy 1",
                 'status_code': 403,
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -77,8 +71,7 @@ class MediaTestSuite(MediaTestCase):
                              capability='read_activity',
                              role='potato')
 
-        url = reverse_lazy('activity:type_slug',
-                           kwargs={'activity_slug': 'they-killed-kenny'})
+        url = reverse_lazy('activity:type_slug', kwargs={'activity_slug': 'they-killed-kenny'})
         response = self.client.get(url)
         json = response.json()
         expected = {'detail': 'activity-not-found', 'status_code': 400}
@@ -101,13 +94,12 @@ class MediaTestSuite(MediaTestCase):
                              capability='read_activity',
                              role='potato')
 
-        url = reverse_lazy('activity:type_slug',
-                           kwargs={'activity_slug': 'academy_registration'})
+        url = reverse_lazy('activity:type_slug', kwargs={'activity_slug': 'career_note'})
         response = self.client.get(url)
         json = response.json()
         expected = {
-            'description': 'When student successfuly join to academy',
-            'slug': 'academy_registration',
+            'description': 'Notes related to the student career',
+            'slug': 'career_note',
         }
 
         self.assertEqual(json, expected)

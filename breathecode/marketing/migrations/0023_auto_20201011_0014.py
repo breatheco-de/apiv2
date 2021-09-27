@@ -13,19 +13,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='formentry',
             name='latitude',
-            field=models.DecimalField(blank=True,
-                                      decimal_places=15,
-                                      default=None,
-                                      max_digits=30,
-                                      null=True),
+            field=models.DecimalField(blank=True, decimal_places=15, default=None, max_digits=30, null=True),
         ),
         migrations.AlterField(
             model_name='formentry',
             name='longitude',
-            field=models.DecimalField(blank=True,
-                                      decimal_places=15,
-                                      default=None,
-                                      max_digits=30,
-                                      null=True),
+            field=models.DecimalField(blank=True, decimal_places=15, default=None, max_digits=30, null=True),
         ),
     ]

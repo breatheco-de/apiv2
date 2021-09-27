@@ -47,8 +47,7 @@ def clean():
             if not issubclass(CurrentModel, Model):
                 continue
 
-            if (hasattr(CurrentModel, 'Meta')
-                    and hasattr(CurrentModel.Meta, 'abstract')):
+            if (hasattr(CurrentModel, 'Meta') and hasattr(CurrentModel.Meta, 'abstract')):
                 continue
 
             models.append(CurrentModel)
@@ -110,8 +109,7 @@ def get_model(model_name):
         raise Exception('Model not found')
 
     if len(found) > 1:
-        raise Exception(
-            'Exist many app with the same model name, use `app.model` syntax')
+        raise Exception('Exist many app with the same model name, use `app.model` syntax')
 
     return found[0]
 

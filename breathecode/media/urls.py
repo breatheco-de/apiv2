@@ -1,17 +1,9 @@
 from django.urls.conf import path
 from .views import MediaView, CategoryView, UploadView, MaskingUrlView, ResolutionView
 
-media_view = MediaView.as_view({
-    'get': 'get',
-    'put': 'put',
-    'delete': 'delete'
-})
+media_view = MediaView.as_view({'get': 'get', 'put': 'put', 'delete': 'delete'})
 
-media_by_id_view = MediaView.as_view({
-    'get': 'get_id',
-    'put': 'put_id',
-    'delete': 'delete_id'
-})
+media_by_id_view = MediaView.as_view({'get': 'get_id', 'put': 'put_id', 'delete': 'delete_id'})
 
 media_by_slug_view = MediaView.as_view({
     'get': 'get_slug',
@@ -23,16 +15,9 @@ media_by_name_view = MediaView.as_view({
 
 category_view = CategoryView.as_view({'get': 'get', 'post': 'post'})
 category_by_id_view = CategoryView.as_view({'get': 'get_id'})
-category_by_slug_view = CategoryView.as_view({
-    'get': 'get_slug',
-    'put': 'put',
-    'delete': 'delete'
-})
+category_by_slug_view = CategoryView.as_view({'get': 'get_slug', 'put': 'put', 'delete': 'delete'})
 
-resolution_by_id_view = ResolutionView.as_view({
-    'get': 'get_id',
-    'delete': 'delete'
-})
+resolution_by_id_view = ResolutionView.as_view({'get': 'get_id', 'delete': 'delete'})
 resolution_by_media_id_view = ResolutionView.as_view({'get': 'get_media_id'})
 
 app_name = 'media'

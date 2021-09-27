@@ -94,10 +94,8 @@ class Command(BaseCommand):
                 'description': 'Create, update or delete event information'
             },
             {
-                'slug':
-                'read_cohort',
-                'description':
-                'List all the cohorts or a single cohort information'
+                'slug': 'read_cohort',
+                'description': 'List all the cohorts or a single cohort information'
             },
             {
                 'slug': 'crud_cohort',
@@ -145,29 +143,23 @@ class Command(BaseCommand):
             },
             {
                 'slug': 'crud_media_resolution',
-                'description':
-                'Create, update or delete academy media resolutions'
+                'description': 'Create, update or delete academy media resolutions'
             },
             {
-                'slug':
-                'read_cohort_activity',
-                'description':
-                'Read low level activity in a cohort (attendancy, etc.)'
+                'slug': 'read_cohort_activity',
+                'description': 'Read low level activity in a cohort (attendancy, etc.)'
             },
             {
                 'slug': 'generate_academy_token',
-                'description':
-                'Create a new token only to be used by the academy'
+                'description': 'Create a new token only to be used by the academy'
             },
             {
                 'slug': 'get_academy_token',
                 'description': 'Read the academy token'
             },
             {
-                'slug':
-                'send_reset_password',
-                'description':
-                'Generate a temporal token and resend forgot password link'
+                'slug': 'send_reset_password',
+                'description': 'Generate a temporal token and resend forgot password link'
             },
             {
                 'slug': 'read_activity',
@@ -193,8 +185,11 @@ class Command(BaseCommand):
             },
             {
                 'slug': 'academy_reporting',
-                'description':
-                'Get detailed reports about the academy activity'
+                'description': 'Get detailed reports about the academy activity'
+            },
+            {
+                'slug': 'generate_temporal_token',
+                'description': 'Generate a temporal token to reset github credential or forgot password'
             },
         ]
 
@@ -220,9 +215,8 @@ class Command(BaseCommand):
                 'name':
                 'Academy Token',
                 'caps': [
-                    'read_member', 'read_syllabus', 'read_student',
-                    'read_cohort', 'read_media', 'read_my_academy',
-                    'read_invite', 'read_lead', 'crud_lead'
+                    'read_member', 'read_syllabus', 'read_student', 'read_cohort', 'read_media',
+                    'read_my_academy', 'read_invite', 'read_lead', 'crud_lead'
                 ]
             },
             {
@@ -231,11 +225,10 @@ class Command(BaseCommand):
                 'name':
                 'Staff (Base)',
                 'caps': [
-                    'read_member', 'read_syllabus', 'read_student',
-                    'read_cohort', 'read_media', 'read_my_academy',
-                    'read_invite', 'get_academy_token', 'crud_activity',
-                    'read_survey', 'read_layout', 'read_event',
-                    'academy_reporting'
+                    'read_member', 'read_syllabus', 'read_student', 'read_cohort', 'read_media',
+                    'read_my_academy', 'read_invite', 'get_academy_token', 'crud_activity', 'read_survey',
+                    'read_layout', 'read_event', 'read_certificate', 'academy_reporting', 'read_won_lead',
+                    'read_eventcheckin'
                 ]
             },
             {
@@ -244,8 +237,8 @@ class Command(BaseCommand):
                 'name':
                 'Student',
                 'caps': [
-                    'crud_assignment', 'read_syllabus', 'read_assignment',
-                    'read_cohort', 'read_my_academy', 'crud_activity'
+                    'crud_assignment', 'read_syllabus', 'read_assignment', 'read_cohort', 'read_my_academy',
+                    'crud_activity'
                 ]
             },
         ]
@@ -259,18 +252,14 @@ class Command(BaseCommand):
             'Teacher Assistant',
             'caps':
             extend(roles, ['staff']) + [
-                'read_assigment', 'crud_assignment', 'read_cohort_activity',
-                'read_nps_answers', 'classroom_activity', 'read_event'
+                'read_assigment', 'crud_assignment', 'read_cohort_activity', 'read_nps_answers',
+                'classroom_activity', 'read_event'
             ]
         })
         roles.append({
-            'slug':
-            'career_support',
-            'name':
-            'Career Support Specialist',
-            'caps':
-            extend(roles, ['staff']) +
-            ['read_certificate', 'crud_certificate']
+            'slug': 'career_support',
+            'name': 'Career Support Specialist',
+            'caps': extend(roles, ['staff']) + ['read_certificate', 'crud_certificate']
         })
         roles.append({
             'slug':
@@ -278,18 +267,13 @@ class Command(BaseCommand):
             'name':
             'Admissions Developer',
             'caps':
-            extend(roles, ['staff']) + [
-                'crud_lead', 'crud_student', 'crud_cohort', 'read_cohort',
-                'read_lead', 'read_eventcheckin'
-            ]
+            extend(roles, ['staff']) +
+            ['crud_lead', 'crud_student', 'crud_cohort', 'read_cohort', 'read_lead']
         })
         roles.append({
-            'slug':
-            'syllabus_coordinator',
-            'name':
-            'Syllabus Coordinator',
-            'caps':
-            extend(roles, ['staff']) + ['crud_syllabus', 'crud_media']
+            'slug': 'syllabus_coordinator',
+            'name': 'Syllabus Coordinator',
+            'caps': extend(roles, ['staff']) + ['crud_syllabus', 'crud_media']
         })
         roles.append({
             'slug': 'culture_and_recruitment',
@@ -303,8 +287,8 @@ class Command(BaseCommand):
             'Manage Syllabus, Exercises and all academy content',
             'caps':
             extend(roles, ['staff']) + [
-                'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin',
-                'read_nps_answers', 'read_lead', 'read_cohort', 'crud_media'
+                'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
+                'read_cohort', 'crud_media'
             ]
         })
         roles.append({
@@ -321,11 +305,7 @@ class Command(BaseCommand):
             'name': 'Homework Reviewer',
             'caps': extend(roles, ['assistant'])
         })
-        roles.append({
-            'slug': 'teacher',
-            'name': 'Teacher',
-            'caps': extend(roles, ['assistant'])
-        })
+        roles.append({'slug': 'teacher', 'name': 'Teacher', 'caps': extend(roles, ['assistant'])})
         roles.append({
             'slug':
             'academy_coordinator',
@@ -333,8 +313,8 @@ class Command(BaseCommand):
             'Mentor in residence',
             'caps':
             extend(roles, ['teacher']) + [
-                'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey',
-                'read_won_lead', 'crud_member'
+                'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
+                'send_reset_password', 'generate_temporal_token', 'crud_certificate'
             ]
         })
         roles.append({
@@ -344,12 +324,11 @@ class Command(BaseCommand):
             'Country Manager',
             'caps':
             extend(roles, [
-                'academy_coordinator', 'student', 'career_support',
-                'growth_manager', 'admissions_developer',
+                'academy_coordinator', 'student', 'career_support', 'growth_manager', 'admissions_developer',
                 'syllabus_coordinator'
             ]) + [
-                'crud_member', 'crud_my_academy', 'generate_academy_token',
-                'send_reset_password'
+                'crud_member', 'crud_my_academy', 'generate_academy_token', 'send_reset_password',
+                'generate_temporal_token'
             ]
         })
 

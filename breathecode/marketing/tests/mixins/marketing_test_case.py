@@ -11,8 +11,8 @@ from breathecode.tests.mixins import GenerateModelsMixin, CacheMixin, TokenMixin
 from breathecode.feedback.actions import strings
 
 
-class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
-                        TokenMixin, GenerateQueriesMixin, DatetimeMixin):
+class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
+                        DatetimeMixin):
     """MarketingTestCase with auth methods"""
     def tearDown(self):
         self.clear_cache()
@@ -24,8 +24,7 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         kwargs = {}
         if id:
             kwargs['id'] = id
-        return Token.objects.filter(**kwargs).values_list('key',
-                                                          flat=True).first()
+        return Token.objects.filter(**kwargs).values_list('key', flat=True).first()
 
     # This function was moved here because i want to use it as one example to
     # test the email
@@ -48,17 +47,15 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
             }, ['email'])
 
         self.assertEqual(args_list, [
-            call(
-                'https://api.mailgun.net/v3/None/messages',
-                auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
-                data={
-                    'from':
-                    f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
-                    'to': model['user'].email,
-                    'subject': template['subject'],
-                    'text': template['text'],
-                    'html': template['html']
-                })
+            call('https://api.mailgun.net/v3/None/messages',
+                 auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
+                 data={
+                     'from': f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
+                     'to': model['user'].email,
+                     'subject': template['subject'],
+                     'text': template['text'],
+                     'html': template['html']
+                 })
         ])
 
         html = template['html']
@@ -91,8 +88,7 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
         self.assertEqual(mock.call_args_list, [
             call('POST',
                  'https://old.hardcoded.breathecode.url/admin/api.php',
-                 params=[('api_action', 'contact_sync'),
-                         ('api_key', model['active_campaign_academy'].ac_key),
+                 params=[('api_action', 'contact_sync'), ('api_key', model['active_campaign_academy'].ac_key),
                          ('api_output', 'json')],
                  data={
                      'email': 'pokemon@potato.io',
@@ -101,20 +97,17 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
                      'phone': '123123123',
                      'field[18,0]': model['academy'].slug
                  }),
-            call(
-                'POST',
-                'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
-                headers={
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'Api-Token': model['active_campaign_academy'].ac_key
-                },
-                json={
-                    'contactAutomation': {
-                        'contact': 1,
-                        'automation': model['automation'].acp_id
-                    }
-                }),
+            call('POST',
+                 'https://old.hardcoded.breathecode.url/api/3/contactAutomations',
+                 headers={
+                     'Accept': 'application/json',
+                     'Content-Type': 'application/json',
+                     'Api-Token': model['active_campaign_academy'].ac_key
+                 },
+                 json={'contactAutomation': {
+                     'contact': 1,
+                     'automation': model['automation'].acp_id
+                 }}),
             call('POST',
                  'https://old.hardcoded.breathecode.url/api/3/contactTags',
                  headers={
@@ -122,10 +115,8 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin,
                      'Content-Type': 'application/json',
                      'Api-Token': model['active_campaign_academy'].ac_key
                  },
-                 json={
-                     'contactTag': {
-                         'contact': 1,
-                         'tag': model['tag'].acp_id
-                     }
-                 })
+                 json={'contactTag': {
+                     'contact': 1,
+                     'tag': model['tag'].acp_id
+                 }})
         ])

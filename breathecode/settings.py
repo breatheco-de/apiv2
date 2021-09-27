@@ -111,7 +111,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'breathecode.utils.admin_timezone.TimezoneMiddleware',
+    #'breathecode.utils.admin_timezone.TimezoneMiddleware',
 
     # ⬇ Rollbar is always last please!
     # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',

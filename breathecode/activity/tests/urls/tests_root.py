@@ -96,11 +96,9 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(
             json, {
-                'detail':
-                ("You (user: 1) don't have this capability: read_activity for "
-                 'academy 1'),
-                'status_code':
-                403,
+                'detail': ("You (user: 1) don't have this capability: read_activity for "
+                           'academy 1'),
+                'status_code': 403,
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -109,9 +107,7 @@ class MediaTestSuite(MediaTestCase):
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__without_data(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -142,8 +138,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore,
                   'fetch',
-                  new=datastore_fetch_mock(first_fetch=[],
-                                           second_fetch=DATASTORE_SHARED_SEED))
+                  new=datastore_fetch_mock(first_fetch=[], second_fetch=DATASTORE_SHARED_SEED))
     def test_type__just_have_public_activities(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -182,8 +177,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore,
                   'fetch',
-                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED,
-                                           second_fetch=[]))
+                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED, second_fetch=[]))
     def test_type__just_have_activities_from_current_academy(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -275,9 +269,7 @@ class MediaTestSuite(MediaTestCase):
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__bad_slug_by_querystring(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -302,9 +294,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__slug_by_querystring__its_not_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -331,8 +321,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore,
                   'fetch',
-                  new=datastore_fetch_mock(first_fetch=[],
-                                           second_fetch=DATASTORE_SHARED_SEED))
+                  new=datastore_fetch_mock(first_fetch=[], second_fetch=DATASTORE_SHARED_SEED))
     def test_type__with_data__slug_by_querystring__its_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -364,12 +353,8 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(kind='student_activity',
-                 slug='breathecode_login',
-                 academy_id=1),
-            call(kind='student_activity',
-                 slug='breathecode_login',
-                 academy_id=0),
+            call(kind='student_activity', slug='breathecode_login', academy_id=1),
+            call(kind='student_activity', slug='breathecode_login', academy_id=0),
         ])
 
     """
@@ -377,9 +362,7 @@ class MediaTestSuite(MediaTestCase):
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__bad_cohort_by_querystring(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -404,9 +387,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__cohort_by_querystring__its_not_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -429,19 +410,14 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(kind='student_activity',
-                 cohort='miami-downtown-pt-xx',
-                 academy_id=1),
-            call(kind='student_activity',
-                 cohort='miami-downtown-pt-xx',
-                 academy_id=0),
+            call(kind='student_activity', cohort='miami-downtown-pt-xx', academy_id=1),
+            call(kind='student_activity', cohort='miami-downtown-pt-xx', academy_id=0),
         ])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore,
                   'fetch',
-                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED,
-                                           second_fetch=[]))
+                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED, second_fetch=[]))
     def test_type__with_data__cohort_by_querystring__its_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -476,12 +452,8 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(kind='student_activity',
-                 cohort='miami-downtown-pt-xx',
-                 academy_id=1),
-            call(kind='student_activity',
-                 cohort='miami-downtown-pt-xx',
-                 academy_id=0),
+            call(kind='student_activity', cohort='miami-downtown-pt-xx', academy_id=1),
+            call(kind='student_activity', cohort='miami-downtown-pt-xx', academy_id=0),
         ])
 
     """
@@ -489,9 +461,7 @@ class MediaTestSuite(MediaTestCase):
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__bad_user_id_by_querystring(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -516,9 +486,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__user_id_is_string_by_querystring(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -543,9 +511,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__user_id_by_querystring__its_not_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -575,8 +541,7 @@ class MediaTestSuite(MediaTestCase):
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore,
                   'fetch',
-                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED,
-                                           second_fetch=[]))
+                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED, second_fetch=[]))
     def test_type__with_data__user_id_by_querystring__its_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -620,9 +585,7 @@ class MediaTestSuite(MediaTestCase):
     """
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__bad_email_by_querystring(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -647,9 +610,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(mock.fetch.call_args_list, [])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
-    @patch.object(Datastore,
-                  'fetch',
-                  new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
+    @patch.object(Datastore, 'fetch', new=datastore_fetch_mock(first_fetch=[], second_fetch=[]))
     def test_type__with_data__email_by_querystring__its_not_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -674,19 +635,14 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(kind='student_activity',
-                 email='konan@naruto.io',
-                 academy_id=1),
-            call(kind='student_activity',
-                 email='konan@naruto.io',
-                 academy_id=0),
+            call(kind='student_activity', email='konan@naruto.io', academy_id=1),
+            call(kind='student_activity', email='konan@naruto.io', academy_id=0),
         ])
 
     @patch.object(Datastore, '__init__', new=lambda x: None)
     @patch.object(Datastore,
                   'fetch',
-                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED,
-                                           second_fetch=[]))
+                  new=datastore_fetch_mock(first_fetch=DATASTORE_PRIVATE_SEED, second_fetch=[]))
     def test_type__with_data__email_by_querystring__its_exist(self):
         from breathecode.services.google_cloud import Datastore as mock
         mock.fetch.call_args_list = []
@@ -723,12 +679,8 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(mock.fetch.call_args_list, [
-            call(kind='student_activity',
-                 email='konan@naruto.io',
-                 academy_id=1),
-            call(kind='student_activity',
-                 email='konan@naruto.io',
-                 academy_id=0),
+            call(kind='student_activity', email='konan@naruto.io', academy_id=1),
+            call(kind='student_activity', email='konan@naruto.io', academy_id=0),
         ])
 
     """

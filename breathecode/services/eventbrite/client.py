@@ -35,9 +35,7 @@ class Eventbrite:
         if query_string is not None:
             _query_string = '?' + urllib.parse.urlencode(query_string)
 
-        response = requests.request(_type,
-                                    self.host + url + _query_string,
-                                    headers=_headers)
+        response = requests.request(_type, self.host + url + _query_string, headers=_headers)
         result = response.json()
 
         if 'status_code' in result and result['status_code'] >= 400:
@@ -47,13 +45,12 @@ class Eventbrite:
             print('has more items?', result['pagination']['has_more_items'])
             if result['pagination']['has_more_items']:
                 print('Continuation: ', result['pagination']['continuation'])
-                new_result = self.request(
-                    _type,
-                    url,
-                    query_string={
-                        **query_string, 'continuation':
-                        result['pagination']['continuation']
-                    })
+                new_result = self.request(_type,
+                                          url,
+                                          query_string={
+                                              **query_string, 'continuation':
+                                              result['pagination']['continuation']
+                                          })
                 for key in new_result:
                     print(key, type(new_result[key]) == 'list')
                     if type(new_result[key]) == 'list':
@@ -74,8 +71,7 @@ class Eventbrite:
         return data
 
     def get_organization_venues(self, organization_id):
-        data = self.request('GET',
-                            f'/organizations/{str(organization_id)}/venues/')
+        data = self.request('GET', f'/organizations/{str(organization_id)}/venues/')
         return data
 
     def execute_action(self, eventbrite_webhook_id: int):
@@ -95,8 +91,7 @@ class Eventbrite:
         #     }
         # }
 
-        webhook = EventbriteWebhook.objects.filter(
-            id=eventbrite_webhook_id).first()
+        webhook = EventbriteWebhook.objects.filter(id=eventbrite_webhook_id).first()
 
         if not webhook:
             raise Exception('Invalid webhook')

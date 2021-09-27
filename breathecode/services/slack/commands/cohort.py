@@ -28,11 +28,9 @@ def render_cohort(channel_id):
     cohort = Cohort.objects.filter(slackchannel__slack_id=channel_id).first()
     if cohort is None:
         raise Exception(
-            f'Cohort was not found as slack channel, make sure the channel name matches the cohort slug'
-        )
+            f'Cohort was not found as slack channel, make sure the channel name matches the cohort slug')
 
-    teachers = CohortUser.objects.filter(cohort=cohort,
-                                         role__in=['TEACHER', 'ASSISTANT'])
+    teachers = CohortUser.objects.filter(cohort=cohort, role__in=['TEACHER', 'ASSISTANT'])
     return {
         'type': 'section',
         'text': {

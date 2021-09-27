@@ -39,7 +39,6 @@ class MediaModelsMixin(ModelsMixin):
             kargs = {}
 
             kargs = {**kargs, **media_resolution_kwargs}
-            models['media_resolution'] = mixer.blend('media.MediaResolution',
-                                                     **kargs)
+            models['media_resolution'] = mixer.blend('media.MediaResolution', **kargs)
 
         return models

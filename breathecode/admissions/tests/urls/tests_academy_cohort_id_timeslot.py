@@ -13,7 +13,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins.new_admissions_test_case import AdmissionsTestCase
+from ..mixins import AdmissionsTestCase
 
 
 class CohortUserTestSuite(AdmissionsTestCase):
@@ -22,8 +22,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Auth
     """
     def test_cohort_time_slot__without_auth(self):
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot',
-                           kwargs={'cohort_id': 1})
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
         response = self.client.get(url)
         json = response.json()
 
@@ -36,15 +35,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
     def test_cohort_time_slot__without_academy_header(self):
         model = self.generate_models(authenticate=True)
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot',
-                           kwargs={'cohort_id': 1})
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
         response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(
             json, {
-                'detail':
-                "Missing academy_id parameter expected for the endpoint url or 'Academy' header",
+                'detail': "Missing academy_id parameter expected for the endpoint url or 'Academy' header",
                 'status_code': 403,
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -53,17 +50,14 @@ class CohortUserTestSuite(AdmissionsTestCase):
     def test_cohort_time_slot__without_capabilities(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True)
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot',
-                           kwargs={'cohort_id': 1})
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail':
-                "You (user: 1) don't have this capability: read_cohort for academy 1",
-                'status_code': 403,
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_cohort for academy 1",
+            'status_code': 403,
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
@@ -77,8 +71,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='read_cohort',
                                      role='potato')
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot',
-                           kwargs={'cohort_id': 1})
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
         response = self.client.get(url)
         json = response.json()
 
@@ -100,29 +93,19 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      capability='read_cohort',
                                      role='potato',
                                      cohort_time_slot=True)
-        model_dict = self.remove_dinamics_fields(
-            model['cohort_time_slot'].__dict__)
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot',
-                           kwargs={'cohort_id': 1})
+        model_dict = self.remove_dinamics_fields(model['cohort_time_slot'].__dict__)
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id':
-            model.cohort_time_slot.id,
-            'cohort':
-            model.cohort_time_slot.cohort.id,
-            'starting_at':
-            self.datetime_to_iso(model.cohort_time_slot.starting_at),
-            'ending_at':
-            self.datetime_to_iso(model.cohort_time_slot.ending_at),
-            'recurrent':
-            model.cohort_time_slot.recurrent,
-            'recurrency_type':
-            model.cohort_time_slot.recurrency_type,
-            'created_at':
-            self.datetime_to_iso(model.cohort_time_slot.created_at),
-            'updated_at':
-            self.datetime_to_iso(model.cohort_time_slot.updated_at),
+            'id': model.cohort_time_slot.id,
+            'cohort': model.cohort_time_slot.cohort.id,
+            'starting_at': self.datetime_to_iso(model.cohort_time_slot.starting_at),
+            'ending_at': self.datetime_to_iso(model.cohort_time_slot.ending_at),
+            'recurrent': model.cohort_time_slot.recurrent,
+            'recurrency_type': model.cohort_time_slot.recurrency_type,
+            'created_at': self.datetime_to_iso(model.cohort_time_slot.created_at),
+            'updated_at': self.datetime_to_iso(model.cohort_time_slot.updated_at),
         }]
 
         self.assertEqual(json, expected)
@@ -144,8 +127,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato')
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot',
-                           kwargs={'cohort_id': 1})
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
         data = {}
         response = self.client.post(url, data, format='json')
         json = response.json()
@@ -167,8 +149,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato')
-        url = reverse_lazy('admissions:academy_cohort_id_timeslot',
-                           kwargs={'cohort_id': 1})
+        url = reverse_lazy('admissions:academy_cohort_id_timeslot', kwargs={'cohort_id': 1})
 
         starting_at = self.datetime_now()
         ending_at = self.datetime_now()
@@ -190,12 +171,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_cohort_time_slot_dict(),
-                         [{
-                             'cohort_id': 1,
-                             'ending_at': ending_at,
-                             'id': 1,
-                             'recurrency_type': 'WEEKLY',
-                             'recurrent': True,
-                             'starting_at': starting_at,
-                         }])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [{
+            'cohort_id': 1,
+            'ending_at': ending_at,
+            'id': 1,
+            'recurrency_type': 'WEEKLY',
+            'recurrent': True,
+            'starting_at': starting_at,
+        }])

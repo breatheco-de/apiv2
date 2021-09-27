@@ -25,9 +25,8 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                              **kwargs):
         models = models.copy()
 
-        if not 'user' in models and (user or authenticate or profile_academy
-                                     or manual_authenticate or cohort_user
-                                     or task or slack_team):
+        if not 'user' in models and (user or authenticate or profile_academy or manual_authenticate
+                                     or cohort_user or task or slack_team):
             kargs = {}
 
             kargs = {**kargs, **user_kwargs}
