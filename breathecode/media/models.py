@@ -1,8 +1,7 @@
-import re
 from breathecode.admissions.models import Academy
-from django.contrib.auth.models import User
 from django.db import models
-from slugify import slugify
+
+__all__ = ['Category', 'Media', 'MediaResolution']
 
 
 class Category(models.Model):
@@ -26,10 +25,7 @@ class Media(models.Model):
     hits = models.IntegerField(default=0)
 
     categories = models.ManyToManyField(Category, blank=True)
-    academy = models.ForeignKey(Academy,
-                                on_delete=models.CASCADE,
-                                blank=True,
-                                null=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

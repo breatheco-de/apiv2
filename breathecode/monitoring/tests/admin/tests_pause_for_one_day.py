@@ -29,11 +29,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         endpoints = [{
             **endpoint, 'paused_until': None
-        } for endpoint in self.all_endpoint_dict()
-                     if self.assertDatetime(endpoint['paused_until'])]
+        } for endpoint in self.all_endpoint_dict() if self.assertDatetime(endpoint['paused_until'])]
         self.assertEqual(endpoints, [{
-            **self.model_to_dict(model, 'endpoint'), 'frequency_in_minutes':
-            30.0
+            **self.model_to_dict(model, 'endpoint'), 'frequency_in_minutes': 30.0
         } for model in models])
 
     def tests_pause_for_one_day_length_3(self):
@@ -46,9 +44,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         endpoints = [{
             **endpoint, 'paused_until': None
-        } for endpoint in self.all_endpoint_dict()
-                     if self.assertDatetime(endpoint['paused_until'])]
+        } for endpoint in self.all_endpoint_dict() if self.assertDatetime(endpoint['paused_until'])]
         self.assertEqual(endpoints, [{
-            **self.model_to_dict(model, 'endpoint'), 'frequency_in_minutes':
-            30.0
+            **self.model_to_dict(model, 'endpoint'), 'frequency_in_minutes': 30.0
         } for model in models])

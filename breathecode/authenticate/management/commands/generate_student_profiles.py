@@ -15,8 +15,7 @@ class Command(BaseCommand):
         cus = CohortUser.objects.filter(role='STUDENT')
         count = 0
         for cu in cus:
-            profile = ProfileAcademy.objects.filter(
-                user=cu.user, academy=cu.cohort.academy).first()
+            profile = ProfileAcademy.objects.filter(user=cu.user, academy=cu.cohort.academy).first()
             if profile is None:
                 count = count + 1
                 profile = ProfileAcademy(user=cu.user,

@@ -38,10 +38,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='formentry',
             name='email',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   max_length=150,
-                                   null=True),
+            field=models.CharField(blank=True, default=None, max_length=150, null=True),
         ),
         migrations.AlterField(
             model_name='formentry',
@@ -51,9 +48,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='formentry',
             name='utm_url',
-            field=models.CharField(blank=True,
-                                   default=None,
-                                   max_length=250,
-                                   null=True),
+            field=models.CharField(blank=True, default=None, max_length=250, null=True),
         ),
     ]

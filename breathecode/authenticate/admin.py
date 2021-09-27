@@ -2,12 +2,10 @@ import base64, os, urllib.parse, logging
 from django.contrib import admin
 from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
-from .actions import delete_tokens
+from .actions import delete_tokens, generate_academy_token
 from django.utils.html import format_html
-from .models import (CredentialsGithub, Token, UserProxy, Profile,
-                     CredentialsSlack, ProfileAcademy, Role,
-                     CredentialsFacebook, Capability, UserInvite,
-                     CredentialsGoogle)
+from .models import (CredentialsGithub, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy, Role,
+                     CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy)
 from .actions import reset_password
 
 logger = logging.getLogger(__name__)
@@ -39,9 +37,7 @@ send_reset_password.short_description = 'Send reset password link'
 @admin.register(CredentialsGithub)
 class CredentialsGithubAdmin(admin.ModelAdmin):
     list_display = ('github_id', 'user_id', 'email', 'token')
-    search_fields = [
-        'user__first_name', 'user__last_name', 'user__email', 'email'
-    ]
+    search_fields = ['user__first_name', 'user__last_name', 'user__email', 'email']
     raw_id_fields = ['user']
 
 
@@ -82,17 +78,14 @@ class TokenAdmin(admin.ModelAdmin):
 class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ['email', 'first_name', 'last_name']
     list_filter = ['academy', 'cohort', 'role']
-    list_display = ('email', 'first_name', 'last_name', 'status', 'academy',
-                    'token', 'created_at', 'invite_url')
+    list_display = ('email', 'first_name', 'last_name', 'status', 'academy', 'token', 'created_at',
+                    'invite_url')
 
     def invite_url(self, obj):
         params = {'callback': 'https://learn.breatheco.de'}
         querystr = urllib.parse.urlencode(params)
-        url = os.getenv('API_URL') + '/v1/auth/member/invite/' + str(
-            obj.token) + '?' + querystr
-        return format_html(
-            f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>"
-        )
+        url = os.getenv('API_URL') + '/v1/auth/member/invite/' + str(obj.token) + '?' + querystr
+        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>invite url</a>")
 
 
 def clear_user_password(modeladmin, request, queryset):
@@ -106,19 +99,13 @@ clear_user_password.short_description = 'Clear user password'
 
 @admin.register(UserProxy)
 class UserAdmin(UserAdmin):
-    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff',
-                    'github_login')
-    actions = [
-        clean_all_tokens, clean_expired_tokens, send_reset_password,
-        clear_user_password
-    ]
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'github_login')
+    actions = [clean_all_tokens, clean_expired_tokens, send_reset_password, clear_user_password]
 
     def get_queryset(self, request):
 
         self.github_callback = f'https://app.breatheco.de'
-        self.github_callback = str(
-            base64.urlsafe_b64encode(self.github_callback.encode('utf-8')),
-            'utf-8')
+        self.github_callback = str(base64.urlsafe_b64encode(self.github_callback.encode('utf-8')), 'utf-8')
         return super(UserAdmin, self).get_queryset(request)
 
     def github_login(self, obj):
@@ -151,8 +138,7 @@ mark_as_active.short_description = 'Mark as ACTIVE'
 
 @admin.register(ProfileAcademy)
 class ProfileAcademyAdmin(admin.ModelAdmin):
-    list_display = ('user', 'email', 'academy', 'role', 'status', 'created_at',
-                    'slack', 'facebook')
+    list_display = ('user', 'email', 'academy', 'role', 'status', 'created_at', 'slack', 'facebook')
     search_fields = ['user__first_name', 'user__last_name', 'user__email']
     list_filter = ['academy__slug', 'status', 'role__slug']
     actions = [mark_as_active]
@@ -161,9 +147,7 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
 
         self.slack_callback = f'https://app.breatheco.de'
-        self.slack_callback = str(
-            base64.urlsafe_b64encode(self.slack_callback.encode('utf-8')),
-            'utf-8')
+        self.slack_callback = str(base64.urlsafe_b64encode(self.slack_callback.encode('utf-8')), 'utf-8')
         return super(ProfileAcademyAdmin, self).get_queryset(request)
 
     def slack(self, obj):
@@ -188,3 +172,30 @@ class ProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone', 'github_username', 'avatar_url')
     search_fields = ['user__first_name', 'user__last_name', 'user__email']
     # actions = [clean_all_tokens, clean_expired_tokens, send_reset_password]
+
+
+def generate_token(modeladmin, request, queryset):
+    academies = queryset.all()
+    for a in academies:
+        token = generate_academy_token(a.id)
+
+
+generate_token.short_description = 'Generate academy token'
+
+
+def reset_token(modeladmin, request, queryset):
+    academies = queryset.all()
+    for a in academies:
+        token = generate_academy_token(a.id, force=True)
+
+
+reset_token.short_description = 'RESET academy token'
+
+
+@admin.register(AcademyProxy)
+class AcademyAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name', 'token')
+    actions = [generate_token, reset_token]
+
+    def token(self, obj):
+        return Token.objects.filter(user__username=obj.slug).first()

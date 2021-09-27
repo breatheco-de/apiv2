@@ -33,8 +33,7 @@ def send_bulk_survey(modeladmin, request, queryset):
             logger.fatal(error)
 
     if errors:
-        message = ' - '.join(
-            [f'{error} ({errors[error]})' for error in errors.keys()])
+        message = ' - '.join([f'{error} ({errors[error]})' for error in errors.keys()])
         messages.error(request, message=message)
     else:
         messages.success(request, message='Survey was successfully sent')
@@ -69,8 +68,7 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
             logger.fatal(error)
 
     if errors:
-        message = ' - '.join(
-            [f'{error} ({errors[error]})' for error in errors.keys()])
+        message = ' - '.join([f'{error} ({errors[error]})' for error in errors.keys()])
         messages.error(request, message=message)
     else:
         messages.success(request, message='Survey was successfully sent')
@@ -88,7 +86,7 @@ class CohortUserAdmin(CohortUserAdmin):
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
-    pass
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'specialty_mode')
 
 
 def add_academy_to_answer(modeladmin, request, queryset):
@@ -109,20 +107,16 @@ add_academy_to_answer.short_description = 'Add academy to answer'
 
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score',
-                    'comment', 'opened_at', 'created_at', 'answer_url')
-    search_fields = [
-        'user__first_name', 'user__last_name', 'user__email', 'cohort__slug'
-    ]
+    list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score', 'comment', 'opened_at',
+                    'created_at', 'answer_url')
+    search_fields = ['user__first_name', 'user__last_name', 'user__email', 'cohort__slug']
     list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
     actions = ['export_as_csv', add_academy_to_answer]
     raw_id_fields = ['user', 'cohort', 'mentor']
 
     def answer_url(self, obj):
         url = 'https://nps.breatheco.de/' + str(obj.id)
-        return format_html(
-            f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open answer</a>"
-        )
+        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open answer</a>")
 
     # def entity(self, object):
     #     return f"{object.entity_slug} (id:{str(object.entity_id)})"
@@ -161,16 +155,11 @@ send_big_cohort_bulk_survey.short_description = 'Send GENERAL BIG Survey to all 
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
     list_display = ('cohort', 'status', 'duration', 'created_at', 'survey_url')
-    search_fields = [
-        'cohort__slug', 'cohort__academy__slug', 'cohort__name',
-        'cohort__academy__name'
-    ]
+    search_fields = ['cohort__slug', 'cohort__academy__slug', 'cohort__name', 'cohort__academy__name']
     list_filter = ['status', 'cohort__academy__slug']
     raw_id_fields = ['cohort']
     actions = [send_big_cohort_bulk_survey]
 
     def survey_url(self, obj):
         url = 'https://nps.breatheco.de/survey/' + str(obj.id)
-        return format_html(
-            f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open survey</a>"
-        )
+        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open survey</a>")

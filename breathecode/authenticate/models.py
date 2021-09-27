@@ -1,7 +1,6 @@
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User
 from django.conf import settings
 from django.db import models
-from rest_framework import serializers
 from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
@@ -9,34 +8,36 @@ from django.core.validators import RegexValidator
 from .signals import invite_accepted
 from breathecode.admissions.models import Academy, Cohort
 
+__all__ = [
+    'User', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite', 'ProfileAcademy', 'CredentialsGithub',
+    'CredentialsSlack', 'CredentialsFacebook', 'CredentialsQuickBooks', 'CredentialsGoogle', 'DeviceId',
+    'Token'
+]
+
 
 class UserProxy(User):
     class Meta:
         proxy = True
 
 
+class AcademyProxy(Academy):
+    class Meta:
+        proxy = True
+
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    avatar_url = models.CharField(max_length=255,
-                                  blank=True,
-                                  null=True,
-                                  default=None)
+    avatar_url = models.CharField(max_length=255, blank=True, null=True, default=None)
     bio = models.CharField(max_length=255, blank=True, null=True)
 
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
-        message=
-        "Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
-    )
-    phone = models.CharField(validators=[phone_regex],
-                             max_length=17,
-                             blank=True,
+        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True,
                              default='')  # validators should be a list
 
     show_tutorial = models.BooleanField(
-        default=True,
-        help_text='Set true if you want to show the tutorial on the user UI/UX'
-    )
+        default=True, help_text='Set true if you want to show the tutorial on the user UI/UX')
 
     twitter_username = models.CharField(max_length=50, blank=True, null=True)
     github_username = models.CharField(max_length=50, blank=True, null=True)
@@ -48,10 +49,7 @@ class Profile(models.Model):
 
 class Capability(models.Model):
     slug = models.SlugField(max_length=40, primary_key=True)
-    description = models.CharField(max_length=255,
-                                   blank=True,
-                                   null=True,
-                                   default=None)
+    description = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     def __str__(self):
         return f'{self.slug}'
@@ -59,10 +57,7 @@ class Capability(models.Model):
 
 class Role(models.Model):
     slug = models.SlugField(max_length=25, primary_key=True)
-    name = models.CharField(max_length=255,
-                            blank=True,
-                            null=True,
-                            default=None)
+    name = models.CharField(max_length=255, blank=True, null=True, default=None)
     capabilities = models.ManyToManyField(Capability)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -83,26 +78,11 @@ INVITE_STATUS = (
 # TODO: list this invite
 class UserInvite(models.Model):
 
-    email = models.CharField(blank=False,
-                             max_length=150,
-                             null=True,
-                             default=None)
+    email = models.CharField(blank=False, max_length=150, null=True, default=None)
 
-    academy = models.ForeignKey(Academy,
-                                on_delete=models.CASCADE,
-                                null=True,
-                                default=None,
-                                blank=True)
-    cohort = models.ForeignKey(Cohort,
-                               on_delete=models.CASCADE,
-                               null=True,
-                               default=None,
-                               blank=True)
-    role = models.ForeignKey(Role,
-                             on_delete=models.CASCADE,
-                             null=True,
-                             default=None,
-                             blank=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None, blank=True)
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, null=True, default=None, blank=True)
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
     first_name = models.CharField(max_length=100, default=None, null=True)
     last_name = models.CharField(max_length=100, default=None, null=True)
@@ -111,18 +91,12 @@ class UserInvite(models.Model):
 
     author = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    status = models.CharField(max_length=15,
-                              choices=INVITE_STATUS,
-                              default=PENDING)
+    status = models.CharField(max_length=15, choices=INVITE_STATUS, default=PENDING)
 
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
-        message=
-        "Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
-    )
-    phone = models.CharField(validators=[phone_regex],
-                             max_length=17,
-                             blank=True,
+        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True,
                              default='')  # validators should be a list
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -146,38 +120,23 @@ class ProfileAcademy(models.Model):
         super(ProfileAcademy, self).__init__(*args, **kwargs)
         self.__old_status = self.status
 
-    user = models.ForeignKey(User,
-                             on_delete=models.SET_NULL,
-                             default=None,
-                             null=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, null=True)
 
-    email = models.CharField(blank=False,
-                             max_length=150,
-                             null=True,
-                             default=None)
+    email = models.CharField(blank=False, max_length=150, null=True, default=None)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
 
     first_name = models.CharField(max_length=100, default=None, null=True)
     last_name = models.CharField(max_length=100, default=None, null=True)
-    address = models.CharField(max_length=255,
-                               blank=True,
-                               default=None,
-                               null=True)
+    address = models.CharField(max_length=255, blank=True, default=None, null=True)
 
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
-        message=
-        "Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed."
-    )
-    phone = models.CharField(validators=[phone_regex],
-                             max_length=17,
-                             blank=True,
+        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+    phone = models.CharField(validators=[phone_regex], max_length=17, blank=True,
                              default='')  # validators should be a list
 
-    status = models.CharField(max_length=15,
-                              choices=PROFILE_ACADEMY_STATUS,
-                              default=INVITED)
+    status = models.CharField(max_length=15, choices=PROFILE_ACADEMY_STATUS, default=INVITED)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -243,17 +202,12 @@ class CredentialsSlack(models.Model):
 class CredentialsFacebook(models.Model):
 
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    academy = models.OneToOneField(Academy,
-                                   on_delete=models.CASCADE,
-                                   blank=True)
+    academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True)
 
     token = models.CharField(max_length=255)
     expires_at = models.DateTimeField()
     facebook_id = models.BigIntegerField(null=True, default=None)
-    email = models.CharField(blank=False,
-                             null=True,
-                             default=None,
-                             max_length=150)
+    email = models.CharField(blank=False, null=True, default=None, max_length=150)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -316,8 +270,7 @@ class Token(rest_framework.authtoken.models.Token):
             kwargs['token_type'] = 'temporal'
 
         if 'hours_length' in kwargs:
-            kwargs['expires_at'] = utc_now + timezone.timedelta(
-                hours=kwargs['hours_length'])
+            kwargs['expires_at'] = utc_now + timezone.timedelta(hours=kwargs['hours_length'])
             del kwargs['hours_length']
 
         token, created = Token.objects.get_or_create(user=user, **kwargs)
@@ -336,8 +289,7 @@ class Token(rest_framework.authtoken.models.Token):
         # delete expired tokens
         Token.objects.filter(expires_at__lt=utc_now).delete()
         # find among any non-expired token
-        _token = Token.objects.filter(key=token,
-                                      expires_at__gt=utc_now).first()
+        _token = Token.objects.filter(key=token, expires_at__gt=utc_now).first()
 
         return _token
 

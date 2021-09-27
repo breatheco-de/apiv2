@@ -14,15 +14,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Capability',
             fields=[
-                ('slug',
-                 models.SlugField(max_length=25,
-                                  primary_key=True,
-                                  serialize=False)),
-                ('description',
-                 models.CharField(blank=True,
-                                  default=None,
-                                  max_length=255,
-                                  null=True)),
+                ('slug', models.SlugField(max_length=25, primary_key=True, serialize=False)),
+                ('description', models.CharField(blank=True, default=None, max_length=255, null=True)),
             ],
         ),
         migrations.AddField(

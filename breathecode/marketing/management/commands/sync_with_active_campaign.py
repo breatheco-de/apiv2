@@ -14,5 +14,4 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS('Successfully sync tags'))
 
             sync_automations(a)
-            self.stdout.write(
-                self.style.SUCCESS('Successfully sync automations'))
+            self.stdout.write(self.style.SUCCESS('Successfully sync automations'))

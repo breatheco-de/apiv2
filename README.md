@@ -43,15 +43,37 @@ Check out the [Postman docs](https://documenter.getpostman.com/view/2432393/T1LP
 
 The documentation is divided into several sections:
 
-- No instalation (with gitpod)
-- [Installarion inside Docker (easier)](#working-inside-docker-slower)
+- [No Installation (with gitpod)](#working-inside-gitpod-no-instalation)
+  - [How to work Gitpod](#how-to-work-gitpod)
+  - [Add the browser extension](#add-the-browser-extension)
+  - [How to use Gitpod browser extension](#how-to-use-gitpod-browser-extension)
+- [Installation inside Docker (easier)](#working-inside-docker-easier)
   - [Build BreatheCode Dev docker image](#build-breathecode-dev-docker-image)
   - [Testing inside BreatheCode Dev](#testing-inside-breathecode-dev)
   - [Run BreatheCode API as docker service](#run-breathecode-api-as-docker-service)
-- [Instalation in your local machine (a bit harder but more performant)](#working-in-your-local-machine-recomended)
+- [Installation in your local machine (a bit harder but more performant)](#working-in-your-local-machine-recomended)
   - [Installation in your local machine](#installation-in-your-local-machine)
   - [Testing in your local machine](#testing-in-your-local-machine)
   - [Run BreatheCode API in your local machine](#run-breathecode-api-in-your-local-machine)
+
+## Working inside Gitpod (no instalation)
+
+### `How to work Gitpod`
+
+Creating a workspace is as easy as prefixing any GitHub URL with `gitpod.io/#`.
+
+### `Add the browser extension`
+
+Gitpod provide the extension for:
+
+- [Chrome](https://chrome.google.com/webstore/detail/gitpod-online-ide/dodmmooeoklaejobgleioelladacbeki) - also works for Edge, Brave and other Chromium-based browsers.
+- [Firefox](https://addons.mozilla.org/firefox/addon/gitpod/)
+
+### `How to use Gitpod browser extension`
+
+For convenience, Gitpod developed a Gitpod browser extension. It adds a button to GitHub, GitLab or Bitbucket that does the prefixing for you - as simple as that.
+
+![How to use gitpod extension](https://www.gitpod.io/images/docs/browser-extension-lense.png)
 
 ## Working inside Docker (easier)
 

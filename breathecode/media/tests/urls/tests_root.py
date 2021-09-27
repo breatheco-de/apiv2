@@ -52,12 +52,10 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail':
-                "You (user: 1) don't have this capability: read_media for academy 1",
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_media for academy 1",
+            'status_code': 403
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     """
@@ -113,9 +111,7 @@ class MediaTestSuite(MediaTestCase):
             'url': model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -158,9 +154,7 @@ class MediaTestSuite(MediaTestCase):
             model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     """
     🔽🔽🔽 Academy in querystring
@@ -184,9 +178,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -229,9 +221,7 @@ class MediaTestSuite(MediaTestCase):
             model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -248,18 +238,12 @@ class MediaTestSuite(MediaTestCase):
         del base['academy']
 
         models = [
-            self.generate_models(academy=True,
-                                 media=True,
-                                 category=True,
-                                 models=base) for _ in range(0, 2)
+            self.generate_models(academy=True, media=True, category=True, models=base) for _ in range(0, 2)
         ]
 
-        ordened_models = sorted(models,
-                                key=lambda x: x['media'].created_at,
-                                reverse=True)
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
-        url = (reverse_lazy('media:root') + '?academy=' +
-               str(models[0]['media'].academy.id) + ',' +
+        url = (reverse_lazy('media:root') + '?academy=' + str(models[0]['media'].academy.id) + ',' +
                str(models[1]['media'].academy.id))
         response = self.client.get(url)
         json = response.json()
@@ -289,9 +273,7 @@ class MediaTestSuite(MediaTestCase):
         } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        } for model in models])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
 
     """
     🔽🔽🔽 Mime in querystring
@@ -315,9 +297,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -360,9 +340,7 @@ class MediaTestSuite(MediaTestCase):
             model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -376,17 +354,11 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     role='potato')
 
-        models = [
-            self.generate_models(media=True, category=True, models=base)
-            for _ in range(0, 2)
-        ]
+        models = [self.generate_models(media=True, category=True, models=base) for _ in range(0, 2)]
 
-        ordened_models = sorted(models,
-                                key=lambda x: x['media'].created_at,
-                                reverse=True)
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
-        url = reverse_lazy('media:root') + '?mime=' + models[0][
-            'media'].mime + ',' + models[1]['media'].mime
+        url = reverse_lazy('media:root') + '?mime=' + models[0]['media'].mime + ',' + models[1]['media'].mime
         response = self.client.get(url)
         json = response.json()
         self.assertEqual(json, [{
@@ -415,9 +387,7 @@ class MediaTestSuite(MediaTestCase):
         } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        } for model in models])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
 
     """
     🔽🔽🔽 Name in querystring
@@ -441,9 +411,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -486,9 +454,7 @@ class MediaTestSuite(MediaTestCase):
             model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -502,17 +468,12 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     role='potato')
 
-        models = [
-            self.generate_models(media=True, category=True, models=base)
-            for _ in range(0, 2)
-        ]
+        models = [self.generate_models(media=True, category=True, models=base) for _ in range(0, 2)]
 
-        ordened_models = sorted(models,
-                                key=lambda x: x['media'].created_at,
-                                reverse=True)
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
-        url = (reverse_lazy('media:root') + '?name=' +
-               models[0]['media'].name + ',' + models[1]['media'].name)
+        url = (reverse_lazy('media:root') + '?name=' + models[0]['media'].name + ',' +
+               models[1]['media'].name)
         response = self.client.get(url)
         json = response.json()
         self.assertEqual(json, [{
@@ -541,9 +502,7 @@ class MediaTestSuite(MediaTestCase):
         } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        } for model in models])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
 
     """
     🔽🔽🔽 Slug in querystring
@@ -567,9 +526,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -612,9 +569,7 @@ class MediaTestSuite(MediaTestCase):
             model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -628,20 +583,15 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     role='potato')
 
-        models = [
-            self.generate_models(media=True, category=True, models=base)
-            for _ in range(0, 2)
-        ]
+        models = [self.generate_models(media=True, category=True, models=base) for _ in range(0, 2)]
 
-        ordened_models = sorted(models,
-                                key=lambda x: x['media'].created_at,
-                                reverse=True)
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
-        url = (reverse_lazy('media:root') + '?slug=' +
-               models[0]['media'].slug + ',' + models[1]['media'].slug)
+        url = (reverse_lazy('media:root') + '?slug=' + models[0]['media'].slug + ',' +
+               models[1]['media'].slug)
         response = self.client.get(url)
         json = response.json()
-        self.assertEqual(json, [{
+        expected = [{
             'categories': [{
                 'id': model['category'].id,
                 'medias': 1,
@@ -664,12 +614,11 @@ class MediaTestSuite(MediaTestCase):
             f'{model.media.url}-thumbnail',
             'url':
             model['media'].url
-        } for model in ordened_models])
+        } for model in ordened_models]
 
+        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        } for model in models])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
 
     """
     🔽🔽🔽 Id in querystring
@@ -693,9 +642,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -738,9 +685,7 @@ class MediaTestSuite(MediaTestCase):
             model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -754,17 +699,12 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     role='potato')
 
-        models = [
-            self.generate_models(media=True, category=True, models=base)
-            for _ in range(0, 2)
-        ]
+        models = [self.generate_models(media=True, category=True, models=base) for _ in range(0, 2)]
 
-        ordened_models = sorted(models,
-                                key=lambda x: x['media'].created_at,
-                                reverse=True)
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
-        url = (reverse_lazy('media:root') + '?id=' +
-               str(models[0]['media'].id) + ',' + str(models[1]['media'].id))
+        url = (reverse_lazy('media:root') + '?id=' + str(models[0]['media'].id) + ',' +
+               str(models[1]['media'].id))
         response = self.client.get(url)
         json = response.json()
         self.assertEqual(json, [{
@@ -793,9 +733,7 @@ class MediaTestSuite(MediaTestCase):
         } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        } for model in models])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
 
     """
     🔽🔽🔽 Categories in querystring
@@ -819,9 +757,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -864,15 +800,12 @@ class MediaTestSuite(MediaTestCase):
             model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_root__with_category__with_two_categories_in_querystring__return_nothing(
-            self):
+    def test_root__with_category__with_two_categories_in_querystring__return_nothing(self):
         """Test /answer without auth"""
         self.headers(academy=1)
 
@@ -881,10 +814,7 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     role='potato')
 
-        models = [
-            self.generate_models(media=True, category=True, models=base)
-            for _ in range(0, 2)
-        ]
+        models = [self.generate_models(media=True, category=True, models=base) for _ in range(0, 2)]
 
         url = (reverse_lazy('media:root') + '?categories=1,2')
         response = self.client.get(url)
@@ -892,9 +822,7 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, [])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        } for model in models])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -908,9 +836,7 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     role='potato')
 
-        categories = [
-            self.generate_models(category=True).category for _ in range(0, 2)
-        ]
+        categories = [self.generate_models(category=True).category for _ in range(0, 2)]
 
         category1 = categories[0]
         category2 = categories[1]
@@ -918,15 +844,10 @@ class MediaTestSuite(MediaTestCase):
         media_kwargs = {'categories': [x.id for x in categories]}
 
         models = [
-            self.generate_models(media=True,
-                                 models=base,
-                                 media_kwargs=media_kwargs)
-            for _ in range(0, 2)
+            self.generate_models(media=True, models=base, media_kwargs=media_kwargs) for _ in range(0, 2)
         ]
 
-        ordened_models = sorted(models,
-                                key=lambda x: x['media'].created_at,
-                                reverse=True)
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
         url = (reverse_lazy('media:root') + '?categories=1,2')
         response = self.client.get(url)
@@ -962,9 +883,7 @@ class MediaTestSuite(MediaTestCase):
         } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        } for model in models])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
 
     """
     🔽🔽🔽 Type in querystring
@@ -988,9 +907,7 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1035,9 +952,7 @@ class MediaTestSuite(MediaTestCase):
             model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     """
     🔽🔽🔽 Like in querystring
@@ -1061,15 +976,12 @@ class MediaTestSuite(MediaTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_root__with_category__with_like_in_querystring__like_match_name(
-            self):
+    def test_root__with_category__with_like_in_querystring__like_match_name(self):
         """Test /answer without auth"""
         self.headers(academy=1)
         media_kwargs = {'name': 'Freyja'}
@@ -1109,15 +1021,12 @@ class MediaTestSuite(MediaTestCase):
             model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_root__with_category__with_like_in_querystring__like_match_slug(
-            self):
+    def test_root__with_category__with_like_in_querystring__like_match_slug(self):
         """Test /answer without auth"""
         self.headers(academy=1)
         media_kwargs = {'slug': 'freyja'}
@@ -1157,9 +1066,7 @@ class MediaTestSuite(MediaTestCase):
             model['media'].url
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     """
     🔽🔽🔽 Sort in querystring
@@ -1178,15 +1085,11 @@ class MediaTestSuite(MediaTestCase):
                                     role='potato')
 
         models = [
-            self.generate_models(media=True,
-                                 category=True,
-                                 models=base,
-                                 media_kwargs=media_kwargs) for _ in range(2)
+            self.generate_models(media=True, category=True, models=base, media_kwargs=media_kwargs)
+            for _ in range(2)
         ]
 
-        ordened_models = sorted(models,
-                                key=lambda x: x['media'].id,
-                                reverse=True)
+        ordened_models = sorted(models, key=lambda x: x['media'].id, reverse=True)
 
         url = reverse_lazy('media:root') + '?sort=-id'
         response = self.client.get(url)
@@ -1217,9 +1120,7 @@ class MediaTestSuite(MediaTestCase):
             model['media'].url
         } for model in ordened_models])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        } for model in models])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
 
     """
     🔽🔽🔽 Bulk delete
@@ -1241,9 +1142,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1260,9 +1159,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -1344,14 +1241,9 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     profile_academy=True)
 
-        models = [
-            self.generate_models(media=True, models=base)
-            for _ in range(0, 105)
-        ]
+        models = [self.generate_models(media=True, models=base) for _ in range(0, 105)]
 
-        ordened_models = sorted(models,
-                                key=lambda x: x['media'].created_at,
-                                reverse=True)
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
         url = reverse_lazy('media:root')
         response = self.client.get(url)
@@ -1369,9 +1261,7 @@ class MediaTestSuite(MediaTestCase):
         } for model in ordened_models[:100]]
 
         self.assertEqual(json, expected)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        } for model in models])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
 
     def test_root__pagination__first_five(self):
         """Test /academy/student"""
@@ -1382,14 +1272,9 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     profile_academy=True)
 
-        models = [
-            self.generate_models(media=True, models=base)
-            for _ in range(0, 10)
-        ]
+        models = [self.generate_models(media=True, models=base) for _ in range(0, 10)]
 
-        ordened_models = sorted(models,
-                                key=lambda x: x['media'].created_at,
-                                reverse=True)
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
         url = reverse_lazy('media:root') + '?limit=5&offset=0'
         response = self.client.get(url)
@@ -1419,9 +1304,7 @@ class MediaTestSuite(MediaTestCase):
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        } for model in models])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
 
     def test_root__pagination__last_five(self):
         """Test /academy/student"""
@@ -1432,14 +1315,9 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     profile_academy=True)
 
-        models = [
-            self.generate_models(media=True, models=base)
-            for _ in range(0, 10)
-        ]
+        models = [self.generate_models(media=True, models=base) for _ in range(0, 10)]
 
-        ordened_models = sorted(models,
-                                key=lambda x: x['media'].created_at,
-                                reverse=True)
+        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
 
         url = reverse_lazy('media:root') + '?limit=5&offset=5'
         response = self.client.get(url)
@@ -1469,9 +1347,7 @@ class MediaTestSuite(MediaTestCase):
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        } for model in models])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
 
     def test_root__pagination__after_last_five(self):
         """Test /academy/student"""
@@ -1482,10 +1358,7 @@ class MediaTestSuite(MediaTestCase):
                                     capability='read_media',
                                     profile_academy=True)
 
-        models = [
-            self.generate_models(media=True, models=base)
-            for _ in range(0, 10)
-        ]
+        models = [self.generate_models(media=True, models=base) for _ in range(0, 10)]
         url = reverse_lazy('media:root') + '?limit=5&offset=10'
         response = self.client.get(url)
         json = response.json()
@@ -1499,6 +1372,4 @@ class MediaTestSuite(MediaTestCase):
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        } for model in models])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])

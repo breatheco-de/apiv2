@@ -9,8 +9,7 @@ import socket
 __all__ = ['main']
 
 api_path = os.getcwd()
-dependencies_path = Path(
-    f'{api_path}/scripts/doctor/dependencies.json').resolve()
+dependencies_path = Path(f'{api_path}/scripts/doctor/dependencies.json').resolve()
 
 
 def status(condition, true='yes', false='no'):
@@ -23,8 +22,7 @@ def check_dependencies(dependencies):
     is_python_outdated = sys.version_info[0] < 3 or sys.version_info[1] < 9
     print('python =>', status(not is_python_outdated, 'updated', 'outdated'))
     for dependency in dependencies:
-        print(f'{dependency} =>',
-              status(which(dependency), 'installed', 'not installed'))
+        print(f'{dependency} =>', status(which(dependency), 'installed', 'not installed'))
 
 
 def port_is_open(host, port=80):
@@ -40,13 +38,10 @@ def check_conections():
     print('\n--- Check conection status ---\n')
 
     import subprocess
-    result = subprocess.run(['docker', 'image', 'ls'],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
+    result = subprocess.run(['docker', 'image', 'ls'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     print(f'docker =>', status(not result.stderr, 'up', 'down'))
-    print(f'postgres =>', status(port_is_open('localhost', 5432), 'up',
-                                 'down'))
+    print(f'postgres =>', status(port_is_open('localhost', 5432), 'up', 'down'))
     print(f'redis =>', status(port_is_open('localhost', 6379), 'up', 'down'))
 
 

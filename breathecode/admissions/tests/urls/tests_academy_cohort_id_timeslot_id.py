@@ -12,7 +12,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
-from ..mixins.new_admissions_test_case import AdmissionsTestCase
+from ..mixins import AdmissionsTestCase
 
 
 class CohortUserTestSuite(AdmissionsTestCase):
@@ -48,8 +48,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(
             json, {
-                'detail':
-                "Missing academy_id parameter expected for the endpoint url or 'Academy' header",
+                'detail': "Missing academy_id parameter expected for the endpoint url or 'Academy' header",
                 'status_code': 403,
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -66,12 +65,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail':
-                "You (user: 1) don't have this capability: read_cohort for academy 1",
-                'status_code': 403,
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_cohort for academy 1",
+            'status_code': 403,
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
@@ -125,16 +122,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
         expected = {
             'id': model.cohort_time_slot.id,
             'cohort': model.cohort_time_slot.cohort.id,
-            'starting_at':
-            self.datetime_to_iso(model.cohort_time_slot.starting_at),
-            'ending_at':
-            self.datetime_to_iso(model.cohort_time_slot.ending_at),
+            'starting_at': self.datetime_to_iso(model.cohort_time_slot.starting_at),
+            'ending_at': self.datetime_to_iso(model.cohort_time_slot.ending_at),
             'recurrent': model.cohort_time_slot.recurrent,
             'recurrency_type': model.cohort_time_slot.recurrency_type,
-            'created_at':
-            self.datetime_to_iso(model.cohort_time_slot.created_at),
-            'updated_at':
-            self.datetime_to_iso(model.cohort_time_slot.updated_at),
+            'created_at': self.datetime_to_iso(model.cohort_time_slot.created_at),
+            'updated_at': self.datetime_to_iso(model.cohort_time_slot.updated_at),
         }
 
         self.assertEqual(json, expected)
@@ -236,13 +229,12 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            self.all_cohort_time_slot_dict(),
-            [{
-                **self.model_to_dict(model, 'cohort_time_slot'),
-                'ending_at': ending_at,
-                'starting_at': starting_at,
-            }])
+        self.assertEqual(self.all_cohort_time_slot_dict(),
+                         [{
+                             **self.model_to_dict(model, 'cohort_time_slot'),
+                             'ending_at': ending_at,
+                             'starting_at': starting_at,
+                         }])
 
     """
     🔽🔽🔽 Delete

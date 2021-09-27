@@ -13,8 +13,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='eventcheckin',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'),
-                                            ('DONE', 'Done')],
+            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done')],
                                    default='PENDING',
                                    max_length=9),
         ),

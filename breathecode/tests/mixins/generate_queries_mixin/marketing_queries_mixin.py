@@ -10,7 +10,7 @@ class MarketingQueriesMixin():
             'module':
             'marketing',
             'models': [
-                'ActiveCampaignAcademy', 'Automation', 'Tag', 'Contact',
-                'FormEntry', 'ShortLink'
+                'ActiveCampaignAcademy', 'Automation', 'Tag', 'Contact', 'FormEntry', 'ShortLink',
+                'AcademyAlias'
             ]
         }

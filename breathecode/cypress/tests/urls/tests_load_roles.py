@@ -173,10 +173,8 @@ class AcademyEventTestSuite(CypressTestCase):
                 'description': 'Create, update or delete event information'
             },
             {
-                'slug':
-                'read_cohort',
-                'description':
-                'List all the cohorts or a single cohort information'
+                'slug': 'read_cohort',
+                'description': 'List all the cohorts or a single cohort information'
             },
             {
                 'slug': 'crud_cohort',
@@ -224,29 +222,23 @@ class AcademyEventTestSuite(CypressTestCase):
             },
             {
                 'slug': 'crud_media_resolution',
-                'description':
-                'Create, update or delete academy media resolutions'
+                'description': 'Create, update or delete academy media resolutions'
             },
             {
-                'slug':
-                'read_cohort_activity',
-                'description':
-                'Read low level activity in a cohort (attendancy, etc.)'
+                'slug': 'read_cohort_activity',
+                'description': 'Read low level activity in a cohort (attendancy, etc.)'
             },
             {
                 'slug': 'generate_academy_token',
-                'description':
-                'Create a new token only to be used by the academy'
+                'description': 'Create a new token only to be used by the academy'
             },
             {
                 'slug': 'get_academy_token',
                 'description': 'Read the academy token'
             },
             {
-                'slug':
-                'send_reset_password',
-                'description':
-                'Generate a temporal token and resend forgot password link'
+                'slug': 'send_reset_password',
+                'description': 'Generate a temporal token and resend forgot password link'
             },
             {
                 'slug': 'read_activity',
@@ -272,7 +264,10 @@ class AcademyEventTestSuite(CypressTestCase):
             },
             {
                 'slug': 'academy_reporting',
-                'description':
-                'Get detailed reports about the academy activity'
+                'description': 'Get detailed reports about the academy activity'
+            },
+            {
+                'slug': 'generate_temporal_token',
+                'description': 'Generate a temporal token to reset github credential or forgot password'
             },
         ])

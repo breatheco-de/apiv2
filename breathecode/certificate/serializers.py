@@ -1,7 +1,5 @@
-from .models import Badge, Specialty
-from rest_framework import serializers
 import serpy
-from breathecode.admissions.serializers import SyllabusSmallSerializer, SyllabusCertificateSerializer
+from breathecode.admissions.serializers import GetSmallSpecialtyModeSerializer
 
 
 class ProfileSmallSerializer(serpy.Serializer):
@@ -55,13 +53,44 @@ class LayoutDesignSerializer(serpy.Serializer):
     preview_url = serpy.Field()
 
 
+class SyllabusVersionSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    version = serpy.Field()
+    slug = serpy.MethodField()
+    name = serpy.MethodField()
+    syllabus = serpy.MethodField()
+    duration_in_hours = serpy.MethodField()
+    duration_in_days = serpy.MethodField()
+    week_hours = serpy.MethodField()
+
+    def get_slug(self, obj):
+        return obj.syllabus.slug if obj.syllabus else None
+
+    def get_name(self, obj):
+        return obj.syllabus.name if obj.syllabus else None
+
+    def get_syllabus(self, obj):
+        return obj.syllabus.id if obj.syllabus else None
+
+    def get_duration_in_hours(self, obj):
+        return obj.syllabus.duration_in_hours if obj.syllabus else None
+
+    def get_duration_in_days(self, obj):
+        return obj.syllabus.duration_in_days if obj.syllabus else None
+
+    def get_week_hours(self, obj):
+        return obj.syllabus.week_hours if obj.syllabus else None
+
+
 class CohortSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
-    syllabus = SyllabusCertificateSerializer()
+    specialty_mode = GetSmallSpecialtyModeSerializer(required=False, many=False)
+    syllabus_version = SyllabusVersionSmallSerializer(required=False, many=False)
 
 
 class SpecialtySerializer(serpy.Serializer):

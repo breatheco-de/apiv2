@@ -13,8 +13,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         empty_profiles = ProfileAcademy.objects.filter(
-            Q(first_name__isnull=True) | Q(first_name=''),
-            Q(user__first_name__isnull=False))
+            Q(first_name__isnull=True) | Q(first_name=''), Q(user__first_name__isnull=False))
         print(f'Found {str(empty_profiles.count())} profiles out of sync')
 
         save = False
@@ -35,9 +34,8 @@ class Command(BaseCommand):
             if save:
                 profile.save()
 
-        profiles = ProfileAcademy.objects.filter(
-            Q(first_name__isnull=False),
-            Q(user__first_name__isnull=True) | Q(user__first_name=''))
+        profiles = ProfileAcademy.objects.filter(Q(first_name__isnull=False),
+                                                 Q(user__first_name__isnull=True) | Q(user__first_name=''))
         print(f'Found {str(profiles.count())} users out of sync')
         for p in profiles:
             if p.user is None:

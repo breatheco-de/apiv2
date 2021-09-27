@@ -34,22 +34,17 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:user_invite')
         response = self.client.delete(url)
         json = response.json()
-        self.assertEqual(
-            json, {
-                'detail':
-                "You (user: 1) don't have this capability: crud_invite for academy 1",
-                'status_code': 403,
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: crud_invite for academy 1",
+            'status_code': 403,
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_invite_delete_in_bulk_with_two_invites(self):
         """Test /academy/user/invite with two invites"""
         self.headers(academy=1)
 
-        base = self.generate_models(academy=True,
-                                    capability='crud_invite',
-                                    authenticate=True,
-                                    role='potato')
+        base = self.generate_models(academy=True, capability='crud_invite', authenticate=True, role='potato')
 
         invite_kwargs = {
             'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),

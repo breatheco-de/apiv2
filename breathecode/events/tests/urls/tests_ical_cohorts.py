@@ -28,6 +28,7 @@ class AcademyCohortTestSuite(EventTestCase):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
         model = self.generate_models(academy=True,
+                                     skip_cohort=True,
                                      device_id=True,
                                      device_id_kwargs=device_id_kwargs)
 
@@ -121,8 +122,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_ical_cohorts__with_one__with_incoming_true__return_zero_cohorts(
-            self):
+    def test_ical_cohorts__with_one__with_incoming_true__return_zero_cohorts(self):
         """Test /academy/cohort without auth"""
         cohort_kwargs = {'kickoff_date': timezone.now() - timedelta(days=1)}
         device_id_kwargs = {'name': 'server'}
@@ -234,8 +234,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort.id}_{key}',
             f'LOCATION:{academy.name}',
             self.line_limit(
-                f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'
-            ),
+                f'ORGANIZER;CN="{user.first_name} {user.last_name}";ROLE=OWNER:MAILTO:{user.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -357,8 +356,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy1.name}',
             self.line_limit(
-                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'
-            ),
+                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -371,8 +369,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy2.name}',
             self.line_limit(
-                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'
-            ),
+                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -381,17 +378,13 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_ical_cohorts__with_two__with_teacher__with_ending_date__with_two_academies_id(
-            self):
+    def test_ical_cohorts__with_two__with_teacher__with_ending_date__with_two_academies_id(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
         cohort_kwargs = {'ending_date': datetime.now()}
         device_id_kwargs = {'name': 'server'}
-        base = self.generate_models(device_id=True,
-                                    device_id_kwargs=device_id_kwargs)
-        base1 = self.generate_models(academy=True,
-                                     skip_cohort=True,
-                                     models=base)
+        base = self.generate_models(device_id=True, device_id_kwargs=device_id_kwargs)
+        base1 = self.generate_models(academy=True, skip_cohort=True, models=base)
 
         models = [
             self.generate_models(user=True,
@@ -408,9 +401,7 @@ class AcademyCohortTestSuite(EventTestCase):
                                  cohort_user_kwargs=cohort_user_kwargs),
         ]
 
-        base2 = self.generate_models(academy=True,
-                                     skip_cohort=True,
-                                     models=base)
+        base2 = self.generate_models(academy=True, skip_cohort=True, models=base)
 
         models = models + [
             self.generate_models(user=True,
@@ -466,8 +457,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy1.name}',
             self.line_limit(
-                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'
-            ),
+                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -480,8 +470,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy2.name}',
             self.line_limit(
-                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'
-            ),
+                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -494,8 +483,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort3.id}_{key}',
             f'LOCATION:{academy3.name}',
             self.line_limit(
-                f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'
-            ),
+                f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -508,8 +496,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort4.id}_{key}',
             f'LOCATION:{academy4.name}',
             self.line_limit(
-                f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'
-            ),
+                f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -518,18 +505,14 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_ical_cohorts__with_two__with_teacher__with_ending_date__with_two_academies_slug(
-            self):
+    def test_ical_cohorts__with_two__with_teacher__with_ending_date__with_two_academies_slug(self):
         """Test /academy/cohort without auth"""
         cohort_user_kwargs = {'role': 'TEACHER'}
         cohort_kwargs = {'ending_date': datetime.now()}
 
         device_id_kwargs = {'name': 'server'}
-        base = self.generate_models(device_id=True,
-                                    device_id_kwargs=device_id_kwargs)
-        base1 = self.generate_models(academy=True,
-                                     skip_cohort=True,
-                                     models=base)
+        base = self.generate_models(device_id=True, device_id_kwargs=device_id_kwargs)
+        base1 = self.generate_models(academy=True, skip_cohort=True, models=base)
 
         models = [
             self.generate_models(user=True,
@@ -546,9 +529,7 @@ class AcademyCohortTestSuite(EventTestCase):
                                  cohort_user_kwargs=cohort_user_kwargs),
         ]
 
-        base2 = self.generate_models(academy=True,
-                                     skip_cohort=True,
-                                     models=base)
+        base2 = self.generate_models(academy=True, skip_cohort=True, models=base)
 
         models = models + [
             self.generate_models(user=True,
@@ -568,10 +549,7 @@ class AcademyCohortTestSuite(EventTestCase):
         models = sorted(models, key=lambda x: x.cohort.id)
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
-        args = {
-            'academy_slug':
-            ','.join(list(dict.fromkeys([x.academy.slug for x in models])))
-        }
+        args = {'academy_slug': ','.join(list(dict.fromkeys([x.academy.slug for x in models])))}
         url = url + '?' + urllib.parse.urlencode(args)
         response = self.client.get(url)
 
@@ -609,8 +587,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort1.id}_{key}',
             f'LOCATION:{academy1.name}',
             self.line_limit(
-                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'
-            ),
+                f'ORGANIZER;CN="{user1.first_name} {user1.last_name}";ROLE=OWNER:MAILTO:{user1.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -623,8 +600,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort2.id}_{key}',
             f'LOCATION:{academy2.name}',
             self.line_limit(
-                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'
-            ),
+                f'ORGANIZER;CN="{user2.first_name} {user2.last_name}";ROLE=OWNER:MAILTO:{user2.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -637,8 +613,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort3.id}_{key}',
             f'LOCATION:{academy3.name}',
             self.line_limit(
-                f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'
-            ),
+                f'ORGANIZER;CN="{user3.first_name} {user3.last_name}";ROLE=OWNER:MAILTO:{user3.email}'),
             'END:VEVENT',
 
             # =================================================================
@@ -651,8 +626,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'UID:breathecode_cohort_{cohort4.id}_{key}',
             f'LOCATION:{academy4.name}',
             self.line_limit(
-                f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'
-            ),
+                f'ORGANIZER;CN="{user4.first_name} {user4.last_name}";ROLE=OWNER:MAILTO:{user4.email}'),
             'END:VEVENT',
             'END:VCALENDAR',
             '',
@@ -725,25 +699,16 @@ class AcademyCohortTestSuite(EventTestCase):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {'ending_date': datetime(year=2030, month=10, day=10)}
         cohort_time_slot_kwargs = {
-            'starting_at': datetime(year=2028,
-                                    month=10,
-                                    day=8,
-                                    hour=0,
-                                    second=30),
-            'ending_at': datetime(year=2028,
-                                  month=10,
-                                  day=8,
-                                  hour=6,
-                                  second=30),
+            'starting_at': datetime(year=2028, month=10, day=8, hour=0, second=30),
+            'ending_at': datetime(year=2028, month=10, day=8, hour=6, second=30),
         }
-        model = self.generate_models(
-            academy=True,
-            cohort=True,
-            device_id=True,
-            cohort_time_slot=True,
-            device_id_kwargs=device_id_kwargs,
-            cohort_kwargs=cohort_kwargs,
-            cohort_time_slot_kwargs=cohort_time_slot_kwargs)
+        model = self.generate_models(academy=True,
+                                     cohort=True,
+                                     device_id=True,
+                                     cohort_time_slot=True,
+                                     device_id_kwargs=device_id_kwargs,
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_time_slot_kwargs=cohort_time_slot_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
         args = {'academy': '1'}
@@ -752,13 +717,12 @@ class AcademyCohortTestSuite(EventTestCase):
         cohort = model['cohort']
         timeslot = model['cohort_time_slot']
         academy = model['academy']
-        last_timeslot_starting_at = datetime(
-            year=2030,
-            month=10,
-            day=6,
-            hour=0,
-            second=30,
-            tzinfo=timeslot.starting_at.tzinfo)
+        last_timeslot_starting_at = datetime(year=2030,
+                                             month=10,
+                                             day=6,
+                                             hour=0,
+                                             second=30,
+                                             tzinfo=timeslot.starting_at.tzinfo)
 
         last_timeslot_ending_at = datetime(year=2030,
                                            month=10,
@@ -813,8 +777,7 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.content.decode('utf-8'), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_ical_cohorts__with_one__first_day__last_day__timeslot_not_recurrent(
-            self):
+    def test_ical_cohorts__with_one__first_day__last_day__timeslot_not_recurrent(self):
         """Test /academy/cohort without auth"""
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {
@@ -823,27 +786,18 @@ class AcademyCohortTestSuite(EventTestCase):
         }
 
         cohort_time_slot_kwargs = {
-            'starting_at': datetime(year=2025,
-                                    month=10,
-                                    day=8,
-                                    hour=0,
-                                    second=30),
-            'ending_at': datetime(year=2025,
-                                  month=10,
-                                  day=8,
-                                  hour=6,
-                                  second=30),
+            'starting_at': datetime(year=2025, month=10, day=8, hour=0, second=30),
+            'ending_at': datetime(year=2025, month=10, day=8, hour=6, second=30),
             'recurrent': False,
         }
 
-        model = self.generate_models(
-            academy=True,
-            cohort=True,
-            device_id=True,
-            cohort_time_slot=True,
-            device_id_kwargs=device_id_kwargs,
-            cohort_kwargs=cohort_kwargs,
-            cohort_time_slot_kwargs=cohort_time_slot_kwargs)
+        model = self.generate_models(academy=True,
+                                     cohort=True,
+                                     device_id=True,
+                                     cohort_time_slot=True,
+                                     device_id_kwargs=device_id_kwargs,
+                                     cohort_kwargs=cohort_kwargs,
+                                     cohort_time_slot_kwargs=cohort_time_slot_kwargs)
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
         args = {'academy': '1'}
@@ -908,29 +862,13 @@ class AcademyCohortTestSuite(EventTestCase):
         }
 
         first_cohort_time_slot_kwargs = {
-            'starting_at': datetime(year=2021,
-                                    month=10,
-                                    day=8,
-                                    hour=0,
-                                    second=30),
-            'ending_at': datetime(year=2021,
-                                  month=10,
-                                  day=8,
-                                  hour=6,
-                                  second=30),
+            'starting_at': datetime(year=2021, month=10, day=8, hour=0, second=30),
+            'ending_at': datetime(year=2021, month=10, day=8, hour=6, second=30),
         }
 
         last_cohort_time_slot_kwargs = {
-            'starting_at': datetime(year=2028,
-                                    month=10,
-                                    day=8,
-                                    hour=0,
-                                    second=30),
-            'ending_at': datetime(year=2028,
-                                  month=10,
-                                  day=8,
-                                  hour=6,
-                                  second=30),
+            'starting_at': datetime(year=2028, month=10, day=8, hour=0, second=30),
+            'ending_at': datetime(year=2028, month=10, day=8, hour=6, second=30),
         }
 
         base = self.generate_models(academy=True,
@@ -940,14 +878,12 @@ class AcademyCohortTestSuite(EventTestCase):
                                     cohort_kwargs=cohort_kwargs)
 
         models = [
-            self.generate_models(
-                cohort_time_slot=True,
-                models=base,
-                cohort_time_slot_kwargs=first_cohort_time_slot_kwargs),
-            self.generate_models(
-                cohort_time_slot=True,
-                models=base,
-                cohort_time_slot_kwargs=last_cohort_time_slot_kwargs),
+            self.generate_models(cohort_time_slot=True,
+                                 models=base,
+                                 cohort_time_slot_kwargs=first_cohort_time_slot_kwargs),
+            self.generate_models(cohort_time_slot=True,
+                                 models=base,
+                                 cohort_time_slot_kwargs=last_cohort_time_slot_kwargs),
         ]
 
         url = reverse_lazy('events:academy_id_ical_cohorts')
@@ -957,13 +893,12 @@ class AcademyCohortTestSuite(EventTestCase):
         cohort = base['cohort']
         timeslot = models[0]['cohort_time_slot']
         academy = base['academy']
-        last_timeslot_starting_at = datetime(
-            year=2030,
-            month=10,
-            day=6,
-            hour=0,
-            second=30,
-            tzinfo=timeslot.starting_at.tzinfo)
+        last_timeslot_starting_at = datetime(year=2030,
+                                             month=10,
+                                             day=6,
+                                             hour=0,
+                                             second=30,
+                                             tzinfo=timeslot.starting_at.tzinfo)
 
         last_timeslot_ending_at = datetime(year=2030,
                                            month=10,
@@ -1027,55 +962,34 @@ class AcademyCohortTestSuite(EventTestCase):
         }
 
         first_cohort_time_slot_kwargs = {
-            'starting_at': datetime(year=2021,
-                                    month=10,
-                                    day=8,
-                                    hour=0,
-                                    second=30),
-            'ending_at': datetime(year=2021,
-                                  month=10,
-                                  day=8,
-                                  hour=6,
-                                  second=30),
+            'starting_at': datetime(year=2021, month=10, day=8, hour=0, second=30),
+            'ending_at': datetime(year=2021, month=10, day=8, hour=6, second=30),
         }
 
         last_cohort_time_slot_kwargs = {
-            'starting_at': datetime(year=2028,
-                                    month=10,
-                                    day=8,
-                                    hour=0,
-                                    second=30),
-            'ending_at': datetime(year=2028,
-                                  month=10,
-                                  day=8,
-                                  hour=6,
-                                  second=30),
+            'starting_at': datetime(year=2028, month=10, day=8, hour=0, second=30),
+            'ending_at': datetime(year=2028, month=10, day=8, hour=6, second=30),
         }
 
         base = self.generate_models(academy=True,
+                                    skip_cohort=True,
                                     device_id=True,
                                     device_id_kwargs=device_id_kwargs)
 
         models = [
-            self.generate_models(cohort=True,
-                                 models=base,
-                                 cohort_kwargs=cohort_kwargs),
-            self.generate_models(cohort=True,
-                                 models=base,
-                                 cohort_kwargs=cohort_kwargs),
+            self.generate_models(cohort=True, models=base, cohort_kwargs=cohort_kwargs),
+            self.generate_models(cohort=True, models=base, cohort_kwargs=cohort_kwargs),
         ]
 
         for index in range(0, len(models)):
             model = models[index]
 
-            timeslot1 = self.generate_models(
-                cohort_time_slot=True,
-                models=model,
-                cohort_time_slot_kwargs=first_cohort_time_slot_kwargs)
-            timeslot2 = self.generate_models(
-                cohort_time_slot=True,
-                models=model,
-                cohort_time_slot_kwargs=last_cohort_time_slot_kwargs)
+            timeslot1 = self.generate_models(cohort_time_slot=True,
+                                             models=model,
+                                             cohort_time_slot_kwargs=first_cohort_time_slot_kwargs)
+            timeslot2 = self.generate_models(cohort_time_slot=True,
+                                             models=model,
+                                             cohort_time_slot_kwargs=last_cohort_time_slot_kwargs)
 
             model['timeslot1'] = timeslot1.cohort_time_slot
             model['timeslot2'] = timeslot2.cohort_time_slot
@@ -1089,13 +1003,12 @@ class AcademyCohortTestSuite(EventTestCase):
         timeslot = models[0]['timeslot1']
 
         academy = base['academy']
-        last_timeslot_starting_at = datetime(
-            year=2030,
-            month=10,
-            day=6,
-            hour=0,
-            second=30,
-            tzinfo=timeslot.starting_at.tzinfo)
+        last_timeslot_starting_at = datetime(year=2030,
+                                             month=10,
+                                             day=6,
+                                             hour=0,
+                                             second=30,
+                                             tzinfo=timeslot.starting_at.tzinfo)
 
         last_timeslot_ending_at = datetime(year=2030,
                                            month=10,

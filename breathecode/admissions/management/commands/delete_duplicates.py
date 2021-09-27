@@ -1,7 +1,6 @@
-import os, requests, sys, pytz
-from datetime import datetime
-from django.core.management.base import BaseCommand, CommandError
-from ...models import Academy, Certificate, Cohort, User, CohortUser
+import os
+from django.core.management.base import BaseCommand
+from ...models import CohortUser
 
 HOST = os.environ.get('OLD_BREATHECODE_API')
 DATETIME_FORMAT = '%Y-%m-%d'
@@ -19,12 +18,10 @@ class Command(BaseCommand):
 
         # collector
         qs = CohortUser.objects.order_by('id')
-        for user_id, cohort_id in set(qs.values_list('user__id',
-                                                     'cohort__id')):
+        for user_id, cohort_id in set(qs.values_list('user__id', 'cohort__id')):
             result.append(
-                qs.filter(user__id=user_id,
-                          cohort__id=cohort_id).values('id', 'user__id',
-                                                       'cohort__id').first())
+                qs.filter(user__id=user_id, cohort__id=cohort_id).values('id', 'user__id',
+                                                                         'cohort__id').first())
 
         # remove dups
         for data in result:
@@ -57,9 +54,6 @@ class Command(BaseCommand):
             #     id = pref.id
 
             # bulk delete but cohort user with that id
-            (CohortUser.objects.filter(
-                user__id=user, cohort__id=cohort).exclude(id=id).delete())
+            (CohortUser.objects.filter(user__id=user, cohort__id=cohort).exclude(id=id).delete())
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f'Remove duplicates from cohort users has ended'))
+        self.stdout.write(self.style.SUCCESS(f'Remove duplicates from cohort users has ended'))

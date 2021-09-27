@@ -37,9 +37,7 @@ class CommonViewMixin(HeaderLimitOffsetPagination, GenerateLookupsMixin):
         serializer = self.__serializer__(page, many=True)
 
         if self.is_paginate(self.__request__):
-            return self.get_paginated_response(serializer.data,
-                                               cache=self.cache,
-                                               cache_kwargs=cache_kwargs)
+            return self.get_paginated_response(serializer.data, cache=self.cache, cache_kwargs=cache_kwargs)
         else:
             self.cache.set(serializer.data, **cache_kwargs)
             return Response(serializer.data, status=status.HTTP_200_OK)

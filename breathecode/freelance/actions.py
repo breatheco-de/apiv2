@@ -15,8 +15,7 @@ def sync_user_issues(freelancer):
     github_id = freelancer.github_user.github_id
     credentials = CredentialsGithub.objects.filter(github_id=github_id).first()
     if credentials is None:
-        raise ValueError(
-            f'Credentials for this user {gitub_user_id} not found')
+        raise ValueError(f'Credentials for this user {gitub_user_id} not found')
 
     g = Github(credentials.token)
     user = g.get_user()
@@ -59,8 +58,7 @@ def generate_freelancer_bill(freelancer):
 
     Issue.objects.filter(status='TODO', bill__isnull=False).update(bill=None)
 
-    open_bill = Bill.objects.filter(freelancer__id=freelancer.id,
-                                    status='DUE').first()
+    open_bill = Bill.objects.filter(freelancer__id=freelancer.id, status='DUE').first()
     if open_bill is None:
         open_bill = Bill(freelancer=freelancer, )
         open_bill.save()

@@ -9,10 +9,8 @@ from rest_framework.test import APITestCase, APIClient
 from mixer.backend.django import mixer
 from django.core.cache import cache
 from breathecode.tests.mixins import ModelsMixin
-from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH,
-                                     apply_google_cloud_client_mock,
-                                     apply_google_cloud_bucket_mock,
-                                     apply_google_cloud_blob_mock)
+from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_client_mock,
+                                     apply_google_cloud_bucket_mock, apply_google_cloud_blob_mock)
 
 
 class AuthTestCase(APITestCase, ModelsMixin):
@@ -62,10 +60,7 @@ class AuthTestCase(APITestCase, ModelsMixin):
         return response
 
     def all_profile_academy_dict(self):
-        return [
-            self.remove_dinamics_fields(data.__dict__.copy())
-            for data in ProfileAcademy.objects.filter()
-        ]
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in ProfileAcademy.objects.filter()]
 
     def get_profile_academy(self, id: int):
         return ProfileAcademy.objects.filter(id=id).first()
@@ -74,8 +69,8 @@ class AuthTestCase(APITestCase, ModelsMixin):
         headers = {}
 
         items = [
-            index for index in kargs if kargs[index] and (
-                isinstance(kargs[index], str) or isinstance(kargs[index], int))
+            index for index in kargs
+            if kargs[index] and (isinstance(kargs[index], str) or isinstance(kargs[index], int))
         ]
 
         for index in items:
@@ -103,8 +98,7 @@ class AuthTestCase(APITestCase, ModelsMixin):
         self.maxDiff = None
         models = models.copy()
 
-        if not 'user' in models and (user or authenticate or profile_academy
-                                     or credentials_github):
+        if not 'user' in models and (user or authenticate or profile_academy or credentials_github):
             models['user'] = mixer.blend('auth.User')
             models['user'].set_password(self.password)
             models['user'].save()
@@ -121,8 +115,7 @@ class AuthTestCase(APITestCase, ModelsMixin):
         if not 'credentials_github' in models and credentials_github:
             kargs = {'user': models['user']}
 
-            models['credentials_github'] = mixer.blend(
-                'authenticate.CredentialsGithub', **kargs)
+            models['credentials_github'] = mixer.blend('authenticate.CredentialsGithub', **kargs)
 
         if authenticate:
             self.client.force_authenticate(user=models['user'])
@@ -136,8 +129,7 @@ class AuthTestCase(APITestCase, ModelsMixin):
                 'description': capability,
             }
 
-            models['capability'] = mixer.blend('authenticate.Capability',
-                                               **kargs)
+            models['capability'] = mixer.blend('authenticate.Capability', **kargs)
 
         if not 'role' in models and role:
             kargs = {
@@ -159,7 +151,6 @@ class AuthTestCase(APITestCase, ModelsMixin):
             if profile_academy_status:
                 kargs['status'] = profile_academy_status
 
-            models['profile_academy'] = mixer.blend(
-                'authenticate.ProfileAcademy', **kargs)
+            models['profile_academy'] = mixer.blend('authenticate.ProfileAcademy', **kargs)
 
         return models

@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 
+__all__ = ['AssetTranslation', 'AssetTechnology', 'Asset', 'AssetAlias']
+
 
 class AssetTranslation(models.Model):
     slug = models.SlugField(max_length=2, primary_key=True)
@@ -91,31 +93,16 @@ class Asset(models.Model):
     with_video = models.BooleanField(default=False)
     graded = models.BooleanField(default=False)
     gitpod = models.BooleanField(default=False)
-    duration = models.IntegerField(null=True,
-                                   blank=True,
-                                   default=None,
-                                   help_text='In hours')
+    duration = models.IntegerField(null=True, blank=True, default=None, help_text='In hours')
 
-    difficulty = models.CharField(max_length=20,
-                                  choices=DIFFICULTY,
-                                  default=None,
-                                  null=True,
-                                  blank=True)
-    visibility = models.CharField(max_length=20,
-                                  choices=VISIBILITY,
-                                  default=PUBLIC)
+    difficulty = models.CharField(max_length=20, choices=DIFFICULTY, default=None, null=True, blank=True)
+    visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
     asset_type = models.CharField(max_length=20, choices=TYPE)
 
-    status = models.CharField(max_length=20,
-                              choices=ASSET_STATUS,
-                              default=DRAFT)
+    status = models.CharField(max_length=20, choices=ASSET_STATUS, default=DRAFT)
     status_text = models.TextField(null=True, default=None, blank=True)
 
-    author = models.ForeignKey(User,
-                               on_delete=models.SET_NULL,
-                               default=None,
-                               blank=True,
-                               null=True)
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

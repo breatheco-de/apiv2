@@ -150,10 +150,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.put(url, data, format='json')
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'different-academy-media-put',
-            'status_code': 400
-        })
+        self.assertEqual(json, {'detail': 'different-academy-media-put', 'status_code': 400})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_media_dict(), [{
             **self.model_to_dict(model, 'media')
@@ -237,18 +234,9 @@ class MediaTestSuite(MediaTestCase):
         del base['media']
         del base['category']
 
-        model = model + [
-            self.generate_models(
-                media=True, profile_academy=True, category=True, models=base)
-        ]
+        model = model + [self.generate_models(media=True, profile_academy=True, category=True, models=base)]
 
-        data = [{
-            'id': 1,
-            'categories': [1, 2]
-        }, {
-            'id': 2,
-            'categories': [1, 2]
-        }]
+        data = [{'id': 1, 'categories': [1, 2]}, {'id': 2, 'categories': [1, 2]}]
         response = self.client.put(url, data, format='json')
         json = response.json()
 
@@ -354,9 +342,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -373,9 +359,7 @@ class MediaTestSuite(MediaTestCase):
         response = self.client.delete(url)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(self.all_media_dict(), [{
-            **self.model_to_dict(model, 'media')
-        }])
+        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())

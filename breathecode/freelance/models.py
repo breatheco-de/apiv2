@@ -3,13 +3,12 @@ from django.db import models
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.admissions.models import Academy
 
+__all__ = ['Freelancer', 'Bill', 'Issue']
+
 
 class Freelancer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    github_user = models.ForeignKey(CredentialsGithub,
-                                    on_delete=models.SET_DEFAULT,
-                                    null=True,
-                                    default=None)
+    github_user = models.ForeignKey(CredentialsGithub, on_delete=models.SET_DEFAULT, null=True, default=None)
     price_per_hour = models.FloatField()
 
     def __str__(self):
@@ -33,15 +32,9 @@ class Bill(models.Model):
     total_duration_in_hours = models.FloatField(default=0)
     total_price = models.FloatField(default=0)
 
-    academy = models.ForeignKey(Academy,
-                                on_delete=models.CASCADE,
-                                null=True,
-                                default=None)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
 
-    reviewer = models.ForeignKey(User,
-                                 on_delete=models.CASCADE,
-                                 null=True,
-                                 default=None)
+    reviewer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
     paid_at = models.DateTimeField(null=True, default=None, blank=True)
 
@@ -66,13 +59,8 @@ ISSUE_STATUS = (
 class Issue(models.Model):
     title = models.CharField(max_length=255)
 
-    status = models.CharField(max_length=20,
-                              choices=ISSUE_STATUS,
-                              default=DRAFT)
-    github_state = models.CharField(max_length=30,
-                                    blank=True,
-                                    null=True,
-                                    default=None)
+    status = models.CharField(max_length=20, choices=ISSUE_STATUS, default=DRAFT)
+    github_state = models.CharField(max_length=30, blank=True, null=True, default=None)
     github_number = models.PositiveIntegerField()
     body = models.TextField(max_length=500)
 
@@ -80,22 +68,11 @@ class Issue(models.Model):
     duration_in_hours = models.FloatField(default=0)
 
     url = models.URLField(max_length=255)
-    repository_url = models.URLField(max_length=255,
-                                     blank=True,
-                                     default=None,
-                                     null=True)
+    repository_url = models.URLField(max_length=255, blank=True, default=None, null=True)
 
-    author = models.ForeignKey(User,
-                               on_delete=models.CASCADE,
-                               null=True,
-                               default=None,
-                               blank=True)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None, blank=True)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
-    bill = models.ForeignKey(Bill,
-                             on_delete=models.CASCADE,
-                             null=True,
-                             default=None,
-                             blank=True)
+    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

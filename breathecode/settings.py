@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'breathecode.media',
     'breathecode.assessment',
     'breathecode.registry',
+    'explorer',
 ]
 
 if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
@@ -109,7 +110,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'breathecode.utils.admin_timezone.TimezoneMiddleware',
+    #'breathecode.utils.admin_timezone.TimezoneMiddleware',
 
     # ⬇ Rollbar is always last please!
     # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',
@@ -143,20 +144,16 @@ WSGI_APPLICATION = 'breathecode.wsgi.application'
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME':
-        'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME':
-        'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
-        'NAME':
-        'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
-        'NAME':
-        'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
 
@@ -222,17 +219,12 @@ logging.config.dictConfig({
 })
 
 ROLLBAR = {
-    'access_token':
-    os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
-    'environment':
-    'development' if DEBUG else 'production',
-    'branch':
-    'master',
-    'root':
-    BASE_DIR,
+    'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
+    'environment': 'development' if DEBUG else 'production',
+    'branch': 'master',
+    'root': BASE_DIR,
     # parsed POST variables placed in your output for exception handling
-    'EXCEPTION_HANDLER':
-    'rollbar.contrib.django_rest_framework.post_exception_handler',
+    'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler',
 }
 
 MESSAGE_TAGS = {
@@ -310,10 +302,8 @@ is_test_env = os.getenv('ENV') == 'test'
 CACHES = {
     'default': {
         'BACKEND':
-        'django.core.cache.backends.locmem.LocMemCache'
-        if is_test_env else 'django_redis.cache.RedisCache',
-        'LOCATION':
-        'breathecode' if is_test_env else [REDIS_URL],
+        'django.core.cache.backends.locmem.LocMemCache' if is_test_env else 'django_redis.cache.RedisCache',
+        'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
         # **cache_opts(is_test_env),
     },
 }
@@ -335,3 +325,22 @@ DATABASES = {
     'default': dj_database_url.config(default=DATABASE_URL),
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+# SQL Explorer
+EXPLORER_CONNECTIONS = {'Default': 'default'}
+EXPLORER_DEFAULT_CONNECTION = 'default'
+
+EXPLORER_SQL_BLACKLIST = (
+    'ALTER',
+    'CREATE TABLE',
+    'DELETE',
+    'DROP',
+    'GRANT',
+    'INSERT INTO',
+    'OWNER TO'
+    'RENAME ',
+    'REPLACE',
+    'SCHEMA',
+    'TRUNCATE',
+    'UPDATE',
+)

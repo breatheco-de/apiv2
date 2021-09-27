@@ -40,8 +40,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(
             json, {
-                'detail':
-                "You (user: 2) don't have this capability: read_member "
+                'detail': "You (user: 2) don't have this capability: read_member "
                 'for academy 1',
                 'status_code': 403
             })
@@ -50,9 +49,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_academy_id_member_id_without_academy(self):
         """Test /academy/:id/member/:id"""
         role = 'konan'
-        self.generate_models(authenticate=True,
-                             role=role,
-                             capability='read_member')
+        self.generate_models(authenticate=True, role=role, capability='read_member')
         url = reverse_lazy('authenticate:academy_id_member_id',
                            kwargs={
                                'academy_id': 1,
@@ -63,8 +60,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(
             json, {
-                'detail':
-                "You (user: 2) don't have this capability: read_member "
+                'detail': "You (user: 2) don't have this capability: read_member "
                 'for academy 1',
                 'status_code': 403
             })
@@ -95,8 +91,7 @@ class AuthenticateTestSuite(AuthTestCase):
                     'slug': model['academy'].slug,
                 },
                 'address': None,
-                'created_at': datetime_to_iso_format(
-                    profile_academy.created_at),
+                'created_at': datetime_to_iso_format(profile_academy.created_at),
                 'email': None,
                 'first_name': None,
                 'id': 1,
@@ -161,8 +156,7 @@ class AuthenticateTestSuite(AuthTestCase):
                     'slug': model['academy'].slug,
                 },
                 'address': None,
-                'created_at': datetime_to_iso_format(
-                    profile_academy.created_at),
+                'created_at': datetime_to_iso_format(profile_academy.created_at),
                 'email': None,
                 'first_name': None,
                 'id': 1,
@@ -179,8 +173,7 @@ class AuthenticateTestSuite(AuthTestCase):
                     'id': model['user'].id,
                     'last_name': model['user'].last_name,
                     'github': {
-                        'avatar_url':
-                        model['user'].credentialsgithub.avatar_url,
+                        'avatar_url': model['user'].credentialsgithub.avatar_url,
                         'name': model['user'].credentialsgithub.name,
                         'username': model['user'].credentialsgithub.username,
                     },
@@ -229,8 +222,7 @@ class AuthenticateTestSuite(AuthTestCase):
                     'slug': model['academy'].slug,
                 },
                 'address': None,
-                'created_at': datetime_to_iso_format(
-                    profile_academy.created_at),
+                'created_at': datetime_to_iso_format(profile_academy.created_at),
                 'email': None,
                 'first_name': None,
                 'id': 1,
