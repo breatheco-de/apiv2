@@ -1,15 +1,15 @@
 {
+  "stack": "heroku-20",
+  "name": "BreatheCode API",
+  "description": "Technology for Learning",
+  "repository": "https://github.com/breatheco-de/apiv2",
+  "website": "https://breathecode.herokuapp.com",
   "environments": {
     "test": {
       "env": {
-        "ENV": {
-          "description": "It can be development or production",
-          "value": "development"
-        },
-        "LOG_LEVEL": {
-          "description": "Shows everything on the console",
-          "value": "DEBUG"
-        }
+        "ENV": "development",
+        "LOG_LEVEL": "DEBUG",
+        "RANDOM_NAME": "2"
       },
       "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
       "scripts": {
@@ -17,21 +17,16 @@
       },
       "formation": {
         "test": {
-          "quantity": 2,
-          "size": "performance-m"
+          "quantity": 1,
+          "size": "hobby"
         }
       }
     },
     "review": {
       "env": {
-        "ENV": {
-          "description": "It can be development or production",
-          "value": "development"
-        },
-        "LOG_LEVEL": {
-          "description": "Shows everything on the console",
-          "value": "DEBUG"
-        }
+        "ENV": "development",
+        "LOG_LEVEL": "DEBUG",
+        "RANDOM_NAME": "3"
       },
       "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"],
       "scripts": {
@@ -40,8 +35,8 @@
       },
       "formation": {
         "test": {
-          "quantity": 2,
-          "size": "performance-m"
+          "quantity": 1,
+          "size": "hobby"
         }
       }
     }
