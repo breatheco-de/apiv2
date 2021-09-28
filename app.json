@@ -29,7 +29,7 @@
       "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"],
       "scripts": {
         "test": "pipenv run ptest",
-        "postdeploy": "python manage.py migrate"
+        "postdeploy": "pipenv run migrate"
       },
       "formation": {
         "test": {
