@@ -1,37 +1,49 @@
 {
   "environments": {
     "test": {
-        "env": {
-            "ENV": {
-                "description": "It can be development or production",
-                "value": "development"
-            },
-            "LOG_LEVEL": {
-                "description": "Shows everything on the console",
-                "value": "DEBUG"
-            }
+      "env": {
+        "ENV": {
+          "description": "It can be development or production",
+          "value": "development"
         },
-        "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
-        "scripts": {
-            "test": "pipenv run test"
+        "LOG_LEVEL": {
+          "description": "Shows everything on the console",
+          "value": "DEBUG"
         }
+      },
+      "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
+      "scripts": {
+        "test": "pipenv run ptest"
+      },
+      "formation": {
+        "test": {
+          "quantity": 2,
+          "size": "performance-m"
+        }
+      }
     },
     "review": {
-        "env": {
-            "ENV": {
-                "description": "It can be development or production",
-                "value": "development"
-            },
-            "LOG_LEVEL": {
-                "description": "Shows everything on the console",
-                "value": "DEBUG"
-            }
+      "env": {
+        "ENV": {
+          "description": "It can be development or production",
+          "value": "development"
         },
-        "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"],
-        "scripts": {
-            "test": "pipenv run test",
-            "postdeploy": "python manage.py migrate"
+        "LOG_LEVEL": {
+          "description": "Shows everything on the console",
+          "value": "DEBUG"
         }
+      },
+      "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"],
+      "scripts": {
+        "test": "pipenv run ptest",
+        "postdeploy": "python manage.py migrate"
+      },
+      "formation": {
+        "test": {
+          "quantity": 2,
+          "size": "performance-m"
+        }
+      }
     }
   }
 }

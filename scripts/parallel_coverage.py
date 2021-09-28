@@ -2,6 +2,7 @@
 
 import os
 import sys
+import shutil
 import webbrowser
 from pathlib import Path
 from .utils.environment import test_environment, reset_environment
@@ -35,14 +36,14 @@ if __name__ == '__main__':
 
     reset_environment()
     test_environment()
-    xml_path = os.path.join(os.getcwd(), 'coverage.xml')
+    htmlcov_path = os.path.join(os.getcwd(), 'htmlcov')
 
-    if os.path.exists(xml_path):
-        os.remove(xml_path)
+    if os.path.exists(htmlcov_path):
+        shutil.rmtree(htmlcov_path)
 
-    exit_code = os.system(f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report xml')
+    exit_code = os.system(f'pytest {dir} --disable-pytest-warnings --cov={module} --cov-report html -n auto')
 
-    webbrowser.open('file://' + os.path.realpath(os.path.join(os.getcwd(), 'coverage.xml')))
+    webbrowser.open('file://' + os.path.realpath(os.path.join(os.getcwd(), 'htmlcov', 'index.html')))
 
     # python don't return 256
     if exit_code:

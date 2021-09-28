@@ -23,8 +23,14 @@ docker-compose run bc-dev fish
 # Testing
 pipenv run test ./breathecode/activity  # path
 
+# Testing in parallel
+pipenv run ptest ./breathecode/activity  # path
+
 # Coverage
 pipenv run cov breathecode.activity  # python module path
+
+# Coverage in parallel
+pipenv run pcov breathecode.activity  # python module path
 ```
 
 ### `Run BreatheCode API as docker service`
@@ -72,8 +78,14 @@ python -m scripts.install
 # Testing
 pipenv run test ./breathecode/activity  # path
 
+# Testing in parallel
+pipenv run ptest ./breathecode/activity  # path
+
 # Coverage
 pipenv run cov breathecode.activity  # python module path
+
+# Coverage in parallel
+pipenv run pcov breathecode.activity  # python module path
 ```
 
 ### `Run BreatheCode API in your local machine`
