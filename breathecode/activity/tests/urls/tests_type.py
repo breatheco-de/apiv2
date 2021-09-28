@@ -112,8 +112,21 @@ class MediaTestSuite(MediaTestCase):
                 'slug': 'exercise_success',
             },
             {
-                'description': 'When student successfuly join to academy',
-                'slug': 'academy_registration',
+                'description': 'When student successfuly joins breathecode',
+                'slug': 'registration'
+            },
+            {
+                'description': 'Student cohort changes like: starts, drop, pospone, etc',
+                'slug': 'educational_status_change'
+            },
+            {
+                'description': "Notes that can be added by teachers, TA's or anyone involved "
+                'in the student education',
+                'slug': 'educational_note'
+            },
+            {
+                'description': 'Notes related to the student career',
+                'slug': 'career_note',
             },
         ]
 

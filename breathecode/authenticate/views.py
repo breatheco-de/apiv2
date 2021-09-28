@@ -38,12 +38,13 @@ from .models import (
 from .actions import reset_password, resend_invite, generate_academy_token
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
-from breathecode.utils import localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
+from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
+                               GenerateLookupsMixin)
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from .serializers import (UserSerializer, AuthSerializer, GroupSerializer, UserSmallSerializer,
-                          GETProfileAcademy, StaffSerializer, MemberPOSTSerializer, MemberPUTSerializer,
-                          StudentPOSTSerializer, RoleSmallSerializer, UserMeSerializer, UserInviteSerializer,
-                          TokenSmallSerializer, UserInvitePUTSerializer)
+from .serializers import (GetProfileAcademySmallSerializer, UserSerializer, AuthSerializer,
+                          UserSmallSerializer, GetProfileAcademySerializer, MemberPOSTSerializer,
+                          MemberPUTSerializer, StudentPOSTSerializer, RoleSmallSerializer, UserMeSerializer,
+                          UserInviteSerializer, TokenSmallSerializer)
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +127,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             if item is None:
                 raise ValidationException('Profile not found for this user and academy', 404)
 
-            serializer = GETProfileAcademy(item, many=False)
+            serializer = GetProfileAcademySerializer(item, many=False)
             return Response(serializer.data)
 
         items = ProfileAcademy.objects.filter(academy__id=academy_id).exclude(role__slug='student')
@@ -149,7 +150,7 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             items = items.first()
 
         page = self.paginate_queryset(items, request)
-        serializer = GETProfileAcademy(page, many=is_many)
+        serializer = GetProfileAcademySmallSerializer(page, many=is_many)
 
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
@@ -194,8 +195,6 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('crud_member')
     def delete(self, request, academy_id=None, user_id=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
-
-        print('printing items', lookups)
 
         if lookups and user_id:
             raise ValidationException(
@@ -308,7 +307,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             if profile is None:
                 raise ValidationException('Profile not found', 404)
 
-            serializer = GETProfileAcademy(profile, many=False)
+            serializer = GetProfileAcademySerializer(profile, many=False)
             return Response(serializer.data)
 
         items = ProfileAcademy.objects.filter(role__slug='student', academy__id=academy_id)
@@ -322,7 +321,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             items = items.filter(status__iexact=status)
 
         page = self.paginate_queryset(items, request)
-        serializer = GETProfileAcademy(page, many=True)
+        serializer = GetProfileAcademySmallSerializer(page, many=True)
 
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
@@ -769,7 +768,6 @@ def save_slack_token(request):
         'redirect_uri': os.getenv('SLACK_REDIRECT_URL', '') + '?payload=' + original_payload,
         'code': code,
     }
-    # print("params", params)
     resp = requests.post('https://slack.com/api/oauth.v2.access', data=params)
     if resp.status_code == 200:
 

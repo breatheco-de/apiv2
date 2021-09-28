@@ -90,7 +90,66 @@ class AuthenticateTestSuite(AuthTestCase):
             'user': {
                 'email': model['profile_academy'].user.email,
                 'first_name': model['profile_academy'].user.first_name,
-                'github': None,
+                'profile': None,
+                'id': model['profile_academy'].user.id,
+                'last_name': model['profile_academy'].user.last_name
+            }
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            'academy_id': 1,
+            'address': None,
+            'email': None,
+            'first_name': None,
+            'id': 1,
+            'last_name': None,
+            'phone': '',
+            'role_id': 'hitman',
+            'status': 'INVITED',
+            'user_id': 1
+        }])
+
+    """
+    🔽🔽🔽 With profile
+    """
+
+    def test_academy_member__with_profile(self):
+        """Test /academy/member"""
+        self.headers(academy=1)
+        role = 'hitman'
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='read_member',
+                                     profile_academy=True,
+                                     profile=True)
+        url = reverse_lazy('authenticate:academy_member')
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'academy': {
+                'id': model['profile_academy'].academy.id,
+                'name': model['profile_academy'].academy.name,
+                'slug': model['profile_academy'].academy.slug
+            },
+            'address': model['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
+            'email': model['profile_academy'].email,
+            'first_name': model['profile_academy'].first_name,
+            'id': model['profile_academy'].id,
+            'last_name': model['profile_academy'].last_name,
+            'phone': model['profile_academy'].phone,
+            'role': {
+                'name': 'hitman',
+                'slug': 'hitman'
+            },
+            'status': 'INVITED',
+            'user': {
+                'email': model['profile_academy'].user.email,
+                'first_name': model['profile_academy'].user.first_name,
+                'profile': {
+                    'avatar_url': None
+                },
                 'id': model['profile_academy'].user.id,
                 'last_name': model['profile_academy'].user.last_name
             }
@@ -148,7 +207,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user': {
                 'email': model['profile_academy'].user.email,
                 'first_name': model['profile_academy'].user.first_name,
-                'github': None,
+                'profile': None,
                 'id': model['profile_academy'].user.id,
                 'last_name': model['profile_academy'].user.last_name
             }
@@ -217,7 +276,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'user': {
                     'email': model['profile_academy'].user.email,
                     'first_name': model['profile_academy'].user.first_name,
-                    'github': None,
+                    'profile': None,
                     'id': model['profile_academy'].user.id,
                     'last_name': model['profile_academy'].user.last_name
                 }
@@ -287,7 +346,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'user': {
                     'email': model['profile_academy'].user.email,
                     'first_name': model['profile_academy'].user.first_name,
-                    'github': None,
+                    'profile': None,
                     'id': model['profile_academy'].user.id,
                     'last_name': model['profile_academy'].user.last_name
                 }
@@ -433,9 +492,6 @@ class AuthenticateTestSuite(AuthTestCase):
                    str(getattr(model['profile_academy'], field)))
             response = self.client.delete(url)
 
-            if response.status_code != 204:
-                print(response.json())
-
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_profile_academy_dict(), [])
 
@@ -477,9 +533,6 @@ class AuthenticateTestSuite(AuthTestCase):
                    str(getattr(model2['profile_academy'], field)))
             response = self.client.delete(url)
 
-            if response.status_code != 204:
-                print(response.json())
-
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_profile_academy_dict(), [])
 
@@ -520,9 +573,6 @@ class AuthenticateTestSuite(AuthTestCase):
                    str(getattr(model1['profile_academy'], field)) + ',' +
                    str(getattr(model2['profile_academy'], field)))
             response = self.client.delete(url)
-
-            if response.status_code != 204:
-                print(response.json())
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_profile_academy_dict(), [{
@@ -586,7 +636,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user': {
                 'email': model_1['profile_academy'].user.email,
                 'first_name': model_1['profile_academy'].user.first_name,
-                'github': None,
+                'profile': None,
                 'id': model_1['profile_academy'].user.id,
                 'last_name': model_1['profile_academy'].user.last_name
             }
@@ -669,7 +719,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user': {
                 'email': model_1['profile_academy'].user.email,
                 'first_name': model_1['profile_academy'].user.first_name,
-                'github': None,
+                'profile': None,
                 'id': model_1['profile_academy'].user.id,
                 'last_name': model_1['profile_academy'].user.last_name
             }
@@ -752,7 +802,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user': {
                 'email': model_1['profile_academy'].user.email,
                 'first_name': model_1['profile_academy'].user.first_name,
-                'github': None,
+                'profile': None,
                 'id': model_1['profile_academy'].user.id,
                 'last_name': model_1['profile_academy'].user.last_name
             }
@@ -835,7 +885,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user': {
                 'email': model_1['profile_academy'].user.email,
                 'first_name': model_1['profile_academy'].user.first_name,
-                'github': None,
+                'profile': None,
                 'id': model_1['profile_academy'].user.id,
                 'last_name': model_1['profile_academy'].user.last_name
             }
@@ -918,7 +968,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user': {
                 'email': model_1['profile_academy'].user.email,
                 'first_name': model_1['profile_academy'].user.first_name,
-                'github': None,
+                'profile': None,
                 'id': model_1['profile_academy'].user.id,
                 'last_name': model_1['profile_academy'].user.last_name
             }
@@ -1001,7 +1051,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user': {
                 'email': model_1['profile_academy'].user.email,
                 'first_name': model_1['profile_academy'].user.first_name,
-                'github': None,
+                'profile': None,
                 'id': model_1['profile_academy'].user.id,
                 'last_name': model_1['profile_academy'].user.last_name
             }
@@ -1084,7 +1134,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user': {
                 'email': model_1['profile_academy'].user.email,
                 'first_name': model_1['profile_academy'].user.first_name,
-                'github': None,
+                'profile': None,
                 'id': model_1['profile_academy'].user.id,
                 'last_name': model_1['profile_academy'].user.last_name
             }
@@ -1167,7 +1217,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user': {
                 'email': model_1['profile_academy'].user.email,
                 'first_name': model_1['profile_academy'].user.first_name,
-                'github': None,
+                'profile': None,
                 'id': model_1['profile_academy'].user.id,
                 'last_name': model_1['profile_academy'].user.last_name
             }

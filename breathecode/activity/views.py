@@ -32,7 +32,11 @@ ACTIVITIES = {
     'office_attendance': 'When the office raspberry pi detects the student',
     'nps_survey_answered': 'When a nps survey is answered by the student',
     'exercise_success': 'When student successfuly tests exercise',
-    'academy_registration': 'When student successfuly join to academy',
+    'registration': 'When student successfuly joins breathecode',
+    'educational_status_change': 'Student cohort changes like: starts, drop, pospone, etc',
+    'educational_note':
+    'Notes that can be added by teachers, TA\'s or anyone involved in the student education',
+    'career_note': 'Notes related to the student career',
 }
 
 ACTIVITY_PUBLIC_SLUGS = [
@@ -58,30 +62,51 @@ class ActivityViewMixin(APIView):
         elif len(slugs) == 1:
             self.queryargs.append(Activity.slug == slugs[0])
 
-    def filter_by_cohort(self, cohort):
+    def filter_by_cohort(self, academy_id, cohort_id_or_slug):
+        if Cohort.objects.filter(academy__id=academy_id, slug=cohort_id_or_slug).exists():
+            self.queryargs.append(Activity.cohort == cohort_id_or_slug)
+            return
 
-        query_cohort = Cohort.objects.filter(slug=cohort)
+        try:
+            # this parse prevent a call to the db if the cohort slug doesn't exist
+            cohort_id = int(cohort_id_or_slug)
+        except:
+            raise ValidationException('Cohort not found', slug='cohort-not-found')
 
-        if query_cohort.count() > 0:
-            self.queryargs.append(Activity.cohort == cohort)
-        else:
-            cohort_id = int(cohort)
-            query_cohort = Cohort.objects.get(pk=cohort_id)
-            self.queryargs.append(Activity.cohort == query_cohort.slug)
+        slug = Cohort.objects.filter(academy__id=academy_id, pk=cohort_id).values_list('slug',
+                                                                                       flat=True).first()
+        if not slug:
+            raise ValidationException('Cohort not found', slug='cohort-not-found')
+
+        self.queryargs.append(Activity.cohort == slug)
 
     def filter_by_cohorts(self, academy_id):
         cohorts = self.request.GET.get('cohort', [])
+        slugs = []
         if cohorts:
             cohorts = cohorts.split(',')
 
         for cohort in cohorts:
             if (cohort and not Cohort.objects.filter(slug=cohort, academy__id=academy_id).exists()):
-                raise ValidationException('Cohort not found', slug='cohort-not-found')
+                try:
+                    # this parse prevent a call to the db if the cohort slug doesn't exist
+                    cohort_id = int(cohort)
 
-        if len(cohorts) > 1:
-            self.queryargs.append(OR(*[Activity.cohort == cohort for cohort in cohorts]))
-        elif len(cohorts) == 1:
-            self.queryargs.append(Activity.cohort == cohorts[0])
+                    c = Cohort.objects.filter(id=cohort_id, academy__id=academy_id).first()
+                    if not c:
+                        raise ValidationException('Cohort not found', slug='cohort-not-found')
+
+                    slugs.append(c.slug)
+
+                except:
+                    raise ValidationException('Cohort not found', slug='cohort-not-found')
+
+            slugs.append(cohort)
+
+        if len(slugs) > 1:
+            self.queryargs.append(OR(*[Activity.cohort == cohort for cohort in slugs]))
+        elif len(slugs) == 1:
+            self.queryargs.append(Activity.cohort == slugs[0])
 
     def filter_by_user_ids(self):
         user_ids = self.request.GET.get('user_id', [])
@@ -153,22 +178,25 @@ class ActivityTypeView(APIView):
 
 
 class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
-    def get(self, request, cohort_id=None):
-        from google.cloud import ndb
-        client = ndb.Client()
+    @capable_of('read_activity')
+    def get(self, request, cohort_id=None, academy_id=None):
+        self.queryargs = []
+        from breathecode.utils import NDB
 
         self.filter_by_slugs()
-        self.filter_by_cohort(cohort_id)
+        self.filter_by_cohort(academy_id, cohort_id)
         limit = self.get_limit_from_query()
         offset = self.get_offset_from_query()
 
-        with client.context():
-            query = Activity.query().filter(*self.queryargs, )
+        client = NDB(Activity)
+        data = client.fetch(self.queryargs, limit=limit, offset=offset)
+        page = self.paginate_queryset(data, request)
 
-            elements = query.fetch(limit=limit, offset=offset)
-            activities = [c.to_dict() for c in elements]
-
-        return Response(activities, status=status.HTTP_200_OK)
+        if self.is_paginate(request):
+            count = client.count(self.queryargs)
+            return self.get_paginated_response(page, count)
+        else:
+            return Response(page, status=status.HTTP_200_OK)
 
 
 class ActivityMeView(APIView):
