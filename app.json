@@ -4,6 +4,11 @@
   "description": "Technology for Learning",
   "repository": "https://github.com/breatheco-de/apiv2",
   "website": "https://breathecode.herokuapp.com",
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
   "environments": {
     "test": {
       "env": {
