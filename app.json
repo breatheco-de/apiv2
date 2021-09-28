@@ -8,8 +8,7 @@
     "test": {
       "env": {
         "ENV": "development",
-        "LOG_LEVEL": "DEBUG",
-        "RANDOM_NAME": "6"
+        "LOG_LEVEL": "DEBUG"
       },
       "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
       "scripts": {
@@ -17,7 +16,7 @@
       },
       "formation": {
         "test": {
-          "quantity": 2,
+          "quantity": 1,
           "size": "performance-m"
         }
       }
@@ -25,8 +24,7 @@
     "review": {
       "env": {
         "ENV": "development",
-        "LOG_LEVEL": "DEBUG",
-        "RANDOM_NAME": "7"
+        "LOG_LEVEL": "DEBUG"
       },
       "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"],
       "scripts": {
@@ -35,7 +33,7 @@
       },
       "formation": {
         "test": {
-          "quantity": 2,
+          "quantity": 1,
           "size": "performance-m"
         }
       }
