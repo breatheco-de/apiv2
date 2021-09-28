@@ -18,11 +18,6 @@
       "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
       "scripts": {
         "test": "pipenv run ptest"
-      },
-      "formation": {
-        "test": {
-          "size": "performance-m"
-        }
       }
     },
     "review": {
@@ -33,11 +28,6 @@
       "scripts": {
         "test": "pipenv run ptest",
         "postdeploy": "python manage.py migrate"
-      },
-      "formation": {
-        "review": {
-          "size": "performance-m"
-        }
       }
     }
   }
