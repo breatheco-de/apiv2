@@ -21,7 +21,6 @@
       },
       "formation": {
         "test": {
-          "quantity": 1,
           "size": "performance-m"
         }
       }
@@ -31,14 +30,12 @@
         "ENV": "development",
         "LOG_LEVEL": "DEBUG"
       },
-      "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"],
       "scripts": {
         "test": "pipenv run ptest",
         "postdeploy": "python manage.py migrate"
       },
       "formation": {
         "review": {
-          "quantity": 1,
           "size": "performance-m"
         }
       }
