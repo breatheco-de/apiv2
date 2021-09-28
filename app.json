@@ -37,7 +37,7 @@
         "postdeploy": "python manage.py migrate"
       },
       "formation": {
-        "test": {
+        "review": {
           "quantity": 1,
           "size": "performance-m"
         }
