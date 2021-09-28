@@ -9,7 +9,7 @@
       "env": {
         "ENV": "development",
         "LOG_LEVEL": "DEBUG",
-        "RANDOM_NAME": "2"
+        "RANDOM_NAME": "4"
       },
       "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
       "scripts": {
@@ -26,7 +26,7 @@
       "env": {
         "ENV": "development",
         "LOG_LEVEL": "DEBUG",
-        "RANDOM_NAME": "3"
+        "RANDOM_NAME": "5"
       },
       "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"],
       "scripts": {
@@ -36,7 +36,7 @@
       "formation": {
         "test": {
           "quantity": 1,
-          "size": "hobby"
+          "size": "performance-m"
         }
       }
     }
