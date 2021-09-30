@@ -117,7 +117,7 @@ class UserSmallSerializer(serpy.Serializer):
     profile = serpy.MethodField()
 
     def get_github(self, obj):
-        if not hasattr(obj, 'profile'):
+        if not hasattr(obj, 'credentialsgithub'):
             return None
 
         return GithubSmallSerializer(obj.credentialsgithub).data
