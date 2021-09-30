@@ -396,7 +396,7 @@ def add_student_activity(user, data, academy_id):
             _query = _query.filter(slug=data['cohort'])
 
         if not _query.exists():
-            raise ValidationException(f"Cohort {str(data['cohort'])} doesn't exist", slug='cohort-not-exists')
+            raise ValidationException(f"Cohort {str(data['cohort'])} doesn't exist in this academy", slug='cohort-not-exists')
 
     fields = {
         **data,
@@ -411,3 +411,97 @@ def add_student_activity(user, data, academy_id):
     datastore.update('student_activity', fields)
 
     return fields
+
+
+class StudentActivityView(APIView, HeaderLimitOffsetPagination):
+    @capable_of('read_activity')
+    def get(self, request, student_id=None, academy_id=None):
+        from breathecode.services.google_cloud import Datastore
+
+        cohort_user = CohortUser.objects.filter(role='STUDENT',
+                                                user__id=student_id,
+                                                cohort__academy__id=academy_id).first()
+        if cohort_user is None:
+            raise ValidationException(f'There is not student with that ID that belongs to any cohort within your academy', slug='student-no-cohort')
+
+        kwargs = {'kind': 'student_activity'}
+
+        slug = request.GET.get('slug')
+        if slug:
+            kwargs['slug'] = slug
+
+        if slug and slug not in ACTIVITIES:
+            raise ValidationException(f'Activity type {slug} not found', slug='activity-not-found')
+
+        if student_id:
+            try:
+                kwargs['user_id'] = int(student_id)
+            except ValueError:
+                raise ValidationException('student_id is not a interger', slug='bad-student-id')
+
+        email = request.GET.get('email')
+        if email:
+            kwargs['email'] = email
+
+        user = User.objects.filter(Q(id=student_id) | Q(email=email))
+        if (student_id or email) and not user:
+            raise ValidationException('User not exists', slug='user-not-exists')
+
+        datastore = Datastore()
+        #academy_iter = datastore.fetch(**kwargs, academy_id=int(academy_id))
+
+        limit = request.GET.get('limit')
+        offset = request.GET.get('offset')
+
+        # get the the total entities on db by kind
+        if limit is not None or offset is not None:
+            count = datastore.count(**kwargs)
+
+        if limit:
+            kwargs['limit'] = int(limit)
+
+        if offset:
+            kwargs['offset'] = int(offset)
+
+        public_iter = datastore.fetch(
+            **kwargs
+        )  # TODO: remove this in the future because the academy_id was not present brefore and students didn't have it
+
+        # query_iter = academy_iter + public_iter
+        public_iter.sort(key=lambda x: x['created_at'], reverse=True)
+
+        page = self.paginate_queryset(public_iter, request)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(page, count)
+        else:
+            return Response(page, status=status.HTTP_200_OK)
+
+    @capable_of('crud_activity')
+    def post(self, request, student_id=None, academy_id=None):
+
+        user = User.objects.filter(id=student_id)
+
+        data = request.data
+        if isinstance(data, list) == False:
+            data = [data]
+
+        new_activities = []
+        for activity in data:
+
+            if "cohort" not in activity:
+                raise ValidationException('Every activity specified for each student must have a cohort (slug)', slug='missing-cohort')
+            elif activity["cohort"].isnumeric():
+                raise ValidationException('Cohort must be a slug, not a numeric ID', slug='invalid-cohort')
+
+            student_id = activity['user_id']
+            del activity['user_id']
+            cohort_user = CohortUser.objects.filter(role='STUDENT',
+                                                    user__id=student_id,
+                                                    cohort__slug=activity["cohort"]).first()
+            if cohort_user is None:
+                raise ValidationException('Student not found in this cohort', slug='not-found-in-cohort')
+
+            new_activities.append(add_student_activity(cohort_user.user, activity, academy_id))
+
+        return Response(new_activities, status=status.HTTP_201_CREATED)

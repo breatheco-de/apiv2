@@ -45,11 +45,6 @@ def generate_certificate(user, cohort=None, layout=None):
             f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}',
             slug='missing-syllabus-version')
 
-    if cohort.specialty_mode is None:
-        raise ValidationException(
-            'The cohort has no schedule assigned, please edit the cohort to specify a schedule',
-            slug='missing-specialty-mode')
-
     specialty = Specialty.objects.filter(syllabus__id=cohort.syllabus_version.syllabus_id).first()
     if not specialty:
         raise ValidationException('Specialty has no Syllabus assigned', slug='missing-specialty')
@@ -115,10 +110,10 @@ def generate_certificate(user, cohort=None, layout=None):
                                       'status GRADUATED',
                                       slug='bad-educational-status')
 
-        if cohort.current_day != cohort.specialty_mode.syllabus.duration_in_days:
+        if cohort.current_day != cohort.syllabus_version.syllabus.duration_in_days:
             raise ValidationException(
                 'Cohort current day should be '
-                f'{cohort.specialty_mode.syllabus.duration_in_days}',
+                f'{cohort.syllabus_version.syllabus.duration_in_days}',
                 slug='cohort-not-finished')
 
         if cohort.stage != 'ENDED':
