@@ -132,27 +132,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(self.all_user_specialty_dict(), [])
 
-    """
-    🔽🔽🔽 without SpecialtyMode
-    """
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_without_certificate(self):
-        cohort_kwargs = {'stage': 'ENDED'}
-        model = self.generate_models(user=True,
-                                     cohort=True,
-                                     cohort_user=True,
-                                     syllabus_version=True,
-                                     cohort_kwargs=cohort_kwargs)
-        try:
-            generate_certificate(model['user'], model['cohort'])
-            assert False
-        except Exception as e:
-            self.assertEqual(str(e), 'missing-specialty-mode')
-
-        self.assertEqual(self.all_user_specialty_dict(), [])
 
     """
     🔽🔽🔽 without Specialty
