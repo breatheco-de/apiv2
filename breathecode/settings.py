@@ -8,9 +8,10 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+from pathlib import Path
 import django_heroku
 import dj_database_url
-import sys
+import json
 import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
@@ -330,17 +331,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 EXPLORER_CONNECTIONS = {'Default': 'default'}
 EXPLORER_DEFAULT_CONNECTION = 'default'
 
-EXPLORER_SQL_BLACKLIST = (
-    'ALTER',
-    'CREATE TABLE',
-    'DELETE',
-    'DROP',
-    'GRANT',
-    'INSERT INTO',
-    'OWNER TO'
-    'RENAME ',
-    'REPLACE',
-    'SCHEMA',
-    'TRUNCATE',
-    'UPDATE',
-)
+sql_keywords_path = Path(os.getcwd()) / 'breathecode' / 'sql_keywords.json'
+with open(sql_keywords_path, 'r') as f:
+    sql_keywords = json.load(f)
+
+    # https://www.postgresql.org/docs/8.1/sql-keywords-appendix.html
+    # scripts/update_sql_keywords_json.py
+    # breathecode/sql_keywords.json
+
+    EXPLORER_SQL_BLACKLIST = tuple(sql_keywords['blacklist'])
