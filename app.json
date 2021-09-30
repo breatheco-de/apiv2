@@ -1,37 +1,34 @@
 {
+  "stack": "heroku-20",
+  "name": "BreatheCode API",
+  "description": "Technology for Learning",
+  "repository": "https://github.com/breatheco-de/apiv2",
+  "website": "https://breathecode.herokuapp.com",
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
   "environments": {
     "test": {
-        "env": {
-            "ENV": {
-                "description": "It can be development or production",
-                "value": "development"
-            },
-            "LOG_LEVEL": {
-                "description": "Shows everything on the console",
-                "value": "DEBUG"
-            }
-        },
-        "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
-        "scripts": {
-            "test": "pipenv run test"
-        }
+      "env": {
+        "ENV": "development",
+        "LOG_LEVEL": "DEBUG"
+      },
+      "addons": ["heroku-postgresql:in-dyno", "heroku-redis:in-dyno"],
+      "scripts": {
+        "test": "pipenv run ptest"
+      }
     },
     "review": {
-        "env": {
-            "ENV": {
-                "description": "It can be development or production",
-                "value": "development"
-            },
-            "LOG_LEVEL": {
-                "description": "Shows everything on the console",
-                "value": "DEBUG"
-            }
-        },
-        "addons": ["heroku-postgresql:hobby-dev", "heroku-redis:hobby-dev"],
-        "scripts": {
-            "test": "pipenv run test",
-            "postdeploy": "python manage.py migrate"
-        }
+      "env": {
+        "ENV": "development",
+        "LOG_LEVEL": "DEBUG"
+      },
+      "scripts": {
+        "test": "pipenv run ptest",
+        "postdeploy": "python manage.py migrate"
+      }
     }
   }
 }

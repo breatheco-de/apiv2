@@ -29,7 +29,7 @@ jobs:
 
       - name: Test with pytest
         run: |
-          pipenv run cov_ci
+          pipenv run pcov_ci
 
       - uses: codecov/codecov-action@v1
         if: ${{ github.event_name == 'pull_request' || github.repository == 'breatheco-de/apiv2' }}
