@@ -65,6 +65,19 @@ class AuthTestCase(APITestCase, ModelsMixin):
     def get_profile_academy(self, id: int):
         return ProfileAcademy.objects.filter(id=id).first()
 
+    def headers(self, **kargs):
+        headers = {}
+
+        items = [
+            index for index in kargs
+            if kargs[index] and (isinstance(kargs[index], str) or isinstance(kargs[index], int))
+        ]
+
+        for index in items:
+            headers[f'HTTP_{index.upper()}'] = str(kargs[index])
+
+        self.client.credentials(**headers)
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -77,6 +90,8 @@ class AuthTestCase(APITestCase, ModelsMixin):
                         capability='',
                         profile_academy_status='',
                         credentials_github=False,
+                        profile=False,
+                        profile_kwargs={},
                         models={}):
         """Generate models"""
         # TODO: rewrite authenticate tests to use the global generate_models
@@ -87,6 +102,15 @@ class AuthTestCase(APITestCase, ModelsMixin):
             models['user'] = mixer.blend('auth.User')
             models['user'].set_password(self.password)
             models['user'].save()
+
+        if not 'profile' in models and profile:
+            kargs = {}
+
+            if 'user' in models:
+                kargs['user'] = models['user']
+
+            kargs = {**kargs, **profile_kwargs}
+            models['profile'] = mixer.blend('authenticate.Profile', **kargs)
 
         if not 'credentials_github' in models and credentials_github:
             kargs = {'user': models['user']}

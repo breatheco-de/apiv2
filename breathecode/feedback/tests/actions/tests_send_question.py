@@ -203,7 +203,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
 
         model = self.generate_models(user=True, cohort_user=True, syllabus_version=True, specialty_mode=True)
 
-        certificate = model['cohort'].specialty_mode.name
+        certificate = model.syllabus.name
         send_question(model['user'])
 
         expected = [{
@@ -261,7 +261,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      specialty_mode=True,
                                      cohort_kwargs=cohort_kwargs)
 
-        certificate = model['cohort'].specialty_mode.name
+        certificate = model.syllabus.name
         send_question(model['user'])
 
         expected = [{
@@ -317,7 +317,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      specialty_mode=True,
                                      cohort_kwargs=cohort_kwargs)
 
-        certificate = model['cohort'].specialty_mode.name
+        certificate = model.syllabus.name
         send_question(model['user'])
 
         expected = [{
@@ -373,7 +373,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      specialty_mode=True,
                                      cohort_kwargs=cohort_kwargs)
 
-        certificate = model['cohort'].specialty_mode.name
+        certificate = model.syllabus.name
         send_question(model['user'])
 
         expected = [{

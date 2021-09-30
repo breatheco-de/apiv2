@@ -591,7 +591,7 @@ class MediaTestSuite(MediaTestCase):
                models[1]['media'].slug)
         response = self.client.get(url)
         json = response.json()
-        self.assertEqual(json, [{
+        expected = [{
             'categories': [{
                 'id': model['category'].id,
                 'medias': 1,
@@ -614,8 +614,9 @@ class MediaTestSuite(MediaTestCase):
             f'{model.media.url}-thumbnail',
             'url':
             model['media'].url
-        } for model in ordened_models])
+        } for model in ordened_models]
 
+        self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
 

@@ -13,11 +13,21 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='monitorscript',
             name='notify_email',
-            field=models.CharField(blank=True, default=None, help_text='Only specify if need to override the application.notify_email, you can add many comma separated.', max_length=255, null=True),
+            field=models.CharField(
+                blank=True,
+                default=None,
+                help_text=
+                'Only specify if need to override the application.notify_email, you can add many comma separated.',
+                max_length=255,
+                null=True),
         ),
         migrations.AlterField(
             model_name='application',
             name='notify_email',
-            field=models.CharField(blank=True, default=None, help_text='Comma separated list of emails', max_length=255, null=True),
+            field=models.CharField(blank=True,
+                                   default=None,
+                                   help_text='Comma separated list of emails',
+                                   max_length=255,
+                                   null=True),
         ),
     ]
