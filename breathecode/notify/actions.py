@@ -44,7 +44,7 @@ def send_email_message(template_slug, to, data={}):
 
         return result.status_code == 200
     else:
-        logger.warning('Email not sent because EMAIL_NOTIFICATIONS_ENABLED != TRUE')
+        logger.warning(f'Email to {to} not sent because EMAIL_NOTIFICATIONS_ENABLED != TRUE')
         return True
 
 
