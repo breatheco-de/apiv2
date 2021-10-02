@@ -182,6 +182,11 @@ def register_new_lead(form_entry=None):
     if not 'id' in form_entry:
         raise Exception('The id doesn\'t exist')
 
+    if 'utm_language' in form_entry and form_entry["utm_language"] == "us":
+        form_entry["utm_language"] = "en"
+    elif 'language' in form_entry and form_entry["language"] == "us":
+        form_entry["language"] = "en"
+
     contact = {
         'email': form_entry['email'],
         'first_name': form_entry['first_name'],
