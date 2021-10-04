@@ -102,49 +102,9 @@
 <body>
     <div class="invoice-box">
         <table cellpadding="0" cellspacing="0">
-            <tr>
-                <td>
-                    <a href="/v1/freelance/bills/html">⬅ Back to all unpaid bills</a>
-                </td>
-            </tr>
             <tr class="top">
                 <td colspan="2">
-                    <table>
-                        <tr>
-                            <td class="title">
-                                <img src="{{ academy.logo_url }}" style="width:100%; max-width:300px;">
-                            </td>
-
-                            <td>
-
-                                Invoice #{{ id }}<br>
-                                status: {{ status }}<br>
-                                Created: {{ created_at }}<br>
-                                Paid: {{ paid_at }}<br>
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-            </tr>
-
-
-            <tr class="information">
-                <td colspan="2">
-                    <table>
-                        <tr>
-                            <td>
-                                {{ freelancer.user.first_name }} {{ freelancer.user.last_name }}<br>
-                                {{ freelancer.user.email }}<br>
-                                Rate: ${{ freelancer.price_per_hour }}
-                            </td>
-
-                            <!-- <td>
-                                {{ academy_name }}<br>
-                                John Doe<br>
-                                john@example.com
-                            </td> -->
-                        </tr>
-                    </table>
+                    <h1>The following is a list of UNPAID payments:</h1>
                 </td>
             </tr>
 
@@ -156,27 +116,27 @@
                 <td>
                     Price
                 </td>
+                <td>
+                    &nbsp;
+                </td>
             </tr>
 
-            {% for issue in issues %}
+            {% for bill in bills %}
             <tr class="item">
                 <td>
-                    <a href="{{ issue.url }}" target="_blank" rel="noopener noreferrer">{{ issue.title }}</a>
+                    {{ bill.freelancer.user.first_name }} {{ bill.freelancer.user.last_name }} ➝ <small>{{ bill.freelancer.user.email }}</small>
                 </td>
 
                 <td>
-                    {{ issue.duration_in_hours }}
+                    {{ bill.total_price }}
+                </td>
+
+                <td>
+                    <button onClick="location.href = '/v1/freelance/bills/{{ bill.id }}/html';">view</button>
                 </td>
             </tr>
             {% endfor %}
 
-            <tr class="total">
-                <td></td>
-
-                <td>
-                   Total Hours: {{ total_duration_in_hours }}  <br />
-                </td>
-            </tr>
             <tr class="total">
                 <td></td>
 
