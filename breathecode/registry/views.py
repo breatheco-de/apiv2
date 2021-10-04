@@ -1,6 +1,7 @@
 import requests, logging
 from django.shortcuts import render
 from django.utils import timezone
+from django.db.models import Q
 from django.http import HttpResponse
 from .models import Asset, AssetAlias, AssetTechnology
 from breathecode.notify.actions import send_email_message
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def redirect_gitpod(request, asset_slug):
-    alias = AssetAlias.objects.filter(slug=asset_slug).first()
+    alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
     if alias is None:
         raise ValidationException('Asset alias not found', status.HTTP_404_NOT_FOUND)
 
@@ -42,20 +43,21 @@ def get_technologies(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_readme(request, asset_slug):
-    asset = Asset.objects.filter(slug=asset_slug).first()
-    if asset is None:
-        raise ValidationException('Asset alias not found', status.HTTP_404_NOT_FOUND)
+    alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
+    if alias is None:
+        raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
 
-    return Response(asset.readme)
+    return Response(alias.asset.readme)
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_config(request, asset_slug):
-    asset = Asset.objects.filter(slug=asset_slug).first()
-    if asset is None:
-        raise ValidationException('Asset alias not found', status.HTTP_404_NOT_FOUND)
+    alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
+    if alias is None:
+        raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
 
+    asset = alias.asset
     main_branch = "master"
     response = requests.head(f'{asset.url}/tree/{main_branch}', allow_redirects=False)
     if response.status_code == 302:
@@ -89,11 +91,11 @@ class GetAssetView(APIView):
     def get(self, request, asset_slug=None):
 
         if asset_slug is not None:
-            asset = Asset.objects.filter(slug=asset_slug).first()
-            if asset is None:
+            alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
+            if alias is None:
                 raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
 
-            serializer = AssetBigSerializer(asset)
+            serializer = AssetBigSerializer(alias.asset)
             return Response(serializer.data)
 
         items = Asset.objects.all()
