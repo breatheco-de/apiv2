@@ -144,15 +144,6 @@ class CertificateCohortView(APIView):
                     f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}',
                     slug='cohort-has-no-syllabus-version-assigned')
 
-            if cohort.specialty_mode and not cohort.specialty_mode.syllabus:
-                raise ValidationException('SpecialtyMode has no Syllabus',
-                                          code=400,
-                                          slug='specialty-mode-has-no-syllabus-assigned')
-
-            if not cohort.specialty_mode:
-                raise ValidationException('Cohort has no SpecialtyMode',
-                                          code=400,
-                                          slug='cohort-has-no-specialty-mode-assigned')
 
             else:
                 cohort__users.append(cohort_user)
