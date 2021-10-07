@@ -19,12 +19,12 @@ def render_html_all_bills(request):
 
     total_price = 0
     for bill in serializer.data:
-        total_price += bill["total_price"]
+        total_price += bill['total_price']
 
-
-    data = {'bills': serializer.data, "total_price": total_price }
+    data = {'bills': serializer.data, 'total_price': total_price}
     template = get_template_content('bills', data)
     return HttpResponse(template['html'])
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

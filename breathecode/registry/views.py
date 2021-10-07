@@ -17,6 +17,7 @@ from django.http import HttpResponseRedirect
 
 logger = logging.getLogger(__name__)
 
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def redirect_gitpod(request, asset_slug):
@@ -56,27 +57,31 @@ def get_config(request, asset_slug):
     if asset is None:
         raise ValidationException('Asset alias not found', status.HTTP_404_NOT_FOUND)
 
-    main_branch = "master"
+    main_branch = 'master'
     response = requests.head(f'{asset.url}/tree/{main_branch}', allow_redirects=False)
     if response.status_code == 302:
-        main_branch = "main"
+        main_branch = 'main'
 
     try:
         response = requests.get(f'{asset.url}/blob/{main_branch}/learn.json?raw=true')
         if response.status_code == 404:
             response = requests.get(f'{asset.url}/blob/{main_branch}/bc.json?raw=true')
             if response.status_code == 404:
-                raise ValidationException(f'Config file not found for {asset.url}', code=404, slug='config_not_found')
+                raise ValidationException(f'Config file not found for {asset.url}',
+                                          code=404,
+                                          slug='config_not_found')
 
             return Response(response.json())
     except Exception as e:
         data = {
-            'MESSAGE': f"learn.json or bc.json not found or invalid for for {asset.url}",
+            'MESSAGE': f'learn.json or bc.json not found or invalid for for {asset.url}',
         }
-        send_email_message('Error fetching the exercise meta-data learn.json for {asset.slug}', to=asset.author.email, data=data)
-        raise ValidationException(f'Config file invalid or not found for {asset.url}', code=404, slug='config_not_found')
-
-
+        send_email_message('Error fetching the exercise meta-data learn.json for {asset.slug}',
+                           to=asset.author.email,
+                           data=data)
+        raise ValidationException(f'Config file invalid or not found for {asset.url}',
+                                  code=404,
+                                  slug='config_not_found')
 
 
 # Create your views here.

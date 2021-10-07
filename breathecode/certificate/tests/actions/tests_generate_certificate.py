@@ -132,7 +132,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(self.all_user_specialty_dict(), [])
 
-
     """
     🔽🔽🔽 without Specialty
     """
