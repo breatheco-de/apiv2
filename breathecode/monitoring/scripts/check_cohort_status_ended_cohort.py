@@ -7,7 +7,7 @@ from breathecode.admissions.models import Cohort
 from django.utils import timezone
 
 to_fix_cohort_stage = Cohort.objects.filter(ending_date__lt=timezone.now(), academy__id=academy.id)\
-    .exclude(stage='ENDED').values_list('name', flat=True)
+    .exclude(stage__in=['ENDED','DELETED']).values_list('name', flat=True)
 
 if len(to_fix_cohort_stage) > 0:
     to_fix_cohort_name = ('\n').join(['- ' + cohort_name for cohort_name in to_fix_cohort_stage])
