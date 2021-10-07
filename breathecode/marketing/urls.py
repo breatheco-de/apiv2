@@ -20,6 +20,7 @@ urlpatterns = [
     path('academy/automation', AcademyAutomationView.as_view(), name='academy_automation'),
     path('facebook/lead', receive_facebook_lead, name='facebook_all'),
     path('report/lead', get_leads_report, name='report_lead'),
+
     # path('report/summary', get_summary, name="report_summary"),
     path('activecampaign/webhook/<int:ac_academy_id>', activecampaign_webhook, name='activecampaign_webhook'),
     path('activecampaign/webhook/<str:academy_slug>', activecampaign_webhook, name='activecampaign_webhook'),

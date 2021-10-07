@@ -2,7 +2,10 @@ import logging
 from django.dispatch import receiver
 from django.db.models import Avg
 from .signals import survey_answered
+from breathecode.admissions.signals import student_graduated
+from breathecode.admissions.models import CohortUser
 from .models import Answer
+from .tasks import process_student_graduation
 
 logger = logging.getLogger(__name__)
 
@@ -16,3 +19,8 @@ def answer_received(sender, instance, **kwargs):
         survey_score = Answer.objects.filter(survey=instance.survey).aggregate(Avg('score'))
         instance.survey.avg_score = survey_score['score__avg']
         instance.survey.save()
+
+@receiver(student_graduated, sender=CohortUser)
+def post_save_cohort_user(sender, instance, **kwargs):
+    logger.debug('Received student_graduated signal')
+    process_student_graduation.delay(instance.cohort.id, instance.user.id)

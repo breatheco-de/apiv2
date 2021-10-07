@@ -4,7 +4,7 @@ from django.contrib import admin, messages
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
-from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey
+from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey, Review, ReviewPlatform
 from .actions import send_question, send_survey_group
 from django.utils.html import format_html
 from breathecode.utils import AdminExportCsvMixin
@@ -163,3 +163,23 @@ class SurveyAdmin(admin.ModelAdmin):
     def survey_url(self, obj):
         url = 'https://nps.breatheco.de/survey/' + str(obj.id)
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open survey</a>")
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    search_fields = ['author__first_name', 'author__last_name', 'author__email', 'cohort__slug']
+    list_display = ('id', 'current_status', 'author', 'cohort', 'total_rating', 'platform')
+    list_filter = ['status', 'cohort__academy__slug', 'platform']
+    raw_id_fields=['author', 'cohort']
+
+    def current_status(self, obj):
+        colors = {
+            'DONE': 'bg-success',
+            'IGNORE': '',
+            'PENDING': 'bg-warning',
+        }
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+
+@admin.register(ReviewPlatform)
+class ReviewPlatformAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name')

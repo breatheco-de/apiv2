@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Cohort
 from django.core.validators import RegexValidator
 
 __all__ = [
@@ -360,3 +360,4 @@ class ActiveCampaignWebhook(models.Model):
 
     def __str__(self):
         return f'Webhook {self.webhook_type} {self.status} => {self.status_text}'
+

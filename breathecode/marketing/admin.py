@@ -1,7 +1,9 @@
 import logging
 from django.contrib import admin, messages
 from django import forms
-from .models import FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook, AcademyAlias
+from .models import (
+    FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook, AcademyAlias,
+)
 from .actions import (
     register_new_lead,
     save_get_geolocal,

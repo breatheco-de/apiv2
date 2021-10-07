@@ -34,8 +34,7 @@ class UserAdmin(UserAdmin):
 class AcademyForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(AcademyForm, self).__init__(*args, **kwargs)
-        if self.instance.id:
-            self.fields['timezone'] = forms.ChoiceField(choices=timezones)
+        self.fields['timezone'] = forms.ChoiceField(choices=timezones)
 
 
 @admin.register(Academy)
@@ -177,8 +176,7 @@ sync_timeslots.short_description = 'Sync Timeslots With Certificate ⏱ '
 class CohortForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(CohortForm, self).__init__(*args, **kwargs)
-        if self.instance.id:
-            self.fields['timezone'] = forms.ChoiceField(choices=timezones)
+        self.fields['timezone'] = forms.ChoiceField(choices=timezones)
 
 
 cohort_actions = [sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots]

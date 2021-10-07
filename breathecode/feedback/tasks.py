@@ -1,18 +1,36 @@
 from breathecode.authenticate.models import Token
 from breathecode.utils import ValidationException
+from django.db.models import Avg
 import logging
 from celery import shared_task, Task
 from django.utils import timezone
 from breathecode.notify.actions import send_email_message, send_slack
 from .utils import strings
-from breathecode.admissions.models import CohortUser
+from breathecode.admissions.models import CohortUser, Cohort
+from breathecode.admissions.signals import student_graduated
 from django.contrib.auth.models import User
-from .models import Survey, Answer
+from .models import Survey, Answer, Review, ReviewPlatform
 from django.utils import timezone
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 
+
+def get_student_answer_avg(user_id, cohort_id=None, academy_id=None):
+
+    answers = Answer.objects.filter(user__id=user_id, status='ANSWERED', score__isnull=False)
+    
+    # optionally filter by cohort
+    if cohort_id is not None:
+        answers = answers.filter(cohort__id=cohort_id)
+    
+    # optionally filter by academy
+    if academy_id is not None:
+        answers = answers.filter(academy__id=academy_id)
+
+    query = answers.aggregate(average=Avg('score'))
+
+    return query['average']
 
 class BaseTaskWithRetry(Task):
     autoretry_for = (Exception, )
@@ -149,3 +167,39 @@ def send_cohort_survey(self, user_id, survey_id):
 
     if hasattr(user, 'slackuser') and hasattr(survey.cohort.academy, 'slackteam'):
         send_slack('nps_survey', user.slackuser, survey.cohort.academy.slackteam, data=data)
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def process_student_graduation(self, cohort_id, user_id):
+    logger.debug('Starting process_student_graduation')
+
+    cohort = Cohort.objects.filter(id=cohort_id).first()
+    if cohort is None:
+        raise ValidationException(f'Invalid cohort id: {cohort_id}')
+    user = User.objects.filter(id=user_id).first()
+    if user is None:
+        raise ValidationException(f'Invalid user id: {user_id}')
+
+    # If the user gave us a rating >7 we should create reviews for each review platform with status "pending"
+    average = get_student_answer_avg(user_id, cohort_id)
+    if average is None or average >= 8:
+        total_reviews = Review.objects.filter(cohort=cohort,author=user,).count()
+        if total_reviews > 0:
+            logger.debug(f'No new reviews will be requested, student already has pending requests for this cohort')
+            return False
+
+        platforms = ReviewPlatform.objects.all()
+        logger.debug(f'{platforms.count()} will be requested for student {user.id}, avg NPS score of {average}')
+        for plat in platforms:
+            review = Review(
+                cohort=cohort,
+                author=user,
+                platform=plat
+            )
+            review.save()
+
+        return True
+
+
+    logger.debug(f'No reviews requested for student {user.id} because average NPS score is {average}')
+    return False
