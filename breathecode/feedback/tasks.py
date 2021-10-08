@@ -228,7 +228,7 @@ def process_answer_received(self, answer_id):
 
     if answer.score < 8:
         # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
-        send_email_message("negative_answer", SYSTEM_EMAIL, data={
+        send_email_message("negative_answer", [SYSTEM_EMAIL, answer.academy.feedback_email], data={
             "SUBJECT": f"A student answered with a bad NPS score at {answer.academy.name}",
             "FULL_NAME": answer.user.first_name + " " + answer.user.last_name,
             "QUESTION": answer.title,
