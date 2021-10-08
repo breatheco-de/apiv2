@@ -41,7 +41,13 @@ class UserSerializer(serpy.Serializer):
 
         return GetProfileSmallSerializer(obj.profile).data
 
-
+class GithubSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    avatar_url = serpy.Field()
+    name = serpy.Field()
+    username = serpy.Field()
+    
 class UserSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
