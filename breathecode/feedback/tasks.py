@@ -233,6 +233,7 @@ def process_answer_received(self, answer_id):
             "QUESTION": answer.title,
             "SCORE": answer.score,
             "COMMENTS": answer.comment,
+            "ACADEMY": answer.academy.name,
             "LINK": f"{ADMIN_URL}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}"
         })
 
