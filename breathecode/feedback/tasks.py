@@ -232,7 +232,7 @@ def process_answer_received(self, answer_id):
             "FULL_NAME": answer.user.first_name + " " + answer.user.last_name,
             "QUESTION": answer.title,
             "SCORE": answer.score,
-            "COMMENT": answer.comment,
+            "COMMENTS": answer.comment,
             "LINK": f"{ADMIN_URL}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}"
         })
 
