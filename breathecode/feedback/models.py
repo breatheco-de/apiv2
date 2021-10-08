@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.events.models import Event
+from .signals import survey_answered
 from breathecode.authenticate.models import Token
 
 __all__ = ['UserProxy', 'CohortUserProxy', 'CohortProxy', 'Survey', 'Answer']
@@ -85,6 +86,10 @@ SURVEY_STATUS = (
 
 
 class Answer(models.Model):
+    def __init__(self, *args, **kwargs):
+        super(Answer, self).__init__(*args, **kwargs)
+        self.__old_status = self.status
+
     title = models.CharField(max_length=200, blank=True)
     lowest = models.CharField(max_length=50, default='not likely')
     highest = models.CharField(max_length=50, default='very likely')
@@ -121,6 +126,14 @@ class Answer(models.Model):
     opened_at = models.DateTimeField(default=None, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+
+        if self.__old_status != self.status and self.status == 'ANSWERED':
+            # signal the updated answer
+            survey_answered.send(instance=self, sender=Answer)
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.
 
 
 class ReviewPlatform(models.Model):

@@ -1,7 +1,7 @@
+import logging, os
 from breathecode.authenticate.models import Token
 from breathecode.utils import ValidationException
 from django.db.models import Avg
-import logging
 from celery import shared_task, Task
 from django.utils import timezone
 from breathecode.notify.actions import send_email_message, send_slack
@@ -14,6 +14,9 @@ from django.utils import timezone
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
+
+ADMIN_URL = os.getenv('ADMIN_URL', "")
+SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', "")
 
 
 def get_student_answer_avg(user_id, cohort_id=None, academy_id=None):
@@ -203,3 +206,34 @@ def process_student_graduation(self, cohort_id, user_id):
 
     logger.debug(f'No reviews requested for student {user.id} because average NPS score is {average}')
     return False
+
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def process_answer_received(self, answer_id):
+    """
+    This task will be called every time a single NPS answer is received
+    the task will reivew the score, if we got less than 7 it will notify
+    the school.
+    """
+    logger.debug('Starting notify_bad_nps_score')
+    answer = Answer.objects.filter(id=answer_id).first()
+    if answer is None:
+        raise ValidationException("Answer not found")
+
+    if answer.survey is not None:
+        survey_score = Answer.objects.filter(survey=answer.survey).aggregate(Avg('score'))
+        answer.survey.avg_score = survey_score['score__avg']
+        answer.survey.save()
+
+    if answer.score < 8:
+        # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
+        send_email_message("negative_answer", SYSTEM_EMAIL, data={
+            "FULL_NAME": answer.user.first_name + " " + answer.user.last_name,
+            "QUESTION": answer.title,
+            "SCORE": answer.score,
+            "COMMENT": answer.comment,
+            "LINK": f"{ADMIN_URL}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}"
+        })
+
+    return True
