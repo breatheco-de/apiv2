@@ -63,7 +63,7 @@ urlpatterns = [
         name='file_id',
     ),
     path(
-        'file/<slug:media_slug>',
+        'file/<str:media_slug>',
         MaskingUrlView.as_view(),
         name='file_slug',
     ),
