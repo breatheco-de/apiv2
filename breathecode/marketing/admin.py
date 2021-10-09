@@ -3,6 +3,7 @@ from django.contrib import admin, messages
 from django import forms
 from .models import (
     FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook, AcademyAlias,
+    Downloadable,
 )
 from .actions import (
     register_new_lead,
@@ -238,3 +239,17 @@ class ActiveCampaignWebhookAdmin(admin.ModelAdmin):
             'PENDING': 'bg-warning',
         }
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+
+@admin.register(Downloadable)
+class DownloadableAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name', 'academy', 'status', 'open_link')
+
+    def open_link(self, obj):
+        return format_html(f"<a href='{obj.destination_url}' target='parent'>open link</a>")
+
+    def status(self, obj):
+        colors = {
+            'ACTIVE': 'bg-success',
+            'NOT_FOUND': 'bg-error',
+        }
+        return format_html(f"<span class='badge {colors[obj.destination_status]}'>{obj.destination_status}</span>")

@@ -22,6 +22,12 @@ class AutomationSmallSerializer(serpy.Serializer):
     name = serpy.Field()
     status = serpy.Field()
 
+class DownloadableSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    name = serpy.Field()
+    destination_url = serpy.Field()
+    preview_url = serpy.Field()
+
 
 class TagSmallSerializer(serpy.Serializer):
     id = serpy.Field()
