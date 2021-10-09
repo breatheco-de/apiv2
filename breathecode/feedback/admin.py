@@ -107,7 +107,7 @@ add_academy_to_answer.short_description = 'Add academy to answer'
 
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score', 'comment', 'opened_at',
+    list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score', 'opened_at',
                     'created_at', 'answer_url')
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'cohort__slug']
     list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
