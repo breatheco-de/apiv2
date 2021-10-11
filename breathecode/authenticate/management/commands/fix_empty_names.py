@@ -15,7 +15,7 @@ class Command(BaseCommand):
         CharField.register_lookup(Length, 'length')
         students_to_sync = ProfileAcademy.objects.filter(Q(first_name__isnull=True) | Q(
             first_name='')).exclude(Q(user__first_name__isnull=True) | Q(user__first_name=''))
-        logger.debug(f'Found {students_to_sync.count()} students to sync')
+        logger.debug(f'Found {students_to_sync.count()} ProfileAcademy\'s to sync')
         for stu in students_to_sync:
             if stu.user is None:
                 continue
@@ -30,16 +30,16 @@ class Command(BaseCommand):
         students_to_sync = ProfileAcademy.objects.filter(
             Q(user__first_name__isnull=True)
             | Q(user__first_name='')).exclude(Q(first_name__isnull=True) | Q(first_name=''))
-        logger.debug(f'Found {students_to_sync.count()} students to sync')
+        logger.debug(f'Found {students_to_sync.count()} User\'s to sync')
         for stu in students_to_sync:
             if stu.user is None:
                 continue
 
-            if stu.first_name != '':
+            if stu.first_name is not None and len(stu.first_name) > 0:
                 logger.debug(f'Updating student first name for {stu.first_name}')
                 stu.user.first_name = stu.first_name
-            if stu.last_name != '':
+            if stu.first_name is not None and len(stu.last_name) > 0:
                 stu.user.last_name = stu.last_name
-            stu.save()
+            stu.user.save()
 
         logger.debug(f'Finished.')
