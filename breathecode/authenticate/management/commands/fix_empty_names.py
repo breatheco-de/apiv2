@@ -24,4 +24,16 @@ class Command(BaseCommand):
                 stu.last_name = stu.user.last_name
             stu.save()
 
+        students_to_sync = ProfileAcademy.objects.filter(
+            Q(user__first_name__isnull=True)
+            | Q(user__first_name='')).exclude(Q(first_name__isnull=True) | Q(first_name=''))
+        logger.debug(f'Found {students_to_sync.count()} students to sync')
+        for stu in students_to_sync:
+            if stu.first_name != '':
+                logger.debug(f'Updating student first name for {stu.first_name}')
+                stu.user.first_name = stu.first_name
+            if stu.last_name != '':
+                stu.user.last_name = stu.last_name
+            stu.save()
+
         logger.debug(f'Finished.')
