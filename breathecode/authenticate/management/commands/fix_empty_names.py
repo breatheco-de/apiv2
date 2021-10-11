@@ -17,6 +17,9 @@ class Command(BaseCommand):
             first_name='')).exclude(Q(user__first_name__isnull=True) | Q(user__first_name=''))
         logger.debug(f'Found {students_to_sync.count()} students to sync')
         for stu in students_to_sync:
+            if stu.user is None:
+                continue
+
             if stu.user.first_name != '':
                 logger.debug(f'Updating student first name for {stu.user.first_name}')
                 stu.first_name = stu.user.first_name
@@ -29,6 +32,9 @@ class Command(BaseCommand):
             | Q(user__first_name='')).exclude(Q(first_name__isnull=True) | Q(first_name=''))
         logger.debug(f'Found {students_to_sync.count()} students to sync')
         for stu in students_to_sync:
+            if stu.user is None:
+                continue
+
             if stu.first_name != '':
                 logger.debug(f'Updating student first name for {stu.first_name}')
                 stu.user.first_name = stu.first_name
