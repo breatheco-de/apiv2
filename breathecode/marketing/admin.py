@@ -2,17 +2,17 @@ import logging
 from django.contrib import admin, messages
 from django import forms
 from .models import (
-    FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook, AcademyAlias,
+    FormEntry,
+    Tag,
+    Automation,
+    ShortLink,
+    ActiveCampaignAcademy,
+    ActiveCampaignWebhook,
+    AcademyAlias,
     Downloadable,
 )
-from .actions import (
-    register_new_lead,
-    save_get_geolocal,
-    get_facebook_lead_info,
-    test_ac_connection,
-    sync_tags,
-    sync_automations,
-)
+from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
+                      sync_tags, sync_automations, acp_ids)
 from breathecode.services.activecampaign import ActiveCampaign
 from django.utils.html import format_html
 from django.contrib.admin import SimpleListFilter
@@ -221,7 +221,7 @@ def run_hook(modeladmin, request, queryset):
     for hook in queryset.all():
         ac_academy = hook.ac_academy
         client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
-        client.execute_action(hook.id)
+        client.execute_action(hook.id, acp_ids)
 
 
 run_hook.short_description = 'Process Hook'
@@ -240,6 +240,7 @@ class ActiveCampaignWebhookAdmin(admin.ModelAdmin):
         }
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
+
 @admin.register(Downloadable)
 class DownloadableAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'academy', 'status', 'open_link')
@@ -252,4 +253,5 @@ class DownloadableAdmin(admin.ModelAdmin):
             'ACTIVE': 'bg-success',
             'NOT_FOUND': 'bg-error',
         }
-        return format_html(f"<span class='badge {colors[obj.destination_status]}'>{obj.destination_status}</span>")
+        return format_html(
+            f"<span class='badge {colors[obj.destination_status]}'>{obj.destination_status}</span>")

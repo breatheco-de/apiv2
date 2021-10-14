@@ -225,9 +225,13 @@ class FormEntry(models.Model):
     utm_medium = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_campaign = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_source = models.CharField(max_length=70, blank=True, null=True, default=None)
-    
-    current_download = models.CharField(max_length=255, blank=True, null=True, default=None, help_text="Slug of the breathecode.marketing.downloadable")
-    
+
+    current_download = models.CharField(max_length=255,
+                                        blank=True,
+                                        null=True,
+                                        default=None,
+                                        help_text='Slug of the breathecode.marketing.downloadable')
+
     referral_key = models.CharField(max_length=70, blank=True, null=True, default=None)
 
     gclid = models.CharField(max_length=255, blank=True, null=True, default=None)
@@ -259,6 +263,11 @@ class FormEntry(models.Model):
     # if user is not null, it probably means the lead was won and we invited it to breathecode
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, default=None, blank=True)
 
+    ac_expected_cohort = models.CharField(max_length=100,
+                                          null=True,
+                                          default=None,
+                                          blank=True,
+                                          help_text='Which cohort is this student expecting to join')
     ac_contact_id = models.CharField(max_length=20,
                                      null=True,
                                      default=None,
@@ -372,8 +381,9 @@ class Downloadable(models.Model):
     description = models.TextField(max_length=450)
 
     hits = models.IntegerField(default=0)
-    active = models.BooleanField(default=True, help_text="Non-active downloadables will display a message to the user")
-    
+    active = models.BooleanField(default=True,
+                                 help_text='Non-active downloadables will display a message to the user')
+
     preview_url = models.URLField()
     destination_url = models.URLField()
     destination_status = models.CharField(max_length=15, choices=DESTINATION_STATUS, default=_ACTIVE)

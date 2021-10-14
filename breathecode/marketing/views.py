@@ -15,8 +15,7 @@ from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
                                GenerateLookupsMixin, HeaderLimitOffsetPagination)
 from .serializers import (PostFormEntrySerializer, FormEntrySerializer, FormEntrySmallSerializer,
-                          TagSmallSerializer, AutomationSmallSerializer, DownloadableSerializer
-                        )
+                          TagSmallSerializer, AutomationSmallSerializer, DownloadableSerializer)
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
@@ -39,7 +38,7 @@ def get_downloadable(request, slug=None):
         if download is None:
             raise APIException(f'Document not found', 404)
 
-        if request.GET.get('raw', None) == "true":
+        if request.GET.get('raw', None) == 'true':
             return HttpResponseRedirect(redirect_to=download.destination_url)
 
         seri = DownloadableSerializer(download, many=False)
@@ -52,7 +51,7 @@ def get_downloadable(request, slug=None):
 
     active = request.GET.get('active', None)
     if active is not None:
-        if active == "true":
+        if active == 'true':
             active = True
         else:
             active = False
@@ -61,6 +60,7 @@ def get_downloadable(request, slug=None):
     items = items.order_by('created_at')
     serializer = DownloadableSerializer(items, many=True)
     return Response(serializer.data)
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -95,7 +95,7 @@ def activecampaign_webhook(request, ac_academy_id=None, academy_slug=None):
     else:
         logger.debug('One request cannot be parsed, maybe you should update `ActiveCampaign'
                      '.add_webhook_to_log`')
-        logger.debug(request.data)
+        #logger.debug(request.data)
 
     # async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')

@@ -3,7 +3,7 @@ from celery import shared_task, Task
 from django.db.models import F
 from breathecode.services.activecampaign import ActiveCampaign
 from .models import FormEntry, ShortLink, ActiveCampaignWebhook
-from .actions import register_new_lead, save_get_geolocal
+from .actions import register_new_lead, save_get_geolocal, acp_ids
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ def async_activecampaign_webhook(self, webhook_id):
     if ac_academy is not None:
         try:
             client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
-            client.execute_action(webhook_id)
+            client.execute_action(webhook_id, acp_ids)
         except Exception as e:
             logger.debug(f'ActiveCampaign Webhook Exception')
             logger.debug(str(e))

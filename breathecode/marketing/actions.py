@@ -25,12 +25,13 @@ acp_ids = {
     'utm_location': '18',
     'course': '2',
     'client_comments': '13',
-    'current_download': '46', # use in downloadables
+    'current_download': '46',  # use in downloadables
     'utm_language': '16',
     'utm_country': '19',
     'gclid': '26',
     'referral_key': '27',
     'utm_campaign': '33',
+    'expected_cohort': '10'
 }
 
 
@@ -81,6 +82,7 @@ def get_lead_automations(ac_academy, form_entry):
 
     logger.debug(f'found {str(count)} automations')
     return automations.values_list('acp_id', flat=True)
+
 
 def add_to_active_campaign(contact, academy_id: int, automation_id: int):
     if not ActiveCampaignAcademy.objects.filter(academy__id=academy_id).count():
@@ -142,10 +144,16 @@ def register_new_lead(form_entry=None):
 
     ac_academy = None
     alias = AcademyAlias.objects.filter(active_campaign_slug=form_entry['location']).first()
-    if alias is not None and alias.academy.activecampaignacademy is not None:
-        ac_academy = alias.academy.activecampaignacademy
-    else:
+
+    try:
+        if alias is not None:
+            ac_academy = alias.academy.activecampaignacademy
+    except:
+        pass
+
+    if ac_academy is None:
         ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry['location']).first()
+
     if ac_academy is None:
         raise Exception(f"No academy found with slug {form_entry['location']}")
 

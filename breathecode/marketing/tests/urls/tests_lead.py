@@ -118,6 +118,7 @@ class LeadTestSuite(MarketingTestCase):
                 'sentiment': None,
                 'ac_contact_id': None,
                 'ac_deal_id': None,
+                'ac_expected_cohort': None,
                 'won_at': None,
                 'contact': None,
                 'academy': None,
@@ -168,6 +169,7 @@ class LeadTestSuite(MarketingTestCase):
             'user_id': None,
             'ac_contact_id': None,
             'ac_deal_id': None,
+            'ac_expected_cohort': None,
             'won_at': None
         }])
 
@@ -246,6 +248,7 @@ class LeadTestSuite(MarketingTestCase):
                 'sentiment': data['sentiment'],
                 'ac_contact_id': None,
                 'ac_deal_id': None,
+                'ac_expected_cohort': None,
                 'won_at': None,
                 'contact': None,
                 'academy': None,
@@ -295,6 +298,7 @@ class LeadTestSuite(MarketingTestCase):
             'user_id': None,
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
+            'ac_expected_cohort': None,
             'won_at': json['won_at']
         }])
 
@@ -357,6 +361,7 @@ class LeadTestSuite(MarketingTestCase):
                 'sentiment': data['sentiment'],
                 'ac_contact_id': None,
                 'ac_deal_id': None,
+                'ac_expected_cohort': None,
                 'won_at': None,
                 'contact': None,
                 'academy': 1,
@@ -406,6 +411,7 @@ class LeadTestSuite(MarketingTestCase):
             'user_id': None,
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
+            'ac_expected_cohort': None,
             'won_at': json['won_at']
         }])
 
@@ -470,6 +476,7 @@ class LeadTestSuite(MarketingTestCase):
                 'sentiment': data['sentiment'],
                 'ac_contact_id': None,
                 'ac_deal_id': None,
+                'ac_expected_cohort': None,
                 'won_at': None,
                 'contact': None,
                 'academy': 1,
@@ -519,6 +526,7 @@ class LeadTestSuite(MarketingTestCase):
             'user_id': None,
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
+            'ac_expected_cohort': None,
             'won_at': json['won_at']
         }])
 
@@ -585,6 +593,7 @@ class LeadTestSuite(MarketingTestCase):
                 'sentiment': data['sentiment'],
                 'ac_contact_id': None,
                 'ac_deal_id': None,
+                'ac_expected_cohort': None,
                 'won_at': None,
                 'contact': None,
                 'academy': 2,
@@ -634,5 +643,6 @@ class LeadTestSuite(MarketingTestCase):
             'user_id': None,
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
+            'ac_expected_cohort': None,
             'won_at': json['won_at']
         }])

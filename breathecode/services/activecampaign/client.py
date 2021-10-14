@@ -1,6 +1,7 @@
 import requests, json
 from requests.auth import HTTPBasicAuth
 import breathecode.services.activecampaign.actions as actions
+from breathecode.utils import APIException
 import logging, re, os, json, inspect, urllib
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class ActiveCampaign:
         self.token = token
         self.headers = {'Authorization': f'Bearer {token}'}
 
-    def execute_action(self, webhook_id: int):
+    def execute_action(self, webhook_id: int, acp_ids: dict):
         # wonderful way to fix one poor mocking system
         import requests
 
@@ -53,7 +54,7 @@ class ActiveCampaign:
             fn = getattr(actions, action)
 
             try:
-                fn(self, webhook, json.loads(webhook.payload))
+                fn(self, webhook, json.loads(webhook.payload), acp_ids)
                 logger.debug('Mark active campaign action as done')
                 webhook.status = 'DONE'
                 webhook.status_text = 'OK'
@@ -101,6 +102,31 @@ class ActiveCampaign:
         webhook.save()
 
         return webhook
+
+    def get_deal(self, deal_id):
+        #/api/3/deals/id
+        #Api-Token
+        resp = requests.get(f'{self.host}/api/3/deals/{deal_id}', headers={'Api-Token': self.token})
+        logger.debug(f'Get deal {self.host}/api/3/deals/{deal_id}', resp.status_code)
+        return resp.json()
+
+    def get_deal_customfields(self, deal_id):
+        #/api/3/deals/id
+        #Api-Token
+        resp = requests.get(f'{self.host}/api/3/deals/{deal_id}/dealCustomFieldData',
+                            headers={'Api-Token': self.token})
+        logger.debug(
+            f'Get custom fields {self.host}/api/3/deals/{deal_id}/dealCustomFieldData with status {str(resp.status_code)}'
+        )
+
+        if resp.status_code == 200:
+            data = resp.json()
+            _reponse = {}
+            for field in data['dealCustomFieldData']:
+                _reponse[str(field['customFieldId'])] = field['fieldValue']
+            return _reponse
+
+        return None
 
 
 class Contacts(object):

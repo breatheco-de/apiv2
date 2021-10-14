@@ -486,7 +486,7 @@ class MaskingUrlView(APIView):
         if media_id:
             lookups['id'] = media_id
         elif media_slug:
-            lookups['slug'] = media_slug
+            lookups['slug'] = media_slug.split('.')[0]  #ignore extesion
 
         width = request.GET.get('width')
         height = request.GET.get('height')
