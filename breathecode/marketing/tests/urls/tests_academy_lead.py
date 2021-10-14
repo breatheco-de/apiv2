@@ -169,6 +169,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'ac_expected_cohort': model.form_entry.ac_expected_cohort,
             'user': None,
         }]
 
@@ -239,6 +240,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'ac_expected_cohort': model.form_entry.ac_expected_cohort,
             'user': None,
         }]
 
@@ -309,6 +311,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'ac_expected_cohort': model.form_entry.ac_expected_cohort,
             'user': None,
         }]
 
@@ -379,6 +382,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'ac_expected_cohort': model.form_entry.ac_expected_cohort,
             'user': None,
         }]
 
@@ -448,6 +452,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'ac_expected_cohort': model.form_entry.ac_expected_cohort,
             'user': None,
         }]
 
@@ -517,6 +522,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model.form_entry.utm_medium,
             'utm_source': model.form_entry.utm_source,
             'utm_url': model.form_entry.utm_url,
+            'ac_expected_cohort': model.form_entry.ac_expected_cohort,
             'user': None,
         }]
 
@@ -640,6 +646,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': model['form_entry'].utm_medium,
             'utm_source': model['form_entry'].utm_source,
             'utm_url': model['form_entry'].utm_url,
+            'ac_expected_cohort': model['form_entry'].ac_expected_cohort,
             'created_at': self.datetime_to_iso(model['form_entry'].created_at),
             'user': None,
         } for model in ordened_models][:100]
@@ -697,6 +704,7 @@ class CohortUserTestSuite(MarketingTestCase):
                 'utm_medium': model['form_entry'].utm_medium,
                 'utm_source': model['form_entry'].utm_source,
                 'utm_url': model['form_entry'].utm_url,
+                'ac_expected_cohort': model['form_entry'].ac_expected_cohort,
                 'created_at': self.datetime_to_iso(model['form_entry'].created_at),
                 'user': None,
             } for model in ordened_models][:5],
@@ -753,6 +761,7 @@ class CohortUserTestSuite(MarketingTestCase):
                 'utm_medium': model['form_entry'].utm_medium,
                 'utm_source': model['form_entry'].utm_source,
                 'utm_url': model['form_entry'].utm_url,
+                'ac_expected_cohort': model['form_entry'].ac_expected_cohort,
                 'created_at': self.datetime_to_iso(model['form_entry'].created_at),
                 'user': None,
             } for model in ordened_models][5:],
@@ -849,6 +858,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': models[0].form_entry.utm_medium,
             'utm_source': models[0].form_entry.utm_source,
             'utm_url': models[0].form_entry.utm_url,
+            'ac_expected_cohort': models[0].form_entry.ac_expected_cohort,
             'user': None,
         }]
 
@@ -906,6 +916,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': models[0].form_entry.utm_medium,
             'utm_source': models[0].form_entry.utm_source,
             'utm_url': models[0].form_entry.utm_url,
+            'ac_expected_cohort': models[0].form_entry.ac_expected_cohort,
             'user': None,
         }]
 
@@ -964,6 +975,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': models[0].form_entry.utm_medium,
             'utm_source': models[0].form_entry.utm_source,
             'utm_url': models[0].form_entry.utm_url,
+            'ac_expected_cohort': models[0].form_entry.ac_expected_cohort,
             'user': None,
         }]
 
@@ -1020,6 +1032,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_medium': models[0].form_entry.utm_medium,
             'utm_source': models[0].form_entry.utm_source,
             'utm_url': models[0].form_entry.utm_url,
+            'ac_expected_cohort': models[0].form_entry.ac_expected_cohort,
             'user': None,
         }]
         self.assertEqual(json, expected)
