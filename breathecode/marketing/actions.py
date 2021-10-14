@@ -30,6 +30,7 @@ acp_ids = {
     'gclid': '26',
     'referral_key': '27',
     'utm_campaign': '33',
+    'expected_cohort': '10'
 }
 
 
@@ -142,10 +143,16 @@ def register_new_lead(form_entry=None):
 
     ac_academy = None
     alias = AcademyAlias.objects.filter(active_campaign_slug=form_entry['location']).first()
-    if alias is not None and alias.academy.activecampaignacademy is not None:
-        ac_academy = alias.academy.activecampaignacademy
-    else:
+
+    try:
+        if alias is not None:
+            ac_academy = alias.academy.activecampaignacademy
+    except:
+        pass
+
+    if ac_academy is None:
         ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=form_entry['location']).first()
+
     if ac_academy is None:
         raise Exception(f"No academy found with slug {form_entry['location']}")
 
@@ -182,10 +189,10 @@ def register_new_lead(form_entry=None):
     if not 'id' in form_entry:
         raise Exception('The id doesn\'t exist')
 
-    if 'utm_language' in form_entry and form_entry["utm_language"] == "us":
-        form_entry["utm_language"] = "en"
-    elif 'language' in form_entry and form_entry["language"] == "us":
-        form_entry["language"] = "en"
+    if 'utm_language' in form_entry and form_entry['utm_language'] == 'us':
+        form_entry['utm_language'] = 'en'
+    elif 'language' in form_entry and form_entry['language'] == 'us':
+        form_entry['language'] = 'en'
 
     contact = {
         'email': form_entry['email'],

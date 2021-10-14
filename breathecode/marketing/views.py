@@ -62,7 +62,7 @@ def activecampaign_webhook(request, ac_academy_id=None, academy_slug=None):
     else:
         logger.debug('One request cannot be parsed, maybe you should update `ActiveCampaign'
                      '.add_webhook_to_log`')
-        logger.debug(request.data)
+        #logger.debug(request.data)
 
     # async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')

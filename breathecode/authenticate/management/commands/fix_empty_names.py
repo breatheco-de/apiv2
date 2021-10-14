@@ -33,6 +33,7 @@ class Command(BaseCommand):
         logger.debug(f'Found {students_to_sync.count()} User\'s to sync')
         for stu in students_to_sync:
             if stu.user is None:
+                logger.debug(f'Skip {stu.first_name} {stu.last_name} because it has not user object')
                 continue
 
             if stu.first_name is not None and len(stu.first_name) > 0:

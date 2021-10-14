@@ -256,6 +256,11 @@ class FormEntry(models.Model):
     # if user is not null, it probably means the lead was won and we invited it to breathecode
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, default=None, blank=True)
 
+    ac_expected_cohort = models.CharField(max_length=100,
+                                          null=True,
+                                          default=None,
+                                          blank=True,
+                                          help_text='Which cohort is this student expecting to join')
     ac_contact_id = models.CharField(max_length=20,
                                      null=True,
                                      default=None,

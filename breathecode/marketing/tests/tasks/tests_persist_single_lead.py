@@ -428,6 +428,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(self.all_form_entry_dict(), [{
             'ac_contact_id': '1',
             'ac_deal_id': None,
+            'ac_expected_cohort': None,
             'academy_id': 1,
             'automations': '',
             'browser_lang': None,
@@ -588,6 +589,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(self.all_form_entry_dict(), [{
             'ac_contact_id': '1',
             'ac_deal_id': model['form_entry'].ac_deal_id,
+            'ac_expected_cohort': None,
             'academy_id': model['form_entry'].academy_id,
             'automations': model['form_entry'].automations,
             'browser_lang': model['form_entry'].browser_lang,
