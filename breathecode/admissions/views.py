@@ -21,7 +21,7 @@ from .serializers import (AcademySerializer, GetSyllabusSerializer, SpecialtyMod
                           CohortUserSerializer, GetCohortUserSerializer, CohortUserPUTSerializer,
                           CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
                           GetSpecialtyModeSerializer, GetSyllabusVersionSerializer, SyllabusVersionSerializer,
-                          GetBigAcademySerializer, AcademyReportSerializer)
+                          GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer)
 from .models import (Academy, AcademySpecialtyMode, SpecialtyModeTimeSlot, CohortTimeSlot, CohortUser,
                      SpecialtyMode, Cohort, Country, STUDENT, DELETED, Syllabus, SyllabusVersion)
 from breathecode.authenticate.models import ProfileAcademy
@@ -83,7 +83,7 @@ def get_cohorts(request, id=None):
 
     items = items.order_by(sort)
 
-    serializer = GetCohortSerializer(items, many=True)
+    serializer = PublicCohortSerializer(items, many=True)
 
     return Response(serializer.data)
 

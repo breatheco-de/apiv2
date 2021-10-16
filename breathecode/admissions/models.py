@@ -219,6 +219,10 @@ class Cohort(models.Model):
     private = models.BooleanField(default=False)
     never_ends = models.BooleanField(default=False)
 
+    remote_available = models.BooleanField(
+        default=True, help_text='True (default) if the students from other cities can take it from home')
+    online_meeting_url = models.URLField(max_length=255, blank=True, default=None, null=True)
+
     timezone = models.CharField(max_length=50, null=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
