@@ -72,17 +72,17 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
 
     _issue = Issue.objects.filter(github_number=issue_id).first()
 
-    if _issue.status in ['DONE', 'IGNORED'] and incoming_github_action not in ['reopened']:
-        logger.debug(
-            f'Ignoring changes to this issue {issue_id} because status is {_issue.status} and its not being reponened: {_issue.title}'
-        )
-        return _issue
-
     if _issue is None:
         _issue = Issue(
             title='Untitled',
             github_number=issue_id,
         )
+
+    if _issue.status in ['DONE', 'IGNORED'] and incoming_github_action not in ['reopened']:
+        logger.debug(
+            f'Ignoring changes to this issue {issue_id} because status is {_issue.status} and its not being reponened: {_issue.title}'
+        )
+        return _issue
 
     _issue.title = issue['title'][:255]
     _issue.body = issue['body'][:500]
