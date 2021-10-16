@@ -30,6 +30,8 @@ def get_status(content):
 def update_status_based_on_github_action(github_action, issue):
     # Possible github action:
     # opened, edited, deleted, pinned, unpinned, closed, reopened, assigned, unassigned, labeled, unlabeled, locked, unlocked, transferred, milestoned, or demilestoned.
+    if issue is None:
+        return 'DRAFT'
 
     if issue.status == 'IGNORED':
         return 'IGNORED'
