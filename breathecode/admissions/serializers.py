@@ -705,6 +705,19 @@ class SpecialtyModeSerializer(serializers.ModelSerializer):
         exclude = ()
 
 
+class SpecialtyModePUTSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+    slug = serializers.SlugField(required=False)
+    name = serializers.CharField(required=False)
+    schedule_type = serializers.CharField(required=False)
+    description = serializers.CharField(required=False)
+    syllabus = serializers.IntegerField(required=False)
+
+    class Meta:
+        model = SpecialtyMode
+        exclude = ()
+
+
 class SpecialtyModeTimeSlotSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpecialtyModeTimeSlot
