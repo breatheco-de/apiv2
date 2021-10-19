@@ -1,7 +1,7 @@
 {% extends "base.txt" %}
 {% block content %}
 
-Student {{ FULL_NAME }} from {{ ACADEMY }} just have negative answer (score {{ SCORE }}) for this question: {{ QUESTION }} 
+Student {{ FULL_NAME }} from {{ ACADEMY }} just have negative answer (score {{ SCORE }}) for this question: {{ QUESTION }}
 
 Student comments: {{ COMMENTS }}
 

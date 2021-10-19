@@ -13,6 +13,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='review',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('REQUESTED', 'Requested'), ('DONE', 'Done'), ('IGNORE', 'Ignore')], default='PENDING', help_text='Deleted reviews hav status=Ignore', max_length=9),
+            field=models.CharField(choices=[('PENDING', 'Pending'), ('REQUESTED', 'Requested'),
+                                            ('DONE', 'Done'), ('IGNORE', 'Ignore')],
+                                   default='PENDING',
+                                   help_text='Deleted reviews hav status=Ignore',
+                                   max_length=9),
         ),
     ]

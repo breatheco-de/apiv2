@@ -26,13 +26,13 @@ class AnswerTestSuite(FeedbackTestCase):
 
         model = self.generate_models(authenticate=True,
                                      answer=True,
-                                     profile_academy=True, 
+                                     profile_academy=True,
                                      answer_status='ANSWERED',
                                      answer_score=8)
 
         # try:
         average = get_student_answer_avg(model['user'].id, model['answer'].cohort.id)
         # except Exception as e:
-            # self.assertEquals(str(e), 'without-cohort-or-cannot-determine-cohort')
+        # self.assertEquals(str(e), 'without-cohort-or-cannot-determine-cohort')
 
         self.assertEqual(average, model['answer'].score)
