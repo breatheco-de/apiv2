@@ -239,6 +239,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'logo': 'a',
             'private': not model.syllabus.private,
         }
+        print(data, self.all_syllabus_dict())
         response = self.client.put(url, data, format='json')
         json = response.json()
         expected = {

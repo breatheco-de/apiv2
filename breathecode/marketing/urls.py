@@ -20,7 +20,6 @@ urlpatterns = [
     path('academy/automation', AcademyAutomationView.as_view(), name='academy_automation'),
     path('facebook/lead', receive_facebook_lead, name='facebook_all'),
     path('report/lead', get_leads_report, name='report_lead'),
-    
     path('downloadable', get_downloadable, name='downloadable'),
     path('downloadable/<str:slug>', get_downloadable, name='single_downloadable'),
 

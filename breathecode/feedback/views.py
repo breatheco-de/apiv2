@@ -260,10 +260,11 @@ def get_review_platform(request, platform_slug=None):
             serializer = ReviewPlatformSerializer(items, many=False)
             return Response(serializer.data)
         else:
-            raise ValidationException("Review platform not found", slug="reivew_platform_not_found", code=404)
+            raise ValidationException('Review platform not found', slug='reivew_platform_not_found', code=404)
     else:
         serializer = ReviewPlatformSerializer(rp, many=True)
         return Response(serializer.data)
+
 
 class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
@@ -292,7 +293,7 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if 'platform' in self.request.GET:
             param = self.request.GET.get('platform')
-            lookup['platform__slug'] = param;
+            lookup['platform__slug'] = param
 
         if 'cohort' in self.request.GET:
             param = self.request.GET.get('cohort')
@@ -351,7 +352,7 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         items = Review.objects.filter(**lookups, academy__id=academy_id)
 
         for item in items:
-            item.status = "IGNORE"
+            item.status = 'IGNORE'
             item.save()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)

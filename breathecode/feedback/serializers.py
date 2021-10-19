@@ -40,13 +40,15 @@ class UserSerializer(serpy.Serializer):
 
         return GetProfileSmallSerializer(obj.profile).data
 
+
 class GithubSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     avatar_url = serpy.Field()
     name = serpy.Field()
     username = serpy.Field()
-    
+
+
 class UserSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -125,11 +127,13 @@ class BigAnswerSerializer(serpy.Serializer):
     mentor = UserSerializer(required=False)
     event = EventTypeSmallSerializer(required=False)
 
+
 class ReviewPlatformSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     website = serpy.Field()
-    
+
+
 class ReviewSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     total_rating = serpy.Field()
@@ -264,22 +268,22 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
 
         return result
 
-class ReviewPUTSerializer(serializers.ModelSerializer):
 
+class ReviewPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        exclude = ('created_at','updated_at', 'author', 'platform')
+        exclude = ('created_at', 'updated_at', 'author', 'platform')
 
     def validate(self, data):
 
         if 'cohort' in data:
             raise ValidationException(
                 'The cohort cannot be updated in a review, please create a new review instead.')
-        
+
         if 'author' in data:
             raise ValidationException(
                 'The author cannot be updated in a review, please create a new review instead.')
-        
+
         if 'platform' in data:
             raise ValidationException(
                 'The platform cannot be updated in a review, please create a new review instead.')

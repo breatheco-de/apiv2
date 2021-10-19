@@ -15,18 +15,18 @@ from django.utils import timezone
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
 
-ADMIN_URL = os.getenv('ADMIN_URL', "")
-SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', "")
+ADMIN_URL = os.getenv('ADMIN_URL', '')
+SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', '')
 
 
 def get_student_answer_avg(user_id, cohort_id=None, academy_id=None):
 
     answers = Answer.objects.filter(user__id=user_id, status='ANSWERED', score__isnull=False)
-    
+
     # optionally filter by cohort
     if cohort_id is not None:
         answers = answers.filter(cohort__id=cohort_id)
-    
+
     # optionally filter by academy
     if academy_id is not None:
         answers = answers.filter(academy__id=academy_id)
@@ -34,6 +34,7 @@ def get_student_answer_avg(user_id, cohort_id=None, academy_id=None):
     query = answers.aggregate(average=Avg('score'))
 
     return query['average']
+
 
 class BaseTaskWithRetry(Task):
     autoretry_for = (Exception, )
@@ -186,27 +187,26 @@ def process_student_graduation(self, cohort_id, user_id):
     # If the user gave us a rating >7 we should create reviews for each review platform with status "pending"
     average = get_student_answer_avg(user_id, cohort_id)
     if average is None or average >= 8:
-        total_reviews = Review.objects.filter(cohort=cohort,author=user,).count()
+        total_reviews = Review.objects.filter(
+            cohort=cohort,
+            author=user,
+        ).count()
         if total_reviews > 0:
-            logger.debug(f'No new reviews will be requested, student already has pending requests for this cohort')
+            logger.debug(
+                f'No new reviews will be requested, student already has pending requests for this cohort')
             return False
 
         platforms = ReviewPlatform.objects.all()
-        logger.debug(f'{platforms.count()} will be requested for student {user.id}, avg NPS score of {average}')
+        logger.debug(
+            f'{platforms.count()} will be requested for student {user.id}, avg NPS score of {average}')
         for plat in platforms:
-            review = Review(
-                cohort=cohort,
-                author=user,
-                platform=plat
-            )
+            review = Review(cohort=cohort, author=user, platform=plat)
             review.save()
 
         return True
 
-
     logger.debug(f'No reviews requested for student {user.id} because average NPS score is {average}')
     return False
-
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
@@ -219,7 +219,7 @@ def process_answer_received(self, answer_id):
     logger.debug('Starting notify_bad_nps_score')
     answer = Answer.objects.filter(id=answer_id).first()
     if answer is None:
-        raise ValidationException("Answer not found")
+        raise ValidationException('Answer not found')
 
     if answer.survey is not None:
         survey_score = Answer.objects.filter(survey=answer.survey).aggregate(Avg('score'))
@@ -228,14 +228,16 @@ def process_answer_received(self, answer_id):
 
     if answer.score < 8:
         # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
-        send_email_message("negative_answer", [SYSTEM_EMAIL, answer.academy.feedback_email], data={
-            "SUBJECT": f"A student answered with a bad NPS score at {answer.academy.name}",
-            "FULL_NAME": answer.user.first_name + " " + answer.user.last_name,
-            "QUESTION": answer.title,
-            "SCORE": answer.score,
-            "COMMENTS": answer.comment,
-            "ACADEMY": answer.academy.name,
-            "LINK": f"{ADMIN_URL}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}"
-        })
+        send_email_message('negative_answer', [SYSTEM_EMAIL, answer.academy.feedback_email],
+                           data={
+                               'SUBJECT': f'A student answered with a bad NPS score at {answer.academy.name}',
+                               'FULL_NAME': answer.user.first_name + ' ' + answer.user.last_name,
+                               'QUESTION': answer.title,
+                               'SCORE': answer.score,
+                               'COMMENTS': answer.comment,
+                               'ACADEMY': answer.academy.name,
+                               'LINK':
+                               f'{ADMIN_URL}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
+                           })
 
     return True

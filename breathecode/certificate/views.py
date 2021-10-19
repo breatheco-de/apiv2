@@ -144,7 +144,6 @@ class CertificateCohortView(APIView):
                     f'The cohort has no syllabus assigned, please set a syllabus for cohort: {cohort.name}',
                     slug='cohort-has-no-syllabus-version-assigned')
 
-
             else:
                 cohort__users.append(cohort_user)
 

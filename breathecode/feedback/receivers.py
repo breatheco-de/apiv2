@@ -19,6 +19,7 @@ def answer_received(sender, instance, **kwargs):
     logger.debug('Answer received, calling task process_answer_received')
     process_answer_received.delay(instance.id)
 
+
 @receiver(student_graduated, sender=CohortUser)
 def post_save_cohort_user(sender, instance, **kwargs):
     logger.debug('Received student_graduated signal')

@@ -249,6 +249,23 @@ class GetCohortSerializer(serpy.Serializer):
     academy = GetAcademySerializer()
 
 
+class PublicCohortSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    never_ends = serpy.Field()
+    private = serpy.Field()
+    language = serpy.Field()
+    kickoff_date = serpy.Field()
+    ending_date = serpy.Field()
+    remote_available = serpy.Field()
+    specialty_mode = GetSmallSpecialtyModeSerializer(required=False)
+    syllabus_version = SyllabusVersionSmallSerializer(required=False)
+    academy = GetAcademySerializer()
+
+
 class GetSmallCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -683,6 +700,19 @@ class CohortTimeSlotSerializer(serializers.ModelSerializer):
 
 
 class SpecialtyModeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SpecialtyMode
+        exclude = ()
+
+
+class SpecialtyModePUTSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+    slug = serializers.SlugField(required=False)
+    name = serializers.CharField(required=False)
+    schedule_type = serializers.CharField(required=False)
+    description = serializers.CharField(required=False)
+    syllabus = serializers.IntegerField(required=False)
+
     class Meta:
         model = SpecialtyMode
         exclude = ()

@@ -4,10 +4,13 @@ from .serializers import BillSerializer, SmallIssueSerializer, BigBillSerializer
 from rest_framework.permissions import AllowAny
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from .actions import sync_user_issues, generate_freelancer_bill
-from .models import Bill, Freelancer, Issue
+from .actions import sync_user_issues, generate_freelancer_bill, add_webhook
+from .models import Bill, Freelancer, Issue, RepositoryIssueWebhook
+from .tasks import async_repository_issue_github
 from rest_framework.views import APIView
 from breathecode.notify.actions import get_template_content
+from breathecode.utils.validation_exception import ValidationException
+from breathecode.admissions.models import Academy
 from django.http import HttpResponse
 
 
@@ -141,3 +144,22 @@ def get_latest_bill(request, user_id=None):
 
     open_bill = generate_freelancer_bill(freelancer)
     return Response(open_bill, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+# @renderer_classes([PlainTextRenderer])
+def issue_webhook(request, academy_slug):
+
+    a = Academy.objects.filter(slug=academy_slug).first()
+    if a is None:
+        raise ValidationException(f'Academy not found (slug:{academy_slug}) ')
+
+    payload = request.data
+    webhook = add_webhook(payload, academy_slug)
+    if webhook:
+        async_repository_issue_github.delay(webhook.id)
+        return Response(payload, status=status.HTTP_200_OK)
+    else:
+        logger.debug('Error at procesing webhook from github')
+        raise ValidationException('Error at procesing webhook from github')

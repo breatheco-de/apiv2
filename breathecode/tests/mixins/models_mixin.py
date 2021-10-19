@@ -18,7 +18,7 @@ class ModelsMixin():
         # remove any field starting with __ (double underscore) because it is considered private
         without_private_keys = result.copy()
         for key in result:
-            if '__' in key:
+            if '__' in key or key.startswith('_'):
                 del without_private_keys[key]
 
         return without_private_keys
