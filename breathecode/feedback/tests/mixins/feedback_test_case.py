@@ -54,7 +54,7 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin,
                  auth=('api', os.environ.get('MAILGUN_API_KEY', '')),
                  data={
                      'from': f"BreatheCode <mailgun@{os.environ.get('MAILGUN_DOMAIN')}>",
-                     'to': model['user'].email,
+                     'to': [model['user'].email],
                      'subject': template['subject'],
                      'text': template['text'],
                      'html': template['html']
