@@ -61,7 +61,7 @@ class Academy(models.Model):
 
     marketing_email = models.EmailField(blank=True, null=True, default=None)
     feedback_email = models.EmailField(blank=True, null=True, default=None)
-    
+
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
@@ -221,6 +221,10 @@ class Cohort(models.Model):
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
     private = models.BooleanField(default=False)
     never_ends = models.BooleanField(default=False)
+
+    remote_available = models.BooleanField(
+        default=True, help_text='True (default) if the students from other cities can take it from home')
+    online_meeting_url = models.URLField(max_length=255, blank=True, default=None, null=True)
 
     timezone = models.CharField(max_length=50, null=True, default=None)
 

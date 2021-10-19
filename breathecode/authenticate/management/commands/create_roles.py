@@ -236,7 +236,7 @@ class Command(BaseCommand):
                     'read_member', 'read_syllabus', 'read_student', 'read_cohort', 'read_media',
                     'read_my_academy', 'read_invite', 'get_academy_token', 'crud_activity', 'read_survey',
                     'read_layout', 'read_event', 'read_certificate', 'academy_reporting', 'read_won_lead',
-                    'read_eventcheckin', 'read_review'
+                    'read_eventcheckin', 'read_review', 'read_activity'
                 ]
             },
             {
@@ -313,7 +313,11 @@ class Command(BaseCommand):
             'name': 'Homework Reviewer',
             'caps': extend(roles, ['assistant'])
         })
-        roles.append({'slug': 'teacher', 'name': 'Teacher', 'caps': extend(roles, ['assistant'])})
+        roles.append({
+            'slug': 'teacher',
+            'name': 'Teacher',
+            'caps': extend(roles, ['assistant']) + ['crud_cohort']
+        })
         roles.append({
             'slug':
             'academy_coordinator',
@@ -334,10 +338,8 @@ class Command(BaseCommand):
             extend(roles, [
                 'academy_coordinator', 'student', 'career_support', 'growth_manager', 'admissions_developer',
                 'syllabus_coordinator'
-            ]) + [
-                'crud_my_academy', 'generate_academy_token', 'send_reset_password',
-                'generate_temporal_token'
-            ]
+            ]) +
+            ['crud_my_academy', 'generate_academy_token', 'send_reset_password', 'generate_temporal_token']
         })
 
         for r in roles:

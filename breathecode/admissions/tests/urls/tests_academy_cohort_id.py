@@ -402,6 +402,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'id': model['cohort'].id,
             'kickoff_date': model['cohort'].kickoff_date,
+            'remote_available': model['cohort'].remote_available,
+            'online_meeting_url': model['cohort'].online_meeting_url,
             'language': data['language'],
             'name': data['name'],
             'never_ends': False,
