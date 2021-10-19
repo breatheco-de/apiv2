@@ -1,10 +1,10 @@
-import serpy, logging
+import serpy, logging, os
 from rest_framework import serializers
 from .models import Task
 from rest_framework.exceptions import ValidationError
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import CohortUser
-from breathecode.authenticate.models import ProfileAcademy
+from breathecode.authenticate.models import ProfileAcademy, Token
 from django.contrib.auth.models import User
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,16 @@ class TaskGETSerializer(serpy.Serializer):
     live_url = serpy.Field()
     task_type = serpy.Field()
     user = UserSmallSerializer()
+
+
+class TaskGETDeliverSerializer(TaskGETSerializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    delivery_url = serpy.MethodField()
+
+    def get_delivery_url(self, obj):
+        token, created = Token.get_or_create(obj.user, token_type='temporal')
+        return os.getenv('API_URL') + f'/v1/assignment/task/{str(obj.id)}/deliver/{token}'
 
 
 class PostTaskSerializer(serializers.ModelSerializer):
