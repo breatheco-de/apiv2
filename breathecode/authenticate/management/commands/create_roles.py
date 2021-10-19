@@ -130,6 +130,14 @@ class Command(BaseCommand):
                 'description': 'Create, update or delete academy leads'
             },
             {
+                'slug': 'read_review',
+                'description': 'Read review for a particular academy'
+            },
+            {
+                'slug': 'crud_review',
+                'description': 'Create, update or delete academy reviews'
+            },
+            {
                 'slug': 'read_media',
                 'description': 'List all the medias'
             },
@@ -216,7 +224,7 @@ class Command(BaseCommand):
                 'Academy Token',
                 'caps': [
                     'read_member', 'read_syllabus', 'read_student', 'read_cohort', 'read_media',
-                    'read_my_academy', 'read_invite', 'read_lead', 'crud_lead'
+                    'read_my_academy', 'read_invite', 'read_lead', 'crud_lead', 'read_review'
                 ]
             },
             {
@@ -228,7 +236,7 @@ class Command(BaseCommand):
                     'read_member', 'read_syllabus', 'read_student', 'read_cohort', 'read_media',
                     'read_my_academy', 'read_invite', 'get_academy_token', 'crud_activity', 'read_survey',
                     'read_layout', 'read_event', 'read_certificate', 'academy_reporting', 'read_won_lead',
-                    'read_eventcheckin'
+                    'read_eventcheckin', 'read_review'
                 ]
             },
             {
@@ -298,7 +306,7 @@ class Command(BaseCommand):
             'Growth Manager',
             'caps':
             extend(roles, ['staff', 'community_manager']) +
-            ['crud_media', 'read_activity', 'read_lead', 'read_won_lead']
+            ['crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review']
         })
         roles.append({
             'slug': 'homework_reviewer',
@@ -314,7 +322,7 @@ class Command(BaseCommand):
             'caps':
             extend(roles, ['teacher']) + [
                 'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
-                'send_reset_password', 'generate_temporal_token', 'crud_certificate'
+                'send_reset_password', 'generate_temporal_token', 'crud_certificate', 'crud_review'
             ]
         })
         roles.append({
@@ -327,7 +335,7 @@ class Command(BaseCommand):
                 'academy_coordinator', 'student', 'career_support', 'growth_manager', 'admissions_developer',
                 'syllabus_coordinator'
             ]) + [
-                'crud_member', 'crud_my_academy', 'generate_academy_token', 'send_reset_password',
+                'crud_my_academy', 'generate_academy_token', 'send_reset_password',
                 'generate_temporal_token'
             ]
         })

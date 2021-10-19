@@ -23,6 +23,13 @@ class AutomationSmallSerializer(serpy.Serializer):
     status = serpy.Field()
 
 
+class DownloadableSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    name = serpy.Field()
+    destination_url = serpy.Field()
+    preview_url = serpy.Field()
+
+
 class TagSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -68,6 +75,7 @@ class FormEntrySmallSerializer(serpy.Serializer):
     tags = serpy.Field()
     storage_status = serpy.Field()
     country = serpy.Field()
+    ac_expected_cohort = serpy.Field()
     lead_type = serpy.Field()
     created_at = serpy.Field()
     user = UserSmallSerializer(required=False)

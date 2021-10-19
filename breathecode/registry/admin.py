@@ -98,5 +98,6 @@ class AssetTechnologyAdmin(admin.ModelAdmin):
 # Register your models here.
 @admin.register(AssetAlias)
 class AssetAliasAdmin(admin.ModelAdmin):
-    search_fields = ['slug', 'asset']
+    search_fields = ['slug']
     list_display = ('slug', 'asset')
+    raw_id_fields = ['asset']

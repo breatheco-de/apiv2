@@ -93,6 +93,7 @@ class LeadTestSuite(MarketingTestCase):
                 'phone': None,
                 'course': None,
                 'client_comments': None,
+                'current_download': None,
                 'location': None,
                 'language': 'en',
                 'utm_url': None,
@@ -117,6 +118,7 @@ class LeadTestSuite(MarketingTestCase):
                 'sentiment': None,
                 'ac_contact_id': None,
                 'ac_deal_id': None,
+                'ac_expected_cohort': None,
                 'won_at': None,
                 'contact': None,
                 'academy': None,
@@ -140,6 +142,7 @@ class LeadTestSuite(MarketingTestCase):
             'phone': None,
             'course': None,
             'client_comments': None,
+            'current_download': None,
             'location': None,
             'language': 'en',
             'utm_url': None,
@@ -166,6 +169,7 @@ class LeadTestSuite(MarketingTestCase):
             'user_id': None,
             'ac_contact_id': None,
             'ac_deal_id': None,
+            'ac_expected_cohort': None,
             'won_at': None
         }])
 
@@ -219,6 +223,7 @@ class LeadTestSuite(MarketingTestCase):
                 'phone': data['phone'],
                 'course': data['course'],
                 'client_comments': data['client_comments'],
+                'current_download': None,
                 'location': data['location'],
                 'language': data['language'],
                 'utm_url': data['utm_url'],
@@ -243,6 +248,7 @@ class LeadTestSuite(MarketingTestCase):
                 'sentiment': data['sentiment'],
                 'ac_contact_id': None,
                 'ac_deal_id': None,
+                'ac_expected_cohort': None,
                 'won_at': None,
                 'contact': None,
                 'academy': None,
@@ -265,6 +271,7 @@ class LeadTestSuite(MarketingTestCase):
             'phone': json['phone'],
             'course': json['course'],
             'client_comments': json['client_comments'],
+            'current_download': json['current_download'],
             'location': json['location'],
             'language': json['language'],
             'utm_url': json['utm_url'],
@@ -291,6 +298,7 @@ class LeadTestSuite(MarketingTestCase):
             'user_id': None,
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
+            'ac_expected_cohort': None,
             'won_at': json['won_at']
         }])
 
@@ -328,6 +336,7 @@ class LeadTestSuite(MarketingTestCase):
                 'phone': data['phone'],
                 'course': data['course'],
                 'client_comments': data['client_comments'],
+                'current_download': None,
                 'location': data['location'],
                 'language': data['language'],
                 'utm_url': data['utm_url'],
@@ -352,6 +361,7 @@ class LeadTestSuite(MarketingTestCase):
                 'sentiment': data['sentiment'],
                 'ac_contact_id': None,
                 'ac_deal_id': None,
+                'ac_expected_cohort': None,
                 'won_at': None,
                 'contact': None,
                 'academy': 1,
@@ -374,6 +384,7 @@ class LeadTestSuite(MarketingTestCase):
             'phone': json['phone'],
             'course': json['course'],
             'client_comments': json['client_comments'],
+            'current_download': json['current_download'],
             'location': json['location'],
             'language': json['language'],
             'utm_url': json['utm_url'],
@@ -400,6 +411,7 @@ class LeadTestSuite(MarketingTestCase):
             'user_id': None,
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
+            'ac_expected_cohort': None,
             'won_at': json['won_at']
         }])
 
@@ -439,6 +451,7 @@ class LeadTestSuite(MarketingTestCase):
                 'phone': data['phone'],
                 'course': data['course'],
                 'client_comments': data['client_comments'],
+                'current_download': None,
                 'location': data['location'],
                 'language': data['language'],
                 'utm_url': data['utm_url'],
@@ -463,6 +476,7 @@ class LeadTestSuite(MarketingTestCase):
                 'sentiment': data['sentiment'],
                 'ac_contact_id': None,
                 'ac_deal_id': None,
+                'ac_expected_cohort': None,
                 'won_at': None,
                 'contact': None,
                 'academy': 1,
@@ -485,6 +499,7 @@ class LeadTestSuite(MarketingTestCase):
             'phone': json['phone'],
             'course': json['course'],
             'client_comments': json['client_comments'],
+            'current_download': None,
             'location': json['location'],
             'language': json['language'],
             'utm_url': json['utm_url'],
@@ -511,6 +526,7 @@ class LeadTestSuite(MarketingTestCase):
             'user_id': None,
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
+            'ac_expected_cohort': None,
             'won_at': json['won_at']
         }])
 
@@ -552,6 +568,7 @@ class LeadTestSuite(MarketingTestCase):
                 'phone': data['phone'],
                 'course': data['course'],
                 'client_comments': data['client_comments'],
+                'current_download': None,
                 'location': data['location'],
                 'language': data['language'],
                 'utm_url': data['utm_url'],
@@ -576,6 +593,7 @@ class LeadTestSuite(MarketingTestCase):
                 'sentiment': data['sentiment'],
                 'ac_contact_id': None,
                 'ac_deal_id': None,
+                'ac_expected_cohort': None,
                 'won_at': None,
                 'contact': None,
                 'academy': 2,
@@ -598,6 +616,7 @@ class LeadTestSuite(MarketingTestCase):
             'phone': json['phone'],
             'course': json['course'],
             'client_comments': json['client_comments'],
+            'current_download': json['current_download'],
             'location': json['location'],
             'language': json['language'],
             'utm_url': json['utm_url'],
@@ -624,5 +643,6 @@ class LeadTestSuite(MarketingTestCase):
             'user_id': None,
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
+            'ac_expected_cohort': None,
             'won_at': json['won_at']
         }])

@@ -1,8 +1,10 @@
-import requests
+import requests, logging
 from django.shortcuts import render
 from django.utils import timezone
+from django.db.models import Q
 from django.http import HttpResponse
 from .models import Asset, AssetAlias, AssetTechnology
+from breathecode.notify.actions import send_email_message
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -14,11 +16,13 @@ from rest_framework.views import APIView
 from rest_framework import status
 from django.http import HttpResponseRedirect
 
+logger = logging.getLogger(__name__)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def redirect_gitpod(request, asset_slug):
-    alias = AssetAlias.objects.filter(slug=asset_slug).first()
+    alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
     if alias is None:
         raise ValidationException('Asset alias not found', status.HTTP_404_NOT_FOUND)
 
@@ -40,27 +44,46 @@ def get_technologies(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_readme(request, asset_slug):
-    asset = Asset.objects.filter(slug=asset_slug).first()
-    if asset is None:
-        raise ValidationException('Asset alias not found', status.HTTP_404_NOT_FOUND)
+    alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
+    if alias is None:
+        raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
 
-    return Response(asset.readme)
+    return Response(alias.asset.readme)
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_config(request, asset_slug):
-    asset = Asset.objects.filter(slug=asset_slug).first()
-    if asset is None:
-        raise ValidationException('Asset alias not found', status.HTTP_404_NOT_FOUND)
+    alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
+    if alias is None:
+        raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
 
-    response = requests.get(asset.url + '/blob/master/learn.json?raw=true')
-    if response.status_code == 404:
-        response = requests.get(asset.url + '/blob/master/bc.json?raw=true')
+    asset = alias.asset
+    main_branch = "master"
+    response = requests.head(f'{asset.url}/tree/{main_branch}', allow_redirects=False)
+    if response.status_code == 302:
+        main_branch = 'main'
+
+    try:
+        response = requests.get(f'{asset.url}/blob/{main_branch}/learn.json?raw=true')
         if response.status_code == 404:
-            raise ValidationException('Config file not found', code=404, slug='config_not_found')
+            response = requests.get(f'{asset.url}/blob/{main_branch}/bc.json?raw=true')
+            if response.status_code == 404:
+                raise ValidationException(f'Config file not found for {asset.url}',
+                                          code=404,
+                                          slug='config_not_found')
 
-    return Response(response.json())
+            return Response(response.json())
+    except Exception as e:
+        data = {
+            'MESSAGE': f'learn.json or bc.json not found or invalid for for {asset.url}',
+        }
+        send_email_message('Error fetching the exercise meta-data learn.json for {asset.slug}',
+                           to=asset.author.email,
+                           data=data)
+        raise ValidationException(f'Config file invalid or not found for {asset.url}',
+                                  code=404,
+                                  slug='config_not_found')
 
 
 # Create your views here.
@@ -73,11 +96,11 @@ class GetAssetView(APIView):
     def get(self, request, asset_slug=None):
 
         if asset_slug is not None:
-            asset = Asset.objects.filter(slug=asset_slug).first()
-            if asset is None:
+            alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
+            if alias is None:
                 raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
 
-            serializer = AssetBigSerializer(asset)
+            serializer = AssetBigSerializer(alias.asset)
             return Response(serializer.data)
 
         items = Asset.objects.all()
