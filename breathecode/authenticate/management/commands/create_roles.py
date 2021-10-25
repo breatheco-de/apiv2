@@ -62,6 +62,12 @@ class Command(BaseCommand):
                 'description': 'Read assigment information'
             },
             {
+                'slug':
+                'read_assignment_sensitive_details',
+                'description':
+                'The mentor in residence is allowed to see aditional info about the task, like the "delivery url"'
+            },
+            {
                 'slug': 'crud_assignment',
                 'description': 'Update assignments'
             },
@@ -326,7 +332,8 @@ class Command(BaseCommand):
             'caps':
             extend(roles, ['teacher']) + [
                 'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
-                'send_reset_password', 'generate_temporal_token', 'crud_certificate', 'crud_review'
+                'send_reset_password', 'generate_temporal_token', 'crud_certificate', 'crud_review',
+                'read_assignment_sensitive_details',
             ]
         })
         roles.append({

@@ -7,6 +7,22 @@ logger = logging.getLogger(__name__)
 HOST = os.environ.get('OLD_BREATHECODE_API')
 
 
+def deliver_task(github_url, live_url=None, task_id=None, task=None):
+
+    if task is None:
+        task = Task.objects.filter(id=task_id).first()
+        if task is None:
+            raise ValidationException('Invalid or missing task id')
+
+    task.github_url = github_url
+    task.live_url = live_url
+    task.task_status = 'DONE'
+    task.revision_status = 'PENDING'  #we have to make it pending so the teachers reviews again
+    task.save()
+
+    return task
+
+
 def sync_student_tasks(user, cohort=None):
 
     if cohort is None:
