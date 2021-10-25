@@ -58,6 +58,10 @@ class TaskTeacherView(APIView):
             else:
                 items = items.filter(user__cohortuser__cohort__slug__in=ids, user__cohortuser__role='STUDENT')
 
+        edu_status = request.GET.get('edu_status', None)
+        if edu_status is not None:
+            items = items.filter(user__cohortuser__educational_status__in=edu_status.split(','))
+
         # tasks from users that belong to these cohort
         teacher = request.GET.get('teacher', None)
         if teacher is not None:

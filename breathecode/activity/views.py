@@ -396,7 +396,8 @@ def add_student_activity(user, data, academy_id):
             _query = _query.filter(slug=data['cohort'])
 
         if not _query.exists():
-            raise ValidationException(f"Cohort {str(data['cohort'])} doesn't exist in this academy", slug='cohort-not-exists')
+            raise ValidationException(f"Cohort {str(data['cohort'])} doesn't exist in this academy",
+                                      slug='cohort-not-exists')
 
     fields = {
         **data,
@@ -422,7 +423,9 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
                                                 user__id=student_id,
                                                 cohort__academy__id=academy_id).first()
         if cohort_user is None:
-            raise ValidationException(f'There is not student with that ID that belongs to any cohort within your academy', slug='student-no-cohort')
+            raise ValidationException(
+                f'There is not student with that ID that belongs to any cohort within your academy',
+                slug='student-no-cohort')
 
         kwargs = {'kind': 'student_activity'}
 
@@ -489,16 +492,18 @@ class StudentActivityView(APIView, HeaderLimitOffsetPagination):
         new_activities = []
         for activity in data:
 
-            if "cohort" not in activity:
-                raise ValidationException('Every activity specified for each student must have a cohort (slug)', slug='missing-cohort')
-            elif activity["cohort"].isnumeric():
+            if 'cohort' not in activity:
+                raise ValidationException(
+                    'Every activity specified for each student must have a cohort (slug)',
+                    slug='missing-cohort')
+            elif activity['cohort'].isnumeric():
                 raise ValidationException('Cohort must be a slug, not a numeric ID', slug='invalid-cohort')
 
             student_id = activity['user_id']
             del activity['user_id']
             cohort_user = CohortUser.objects.filter(role='STUDENT',
                                                     user__id=student_id,
-                                                    cohort__slug=activity["cohort"]).first()
+                                                    cohort__slug=activity['cohort']).first()
             if cohort_user is None:
                 raise ValidationException('Student not found in this cohort', slug='not-found-in-cohort')
 

@@ -98,12 +98,16 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_resend_invite_with_invitation(self):
         """Test """
         self.headers(academy=1)
+        profile_academy_kwargs = {'email': 'email@dotdotdotdot.dot'}
+        user_invite_kwargs = {'email': 'email@dotdotdotdot.dot'}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='crud_member',
                                      role='potato',
                                      syllabus=True,
-                                     user_invite=True)
+                                     user_invite=True,
+                                     profile_academy_kwargs=profile_academy_kwargs,
+                                     user_invite_kwargs=user_invite_kwargs)
         url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'pa_id': 1})
         response = self.client.put(url)
         json = response.json()
@@ -115,7 +119,13 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertToken(json['token'])
         del json['token']
         del json['invite_url']
-        expected = {'id': 1, 'status': 'PENDING', 'email': None, 'first_name': None, 'last_name': None}
+        expected = {
+            'id': 1,
+            'status': 'PENDING',
+            'email': 'email@dotdotdotdot.dot',
+            'first_name': None,
+            'last_name': None
+        }
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
         all_user_invite = [x for x in self.all_user_invite_dict() if x.pop('sent_at')]

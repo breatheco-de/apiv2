@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
 from .actions import get_bucket_object
+from .signals import student_graduated
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
 
@@ -59,6 +60,8 @@ class Academy(models.Model):
     street_address = models.CharField(max_length=250)
 
     marketing_email = models.EmailField(blank=True, null=True, default=None)
+    feedback_email = models.EmailField(blank=True, null=True, default=None)
+
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
@@ -275,6 +278,10 @@ EDU_STATUS = (
 
 
 class CohortUser(models.Model):
+    def __init__(self, *args, **kwargs):
+        super(CohortUser, self).__init__(*args, **kwargs)
+        self.__old_edu_status = self.educational_status
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
     role = models.CharField(max_length=9, choices=COHORT_ROLE, default=STUDENT)
@@ -284,6 +291,13 @@ class CohortUser(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+
+        if self.__old_edu_status != self.educational_status and self.educational_status == 'GRADUATED':
+            student_graduated.send(instance=self, sender=CohortUser)
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.
 
 
 DAILY = 'DAILY'
