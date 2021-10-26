@@ -209,6 +209,14 @@ class AcademyEventTestSuite(CypressTestCase):
                 'description': 'Create, update or delete academy leads'
             },
             {
+                'slug': 'read_review',
+                'description': 'Read review for a particular academy'
+            },
+            {
+                'slug': 'crud_review',
+                'description': 'Create, update or delete academy reviews'
+            },
+            {
                 'slug': 'read_media',
                 'description': 'List all the medias'
             },

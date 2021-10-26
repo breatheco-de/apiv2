@@ -203,7 +203,11 @@ class AuthenticateTestSuite(AuthTestCase):
                     'first_name': model['user'].first_name,
                     'id': model['user'].id,
                     'last_name': model['user'].last_name,
-                    'github': None,
+                    'github': {
+                        'avatar_url': None,
+                        'name': None,
+                        'username': None
+                    },
                     'profile': None,
                 },
             })
