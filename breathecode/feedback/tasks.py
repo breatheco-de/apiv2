@@ -7,7 +7,6 @@ from django.utils import timezone
 from breathecode.notify.actions import send_email_message, send_slack
 from .utils import strings
 from breathecode.admissions.models import CohortUser, Cohort
-from breathecode.admissions.signals import student_graduated
 from django.contrib.auth.models import User
 from .models import Survey, Answer, Review, ReviewPlatform
 from django.utils import timezone

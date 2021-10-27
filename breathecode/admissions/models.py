@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
 from .actions import get_bucket_object
-from .signals import student_graduated
+from .signals import student_edu_status_updated
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
 
@@ -294,8 +294,8 @@ class CohortUser(models.Model):
 
     def save(self, *args, **kwargs):
 
-        if self.__old_edu_status != self.educational_status and self.educational_status == 'GRADUATED':
-            student_graduated.send(instance=self, sender=CohortUser)
+        if self.__old_edu_status != self.educational_status:
+            student_edu_status_updated.send(instance=self, sender=CohortUser)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 

@@ -1,8 +1,10 @@
 import logging
 from celery import shared_task, Task
 from django.db.models import F
+from django.contrib.auth.models import User
+from breathecode.admissions.models import Cohort
 from breathecode.services.activecampaign import ActiveCampaign
-from .models import FormEntry, ShortLink, ActiveCampaignWebhook
+from .models import FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag
 from .actions import register_new_lead, save_get_geolocal, acp_ids
 
 logger = logging.getLogger(__name__)
@@ -11,7 +13,7 @@ logger = logging.getLogger(__name__)
 class BaseTaskWithRetry(Task):
     autoretry_for = (Exception, )
     #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
+    retry_kwargs = {'max_retries': 1, 'countdown': 60 * 5}
     retry_backoff = True
 
 
@@ -72,3 +74,60 @@ def async_activecampaign_webhook(self, webhook_id):
         status = 'error'
 
     logger.debug(f'ActiveCampaign webook status: {status}')
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def add_cohort_task_to_student(self, user_id, cohort_id, academy_id):
+    logger.debug('Task process_cohortuser_add started')
+
+    ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    if ac_academy is None:
+        raise Exception(f'ActiveCampaign Academy {str(academy_id)} not found')
+
+    user = User.objects.filter(id=user_id).first()
+    if user is None:
+        raise Exception(f'user with id {str(user_id)} not found')
+
+    cohort = Cohort.objects.filter(id=cohort_id).first()
+    if cohort is None:
+        raise Exception(f'Cohort {str(cohort_id)} not found')
+
+    client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+    tag = Tag.objects.filter(slug=cohort.slug, ac_academy__id=ac_academy.id).first()
+    if tag is None:
+        logger.debug(
+            f'Cohort tag {cohort.slug} does not exist in the system, the tag could not be added to the student.'
+        )
+        return True
+
+    if tag is not None:
+        contact = client.get_contact_by_email(user.email)
+        if contact is None:
+            logger.debug(f'No contact found on activecampaign, could not add cohort tag to the student')
+
+        logger.debug(f'Adding tag {tag.id} to acp contact {contact["id"]}')
+        client.add_tag_to_contact(contact['id'], tag.acp_id)
+    else:
+        return False
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def add_cohort_slug_as_acp_tag(self, cohort_id, academy_id):
+    logger.debug('Task process_cohort_add started')
+
+    ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    if ac_academy is None:
+        raise Exception(f'ActiveCampaign Academy {str(academy_id)} not found')
+
+    cohort = Cohort.objects.filter(id=cohort_id).first()
+    if cohort is None:
+        raise Exception(f'Cohort {str(cohort_id)} not found')
+
+    client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+    tag = Tag.objects.filter(slug=cohort.slug, ac_academy__id=ac_academy.id).first()
+    if tag is None:
+        data = client.create_tag(cohort.slug,
+                                 description=f'Cohort {cohort.slug} at {ac_academy.academy.slug}')
+        tag = Tag(slug=data['tag'], acp_id=data['id'], tag_type='OTHER', ac_academy=ac_academy, subscribers=0)
+        tag.save()
+        return True

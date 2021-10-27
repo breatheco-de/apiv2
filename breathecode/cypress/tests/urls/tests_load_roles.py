@@ -110,6 +110,12 @@ class AcademyEventTestSuite(CypressTestCase):
             },
             {
                 'slug':
+                'read_assignment_sensitive_details',
+                'description':
+                'The mentor in residence is allowed to see aditional info about the task, like the "delivery url"'
+            },
+            {
+                'slug':
                 'crud_my_academy',
                 'description':
                 'Read, or update your academy information (very high level, almost the academy admin)'
