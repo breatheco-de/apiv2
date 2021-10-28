@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
 from .actions import get_bucket_object
-from .signals import student_graduated
+from .signals import student_edu_status_updated
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
 
@@ -61,7 +61,7 @@ class Academy(models.Model):
 
     marketing_email = models.EmailField(blank=True, null=True, default=None)
     feedback_email = models.EmailField(blank=True, null=True, default=None)
-    
+
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
@@ -222,6 +222,10 @@ class Cohort(models.Model):
     private = models.BooleanField(default=False)
     never_ends = models.BooleanField(default=False)
 
+    remote_available = models.BooleanField(
+        default=True, help_text='True (default) if the students from other cities can take it from home')
+    online_meeting_url = models.URLField(max_length=255, blank=True, default=None, null=True)
+
     timezone = models.CharField(max_length=50, null=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
@@ -290,8 +294,8 @@ class CohortUser(models.Model):
 
     def save(self, *args, **kwargs):
 
-        if self.__old_edu_status != self.educational_status and self.educational_status == 'GRADUATED':
-            student_graduated.send(instance=self, sender=CohortUser)
+        if self.__old_edu_status != self.educational_status:
+            student_edu_status_updated.send(instance=self, sender=CohortUser)
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
 

@@ -1,9 +1,10 @@
-import logging
-from django.contrib import admin
+import logging, os
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
 from django.contrib.auth.models import User
-from django.contrib import messages
+from breathecode.authenticate.models import Token
+from django.utils.html import format_html
 from .models import Task, UserProxy, CohortProxy
 from .actions import sync_student_tasks, sync_cohort_tasks
 # Register your models here.
@@ -84,6 +85,12 @@ mark_as_rejected.short_description = 'Mark revision status as REJECTED'
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
     search_fields = ['title', 'associated_slug', 'user__first_name', 'user__last_name', 'user__email']
-    list_display = ('title', 'task_type', 'associated_slug', 'task_status', 'revision_status', 'user')
+    list_display = ('title', 'task_type', 'associated_slug', 'task_status', 'revision_status', 'user',
+                    'delivery_url')
     list_filter = ['task_type', 'task_status', 'revision_status']
     actions = [mark_as_delivered, mark_as_approved, mark_as_rejected]
+
+    def delivery_url(self, obj):
+        token, created = Token.get_or_create(obj.user, token_type='temporal')
+        url = os.getenv('API_URL') + f'/v1/assignment/task/{str(obj.id)}/deliver/{token}'
+        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>deliver</a>")

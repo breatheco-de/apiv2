@@ -59,7 +59,7 @@ def get_config(request, asset_slug):
         raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
 
     asset = alias.asset
-    main_branch = "master"
+    main_branch = 'master'
     response = requests.head(f'{asset.url}/tree/{main_branch}', allow_redirects=False)
     if response.status_code == 302:
         main_branch = 'main'

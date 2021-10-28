@@ -14,14 +14,15 @@ from rest_framework.views import APIView
 from django.db.models import Q
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.contrib.auth.models import User
-from .serializers import (AcademySerializer, GetSyllabusSerializer, SpecialtyModeTimeSlotSerializer,
-                          CohortSerializer, CohortTimeSlotSerializer, GETSpecialtyModeTimeSlotSerializer,
+from .serializers import (AcademySerializer, GetSyllabusSerializer, SpecialtyModePUTSerializer,
+                          SpecialtyModeSerializer, SpecialtyModeTimeSlotSerializer, CohortSerializer,
+                          CohortTimeSlotSerializer, GETSpecialtyModeTimeSlotSerializer,
                           GETCohortTimeSlotSerializer, GetCohortSerializer, GetSyllabusVersionSerializer,
                           SyllabusSerializer, SyllabusVersionPutSerializer, SyllabusVersionSerializer,
                           CohortUserSerializer, GetCohortUserSerializer, CohortUserPUTSerializer,
                           CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
                           GetSpecialtyModeSerializer, GetSyllabusVersionSerializer, SyllabusVersionSerializer,
-                          GetBigAcademySerializer, AcademyReportSerializer)
+                          GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer)
 from .models import (Academy, AcademySpecialtyMode, SpecialtyModeTimeSlot, CohortTimeSlot, CohortUser,
                      SpecialtyMode, Cohort, Country, STUDENT, DELETED, Syllabus, SyllabusVersion)
 from breathecode.authenticate.models import ProfileAcademy
@@ -83,7 +84,7 @@ def get_cohorts(request, id=None):
 
     items = items.order_by(sort)
 
-    serializer = GetCohortSerializer(items, many=True)
+    serializer = PublicCohortSerializer(items, many=True)
 
     return Response(serializer.data)
 
@@ -857,6 +858,42 @@ class AcademySpecialtyModeView(APIView, HeaderLimitOffsetPagination, GenerateLoo
             return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_certificate')
+    def post(self, request, academy_id=None):
+        if 'syllabus' not in request.data:
+            raise ValidationException(f'Missing syllabus in the request', slug='missing-syllabus-in-request')
+
+        syllabus = Syllabus.objects.filter(id=request.data['syllabus']).exists()
+        if not syllabus:
+            raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
+
+        serializer = SpecialtyModeSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_certificate')
+    def put(self, request, certificate_id=None, certificate_slug=None, academy_id=None):
+        schedule = SpecialtyMode.objects.filter(
+            Q(id=certificate_id) | Q(slug=certificate_slug, slug__isnull=False)).first()
+        if not schedule:
+            raise ValidationException(f'Schedule not found', code=404, slug='specialty-mode-not-found')
+
+        if 'syllabus' in request.data and not Syllabus.objects.filter(
+                Q(academy_owner__id=academy_id) | Q(private=False),
+                id=request.data['syllabus'],
+        ).exists():
+            raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
+
+        serializer = SpecialtyModePUTSerializer(schedule, data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_certificate')
     def delete(self, request, academy_id=None):
         # TODO: here i don't add one single delete, because i don't know if it is required
         lookups = self.generate_lookups(request, many_fields=['id'])
@@ -939,6 +976,8 @@ class SyllabusView(APIView):
 
     @capable_of('crud_syllabus')
     def put(self, request, syllabus_id=None, syllabus_slug=None, academy_id=None):
+        print('asdasdasdasads', syllabus_id, syllabus_slug, academy_id)
+
         if 'slug' in request.data and not request.data['slug']:
             raise ValidationException('slug can\'t be empty', slug='empty-slug')
 

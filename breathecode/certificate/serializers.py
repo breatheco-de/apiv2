@@ -93,6 +93,18 @@ class CohortSmallSerializer(serpy.Serializer):
     syllabus_version = SyllabusVersionSmallSerializer(required=False, many=False)
 
 
+class CohortMidSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    kickoff_date = serpy.Field()
+    ending_date = serpy.Field()
+    specialty_mode = GetSmallSpecialtyModeSerializer(required=False, many=False)
+    syllabus_version = SyllabusVersionSmallSerializer(required=False, many=False)
+
+
 class SpecialtySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -133,7 +145,7 @@ class UserSpecialtySerializer(serpy.Serializer):
     user = UserSmallSerializer(many=False)
     specialty = SpecialtySerializer(many=False)
     academy = AcademySmallSerializer(many=False)
-    cohort = CohortSmallSerializer(required=False, many=False)
+    cohort = CohortMidSerializer(required=False, many=False)
 
     preview_url = serpy.Field()
 

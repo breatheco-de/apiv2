@@ -25,10 +25,10 @@ logger = logging.getLogger(__name__)
 
 def send_email_message(template_slug, to, data={}):
 
-    if to is None or to == "" or (isinstance(to,list) and len(to) == 0):
-        raise ValidationException(f"Invalid email to send notification to {str(to)}")
+    if to is None or to == '' or (isinstance(to, list) and len(to) == 0):
+        raise ValidationException(f'Invalid email to send notification to {str(to)}')
 
-    if isinstance(to,list) == False:
+    if isinstance(to, list) == False:
         to = [to]
 
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE':

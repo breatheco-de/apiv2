@@ -48,7 +48,8 @@ def deal_update(self, webhook, payload: dict, acp_ids):
         logger.debug(f'looking for deal on activecampaign api')
         ac_academy = entry.academy.activecampaignacademy
         fields = self.get_deal_customfields(entry.ac_deal_id)
-        entry.ac_expected_cohort = fields[acp_ids['expected_cohort']]
+        if acp_ids['expected_cohort'] in fields:
+            entry.ac_expected_cohort = fields[acp_ids['expected_cohort']]
     else:
         logger.debug(f'No academy for EntryForm, ignoring deal custom fields')
 

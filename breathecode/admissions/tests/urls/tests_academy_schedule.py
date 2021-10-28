@@ -287,3 +287,106 @@ class CertificateTestSuite(AdmissionsTestCase):
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_specialty_mode_dict(), [])
+
+    def test_academy_schedule__post__without_syllabus(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_certificate',
+                                     role='potato')
+        url = reverse_lazy('admissions:academy_schedule')
+        response = self.client.post(url)
+        json = response.json()
+        expected = {
+            'detail': 'missing-syllabus-in-request',
+            'status_code': 400,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_specialty_mode_dict(), [])
+
+    def test_academy_schedule__post__syllabus_not_found(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_certificate',
+                                     role='potato')
+        url = reverse_lazy('admissions:academy_schedule')
+        data = {'syllabus': 1}
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {
+            'detail': 'syllabus-not-found',
+            'status_code': 404,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.all_specialty_mode_dict(), [])
+
+    def test_academy_schedule__post__without_body(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     syllabus=True,
+                                     capability='crud_certificate',
+                                     role='potato')
+        url = reverse_lazy('admissions:academy_schedule')
+        data = {'syllabus': 1}
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {
+            'slug': ['This field is required.'],
+            'name': ['This field is required.'],
+            'description': ['This field is required.'],
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_specialty_mode_dict(), [])
+
+    def test_academy_schedule__post(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     syllabus=True,
+                                     capability='crud_certificate',
+                                     role='potato')
+        url = reverse_lazy('admissions:academy_schedule')
+        data = {
+            'syllabus': 1,
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'description': 'Oh my god!',
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+
+        self.assertDatetime(json['created_at'])
+        del json['created_at']
+
+        self.assertDatetime(json['updated_at'])
+        del json['updated_at']
+
+        expected = {
+            'id': 1,
+            'schedule_type': 'PART-TIME',
+            'syllabus': 1,
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_specialty_mode_dict(), [{
+            'id': 1,
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'description': 'Oh my god!',
+            'schedule_type': 'PART-TIME',
+            'syllabus_id': 1,
+        }])
