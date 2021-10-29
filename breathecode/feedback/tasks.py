@@ -166,7 +166,6 @@ def send_cohort_survey(self, user_id, survey_id):
 
     if user.email:
         send_email_message('nps_survey', user.email, data)
-        survey.sent_at = timezone.now()
 
     if hasattr(user, 'slackuser') and hasattr(survey.cohort.academy, 'slackteam'):
         send_slack('nps_survey', user.slackuser, survey.cohort.academy.slackteam, data=data)

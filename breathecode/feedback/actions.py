@@ -1,5 +1,6 @@
 from breathecode.notify.actions import send_email_message, send_slack
 import logging, random
+from django.utils import timezone
 from breathecode.utils import ValidationException
 from breathecode.authenticate.models import Token
 from .models import Answer, Survey
@@ -39,6 +40,8 @@ def send_survey_group(survey=None, cohort=None):
                 f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
             result['error'].append(
                 f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
+    survey.sent_at = timezone.now()
+    survey.save()
 
     return result
 
