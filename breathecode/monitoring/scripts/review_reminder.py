@@ -32,8 +32,9 @@ if total_reviews == 0:
 
 else:
     review_names = ('\n').join([
-        '- ' + (r.author.first_name + ' ' + r.author.last_name + ' (' + r.nps_previous_rating + '/10) for ' +
-                r.cohort.name + ' in ' + r.platform.name) for r in reviews
+        '- ' + (r.author.first_name + ' ' + r.author.last_name + ' (' +
+                str(r.nps_previous_rating if not None else '0') + '/10) for ' + r.cohort.name + ' in ' +
+                r.platform.name) for r in reviews
     ])
 
     raise ScriptNotification(
