@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
 from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey, Review, ReviewPlatform
-from .actions import send_question, send_survey_group
+from .actions import send_question, send_survey_group, create_user_graduation_reviews
 from django.utils.html import format_html
 from breathecode.utils import AdminExportCsvMixin
 
@@ -77,10 +77,20 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
 send_bulk_cohort_user_survey.short_description = 'Send General NPS Survey'
 
 
+def generate_review_requests(modeladmin, request, queryset):
+    cus = queryset.all()
+    for cu in cus:
+        create_user_graduation_reviews(cu.user, cu.cohort)
+
+
+generate_review_requests.short_description = 'Generate review requests'
+
+
 @admin.register(CohortUserProxy)
 class CohortUserAdmin(CohortUserAdmin):
     actions = [
         send_bulk_cohort_user_survey,
+        generate_review_requests,
     ]
 
 

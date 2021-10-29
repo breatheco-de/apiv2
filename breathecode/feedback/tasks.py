@@ -18,23 +18,6 @@ ADMIN_URL = os.getenv('ADMIN_URL', '')
 SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', '')
 
 
-def get_student_answer_avg(user_id, cohort_id=None, academy_id=None):
-
-    answers = Answer.objects.filter(user__id=user_id, status='ANSWERED', score__isnull=False)
-
-    # optionally filter by cohort
-    if cohort_id is not None:
-        answers = answers.filter(cohort__id=cohort_id)
-
-    # optionally filter by academy
-    if academy_id is not None:
-        answers = answers.filter(academy__id=academy_id)
-
-    query = answers.aggregate(average=Avg('score'))
-
-    return query['average']
-
-
 class BaseTaskWithRetry(Task):
     autoretry_for = (Exception, )
     #                                           seconds
@@ -173,6 +156,8 @@ def send_cohort_survey(self, user_id, survey_id):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def process_student_graduation(self, cohort_id, user_id):
+    from .actions import create_user_graduation_reviews
+
     logger.debug('Starting process_student_graduation')
 
     cohort = Cohort.objects.filter(id=cohort_id).first()
@@ -182,29 +167,9 @@ def process_student_graduation(self, cohort_id, user_id):
     if user is None:
         raise ValidationException(f'Invalid user id: {user_id}')
 
-    # If the user gave us a rating >7 we should create reviews for each review platform with status "pending"
-    average = get_student_answer_avg(user_id, cohort_id)
-    if average is None or average >= 8:
-        total_reviews = Review.objects.filter(
-            cohort=cohort,
-            author=user,
-        ).count()
-        if total_reviews > 0:
-            logger.debug(
-                f'No new reviews will be requested, student already has pending requests for this cohort')
-            return False
+    create_user_graduation_reviews(user, cohort)
 
-        platforms = ReviewPlatform.objects.all()
-        logger.debug(
-            f'{platforms.count()} will be requested for student {user.id}, avg NPS score of {average}')
-        for plat in platforms:
-            review = Review(cohort=cohort, author=user, platform=plat)
-            review.save()
-
-        return True
-
-    logger.debug(f'No reviews requested for student {user.id} because average NPS score is {average}')
-    return False
+    return True
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
