@@ -131,6 +131,14 @@ class AcademyEventTestSuite(CypressTestCase):
                 'description': 'Read academy staff member information'
             },
             {
+                'slug': 'read_shortlink',
+                'description': 'Access the list of marketing shortlinks'
+            },
+            {
+                'slug': 'crud_shortlink',
+                'description': 'Create, update and delete marketing short links'
+            },
+            {
                 'slug': 'crud_student',
                 'description': 'Create, update or delete students'
             },

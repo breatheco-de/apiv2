@@ -21,7 +21,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
         content = response.content.decode('utf-8')
 
-        self.assertNotEqual(content.find('<title>Document</title>'), -1)
+        self.assertNotEqual(content.find('<title>'), -1)
         self.assertNotEqual(content.find('Email is required'), -1)
         self.assertNotEqual(
             content.find(
@@ -49,7 +49,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
         content = response.content.decode('utf-8')
 
-        self.assertNotEqual(content.find('<title>Document</title>'), -1)
+        self.assertNotEqual(content.find('<title>'), -1)
         self.assertNotEqual(
             content.find(
                 '<label for="id_password1">Password1:</label></th><td><ul class="errorlist"><li>Ensure this value has at least 8 characters (it has 5).</li></ul>'
@@ -76,7 +76,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
         content = response.content.decode('utf-8')
 
-        self.assertNotEqual(content.find('<title>Document</title>'), -1)
+        self.assertNotEqual(content.find('<title>'), -1)
         self.assertNotEqual(content.find('Email is required'), -1)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -96,7 +96,7 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.post(url, data)
         content = response.content.decode('utf-8')
 
-        self.assertNotEqual(content.find('<title>Document</title>'), -1)
+        self.assertNotEqual(content.find('<title>'), -1)
         self.assertNotEqual(content.find('Email is required'), -1)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -632,7 +632,8 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             raise ValidationException(('Cannot be marked as `GRADUATED` if its financial '
                                        'status is `LATE`'))
 
-        has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING', task_type='PROJECT').count()
+        has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
+                                        task_type='PROJECT').exclude(revision_status='IGNORED').count()
         if is_graduated and has_tasks:
             raise ValidationException(
                 'User has tasks with status pending the educational status cannot be GRADUATED')

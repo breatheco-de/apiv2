@@ -94,8 +94,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
     def validate(self, data):
 
         user = self.context['request'].user
-        # the user cannot vote to the same entity within 5 minutes
-        # answer = Task.objects.filter(user=self.context['request'].user,id=self.context['answer']).first()
+
         if self.instance.user.id != self.context['request'].user.id:
             if 'task_status' in data and data['task_status'] != self.instance.task_status:
                 raise ValidationException('Only the task owner can modify its status')

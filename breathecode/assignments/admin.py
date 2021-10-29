@@ -75,6 +75,13 @@ def mark_as_approved(modeladmin, request, queryset):
 mark_as_approved.short_description = 'Mark revision status as APPROVED'
 
 
+def mark_as_ignored(modeladmin, request, queryset):
+    queryset.update(revision_status='IGNORED')
+
+
+mark_as_ignored.short_description = 'Mark revision status as IGNORED'
+
+
 def mark_as_rejected(modeladmin, request, queryset):
     queryset.update(revision_status='REJECTED')
 
@@ -88,7 +95,7 @@ class TaskAdmin(admin.ModelAdmin):
     list_display = ('title', 'task_type', 'associated_slug', 'task_status', 'revision_status', 'user',
                     'delivery_url')
     list_filter = ['task_type', 'task_status', 'revision_status']
-    actions = [mark_as_delivered, mark_as_approved, mark_as_rejected]
+    actions = [mark_as_delivered, mark_as_approved, mark_as_rejected, mark_as_ignored]
 
     def delivery_url(self, obj):
         token, created = Token.get_or_create(obj.user, token_type='temporal')

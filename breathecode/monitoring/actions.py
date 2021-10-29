@@ -69,7 +69,6 @@ def get_website_text(endp):
     status_text = res['status_text']
     payload = res['payload']
 
-    logger.debug(f'Tested {url} {status_code}')
     endp.last_check = timezone.now()
 
     if status_code > 399:
