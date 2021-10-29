@@ -16,12 +16,12 @@ def calculate_weeks(date_created, current_date):
 
 
 TODAY = timezone.now()
-FOUR_WEEKS_AGO = TODAY - timedelta(weeks=4)
+EIGHT_WEEKS_AGO = TODAY - timedelta(weeks=8)
 
 # Cohorts that ended no more than 4 weeks ago
 reviews = Review.objects.filter(status='PENDING',
-                                cohort__academy__id=4,
-                                cohort__ending_date__gte=FOUR_WEEKS_AGO,
+                                cohort__academy__id=academy.id,
+                                cohort__ending_date__gte=EIGHT_WEEKS_AGO,
                                 cohort__kickoff_date__lte=TODAY)
 
 # exclude cohorts that never end
@@ -38,7 +38,7 @@ else:
     ])
 
     raise ScriptNotification(
-        f'There are {str(total_reviews)} reviews to be requested because the students gave us 8 or more on NPS: '
+        f'There are {str(total_reviews)} reviews to be requested because the students gave us 8 or more on the NPS survey: '
         f'\n {review_names}',
         status='CRITICAL',
         title=f'There are {str(total_reviews)} reviews pending to be requested',
