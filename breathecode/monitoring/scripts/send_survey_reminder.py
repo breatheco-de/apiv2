@@ -22,7 +22,7 @@ cohorts = Cohort.objects.filter(academy__id=academy.id)
 cohorts = cohorts.filter(ending_date__gte=TWO_WEEKS_AGO, kickoff_date__lte=TODAY)
 
 # exclude cohorts that never end
-cohorts = cohorts.exclude(never_ends=True).exclude(stage='DELETED')
+cohorts = cohorts.exclude(never_ends=True).exclude(stage__in=['DELETED','INACTIVE'])
 
 cohorts_with_pending_surveys = []
 
