@@ -80,7 +80,16 @@ send_bulk_cohort_user_survey.short_description = 'Send General NPS Survey'
 def generate_review_requests(modeladmin, request, queryset):
     cus = queryset.all()
     for cu in cus:
-        create_user_graduation_reviews(cu.user, cu.cohort)
+        if cu.educational_status != 'GRADUATED':
+            messages.success(request, message='All selected students must have graduated')
+            return False
+
+    try:
+        for cu in cus:
+            create_user_graduation_reviews(cu.user, cu.cohort)
+            messages.success(request, message='Review request were successfully generated')
+    except:
+        messages.error(request, message='Error generating review requests')
 
 
 generate_review_requests.short_description = 'Generate review requests'

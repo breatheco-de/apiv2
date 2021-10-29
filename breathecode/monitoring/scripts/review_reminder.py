@@ -39,6 +39,6 @@ else:
 
     raise ScriptNotification(f'There are {str(total_reviews)} reviews to be requested: '
                              f'\n {review_names}',
-                             status='FATAL',
+                             status='CRITICAL',
                              title=f'There are {str(total_reviews)} reviews pending to be requested',
                              slug='cohort-have-pending-reviews')

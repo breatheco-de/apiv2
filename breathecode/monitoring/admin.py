@@ -140,6 +140,7 @@ class MonitorScriptAdmin(admin.ModelAdmin):
         colors = {
             'OPERATIONAL': 'bg-success',
             'CRITICAL': 'bg-error',
+            'FATAL': 'bg-error',  # important: this status was deprecated and deleted!
             'MINOR': 'bg-warning',
         }
         now = timezone.now()
