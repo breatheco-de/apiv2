@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from .actions import sync_user_issues, generate_freelancer_bill, add_webhook
-from .models import Bill, Freelancer, Issue, RepositoryIssueWebhook
+from .models import Bill, Freelancer, Issue, RepositoryIssueWebhook, BILL_STATUS
 from .tasks import async_repository_issue_github
 from rest_framework.views import APIView
 from breathecode.notify.actions import get_template_content
@@ -17,14 +17,30 @@ from django.http import HttpResponse
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def render_html_all_bills(request):
-    items = Bill.objects.filter(status='APPROVED')
+
+    lookup = {}
+
+    status = 'APPROVED'
+    if 'status' in request.GET:
+        status = request.GET.get('status')
+    lookup['status'] = status.upper()
+
+    if 'academy' in request.GET:
+        lookup['academy__id__in'] = request.GET.get('academy').split(',')
+
+    items = Bill.objects.filter(**lookup)
     serializer = BigBillSerializer(items, many=True)
 
     total_price = 0
     for bill in serializer.data:
         total_price += bill['total_price']
 
-    data = {'bills': serializer.data, 'total_price': total_price}
+    data = {
+        'status': status,
+        'possible_status': [s for s in BILL_STATUS],
+        'bills': serializer.data,
+        'total_price': total_price
+    }
     template = get_template_content('bills', data)
     return HttpResponse(template['html'])
 

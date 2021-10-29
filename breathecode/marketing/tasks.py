@@ -1,9 +1,11 @@
 import logging
 from celery import shared_task, Task
 from django.db.models import F
+from django.utils import timezone
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Cohort
 from breathecode.services.activecampaign import ActiveCampaign
+from breathecode.monitoring.actions import test_link
 from .models import FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag
 from .actions import register_new_lead, save_get_geolocal, acp_ids
 
@@ -43,7 +45,25 @@ def persist_single_lead(self, form_data):
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def update_link_viewcount(self, slug):
     logger.debug('Starting update_link_viewcount')
-    ShortLink.objects.filter(slug=slug).update(hits=F('hits') + 1)
+
+    sl = ShortLink.objects.filter(slug=slug).first()
+    if sl is None:
+        logger.debug(f'ShortLink with slug {slug} not found')
+        return False
+
+    sl.hits = sl.hits + 1
+    sl.lastclick_at = timezone.now()
+    sl.save()
+
+    result = test_link(url=sl.destination)
+    if result['status_code'] < 200 or result['status_code'] > 299:
+        sl.destination_status_text = result['status_text']
+        sl.destination_status = 'ERROR'
+        sl.save()
+    else:
+        sl.destination_status = 'ACTIVE'
+        sl.destination_status_text = result['status_text']
+        sl.save()
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)

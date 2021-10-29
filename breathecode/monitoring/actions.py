@@ -22,37 +22,52 @@ SCRIPT_HEADER = """
 """
 
 
-def get_website_text(endp):
-    """Make a request to get the content of the given URL."""
+def test_link(url, test_pattern=None):
 
     headers = {'User-Agent': USER_AGENT}
 
-    url = endp.url
-    status_code = 404
-    status_text = ''
-    payload = None
+    result = {
+        'url': url,
+        'status_code': 404,
+        'status_text': '',
+        'payload': None,
+    }
+
     try:
         r = requests.get(url, headers=headers, timeout=2)
         content_type = r.headers['content-type']
         length = 0
         if 'content-length' in r.headers:
             length = r.headers['content-length']
-        status_code = r.status_code
+        result['status_code'] = r.status_code
 
         # if status is one error, we should need see the status text
-        payload = r.text
+        result['payload'] = r.text
 
-        if (endp.test_pattern and not (status_code >= 200 and status_code <= 299) and int(length) > 3000):
-            status_code = 400
-            status_text = ('Timeout: The payload of this request is too long '
-                           '(more than 3 MB), remove the test_pattern to avoid timeout')
+        if (test_pattern is None and not (result['status_code'] >= 200 and result['status_code'] <= 299)
+                and int(length) > 3000):
+            result['status_code'] = 400
+            result['status_text'] = ('Timeout: The payload of this request is too long '
+                                     '(more than 3 MB), remove the test_pattern to avoid timeout')
 
     except requests.Timeout:
-        status_code = 500
-        status_text = 'Connection Timeout'
+        result['status_code'] = 500
+        result['status_text'] = 'Connection Timeout'
     except requests.ConnectionError:
-        status_code = 404
-        status_text = 'Connection Error'
+        result['status_code'] = 404
+        result['status_text'] = f'Connection Error {r.status_code}'
+
+    logger.debug(f'Tested {url} {result["status_text"]} with {r.status_code}')
+    return result
+
+
+def get_website_text(endp):
+    """Make a request to get the content of the given URL."""
+
+    res = test_link(endp.url, endp.test_pattern)
+    status_code = res['status_code']
+    status_text = res['status_text']
+    payload = res['payload']
 
     logger.debug(f'Tested {url} {status_code}')
     endp.last_check = timezone.now()

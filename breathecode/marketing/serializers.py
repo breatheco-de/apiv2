@@ -1,7 +1,11 @@
 import serpy, logging
-from .models import FormEntry, AcademyAlias
+from django.utils import timezone
+from datetime import timedelta
+from .models import FormEntry, AcademyAlias, ShortLink
+from breathecode.monitoring.actions import test_link
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
+from breathecode.utils.validation_exception import ValidationException
 
 logger = logging.getLogger(__name__)
 
@@ -10,6 +14,15 @@ class AcademySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+
+
+class ShortlinkSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    destination = serpy.Field()
+    hits = serpy.Field()
+    private = serpy.Field()
+    lastclick_at = serpy.Field()
 
 
 class UserSmallSerializer(serpy.Serializer):
@@ -105,3 +118,37 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
 
         result = super().create({**data, 'academy': academy})
         return result
+
+
+class ShortLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShortLink
+        exclude = ('academy', )
+
+    def validate(self, data):
+
+        link = ShortLink.objects.filter(slug=data['slug']).first()
+        if link is not None and self.instance is None and self.instance.id != link.id:
+            raise ValidationException(f'Shortlink with slug {data["slug"]} already exists',
+                                      slug='shortlink-already-exists')
+
+        status = test_link(data['destination'])
+        if status['status_code'] < 200 or status['status_code'] > 299:
+            raise ValidationException(f'Destination URL is invalid, returning status {status["status_code"]}')
+
+        academy = Academy.objects.filter(id=self.context['academy']).first()
+        if academy is None:
+            raise ValidationException(f'Academy {self.context["academy"]} not found',
+                                      slug='academy-not-found')
+
+        utc_now = timezone.now()
+        days_ago = self.instance.created_at + timedelta(days=1)
+        if days_ago < utc_now:
+            raise ValidationException(
+                f'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
+                slug='update-days-ago')
+
+        return {**data, 'academy': academy}
+
+    def create(self, validated_data):
+        return ShortLink.objects.create(**validated_data)

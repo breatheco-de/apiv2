@@ -312,9 +312,11 @@ class FormEntry(models.Model):
 
 _ACTIVE = 'ACTIVE'
 NOT_FOUND = 'NOT_FOUND'
+ERROR = 'ERROR'
 DESTINATION_STATUS = (
     (_ACTIVE, 'Active'),
     (NOT_FOUND, 'Not found'),
+    (ERROR, 'Error'),
 )
 
 
@@ -323,7 +325,10 @@ class ShortLink(models.Model):
     destination = models.URLField()
     hits = models.IntegerField(default=0)
     active = models.BooleanField(default=True)
+    private = models.BooleanField(default=True)
+
     destination_status = models.CharField(max_length=15, choices=DESTINATION_STATUS, default=_ACTIVE)
+    destination_status_text = models.CharField(max_length=250, default=None, blank=True, null=True)
 
     utm_content = models.CharField(max_length=250, null=True, default=None, blank=True)
     utm_medium = models.CharField(max_length=50, blank=True, null=True, default=None)
@@ -333,6 +338,11 @@ class ShortLink(models.Model):
     # Status
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    lastclick_at = models.DateTimeField(blank=True,
+                                        null=True,
+                                        default=None,
+                                        help_text='Last time a click was registered for this link')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

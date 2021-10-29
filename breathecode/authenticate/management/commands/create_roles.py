@@ -68,6 +68,14 @@ class Command(BaseCommand):
                 'The mentor in residence is allowed to see aditional info about the task, like the "delivery url"'
             },
             {
+                'slug': 'read_shortlink',
+                'description': 'Access the list of marketing shortlinks'
+            },
+            {
+                'slug': 'crud_shortlink',
+                'description': 'Create, update and delete marketing short links'
+            },
+            {
                 'slug': 'crud_assignment',
                 'description': 'Update assignments'
             },
@@ -230,7 +238,8 @@ class Command(BaseCommand):
                 'Academy Token',
                 'caps': [
                     'read_member', 'read_syllabus', 'read_student', 'read_cohort', 'read_media',
-                    'read_my_academy', 'read_invite', 'read_lead', 'crud_lead', 'read_review'
+                    'read_my_academy', 'read_invite', 'read_lead', 'crud_lead', 'read_review',
+                    'read_shortlink'
                 ]
             },
             {
@@ -242,7 +251,7 @@ class Command(BaseCommand):
                     'read_member', 'read_syllabus', 'read_student', 'read_cohort', 'read_media',
                     'read_my_academy', 'read_invite', 'get_academy_token', 'crud_activity', 'read_survey',
                     'read_layout', 'read_event', 'read_certificate', 'academy_reporting', 'read_won_lead',
-                    'read_eventcheckin', 'read_review', 'read_activity'
+                    'read_eventcheckin', 'read_review', 'read_activity', 'read_shortlink'
                 ]
             },
             {
@@ -271,9 +280,12 @@ class Command(BaseCommand):
             ]
         })
         roles.append({
-            'slug': 'career_support',
-            'name': 'Career Support Specialist',
-            'caps': extend(roles, ['staff']) + ['read_certificate', 'crud_certificate']
+            'slug':
+            'career_support',
+            'name':
+            'Career Support Specialist',
+            'caps':
+            extend(roles, ['staff']) + ['read_certificate', 'crud_certificate', 'crud_shortlink']
         })
         roles.append({
             'slug':
@@ -312,7 +324,7 @@ class Command(BaseCommand):
             'Growth Manager',
             'caps':
             extend(roles, ['staff', 'community_manager']) +
-            ['crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review']
+            ['crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink']
         })
         roles.append({
             'slug': 'homework_reviewer',
@@ -331,9 +343,18 @@ class Command(BaseCommand):
             'Mentor in residence',
             'caps':
             extend(roles, ['teacher']) + [
-                'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
-                'send_reset_password', 'generate_temporal_token', 'crud_certificate', 'crud_review',
+                'crud_syllabus',
+                'crud_cohort',
+                'crud_student',
+                'crud_survey',
+                'read_won_lead',
+                'crud_member',
+                'send_reset_password',
+                'generate_temporal_token',
+                'crud_certificate',
+                'crud_review',
                 'read_assignment_sensitive_details',
+                'crud_shortlink',
             ]
         })
         roles.append({

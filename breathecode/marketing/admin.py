@@ -211,9 +211,24 @@ class AutomationAdmin(admin.ModelAdmin, AdminExportCsvMixin):
 @admin.register(ShortLink)
 class ShortLinkAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['slug', 'destination']
-    list_display = ('id', 'slug', 'hits', 'active', 'destination_status', 'destination')
+    list_display = ('id', 'slug', 'hits', 'current_status', 'active', 'lastclick_at', 'link')
     list_filter = ['destination_status', 'active']
     actions = ['export_as_csv']
+
+    def current_status(self, obj):
+        colors = {
+            'ACTIVE': 'bg-success',
+            'ERROR': 'bg-error',
+            'NOT_FOUND': 'bg-warning',
+        }
+
+        return format_html(
+            f"<span class='badge {colors[obj.destination_status]}'>{obj.destination_status}</span>")
+
+    def link(self, obj):
+        return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>{short_link}</a>",
+                           url=f'https://s.4geeks.co/s/{obj.slug}',
+                           short_link=f'https://s.4geeks.co/s/{obj.slug}')
 
 
 def run_hook(modeladmin, request, queryset):
