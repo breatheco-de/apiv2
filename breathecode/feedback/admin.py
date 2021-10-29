@@ -154,7 +154,7 @@ send_big_cohort_bulk_survey.short_description = 'Send GENERAL BIG Survey to all 
 
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
-    list_display = ('cohort', 'status', 'duration', 'created_at', 'survey_url')
+    list_display = ('cohort', 'status', 'duration', 'sent_at', 'survey_url')
     search_fields = ['cohort__slug', 'cohort__academy__slug', 'cohort__name', 'cohort__academy__name']
     list_filter = ['status', 'cohort__academy__slug']
     raw_id_fields = ['cohort']
