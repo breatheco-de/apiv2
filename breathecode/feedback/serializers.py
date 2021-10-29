@@ -137,6 +137,7 @@ class ReviewPlatformSerializer(serpy.Serializer):
 class ReviewSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     total_rating = serpy.Field()
+    nps_previous_rating = serpy.Field()
     public_url = serpy.Field()
     status = serpy.Field()
     status_text = serpy.Field()
@@ -272,7 +273,7 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
 class ReviewPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        exclude = ('created_at', 'updated_at', 'author', 'platform')
+        exclude = ('created_at', 'updated_at', 'author', 'platform', 'nps_previous_rating')
 
     def validate(self, data):
 

@@ -88,8 +88,8 @@ def generate_review_requests(modeladmin, request, queryset):
         for cu in cus:
             create_user_graduation_reviews(cu.user, cu.cohort)
             messages.success(request, message='Review request were successfully generated')
-    except:
-        messages.error(request, message='Error generating review requests')
+    except Exception as e:
+        messages.error(request, message=str(e))
 
 
 generate_review_requests.short_description = 'Generate review requests'
@@ -187,7 +187,9 @@ class SurveyAdmin(admin.ModelAdmin):
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
     search_fields = ['author__first_name', 'author__last_name', 'author__email', 'cohort__slug']
-    list_display = ('id', 'current_status', 'author', 'cohort', 'total_rating', 'platform')
+    list_display = ('id', 'current_status', 'author', 'cohort', 'nps_previous_rating', 'total_rating',
+                    'platform')
+    readonly_fields = ['nps_previous_rating']
     list_filter = ['status', 'cohort__academy__slug', 'platform']
     raw_id_fields = ['author', 'cohort']
 

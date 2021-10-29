@@ -155,12 +155,15 @@ def get_student_answer_avg(user_id, cohort_id=None, academy_id=None):
 
     query = answers.aggregate(average=Avg('score'))
 
+    if query['average'] is not None:
+        return round(query['average'], 2)
+
     return query['average']
 
 
 def create_user_graduation_reviews(user, cohort):
 
-    # If the user gave us a rating >7 we should create reviews for each review platform with status "pending"
+    # If the user gave us a rating >=8 we should create reviews for each review platform with status "pending"
     average = get_student_answer_avg(user.id, cohort.id)
     if average is None or average >= 8:
         total_reviews = Review.objects.filter(
@@ -176,7 +179,7 @@ def create_user_graduation_reviews(user, cohort):
         logger.debug(
             f'{platforms.count()} will be requested for student {user.id}, avg NPS score of {average}')
         for plat in platforms:
-            review = Review(cohort=cohort, author=user, platform=plat)
+            review = Review(cohort=cohort, author=user, platform=plat, nps_previous_rating=average)
             review.save()
 
         return True
