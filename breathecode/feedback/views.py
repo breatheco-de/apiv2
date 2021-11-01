@@ -47,7 +47,7 @@ def get_survey_questions(request, survey_id=None):
         raise ValidationException('Survey not found', 404)
 
     utc_now = timezone.now()
-    if utc_now > survey.created_at + survey.duration:
+    if utc_now > survey.sent_at + survey.duration:
         raise ValidationException('This survey has already expired', 400)
 
     cu = CohortUser.objects.filter(cohort=survey.cohort, role='STUDENT', user=request.user).first()
