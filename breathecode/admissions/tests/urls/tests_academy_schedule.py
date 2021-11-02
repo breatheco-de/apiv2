@@ -210,7 +210,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                          capability='crud_certificate',
                                          role='potato',
                                          certificate_kwargs=certificate_kwargs,
-                                         academy_specialty_mode=True,
+                                         syllabus=True,
                                          specialty_mode=True,
                                          models=base)
             url = (reverse_lazy('admissions:academy_schedule') + f'?{field}=' +
@@ -268,7 +268,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                           capability='crud_certificate',
                                           role='potato',
                                           certificate_kwargs=certificate_kwargs,
-                                          academy_specialty_mode=True,
+                                          syllabus=True,
                                           specialty_mode=True,
                                           models=base)
 
@@ -276,7 +276,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                           capability='crud_certificate',
                                           role='potato',
                                           certificate_kwargs=certificate_kwargs,
-                                          academy_specialty_mode=True,
+                                          syllabus=True,
                                           specialty_mode=True,
                                           models=base)
 
