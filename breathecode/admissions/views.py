@@ -23,8 +23,8 @@ from .serializers import (AcademySerializer, GetSyllabusSerializer, SpecialtyMod
                           CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
                           GetSpecialtyModeSerializer, GetSyllabusVersionSerializer, SyllabusVersionSerializer,
                           GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer)
-from .models import (Academy, AcademySpecialtyMode, SpecialtyModeTimeSlot, CohortTimeSlot, CohortUser,
-                     SpecialtyMode, Cohort, Country, STUDENT, DELETED, Syllabus, SyllabusVersion)
+from .models import (Academy, SpecialtyModeTimeSlot, CohortTimeSlot, CohortUser, SpecialtyMode, Cohort,
+                     Country, STUDENT, DELETED, Syllabus, SyllabusVersion)
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -548,13 +548,11 @@ class AcademySpecialtyModeTimeSlotView(APIView, GenerateLookupsMixin):
                                       400,
                                       slug='certificate-in-body')
 
-        academy_certificate = AcademySpecialtyMode.objects.filter(specialty_mode__id=certificate_id,
-                                                                  academy__id=academy_id).first()
+        certificate = SpecialtyMode.objects.filter(id=certificate_id,
+                                                   syllabus__academy_owner__id=academy_id).first()
 
-        if certificate_id and not academy_certificate:
+        if certificate_id and not certificate:
             raise ValidationException('Certificate not found', 404, slug='certificate-not-found')
-
-        certificate = academy_certificate.specialty_mode
 
         data = {
             **request.data,
@@ -573,13 +571,11 @@ class AcademySpecialtyModeTimeSlotView(APIView, GenerateLookupsMixin):
         if 'certificate' in request.data or 'certificate_id' in request.data:
             raise ValidationException("Certificate can't be passed is the body", 400)
 
-        academy_certificate = AcademySpecialtyMode.objects.filter(specialty_mode__id=certificate_id,
-                                                                  academy__id=academy_id).first()
+        certificate = SpecialtyMode.objects.filter(id=certificate_id,
+                                                   syllabus__academy_owner__id=academy_id).first()
 
-        if certificate_id and not academy_certificate:
+        if certificate_id and not certificate:
             raise ValidationException('Certificate not found', 404, slug='certificate-not-found')
-
-        certificate = academy_certificate.specialty_mode
 
         item = SpecialtyModeTimeSlot.objects.filter(academy__id=academy_id,
                                                     specialty_mode__id=certificate_id,
@@ -901,8 +897,9 @@ class AcademySpecialtyModeView(APIView, HeaderLimitOffsetPagination, GenerateLoo
         if not lookups:
             raise ValidationException('Missing parameters in the querystring', code=400)
 
-        ids = AcademySpecialtyMode.objects.filter(academy__id=academy_id).values_list('specialty_mode_id',
-                                                                                      flat=True)
+        ids = SpecialtyMode.objects.filter(syllabus__academy_owner__id=academy_id).values_list('id',
+                                                                                               flat=True)
+
         items = SpecialtyMode.objects.filter(**lookups).filter(id__in=ids)
 
         for item in items:
@@ -920,7 +917,7 @@ def get_single_course(request, certificate_slug):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class SyllabusView(APIView):
+class SyllabusView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
@@ -950,9 +947,15 @@ class SyllabusView(APIView):
             serializer = GetSyllabusSerializer(syllabus, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        syllabus = Syllabus.objects.filter(Q(academy_owner__id=academy_id) | Q(private=False))
-        serializer = GetSyllabusSerializer(syllabus, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        items = Syllabus.objects.filter(Q(academy_owner__id=academy_id) | Q(private=False))
+
+        page = self.paginate_queryset(items, request)
+        serializer = GetSyllabusSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_syllabus')
     def post(self, request, academy_id=None):

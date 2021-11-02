@@ -169,6 +169,11 @@ REVIEW_STATUS = (
 
 class Review(models.Model):
 
+    nps_previous_rating = models.FloatField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text='Automatically calculated based on NPS survay responses')
     total_rating = models.FloatField(blank=True, null=True, default=None)
     public_url = models.URLField(blank=True, null=True, default=None)
 

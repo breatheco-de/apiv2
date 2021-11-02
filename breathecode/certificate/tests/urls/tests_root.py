@@ -182,6 +182,8 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(model.cohort.kickoff_date),
+                'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
                 'specialty_mode': {
@@ -335,6 +337,8 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(models[1].cohort.kickoff_date),
+                'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
                 'specialty_mode': {
@@ -389,6 +393,8 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(models[1].cohort.kickoff_date),
+                'ending_date': None,
                 'name': models[1].cohort.name,
                 'slug': models[1].cohort.slug,
                 'specialty_mode': {
@@ -538,6 +544,8 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(models[0].cohort.kickoff_date),
+                'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
                 'specialty_mode': {
@@ -648,6 +656,8 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(models[0].cohort.kickoff_date),
+                'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
                 'specialty_mode': {
@@ -754,6 +764,8 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(models[0].cohort.kickoff_date),
+                'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
                 'specialty_mode': {
@@ -861,6 +873,8 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(models[0].cohort.kickoff_date),
+                'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
                 'specialty_mode': {
