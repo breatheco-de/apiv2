@@ -148,6 +148,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
 
+    """
+    🔽🔽🔽 Pagination
+    """
+
     def test_certificate_with_data_without_pagination_get_just_100(self):
         """Test /certificate without auth"""
         base = self.generate_models(authenticate=True)

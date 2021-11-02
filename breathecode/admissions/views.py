@@ -920,7 +920,7 @@ def get_single_course(request, certificate_slug):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class SyllabusView(APIView):
+class SyllabusView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
@@ -950,9 +950,15 @@ class SyllabusView(APIView):
             serializer = GetSyllabusSerializer(syllabus, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        syllabus = Syllabus.objects.filter(Q(academy_owner__id=academy_id) | Q(private=False))
-        serializer = GetSyllabusSerializer(syllabus, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        items = Syllabus.objects.filter(Q(academy_owner__id=academy_id) | Q(private=False))
+
+        page = self.paginate_queryset(items, request)
+        serializer = GetSyllabusSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
     @capable_of('crud_syllabus')
     def post(self, request, academy_id=None):
