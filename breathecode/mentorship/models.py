@@ -1,25 +1,128 @@
 import re
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Syllabus
 from django.contrib.auth.models import User
 from django.db import models
 from slugify import slugify
 
-# class MentorProfile(models.Model):
-#     slug = models.SlugField(max_length=150, unique=True)
-#     name = models.CharField(max_length=150)
+DRAFT = 'DRAFT'
+ACTIVE = 'ACTIVE'
+INNACTIVE = 'INNACTIVE'
+MENTORSHIP_STATUS = (
+    (DRAFT, 'Draft'),
+    (ACTIVE, 'Active'),
+    (INNACTIVE, 'Innactive'),
+)
 
-#     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-#     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
-#     def __str__(self):
-#         return f'{self.name} ({self.id})'
+class MentorshipService(models.Model):
+    slug = models.SlugField(max_length=150, unique=True)
+    name = models.CharField(max_length=150)
 
-# class MentorshipSession(models.Model):
-#     slug = models.SlugField(max_length=150, unique=True)
-#     name = models.CharField(max_length=150)
+    status = models.CharField(max_length=15, choices=MENTORSHIP_STATUS, default=DRAFT)
 
-#     created_at = models.DateTimeField(auto_now_add=True, editable=False)
-#     updated_at = models.DateTimeField(auto_now=True, editable=False)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
-#     def __str__(self):
-#         return f'{self.name} ({self.id})'
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.name} ({self.id})'
+
+
+INVITED = 'INVITED'
+MENTOR_STATUS = (
+    (INVITED, 'Invited'),
+    (ACTIVE, 'Active'),
+    (INNACTIVE, 'Innactive'),
+)
+
+
+class MentorProfile(models.Model):
+    name = models.CharField(max_length=150, blank=True, null=True, default=None)
+
+    price_per_hour = models.FloatField()
+
+    service = models.ForeignKey(MentorshipService, on_delete=models.CASCADE)
+
+    token = models.CharField(max_length=255, unique=True, help_text='Used for the invitation')
+
+    syllabus = models.ManyToManyField(to=Syllabus,
+                                      blank=True,
+                                      null=True,
+                                      default=None,
+                                      help_text='What syllabis is this mentor going to be menting to?')
+
+    status = models.CharField(max_length=15,
+                              choices=MENTOR_STATUS,
+                              default=INVITED,
+                              help_text=f'Options are: {"".join([key for key,label in MENTOR_STATUS])}')
+
+    email = models.CharField(blank=True,
+                             max_length=150,
+                             null=True,
+                             default=None,
+                             help_text='Only use this if the user does not exist on breathecode already')
+    user = models.ForeignKey(User,
+                             on_delete=models.CASCADE,
+                             help_text='If the user does not exist, you can use the email field instead')
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        name = self.name
+        if self.user is not None and self.user.first_name is not None and self.user.first_name != '':
+            name = self.user.first_name + ' ' + self.user.last_name
+
+        return f'{name} ({self.id})'
+
+
+PENDING = 'PENDING'
+COMPLETED = 'COMPLETED'
+FAILED = 'FAILED'
+MENTORSHIP_STATUS = (
+    (PENDING, 'Pending'),
+    (COMPLETED, 'Completed'),
+    (FAILED, 'Failed'),
+)
+
+
+class MentorshipSession(models.Model):
+
+    is_online = models.BooleanField()
+    latitude = models.FloatField(blank=True, null=True, default=None)
+    longitude = models.FloatField(blank=True, null=True, default=None)
+
+    mentor = models.ForeignKey(MentorProfile, on_delete=models.CASCADE)
+    mentee = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    online_meeting_url = models.CharField(max_length=255, blank=True, null=True, default=None)
+    online_recording_url = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text='We encourace the mentors to record the session and share them with the students')
+
+    status = models.CharField(max_length=15,
+                              choices=MENTORSHIP_STATUS,
+                              default=PENDING,
+                              help_text=f'Options are: {"".join([key for key,label in MENTORSHIP_STATUS])}')
+
+    agenda = models.TextField(blank=True,
+                              null=True,
+                              default=None,
+                              help_text='What will this mentorship be about')
+    summary = models.TextField(blank=True,
+                               null=True,
+                               default=None,
+                               help_text='Describe briefly what happened at the mentorship session')
+
+    started_at = models.DateTimeField(blank=True, null=True, default=None)
+    ended_at = models.DateTimeField(blank=True, null=True, default=None)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'(Session {self.id} with {str(self.mentor)} and {str(self.mentee)})'

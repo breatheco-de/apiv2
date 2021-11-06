@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'breathecode.media',
     'breathecode.assessment',
     'breathecode.registry',
+    'breathecode.mentorship',
     'explorer',
 ]
 

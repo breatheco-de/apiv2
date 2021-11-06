@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.events.models import Event
+from breathecode.mentorship.models import MentorshipSession
 from .signals import survey_answered
 from breathecode.authenticate.models import Token
 
@@ -96,6 +97,11 @@ class Answer(models.Model):
     lang = models.CharField(max_length=3, blank=True, default='en')
 
     event = models.ForeignKey(Event, on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    mentorship_session = models.ForeignKey(MentorshipSession,
+                                           on_delete=models.SET_NULL,
+                                           default=None,
+                                           blank=True,
+                                           null=True)
     mentor = models.ForeignKey(User,
                                related_name='mentor_set',
                                on_delete=models.SET_NULL,
