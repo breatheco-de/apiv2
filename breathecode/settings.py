@@ -15,6 +15,9 @@ import json
 import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
+import mimetypes
+
+mimetypes.add_type('text/css', '.css', True)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
