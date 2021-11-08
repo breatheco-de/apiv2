@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (AcademyView, CohortUserView, AcademyCohortView, SyllabusVersionView, SyllabusView,
-                    get_timezones, UserView, UserMeView, AcademyCohortUserView, get_single_course,
+                    get_timezones, UserView, UserMeView, AcademyCohortUserView, get_schedule,
                     AcademySpecialtyModeView, SpecialtyModeView, get_all_academies, get_cohorts,
                     AcademyCohortTimeSlotView, AcademySpecialtyModeTimeSlotView,
                     AcademySyncCohortTimeSlotView, AcademyReportView)
@@ -48,18 +48,18 @@ urlpatterns = [
     # 🔽 this endpoint is deprecated 🔽
     path('certificate', SpecialtyModeView.as_view()),
     # 🔽 this endpoint is deprecated 🔽
-    path('certificate/<str:certificate_slug>/', get_single_course),
+    path('certificate/<int:schedule_id>/', get_schedule),
     path('schedule', SpecialtyModeView.as_view(), name='schedule'),
-    path('schedule/<str:certificate_slug>/', get_single_course, name='schedule_slug'),
+    path('schedule/<int:schedule_id>/', get_schedule, name='schedule_id'),
     # 🔽 this endpoint is deprecated 🔽
     path('academy/certificate', AcademySpecialtyModeView.as_view()),
     path('academy/schedule', AcademySpecialtyModeView.as_view(), name='academy_schedule'),
     path('academy/schedule/<int:certificate_id>',
          AcademySpecialtyModeView.as_view(),
          name='academy_schedule_id'),
-    path('academy/schedule/<str:certificate_slug>',
+    path('academy/schedule/<int:certificate_id>',
          AcademySpecialtyModeView.as_view(),
-         name='academy_schedule_slug'),
+         name='academy_schedule_id'),
     path('syllabus', SyllabusView.as_view(), name='syllabus'),
     path('syllabus/<int:syllabus_id>', SyllabusView.as_view(), name='syllabus_id'),
     path('syllabus/<int:syllabus_id>/version', SyllabusVersionView.as_view(), name='syllabus_id_version'),

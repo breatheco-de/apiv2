@@ -147,7 +147,6 @@ class CertificateTestSuite(CertificateTestCase):
                 'specialty_mode': {
                     'id': 1,
                     'name': model['specialty_mode'].name,
-                    'slug': model['specialty_mode'].slug,
                     'syllabus': model['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': {
