@@ -46,7 +46,7 @@ class AcademyAdmin(admin.ModelAdmin):
 @admin.register(AcademySpecialtyMode)
 class AcademySpecialtyMode(admin.ModelAdmin):
     list_display = ('specialty_mode', 'academy')
-    list_filter = ['specialty_mode__slug', 'academy__slug']
+    list_filter = ['specialty_mode__name', 'academy__slug']
 
 
 @admin.register(Country)
@@ -61,7 +61,7 @@ class CityAdmin(admin.ModelAdmin):
 
 @admin.register(SpecialtyMode)
 class SpecialtyModeAdmin(admin.ModelAdmin):
-    list_display = ('slug', 'name')
+    list_display = ('name', )
 
 
 def make_assistant(modeladmin, request, queryset):
@@ -239,7 +239,7 @@ class CohortAdmin(admin.ModelAdmin):
     form = CohortForm
     search_fields = ['slug', 'name', 'academy__city__name']
     list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'specialty_mode')
-    list_filter = ['stage', 'academy__slug', 'specialty_mode__slug', 'syllabus_version__version']
+    list_filter = ['stage', 'academy__slug', 'specialty_mode__name', 'syllabus_version__version']
 
     if os.getenv('ENV') == 'development':
         actions = cohort_actions + [link_randomly_relations_to_cohorts]
@@ -326,20 +326,20 @@ def replicate_in_all(modeladmin, request, queryset):
     for a in academies:
         to_filter = {}
         for c in cert_timeslot:
+            key = c.specialty_mode.id
             # delete all timeslots for that academy and specialty mode ONLY the first time
-            if c.specialty_mode.slug not in to_filter:
+            if key not in to_filter:
                 SpecialtyModeTimeSlot.objects.filter(specialty_mode=c.specialty_mode, academy=a).delete()
-                to_filter[c.specialty_mode.slug] = True
+                to_filter[key] = True
             # and then re add the timeslots one by one
             new_timeslot = SpecialtyModeTimeSlot(recurrent=c.recurrent,
                                                  starting_at=c.starting_at,
                                                  ending_at=c.ending_at,
                                                  specialty_mode=c.specialty_mode,
                                                  academy=a)
+
             new_timeslot.save()
-
         logger.info(f'All academies in sync with those timeslots')
-
     messages.add_message(request, messages.INFO, f'All academies in sync with those timeslots')
 
 
@@ -350,6 +350,6 @@ replicate_in_all.short_description = 'Replicate same timeslots in all academies'
 class SpecialtyModeTimeSlotAdmin(admin.ModelAdmin):
     list_display = ('id', 'specialty_mode', 'starting_at', 'ending_at', 'academy', 'recurrent',
                     'recurrency_type')
-    list_filter = ['specialty_mode__slug', 'academy__slug', 'recurrent', 'recurrency_type']
-    search_fields = ['specialty_mode__slug', 'specialty_mode__name', 'academy__slug', 'academy__name']
+    list_filter = ['specialty_mode__name', 'academy__slug', 'recurrent', 'recurrency_type']
+    search_fields = ['specialty_mode__name', 'specialty_mode__name', 'academy__slug', 'academy__name']
     actions = [replicate_in_all]

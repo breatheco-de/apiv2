@@ -81,7 +81,6 @@ class UserSerializer(serpy.Serializer):
 
 class GetSpecialtyModeSerializer(serpy.Serializer):
     id = serpy.Field()
-    slug = serpy.Field()
     name = serpy.Field()
     description = serpy.Field()
     syllabus = serpy.MethodField()
@@ -92,7 +91,6 @@ class GetSpecialtyModeSerializer(serpy.Serializer):
 
 class GetSmallSpecialtyModeSerializer(serpy.Serializer):
     id = serpy.Field()
-    slug = serpy.Field()
     name = serpy.Field()
     syllabus = serpy.MethodField()
 
@@ -708,7 +706,6 @@ class SpecialtyModeSerializer(serializers.ModelSerializer):
 
 class SpecialtyModePUTSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
-    slug = serializers.SlugField(required=False)
     name = serializers.CharField(required=False)
     schedule_type = serializers.CharField(required=False)
     description = serializers.CharField(required=False)

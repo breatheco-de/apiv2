@@ -189,7 +189,6 @@ class CertificateTestSuite(CertificateTestCase):
                 'specialty_mode': {
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
-                    'slug': model['specialty_mode'].slug,
                     'syllabus': model['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': {
@@ -344,7 +343,6 @@ class CertificateTestSuite(CertificateTestCase):
                 'specialty_mode': {
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
-                    'slug': models[0]['specialty_mode'].slug,
                     'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': {
@@ -400,7 +398,6 @@ class CertificateTestSuite(CertificateTestCase):
                 'specialty_mode': {
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
-                    'slug': models[0]['specialty_mode'].slug,
                     'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': {
@@ -551,7 +548,6 @@ class CertificateTestSuite(CertificateTestCase):
                 'specialty_mode': {
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
-                    'slug': models[0]['specialty_mode'].slug,
                     'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': None,
@@ -663,7 +659,6 @@ class CertificateTestSuite(CertificateTestCase):
                 'specialty_mode': {
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
-                    'slug': models[0]['specialty_mode'].slug,
                     'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': None,
@@ -771,7 +766,6 @@ class CertificateTestSuite(CertificateTestCase):
                 'specialty_mode': {
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
-                    'slug': models[0]['specialty_mode'].slug,
                     'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': None,
@@ -880,7 +874,6 @@ class CertificateTestSuite(CertificateTestCase):
                 'specialty_mode': {
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
-                    'slug': models[0]['specialty_mode'].slug,
                     'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': None,

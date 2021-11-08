@@ -98,7 +98,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      capability='crud_certificate',
                                      role='potato')
         url = reverse_lazy('admissions:academy_schedule_id', kwargs={'certificate_id': 1})
-        data = {'slug': 'they-killed-kenny', 'name': 'They killed kenny', 'description': 'Oh my god!'}
+        data = {'name': 'They killed kenny', 'description': 'Oh my god!'}
         response = self.client.put(url, data)
         json = response.json()
 

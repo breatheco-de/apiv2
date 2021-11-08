@@ -159,7 +159,6 @@ class SyllabusVersion(models.Model):
 
 
 class SpecialtyMode(models.Model):
-    slug = models.SlugField(max_length=100)
     name = models.CharField(max_length=150)
 
     schedule_type = models.CharField(max_length=15, choices=SCHEDULE_TYPE, default='PART-TIME')

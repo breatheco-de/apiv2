@@ -416,7 +416,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
@@ -506,7 +505,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
@@ -601,7 +599,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
@@ -693,7 +690,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
@@ -760,7 +756,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
@@ -836,7 +831,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
@@ -910,7 +904,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'language': model['cohort'].language,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
@@ -1001,7 +994,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
@@ -1068,7 +1060,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
@@ -1144,7 +1135,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
@@ -1219,7 +1209,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
@@ -1307,7 +1296,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'current_day': model['cohort'].current_day,
                 'specialty_mode': {
                     'id': model['cohort'].specialty_mode.id,
-                    'slug': model['cohort'].specialty_mode.slug,
                     'name': model['cohort'].specialty_mode.name,
                     'syllabus': model['cohort'].specialty_mode.syllabus.id,
                 },
@@ -1396,7 +1384,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'current_day': model['cohort'].current_day,
                 'specialty_mode': {
                     'id': model['cohort'].specialty_mode.id,
-                    'slug': model['cohort'].specialty_mode.slug,
                     'name': model['cohort'].specialty_mode.name,
                     'syllabus': model['cohort'].specialty_mode.syllabus.id,
                 },
