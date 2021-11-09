@@ -59,6 +59,7 @@ class PostTaskSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
 
         _task = Task.objects.filter(associated_slug=validated_data['associated_slug'],
+                                    task_type=validated_data['task_type'],
                                     user__id=validated_data['user'].id).first()
 
         # avoid creating a task twice, if the user already has it it will be re-used.
