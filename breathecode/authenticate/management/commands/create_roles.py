@@ -213,6 +213,14 @@ class Command(BaseCommand):
                 'slug': 'generate_temporal_token',
                 'description': 'Generate a temporal token to reset github credential or forgot password'
             },
+            {
+                'slug': 'read_mentorhip_service',
+                'description': 'Get all mentorship services from one academy'
+            },
+            {
+                'slug': 'read_mentorhip_mentor',
+                'description': 'Get all mentorship mentors from one academy'
+            },
         ]
 
         for c in caps:
@@ -237,9 +245,19 @@ class Command(BaseCommand):
                 'name':
                 'Academy Token',
                 'caps': [
-                    'read_member', 'read_syllabus', 'read_student', 'read_cohort', 'read_media',
-                    'read_my_academy', 'read_invite', 'read_lead', 'crud_lead', 'read_review',
-                    'read_shortlink'
+                    'read_member',
+                    'read_syllabus',
+                    'read_student',
+                    'read_cohort',
+                    'read_media',
+                    'read_my_academy',
+                    'read_invite',
+                    'read_lead',
+                    'crud_lead',
+                    'read_review',
+                    'read_shortlink',
+                    'read_mentorhip_service',
+                    'read_mentorhip_mentor',
                 ]
             },
             {
@@ -248,10 +266,27 @@ class Command(BaseCommand):
                 'name':
                 'Staff (Base)',
                 'caps': [
-                    'read_member', 'read_syllabus', 'read_student', 'read_cohort', 'read_media',
-                    'read_my_academy', 'read_invite', 'get_academy_token', 'crud_activity', 'read_survey',
-                    'read_layout', 'read_event', 'read_certificate', 'academy_reporting', 'read_won_lead',
-                    'read_eventcheckin', 'read_review', 'read_activity', 'read_shortlink'
+                    'read_member',
+                    'read_syllabus',
+                    'read_student',
+                    'read_cohort',
+                    'read_media',
+                    'read_my_academy',
+                    'read_invite',
+                    'get_academy_token',
+                    'crud_activity',
+                    'read_survey',
+                    'read_layout',
+                    'read_event',
+                    'read_certificate',
+                    'academy_reporting',
+                    'read_won_lead',
+                    'read_eventcheckin',
+                    'read_review',
+                    'read_activity',
+                    'read_shortlink',
+                    'read_mentorhip_service',
+                    'read_mentorhip_mentor',
                 ]
             },
             {
@@ -260,8 +295,14 @@ class Command(BaseCommand):
                 'name':
                 'Student',
                 'caps': [
-                    'crud_assignment', 'read_syllabus', 'read_assignment', 'read_cohort', 'read_my_academy',
-                    'crud_activity'
+                    'crud_assignment',
+                    'read_syllabus',
+                    'read_assignment',
+                    'read_cohort',
+                    'read_my_academy',
+                    'crud_activity',
+                    'read_mentorhip_service',
+                    'read_mentorhip_mentor',
                 ]
             },
         ]

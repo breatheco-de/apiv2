@@ -18,18 +18,32 @@ class ServiceAdmin(admin.ModelAdmin):
 
 @admin.register(MentorProfile)
 class MentorAdmin(admin.ModelAdmin):
-    list_display = ['user', 'name', 'email', 'status']
+    list_display = ['user', 'name', 'email', 'status', 'unique_url']
     raw_id_fields = ['user', 'service']
     search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email']
     list_filter = ['service__academy__slug', 'status', 'service__slug']
 
+    def unique_url(self, request):
+        return format_html(
+            f"<a rel='noopener noreferrer' target='_blank' href='/v1/mentorhip/meet/{self.slug}'>book with {self.slug}</a>"
+        )
+
 
 @admin.register(MentorshipSession)
 class SessionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'mentor', 'mentee', 'status', 'started_at']
+    list_display = ['id', 'mentor', 'mentee', 'status', 'started_at', 'openurl']
     raw_id_fields = ['mentor', 'mentee']
     search_fields = [
         'mentee__first_name', 'mentee__last_name', 'mentee__email', 'mentor__user__first_name',
         'mentor__user__last_name', 'mentor__user__email'
     ]
     list_filter = ['mentor__service__academy', 'status', 'mentor__service__slug']
+
+    def openurl(self, request):
+        url = self.online_meeting_url
+        if url is None:
+            url = self.mentor.online_meeting_url
+
+        return format_html(
+            f"<a rel='noopener noreferrer' target='_blank' href='/v1/mentorhip/meet/{self.slug}'>open {url}</a>"
+        )

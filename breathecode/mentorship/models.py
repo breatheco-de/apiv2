@@ -39,12 +39,36 @@ MENTOR_STATUS = (
 
 class MentorProfile(models.Model):
     name = models.CharField(max_length=150, blank=True, null=True, default=None)
+    slug = models.SlugField(
+        max_length=150,
+        unique=True,
+        help_text=
+        'Will be used as unique public booking URL with the students, for example: 4geeks.com/meet/bob')
 
     price_per_hour = models.FloatField()
 
     service = models.ForeignKey(MentorshipService, on_delete=models.CASCADE)
 
-    token = models.CharField(max_length=255, unique=True, help_text='Used for the invitation')
+    timezone = models.CharField(max_length=50,
+                                null=True,
+                                default=None,
+                                help_text='Knowing the mentor\'s timezone helps with more accurrate booking')
+
+    online_meeting_url = models.URLField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text="If set, it will be default for all session's unless the session.online_meeting_url is set")
+
+    token = models.CharField(max_length=255,
+                             unique=True,
+                             help_text='Used for inviting the user to become a mentor')
+
+    booking_url = models.URLField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text='URL where this mentor profile can be booked, E.g: calendly.com/my_username')
 
     syllabus = models.ManyToManyField(to=Syllabus,
                                       blank=True,
@@ -74,7 +98,7 @@ class MentorProfile(models.Model):
         if self.user is not None and self.user.first_name is not None and self.user.first_name != '':
             name = self.user.first_name + ' ' + self.user.last_name
 
-        return f'{name} ({self.id})'
+        return f'{name} ({self.id}) from {self.service.name}, {self.service.academy.name}'
 
 
 PENDING = 'PENDING'
@@ -96,9 +120,11 @@ class MentorshipSession(models.Model):
     mentor = models.ForeignKey(MentorProfile, on_delete=models.CASCADE)
     mentee = models.ForeignKey(User, on_delete=models.CASCADE)
 
-    online_meeting_url = models.CharField(max_length=255, blank=True, null=True, default=None)
-    online_recording_url = models.CharField(
-        max_length=255,
+    online_meeting_url = models.URLField(blank=True,
+                                         null=True,
+                                         default=None,
+                                         help_text='Overrides the mentor.online_meeting_url if set')
+    online_recording_url = models.URLField(
         blank=True,
         null=True,
         default=None,
@@ -118,8 +144,17 @@ class MentorshipSession(models.Model):
                                default=None,
                                help_text='Describe briefly what happened at the mentorship session')
 
-    started_at = models.DateTimeField(blank=True, null=True, default=None)
-    ended_at = models.DateTimeField(blank=True, null=True, default=None)
+    starts_at = models.DateTimeField(blank=True, null=True, default=None, help_text='Scheduled start date')
+    ends_at = models.DateTimeField(blank=True, null=True, default=None, help_text='Scheduled end date')
+
+    started_at = models.DateTimeField(blank=True,
+                                      null=True,
+                                      default=None,
+                                      help_text='Real start date (only if it started)')
+    ended_at = models.DateTimeField(blank=True,
+                                    null=True,
+                                    default=None,
+                                    help_text='Real start date (only if it started)')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
