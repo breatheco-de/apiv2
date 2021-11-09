@@ -80,6 +80,10 @@ class Command(BaseCommand):
                 'description': 'Update assignments'
             },
             {
+                'slug': 'task_delivery_details',
+                'description': 'Get delivery URL for a task, that url can be sent to students for delivery'
+            },
+            {
                 'slug': 'read_certificate',
                 'description': 'List and read all academy certificates'
             },
@@ -276,7 +280,7 @@ class Command(BaseCommand):
             'caps':
             extend(roles, ['staff']) + [
                 'read_assigment', 'crud_assignment', 'read_cohort_activity', 'read_nps_answers',
-                'classroom_activity', 'read_event'
+                'classroom_activity', 'read_event', 'task_delivery_details'
             ]
         })
         roles.append({
