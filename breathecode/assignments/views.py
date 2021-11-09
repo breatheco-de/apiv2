@@ -159,7 +159,7 @@ class TaskMeDeliverView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-    @capable_of('task_advanced_details')
+    @capable_of('task_delivery_details')
     def get(self, request, task_id, academy_id):
 
         item = Task.objects.filter(id=task_id).first()
