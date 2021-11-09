@@ -17,7 +17,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
     def test_certificate_without_auth(self):
         """Test /certificate without auth"""
-        url = reverse_lazy('admissions:schedule_slug', kwargs={'certificate_slug': 'they-killed-kenny'})
+        url = reverse_lazy('admissions:schedule_id', kwargs={'schedule_id': 1})
         response = self.client.get(url)
         json = response.json()
 
@@ -31,11 +31,11 @@ class CertificateTestSuite(AdmissionsTestCase):
 
     def test_certificate_without_data(self):
         """Test /certificate without auth"""
-        url = reverse_lazy('admissions:schedule_slug', kwargs={'certificate_slug': 'they-killed-kenny'})
+        url = reverse_lazy('admissions:schedule_id', kwargs={'schedule_id': 1})
         self.generate_models(authenticate=True)
         response = self.client.get(url)
         json = response.json()
-        expected = {'status_code': 404, 'detail': 'Certificate slug not found'}
+        expected = {'status_code': 404, 'detail': 'schedule-not-found'}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
@@ -47,8 +47,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_certificate_with_data(self):
         """Test /certificate without auth"""
         model = self.generate_models(authenticate=True, specialty_mode=True, syllabus=True)
-        url = reverse_lazy('admissions:schedule_slug',
-                           kwargs={'certificate_slug': model['specialty_mode'].slug})
+        url = reverse_lazy('admissions:schedule_id', kwargs={'schedule_id': 1})
         response = self.client.get(url)
         json = response.json()
 
@@ -56,7 +55,6 @@ class CertificateTestSuite(AdmissionsTestCase):
             json, {
                 'id': model['specialty_mode'].id,
                 'name': model['specialty_mode'].name,
-                'slug': model['specialty_mode'].slug,
                 'description': model['specialty_mode'].description,
                 'syllabus': model['specialty_mode'].syllabus.id,
             })

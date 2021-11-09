@@ -289,6 +289,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         cohort_kwargs = {'never_ends': True}
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
@@ -296,10 +297,11 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      specialty_mode=True,
                                      syllabus=True,
+                                     syllabus_kwargs=syllabus_kwargs,
                                      cohort_kwargs=cohort_kwargs)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
-            'syllabus': model['specialty_mode'].slug + '.v999',
+            'syllabus': model['syllabus'].slug + '.v999',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'current_day': model['cohort'].current_day + 1,
@@ -364,7 +366,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'specialty_mode': {
                 'id': model2.specialty_mode.id,
                 'name': model2.specialty_mode.name,
-                'slug': model2.specialty_mode.slug,
                 'syllabus': model2.specialty_mode.syllabus.id,
             },
             'syllabus_version': {
@@ -447,7 +448,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },
@@ -534,7 +534,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
-                'slug': model['cohort'].specialty_mode.slug,
                 'name': model['cohort'].specialty_mode.name,
                 'syllabus': model['cohort'].specialty_mode.syllabus.id,
             },

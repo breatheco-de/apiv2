@@ -870,9 +870,8 @@ class AcademySpecialtyModeView(APIView, HeaderLimitOffsetPagination, GenerateLoo
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_certificate')
-    def put(self, request, certificate_id=None, certificate_slug=None, academy_id=None):
-        schedule = SpecialtyMode.objects.filter(
-            Q(id=certificate_id) | Q(slug=certificate_slug, slug__isnull=False)).first()
+    def put(self, request, certificate_id=None, academy_id=None):
+        schedule = SpecialtyMode.objects.filter(id=certificate_id).first()
         if not schedule:
             raise ValidationException(f'Schedule not found', code=404, slug='specialty-mode-not-found')
 
@@ -909,10 +908,10 @@ class AcademySpecialtyModeView(APIView, HeaderLimitOffsetPagination, GenerateLoo
 
 
 @api_view(['GET'])
-def get_single_course(request, certificate_slug):
-    certificates = SpecialtyMode.objects.filter(slug=certificate_slug).first()
+def get_schedule(request, schedule_id):
+    certificates = SpecialtyMode.objects.filter(id=schedule_id).first()
     if certificates is None:
-        raise ValidationException('Certificate slug not found', code=404)
+        raise ValidationException('Schedule not found', slug='schedule-not-found', code=404)
     serializer = GetSpecialtyModeSerializer(certificates, many=False)
     return Response(serializer.data, status=status.HTTP_200_OK)
 

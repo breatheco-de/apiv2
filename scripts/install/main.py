@@ -1,8 +1,10 @@
 import os
+from scripts.utils.get_python_path import get_python_path
 
 from shutil import which
 
 __all__ = ['main']
+python_path = get_python_path()
 
 
 def preinstall_hook():
@@ -12,7 +14,7 @@ def preinstall_hook():
         print('')
         print('--- Running preinstall script ---', os.path.basename(script_name), '---')
         print('')
-        os.system(f'python {script_name}')
+        os.system(f'{python_path} -m {script_name}')
 
 
 def install():
@@ -31,7 +33,7 @@ def postinstall_hook():
         print('')
         print('--- Running postinstall script ---', os.path.basename(script_name), '---')
         print('')
-        os.system(f'python {script_name}')
+        os.system(f'{python_path} -m {script_name}')
 
 
 def main():

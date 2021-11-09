@@ -54,9 +54,6 @@ psycopg2-binary = "*"
 django-sql-explorer = {extras = ["xls"], version = "*"}
 google-cloud-ndb = "*"
 
-[requires]
-python_version = "3.9"
-
 [scripts]
 update_sql_keywords="python -m scripts.update_sql_keywords_json"
 backup_syllabus_models="python -m scripts.backup_syllabus_models"
