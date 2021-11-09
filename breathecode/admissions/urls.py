@@ -68,7 +68,7 @@ urlpatterns = [
          name='syllabus_id_version_version'),
     path('syllabus/<str:syllabus_slug>', SyllabusView.as_view(), name='syllabus_slug'),
     path('syllabus/<str:syllabus_slug>/version', SyllabusVersionView.as_view(), name='syllabus_slug_version'),
-    path('syllabus/<str:syllabus_slug>/version/<int:version>',
+    path('syllabus/<str:syllabus_slug>/version/<str:version>',
          SyllabusVersionView.as_view(),
          name='syllabus_slug_version_version'),
     path('academy/<int:academy_id>/syllabus', SyllabusView.as_view(), name='academy_id_syllabus'),

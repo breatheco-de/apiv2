@@ -1015,15 +1015,23 @@ class SyllabusVersionView(APIView):
         if academy_id is None:
             raise ValidationException('Missing academy id', slug='missing-academy-id')
 
-        if version:
-            syllabus_version = SyllabusVersion.objects.filter(
-                Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
-                Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
-                version=version,
-            ).first()
+        if version is not None:
+            syllabus_version = None
+            if version == 'latest':
+                syllabus_version = SyllabusVersion.objects.filter(
+                    Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+                    Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+                ).order_by('-version').first()
+
+            if syllabus_version is None and version.isnumeric():
+                syllabus_version = SyllabusVersion.objects.filter(
+                    Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
+                    Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
+                    version=version,
+                ).first()
 
             if syllabus_version is None:
-                raise ValidationException('It syllabus version not found',
+                raise ValidationException(f'It syllabus version {version} not found',
                                           code=404,
                                           slug='syllabus-version-not-found')
 
