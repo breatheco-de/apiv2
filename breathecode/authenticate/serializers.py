@@ -86,6 +86,7 @@ class AcademySerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     slug = serpy.Field()
+    timezone = serpy.Field()
 
 
 class ProfileAcademySmallSerializer(serpy.Serializer):
