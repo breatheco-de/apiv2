@@ -176,14 +176,14 @@ class SpecialtyMode(models.Model):
     #     remove_bucket_object("certificate-logo-"+self.slug)
     #     super(Image, self).delete(*args, **kwargs)
 
-    def save(self, *args, **kwargs):
+    # def save(self, *args, **kwargs):
 
-        if GOOGLE_APPLICATION_CREDENTIALS is not None and GOOGLE_APPLICATION_CREDENTIALS != '':
-            obj = get_bucket_object('certificate-logo-' + self.slug)
-            if obj is not None:
-                self.logo = obj.public_url
+    #     if GOOGLE_APPLICATION_CREDENTIALS is not None and GOOGLE_APPLICATION_CREDENTIALS != '':
+    #         obj = get_bucket_object('certificate-logo-' + self.slug)
+    #         if obj is not None:
+    #             self.logo = obj.public_url
 
-        super().save(*args, **kwargs)  # Call the "real" save() method.
+    #     super().save(*args, **kwargs)  # Call the "real" save() method.
 
 
 class AcademySpecialtyMode(models.Model):
