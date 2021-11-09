@@ -426,25 +426,25 @@ def get_token_info(request, token):
 
 class UserMeView(APIView):
     def get(self, request, format=None):
-
+        # TODO: This should be not accessible because this endpoint require auth
         try:
             if isinstance(request.user, AnonymousUser):
-                raise PermissionDenied('There is not user')
+                raise ValidationException('There is not user', slug='without-auth', code=403)
 
         except User.DoesNotExist:
-            raise PermissionDenied("You don't have a user")
+            raise ValidationException('You don\'t have a user', slug='user-not-found', code=403)
 
         users = UserSerializer(request.user)
         return Response(users.data)
 
     def put(self, request):
-
+        # TODO: This should be not accessible because this endpoint require auth
         try:
             if isinstance(request.user, AnonymousUser):
-                raise PermissionDenied('There is not user')
+                raise ValidationException('There is not user', slug='without-auth', code=403)
 
         except User.DoesNotExist:
-            raise PermissionDenied("You don't have a user")
+            raise ValidationException('You don\'t have a user', slug='user-not-found', code=403)
 
         serializer = UserMeSerializer(request.user, data=request.data, context={'request': request})
         if serializer.is_valid():
