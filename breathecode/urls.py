@@ -38,7 +38,8 @@ apps = [
     ('v1/media/', 'breathecode.media.urls', 'media'),
     ('v1/marketing/', 'breathecode.marketing.urls', 'marketing'),
     ('v1/mentorship/', 'breathecode.mentorship.urls', 'mentorship'),
-    ('s/', 'breathecode.marketing.urls_shortner', 'shortner'),
+    ('s/', 'breathecode.marketing.urls_shortner', 'marketing_shortner'),
+    ('mentor/', 'breathecode.mentorship.urls_shortner', 'mentorship_shortner'),
 ]
 
 urlpatterns_apps = [path(url, include(urlconf, namespace=namespace)) for url, urlconf, namespace in apps]

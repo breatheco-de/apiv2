@@ -1,8 +1,13 @@
+import os
+from urllib.parse import urlencode, parse_qs, urlsplit, urlunsplit
 from django.shortcuts import render
 from django.utils import timezone
-from django.http import HttpResponse
+from django.contrib import messages
+from django.http import HttpResponse, HttpResponseRedirect
 from breathecode.admissions.models import Academy
+from breathecode.authenticate.models import Token
 from .models import MentorProfile, MentorshipService, MentorshipSession
+from .forms import CloseMentoringSessionForm
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -23,13 +28,158 @@ from rest_framework import status
 from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
 from django.db.models import Q
 
+API_URL = os.getenv('API_URL', '')
+
+
+def render_error(r, msg):
+    return render(r, 'message.html', {
+        'message': msg,
+    })
+
+
+def enforce_token(request, url):
+    token = request.GET.get('token', None)
+    if token is None:
+        return HttpResponseRedirect(redirect_to=f'{API_URL}/v1/auth/view/login?url=' + url)
+
+    token = Token.get_valid(token)
+    if token is None:
+        return render_error(request, 'Invalid token')
+    else:
+        return token
+
+
+def set_query_parameter(url, param_name, param_value):
+    """Given a URL, set or replace a query parameter and return the
+    modified URL.
+
+    >>> set_query_parameter('http://example.com?foo=bar&biz=baz', 'foo', 'stuff')
+    'http://example.com?foo=stuff&biz=baz'
+
+    """
+    scheme, netloc, path, query_string, fragment = urlsplit(url)
+    query_params = parse_qs(query_string)
+
+    query_params[param_name] = [param_value]
+    new_query_string = urlencode(query_params, doseq=True)
+
+    return urlunsplit((scheme, netloc, path, new_query_string, fragment))
+
 
 def forward_booking_url(request, mentor_slug):
-    mentor = MentorProfile.objects.filter(slug=mentor_slug)
-    if mentor is None:
-        raise ValidationException(f'No mentor with slug {slug}')
 
-    return redirect(mentor.booking_url)
+    token = enforce_token(request, f'{API_URL}/mentor/{mentor_slug}')
+    if isinstance(token, HttpResponseRedirect):
+        return token
+
+    mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
+    if mentor is None:
+        return render_error(request, f'No mentor found with slug {mentor_slug}')
+
+    if mentor.status != 'ACTIVE':
+        return render_error(request, f'This mentor is not active')
+
+    booking_url = mentor.booking_url
+    if '?' not in booking_url:
+        booking_url += '?'
+
+    return render(request, 'book_session.html', {
+        'SUBJECT': 'Mentoring Session',
+        'mentor': mentor,
+        'mentee': token.user,
+        'booking_url': booking_url,
+    })
+
+
+def forward_meet_url(request, mentor_slug):
+
+    token = enforce_token(request, f'{API_URL}/mentor/meet/{mentor_slug}')
+    if isinstance(token, HttpResponseRedirect):
+        return token
+
+    redirect = request.GET.get('redirect', None)
+
+    mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
+    if mentor is None:
+        return render_error(request, f'No mentor found with slug {mentor_slug}')
+
+    if mentor.status != 'ACTIVE':
+        return render_error(request, f'This mentor is not active')
+
+    session = MentorshipSession.objects.filter(mentor__slug=mentor_slug,
+                                               mentee__id=token.user.id,
+                                               status='PENDING').first()
+    if session is None and redirect is not None:
+        return render_error(
+            request, f'No mentoring session found with {mentor.user.first_name} {mentor.user.last_name}')
+
+    if session is None:
+        session = MentorshipSession(mentor=mentor,
+                                    mentee=token.user,
+                                    is_online=True,
+                                    online_meeting_url=mentor.online_meeting_url)
+        session.save()
+    elif redirect is not None:
+        session.started_at = timezone.now()
+        session.save()
+        return HttpResponseRedirect(redirect_to=session.online_meeting_url)
+
+    return render(
+        request, 'mentoring_session.html', {
+            'SUBJECT': 'Mentoring Session',
+            'meeting_url': set_query_parameter('?' + request.GET.urlencode(), 'redirect', 'true'),
+            'session': session,
+        })
+
+
+def close_mentoring_session_form(request, session_id):
+
+    if request.method == 'POST':
+        _dict = request.POST.copy()
+        form = CloseMentoringSessionForm(_dict)
+
+        token = Token.objects.filter(key=_dict['token']).first()
+        if token is None or token.expires_at < timezone.now():
+            messages.error(request, f'Invalid or expired deliver token {_dict["token"]}')
+            return render(request, 'form.html', {'form': form})
+
+        session = MentorshipSession.objects.filter(id=_dict['session_id']).first()
+        if session is None:
+            messages.error(request, 'Invalid session id')
+            return render(request, 'form.html', {'form': form})
+
+        if 'status' is _dict and _dict['status'] == 'PENDING':
+            messages.error(request, 'You need to chose either Completed or Failed on the session status')
+            return render(request, 'form.html', {'form': form})
+
+        close_mentoring_session(
+            session=session,
+            summary=_dict['summary'],
+            status=_dict['status'],
+        )
+
+        return render(request, 'message.html',
+                      {'message': 'The mentoring session has been closed successfully'})
+    else:
+        session = MentorshipSession.objects.filter(id=session_id).first()
+        if session is None:
+            return render(request, 'message.html', {
+                'message': f'Invalid session id {str(session_id)}',
+            })
+
+        _dict = request.GET.copy()
+        _dict['token'] = request.GET.get('token', None)
+        _dict[
+            'student_name'] = session.mentee.first_name + ' ' + session.mentee.last_name + ', ' + session.mentee.email
+        _dict['session_id'] = session.id
+        form = CloseMentoringSessionForm(_dict)
+    return render(
+        request, 'form.html', {
+            'form': form,
+            'title': 'Close Mentoring Session',
+            'intro': 'Please fill the following information to deliver your assignment',
+            'btn_lable': 'Close Mentoring Session'
+        })
 
 
 class ServiceView(APIView, HeaderLimitOffsetPagination):

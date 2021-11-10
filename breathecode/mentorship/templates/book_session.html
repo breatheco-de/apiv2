@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="content text-center">
+    <h1 class="title" style="margin-bottom: 20px;">{{ SUBJECT }}</h1>
+    <tr>
+        <td align="center" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
+			padding-top: 25px;
+			padding-bottom: 5px;">
+            <p>Hello {{mentee.first_name }}, in this page you a <b>{{mentor.service.name}}</b> with:
+                {{mentor.first_name}}
+                {{mentor.last_name}}</p>
+
+            <!-- Calendly inline widget begin -->
+            <div class="calendly-inline-widget"
+                data-url="{{booking_url}}&hide_event_type_details=1&hide_gdpr_banner=1&name={{mentee.first_name}}%20{{mentee.last_name}}&email={{mentee.email}}"
+                style="min-width:320px;height:730px;margin-top: -60px;"></div>
+            <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" async></script>
+            <!-- Calendly inline widget end -->
+        </td>
+    </tr>
+</div>
+{% endblock %}
