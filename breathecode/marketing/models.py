@@ -18,7 +18,7 @@ SYNC_STATUS = (
 
 class ActiveCampaignAcademy(models.Model):
     ac_key = models.CharField(max_length=150)
-    ac_url = models.CharField(max_length=150)
+    ac_url = models.URLField()
     event_attendancy_automation = models.ForeignKey('Automation',
                                                     on_delete=models.CASCADE,
                                                     blank=True,
@@ -221,7 +221,7 @@ class FormEntry(models.Model):
     client_comments = models.CharField(max_length=250, blank=True, null=True, default=None)
     location = models.CharField(max_length=70, blank=True, null=True, default=None)
     language = models.CharField(max_length=2, default='en')
-    utm_url = models.CharField(max_length=250, null=True, default=None, blank=True)
+    utm_url = models.URLField(null=True, default=None, blank=True)
     utm_medium = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_campaign = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_source = models.CharField(max_length=70, blank=True, null=True, default=None)
