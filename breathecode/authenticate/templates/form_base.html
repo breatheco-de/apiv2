@@ -9,7 +9,7 @@
         integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
 </head>
 
-<body>
+<body class="{% if request.method == 'GET' %}get{% endif %}">
     <style>
         h1 {
             font-size: 30px;
@@ -34,10 +34,13 @@
         }
 
         .errorlist {
-            display: none;
             background: #f9c1b3;
             border-radius: 5px;
             padding: 10px;
+        }
+
+        .get .errorlist {
+            display: none;
         }
 
         .helptext {

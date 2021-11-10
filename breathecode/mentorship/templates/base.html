@@ -239,6 +239,11 @@
 	</td>
 	</tr>
 	</table>
+	{% if TRACKER_URL %}
+	<img width="1" height="1" border="0" vspace="0" hspace="0"
+		style="margin: 0; padding: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; border: none; display: block;"
+		src="{{ TRACKER_URL }}" />
+	{% endif %}
 </body>
 
 </html>

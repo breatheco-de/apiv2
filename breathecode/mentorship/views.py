@@ -6,8 +6,10 @@ from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import Token
+from breathecode.utils.private_view import private_view, render_message
 from .models import MentorProfile, MentorshipService, MentorshipSession
 from .forms import CloseMentoringSessionForm
+from .actions import close_mentoring_session
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -28,26 +30,6 @@ from rest_framework import status
 from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
 from django.db.models import Q
 
-API_URL = os.getenv('API_URL', '')
-
-
-def render_error(r, msg):
-    return render(r, 'message.html', {
-        'message': msg,
-    })
-
-
-def enforce_token(request, url):
-    token = request.GET.get('token', None)
-    if token is None:
-        return HttpResponseRedirect(redirect_to=f'{API_URL}/v1/auth/view/login?url=' + url)
-
-    token = Token.get_valid(token)
-    if token is None:
-        return render_error(request, 'Invalid token')
-    else:
-        return token
-
 
 def set_query_parameter(url, param_name, param_value):
     """Given a URL, set or replace a query parameter and return the
@@ -66,18 +48,18 @@ def set_query_parameter(url, param_name, param_value):
     return urlunsplit((scheme, netloc, path, new_query_string, fragment))
 
 
-def forward_booking_url(request, mentor_slug):
+@private_view
+def forward_booking_url(request, mentor_slug, token):
 
-    token = enforce_token(request, f'{API_URL}/mentor/{mentor_slug}')
     if isinstance(token, HttpResponseRedirect):
         return token
 
     mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
     if mentor is None:
-        return render_error(request, f'No mentor found with slug {mentor_slug}')
+        return render_message(request, f'No mentor found with slug {mentor_slug}')
 
     if mentor.status != 'ACTIVE':
-        return render_error(request, f'This mentor is not active')
+        return render_message(request, f'This mentor is not active')
 
     booking_url = mentor.booking_url
     if '?' not in booking_url:
@@ -91,9 +73,9 @@ def forward_booking_url(request, mentor_slug):
     })
 
 
-def forward_meet_url(request, mentor_slug):
+@private_view
+def forward_meet_url(request, mentor_slug, token):
 
-    token = enforce_token(request, f'{API_URL}/mentor/meet/{mentor_slug}')
     if isinstance(token, HttpResponseRedirect):
         return token
 
@@ -101,16 +83,16 @@ def forward_meet_url(request, mentor_slug):
 
     mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
     if mentor is None:
-        return render_error(request, f'No mentor found with slug {mentor_slug}')
+        return render_message(request, f'No mentor found with slug {mentor_slug}')
 
     if mentor.status != 'ACTIVE':
-        return render_error(request, f'This mentor is not active')
+        return render_message(request, f'This mentor is not active')
 
     session = MentorshipSession.objects.filter(mentor__slug=mentor_slug,
                                                mentee__id=token.user.id,
                                                status='PENDING').first()
     if session is None and redirect is not None:
-        return render_error(
+        return render_message(
             request, f'No mentoring session found with {mentor.user.first_name} {mentor.user.last_name}')
 
     if session is None:
@@ -121,6 +103,7 @@ def forward_meet_url(request, mentor_slug):
         session.save()
     elif redirect is not None:
         session.started_at = timezone.now()
+        session.status = 'STARTED'
         session.save()
         return HttpResponseRedirect(redirect_to=session.online_meeting_url)
 
@@ -132,7 +115,8 @@ def forward_meet_url(request, mentor_slug):
         })
 
 
-def close_mentoring_session_form(request, session_id):
+@private_view
+def end_mentoring_session(request, session_id, token):
 
     if request.method == 'POST':
         _dict = request.POST.copy()
@@ -148,27 +132,23 @@ def close_mentoring_session_form(request, session_id):
             messages.error(request, 'Invalid session id')
             return render(request, 'form.html', {'form': form})
 
-        if 'status' is _dict and _dict['status'] == 'PENDING':
-            messages.error(request, 'You need to chose either Completed or Failed on the session status')
-            return render(request, 'form.html', {'form': form})
+        if form.is_valid():
+            if close_mentoring_session(session=session, data=_dict):
+                return render_message(
+                    request,
+                    f'The mentoring session has been closed successfully, you can close this window.')
+            else:
+                return render_message(request, f'There was a problem ending the mentoring session')
 
-        close_mentoring_session(
-            session=session,
-            summary=_dict['summary'],
-            status=_dict['status'],
-        )
-
-        return render(request, 'message.html',
-                      {'message': 'The mentoring session has been closed successfully'})
-    else:
+    elif request.method == 'GET':
         session = MentorshipSession.objects.filter(id=session_id).first()
         if session is None:
-            return render(request, 'message.html', {
-                'message': f'Invalid session id {str(session_id)}',
-            })
+            return render_message(request, f'Invalid session id {str(session_id)}')
 
         _dict = request.GET.copy()
         _dict['token'] = request.GET.get('token', None)
+        _dict['status'] = session.status
+        _dict['summary'] = session.summary
         _dict[
             'student_name'] = session.mentee.first_name + ' ' + session.mentee.last_name + ', ' + session.mentee.email
         _dict['session_id'] = session.id
@@ -176,9 +156,11 @@ def close_mentoring_session_form(request, session_id):
     return render(
         request, 'form.html', {
             'form': form,
-            'title': 'Close Mentoring Session',
-            'intro': 'Please fill the following information to deliver your assignment',
-            'btn_lable': 'Close Mentoring Session'
+            'disabled': session.status not in ['PENDING', 'STARTED'],
+            'btn_lable': 'End Mentoring Session'
+            if session.status in ['PENDING', 'STARTED'] else 'Mentoring session already ended',
+            'intro': 'Please fill the following information to formally end the session',
+            'title': 'End Mentoring Session'
         })
 
 

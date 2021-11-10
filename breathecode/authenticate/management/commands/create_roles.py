@@ -221,6 +221,14 @@ class Command(BaseCommand):
                 'slug': 'read_mentorhip_mentor',
                 'description': 'Get all mentorship mentors from one academy'
             },
+            {
+                'slug': 'read_mentorhip_session',
+                'description': 'Get all session from one academy'
+            },
+            {
+                'slug': 'crud_mentorship_session',
+                'description': 'Get all session from one academy'
+            },
         ]
 
         for c in caps:

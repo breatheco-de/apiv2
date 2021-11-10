@@ -2,6 +2,7 @@ import re
 from breathecode.admissions.models import Academy, Syllabus
 from django.contrib.auth.models import User
 from django.db import models
+from .signals import mentorship_session_status
 from slugify import slugify
 
 DRAFT = 'DRAFT'
@@ -19,6 +20,8 @@ class MentorshipService(models.Model):
     name = models.CharField(max_length=150)
 
     status = models.CharField(max_length=15, choices=MENTORSHIP_STATUS, default=DRAFT)
+
+    language = models.CharField(max_length=2, default='en')
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
@@ -102,16 +105,21 @@ class MentorProfile(models.Model):
 
 
 PENDING = 'PENDING'
+STARTED = 'STARTED'
 COMPLETED = 'COMPLETED'
 FAILED = 'FAILED'
 MENTORSHIP_STATUS = (
     (PENDING, 'Pending'),
+    (STARTED, 'Started'),
     (COMPLETED, 'Completed'),
     (FAILED, 'Failed'),
 )
 
 
 class MentorshipSession(models.Model):
+    def __init__(self, *args, **kwargs):
+        super(MentorshipSession, self).__init__(*args, **kwargs)
+        self.__old_status = self.status
 
     is_online = models.BooleanField()
     latitude = models.FloatField(blank=True, null=True, default=None)
@@ -133,7 +141,7 @@ class MentorshipSession(models.Model):
     status = models.CharField(max_length=15,
                               choices=MENTORSHIP_STATUS,
                               default=PENDING,
-                              help_text=f'Options are: {"".join([key for key,label in MENTORSHIP_STATUS])}')
+                              help_text=f'Options are: {", ".join([key for key,label in MENTORSHIP_STATUS])}')
 
     agenda = models.TextField(blank=True,
                               null=True,
@@ -161,3 +169,10 @@ class MentorshipSession(models.Model):
 
     def __str__(self):
         return f'(Session {self.id} with {str(self.mentor)} and {str(self.mentee)})'
+
+    def save(self, *args, **kwargs):
+
+        if self.__old_status != self.status:
+            mentorship_session_status.send(instance=self, sender=MentorshipSession)
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.

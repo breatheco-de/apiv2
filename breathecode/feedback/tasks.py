@@ -9,6 +9,7 @@ from .utils import strings
 from breathecode.admissions.models import CohortUser, Cohort
 from django.contrib.auth.models import User
 from .models import Survey, Answer, Review, ReviewPlatform
+from breathecode.mentorship.models import MentorshipSession
 from django.utils import timezone
 
 # Get an instance of a logger
@@ -16,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 ADMIN_URL = os.getenv('ADMIN_URL', '')
 SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', '')
+API_URL = os.getenv('API_URL', '')
 
 
 class BaseTaskWithRetry(Task):
@@ -28,7 +30,13 @@ class BaseTaskWithRetry(Task):
 def build_question(answer):
 
     question = {'title': '', 'lowest': '', 'highest': ''}
-    if answer.event is not None:
+    if answer.mentorship_session is not None:
+        question['title'] = strings[answer.lang]['session']['title'].format(
+            f'{answer.mentorship_session.mentor.user.first_name} {answer.mentorship_session.mentor.user.last_name}'
+        )
+        question['lowest'] = strings[answer.lang]['session']['lowest']
+        question['highest'] = strings[answer.lang]['session']['highest']
+    elif answer.event is not None:
         question['title'] = strings[answer.lang]['event']['title']
         question['lowest'] = strings[answer.lang]['event']['lowest']
         question['highest'] = strings[answer.lang]['event']['highest']
@@ -142,7 +150,7 @@ def send_cohort_survey(self, user_id, survey_id):
     data = {
         'SUBJECT': strings[survey.lang]['survey_subject'],
         'MESSAGE': strings[survey.lang]['survey_message'],
-        'SURVEY_ID': survey_id,
+        'TRACKER_URL': f'{API_URL}/v1/feedback/survey/{survey_id}/tracker.png',
         'BUTTON': strings[survey.lang]['button_label'],
         'LINK': f'https://nps.breatheco.de/survey/{survey_id}?token={token.key}',
     }
@@ -204,3 +212,47 @@ def process_answer_received(self, answer_id):
                            })
 
     return True
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def send_mentorship_session_survey(self, session_id):
+    logger.debug('Starting send_mentorship_session_survey')
+    session = MentorshipSession.objects.filter(id=session_id).first()
+    if session is None:
+        logger.error('Mentoring session not found')
+        return False
+
+    if Answer.objects.filter(mentorship_session__id=session.id).first() is not None:
+        logger.info(f'There is already a NPS question for this mentoring session, IGNORING')
+        return True
+
+    answer = Answer(mentorship_session=session,
+                    academy=session.mentor.service.academy,
+                    lang=session.mentor.service.language)
+    question = build_question(answer)
+    answer.title = question['title']
+    answer.lowest = question['lowest']
+    answer.highest = question['highest']
+    answer.user = session.mentee
+    answer.status = 'SENT'
+    answer.save()
+
+    has_slackuser = hasattr(session.mentee, 'slackuser')
+    if not session.mentee.email:
+        message = f'Author not have email, this survey cannot be send by {str(session.mentee.id)}'
+        logger.info(message)
+        raise Exception(message)
+
+    token, created = Token.get_or_create(session.mentee, hours_length=48)
+    data = {
+        'SUBJECT': strings[answer.lang]['survey_subject'],
+        'MESSAGE': answer.title,
+        'TRACKER_URL': f'{API_URL}/v1/feedback/answer/{answer.id}/tracker.png',
+        'BUTTON': strings[answer.lang]['button_label'],
+        'LINK': f'https://nps.breatheco.de/{answer.id}?token={token.key}',
+    }
+
+    if session.mentee.email:
+        if send_email_message('nps_survey', session.mentee.email, data):
+            answer.sent_at = timezone.now()
+            answer.save()

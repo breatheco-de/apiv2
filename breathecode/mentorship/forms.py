@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django import forms
 from .models import MENTORSHIP_STATUS
+from rest_framework.exceptions import ValidationError, NotFound
 
 
 class CloseMentoringSessionForm(forms.Form):
@@ -19,5 +20,17 @@ class CloseMentoringSessionForm(forms.Form):
     def __init__(self, params, *args, **kwargs):
         super(forms.Form, self).__init__(params, *args, **kwargs)
         self.fields['token'].widget.attrs.update({'initial': params.get('token')})
-        self.fields['student_name'].widget.attrs.update({'initial': params.get('student_name')})
-        self.fields['session_id'].widget.attrs.update({'initial': params.get('session_id')})
+
+    def clean(self):
+        super(CloseMentoringSessionForm, self).clean()
+        status = self.cleaned_data.get('status')
+
+        # if status == 'PENDING':
+        #     raise ValidationError('You need to chose either Completed or Failed on the session status',
+        #                           code='invalid')
+
+        if status in ['PENDING', 'STARTED']:
+            self._errors['status'] = self.error_class(
+                ['You need to chose either Completed or Failed on the session status'])
+
+        return self.cleaned_data

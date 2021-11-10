@@ -291,4 +291,20 @@ class AcademyEventTestSuite(CypressTestCase):
                 'slug': 'generate_temporal_token',
                 'description': 'Generate a temporal token to reset github credential or forgot password'
             },
+            {
+                'slug': 'read_mentorhip_service',
+                'description': 'Get all mentorship services from one academy'
+            },
+            {
+                'slug': 'read_mentorhip_mentor',
+                'description': 'Get all mentorship mentors from one academy'
+            },
+            {
+                'slug': 'read_mentorhip_session',
+                'description': 'Get all session from one academy'
+            },
+            {
+                'slug': 'crud_mentorship_session',
+                'description': 'Get all session from one academy'
+            },
         ])
