@@ -8,7 +8,7 @@ API_URL = os.getenv('API_URL', '')
 
 def render_message(r, msg):
     return render(r, 'message.html', {
-        'message': msg,
+        'MESSAGE': msg,
     })
 
 

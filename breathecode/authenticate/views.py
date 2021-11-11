@@ -1171,7 +1171,7 @@ def render_invite(request, token, member_id=None):
             return HttpResponseRedirect(redirect_to=callback[2:-2])
         else:
             return render(request, 'message.html',
-                          {'message': 'Welcome to BreatheCode, you can go ahead an log in'})
+                          {'MESSAGE': 'Welcome to BreatheCode, you can go ahead an log in'})
 
 
 def login_html_view(request):

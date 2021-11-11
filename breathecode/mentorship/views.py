@@ -108,10 +108,15 @@ def forward_meet_url(request, mentor_slug, token):
         return HttpResponseRedirect(redirect_to=session.online_meeting_url)
 
     return render(
-        request, 'mentoring_session.html', {
-            'SUBJECT': 'Mentoring Session',
-            'meeting_url': set_query_parameter('?' + request.GET.urlencode(), 'redirect', 'true'),
-            'session': session,
+        request, 'message.html', {
+            'SUBJECT':
+            'Mentoring Session',
+            'BUTTON':
+            'Start Session',
+            'LINK':
+            set_query_parameter('?' + request.GET.urlencode(), 'redirect', 'true'),
+            'MESSAGE':
+            f'Hello {session.mentee.first_name }, you are about to start a {session.mentor.service.name} with: {session.mentor.user.first_name} {session.mentor.user.last_name}',
         })
 
 

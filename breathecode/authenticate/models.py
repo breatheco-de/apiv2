@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
@@ -273,7 +274,12 @@ class Token(rest_framework.authtoken.models.Token):
             kwargs['expires_at'] = utc_now + timezone.timedelta(hours=kwargs['hours_length'])
             del kwargs['hours_length']
 
-        token, created = Token.objects.get_or_create(user=user, **kwargs)
+        token = None
+        created = False
+        try:
+            token, created = Token.objects.get_or_create(user=user, **kwargs)
+        except MultipleObjectsReturned:
+            token = Token.objects.filter(user=user, **kwargs).first()
 
         if not created:
             if token.expires_at < utc_now:
