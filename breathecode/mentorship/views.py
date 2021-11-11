@@ -296,6 +296,10 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
         items = MentorProfile.objects.filter(service__academy__id=academy_id)
         lookup = {}
 
+        if 'service' in self.request.GET:
+            param = self.request.GET.get('service')
+            lookup['service__slug'] = param
+
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
             lookup['status'] = param
