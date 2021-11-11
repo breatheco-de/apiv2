@@ -197,7 +197,7 @@ def process_answer_received(self, answer_id):
         answer.survey.avg_score = survey_score['score__avg']
         answer.survey.save()
 
-    if answer.score < 8:
+    if answer.score is not None and answer.score < 8:
         # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
         send_email_message('negative_answer', [SYSTEM_EMAIL, answer.academy.feedback_email],
                            data={

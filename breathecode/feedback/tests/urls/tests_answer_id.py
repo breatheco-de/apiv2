@@ -225,6 +225,8 @@ class AnswerIdTestSuite(FeedbackTestCase):
                 'cohort': model['answer'].cohort,
                 'academy': model['answer'].academy,
                 'survey': None,
+                'mentorship_session': None,
+                'sent_at': None,
                 'mentor': model['answer'].mentor.id,
                 'event': model['answer'].event,
                 'user': model['answer'].user.id,
