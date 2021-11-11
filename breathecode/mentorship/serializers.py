@@ -11,6 +11,7 @@ class GetAcademySmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    logo_url = serpy.Field()
 
 
 class ProfileSerializer(serpy.Serializer):
@@ -45,6 +46,7 @@ class GETServiceSmallSerializer(serpy.Serializer):
 
 class GETMentorSmallSerializer(serpy.Serializer):
     id = serpy.Field()
+    slug = serpy.Field()
     user = GetUserSmallSerializer()
     service = GETServiceSmallSerializer()
     status = serpy.Field()
@@ -60,6 +62,7 @@ class GETSessionSmallSerializer(serpy.Serializer):
 
 class GETMentorBigSerializer(serpy.Serializer):
     id = serpy.Field()
+    slug = serpy.Field()
     user = GetUserSmallSerializer()
     service = GETServiceSmallSerializer()
     status = serpy.Field()

@@ -18,6 +18,7 @@ MENTORSHIP_STATUS = (
 class MentorshipService(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
+    description = models.TextField(max_length=500, default=None, blank=True, null=True)
 
     status = models.CharField(max_length=15, choices=MENTORSHIP_STATUS, default=DRAFT)
 
@@ -49,6 +50,8 @@ class MentorProfile(models.Model):
         'Will be used as unique public booking URL with the students, for example: 4geeks.com/meet/bob')
 
     price_per_hour = models.FloatField()
+
+    bio = models.TextField(max_length=500, default=None, blank=True, null=True)
 
     service = models.ForeignKey(MentorshipService, on_delete=models.CASCADE)
 
