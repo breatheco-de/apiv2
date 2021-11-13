@@ -242,6 +242,8 @@ class GetCohortSerializer(serpy.Serializer):
     ending_date = serpy.Field()
     current_day = serpy.Field()
     stage = serpy.Field()
+    online_meeting_url = serpy.Field()
+    timezone = serpy.Field()
     specialty_mode = GetSmallSpecialtyModeSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
@@ -488,7 +490,7 @@ class CohortSerializer(CohortSerializerMixin):
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus',
                   'specialty_mode', 'syllabus_version', 'ending_date', 'stage', 'language', 'created_at',
-                  'updated_at', 'never_ends')
+                  'updated_at', 'never_ends', 'online_meeting_url', 'timezone')
 
     def create(self, validated_data):
         del self.context['request']
@@ -511,7 +513,8 @@ class CohortPUTSerializer(CohortSerializerMixin):
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
-                  'syllabus', 'syllabus_version', 'specialty_mode', 'never_ends', 'private')
+                  'syllabus', 'syllabus_version', 'specialty_mode', 'never_ends', 'private',
+                  'online_meeting_url', 'timezone')
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
