@@ -311,6 +311,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'kickoff_date': self.datetime_to_iso(cohort.kickoff_date),
             'current_day': cohort.current_day,
             'specialty_mode': cohort.specialty_mode.id,
+            'online_meeting_url': cohort.online_meeting_url,
+            'timezone': cohort.timezone,
             'academy': {
                 'id': cohort.academy.id,
                 'slug': cohort.academy.slug,
@@ -414,6 +416,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -503,6 +507,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -597,6 +603,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -688,6 +696,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -754,6 +764,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -829,6 +841,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'current_day': model['cohort'].current_day,
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -902,6 +916,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -992,6 +1008,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -1058,6 +1076,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -1133,6 +1153,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'current_day': model['cohort'].current_day,
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -1207,6 +1229,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'current_day': model['cohort'].current_day,
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -1294,6 +1318,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
                 'current_day': model['cohort'].current_day,
+                'online_meeting_url': model['cohort'].online_meeting_url,
+                'timezone': model['cohort'].timezone,
                 'specialty_mode': {
                     'id': model['cohort'].specialty_mode.id,
                     'name': model['cohort'].specialty_mode.name,
@@ -1382,6 +1408,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
                 'current_day': model['cohort'].current_day,
+                'online_meeting_url': model['cohort'].online_meeting_url,
+                'timezone': model['cohort'].timezone,
                 'specialty_mode': {
                     'id': model['cohort'].specialty_mode.id,
                     'name': model['cohort'].specialty_mode.name,
@@ -1661,6 +1689,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': cohort.ending_date,
             'stage': cohort.stage,
             'language': cohort.language,
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
             'created_at': self.datetime_to_iso(cohort.created_at),
             'updated_at': self.datetime_to_iso(cohort.updated_at),
             **data,
