@@ -25,6 +25,12 @@ class FileMock():
     def delete(*args, **kwargs):
         pass
 
+    def upload(*args, **kwargs):
+        return args[0]
+
+    def url(*args, **kwargs):
+        return 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
+
 
 file_mock = Mock(side_effect=FileMock)
 
@@ -413,7 +419,7 @@ class MediaTestSuite(MediaTestCase):
                 }])
 
             self.assertEqual(storage_mock.call_args_list, [call()])
-            self.assertEqual(file_mock.upload.call_args_list, [call(file_bytes)])
+            self.assertEqual(file_mock.upload.call_args_list, [call(file_bytes, content_type='image/png')])
             self.assertEqual(file_mock.url.call_args_list, [call()])
 
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
@@ -507,7 +513,10 @@ class MediaTestSuite(MediaTestCase):
             }])
 
         self.assertEqual(storage_mock.call_args_list, [call(), call()])
-        self.assertEqual(file_mock.upload.call_args_list, [call(file_bytes1), call(file_bytes2)])
+        self.assertEqual(
+            file_mock.upload.call_args_list,
+            [call(file_bytes1, content_type='image/png'),
+             call(file_bytes2, content_type='image/png')])
         self.assertEqual(file_mock.url.call_args_list, [call(), call()])
 
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
