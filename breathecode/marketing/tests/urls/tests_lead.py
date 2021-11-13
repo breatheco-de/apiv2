@@ -9,6 +9,7 @@ from mixer.main import Mixer
 from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
+from faker import Faker
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,
@@ -16,6 +17,8 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins import MarketingTestCase
+
+fake = Faker()
 
 
 def random_string():
@@ -39,7 +42,7 @@ def generate_form_entry_kwargs():
         'client_comments': random_string(),
         'location': random_string(),
         'language': random_string(),
-        'utm_url': random_string(),
+        'utm_url': fake.url(),
         'utm_medium': random_string(),
         'utm_campaign': random_string(),
         'utm_source': random_string(),

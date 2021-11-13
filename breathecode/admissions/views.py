@@ -978,8 +978,6 @@ class SyllabusView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('crud_syllabus')
     def put(self, request, syllabus_id=None, syllabus_slug=None, academy_id=None):
-        print('asdasdasdasads', syllabus_id, syllabus_slug, academy_id)
-
         if 'slug' in request.data and not request.data['slug']:
             raise ValidationException('slug can\'t be empty', slug='empty-slug')
 
@@ -1022,7 +1020,7 @@ class SyllabusVersionView(APIView):
                     Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
                 ).order_by('-version').first()
 
-            if syllabus_version is None and version.isnumeric():
+            if syllabus_version is None and version:
                 syllabus_version = SyllabusVersion.objects.filter(
                     Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
                     Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
