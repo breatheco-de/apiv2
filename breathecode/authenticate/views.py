@@ -1000,7 +1000,7 @@ def reset_password_view(request):
             return HttpResponseRedirect(redirect_to=_dict['callback'] +
                                         '?msg=Check your email for a password reset!')
         else:
-            return render(request, 'message.html', {'message': 'Check your email for a password reset!'})
+            return render(request, 'message.html', {'MESSAGE': 'Check your email for a password reset!'})
     else:
         _dict = request.GET.copy()
         _dict['callback'] = request.GET.get('callback', '')
