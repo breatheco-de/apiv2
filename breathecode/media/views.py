@@ -438,7 +438,7 @@ class UploadView(APIView):
                     # upload file section
                     storage = Storage()
                     cloud_file = storage.file(media_gallery_bucket(), hash)
-                    cloud_file.upload(file_bytes)
+                    cloud_file.upload(file_bytes, content_type=file.content_type)
                     data['url'] = cloud_file.url()
                     data['thumbnail'] = data['url'] + '-thumbnail'
 
