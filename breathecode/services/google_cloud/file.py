@@ -19,10 +19,10 @@ class File:
         if self.blob:
             self.blob.delete()
 
-    def upload(self, content: str, public=False):
+    def upload(self, content: str, public=False, content_type='text/plain'):
         """Delete Blob from Bucker"""
         self.blob = self.bucket.blob(self.file_name)
-        self.blob.upload_from_string(content)
+        self.blob.upload_from_string(content, content_type=content_type)
 
         if public:
             self.blob.make_public()

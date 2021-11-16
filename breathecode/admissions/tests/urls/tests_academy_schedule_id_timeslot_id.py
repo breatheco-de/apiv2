@@ -159,7 +159,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
-                                     academy_specialty_mode=True)
+                                     syllabus=True,
+                                     specialty_mode=True)
         url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
                            kwargs={
                                'certificate_id': 1,
@@ -183,8 +184,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
+                                     syllabus=True,
                                      specialty_mode=True,
-                                     academy_specialty_mode=True,
                                      specialty_mode_time_slot=True)
         url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
                            kwargs={
@@ -211,9 +212,9 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
+                                     syllabus=True,
                                      specialty_mode_time_slot=True,
-                                     specialty_mode=True,
-                                     academy_specialty_mode=True)
+                                     specialty_mode=True)
         url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
                            kwargs={
                                'certificate_id': 1,

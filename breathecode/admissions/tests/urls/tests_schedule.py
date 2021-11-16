@@ -43,7 +43,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(json, [{
             'id': model['specialty_mode'].id,
             'name': model['specialty_mode'].name,
-            'slug': model['specialty_mode'].slug,
             'description': model['specialty_mode'].description,
             'syllabus': model['specialty_mode'].syllabus.id,
         }])
@@ -89,7 +88,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = [{
             'id': model.specialty_mode.id,
-            'slug': model.specialty_mode.slug,
             'name': model.specialty_mode.name,
             'description': model.specialty_mode.description,
             'syllabus': model.specialty_mode.syllabus.id,
@@ -138,7 +136,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = [{
             'id': model.specialty_mode.id,
-            'slug': model.specialty_mode.slug,
             'name': model.specialty_mode.name,
             'description': model.specialty_mode.description,
             'syllabus': model.specialty_mode.syllabus.id,
@@ -147,6 +144,10 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
+
+    """
+    🔽🔽🔽 Pagination
+    """
 
     def test_certificate_with_data_without_pagination_get_just_100(self):
         """Test /certificate without auth"""
@@ -161,7 +162,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(json, [{
             'id': model['specialty_mode'].id,
             'name': model['specialty_mode'].name,
-            'slug': model['specialty_mode'].slug,
             'description': model['specialty_mode'].description,
             'syllabus': model['specialty_mode'].syllabus.id,
         } for model in models if model['specialty_mode'].id <= 100])
@@ -194,7 +194,6 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'results': [{
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
-                    'slug': model['specialty_mode'].slug,
                     'description': model['specialty_mode'].description,
                     'syllabus': model['specialty_mode'].syllabus.id,
                 } for model in models if model['specialty_mode'].id <= 5]
@@ -228,7 +227,6 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'results': [{
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
-                    'slug': model['specialty_mode'].slug,
                     'description': model['specialty_mode'].description,
                     'syllabus': model['specialty_mode'].syllabus.id,
                 } for model in models if model['specialty_mode'].id > 5],

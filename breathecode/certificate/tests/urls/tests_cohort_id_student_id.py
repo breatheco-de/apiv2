@@ -140,12 +140,13 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(model.cohort.kickoff_date),
+                'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
                 'specialty_mode': {
                     'id': 1,
                     'name': model['specialty_mode'].name,
-                    'slug': model['specialty_mode'].slug,
                     'syllabus': model['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': {

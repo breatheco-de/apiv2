@@ -5,7 +5,7 @@ from breathecode.authenticate.signals import invite_accepted
 from breathecode.authenticate.models import ProfileAcademy
 from breathecode.admissions.models import CohortUser, Cohort
 from breathecode.admissions.signals import student_edu_status_updated
-from .models import FormEntry
+from .models import FormEntry, ActiveCampaignAcademy
 from .tasks import add_cohort_task_to_student, add_cohort_slug_as_acp_tag
 
 logger = logging.getLogger(__name__)
@@ -33,4 +33,6 @@ def student_edustatus_updated(sender, instance, *args, **kwargs):
 @receiver(post_save, sender=Cohort)
 def cohort_post_save(sender, instance, created, *args, **kwargs):
     if created:
-        add_cohort_slug_as_acp_tag.delay(instance.id, instance.academy.id)
+        ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=instance.academy.id).first()
+        if ac_academy is not None:
+            add_cohort_slug_as_acp_tag.delay(instance.id, instance.academy.id)

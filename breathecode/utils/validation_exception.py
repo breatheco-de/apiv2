@@ -17,6 +17,7 @@ class ValidationException(APIException):
         self.status_code = code
         self.default_detail = details
         self.slug = slug
+        self.detail = details
 
         if IS_TEST_ENV and slug:
             logger.error(f'Status {str(self.status_code)} - {slug}')

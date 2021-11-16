@@ -182,12 +182,13 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(model.cohort.kickoff_date),
+                'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
                 'specialty_mode': {
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
-                    'slug': model['specialty_mode'].slug,
                     'syllabus': model['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': {
@@ -335,12 +336,13 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(models[1].cohort.kickoff_date),
+                'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
                 'specialty_mode': {
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
-                    'slug': models[0]['specialty_mode'].slug,
                     'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': {
@@ -389,12 +391,13 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(models[1].cohort.kickoff_date),
+                'ending_date': None,
                 'name': models[1].cohort.name,
                 'slug': models[1].cohort.slug,
                 'specialty_mode': {
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
-                    'slug': models[0]['specialty_mode'].slug,
                     'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': {
@@ -538,12 +541,13 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(models[0].cohort.kickoff_date),
+                'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
                 'specialty_mode': {
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
-                    'slug': models[0]['specialty_mode'].slug,
                     'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': None,
@@ -648,12 +652,13 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(models[0].cohort.kickoff_date),
+                'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
                 'specialty_mode': {
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
-                    'slug': models[0]['specialty_mode'].slug,
                     'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': None,
@@ -754,12 +759,13 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(models[0].cohort.kickoff_date),
+                'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
                 'specialty_mode': {
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
-                    'slug': models[0]['specialty_mode'].slug,
                     'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': None,
@@ -861,12 +867,13 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(models[0].cohort.kickoff_date),
+                'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
                 'specialty_mode': {
                     'id': models[0]['specialty_mode'].id,
                     'name': models[0]['specialty_mode'].name,
-                    'slug': models[0]['specialty_mode'].slug,
                     'syllabus': models[0]['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': None,

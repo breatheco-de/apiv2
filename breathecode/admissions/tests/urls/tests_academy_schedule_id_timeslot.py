@@ -133,7 +133,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
-                                     academy_specialty_mode=True)
+                                     syllabus=True,
+                                     specialty_mode=True)
         url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
         data = {}
         response = self.client.post(url, data, format='json')
@@ -153,7 +154,8 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
-                                     academy_specialty_mode=True)
+                                     syllabus=True,
+                                     specialty_mode=True)
         url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
 
         starting_at = self.datetime_now()

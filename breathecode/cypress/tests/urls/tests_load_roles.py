@@ -102,17 +102,11 @@ class AcademyEventTestSuite(CypressTestCase):
                 'name': 'Country Manager',
             },
         ])
-
+        self.maxDiff = None
         self.assertEqual(self.all_capability_dict(), [
             {
                 'slug': 'read_my_academy',
                 'description': 'Read your academy information'
-            },
-            {
-                'slug':
-                'read_assignment_sensitive_details',
-                'description':
-                'The mentor in residence is allowed to see aditional info about the task, like the "delivery url"'
             },
             {
                 'slug':
@@ -131,14 +125,6 @@ class AcademyEventTestSuite(CypressTestCase):
                 'description': 'Read academy staff member information'
             },
             {
-                'slug': 'read_shortlink',
-                'description': 'Access the list of marketing shortlinks'
-            },
-            {
-                'slug': 'crud_shortlink',
-                'description': 'Create, update and delete marketing short links'
-            },
-            {
                 'slug': 'crud_student',
                 'description': 'Create, update or delete students'
             },
@@ -153,6 +139,19 @@ class AcademyEventTestSuite(CypressTestCase):
             {
                 'slug': 'read_assignment',
                 'description': 'Read assigment information'
+            },
+            {
+                'description': 'The mentor in residence is allowed to see aditional info '
+                'about the task, like the "delivery url"',
+                'slug': 'read_assignment_sensitive_details'
+            },
+            {
+                'description': 'Access the list of marketing shortlinks',
+                'slug': 'read_shortlink'
+            },
+            {
+                'description': 'Create, update and delete marketing short links',
+                'slug': 'crud_shortlink'
             },
             {
                 'slug': 'crud_assignment',
@@ -291,5 +290,21 @@ class AcademyEventTestSuite(CypressTestCase):
             {
                 'slug': 'generate_temporal_token',
                 'description': 'Generate a temporal token to reset github credential or forgot password'
+            },
+            {
+                'slug': 'read_mentorhip_service',
+                'description': 'Get all mentorship services from one academy'
+            },
+            {
+                'slug': 'read_mentorhip_mentor',
+                'description': 'Get all mentorship mentors from one academy'
+            },
+            {
+                'slug': 'read_mentorhip_session',
+                'description': 'Get all session from one academy'
+            },
+            {
+                'slug': 'crud_mentorship_session',
+                'description': 'Get all session from one academy'
             },
         ])
