@@ -7,7 +7,7 @@ from django.utils import timezone
 
 
 class Command(BaseCommand):
-    help = 'Sync from eventbrite, please mae sure to add the argument, Eg: sync_eventbrite events'
+    help = 'Sync from eventbrite, please make sure to add the argument, Eg: sync_eventbrite events'
 
     def add_arguments(self, parser):
         parser.add_argument('entity', type=str)

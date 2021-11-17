@@ -11,6 +11,15 @@ SYNC_STATUS = (
     (ERROR, 'Error'),
 )
 
+WARNING = 'WARNING'
+SYNCHED = 'SYNCHED'
+EVENTBRITE_SYNC_STATUS = (
+    (PENDING, 'Pending'),
+    (ERROR, 'Error'),
+    (WARNING, 'Warning'),
+    (SYNCHED, 'Synched'),
+)
+
 __all__ = ['Organization', 'Organizer', 'Venue', 'EventType', 'Event', 'EventCheckin', 'EventbriteWebhook']
 
 
@@ -137,6 +146,12 @@ class Event(models.Model):
     eventbrite_id = models.CharField(unique=True, max_length=80, blank=True, default=None, null=True)
     eventbrite_url = models.CharField(max_length=255, blank=True, default=None, null=True)
     eventbrite_organizer_id = models.CharField(max_length=80, blank=True, default=None, null=True)
+    eventbrite_sync = models.BooleanField(default=False)
+    eventbrite_sync_message = models.CharField(max_length=255, default=None, null=True, blank=True)
+    eventbrite_sync_status = models.CharField(max_length=7,
+                                              choices=EVENTBRITE_SYNC_STATUS,
+                                              default=PENDING,
+                                              blank=True)
 
     status = models.CharField(max_length=9, choices=EVENT_STATUS, default=DRAFT, blank=True)
     eventbrite_status = models.CharField(
