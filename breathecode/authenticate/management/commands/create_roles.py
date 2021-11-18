@@ -195,15 +195,15 @@ CAPABILITIES = [
         'description': 'Generate a temporal token to reset github credential or forgot password'
     },
     {
-        'slug': 'read_mentorhip_service',
+        'slug': 'read_mentorship_service',
         'description': 'Get all mentorship services from one academy'
     },
     {
-        'slug': 'read_mentorhip_mentor',
+        'slug': 'read_mentorship_mentor',
         'description': 'Get all mentorship mentors from one academy'
     },
     {
-        'slug': 'read_mentorhip_session',
+        'slug': 'read_mentorship_session',
         'description': 'Get all session from one academy'
     },
     {
@@ -235,8 +235,8 @@ ROLES = [
             'crud_lead',
             'read_review',
             'read_shortlink',
-            'read_mentorhip_service',
-            'read_mentorhip_mentor',
+            'read_mentorship_service',
+            'read_mentorship_mentor',
         ],
     },
     {
@@ -264,8 +264,8 @@ ROLES = [
             'read_review',
             'read_activity',
             'read_shortlink',
-            'read_mentorhip_service',
-            'read_mentorhip_mentor',
+            'read_mentorship_service',
+            'read_mentorship_mentor',
         ],
     },
     {
@@ -280,8 +280,8 @@ ROLES = [
             'read_cohort',
             'read_my_academy',
             'crud_activity',
-            'read_mentorhip_service',
-            'read_mentorhip_mentor',
+            'read_mentorship_service',
+            'read_mentorship_mentor',
         ],
     },
 ]
