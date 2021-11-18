@@ -35,9 +35,14 @@ def render_html_all_bills(request):
     for bill in serializer.data:
         total_price += bill['total_price']
 
+    status_maper = {
+        'DUE': 'Draft under review',
+        'APPROVED': 'Ready to pay',
+        'PAID': 'Already paid',
+    }
     data = {
         'status': status,
-        'possible_status': [s for s in BILL_STATUS],
+        'possible_status': [(key, status_maper[key]) for key, label in BILL_STATUS],
         'bills': serializer.data,
         'total_price': total_price
     }
