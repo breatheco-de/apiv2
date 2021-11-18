@@ -17,8 +17,8 @@ from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
-PROJECT_ROOT = Path(os.path.dirname(os.path.abspath(__file__))) / 'breathecode'
+BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__))) / '..'
+PROJECT_ROOT = Path(os.path.dirname(os.path.abspath(__file__)))
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 ENVIRONMENT = os.environ.get('ENV')
