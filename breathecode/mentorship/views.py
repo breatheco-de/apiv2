@@ -211,7 +211,7 @@ class ServiceView(APIView, HeaderLimitOffsetPagination):
     #         return Response(serializer.data, status=status.HTTP_200_OK)
     #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of('read_mentorhip_service')
+    @capable_of('read_mentorship_service')
     def get(self, request, service_id=None, academy_id=None):
 
         if service_id is not None:
@@ -282,7 +282,7 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
     #         return Response(serializer.data, status=status.HTTP_200_OK)
     #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of('read_mentorhip_mentor')
+    @capable_of('read_mentorship_mentor')
     def get(self, request, mentor_id=None, academy_id=None):
 
         if mentor_id is not None:
@@ -357,7 +357,7 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
     #         return Response(serializer.data, status=status.HTTP_200_OK)
     #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @capable_of('read_mentorhip_session')
+    @capable_of('read_mentorship_session')
     def get(self, request, session_id=None, academy_id=None):
 
         if session_id is not None:
