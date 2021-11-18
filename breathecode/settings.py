@@ -17,8 +17,8 @@ from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = Path(os.getcwd())
+PROJECT_ROOT = Path(os.getcwd()) / 'breathecode'
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 ENVIRONMENT = os.environ.get('ENV')
@@ -259,13 +259,8 @@ ALLOWED_HOSTS = ['*']
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
-STATIC_ROOT = os.path.join(PROJECT_ROOT, 'staticfiles')
+STATIC_ROOT = PROJECT_ROOT / 'staticfiles'
 STATIC_URL = '/static/'
-
-# Extra places for collectstatic to find static files.
-STATICFILES_DIRS = [
-    os.path.join(PROJECT_ROOT, 'static'),
-]
 
 CORS_ORIGIN_ALLOW_ALL = True
 
