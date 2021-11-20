@@ -14,38 +14,31 @@ def fetch_spider_data(spider):
     spider.status = 'PENDING'
     spider.save()
 
-    while _continue:
-        job_number = job_number + 1
-        response = requests.get(
-            f'https://storage.scrapinghub.com/requests/{ZYTE_API_DEPLOY}/{spider.zyte_spider_number}/{job_number}?apikey={ZYTE_API_KEY}&format=json'
+    # job_number = job_number + 1
+
+    response = requests.get(
+        f'https://storage.scrapinghub.com/items/{ZYTE_API_DEPLOY}/{spider.zyte_spider_number}/{job_number}?apikey={ZYTE_API_KEY}&format=json'
+    )
+
+    if response.status_code == 404:
+        _continue = False
+
+    elif response.status_code != 200:
+        raise Exception(
+            f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {job_number}'
         )
+    jobs = response.json()
+    # print('jobs', jobs)
 
-        if response.status_code == 404:
-            _continue = False
+    if len(jobs) == 0:
+        logger.debug(f'No more jobs found for spider {spider.zyte_spider_number} job {job_number}')
+        _continue = False
 
-        elif response.status_code != 200:
-            raise Exception(
-                f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {job_number}'
-            )
-        jobs = response.json()
-        # print('jobs', jobs)
-        print(
-            'url',
-            f'https://storage.scrapinghub.com/requests/{ZYTE_API_DEPLOY}/{spider.zyte_spider_number}/{job_number}?apikey={ZYTE_API_KEY}&format=json'
-        )
+    for j in jobs:
+        print(j['Company_name'])
 
-        if len(jobs) == 0:
-            logger.debug(f'No more jobs found for spider {spider.zyte_spider_number} job {job_number}')
-            _continue = False
-
-        elif 'fp' not in jobs[0]:
-            logger.debug(f'{len(jobs)} jobs found for spider {spider.zyte_spider_number} job {job_number}')
-            incoming_jobs.append(jobs)
-
-    for jobs in incoming_jobs:
-        for j in jobs:
-            _job = Jobs(name=j['name'], )
-            _job.save()
+        _job = Job(name=j['Company_name'], )
+        _job.save()
 
     spider.status = 'SYNCHED'
     spider.save()
