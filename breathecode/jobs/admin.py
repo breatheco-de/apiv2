@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Platform, Spider, Job
+from .models import Platform, Spider, Job, Employer, Position, Tag, Location
 from .actions import fetch_spider_data
 
 
@@ -27,4 +27,24 @@ class SpiderAdmin(admin.ModelAdmin):
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
+    list_display = ('title', 'published', 'status', 'employer', 'position', 'tag', 'apply_url', 'created_at')
+
+
+@admin.register(Employer)
+class EmployerAdmin(admin.ModelAdmin):
     list_display = ('name', 'created_at')
+
+
+@admin.register(Position)
+class PositionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'created_at')
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'created_at')
+
+
+@admin.register(Location)
+class LocationAdmin(admin.ModelAdmin):
+    list_display = ('city', 'country', 'created_at')

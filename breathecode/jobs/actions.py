@@ -1,5 +1,5 @@
 import requests, os, logging
-from .models import Job
+from .models import Platform, Spider, Job, Employer, Position, Tag, Location
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +11,7 @@ def fetch_spider_data(spider):
     _continue = True
     incoming_jobs = []
     job_number = spider.zyte_job_number
+    name_spider = spider.id
     spider.status = 'PENDING'
     spider.save()
 
@@ -37,7 +38,51 @@ def fetch_spider_data(spider):
     for j in jobs:
         print(j['Company_name'])
 
-        _job = Job(name=j['Company_name'], )
+        if j['Company_name'] == 0 or j['Company_name'] == '':
+            _continue
+        elif j['Company_name']:
+            _emply = Employer(name=j['Company_name'])
+            _emply.save()
+
+        if j['Searched_job'] == 0 or j['Searched_job'] == '':
+            _continue
+        elif j['Searched_job']:
+            _position = Position(name=j['Searched_job'])
+            _position.save()
+
+        if j['Searched_job'] == 0 or j['Searched_job'] == '':
+            _continue
+        elif j['Searched_job']:
+            _tag = Tag(slug=j['Searched_job'])
+            _tag.save()
+
+        if j['Location'] == 0 or j['Location'] == '':
+            _continue
+        elif j['Location']:
+            _loc = Location(city=j['Location'])
+            _loc.save()
+
+        _employe_last = Employer.objects.latest('id')
+        _position_last = Position.objects.latest('id')
+        _tag_last = Tag.objects.latest('id')
+        _location_last = Location.objects.latest('id')
+
+        _remote = False
+
+        if j['Location'] == 'Remote' or j['Location'] == 'remote':
+            _remote = True
+
+        _job = Job(title=j['Job_title'],
+                   published=j['Post_date'],
+                   apply_url=j['Apply_to'],
+                   salary=j['Salary'],
+                   remote=_remote,
+                   employer=_employe_last,
+                   position=_position_last,
+                   tag=_tag_last,
+                   location=_location_last)
+
+        # _job = Job(platform=_platform_last, )
         _job.save()
 
     spider.status = 'SYNCHED'
