@@ -34,6 +34,8 @@ class Spider(models.Model):
     zyte_job_number = models.IntegerField()
     status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
 
+    platform = models.ForeignKey(Platform, on_delete=models.CASCADE, null=False, blank=False)
+
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
