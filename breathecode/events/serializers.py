@@ -66,6 +66,8 @@ class EventSmallSerializer(serpy.Serializer):
     online_event = serpy.Field()
     venue = VenueSerializer(required=False)
     academy = AcademySerializer(required=False)
+    sync = serpy.Field()
+    managed_by = serpy.Field()
 
 
 class EventSmallSerializerNoAcademy(serpy.Serializer):
@@ -81,6 +83,8 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     event_type = EventTypeSmallSerializer(required=False)
     online_event = serpy.Field()
     venue = VenueSerializer(required=False)
+    sync = serpy.Field()
+    managed_by = serpy.Field()
 
 
 class EventCheckinSerializer(serpy.Serializer):

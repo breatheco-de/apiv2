@@ -11,6 +11,7 @@ REQUESTS_PATH = {
     'patch': 'requests.patch',
     'delete': 'requests.delete',
     'head': 'requests.head',
+    'request': 'requests.request',
 }
 
 REQUESTS_INSTANCES = {
@@ -20,6 +21,7 @@ REQUESTS_INSTANCES = {
     'patch': None,
     'delete': None,
     'head': None,
+    'request': None,
 }
 
 
@@ -52,3 +54,7 @@ def apply_requests_delete_mock(endpoints=[]):
 
 def apply_requests_head_mock(endpoints=[]):
     return apply_requests_mock('HEAD', endpoints)
+
+
+def apply_requests_request_mock(endpoints=[]):
+    return apply_requests_mock('REQUEST', endpoints)

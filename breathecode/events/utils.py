@@ -19,6 +19,9 @@ class Eventbrite(object):
         pass
 
     def request(self, _type, url, headers={}, query_string=None):
+        if os.getenv('ENV') == 'test':
+            import requests
+
         _headers = {**self.headers, **headers}
         _query_string = '?' + urllib.parse.urlencode(query_string) if query_string else ''
 

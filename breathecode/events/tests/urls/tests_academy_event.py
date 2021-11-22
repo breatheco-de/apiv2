@@ -94,8 +94,10 @@ class AcademyEventTestSuite(EventTestCase):
                 'state': model['event'].venue.state,
                 'street_address': model['event'].venue.street_address,
                 'title': model['event'].venue.title,
-                'zip_code': model['event'].venue.zip_code
-            }
+                'zip_code': model['event'].venue.zip_code,
+            },
+            'sync': model['event'].sync,
+            'managed_by': model['event'].managed_by,
         }]
 
         self.assertEqual(json, expected)
@@ -151,8 +153,10 @@ class AcademyEventTestSuite(EventTestCase):
                 'state': model['event'].venue.state,
                 'street_address': model['event'].venue.street_address,
                 'title': model['event'].venue.title,
-                'zip_code': model['event'].venue.zip_code
-            }
+                'zip_code': model['event'].venue.zip_code,
+            },
+            'sync': model['event'].sync,
+            'managed_by': model['event'].managed_by,
         }]
 
         self.assertEqual(json, expected)
@@ -208,8 +212,10 @@ class AcademyEventTestSuite(EventTestCase):
                 'state': model['event'].venue.state,
                 'street_address': model['event'].venue.street_address,
                 'title': model['event'].venue.title,
-                'zip_code': model['event'].venue.zip_code
-            }
+                'zip_code': model['event'].venue.zip_code,
+            },
+            'sync': model['event'].sync,
+            'managed_by': model['event'].managed_by,
         }]
 
         self.assertEqual(json, expected)
@@ -248,8 +254,10 @@ class AcademyEventTestSuite(EventTestCase):
                 'state': model['event'].venue.state,
                 'street_address': model['event'].venue.street_address,
                 'title': model['event'].venue.title,
-                'zip_code': model['event'].venue.zip_code
-            }
+                'zip_code': model['event'].venue.zip_code,
+            },
+            'sync': model['event'].sync,
+            'managed_by': model['event'].managed_by,
         }]
 
         self.assertEqual(json, expected)
@@ -305,7 +313,9 @@ class AcademyEventTestSuite(EventTestCase):
             'status': model['event'].status,
             'title': model['event'].title,
             'url': model['event'].url,
-            'venue': model['event'].venue
+            'venue': model['event'].venue,
+            'sync': model['event'].sync,
+            'managed_by': model['event'].managed_by,
         } for model in models]
 
         expected.reverse()
@@ -397,6 +407,8 @@ class AcademyEventTestSuite(EventTestCase):
             'sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'sync': False,
+            'managed_by': 'EVENTBRITE',
             **data,
         }
 
@@ -428,6 +440,8 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'sync': False,
+            'managed_by': 'EVENTBRITE',
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -461,7 +475,9 @@ class AcademyEventTestSuite(EventTestCase):
             'status': model['event'].status,
             'event_type': model['event'].event_type,
             'online_event': model['event'].online_event,
-            'venue': model['event'].venue
+            'venue': model['event'].venue,
+            'sync': model['event'].sync,
+            'managed_by': model['event'].managed_by,
         } for model in models]
         expected.sort(key=lambda x: x['starting_at'], reverse=True)
         expected = expected[0:100]
@@ -493,7 +509,9 @@ class AcademyEventTestSuite(EventTestCase):
             'sync_status': 'PENDING',
             'title': None,
             'url': model['event'].url,
-            'venue_id': None
+            'venue_id': None,
+            'sync': False,
+            'managed_by': 'EVENTBRITE',
         } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -527,7 +545,9 @@ class AcademyEventTestSuite(EventTestCase):
             'status': model['event'].status,
             'event_type': model['event'].event_type,
             'online_event': model['event'].online_event,
-            'venue': model['event'].venue
+            'venue': model['event'].venue,
+            'sync': model['event'].sync,
+            'managed_by': model['event'].managed_by,
         } for model in models]
         expected.sort(key=lambda x: x['starting_at'], reverse=True)
         expected = expected[0:5]
@@ -567,7 +587,9 @@ class AcademyEventTestSuite(EventTestCase):
             'sync_status': 'PENDING',
             'title': None,
             'url': model['event'].url,
-            'venue_id': None
+            'venue_id': None,
+            'sync': False,
+            'managed_by': 'EVENTBRITE',
         } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -601,7 +623,9 @@ class AcademyEventTestSuite(EventTestCase):
             'status': model['event'].status,
             'event_type': model['event'].event_type,
             'online_event': model['event'].online_event,
-            'venue': model['event'].venue
+            'venue': model['event'].venue,
+            'sync': model['event'].sync,
+            'managed_by': model['event'].managed_by,
         } for model in models]
         expected.sort(key=lambda x: x['starting_at'], reverse=True)
         expected = expected[5:10]
@@ -641,7 +665,9 @@ class AcademyEventTestSuite(EventTestCase):
             'sync_status': 'PENDING',
             'title': None,
             'url': model['event'].url,
-            'venue_id': None
+            'venue_id': None,
+            'sync': False,
+            'managed_by': 'EVENTBRITE',
         } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -699,7 +725,9 @@ class AcademyEventTestSuite(EventTestCase):
             'sync_status': 'PENDING',
             'title': None,
             'url': model['event'].url,
-            'venue_id': None
+            'venue_id': None,
+            'sync': False,
+            'managed_by': 'EVENTBRITE',
         } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -805,6 +833,8 @@ class AcademyEventTestSuite(EventTestCase):
             'sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'sync': False,
+            'managed_by': 'EVENTBRITE',
             **data,
         }
 
@@ -838,6 +868,8 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'url': 'https://www.google.com/',
             'venue_id': None,
+            'sync': False,
+            'managed_by': 'EVENTBRITE',
         }])
         self.assertEqual(self.cache.keys(), [])
 
@@ -854,6 +886,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_event_type_with_results(self):
         self.headers(academy=1)
+        # TODO: this is bad placed
         url = reverse_lazy('events:type')
         event_type_kwargs = {
             'slug': 'potato',
@@ -872,7 +905,7 @@ class AcademyEventTestSuite(EventTestCase):
             'academy': model['event_type'].academy,
             'id': model['event_type'].id,
             'name': model['event_type'].name,
-            'slug': model['event_type'].slug
+            'slug': model['event_type'].slug,
         }]
 
         self.assertEqual(json, expected)

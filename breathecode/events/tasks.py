@@ -1,4 +1,5 @@
 import logging
+import os
 from breathecode.services.eventbrite import Eventbrite
 from celery import shared_task, Task
 from .models import Organization, EventbriteWebhook
@@ -16,6 +17,9 @@ class BaseTaskWithRetry(Task):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def persist_organization_events(self, args):
+    if os.getenv('ENV') == 'test':
+        from .actions import sync_org_events
+
     logger.debug('Starting persist_organization_events')
     org = Organization.objects.get(id=args['org_id'])
     result = sync_org_events(org)

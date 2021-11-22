@@ -65,6 +65,7 @@ from .requests import (
     apply_requests_patch_mock,
     apply_requests_delete_mock,
     apply_requests_head_mock,
+    apply_requests_request_mock,
 )
 from .logging import (
     LOGGING_PATH,

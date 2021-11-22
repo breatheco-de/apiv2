@@ -5,16 +5,11 @@ from breathecode.admissions.models import Academy
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
 ERROR = 'ERROR'
+WARNING = 'WARNING'
+SYNCHED = 'SYNCHED'
 SYNC_STATUS = (
     (PENDING, 'Pending'),
     (PERSISTED, 'Persisted'),
-    (ERROR, 'Error'),
-)
-
-WARNING = 'WARNING'
-SYNCHED = 'SYNCHED'
-EVENTBRITE_SYNC_STATUS = (
-    (PENDING, 'Pending'),
     (ERROR, 'Error'),
     (WARNING, 'Warning'),
     (SYNCHED, 'Synched'),
@@ -40,10 +35,7 @@ class Organization(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        if self.name is not None:
-            return self.name + '(' + str(self.id) + ')'
-        else:
-            return 'Organization ' + str(self.id)
+        return f'{self.name} ({self.id})' if self.name else f'({self.id})'
 
 
 class Organizer(models.Model):
@@ -120,6 +112,13 @@ EVENT_STATUS = (
 
 # Create your models here.
 
+BREATHECODE = 'BREATHECODE'
+EVENTBRITE = 'EVENTBRITE'
+MANAGED_BY = (
+    (BREATHECODE, 'Breathecode'),
+    (EVENTBRITE, 'Eventbrite'),
+)
+
 
 class Event(models.Model):
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
@@ -146,12 +145,6 @@ class Event(models.Model):
     eventbrite_id = models.CharField(unique=True, max_length=80, blank=True, default=None, null=True)
     eventbrite_url = models.CharField(max_length=255, blank=True, default=None, null=True)
     eventbrite_organizer_id = models.CharField(max_length=80, blank=True, default=None, null=True)
-    eventbrite_sync = models.BooleanField(default=False)
-    eventbrite_sync_message = models.CharField(max_length=255, default=None, null=True, blank=True)
-    eventbrite_sync_status = models.CharField(max_length=7,
-                                              choices=EVENTBRITE_SYNC_STATUS,
-                                              default=PENDING,
-                                              blank=True)
 
     status = models.CharField(max_length=9, choices=EVENT_STATUS, default=DRAFT, blank=True)
     eventbrite_status = models.CharField(
@@ -161,12 +154,14 @@ class Event(models.Model):
         default=None,
         null=True)
 
+    sync = models.BooleanField(default=False)
     sync_status = models.CharField(
         max_length=9,
         choices=SYNC_STATUS,
         default=PENDING,
         help_text='One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status')
     sync_desc = models.TextField(max_length=255, null=True, default=None, blank=True)
+    managed_by = models.CharField(max_length=11, choices=MANAGED_BY, default=EVENTBRITE)
 
     published_at = models.DateTimeField(null=True, default=None, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

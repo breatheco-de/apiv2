@@ -1,8 +1,11 @@
+import logging
 from datetime import datetime, timedelta
 from breathecode.admissions.models import CohortTimeSlot
 from .models import Organization, Venue, Event, Organizer
 from .utils import Eventbrite
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 status_map = {
     'draft': 'DRAFT',
@@ -84,7 +87,20 @@ def create_or_update_venue(data, org, force_update=False):
     return venue
 
 
+def export_event_to_eventbrite(event, org):
+    if not org.academy:
+        logger.error(f'The organization {org} not have a academy assigned')
+        return
+
+    client = Eventbrite(org.eventbrite_key)
+    # result = client.get_organization_events(org.eventbrite_id)
+    pass
+
+
 def sync_org_events(org):
+    if not org.academy:
+        logger.error(f'The organization {org} not have a academy assigned')
+        return
 
     client = Eventbrite(org.eventbrite_key)
     result = client.get_organization_events(org.eventbrite_id)
@@ -97,17 +113,20 @@ def sync_org_events(org):
         org.sync_desc = f"Success with {len(result['events'])} events..."
         org.save()
     except Exception as e:
-        if org is not None:
+        if org:
             org.sync_status = 'ERROR'
             org.sync_desc = 'Error: ' + str(e)
             org.save()
         raise e
 
+    events = Event.objects.filter(managed_by='BREATHECODE', sync=True, sync_status='PENDING')
+    for event in events:
+        export_event_to_eventbrite(event, org)
+
     return True
 
 
 def update_or_create_event(data, org):
-
     if data is None:  #skip if no data
         print('Ignored event')
         return False
@@ -121,7 +140,7 @@ def update_or_create_event(data, org):
     try:
         venue = None
         if 'venue' in data:
-            venue = create_or_update_venue(data['venue']['id'], org)
+            venue = create_or_update_venue(data['venue'], org)
         organizer = None
         if 'organizer' in data:
             organizer = create_or_update_organizer(data['organizer'], org, force_update=True)

@@ -99,7 +99,9 @@ class AcademyEventsTestSuite(EventTestCase):
                 'city': {
                     'name': model['event'].academy.city.name
                 }
-            }
+            },
+            'sync': False,
+            'managed_by': 'EVENTBRITE',
         }
 
         self.assertEqual(json, expected)
@@ -195,6 +197,8 @@ class AcademyEventsTestSuite(EventTestCase):
             'sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'sync': False,
+            'managed_by': 'EVENTBRITE',
             **data,
         }
 
@@ -278,6 +282,8 @@ class AcademyEventsTestSuite(EventTestCase):
             'sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'sync': False,
+            'managed_by': 'EVENTBRITE',
             **data,
         }
 
