@@ -1,4 +1,5 @@
-import re
+import re, hashlib
+from django.utils import timezone
 from breathecode.admissions.models import Academy, Syllabus
 from django.contrib.auth.models import User
 from django.db import models
@@ -98,6 +99,14 @@ class MentorProfile(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+
+        utc_now = timezone.now()
+        if self.token is None or self.token == '':
+            self.token = hashlib.sha1((str(self.user.id) + str(utc_now)).encode('UTF-8')).hexdigest()
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.
 
     def __str__(self):
         name = self.name
