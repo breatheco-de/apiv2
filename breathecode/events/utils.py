@@ -54,7 +54,7 @@ class Eventbrite(object):
         return data
 
     def get_organization_events(self, organization_id):
-        query_string = {'expand': 'organizer', 'status': 'live'}
+        query_string = {'expand': 'organizer,venue', 'status': 'live'}
         data = self.request('GET',
                             f'/organizations/{str(organization_id)}/events/',
                             query_string=query_string)

@@ -4,14 +4,13 @@ from datetime import datetime
 from unittest.mock import MagicMock, call, patch
 
 from breathecode.tests.mocks import REQUESTS_PATH, apply_requests_request_mock
-from breathecode.tests.mocks.eventbrite.constants.event import EVENTBRITE_EVENT
+from breathecode.tests.mocks.eventbrite.constants.events import EVENTBRITE_EVENTS, get_eventbrite_events_url
 from ..mixins import EventTestCase
 import breathecode.events.actions as actions
 
 sync_org_events = actions.sync_org_events
 
-eventbrite_events_endpoint = ('https://www.eventbriteapi.com/v3/organizations/they-killed-kenny/events/'
-                              '?expand=organizer&status=live')
+eventbrite_events_endpoint = get_eventbrite_events_url('1')
 
 
 def log_mock():
@@ -46,17 +45,13 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'update_or_create_event', update_or_create_event_mock())
     @patch.object(actions, 'export_event_to_eventbrite', export_event_to_eventbrite_mock())
     @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (200, eventbrite_events_endpoint, {
-                   'events': [EVENTBRITE_EVENT]
-               }),
-           ]))
+           apply_requests_request_mock([(200, eventbrite_events_endpoint, EVENTBRITE_EVENTS)]))
     def test_sync_org_events__without_academy(self):
         """Test /answer without auth"""
         import logging
         import breathecode.events.actions as actions
 
-        organization_kwargs = {'eventbrite_id': 'they-killed-kenny'}
+        organization_kwargs = {'eventbrite_id': '1'}
         model = self.generate_models(organization=True, organization_kwargs=organization_kwargs)
         logging.Logger.info.call_args_list = []
 
@@ -80,17 +75,13 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'update_or_create_event', update_or_create_event_mock())
     @patch.object(actions, 'export_event_to_eventbrite', export_event_to_eventbrite_mock())
     @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (200, eventbrite_events_endpoint, {
-                   'events': [EVENTBRITE_EVENT]
-               }),
-           ]))
+           apply_requests_request_mock([(200, eventbrite_events_endpoint, EVENTBRITE_EVENTS)]))
     def test_sync_org_events(self):
         """Test /answer without auth"""
         import logging
         import breathecode.events.actions as actions
 
-        organization_kwargs = {'eventbrite_id': 'they-killed-kenny'}
+        organization_kwargs = {'eventbrite_id': '1'}
         model = self.generate_models(academy=True, organization=True, organization_kwargs=organization_kwargs)
         logging.Logger.info.call_args_list = []
 
@@ -98,7 +89,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(actions.export_event_to_eventbrite.call_args_list, [])
         self.assertEqual(actions.update_or_create_event.call_args_list,
-                         [call(EVENTBRITE_EVENT, model.organization)])
+                         [call(EVENTBRITE_EVENTS['events'][0], model.organization)])
 
         self.assertEqual(logging.Logger.info.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
@@ -115,17 +106,13 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'update_or_create_event', update_or_create_event_mock(raise_error=True))
     @patch.object(actions, 'export_event_to_eventbrite', export_event_to_eventbrite_mock())
     @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (200, eventbrite_events_endpoint, {
-                   'events': [EVENTBRITE_EVENT]
-               }),
-           ]))
+           apply_requests_request_mock([(200, eventbrite_events_endpoint, EVENTBRITE_EVENTS)]))
     def test_sync_org_events__raise_error(self):
         """Test /answer without auth"""
         import logging
         import breathecode.events.actions as actions
 
-        organization_kwargs = {'eventbrite_id': 'they-killed-kenny'}
+        organization_kwargs = {'eventbrite_id': '1'}
         model = self.generate_models(academy=True, organization=True, organization_kwargs=organization_kwargs)
         logging.Logger.info.call_args_list = []
 
@@ -135,7 +122,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(str(cm.exception), 'Random error in creating')
         self.assertEqual(actions.export_event_to_eventbrite.call_args_list, [])
         self.assertEqual(actions.update_or_create_event.call_args_list,
-                         [call(EVENTBRITE_EVENT, model.organization)])
+                         [call(EVENTBRITE_EVENTS['events'][0], model.organization)])
 
         self.assertEqual(logging.Logger.info.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
@@ -155,27 +142,24 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
     @patch.object(logging.Logger, 'info', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
-    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock(raise_error=True))
+    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock())
     @patch.object(actions, 'export_event_to_eventbrite', export_event_to_eventbrite_mock())
     @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (200, eventbrite_events_endpoint, {
-                   'events': []
-               }),
-           ]))
+           apply_requests_request_mock([(200, eventbrite_events_endpoint, EVENTBRITE_EVENTS)]))
     def test_sync_org_events__call_export_event_to_eventbrite__without_events(self):
         """Test /answer without auth"""
         import logging
         import breathecode.events.actions as actions
 
-        organization_kwargs = {'eventbrite_id': 'they-killed-kenny'}
+        organization_kwargs = {'eventbrite_id': '1'}
         model = self.generate_models(academy=True, organization=True, organization_kwargs=organization_kwargs)
         logging.Logger.info.call_args_list = []
 
         sync_org_events(model['organization'])
 
         self.assertEqual(actions.export_event_to_eventbrite.call_args_list, [])
-        self.assertEqual(actions.update_or_create_event.call_args_list, [])
+        self.assertEqual(actions.update_or_create_event.call_args_list,
+                         [call(EVENTBRITE_EVENTS['events'][0], model.organization)])
 
         self.assertEqual(logging.Logger.info.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
@@ -189,20 +173,16 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
     @patch.object(logging.Logger, 'info', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
-    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock(raise_error=True))
+    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock())
     @patch.object(actions, 'export_event_to_eventbrite', export_event_to_eventbrite_mock())
     @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (200, eventbrite_events_endpoint, {
-                   'events': []
-               }),
-           ]))
+           apply_requests_request_mock([(200, eventbrite_events_endpoint, EVENTBRITE_EVENTS)]))
     def test_sync_org_events__call_export_event_to_eventbrite__managed_by_eventbrite(self):
         """Test /answer without auth"""
         import logging
         import breathecode.events.actions as actions
 
-        organization_kwargs = {'eventbrite_id': 'they-killed-kenny'}
+        organization_kwargs = {'eventbrite_id': '1'}
         event_kwargs = {'sync': True, 'managed_by': 'EVENTBRITE'}
         model = self.generate_models(academy=True,
                                      event=True,
@@ -214,7 +194,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         sync_org_events(model['organization'])
 
         self.assertEqual(actions.export_event_to_eventbrite.call_args_list, [])
-        self.assertEqual(actions.update_or_create_event.call_args_list, [])
+        self.assertEqual(actions.update_or_create_event.call_args_list,
+                         [call(EVENTBRITE_EVENTS['events'][0], model.organization)])
 
         self.assertEqual(logging.Logger.info.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
@@ -228,20 +209,16 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
     @patch.object(logging.Logger, 'info', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
-    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock(raise_error=True))
+    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock())
     @patch.object(actions, 'export_event_to_eventbrite', export_event_to_eventbrite_mock())
     @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([
-               (200, eventbrite_events_endpoint, {
-                   'events': []
-               }),
-           ]))
+           apply_requests_request_mock([(200, eventbrite_events_endpoint, EVENTBRITE_EVENTS)]))
     def test_sync_org_events__call_export_event_to_eventbrite__managed_by_breathecode(self):
         """Test /answer without auth"""
         import logging
         import breathecode.events.actions as actions
 
-        organization_kwargs = {'eventbrite_id': 'they-killed-kenny'}
+        organization_kwargs = {'eventbrite_id': '1'}
         event_kwargs = {'sync': True, 'managed_by': 'BREATHECODE'}
         model = self.generate_models(academy=True,
                                      event=True,
@@ -254,7 +231,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(actions.export_event_to_eventbrite.call_args_list,
                          [call(model.event, model.organization)])
-        self.assertEqual(actions.update_or_create_event.call_args_list, [])
+        self.assertEqual(actions.update_or_create_event.call_args_list,
+                         [call(EVENTBRITE_EVENTS['events'][0], model.organization)])
 
         self.assertEqual(logging.Logger.info.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
