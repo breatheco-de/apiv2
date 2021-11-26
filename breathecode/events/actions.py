@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime, timedelta
-from .models import Venue, Event, Organizer
+from .models import Organization, Venue, Event, Organizer
 from .utils import Eventbrite
 from django.utils import timezone
 
@@ -95,14 +95,54 @@ def create_or_update_venue(data, org, force_update=False):
     return venue
 
 
-def export_event_to_eventbrite(event, org):
+def export_event_to_eventbrite(event: Event, org: Organization):
     if not org.academy:
         logger.error(f'The organization {org} not have a academy assigned')
         return
 
+    if event.managed_by == 'EVENTBRITE':
+        repl = f'`{event.title}` ({event.id})' if event.title else f'({event.id})'
+        logger.error(f'The event {repl} can\'t be synced')
+        return
+
+    timezone = org.academy.timezone
     client = Eventbrite(org.eventbrite_key)
-    # result = client.get_organization_events(org.eventbrite_id)
-    pass
+    now = get_current_iso_string()
+
+    data = {
+        'name': {
+            'html': event.title,
+        },
+        'description': {
+            'html': event.description,
+        },
+        'start': {
+            'utc': event.starting_at.isoformat(),
+        },
+        'end': {
+            'utc': event.ending_at.isoformat(),
+        },
+        'summary': event.excerpt,
+        'capacity': event.capacity,
+        'online_event': event.online_event,
+        'url': event.eventbrite_url,
+    }
+
+    if timezone:
+        data['event']['start']['timezone'] = timezone
+        data['event']['end']['timezone'] = timezone
+
+    try:
+        client.create_organization_event(org.eventbrite_id, data)
+        event.sync_desc = now
+        event.sync_status = 'SYNCHED'
+
+    except Exception as e:
+        event.sync_desc = f'{now} => {e}'
+        event.sync_status = 'ERROR'
+
+    event.save()
+    return event
 
 
 def sync_org_events(org):
@@ -120,6 +160,7 @@ def sync_org_events(org):
         org.sync_status = 'PERSISTED'
         org.sync_desc = f"Success with {len(result['events'])} events..."
         org.save()
+
     except Exception as e:
         if org:
             org.sync_status = 'ERROR'
