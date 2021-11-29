@@ -30,6 +30,11 @@ SPIDER_STATUS = (
 class Spider(models.Model):
     """ Create a new platform for Jobs"""
     name = models.CharField(max_length=150)
+    job = models.CharField(max_length=150)
+    loc = models.CharField(max_length=150)
+    ZYTE_API_KEY = models.CharField(max_length=50)
+    ZYTE_API_DEPLOY = models.CharField(max_length=50)
+    ZYTE_FETCH_COUNT = models.IntegerField()
     zyte_spider_number = models.IntegerField()
     zyte_job_number = models.IntegerField()
     status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
@@ -56,7 +61,18 @@ class Employer(models.Model):
 
 class Position(models.Model):
     """ something """
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.name} ({self.id})'
+
+
+class PositionAlias(models.Model):
+    """ something """
+    name = models.CharField(max_length=100, unique=True)
+    position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -76,13 +92,23 @@ class Tag(models.Model):
 
 class Location(models.Model):
     """ something """
-    city = models.CharField(max_length=100)
-    country = models.CharField(max_length=50)
+    name = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.city} ({self.id})'
+        return f'{self.name} ({self.id})'
+
+
+class LocationAlias(models.Model):
+    """ something """
+    name = models.CharField(max_length=100, unique=True)
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=False, blank=False)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.name} ({self.id})'
 
 
 OPENED = 'OPENED'
@@ -109,15 +135,16 @@ JOB_TYPE = (
 class Job(models.Model):
     """ Create a new platform for Jobs"""
     title = models.CharField(max_length=150)
+    platform = models.ForeignKey(Platform, on_delete=models.CASCADE, null=False, blank=False)
     published = models.CharField(max_length=20)
     status = models.CharField(max_length=15, choices=JOB_STATUS, default=OPENED)
-    apply_url = models.URLField(max_length=256)
+    apply_url = models.URLField(max_length=500)
     salary = models.CharField(max_length=12)
     job_type = models.CharField(max_length=15, choices=JOB_TYPE, default=FULLTIME)
-    remote = models.BooleanField(default=False, verbose_name='This is a boolean field')
+    remote = models.BooleanField(default=False, verbose_name='Remote')
     employer = models.ForeignKey(Employer, on_delete=models.CASCADE, null=False, blank=False)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
-    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, null=False, blank=False)
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, null=True, blank=True)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
