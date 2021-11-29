@@ -1,8 +1,9 @@
+import re
+import logging
+import os
+import urllib
 import breathecode.services.eventbrite.actions as actions
-import logging, re, os, json, inspect, urllib
-# from .decorator import commands, actions
-# from breathecode.services.eventbrite.commands import student, cohort
-# from breathecode.services.eventbrite.actions import monitoring
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,6 +106,9 @@ class Eventbrite:
         action = webhook.action.replace('.', '_')
         api_url = webhook.api_url
         # organization_id = webhook.organization_id
+
+        if (re.search('^https://www\.eventbriteapi\.com/v3/events/\d+/?$', api_url)):
+            api_url = api_url + '?expand=organizer,venue'
 
         logger.debug(f'Executing => {action}')
         if hasattr(actions, action):

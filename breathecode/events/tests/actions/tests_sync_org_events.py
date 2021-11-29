@@ -168,7 +168,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(self.all_event_dict(), [])
 
     """
-    🔽🔽🔽 With academy, call export_event_to_eventbrite, events managed by eventbrite
+    🔽🔽🔽 With academy, call export_event_to_eventbrite, with event
     """
 
     @patch.object(logging.Logger, 'info', log_mock())
@@ -177,55 +177,20 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'export_event_to_eventbrite', export_event_to_eventbrite_mock())
     @patch(REQUESTS_PATH['request'],
            apply_requests_request_mock([(200, eventbrite_events_endpoint, EVENTBRITE_EVENTS)]))
-    def test_sync_org_events__call_export_event_to_eventbrite__managed_by_eventbrite(self):
+    def test_sync_org_events__call_export_event_to_eventbrite__with_event(self):
         """Test /answer without auth"""
         import logging
         import breathecode.events.actions as actions
 
         organization_kwargs = {'eventbrite_id': '1'}
-        event_kwargs = {'sync': True, 'managed_by': 'EVENTBRITE'}
+        event_kwargs = {'sync_with_eventbrite': True}
         model = self.generate_models(academy=True,
                                      event=True,
                                      organization=True,
                                      event_kwargs=event_kwargs,
                                      organization_kwargs=organization_kwargs)
         logging.Logger.info.call_args_list = []
-
-        sync_org_events(model['organization'])
-
-        self.assertEqual(actions.export_event_to_eventbrite.call_args_list, [])
-        self.assertEqual(actions.update_or_create_event.call_args_list,
-                         [call(EVENTBRITE_EVENTS['events'][0], model.organization)])
-
-        self.assertEqual(logging.Logger.info.call_args_list, [])
-        self.assertEqual(logging.Logger.error.call_args_list, [])
-
-        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
-
-    """
-    🔽🔽🔽 With academy, call export_event_to_eventbrite, events managed by breathecode
-    """
-
-    @patch.object(logging.Logger, 'info', log_mock())
-    @patch.object(logging.Logger, 'error', log_mock())
-    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock())
-    @patch.object(actions, 'export_event_to_eventbrite', export_event_to_eventbrite_mock())
-    @patch(REQUESTS_PATH['request'],
-           apply_requests_request_mock([(200, eventbrite_events_endpoint, EVENTBRITE_EVENTS)]))
-    def test_sync_org_events__call_export_event_to_eventbrite__managed_by_breathecode(self):
-        """Test /answer without auth"""
-        import logging
-        import breathecode.events.actions as actions
-
-        organization_kwargs = {'eventbrite_id': '1'}
-        event_kwargs = {'sync': True, 'managed_by': 'BREATHECODE'}
-        model = self.generate_models(academy=True,
-                                     event=True,
-                                     organization=True,
-                                     event_kwargs=event_kwargs,
-                                     organization_kwargs=organization_kwargs)
-        logging.Logger.info.call_args_list = []
+        actions.export_event_to_eventbrite.call_args_list = []
 
         sync_org_events(model['organization'])
 

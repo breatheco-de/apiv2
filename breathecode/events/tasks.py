@@ -2,8 +2,8 @@ import logging
 import os
 from breathecode.services.eventbrite import Eventbrite
 from celery import shared_task, Task
-from .models import Organization, EventbriteWebhook
-from .actions import sync_org_events
+from .models import Event, Organization, EventbriteWebhook
+from .actions import export_event_to_eventbrite, sync_org_events
 
 logger = logging.getLogger(__name__)
 
@@ -55,3 +55,26 @@ def async_eventbrite_webhook(self, eventbrite_webhook_id):
         status = 'error'
 
     logger.debug(f'Eventbrite status: {status}')
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def async_export_event_to_eventbrite(self, event_id: int):
+    if os.getenv('ENV') == 'test':
+        from .actions import export_event_to_eventbrite
+
+    logger.debug('Starting async_eventbrite_webhook')
+
+    event = Event.objects.filter(id=event_id).first()
+    if not event:
+        logger.error(f'Event {event_id} not fount')
+        return
+
+    if not event.organization:
+        logger.error(f'Event {event_id} not have a organization assigned')
+        return
+
+    try:
+        export_event_to_eventbrite(event, event.organization)
+    except Exception as e:
+        logger.error(f'The {event_id} export was failed')
+        logger.error(str(e))

@@ -59,43 +59,14 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(self.all_event_dict(), [])
 
     """
-    🔽🔽🔽 With academy and event, can't be synced because is managed by eventbrite
+    🔽🔽🔽 With academy and event with title
     """
 
     @patch.object(logging.Logger, 'warn', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(201, eventbrite_url, dict())]))
-    def test_export_event_to_eventbrite__with_academy(self):
-        import logging
-
-        organization_kwargs = {'eventbrite_id': '1'}
-        model = self.generate_models(academy=True,
-                                     event=True,
-                                     organization=True,
-                                     organization_kwargs=organization_kwargs)
-
-        export_event_to_eventbrite(model.event, model.organization)
-
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('The event (1) can\'t be synced')])
-
-        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [{
-            **self.model_to_dict(model, 'event'),
-            'sync_status': 'PENDING',
-            'sync_desc': None,
-        }])
-
-    """
-    🔽🔽🔽 With academy and event with title, can't be synced because is managed by eventbrite
-    """
-
-    @patch.object(logging.Logger, 'warn', log_mock())
-    @patch.object(logging.Logger, 'error', log_mock())
-    @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
-    @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(201, eventbrite_url, dict())]))
-    def test_export_event_to_eventbrite__with_academy__with_event_title(self):
+    def test_export_event_to_eventbrite__with_event(self):
         import logging
 
         organization_kwargs = {'eventbrite_id': '1'}
@@ -109,46 +80,15 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         export_event_to_eventbrite(model.event, model.organization)
 
         self.assertEqual(logging.Logger.warn.call_args_list, [])
-        self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('The event `They killed kenny` (1) can\'t be synced')])
-
-        self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [{
-            **self.model_to_dict(model, 'event'),
-            'sync_status': 'PENDING',
-            'sync_desc': None,
-        }])
-
-    """
-    🔽🔽🔽 With academy and event with title, is managed by breathecode
-    """
-
-    @patch.object(logging.Logger, 'warn', log_mock())
-    @patch.object(logging.Logger, 'error', log_mock())
-    @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
-    @patch(REQUESTS_PATH['request'], apply_requests_request_mock([(201, eventbrite_url, dict())]))
-    def test_export_event_to_eventbrite__with_event_managed_by_breathecode(self):
-        import logging
-
-        organization_kwargs = {'eventbrite_id': '1'}
-        event_kwargs = {'title': 'They killed kenny', 'managed_by': 'BREATHECODE'}
-        model = self.generate_models(academy=True,
-                                     event=True,
-                                     organization=True,
-                                     event_kwargs=event_kwargs,
-                                     organization_kwargs=organization_kwargs)
-
-        export_event_to_eventbrite(model.event, model.organization)
-
-        self.assertEqual(logging.Logger.warn.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [{
-            **self.model_to_dict(model, 'event'),
-            'sync_status': 'SYNCHED',
-            'sync_desc': '2021-11-23 09:10:58.295264+00:00',
-        }])
+        self.assertEqual(self.all_event_dict(),
+                         [{
+                             **self.model_to_dict(model, 'event'),
+                             'eventbrite_sync_status': 'SYNCHED',
+                             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
+                         }])
 
     """
     🔽🔽🔽 Check the payload
@@ -164,7 +104,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         from breathecode.events.utils import Eventbrite
 
         organization_kwargs = {'eventbrite_id': '1'}
-        event_kwargs = {'title': 'They killed kenny', 'managed_by': 'BREATHECODE'}
+        event_kwargs = {'title': 'They killed kenny'}
         model = self.generate_models(academy=True,
                                      event=True,
                                      organization=True,
@@ -201,8 +141,9 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         ])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
-        self.assertEqual(self.all_event_dict(), [{
-            **self.model_to_dict(model, 'event'),
-            'sync_status': 'SYNCHED',
-            'sync_desc': '2021-11-23 09:10:58.295264+00:00',
-        }])
+        self.assertEqual(self.all_event_dict(),
+                         [{
+                             **self.model_to_dict(model, 'event'),
+                             'eventbrite_sync_status': 'SYNCHED',
+                             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
+                         }])

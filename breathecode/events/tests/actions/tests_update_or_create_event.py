@@ -152,11 +152,10 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'eventbrite_status': event['status'],
             # organizer: organizer,
             'published_at': self.iso_to_datetime(event['published']),
-            'sync': False,
-            'sync_status': 'PERSISTED',
-            'managed_by': 'EVENTBRITE',
+            'sync_with_eventbrite': False,
+            'eventbrite_sync_status': 'PERSISTED',
             'eventbrite_organizer_id': None,
-            'sync_desc': '2021-11-23 09:10:58.295264+00:00',
+            'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
         }
 
         self.assertEqual(self.all_event_dict(), [kwargs])
@@ -220,11 +219,10 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'eventbrite_status': event['status'],
             # organizer: organizer,
             'published_at': self.iso_to_datetime(event['published']),
-            'sync': False,
-            'sync_status': 'PERSISTED',
-            'managed_by': 'EVENTBRITE',
+            'sync_with_eventbrite': False,
+            'eventbrite_sync_status': 'PERSISTED',
             'eventbrite_organizer_id': None,
-            'sync_desc': '2021-11-23 09:10:58.295264+00:00',
+            'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
         }
 
         self.assertEqual(self.all_event_dict(), [kwargs])

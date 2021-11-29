@@ -100,11 +100,6 @@ def export_event_to_eventbrite(event: Event, org: Organization):
         logger.error(f'The organization {org} not have a academy assigned')
         return
 
-    if event.managed_by == 'EVENTBRITE':
-        repl = f'`{event.title}` ({event.id})' if event.title else f'({event.id})'
-        logger.error(f'The event {repl} can\'t be synced')
-        return
-
     timezone = org.academy.timezone
     client = Eventbrite(org.eventbrite_key)
     now = get_current_iso_string()
@@ -134,12 +129,12 @@ def export_event_to_eventbrite(event: Event, org: Organization):
 
     try:
         client.create_organization_event(org.eventbrite_id, data)
-        event.sync_desc = now
-        event.sync_status = 'SYNCHED'
+        event.eventbrite_sync_description = now
+        event.eventbrite_sync_status = 'SYNCHED'
 
     except Exception as e:
-        event.sync_desc = f'{now} => {e}'
-        event.sync_status = 'ERROR'
+        event.eventbrite_sync_description = f'{now} => {e}'
+        event.eventbrite_sync_status = 'ERROR'
 
     event.save()
     return event
@@ -168,7 +163,7 @@ def sync_org_events(org):
             org.save()
         raise e
 
-    events = Event.objects.filter(managed_by='BREATHECODE', sync=True, sync_status='PENDING')
+    events = Event.objects.filter(sync_with_eventbrite=True, eventbrite_sync_status='PENDING')
     for event in events:
         export_event_to_eventbrite(event, org)
 
@@ -247,14 +242,14 @@ def update_or_create_event(data, org):
 
         event.save()
 
-        event.sync_desc = now
-        event.sync_status = 'PERSISTED'
+        event.eventbrite_sync_description = now
+        event.eventbrite_sync_status = 'PERSISTED'
         event.save()
 
     except Exception as e:
         if event is not None:
-            event.sync_desc = f'{now} => {e}'
-            event.sync_status = 'ERROR'
+            event.eventbrite_sync_description = f'{now} => {e}'
+            event.eventbrite_sync_status = 'ERROR'
             event.save()
         raise e
 
