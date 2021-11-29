@@ -1,10 +1,10 @@
-import serpy, logging
+import serpy, logging, os
 from rest_framework import serializers
 from .models import Task
 from rest_framework.exceptions import ValidationError
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import CohortUser
-from breathecode.authenticate.models import ProfileAcademy
+from breathecode.authenticate.models import ProfileAcademy, Token
 from django.contrib.auth.models import User
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,16 @@ class TaskGETSerializer(serpy.Serializer):
     user = UserSmallSerializer()
 
 
+class TaskGETDeliverSerializer(TaskGETSerializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    delivery_url = serpy.MethodField()
+
+    def get_delivery_url(self, obj):
+        token, created = Token.get_or_create(obj.user, token_type='temporal')
+        return os.getenv('API_URL') + f'/v1/assignment/task/{str(obj.id)}/deliver/{token}'
+
+
 class PostTaskSerializer(serializers.ModelSerializer):
     task_status = serializers.CharField(read_only=True)
     revision_status = serializers.CharField(read_only=True)
@@ -47,6 +57,14 @@ class PostTaskSerializer(serializers.ModelSerializer):
         return super(PostTaskSerializer, self).validate({**data, 'user': user})
 
     def create(self, validated_data):
+
+        _task = Task.objects.filter(associated_slug=validated_data['associated_slug'],
+                                    task_type=validated_data['task_type'],
+                                    user__id=validated_data['user'].id).first()
+
+        # avoid creating a task twice, if the user already has it it will be re-used.
+        if _task is not None:
+            return _task
 
         return Task.objects.create(**validated_data)
 
@@ -84,8 +102,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
     def validate(self, data):
 
         user = self.context['request'].user
-        # the user cannot vote to the same entity within 5 minutes
-        # answer = Task.objects.filter(user=self.context['request'].user,id=self.context['answer']).first()
+
         if self.instance.user.id != self.context['request'].user.id:
             if 'task_status' in data and data['task_status'] != self.instance.task_status:
                 raise ValidationException('Only the task owner can modify its status')

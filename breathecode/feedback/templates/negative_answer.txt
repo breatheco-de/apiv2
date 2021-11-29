@@ -1,0 +1,10 @@
+{% extends "base.txt" %}
+{% block content %}
+
+Student {{ FULL_NAME }} from {{ ACADEMY }} just have negative answer (score {{ SCORE }}) for this question: {{ QUESTION }}
+
+Student comments: {{ COMMENTS }}
+
+Read more details about this survey here: {{ LINK }}
+
+{% endblock %}

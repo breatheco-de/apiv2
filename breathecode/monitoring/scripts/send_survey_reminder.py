@@ -22,7 +22,7 @@ cohorts = Cohort.objects.filter(academy__id=academy.id)
 cohorts = cohorts.filter(ending_date__gte=TWO_WEEKS_AGO, kickoff_date__lte=TODAY)
 
 # exclude cohorts that never end
-cohorts = cohorts.exclude(never_ends=True)
+cohorts = cohorts.exclude(never_ends=True).exclude(stage__in=['DELETED', 'INACTIVE'])
 
 cohorts_with_pending_surveys = []
 
@@ -30,7 +30,6 @@ if not cohorts:
     print('No Active cohorts found for this academy')
 
 for cohort in cohorts:
-
     lastest_survey = Survey.objects.filter(cohort__id=cohort.id).order_by('sent_at').first()
 
     if lastest_survey is None:

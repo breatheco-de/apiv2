@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
 from django.db import models
 from .actions import get_bucket_object
+from .signals import student_edu_status_updated
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
 
@@ -59,6 +60,8 @@ class Academy(models.Model):
     street_address = models.CharField(max_length=250)
 
     marketing_email = models.EmailField(blank=True, null=True, default=None)
+    feedback_email = models.EmailField(blank=True, null=True, default=None)
+
     phone_regex = RegexValidator(
         regex=r'^\+?1?\d{9,15}$',
         message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
@@ -156,7 +159,6 @@ class SyllabusVersion(models.Model):
 
 
 class SpecialtyMode(models.Model):
-    slug = models.SlugField(max_length=100)
     name = models.CharField(max_length=150)
 
     schedule_type = models.CharField(max_length=15, choices=SCHEDULE_TYPE, default='PART-TIME')
@@ -174,14 +176,14 @@ class SpecialtyMode(models.Model):
     #     remove_bucket_object("certificate-logo-"+self.slug)
     #     super(Image, self).delete(*args, **kwargs)
 
-    def save(self, *args, **kwargs):
+    # def save(self, *args, **kwargs):
 
-        if GOOGLE_APPLICATION_CREDENTIALS is not None and GOOGLE_APPLICATION_CREDENTIALS != '':
-            obj = get_bucket_object('certificate-logo-' + self.slug)
-            if obj is not None:
-                self.logo = obj.public_url
+    #     if GOOGLE_APPLICATION_CREDENTIALS is not None and GOOGLE_APPLICATION_CREDENTIALS != '':
+    #         obj = get_bucket_object('certificate-logo-' + self.slug)
+    #         if obj is not None:
+    #             self.logo = obj.public_url
 
-        super().save(*args, **kwargs)  # Call the "real" save() method.
+    #     super().save(*args, **kwargs)  # Call the "real" save() method.
 
 
 class AcademySpecialtyMode(models.Model):
@@ -218,6 +220,10 @@ class Cohort(models.Model):
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
     private = models.BooleanField(default=False)
     never_ends = models.BooleanField(default=False)
+
+    remote_available = models.BooleanField(
+        default=True, help_text='True (default) if the students from other cities can take it from home')
+    online_meeting_url = models.URLField(max_length=255, blank=True, default=None, null=True)
 
     timezone = models.CharField(max_length=50, null=True, default=None)
 
@@ -271,6 +277,10 @@ EDU_STATUS = (
 
 
 class CohortUser(models.Model):
+    def __init__(self, *args, **kwargs):
+        super(CohortUser, self).__init__(*args, **kwargs)
+        self.__old_edu_status = self.educational_status
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
     role = models.CharField(max_length=9, choices=COHORT_ROLE, default=STUDENT)
@@ -280,6 +290,13 @@ class CohortUser(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+
+        if self.__old_edu_status != self.educational_status:
+            student_edu_status_updated.send(instance=self, sender=CohortUser)
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.
 
 
 DAILY = 'DAILY'

@@ -141,12 +141,11 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_role_student_with_cohort_user_without_syllabus(self):
-        """ No syllabus """
+    def test_generate_certificate_with_everything_but_specialty_mode(self):
+        """ Should be ok because cohorts dont need specialy mode to generate certificates """
         self.headers(academy=1)
         cohort_kwargs = {'stage': 'ENDED'}
-        specialty_mode_kwargs = {'syllabus': None}
-        self.generate_models(
+        model = self.generate_models(
             authenticate=True,
             cohort=True,
             user=True,
@@ -154,20 +153,24 @@ class CertificateTestSuite(CertificateTestCase):
             capability='crud_certificate',
             role='STUDENT',
             syllabus_version=True,
-            specialty_mode=True,
+            specialty=True,
             cohort_user=True,
+            layout_design=True,
             cohort_kwargs=cohort_kwargs,
-            specialty_mode_kwargs=specialty_mode_kwargs,
         )
+
+        base = model.copy()
+        del base['user']
+        del base['cohort_user']
+        cohort_user_kwargs = {'role': 'TEACHER'}
+        teacher_model = self.generate_models(user=True,
+                                             cohort_user=True,
+                                             cohort_user_kwargs=cohort_user_kwargs,
+                                             models=base)
 
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
-        json = response.json()
-        expected = {'detail': 'specialty-mode-has-no-syllabus-assigned', 'status_code': 400}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_user_specialty_dict(), [])
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -190,7 +193,7 @@ class CertificateTestSuite(CertificateTestCase):
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
         response = self.client.post(url, format='json')
         json = response.json()
-        expected = {'detail': 'cohort-has-no-specialty-mode-assigned', 'status_code': 400}
+        expected = {'detail': 'missing-specialty', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -299,12 +302,13 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(model.cohort.kickoff_date),
+                'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
                 'specialty_mode': {
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
-                    'slug': model['specialty_mode'].slug,
                     'syllabus': model['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': {
@@ -416,12 +420,13 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(model.cohort.kickoff_date),
+                'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
                 'specialty_mode': {
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
-                    'slug': model['specialty_mode'].slug,
                     'syllabus': model['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': {
@@ -533,12 +538,13 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(model.cohort.kickoff_date),
+                'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
                 'specialty_mode': {
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
-                    'slug': model['specialty_mode'].slug,
                     'syllabus': model['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': {
@@ -655,12 +661,13 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'cohort': {
                 'id': 1,
+                'kickoff_date': self.datetime_to_iso(model.cohort.kickoff_date),
+                'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
                 'specialty_mode': {
                     'id': model['specialty_mode'].id,
                     'name': model['specialty_mode'].name,
-                    'slug': model['specialty_mode'].slug,
                     'syllabus': model['specialty_mode'].syllabus.id,
                 },
                 'syllabus_version': {

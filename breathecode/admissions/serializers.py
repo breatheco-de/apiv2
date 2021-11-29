@@ -81,7 +81,6 @@ class UserSerializer(serpy.Serializer):
 
 class GetSpecialtyModeSerializer(serpy.Serializer):
     id = serpy.Field()
-    slug = serpy.Field()
     name = serpy.Field()
     description = serpy.Field()
     syllabus = serpy.MethodField()
@@ -92,7 +91,6 @@ class GetSpecialtyModeSerializer(serpy.Serializer):
 
 class GetSmallSpecialtyModeSerializer(serpy.Serializer):
     id = serpy.Field()
-    slug = serpy.Field()
     name = serpy.Field()
     syllabus = serpy.MethodField()
 
@@ -244,6 +242,25 @@ class GetCohortSerializer(serpy.Serializer):
     ending_date = serpy.Field()
     current_day = serpy.Field()
     stage = serpy.Field()
+    online_meeting_url = serpy.Field()
+    timezone = serpy.Field()
+    specialty_mode = GetSmallSpecialtyModeSerializer(required=False)
+    syllabus_version = SyllabusVersionSmallSerializer(required=False)
+    academy = GetAcademySerializer()
+
+
+class PublicCohortSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    never_ends = serpy.Field()
+    private = serpy.Field()
+    language = serpy.Field()
+    kickoff_date = serpy.Field()
+    ending_date = serpy.Field()
+    remote_available = serpy.Field()
     specialty_mode = GetSmallSpecialtyModeSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
@@ -473,7 +490,7 @@ class CohortSerializer(CohortSerializerMixin):
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus',
                   'specialty_mode', 'syllabus_version', 'ending_date', 'stage', 'language', 'created_at',
-                  'updated_at', 'never_ends')
+                  'updated_at', 'never_ends', 'online_meeting_url', 'timezone')
 
     def create(self, validated_data):
         del self.context['request']
@@ -496,7 +513,8 @@ class CohortPUTSerializer(CohortSerializerMixin):
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
-                  'syllabus', 'syllabus_version', 'specialty_mode', 'never_ends', 'private')
+                  'syllabus', 'syllabus_version', 'specialty_mode', 'never_ends', 'private',
+                  'online_meeting_url', 'timezone')
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
@@ -615,7 +633,8 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             raise ValidationException(('Cannot be marked as `GRADUATED` if its financial '
                                        'status is `LATE`'))
 
-        has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING', task_type='PROJECT').count()
+        has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
+                                        task_type='PROJECT').exclude(revision_status='IGNORED').count()
         if is_graduated and has_tasks:
             raise ValidationException(
                 'User has tasks with status pending the educational status cannot be GRADUATED')
@@ -683,6 +702,18 @@ class CohortTimeSlotSerializer(serializers.ModelSerializer):
 
 
 class SpecialtyModeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SpecialtyMode
+        exclude = ()
+
+
+class SpecialtyModePUTSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+    name = serializers.CharField(required=False)
+    schedule_type = serializers.CharField(required=False)
+    description = serializers.CharField(required=False)
+    syllabus = serializers.IntegerField(required=False)
+
     class Meta:
         model = SpecialtyMode
         exclude = ()

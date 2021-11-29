@@ -2,8 +2,7 @@ from breathecode.authenticate.models import Token
 from breathecode.admissions.models import CohortUser, Cohort
 from breathecode.admissions.serializers import CohortSerializer
 from breathecode.utils import ValidationException
-from .models import Answer, Survey
-from .signals import survey_answered
+from .models import Answer, Survey, Review
 from .actions import send_survey_group
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -40,6 +39,30 @@ class UserSerializer(serpy.Serializer):
             return None
 
         return GetProfileSmallSerializer(obj.profile).data
+
+
+class GithubSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    avatar_url = serpy.Field()
+    name = serpy.Field()
+    username = serpy.Field()
+
+
+class UserSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    email = serpy.Field()
+    first_name = serpy.Field()
+    last_name = serpy.Field()
+    github = serpy.MethodField()
+
+    def get_github(self, obj):
+        if not hasattr(obj, 'credentialsgithub'):
+            return None
+
+        return GithubSmallSerializer(obj.credentialsgithub).data
 
 
 class EventTypeSmallSerializer(serpy.Serializer):
@@ -105,6 +128,24 @@ class BigAnswerSerializer(serpy.Serializer):
     event = EventTypeSmallSerializer(required=False)
 
 
+class ReviewPlatformSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    name = serpy.Field()
+    website = serpy.Field()
+
+
+class ReviewSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    total_rating = serpy.Field()
+    nps_previous_rating = serpy.Field()
+    public_url = serpy.Field()
+    status = serpy.Field()
+    status_text = serpy.Field()
+    cohort = GetCohortSerializer()
+    author = UserSmallSerializer()
+    platform = ReviewPlatformSerializer()
+
+
 class AnswerPUTSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
@@ -135,9 +176,6 @@ class AnswerPUTSerializer(serializers.ModelSerializer):
             instance.comment = validated_data['comment']
 
         instance.save()
-
-        # signal the updated answer
-        survey_answered.send(instance=instance, sender=Answer)
 
         return instance
 
@@ -229,4 +267,33 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
         if send_now:
             send_survey_group(survey=result)
 
+        return result
+
+
+class ReviewPUTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        exclude = ('created_at', 'updated_at', 'author', 'platform', 'nps_previous_rating')
+
+    def validate(self, data):
+
+        if 'cohort' in data:
+            raise ValidationException(
+                'The cohort cannot be updated in a review, please create a new review instead.')
+
+        if 'author' in data:
+            raise ValidationException(
+                'The author cannot be updated in a review, please create a new review instead.')
+
+        if 'platform' in data:
+            raise ValidationException(
+                'The platform cannot be updated in a review, please create a new review instead.')
+
+        if self.instance.cohort.academy.id != int(self.context['academy_id']):
+            raise ValidationException('You don\'t have rights for this cohort academy')
+
+        return data
+
+    def update(self, instance, validated_data):
+        result = super().update(instance, validated_data)
         return result

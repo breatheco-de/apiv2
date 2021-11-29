@@ -1,0 +1,7 @@
+{{ SUBJECT }},
+
+{{ MESSAGE }}
+
+{% if BUTTON %}
+Click here to {{ BUTTON }}: {{ LINK }}
+{% endif %}

@@ -1,8 +1,10 @@
 from breathecode.notify.actions import send_email_message, send_slack
 import logging, random
+from django.utils import timezone
+from django.db.models import Avg
 from breathecode.utils import ValidationException
 from breathecode.authenticate.models import Token
-from .models import Answer, Survey
+from .models import Answer, Survey, Review, ReviewPlatform
 from .utils import strings
 from breathecode.admissions.models import CohortUser
 from .tasks import send_cohort_survey, build_question
@@ -39,6 +41,8 @@ def send_survey_group(survey=None, cohort=None):
                 f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
             result['error'].append(
                 f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
+    survey.sent_at = timezone.now()
+    survey.save()
 
     return result
 
@@ -129,9 +133,49 @@ def send_question(user, cohort=None):
 def answer_survey(user, data):
     answer = Answer.objects.create(**{**data, 'user': user})
 
-    # log = SurveyLog.objects.filter(
-    #     user__id=user.id,
-    #     cohort__id=answer.cohort.id,
-    #     academy__id=answer.academy.id,
-    #     mentor__id=answer.academy.id
-    # )
+
+def get_student_answer_avg(user_id, cohort_id=None, academy_id=None):
+
+    answers = Answer.objects.filter(user__id=user_id, status='ANSWERED', score__isnull=False)
+
+    # optionally filter by cohort
+    if cohort_id is not None:
+        answers = answers.filter(cohort__id=cohort_id)
+
+    # optionally filter by academy
+    if academy_id is not None:
+        answers = answers.filter(academy__id=academy_id)
+
+    query = answers.aggregate(average=Avg('score'))
+
+    if query['average'] is not None:
+        return round(query['average'], 2)
+
+    return query['average']
+
+
+def create_user_graduation_reviews(user, cohort):
+
+    # If the user gave us a rating >=8 we should create reviews for each review platform with status "pending"
+    average = get_student_answer_avg(user.id, cohort.id)
+    if average is None or average >= 8:
+        total_reviews = Review.objects.filter(
+            cohort=cohort,
+            author=user,
+        ).count()
+        if total_reviews > 0:
+            logger.debug(
+                f'No new reviews will be requested, student already has pending requests for this cohort')
+            return False
+
+        platforms = ReviewPlatform.objects.all()
+        logger.debug(
+            f'{platforms.count()} will be requested for student {user.id}, avg NPS score of {average}')
+        for plat in platforms:
+            review = Review(cohort=cohort, author=user, platform=plat, nps_previous_rating=average)
+            review.save()
+
+        return True
+
+    logger.debug(f'No reviews requested for student {user.id} because average NPS score is {average}')
+    return False

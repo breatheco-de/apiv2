@@ -1,6 +1,6 @@
 from django.core.mail import EmailMultiAlternatives
 from rest_framework.exceptions import APIException
-import os, logging, json
+import os, logging, json, re
 from django.template.loader import get_template
 from django.contrib.auth.models import User
 from django.template import Context
@@ -9,6 +9,7 @@ from pyfcm import FCMNotification
 from breathecode.authenticate.models import CredentialsSlack
 from breathecode.services.slack import client
 from breathecode.admissions.models import Cohort, CohortUser
+from breathecode.utils import ValidationException
 from .models import Device, SlackChannel, SlackTeam, SlackUser, SlackUserTeam
 from django.conf import settings
 import requests
@@ -23,6 +24,13 @@ logger = logging.getLogger(__name__)
 
 
 def send_email_message(template_slug, to, data={}):
+
+    if to is None or to == '' or (isinstance(to, list) and len(to) == 0):
+        raise ValidationException(f'Invalid email to send notification to {str(to)}')
+
+    if isinstance(to, list) == False:
+        to = [to]
+
     if os.getenv('EMAIL_NOTIFICATIONS_ENABLED', False) == 'TRUE':
         template = get_template_content(template_slug, data, ['email'])
 
@@ -44,7 +52,7 @@ def send_email_message(template_slug, to, data={}):
 
         return result.status_code == 200
     else:
-        logger.warning('Email not sent because EMAIL_NOTIFICATIONS_ENABLED != TRUE')
+        logger.warning(f'Email to {to} not sent because EMAIL_NOTIFICATIONS_ENABLED != TRUE')
         return True
 
 

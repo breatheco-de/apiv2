@@ -1,5 +1,7 @@
 import os, re, datetime, logging, csv, pytz
 from urllib import parse
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework_csv.renderers import CSVRenderer
 from breathecode.renderers import PlainTextRenderer
 from rest_framework.decorators import renderer_classes
@@ -14,12 +16,19 @@ from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
                                GenerateLookupsMixin, HeaderLimitOffsetPagination)
-from .serializers import (PostFormEntrySerializer, FormEntrySerializer, FormEntrySmallSerializer,
-                          TagSmallSerializer, AutomationSmallSerializer)
+from .serializers import (
+    PostFormEntrySerializer,
+    FormEntrySerializer,
+    FormEntrySmallSerializer,
+    TagSmallSerializer,
+    AutomationSmallSerializer,
+    DownloadableSerializer,
+    ShortLinkSerializer,
+)
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
-from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation
+from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
@@ -27,6 +36,39 @@ from rest_framework.views import APIView
 logger = logging.getLogger(__name__)
 
 # Create your views here.
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_downloadable(request, slug=None):
+
+    if slug is not None:
+        download = Downloadable.objects.filter(slug=slug).first()
+        if download is None:
+            raise APIException(f'Document not found', 404)
+
+        if request.GET.get('raw', None) == 'true':
+            return HttpResponseRedirect(redirect_to=download.destination_url)
+
+        seri = DownloadableSerializer(download, many=False)
+        return Response(seri.data)
+
+    items = Downloadable.objects.all()
+    academy = request.GET.get('academy', None)
+    if academy is not None:
+        items = items.filter(academy__slug__in=academy.split(','))
+
+    active = request.GET.get('active', None)
+    if active is not None:
+        if active == 'true':
+            active = True
+        else:
+            active = False
+        items = items.filter(active=active)
+
+    items = items.order_by('created_at')
+    serializer = DownloadableSerializer(items, many=True)
+    return Response(serializer.data)
 
 
 @api_view(['POST'])
@@ -62,7 +104,7 @@ def activecampaign_webhook(request, ac_academy_id=None, academy_slug=None):
     else:
         logger.debug('One request cannot be parsed, maybe you should update `ActiveCampaign'
                      '.add_webhook_to_log`')
-        logger.debug(request.data)
+        #logger.debug(request.data)
 
     # async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')
@@ -391,6 +433,100 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 
         for item in items:
             item.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('read_shortlink')
+    def get(self, request, slug=None, academy_id=None):
+
+        if slug is not None:
+            link = ShortLink.objects.filter(slug=slug).first()
+            if link is None or (link.private and link.academy.id != academy_id):
+                raise ValidationError(
+                    f'Shortlink with slug {slug} not found or its private and it belongs to another academy',
+                    slug='shortlink-not-found')
+
+        academy = Academy.objects.get(id=academy_id)
+        items = ShortLink.objects.filter(Q(academy__id=academy.id) | Q(private=False))
+        lookup = {}
+
+        private = request.GET.get('private', None)
+        if private == 'true':
+            lookup['private'] = True
+
+        sort_by = '-created_at'
+        if 'sort' in self.request.GET and self.request.GET['sort'] != '':
+            sort_by = self.request.GET.get('sort')
+
+        items = items.filter(**lookup).order_by(sort_by)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(slug__icontains=like)
+
+        page = self.paginate_queryset(items, request)
+        serializer = ShortlinkSmallSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
+
+    @capable_of('crud_shortlink')
+    def post(self, request, academy_id=None):
+
+        serializer = ShortLinkSerializer(data=request.data,
+                                         context={
+                                             'request': request,
+                                             'academy': academy_id
+                                         })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_shortlink')
+    def put(self, request, short_slug, academy_id=None):
+
+        short = ShortLink.objects.filter(slug=short_slug, academy__id=academy_id).first()
+        if short is None:
+            raise ValidationException(f'ShortLink {short_slug} not found', slug='short-not-found')
+
+        serializer = ShortLinkSerializer(short,
+                                         data=request.data,
+                                         context={
+                                             'request': request,
+                                             'academy': academy_id
+                                         })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_shortlink')
+    def delete(self, request, academy_id=None):
+        # TODO: here i don't add one single delete, because i don't know if it is required
+        lookups = self.generate_lookups(request, many_fields=['id'])
+        # automation_objects
+
+        if not lookups:
+            raise ValidationException('Missing parameters in the querystring', code=400)
+
+        items = ShortLink.objects.filter(**lookups, academy__id=academy_id)
+        for i in items:
+            utc_now = timezone.now()
+            days_ago = i.created_at + timedelta(days=1)
+            if days_ago < utc_now:
+                raise ValidationException(
+                    f'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
+                    slug='update-days-ago')
+
+        items.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 

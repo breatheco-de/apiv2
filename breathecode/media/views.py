@@ -438,7 +438,7 @@ class UploadView(APIView):
                     # upload file section
                     storage = Storage()
                     cloud_file = storage.file(media_gallery_bucket(), hash)
-                    cloud_file.upload(file_bytes)
+                    cloud_file.upload(file_bytes, content_type=file.content_type)
                     data['url'] = cloud_file.url()
                     data['thumbnail'] = data['url'] + '-thumbnail'
 
@@ -486,7 +486,7 @@ class MaskingUrlView(APIView):
         if media_id:
             lookups['id'] = media_id
         elif media_slug:
-            lookups['slug'] = media_slug
+            lookups['slug'] = media_slug.split('.')[0]  #ignore extesion
 
         width = request.GET.get('width')
         height = request.GET.get('height')

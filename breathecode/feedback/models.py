@@ -3,6 +3,8 @@ from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.events.models import Event
+from breathecode.mentorship.models import MentorshipSession
+from .signals import survey_answered
 from breathecode.authenticate.models import Token
 
 __all__ = ['UserProxy', 'CohortUserProxy', 'CohortProxy', 'Survey', 'Answer']
@@ -85,12 +87,21 @@ SURVEY_STATUS = (
 
 
 class Answer(models.Model):
+    def __init__(self, *args, **kwargs):
+        super(Answer, self).__init__(*args, **kwargs)
+        self.__old_status = self.status
+
     title = models.CharField(max_length=200, blank=True)
     lowest = models.CharField(max_length=50, default='not likely')
     highest = models.CharField(max_length=50, default='very likely')
     lang = models.CharField(max_length=3, blank=True, default='en')
 
     event = models.ForeignKey(Event, on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    mentorship_session = models.ForeignKey(MentorshipSession,
+                                           on_delete=models.SET_NULL,
+                                           default=None,
+                                           blank=True,
+                                           null=True)
     mentor = models.ForeignKey(User,
                                related_name='mentor_set',
                                on_delete=models.SET_NULL,
@@ -119,5 +130,79 @@ class Answer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, default=None, blank=True, null=True)
 
     opened_at = models.DateTimeField(default=None, blank=True, null=True)
+    sent_at = models.DateTimeField(default=None, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+
+        if self.__old_status != self.status and self.status == 'ANSWERED':
+            # signal the updated answer
+            survey_answered.send(instance=self, sender=Answer)
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.
+
+
+class ReviewPlatform(models.Model):
+    """
+    Websites like KareerKarma, Switchup, Coursereport, etc.
+    """
+    slug = models.SlugField(primary_key=True)
+    name = models.CharField(max_length=100)
+    website = models.URLField()
+    review_signup = models.URLField(blank=True,
+                                    null=True,
+                                    default=None,
+                                    help_text='Give URL to create a new review')
+    contact_email = models.EmailField()
+    contact_name = models.EmailField(blank=True, null=True, default=None)
+    contact_phone = models.CharField(max_length=17, blank=True, null=True, default=None)
+
+    def __str__(self):
+        return f'{self.slug}'
+
+
+PENDING = 'PENDING'
+REQUESTED = 'REQUESTED'
+DONE = 'DONE'
+IGNORE = 'IGNORE'
+REVIEW_STATUS = (
+    (PENDING, 'Pending'),
+    (REQUESTED, 'Requested'),
+    (DONE, 'Done'),
+    (IGNORE, 'Ignore'),
+)
+
+
+class Review(models.Model):
+
+    nps_previous_rating = models.FloatField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text='Automatically calculated based on NPS survay responses')
+    total_rating = models.FloatField(blank=True, null=True, default=None)
+    public_url = models.URLField(blank=True, null=True, default=None)
+
+    status = models.CharField(max_length=9,
+                              choices=REVIEW_STATUS,
+                              default=PENDING,
+                              help_text='Deleted reviews hav status=Ignore')
+    status_text = models.CharField(max_length=255, default=None, null=True, blank=True)
+    comments = models.TextField(default=None,
+                                null=True,
+                                blank=True,
+                                help_text='Student comments when leaving the review')
+
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, null=True, blank=True)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    platform = models.ForeignKey(ReviewPlatform, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        cohort = 'no specific cohort'
+        if self.cohort is not None:
+            cohort = self.cohort.slug
+        return f'{self.author.first_name} {self.author.last_name} for {cohort}'

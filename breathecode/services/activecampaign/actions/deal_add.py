@@ -13,7 +13,7 @@ status = {
 logger = logging.getLogger(__name__)
 
 
-def deal_add(self, webhook, payload: dict):
+def deal_add(self, webhook, payload: dict, acp_ids):
     # prevent circular dependency import between thousand modules previuosly loaded and cached
     from breathecode.marketing.models import FormEntry
 

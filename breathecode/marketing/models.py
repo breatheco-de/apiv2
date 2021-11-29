@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from breathecode.admissions.models import Academy
+from breathecode.admissions.models import Academy, Cohort
 from django.core.validators import RegexValidator
 
 __all__ = [
@@ -18,7 +18,7 @@ SYNC_STATUS = (
 
 class ActiveCampaignAcademy(models.Model):
     ac_key = models.CharField(max_length=150)
-    ac_url = models.CharField(max_length=150)
+    ac_url = models.URLField()
     event_attendancy_automation = models.ForeignKey('Automation',
                                                     on_delete=models.CASCADE,
                                                     blank=True,
@@ -221,10 +221,17 @@ class FormEntry(models.Model):
     client_comments = models.CharField(max_length=250, blank=True, null=True, default=None)
     location = models.CharField(max_length=70, blank=True, null=True, default=None)
     language = models.CharField(max_length=2, default='en')
-    utm_url = models.CharField(max_length=250, null=True, default=None, blank=True)
+    utm_url = models.URLField(max_length=2000, null=True, default=None, blank=True)
     utm_medium = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_campaign = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_source = models.CharField(max_length=70, blank=True, null=True, default=None)
+
+    current_download = models.CharField(max_length=255,
+                                        blank=True,
+                                        null=True,
+                                        default=None,
+                                        help_text='Slug of the breathecode.marketing.downloadable')
+
     referral_key = models.CharField(max_length=70, blank=True, null=True, default=None)
 
     gclid = models.CharField(max_length=255, blank=True, null=True, default=None)
@@ -256,6 +263,11 @@ class FormEntry(models.Model):
     # if user is not null, it probably means the lead was won and we invited it to breathecode
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, default=None, blank=True)
 
+    ac_expected_cohort = models.CharField(max_length=100,
+                                          null=True,
+                                          default=None,
+                                          blank=True,
+                                          help_text='Which cohort is this student expecting to join')
     ac_contact_id = models.CharField(max_length=20,
                                      null=True,
                                      default=None,
@@ -291,6 +303,7 @@ class FormEntry(models.Model):
             'country': self.country,
             'utm_url': self.utm_url,
             'client_comments': self.client_comments,
+            'current_download': self.current_download,
             'latitude': self.longitude,
             'longitude': self.latitude,
         }
@@ -299,9 +312,11 @@ class FormEntry(models.Model):
 
 _ACTIVE = 'ACTIVE'
 NOT_FOUND = 'NOT_FOUND'
+ERROR = 'ERROR'
 DESTINATION_STATUS = (
     (_ACTIVE, 'Active'),
     (NOT_FOUND, 'Not found'),
+    (ERROR, 'Error'),
 )
 
 
@@ -310,7 +325,10 @@ class ShortLink(models.Model):
     destination = models.URLField()
     hits = models.IntegerField(default=0)
     active = models.BooleanField(default=True)
+    private = models.BooleanField(default=True)
+
     destination_status = models.CharField(max_length=15, choices=DESTINATION_STATUS, default=_ACTIVE)
+    destination_status_text = models.CharField(max_length=250, default=None, blank=True, null=True)
 
     utm_content = models.CharField(max_length=250, null=True, default=None, blank=True)
     utm_medium = models.CharField(max_length=50, blank=True, null=True, default=None)
@@ -320,6 +338,11 @@ class ShortLink(models.Model):
     # Status
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    lastclick_at = models.DateTimeField(blank=True,
+                                        null=True,
+                                        default=None,
+                                        help_text='Last time a click was registered for this link')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -360,3 +383,27 @@ class ActiveCampaignWebhook(models.Model):
 
     def __str__(self):
         return f'Webhook {self.webhook_type} {self.status} => {self.status_text}'
+
+
+class Downloadable(models.Model):
+    slug = models.SlugField(max_length=150, unique=True)
+    name = models.CharField(max_length=100)
+    description = models.TextField(max_length=450)
+
+    hits = models.IntegerField(default=0)
+    active = models.BooleanField(default=True,
+                                 help_text='Non-active downloadables will display a message to the user')
+
+    preview_url = models.URLField()
+    destination_url = models.URLField()
+    destination_status = models.CharField(max_length=15, choices=DESTINATION_STATUS, default=_ACTIVE)
+
+    # Status
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.slug}'

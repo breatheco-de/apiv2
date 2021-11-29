@@ -101,9 +101,8 @@ def generate_certificate(user, cohort=None, layout=None):
                                       slug='with-pending-tasks')
 
         if not (cohort_user.finantial_status == FULLY_PAID or cohort_user.finantial_status == UP_TO_DATE):
-            raise ValidationException('The student must have finantial status '
-                                      'FULLY_PAID or UP_TO_DATE',
-                                      slug='bad-finantial-status')
+            message = 'The student must have finantial status FULLY_PAID or UP_TO_DATE'
+            raise ValidationException(message, slug='bad-finantial-status')
 
         if cohort_user.educational_status != 'GRADUATED':
             raise ValidationException('The student must have educational '

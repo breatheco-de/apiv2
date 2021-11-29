@@ -1,17 +1,22 @@
 from breathecode.authenticate.models import ProfileAcademy
 import logging
 from django.shortcuts import render
+from django.utils import timezone
 from django.db.models import Q
 from rest_framework.views import APIView
 from django.contrib.auth.models import AnonymousUser
-from breathecode.utils import localize_query, ValidationException
+from django.contrib import messages
+from breathecode.utils import ValidationException, capable_of, localize_query
 from breathecode.admissions.models import CohortUser, Cohort
+from breathecode.authenticate.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from breathecode.utils import APIException
 from .models import Task
-from .serializers import TaskGETSerializer, PUTTaskSerializer, PostTaskSerializer
+from .actions import deliver_task
+from .forms import DeliverAssigntmentForm
+from .serializers import (TaskGETSerializer, PUTTaskSerializer, PostTaskSerializer, TaskGETDeliverSerializer)
 from .actions import sync_cohort_tasks
 
 logger = logging.getLogger(__name__)
@@ -52,6 +57,10 @@ class TaskTeacherView(APIView):
                 items = items.filter(user__cohortuser__cohort__id__in=ids, user__cohortuser__role='STUDENT')
             else:
                 items = items.filter(user__cohortuser__cohort__slug__in=ids, user__cohortuser__role='STUDENT')
+
+        edu_status = request.GET.get('edu_status', None)
+        if edu_status is not None:
+            items = items.filter(user__cohortuser__educational_status__in=edu_status.split(','))
 
         # tasks from users that belong to these cohort
         teacher = request.GET.get('teacher', None)
@@ -144,3 +153,72 @@ class TaskMeView(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TaskMeDeliverView(APIView):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('task_delivery_details')
+    def get(self, request, task_id, academy_id):
+
+        item = Task.objects.filter(id=task_id).first()
+        if item is None:
+            raise ValidationException('Task not found')
+
+        serializer = TaskGETDeliverSerializer(item, many=False)
+        return Response(serializer.data)
+
+
+def deliver_assignment_view(request, task_id, token):
+
+    if request.method == 'POST':
+        _dict = request.POST.copy()
+        form = DeliverAssigntmentForm(_dict)
+
+        if 'github_url' not in _dict or _dict['github_url'] == '':
+            messages.error(request, 'Github URL is required')
+            return render(request, 'form.html', {'form': form})
+
+        token = Token.objects.filter(key=_dict['token']).first()
+        if token is None or token.expires_at < timezone.now():
+            messages.error(request, f'Invalid or expired deliver token {_dict["token"]}')
+            return render(request, 'form.html', {'form': form})
+
+        task = Task.objects.filter(id=_dict['task_id']).first()
+        if task is None:
+            messages.error(request, 'Invalid task id')
+            return render(request, 'form.html', {'form': form})
+
+        deliver_task(
+            task=task,
+            github_url=_dict['github_url'],
+            live_url=_dict['live_url'],
+        )
+
+        if 'callback' in _dict and _dict['callback'] != '':
+            return HttpResponseRedirect(redirect_to=_dict['callback'] + '?msg=The task has been delivered')
+        else:
+            return render(request, 'message.html', {'message': 'The task has been delivered'})
+    else:
+        task = Task.objects.filter(id=task_id).first()
+        if task is None:
+            return render(request, 'message.html', {
+                'message': f'Invalid assignment id {str(task_id)}',
+            })
+
+        _dict = request.GET.copy()
+        _dict['callback'] = request.GET.get('callback', '')
+        _dict['token'] = token
+        _dict['task_name'] = task.title
+        _dict['task_id'] = task.id
+        form = DeliverAssigntmentForm(_dict)
+    return render(
+        request,
+        'form.html',
+        {
+            'form': form,
+            # 'heading': 'Deliver project assignment',
+            'intro': 'Please fill the following information to deliver your assignment',
+            'btn_lable': 'Deliver Assignment'
+        })

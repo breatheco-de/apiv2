@@ -149,7 +149,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
                                     monitor_script_kwargs=monitor_script_kwargs,
                                     cohort_kwargs={
                                         'ending_date': ending_date,
-                                        'kickoff_date': kickoff_date
+                                        'kickoff_date': kickoff_date,
+                                        'stage': 'ENDED',
                                     })
 
         sent_at = timezone.now() - timedelta(weeks=6)
@@ -198,7 +199,8 @@ class AcademyCohortTestSuite(MonitoringTestCase):
                                  models=base,
                                  cohort_kwargs={
                                      'ending_date': ending_date,
-                                     'kickoff_date': kickoff_date
+                                     'kickoff_date': kickoff_date,
+                                     'stage': 'ENDED',
                                  }) for _ in range(0, 2)
         ]
 

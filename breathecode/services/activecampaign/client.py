@@ -1,6 +1,8 @@
 import requests, json
 from requests.auth import HTTPBasicAuth
 import breathecode.services.activecampaign.actions as actions
+from breathecode.utils import APIException
+from slugify import slugify
 import logging, re, os, json, inspect, urllib
 
 logger = logging.getLogger(__name__)
@@ -20,7 +22,7 @@ class ActiveCampaign:
         self.token = token
         self.headers = {'Authorization': f'Bearer {token}'}
 
-    def execute_action(self, webhook_id: int):
+    def execute_action(self, webhook_id: int, acp_ids: dict):
         # wonderful way to fix one poor mocking system
         import requests
 
@@ -53,7 +55,7 @@ class ActiveCampaign:
             fn = getattr(actions, action)
 
             try:
-                fn(self, webhook, json.loads(webhook.payload))
+                fn(self, webhook, json.loads(webhook.payload), acp_ids)
                 logger.debug('Mark active campaign action as done')
                 webhook.status = 'DONE'
                 webhook.status_text = 'OK'
@@ -101,6 +103,84 @@ class ActiveCampaign:
         webhook.save()
 
         return webhook
+
+    def get_deal(self, deal_id):
+        #/api/3/deals/id
+        #Api-Token
+        resp = requests.get(f'{self.host}/api/3/deals/{deal_id}', headers={'Api-Token': self.token})
+        logger.debug(f'Get deal {self.host}/api/3/deals/{deal_id}', resp.status_code)
+        return resp.json()
+
+    def get_contact_by_email(self, email):
+        #/api/3/deals/id
+        #Api-Token
+        resp = requests.get(f'{self.host}/api/3/contacts',
+                            headers={'Api-Token': self.token},
+                            params={'email': email})
+        logger.debug(f'Get contact by email {self.host}/api/3/contacts', resp.status_code)
+        data = resp.json()
+        if 'contacts' in data and len(data['contacts']) == 1:
+            return data['contacts'][0]
+        else:
+            logger.error(f'Problem fetching contact in activecampaign with email {email}')
+            return None
+
+    def get_deal_customfields(self, deal_id):
+        #/api/3/deals/id
+        #Api-Token
+        resp = requests.get(f'{self.host}/api/3/deals/{deal_id}/dealCustomFieldData',
+                            headers={'Api-Token': self.token})
+        logger.debug(
+            f'Get custom fields {self.host}/api/3/deals/{deal_id}/dealCustomFieldData with status {str(resp.status_code)}'
+        )
+
+        if resp.status_code == 200:
+            data = resp.json()
+            _reponse = {}
+            for field in data['dealCustomFieldData']:
+                _reponse[str(field['customFieldId'])] = field['fieldValue']
+            return _reponse
+
+        return None
+
+    def add_tag_to_contact(self, contact_id: int, tag_id: int):
+        #/api/3/deals/id
+        #Api-Token
+        body = {'contactTag': {'contact': contact_id, 'tag': tag_id}}
+        resp = requests.post(f'{self.host}/api/3/contactTags', headers={'Api-Token': self.token}, json=body)
+        logger.debug(f'Add tag to contact')
+
+        if resp.status_code == 201:
+            data = resp.json()
+            if data and 'contactTag' in data:
+                return data['contactTag']
+            else:
+                raise Exception(f'Bad response format from ActiveCampaign when adding a new tag to contact')
+        else:
+            logger.debug(resp.json())
+            raise Exception(f'Failed to add tag to contact {contact_id} with status={resp.status_code}')
+
+    def create_tag(self, slug: str, description: str):
+        #/api/3/deals/id
+        #Api-Token
+        body = {'tag': {'tag': slugify(slug), 'tagType': 'contact', 'description': description}}
+        resp = requests.post(f'{self.host}/api/3/tags', headers={'Api-Token': self.token}, json=body)
+        logger.debug(f'Creating tag {body["tag"]["tag"]} on active campaign')
+
+        if resp.status_code == 201:
+            logger.debug(f'Tag created successfully')
+            body = resp.json()
+            if 'tag' in body:
+                return body['tag']
+            else:
+                logger.debug(f'Error creating ta {slug}')
+                logger.debug(error)
+                raise Exception(f'Failed to create tag {slug}, status_code={str(resp.status_code)}')
+        else:
+            logger.debug(f'Error creating tag {slug} with status= {str(resp.status_code)}')
+            error = resp.json()
+            logger.debug(error)
+            raise Exception(f'Failed to create tag {slug}, status_code={str(resp.status_code)}')
 
 
 class Contacts(object):

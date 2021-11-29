@@ -87,6 +87,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
                 model = CohortUser.objects.filter(**filter).first().__dict__
                 del model['_state']
+                del model['_CohortUser__old_edu_status']
 
                 self.assertEqual(isinstance(model['created_at'], datetime.datetime), True)
                 del model['created_at']
@@ -152,6 +153,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
                 model = CohortUser.objects.filter(**filter).first().__dict__
                 del model['_state']
+                del model['_CohortUser__old_edu_status']
 
                 self.assertEqual(isinstance(model['created_at'], datetime.datetime), True)
                 del model['created_at']
@@ -216,6 +218,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
                 model = CohortUser.objects.filter(**filter).first().__dict__
                 del model['_state']
+                del model['_CohortUser__old_edu_status']
 
                 self.assertEqual(isinstance(model['created_at'], datetime.datetime), True)
                 del model['created_at']
@@ -281,6 +284,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
                 model = CohortUser.objects.filter(**filter).first().__dict__
                 del model['_state']
+                del model['_CohortUser__old_edu_status']
 
                 self.assertEqual(isinstance(model['created_at'], datetime.datetime), True)
                 del model['created_at']

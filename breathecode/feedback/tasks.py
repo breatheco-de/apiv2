@@ -1,17 +1,23 @@
+import logging, os
 from breathecode.authenticate.models import Token
 from breathecode.utils import ValidationException
-import logging
+from django.db.models import Avg
 from celery import shared_task, Task
 from django.utils import timezone
 from breathecode.notify.actions import send_email_message, send_slack
 from .utils import strings
-from breathecode.admissions.models import CohortUser
+from breathecode.admissions.models import CohortUser, Cohort
 from django.contrib.auth.models import User
-from .models import Survey, Answer
+from .models import Survey, Answer, Review, ReviewPlatform
+from breathecode.mentorship.models import MentorshipSession
 from django.utils import timezone
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
+
+ADMIN_URL = os.getenv('ADMIN_URL', '')
+SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', '')
+API_URL = os.getenv('API_URL', '')
 
 
 class BaseTaskWithRetry(Task):
@@ -24,7 +30,13 @@ class BaseTaskWithRetry(Task):
 def build_question(answer):
 
     question = {'title': '', 'lowest': '', 'highest': ''}
-    if answer.event is not None:
+    if answer.mentorship_session is not None:
+        question['title'] = strings[answer.lang]['session']['title'].format(
+            f'{answer.mentorship_session.mentor.user.first_name} {answer.mentorship_session.mentor.user.last_name}'
+        )
+        question['lowest'] = strings[answer.lang]['session']['lowest']
+        question['highest'] = strings[answer.lang]['session']['highest']
+    elif answer.event is not None:
         question['title'] = strings[answer.lang]['event']['title']
         question['lowest'] = strings[answer.lang]['event']['lowest']
         question['highest'] = strings[answer.lang]['event']['highest']
@@ -138,14 +150,109 @@ def send_cohort_survey(self, user_id, survey_id):
     data = {
         'SUBJECT': strings[survey.lang]['survey_subject'],
         'MESSAGE': strings[survey.lang]['survey_message'],
-        'SURVEY_ID': survey_id,
+        'TRACKER_URL': f'{API_URL}/v1/feedback/survey/{survey_id}/tracker.png',
         'BUTTON': strings[survey.lang]['button_label'],
         'LINK': f'https://nps.breatheco.de/survey/{survey_id}?token={token.key}',
     }
 
     if user.email:
         send_email_message('nps_survey', user.email, data)
-        survey.sent_at = timezone.now()
 
     if hasattr(user, 'slackuser') and hasattr(survey.cohort.academy, 'slackteam'):
         send_slack('nps_survey', user.slackuser, survey.cohort.academy.slackteam, data=data)
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def process_student_graduation(self, cohort_id, user_id):
+    from .actions import create_user_graduation_reviews
+
+    logger.debug('Starting process_student_graduation')
+
+    cohort = Cohort.objects.filter(id=cohort_id).first()
+    if cohort is None:
+        raise ValidationException(f'Invalid cohort id: {cohort_id}')
+    user = User.objects.filter(id=user_id).first()
+    if user is None:
+        raise ValidationException(f'Invalid user id: {user_id}')
+
+    create_user_graduation_reviews(user, cohort)
+
+    return True
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def process_answer_received(self, answer_id):
+    """
+    This task will be called every time a single NPS answer is received
+    the task will reivew the score, if we got less than 7 it will notify
+    the school.
+    """
+    logger.debug('Starting notify_bad_nps_score')
+    answer = Answer.objects.filter(id=answer_id).first()
+    if answer is None:
+        raise ValidationException('Answer not found')
+
+    if answer.survey is not None:
+        survey_score = Answer.objects.filter(survey=answer.survey).aggregate(Avg('score'))
+        answer.survey.avg_score = survey_score['score__avg']
+        answer.survey.save()
+
+    if answer.score is not None and answer.score < 8:
+        # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
+        send_email_message('negative_answer', [SYSTEM_EMAIL, answer.academy.feedback_email],
+                           data={
+                               'SUBJECT': f'A student answered with a bad NPS score at {answer.academy.name}',
+                               'FULL_NAME': answer.user.first_name + ' ' + answer.user.last_name,
+                               'QUESTION': answer.title,
+                               'SCORE': answer.score,
+                               'COMMENTS': answer.comment,
+                               'ACADEMY': answer.academy.name,
+                               'LINK':
+                               f'{ADMIN_URL}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
+                           })
+
+    return True
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def send_mentorship_session_survey(self, session_id):
+    logger.debug('Starting send_mentorship_session_survey')
+    session = MentorshipSession.objects.filter(id=session_id).first()
+    if session is None:
+        logger.error('Mentoring session not found')
+        return False
+
+    if Answer.objects.filter(mentorship_session__id=session.id).first() is not None:
+        logger.info(f'There is already a NPS question for this mentoring session, IGNORING')
+        return True
+
+    answer = Answer(mentorship_session=session,
+                    academy=session.mentor.service.academy,
+                    lang=session.mentor.service.language)
+    question = build_question(answer)
+    answer.title = question['title']
+    answer.lowest = question['lowest']
+    answer.highest = question['highest']
+    answer.user = session.mentee
+    answer.status = 'SENT'
+    answer.save()
+
+    has_slackuser = hasattr(session.mentee, 'slackuser')
+    if not session.mentee.email:
+        message = f'Author not have email, this survey cannot be send by {str(session.mentee.id)}'
+        logger.info(message)
+        raise Exception(message)
+
+    token, created = Token.get_or_create(session.mentee, hours_length=48)
+    data = {
+        'SUBJECT': strings[answer.lang]['survey_subject'],
+        'MESSAGE': answer.title,
+        'TRACKER_URL': f'{API_URL}/v1/feedback/answer/{answer.id}/tracker.png',
+        'BUTTON': strings[answer.lang]['button_label'],
+        'LINK': f'https://nps.breatheco.de/{answer.id}?token={token.key}',
+    }
+
+    if session.mentee.email:
+        if send_email_message('nps_survey', session.mentee.email, data):
+            answer.sent_at = timezone.now()
+            answer.save()

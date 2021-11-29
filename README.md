@@ -56,7 +56,7 @@ The documentation is divided into several sections:
   - [Testing in your local machine](#testing-in-your-local-machine)
   - [Run BreatheCode API in your local machine](#run-breathecode-api-in-your-local-machine)
 
-## Working inside Gitpod (no instalation)
+## Working inside Gitpod (no installation)
 
 ### `How to work Gitpod`
 
@@ -134,10 +134,10 @@ docker-compose logs -f bc-dev
 
 ### `Installation in your local machine`
 
-Install [docker desktop](https://www.docker.com/products/docker-desktop) in you use Windows else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
+Install [docker desktop](https://www.docker.com/products/docker-desktop) in your Windows, else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
 
 ```bash
-# Check which dependencies you need install in you operating system
+# Check which dependencies you need install in your operating system
 python -m scripts.doctor
 
 # Setting up the redis and postgres database, you also can install manually in your local machine this databases

@@ -4,10 +4,10 @@
 
 ### `Build BreatheCode Dev docker image`
 
-Instal [docker desktop](https://www.docker.com/products/docker-desktop) in you use Windows else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
+Install [docker desktop](https://www.docker.com/products/docker-desktop) in your Windows, else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
 
 ```bash
-# Check which dependencies you need install in you operating system
+# Check which dependencies you need install in your operating system
 python -m scripts.doctor
 
 # Generate the BreatheCode Dev docker image
@@ -59,10 +59,10 @@ docker-compose logs -f bc-dev
 
 ### `Installation in your local machine`
 
-Instal [docker desktop](https://www.docker.com/products/docker-desktop) in you use Windows else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
+Install [docker desktop](https://www.docker.com/products/docker-desktop) in your Windows, else find a guide to install Docker and Docker Compose in your linux distribution `uname -a`.
 
 ```bash
-# Check which dependencies you need install in you operating system
+# Check which dependencies you need install in your operating system
 python -m scripts.doctor
 
 # Setting up the redis and postgres database, you also can install manually in your local machine this databases

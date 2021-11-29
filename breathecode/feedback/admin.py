@@ -4,8 +4,8 @@ from django.contrib import admin, messages
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
-from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey
-from .actions import send_question, send_survey_group
+from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey, Review, ReviewPlatform
+from .actions import send_question, send_survey_group, create_user_graduation_reviews
 from django.utils.html import format_html
 from breathecode.utils import AdminExportCsvMixin
 
@@ -77,10 +77,29 @@ def send_bulk_cohort_user_survey(modeladmin, request, queryset):
 send_bulk_cohort_user_survey.short_description = 'Send General NPS Survey'
 
 
+def generate_review_requests(modeladmin, request, queryset):
+    cus = queryset.all()
+    for cu in cus:
+        if cu.educational_status != 'GRADUATED':
+            messages.success(request, message='All selected students must have graduated')
+            return False
+
+    try:
+        for cu in cus:
+            create_user_graduation_reviews(cu.user, cu.cohort)
+            messages.success(request, message='Review request were successfully generated')
+    except Exception as e:
+        messages.error(request, message=str(e))
+
+
+generate_review_requests.short_description = 'Generate review requests'
+
+
 @admin.register(CohortUserProxy)
 class CohortUserAdmin(CohortUserAdmin):
     actions = [
         send_bulk_cohort_user_survey,
+        generate_review_requests,
     ]
 
 
@@ -107,8 +126,8 @@ add_academy_to_answer.short_description = 'Add academy to answer'
 
 @admin.register(Answer)
 class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score', 'comment', 'opened_at',
-                    'created_at', 'answer_url')
+    list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score', 'opened_at', 'created_at',
+                    'answer_url')
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'cohort__slug']
     list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
     actions = ['export_as_csv', add_academy_to_answer]
@@ -154,7 +173,7 @@ send_big_cohort_bulk_survey.short_description = 'Send GENERAL BIG Survey to all 
 
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
-    list_display = ('cohort', 'status', 'duration', 'created_at', 'survey_url')
+    list_display = ('cohort', 'status', 'duration', 'sent_at', 'survey_url')
     search_fields = ['cohort__slug', 'cohort__academy__slug', 'cohort__name', 'cohort__academy__name']
     list_filter = ['status', 'cohort__academy__slug']
     raw_id_fields = ['cohort']
@@ -163,3 +182,26 @@ class SurveyAdmin(admin.ModelAdmin):
     def survey_url(self, obj):
         url = 'https://nps.breatheco.de/survey/' + str(obj.id)
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{url}'>open survey</a>")
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    search_fields = ['author__first_name', 'author__last_name', 'author__email', 'cohort__slug']
+    list_display = ('id', 'current_status', 'author', 'cohort', 'nps_previous_rating', 'total_rating',
+                    'platform')
+    readonly_fields = ['nps_previous_rating']
+    list_filter = ['status', 'cohort__academy__slug', 'platform']
+    raw_id_fields = ['author', 'cohort']
+
+    def current_status(self, obj):
+        colors = {
+            'DONE': 'bg-success',
+            'IGNORE': '',
+            'PENDING': 'bg-warning',
+        }
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+
+
+@admin.register(ReviewPlatform)
+class ReviewPlatformAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name')

@@ -20,6 +20,8 @@ from breathecode.utils.urls import mount_app_openapi
 from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
+from django.conf.urls.static import static
+from django.conf import settings
 
 apps = [
     ('v1/auth/', 'breathecode.authenticate.urls', 'auth'),
@@ -35,7 +37,9 @@ apps = [
     ('v1/certificate/', 'breathecode.certificate.urls', 'certificate'),
     ('v1/media/', 'breathecode.media.urls', 'media'),
     ('v1/marketing/', 'breathecode.marketing.urls', 'marketing'),
-    ('s/', 'breathecode.marketing.urls_shortner', 'shortner'),
+    ('v1/mentorship/', 'breathecode.mentorship.urls', 'mentorship'),
+    ('s/', 'breathecode.marketing.urls_shortner', 'marketing_shortner'),
+    ('mentor/', 'breathecode.mentorship.urls_shortner', 'mentorship_shortner'),
 ]
 
 urlpatterns_apps = [path(url, include(urlconf, namespace=namespace)) for url, urlconf, namespace in apps]
@@ -66,6 +70,10 @@ urlpatterns_django = [
     path('explorer/', include('explorer.urls')),
 ]
 
-urlpatterns = urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django
+urlpatterns_static = static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+urlpatterns = (urlpatterns_apps + urlpatterns_app_openapi + urlpatterns_docs + urlpatterns_django +
+               urlpatterns_static)
+
 if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or os.environ.get('ENV') == 'test':
     urlpatterns.append(path('v1/cypress/', include('breathecode.cypress.urls', namespace='cypress')))
