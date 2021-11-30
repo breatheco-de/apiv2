@@ -229,6 +229,15 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
         return obj.syllabus.github_url if obj.syllabus else None
 
 
+class SmallCohortTimeSlotSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    id = serpy.Field()
+    starting_at = serpy.Field()
+    ending_at = serpy.Field()
+    recurrent = serpy.Field()
+    recurrency_type = serpy.Field()
+
+
 class GetCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -247,6 +256,11 @@ class GetCohortSerializer(serpy.Serializer):
     specialty_mode = GetSmallSpecialtyModeSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
+    timeslots = serpy.MethodField()
+
+    def get_timeslots(self, obj):
+        timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
+        return SmallCohortTimeSlotSerializer(timeslots, many=True).data
 
 
 class PublicCohortSerializer(serpy.Serializer):

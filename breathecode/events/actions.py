@@ -1,8 +1,11 @@
+import pytz
+
 from datetime import datetime, timedelta
 from breathecode.admissions.models import CohortTimeSlot
+from django.utils import timezone
+
 from .models import Organization, Venue, Event, Organizer
 from .utils import Eventbrite
-from django.utils import timezone
 
 status_map = {
     'draft': 'DRAFT',
@@ -214,3 +217,37 @@ def fix_datetime_weekday(current, timeslot, prev=False, next=False):
                 return res
 
         days = days + 1
+
+
+RECURRENCY_TYPE = {
+    'DAILY': 'day',
+    'WEEKLY': 'week',
+    'MONTHLY': 'month',
+}
+
+
+def get_cohort_description(timeslot: CohortTimeSlot) -> str:
+    description = ''
+
+    if timeslot.recurrent:
+        description += f'every {RECURRENCY_TYPE[timeslot.recurrency_type]}, '
+
+    localtime = pytz.timezone(timeslot.cohort.academy.timezone)
+
+    starting_at = localtime.localize(timeslot.starting_at)
+    ending_at = localtime.localize(timeslot.ending_at)
+
+    starting_weekday = starting_at.strftime('%A').upper()
+    ending_weekday = ending_at.strftime('%A').upper()
+
+    if starting_weekday == ending_weekday:
+        description += f'{starting_weekday}'
+
+    else:
+        description += f'{starting_weekday} and {ending_weekday} '
+
+    starting_hour = starting_at.strftime('%I:%M %p')
+    ending_hour = ending_at.strftime('%I:%M %p')
+    description += f'from {starting_hour} to {ending_hour}'
+
+    return description.capitalize()
