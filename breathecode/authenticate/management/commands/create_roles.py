@@ -340,8 +340,14 @@ class Command(BaseCommand):
             'Teacher Assistant',
             'caps':
             extend(roles, ['staff']) + [
-                'read_assigment', 'crud_assignment', 'read_cohort_activity', 'read_nps_answers',
-                'classroom_activity', 'read_event', 'task_delivery_details'
+                'read_assigment',
+                'crud_assignment',
+                'read_cohort_activity',
+                'read_nps_answers',
+                'classroom_activity',
+                'read_event',
+                'task_delivery_details',
+                'crud_cohort',
             ]
         })
         roles.append({
