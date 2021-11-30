@@ -1,4 +1,5 @@
-import os, requests, urllib
+import os
+import urllib
 
 
 class Eventbrite(object):
@@ -19,8 +20,7 @@ class Eventbrite(object):
         pass
 
     def request(self, _type, url, headers={}, query_string=None, data=None):
-        if os.getenv('ENV') == 'test':
-            import requests
+        import requests
 
         _headers = {**self.headers, **headers}
         _query_string = '?' + urllib.parse.urlencode(query_string) if query_string else ''

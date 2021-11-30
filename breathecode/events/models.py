@@ -2,7 +2,6 @@ import os
 from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy
-from .signals import sync_with_eventbrite
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
@@ -166,8 +165,7 @@ class Event(models.Model):
             return 'Event ' + str(self.id)
 
     def save(self, *args, **kwargs):
-        if os.getenv('ENV') == 'test':
-            from .signals import sync_with_eventbrite
+        from .signals import sync_with_eventbrite
 
         super().save(*args, **kwargs)
 
