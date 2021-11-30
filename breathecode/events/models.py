@@ -1,14 +1,20 @@
+import os
 from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy
+from .signals import sync_with_eventbrite
 
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
 ERROR = 'ERROR'
+WARNING = 'WARNING'
+SYNCHED = 'SYNCHED'
 SYNC_STATUS = (
     (PENDING, 'Pending'),
     (PERSISTED, 'Persisted'),
     (ERROR, 'Error'),
+    (WARNING, 'Warning'),
+    (SYNCHED, 'Synched'),
 )
 
 __all__ = ['Organization', 'Organizer', 'Venue', 'EventType', 'Event', 'EventCheckin', 'EventbriteWebhook']
@@ -31,10 +37,7 @@ class Organization(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        if self.name is not None:
-            return self.name + '(' + str(self.id) + ')'
-        else:
-            return 'Organization ' + str(self.id)
+        return f'{self.name} ({self.id})' if self.name else f'({self.id})'
 
 
 class Organizer(models.Model):
@@ -109,8 +112,6 @@ EVENT_STATUS = (
     (DELETED, 'Deleted'),
 )
 
-# Create your models here.
-
 
 class Event(models.Model):
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
@@ -146,12 +147,13 @@ class Event(models.Model):
         default=None,
         null=True)
 
-    sync_status = models.CharField(
+    sync_with_eventbrite = models.BooleanField(default=False)
+    eventbrite_sync_status = models.CharField(
         max_length=9,
         choices=SYNC_STATUS,
         default=PENDING,
         help_text='One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status')
-    sync_desc = models.TextField(max_length=255, null=True, default=None, blank=True)
+    eventbrite_sync_description = models.TextField(max_length=255, null=True, default=None, blank=True)
 
     published_at = models.DateTimeField(null=True, default=None, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -162,6 +164,16 @@ class Event(models.Model):
             return self.title + '(' + str(self.id) + ')'
         else:
             return 'Event ' + str(self.id)
+
+    def save(self, *args, **kwargs):
+        if os.getenv('ENV') == 'test':
+            from .signals import sync_with_eventbrite
+
+        super().save(*args, **kwargs)
+
+        # prevent export a event until this was imported
+        if self.sync_with_eventbrite and self.eventbrite_sync_status == PENDING:
+            sync_with_eventbrite.send(instance=self, sender=self.__class__)
 
 
 PENDING = 'PENDING'

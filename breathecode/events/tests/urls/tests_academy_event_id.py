@@ -99,7 +99,10 @@ class AcademyEventsTestSuite(EventTestCase):
                 'city': {
                     'name': model['event'].academy.city.name
                 }
-            }
+            },
+            'sync_with_eventbrite': False,
+            'eventbrite_sync_status': 'PENDING',
+            'eventbrite_sync_description': None,
         }
 
         self.assertEqual(json, expected)
@@ -165,7 +168,7 @@ class AcademyEventsTestSuite(EventTestCase):
             'ending_at': self.datetime_to_iso(current_date),
         }
 
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json['created_at'])
@@ -191,10 +194,12 @@ class AcademyEventsTestSuite(EventTestCase):
             'organization': None,
             'published_at': None,
             'status': 'DRAFT',
-            'sync_desc': None,
-            'sync_status': 'PENDING',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'sync_with_eventbrite': False,
+            'eventbrite_sync_status': 'PENDING',
             **data,
         }
 
@@ -248,7 +253,7 @@ class AcademyEventsTestSuite(EventTestCase):
             'ending_at': self.datetime_to_iso(current_date),
         }
 
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json['created_at'])
@@ -274,10 +279,11 @@ class AcademyEventsTestSuite(EventTestCase):
             'organization': None,
             'published_at': None,
             'status': 'DRAFT',
-            'sync_desc': None,
-            'sync_status': 'PENDING',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'sync_with_eventbrite': False,
             **data,
         }
 

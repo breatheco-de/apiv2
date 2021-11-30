@@ -31,6 +31,7 @@ from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
 from breathecode.utils import ValidationException
 from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
+import breathecode.events.receivers
 
 logger = logging.getLogger(__name__)
 MONDAY = 0
@@ -199,6 +200,8 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         for key in request.data.keys():
             data[key] = request.data.get(key)
 
+        data['sync_status'] = 'PENDING'
+
         serializer = EventSerializer(data={**data, 'academy': academy.id})
         if serializer.is_valid():
             self.cache.clear()
@@ -212,7 +215,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         if already is None:
             raise ValidationException(f'Event not found for this academy {academy_id}')
 
-        serializer = EventSerializer(already, data=request.data)
+        serializer = EventSerializer(already, data={**request.data, 'sync_status': 'PENDING'})
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()

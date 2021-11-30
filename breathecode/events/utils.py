@@ -18,15 +18,16 @@ class Eventbrite(object):
         # }
         pass
 
-    def request(self, _type, url, headers={}, query_string=None):
+    def request(self, _type, url, headers={}, query_string=None, data=None):
+        if os.getenv('ENV') == 'test':
+            import requests
 
         _headers = {**self.headers, **headers}
-        _query_string = ''
-        if query_string is not None:
-            _query_string = '?' + urllib.parse.urlencode(query_string)
+        _query_string = '?' + urllib.parse.urlencode(query_string) if query_string else ''
 
-        response = requests.request(_type, self.host + url + _query_string, headers=_headers)
+        response = requests.request(_type, self.host + url + _query_string, headers=_headers, data=data)
         result = response.json()
+
         if 'status_code' in result and result['status_code'] >= 400:
             raise Exception(result['error_description'])
 
@@ -53,7 +54,7 @@ class Eventbrite(object):
         return data
 
     def get_organization_events(self, organization_id):
-        query_string = {'expand': 'organizer', 'status': 'live'}
+        query_string = {'expand': 'organizer,venue', 'status': 'live'}
         data = self.request('GET',
                             f'/organizations/{str(organization_id)}/events/',
                             query_string=query_string)
@@ -61,4 +62,8 @@ class Eventbrite(object):
 
     def get_organization_venues(self, organization_id):
         data = self.request('GET', f'/organizations/{str(organization_id)}/venues/')
+        return data
+
+    def create_organization_event(self, organization_id, data):
+        data = self.request('POST', f'/organizations/{str(organization_id)}/events/', data=data)
         return data
