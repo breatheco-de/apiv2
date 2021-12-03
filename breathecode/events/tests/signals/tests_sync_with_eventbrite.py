@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, call, patch
 from ..mixins.new_events_tests_case import EventTestCase
-from ...signals import sync_with_eventbrite
+from ...signals import event_saved
 from ...tasks import async_export_event_to_eventbrite
 
 
@@ -8,7 +8,7 @@ class AcademyEventTestSuite(EventTestCase):
     """
     🔽🔽🔽 No sync, sync_status PENDING
     """
-    @patch.object(sync_with_eventbrite, 'send', MagicMock())
+    @patch.object(event_saved, 'send', MagicMock())
     @patch.object(async_export_event_to_eventbrite, 'delay', MagicMock())
     def test_sync_with_eventbrite__no_sync__status_pending(self):
         event_kwargs = {
@@ -18,7 +18,9 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.generate_models(event=True, event_kwargs=event_kwargs)
         event_db = self.model_to_dict(model, 'event')
 
-        self.assertEqual(sync_with_eventbrite.send.call_args_list, [])
+        self.assertEqual(event_saved.send.call_args_list,
+                         [call(instance=model.event, sender=model.event.__class__)])
+
         self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [])
         self.assertEqual(self.all_event_dict(), [event_db])
 
@@ -26,7 +28,7 @@ class AcademyEventTestSuite(EventTestCase):
     🔽🔽🔽 Sync, sync_status PERSISTED
     """
 
-    @patch.object(sync_with_eventbrite, 'send', MagicMock())
+    @patch.object(event_saved, 'send', MagicMock())
     @patch.object(async_export_event_to_eventbrite, 'delay', MagicMock())
     def test_sync_with_eventbrite__sync__status_persisted(self):
         event_kwargs = {
@@ -36,7 +38,9 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.generate_models(event=True, event_kwargs=event_kwargs)
         event_db = self.model_to_dict(model, 'event')
 
-        self.assertEqual(sync_with_eventbrite.send.call_args_list, [])
+        self.assertEqual(event_saved.send.call_args_list,
+                         [call(instance=model.event, sender=model.event.__class__)])
+
         self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [])
         self.assertEqual(self.all_event_dict(), [event_db])
 
@@ -44,7 +48,7 @@ class AcademyEventTestSuite(EventTestCase):
     🔽🔽🔽 Sync, sync_status ERROR
     """
 
-    @patch.object(sync_with_eventbrite, 'send', MagicMock())
+    @patch.object(event_saved, 'send', MagicMock())
     @patch.object(async_export_event_to_eventbrite, 'delay', MagicMock())
     def test_sync_with_eventbrite__sync__status_error(self):
         event_kwargs = {
@@ -54,7 +58,9 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.generate_models(event=True, event_kwargs=event_kwargs)
         event_db = self.model_to_dict(model, 'event')
 
-        self.assertEqual(sync_with_eventbrite.send.call_args_list, [])
+        self.assertEqual(event_saved.send.call_args_list,
+                         [call(instance=model.event, sender=model.event.__class__)])
+
         self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [])
         self.assertEqual(self.all_event_dict(), [event_db])
 
@@ -62,7 +68,7 @@ class AcademyEventTestSuite(EventTestCase):
     🔽🔽🔽 Sync, sync_status WARNING
     """
 
-    @patch.object(sync_with_eventbrite, 'send', MagicMock())
+    @patch.object(event_saved, 'send', MagicMock())
     @patch.object(async_export_event_to_eventbrite, 'delay', MagicMock())
     def test_sync_with_eventbrite__sync__status_warning(self):
         event_kwargs = {
@@ -72,7 +78,9 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.generate_models(event=True, event_kwargs=event_kwargs)
         event_db = self.model_to_dict(model, 'event')
 
-        self.assertEqual(sync_with_eventbrite.send.call_args_list, [])
+        self.assertEqual(event_saved.send.call_args_list,
+                         [call(instance=model.event, sender=model.event.__class__)])
+
         self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [])
         self.assertEqual(self.all_event_dict(), [event_db])
 
@@ -80,7 +88,7 @@ class AcademyEventTestSuite(EventTestCase):
     🔽🔽🔽 Sync, sync_status SYNCHED
     """
 
-    @patch.object(sync_with_eventbrite, 'send', MagicMock())
+    @patch.object(event_saved, 'send', MagicMock())
     @patch.object(async_export_event_to_eventbrite, 'delay', MagicMock())
     def test_sync_with_eventbrite__sync__status_synched(self):
         event_kwargs = {
@@ -90,7 +98,9 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.generate_models(event=True, event_kwargs=event_kwargs)
         event_db = self.model_to_dict(model, 'event')
 
-        self.assertEqual(sync_with_eventbrite.send.call_args_list, [])
+        self.assertEqual(event_saved.send.call_args_list,
+                         [call(instance=model.event, sender=model.event.__class__)])
+
         self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [])
         self.assertEqual(self.all_event_dict(), [event_db])
 
@@ -98,7 +108,7 @@ class AcademyEventTestSuite(EventTestCase):
     🔽🔽🔽 Sync, sync_status PENDING, check signal call
     """
 
-    @patch.object(sync_with_eventbrite, 'send', MagicMock())
+    @patch.object(event_saved, 'send', MagicMock())
     @patch.object(async_export_event_to_eventbrite, 'delay', MagicMock())
     def test_sync_with_eventbrite__sync__status_pending__check_signal_call(self):
         event_kwargs = {
@@ -108,8 +118,9 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.generate_models(event=True, event_kwargs=event_kwargs)
         event_db = self.model_to_dict(model, 'event')
 
-        self.assertEqual(sync_with_eventbrite.send.call_args_list,
+        self.assertEqual(event_saved.send.call_args_list,
                          [call(instance=model.event, sender=model.event.__class__)])
+
         self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [])
         self.assertEqual(self.all_event_dict(), [event_db])
 

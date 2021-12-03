@@ -128,7 +128,13 @@ def export_event_to_eventbrite(event: Event, org: Organization):
         data['event']['end']['timezone'] = timezone
 
     try:
-        client.create_organization_event(org.eventbrite_id, data)
+        if event.eventbrite_id:
+            client.update_organization_event(event.eventbrite_id, data)
+
+        else:
+            result = client.create_organization_event(org.eventbrite_id, data)
+            event.eventbrite_id = str(result['id'])
+
         event.eventbrite_sync_description = now
         event.eventbrite_sync_status = 'SYNCHED'
 

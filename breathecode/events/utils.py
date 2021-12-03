@@ -64,6 +64,12 @@ class Eventbrite(object):
         data = self.request('GET', f'/organizations/{str(organization_id)}/venues/')
         return data
 
+    # https://www.eventbrite.com/platform/api#/reference/event/create/create-an-event
     def create_organization_event(self, organization_id, data):
         data = self.request('POST', f'/organizations/{str(organization_id)}/events/', data=data)
+        return data
+
+    # https://www.eventbrite.com/platform/api#/reference/event/update/update-an-event
+    def update_organization_event(self, event_id, data):
+        data = self.request('PUT', f'/events/{event_id}/', data=data)
         return data
