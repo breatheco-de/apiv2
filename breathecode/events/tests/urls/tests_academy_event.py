@@ -296,6 +296,7 @@ class AcademyEventTestSuite(EventTestCase):
         if models is None:
             models = [
                 self.generate_models(authenticate=True,
+                                     organization=True,
                                      profile_academy=True,
                                      capability='read_event',
                                      role='potato',
@@ -336,7 +337,7 @@ class AcademyEventTestSuite(EventTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_all_academy_events_post_without_required_fields(self):
+    def test_all_academy_events__post__without_organization(self):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
@@ -349,25 +350,19 @@ class AcademyEventTestSuite(EventTestCase):
 
         response = self.client.post(url, data)
         json = response.json()
-        expected = {
-            'url': ['This field is required.'],
-            'banner': ['This field is required.'],
-            'capacity': ['This field is required.'],
-            'starting_at': ['This field is required.'],
-            'ending_at': ['This field is required.']
-        }
+        expected = {'detail': 'organization-not-exist', 'status_code': 400}
 
         self.assertEqual(json, expected)
-
         self.assertEqual(self.all_event_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_all_academy_events_post_without_required_fields____(self):
+    def test_all_academy_events__post__without_required_fields(self):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
+                                     organization=True,
                                      profile_academy=True,
                                      capability='crud_event',
                                      role='potato')
@@ -405,7 +400,7 @@ class AcademyEventTestSuite(EventTestCase):
             'id': 1,
             'lang': None,
             'online_event': False,
-            'organization': None,
+            'organization': 1,
             'published_at': None,
             'status': 'DRAFT',
             'eventbrite_sync_description': None,
@@ -435,7 +430,7 @@ class AcademyEventTestSuite(EventTestCase):
             'id': 1,
             'lang': None,
             'online_event': False,
-            'organization_id': None,
+            'organization_id': 1,
             'published_at': None,
             'starting_at': current_date,
             'status': 'DRAFT',
@@ -790,6 +785,7 @@ class AcademyEventTestSuite(EventTestCase):
         del base['user']
 
         model = self.generate_models(authenticate=True,
+                                     organization=True,
                                      profile_academy=True,
                                      capability='crud_event',
                                      role='potato2',
@@ -828,7 +824,7 @@ class AcademyEventTestSuite(EventTestCase):
             'id': 2,
             'lang': None,
             'online_event': False,
-            'organization': None,
+            'organization': 1,
             'published_at': None,
             'status': 'DRAFT',
             'eventbrite_sync_description': None,
@@ -860,7 +856,7 @@ class AcademyEventTestSuite(EventTestCase):
             'id': 2,
             'lang': None,
             'online_event': False,
-            'organization_id': None,
+            'organization_id': 1,
             'published_at': None,
             'starting_at': current_date,
             'status': 'DRAFT',
