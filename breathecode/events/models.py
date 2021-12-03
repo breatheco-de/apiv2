@@ -165,13 +165,11 @@ class Event(models.Model):
             return 'Event ' + str(self.id)
 
     def save(self, *args, **kwargs):
-        from .signals import sync_with_eventbrite
+        from .signals import event_saved
 
         super().save(*args, **kwargs)
 
-        # prevent export a event until this was imported
-        if self.sync_with_eventbrite and self.eventbrite_sync_status == PENDING:
-            sync_with_eventbrite.send(instance=self, sender=self.__class__)
+        event_saved.send(instance=self, sender=self.__class__)
 
 
 PENDING = 'PENDING'

@@ -4,4 +4,4 @@ declare a new variable here like this:
 """
 from django.dispatch import Signal
 
-sync_with_eventbrite = Signal()
+event_saved = Signal()

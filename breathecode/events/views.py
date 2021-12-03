@@ -15,7 +15,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from .models import Event, EventType, EventCheckin, Venue
+from .models import Event, EventType, EventCheckin, Organization, Venue
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
@@ -196,11 +196,18 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         if academy is None:
             raise ValidationException(f'Academy {academy_id} not found')
 
+        organization_id = Organization.objects.filter(academy__id=academy_id).values_list('id',
+                                                                                          flat=True).first()
+        if not organization_id:
+            raise ValidationException('Your academy doesn\'t have the integrations with Eventbrite done',
+                                      slug='organization-not-exist')
+
         data = {}
         for key in request.data.keys():
             data[key] = request.data.get(key)
 
         data['sync_status'] = 'PENDING'
+        data['organization'] = organization_id
 
         serializer = EventSerializer(data={**data, 'academy': academy.id})
         if serializer.is_valid():
@@ -215,7 +222,20 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         if already is None:
             raise ValidationException(f'Event not found for this academy {academy_id}')
 
-        serializer = EventSerializer(already, data={**request.data, 'sync_status': 'PENDING'})
+        organization_id = Organization.objects.filter(academy__id=academy_id).values_list('id',
+                                                                                          flat=True).first()
+        if not organization_id:
+            raise ValidationException('Your academy doesn\'t have the integrations with Eventbrite done',
+                                      slug='organization-not-exist')
+
+        data = {}
+        for key in request.data.keys():
+            data[key] = request.data.get(key)
+
+        data['sync_status'] = 'PENDING'
+        data['organization'] = organization_id
+
+        serializer = EventSerializer(already, data=data)
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
