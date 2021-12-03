@@ -105,22 +105,24 @@ def export_event_to_eventbrite(event: Event, org: Organization):
     now = get_current_iso_string()
 
     data = {
-        'name': {
-            'html': event.title,
-        },
-        'description': {
-            'html': event.description,
-        },
-        'start': {
-            'utc': event.starting_at.isoformat(),
-        },
-        'end': {
-            'utc': event.ending_at.isoformat(),
-        },
-        'summary': event.excerpt,
-        'capacity': event.capacity,
-        'online_event': event.online_event,
-        'url': event.eventbrite_url,
+        'event': {
+            'name': {
+                'html': event.title,
+            },
+            'description': {
+                'html': event.description,
+            },
+            'start': {
+                'utc': event.starting_at.isoformat(),
+            },
+            'end': {
+                'utc': event.ending_at.isoformat(),
+            },
+            'summary': event.excerpt,
+            'capacity': event.capacity,
+            'online_event': event.online_event,
+            'url': event.eventbrite_url,
+        }
     }
 
     if timezone:

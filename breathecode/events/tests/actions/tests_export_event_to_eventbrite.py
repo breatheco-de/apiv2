@@ -134,22 +134,24 @@ class SyncOrgVenuesTestSuite(EventTestCase):
                 'POST',
                 '/organizations/1/events/',
                 data={
-                    'name': {
-                        'html': 'They killed kenny',
+                    'event': {
+                        'name': {
+                            'html': 'They killed kenny',
+                        },
+                        'description': {
+                            'html': model.event.description,
+                        },
+                        'start': {
+                            'utc': model.event.starting_at.isoformat(),
+                        },
+                        'end': {
+                            'utc': model.event.ending_at.isoformat(),
+                        },
+                        'summary': model.event.excerpt,
+                        'capacity': model.event.capacity,
+                        'online_event': model.event.online_event,
+                        'url': model.event.eventbrite_url,
                     },
-                    'description': {
-                        'html': model.event.description,
-                    },
-                    'start': {
-                        'utc': model.event.starting_at.isoformat(),
-                    },
-                    'end': {
-                        'utc': model.event.ending_at.isoformat(),
-                    },
-                    'summary': model.event.excerpt,
-                    'capacity': model.event.capacity,
-                    'online_event': model.event.online_event,
-                    'url': model.event.eventbrite_url,
                 },
             ),
         ])
@@ -196,22 +198,24 @@ class SyncOrgVenuesTestSuite(EventTestCase):
                 'PUT',
                 '/events/1/',
                 data={
-                    'name': {
-                        'html': 'They killed kenny',
+                    'event': {
+                        'name': {
+                            'html': 'They killed kenny',
+                        },
+                        'description': {
+                            'html': model.event.description,
+                        },
+                        'start': {
+                            'utc': model.event.starting_at.isoformat(),
+                        },
+                        'end': {
+                            'utc': model.event.ending_at.isoformat(),
+                        },
+                        'summary': model.event.excerpt,
+                        'capacity': model.event.capacity,
+                        'online_event': model.event.online_event,
+                        'url': model.event.eventbrite_url,
                     },
-                    'description': {
-                        'html': model.event.description,
-                    },
-                    'start': {
-                        'utc': model.event.starting_at.isoformat(),
-                    },
-                    'end': {
-                        'utc': model.event.ending_at.isoformat(),
-                    },
-                    'summary': model.event.excerpt,
-                    'capacity': model.event.capacity,
-                    'online_event': model.event.online_event,
-                    'url': model.event.eventbrite_url,
                 },
             ),
         ])
