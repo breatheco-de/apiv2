@@ -28,14 +28,33 @@ class MentorForm(forms.ModelForm):
 @admin.register(MentorProfile)
 class MentorAdmin(admin.ModelAdmin):
     form = MentorForm
-    list_display = ['user', 'name', 'email', 'status', 'unique_url']
+    list_display = ['slug', 'user', 'name', 'email', 'current_status', 'unique_url', 'meet_url']
     raw_id_fields = ['user', 'service']
     search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email']
     list_filter = ['service__academy__slug', 'status', 'service__slug']
     readonly_fields = ('token', )
 
+    def current_status(self, obj):
+        colors = {
+            'ACTIVE': 'bg-success',
+            'INVITED': 'bg-warning',
+            'INNACTIVE': 'bg-warning',
+        }
+
+        if obj.online_meeting_url is None:
+            return format_html(f"<span class='badge bg-error'> Missing Meeting URL</span>")
+
+        if obj.booking_url is None:
+            return format_html(f"<span class='badge bg-error'> Missing Booking URL</span>")
+
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+
     def unique_url(self, obj):
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='/mentor/{obj.slug}'>book</a>")
+
+    def meet_url(self, obj):
+        return format_html(
+            f"<a rel='noopener noreferrer' target='_blank' href='/mentor/meet/{obj.slug}'>meet</a>")
 
 
 @admin.register(MentorshipSession)
