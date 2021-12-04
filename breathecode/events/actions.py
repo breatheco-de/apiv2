@@ -110,7 +110,7 @@ def export_event_to_eventbrite(event: Event, org: Organization):
         'event.description.html': event.description,
         'event.start.utc': re.sub(r'\+00:00$', 'Z', event.starting_at.isoformat()),
         'event.end.utc': re.sub(r'\+00:00$', 'Z', event.ending_at.isoformat()),
-        'event.summary': event.excerpt,
+        # 'event.summary': event.excerpt,
         'event.capacity': event.capacity,
         'event.online_event': event.online_event,
         'event.url': event.eventbrite_url,

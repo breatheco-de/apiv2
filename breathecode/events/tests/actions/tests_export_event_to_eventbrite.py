@@ -127,23 +127,25 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
-        self.assertEqual(Eventbrite.request.call_args_list, [
-            call(
-                'POST',
-                '/organizations/1/events/',
-                data={
-                    'event.name.html': 'They killed kenny',
-                    'event.description.html': model.event.description,
-                    'event.start.utc': self.datetime_to_iso(model.event.starting_at),
-                    'event.end.utc': self.datetime_to_iso(model.event.ending_at),
-                    'event.summary': model.event.excerpt,
-                    'event.capacity': model.event.capacity,
-                    'event.online_event': model.event.online_event,
-                    'event.url': model.event.eventbrite_url,
-                    'event.currency': model.event.currency,
-                },
-            ),
-        ])
+        self.assertEqual(
+            Eventbrite.request.call_args_list,
+            [
+                call(
+                    'POST',
+                    '/organizations/1/events/',
+                    data={
+                        'event.name.html': 'They killed kenny',
+                        'event.description.html': model.event.description,
+                        'event.start.utc': self.datetime_to_iso(model.event.starting_at),
+                        'event.end.utc': self.datetime_to_iso(model.event.ending_at),
+                        # 'event.summary': model.event.excerpt,
+                        'event.capacity': model.event.capacity,
+                        'event.online_event': model.event.online_event,
+                        'event.url': model.event.eventbrite_url,
+                        'event.currency': model.event.currency,
+                    },
+                ),
+            ])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
         self.assertEqual(self.all_event_dict(),
@@ -182,23 +184,25 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
-        self.assertEqual(Eventbrite.request.call_args_list, [
-            call(
-                'PUT',
-                '/events/1/',
-                data={
-                    'event.name.html': 'They killed kenny',
-                    'event.description.html': model.event.description,
-                    'event.start.utc': self.datetime_to_iso(model.event.starting_at),
-                    'event.end.utc': self.datetime_to_iso(model.event.ending_at),
-                    'event.summary': model.event.excerpt,
-                    'event.capacity': model.event.capacity,
-                    'event.online_event': model.event.online_event,
-                    'event.url': model.event.eventbrite_url,
-                    'event.currency': model.event.currency,
-                },
-            ),
-        ])
+        self.assertEqual(
+            Eventbrite.request.call_args_list,
+            [
+                call(
+                    'PUT',
+                    '/events/1/',
+                    data={
+                        'event.name.html': 'They killed kenny',
+                        'event.description.html': model.event.description,
+                        'event.start.utc': self.datetime_to_iso(model.event.starting_at),
+                        'event.end.utc': self.datetime_to_iso(model.event.ending_at),
+                        # 'event.summary': model.event.excerpt,
+                        'event.capacity': model.event.capacity,
+                        'event.online_event': model.event.online_event,
+                        'event.url': model.event.eventbrite_url,
+                        'event.currency': model.event.currency,
+                    },
+                ),
+            ])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
         self.assertEqual(self.all_event_dict(),
