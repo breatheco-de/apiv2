@@ -105,30 +105,20 @@ def export_event_to_eventbrite(event: Event, org: Organization):
     now = get_current_iso_string()
 
     data = {
-        'event': {
-            'name': {
-                'html': event.title,
-            },
-            'description': {
-                'html': event.description,
-            },
-            'start': {
-                'utc': event.starting_at.isoformat(),
-            },
-            'end': {
-                'utc': event.ending_at.isoformat(),
-            },
-            'summary': event.excerpt,
-            'capacity': event.capacity,
-            'online_event': event.online_event,
-            'url': event.eventbrite_url,
-            'currency': event.currency,
-        }
+        'event.name.html': event.title,
+        'event.description.html': event.description,
+        'event.start.utc': event.starting_at.isoformat(),
+        'event.end.utc': event.ending_at.isoformat(),
+        'event.summary': event.excerpt,
+        'event.capacity': event.capacity,
+        'event.online_event': event.online_event,
+        'event.url': event.eventbrite_url,
+        'event.currency': event.currency,
     }
 
     if timezone:
-        data['event']['start']['timezone'] = timezone
-        data['event']['end']['timezone'] = timezone
+        data['event.start.timezone'] = timezone
+        data['event.end.timezone'] = timezone
 
     try:
         if event.eventbrite_id:
