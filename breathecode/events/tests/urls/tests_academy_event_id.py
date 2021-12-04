@@ -228,6 +228,7 @@ class AcademyEventsTestSuite(EventTestCase):
             'venue': None,
             'sync_with_eventbrite': False,
             'eventbrite_sync_status': 'PENDING',
+            'currency': 'USD',
             **data,
         }
 
@@ -314,6 +315,7 @@ class AcademyEventsTestSuite(EventTestCase):
             'title': None,
             'venue': None,
             'sync_with_eventbrite': False,
+            'currency': 'USD',
             **data,
         }
 
