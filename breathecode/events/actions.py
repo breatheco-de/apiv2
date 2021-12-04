@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta
+import re
 from .models import Organization, Venue, Event, Organizer
 from .utils import Eventbrite
 from django.utils import timezone
@@ -107,8 +108,8 @@ def export_event_to_eventbrite(event: Event, org: Organization):
     data = {
         'event.name.html': event.title,
         'event.description.html': event.description,
-        'event.start.utc': event.starting_at.isoformat(),
-        'event.end.utc': event.ending_at.isoformat(),
+        'event.start.utc': re.sub(r'\+00:00$', 'Z', event.starting_at.isoformat()),
+        'event.end.utc': re.sub(r'\+00:00$', 'Z', event.ending_at.isoformat()),
         'event.summary': event.excerpt,
         'event.capacity': event.capacity,
         'event.online_event': event.online_event,

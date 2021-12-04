@@ -2,8 +2,6 @@ import logging
 import breathecode.events.actions as actions
 from unittest.mock import MagicMock, call, patch
 from breathecode.events.utils import Eventbrite
-from breathecode.tests.mocks.eventbrite.constants.events import EVENTBRITE_EVENTS
-from django.utils import timezone
 
 from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_request_mock
 from ..mixins import EventTestCase
@@ -136,8 +134,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
                 data={
                     'event.name.html': 'They killed kenny',
                     'event.description.html': model.event.description,
-                    'event.start.utc': model.event.starting_at.isoformat(),
-                    'event.end.utc': model.event.ending_at.isoformat(),
+                    'event.start.utc': self.datetime_to_iso(model.event.starting_at),
+                    'event.end.utc': self.datetime_to_iso(model.event.ending_at),
                     'event.summary': model.event.excerpt,
                     'event.capacity': model.event.capacity,
                     'event.online_event': model.event.online_event,
@@ -191,8 +189,8 @@ class SyncOrgVenuesTestSuite(EventTestCase):
                 data={
                     'event.name.html': 'They killed kenny',
                     'event.description.html': model.event.description,
-                    'event.start.utc': model.event.starting_at.isoformat(),
-                    'event.end.utc': model.event.ending_at.isoformat(),
+                    'event.start.utc': self.datetime_to_iso(model.event.starting_at),
+                    'event.end.utc': self.datetime_to_iso(model.event.ending_at),
                     'event.summary': model.event.excerpt,
                     'event.capacity': model.event.capacity,
                     'event.online_event': model.event.online_event,
