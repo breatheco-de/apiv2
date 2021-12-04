@@ -408,6 +408,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'venue': None,
             'sync_with_eventbrite': False,
+            'currency': 'USD',
             **data,
         }
 
@@ -440,6 +441,7 @@ class AcademyEventTestSuite(EventTestCase):
             'url': 'https://www.google.com/',
             'venue_id': None,
             'sync_with_eventbrite': False,
+            'currency': 'USD',
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -510,6 +512,7 @@ class AcademyEventTestSuite(EventTestCase):
             'url': model['event'].url,
             'venue_id': None,
             'sync_with_eventbrite': False,
+            'currency': 'USD',
         } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -588,6 +591,7 @@ class AcademyEventTestSuite(EventTestCase):
             'url': model['event'].url,
             'venue_id': None,
             'sync_with_eventbrite': False,
+            'currency': 'USD',
         } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -666,6 +670,7 @@ class AcademyEventTestSuite(EventTestCase):
             'url': model['event'].url,
             'venue_id': None,
             'sync_with_eventbrite': False,
+            'currency': 'USD',
         } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -725,6 +730,7 @@ class AcademyEventTestSuite(EventTestCase):
             'url': model['event'].url,
             'venue_id': None,
             'sync_with_eventbrite': False,
+            'currency': 'USD',
         } for model in models])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -832,6 +838,7 @@ class AcademyEventTestSuite(EventTestCase):
             'title': None,
             'venue': None,
             'sync_with_eventbrite': False,
+            'currency': 'USD',
             **data,
         }
 
@@ -866,6 +873,7 @@ class AcademyEventTestSuite(EventTestCase):
             'url': 'https://www.google.com/',
             'venue_id': None,
             'sync_with_eventbrite': False,
+            'currency': 'USD',
         }])
         self.assertEqual(self.cache.keys(), [])
 

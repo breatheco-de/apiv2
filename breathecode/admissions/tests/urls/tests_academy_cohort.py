@@ -182,6 +182,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      skip_cohort=True,
                                      specialty_mode_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs)
+
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',

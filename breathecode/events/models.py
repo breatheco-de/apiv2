@@ -111,12 +111,26 @@ EVENT_STATUS = (
     (DELETED, 'Deleted'),
 )
 
+USD = 'USD'  # United States dollar
+CRC = 'CRC'  # Costa Rican colón
+CLP = 'CLP'  # Chilean peso
+EUR = 'EUR'  # Euro
+UYU = 'UYU'  # Uruguayan peso
+CURRENCIES = (
+    (USD, 'USD'),
+    (CRC, 'CRC'),
+    (CLP, 'CLP'),
+    (EUR, 'EUR'),
+    (UYU, 'UYU'),
+)
+
 
 class Event(models.Model):
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
     excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
     title = models.CharField(max_length=255, blank=True, default=None, null=True)
     lang = models.CharField(max_length=2, blank=True, default=None, null=True)
+    currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
 
     url = models.URLField(max_length=255)
     banner = models.URLField(max_length=255)

@@ -122,6 +122,7 @@ def export_event_to_eventbrite(event: Event, org: Organization):
             'capacity': event.capacity,
             'online_event': event.online_event,
             'url': event.eventbrite_url,
+            'currency': event.currency,
         }
     }
 
@@ -220,6 +221,7 @@ def update_or_create_event(data, org):
             'eventbrite_url': data['url'],
             'status': status_map[data['status']],
             'eventbrite_status': data['status'],
+            'currency': data['currency'],
             'organization': org,
             # organizer: organizer,
             'venue': venue,
