@@ -134,25 +134,15 @@ class SyncOrgVenuesTestSuite(EventTestCase):
                 'POST',
                 '/organizations/1/events/',
                 data={
-                    'event': {
-                        'name': {
-                            'html': 'They killed kenny',
-                        },
-                        'description': {
-                            'html': model.event.description,
-                        },
-                        'start': {
-                            'utc': model.event.starting_at.isoformat(),
-                        },
-                        'end': {
-                            'utc': model.event.ending_at.isoformat(),
-                        },
-                        'summary': model.event.excerpt,
-                        'capacity': model.event.capacity,
-                        'online_event': model.event.online_event,
-                        'url': model.event.eventbrite_url,
-                        'currency': model.event.currency,
-                    },
+                    'event.name.html': 'They killed kenny',
+                    'event.description.html': model.event.description,
+                    'event.start.utc': model.event.starting_at.isoformat(),
+                    'event.end.utc': model.event.ending_at.isoformat(),
+                    'event.summary': model.event.excerpt,
+                    'event.capacity': model.event.capacity,
+                    'event.online_event': model.event.online_event,
+                    'event.url': model.event.eventbrite_url,
+                    'event.currency': model.event.currency,
                 },
             ),
         ])
@@ -199,25 +189,15 @@ class SyncOrgVenuesTestSuite(EventTestCase):
                 'PUT',
                 '/events/1/',
                 data={
-                    'event': {
-                        'name': {
-                            'html': 'They killed kenny',
-                        },
-                        'description': {
-                            'html': model.event.description,
-                        },
-                        'start': {
-                            'utc': model.event.starting_at.isoformat(),
-                        },
-                        'end': {
-                            'utc': model.event.ending_at.isoformat(),
-                        },
-                        'summary': model.event.excerpt,
-                        'capacity': model.event.capacity,
-                        'online_event': model.event.online_event,
-                        'url': model.event.eventbrite_url,
-                        'currency': model.event.currency,
-                    },
+                    'event.name.html': 'They killed kenny',
+                    'event.description.html': model.event.description,
+                    'event.start.utc': model.event.starting_at.isoformat(),
+                    'event.end.utc': model.event.ending_at.isoformat(),
+                    'event.summary': model.event.excerpt,
+                    'event.capacity': model.event.capacity,
+                    'event.online_event': model.event.online_event,
+                    'event.url': model.event.eventbrite_url,
+                    'event.currency': model.event.currency,
                 },
             ),
         ])
