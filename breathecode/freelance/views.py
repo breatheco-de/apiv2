@@ -182,5 +182,5 @@ def issue_webhook(request, academy_slug):
         async_repository_issue_github.delay(webhook.id)
         return Response(payload, status=status.HTTP_200_OK)
     else:
-        logger.debug('Error at procesing webhook from github')
-        raise ValidationException('Error at procesing webhook from github')
+        logger.debug('Error at processing webhook from github')
+        raise ValidationException('Error at processing webhook from github')
