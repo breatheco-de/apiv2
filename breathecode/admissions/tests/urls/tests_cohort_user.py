@@ -675,7 +675,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         expected = {'detail': 'cohort-with-stage-deleted', 'status_code': 400}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_cohort_user_dict(), [{
             'id': 1,
             'user_id': 1,
