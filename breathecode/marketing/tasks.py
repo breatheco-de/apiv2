@@ -116,7 +116,7 @@ def add_cohort_task_to_student(self, user_id, cohort_id, academy_id):
     tag = Tag.objects.filter(slug=cohort.slug, ac_academy__id=ac_academy.id).first()
     if tag is None:
         logger.debug(
-            f'Cohort tag {cohort.slug} does not exist in the system, the tag could not be added to the student.'
+            f'Cohort tag {cohort.slug} does not exist in the system, the tag could not be added to the student. This tag was supposed to be created by the system when creating a new cohort'
         )
         return True
 

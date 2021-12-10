@@ -80,7 +80,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = [{
             'id': model.specialty_mode.id,
-            'slug': model.specialty_mode.slug,
             'name': model.specialty_mode.name,
             'description': model.specialty_mode.description,
             'syllabus': model.specialty_mode.syllabus.id,
@@ -126,7 +125,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = [{
             'id': model.specialty_mode.id,
-            'slug': model.specialty_mode.slug,
             'name': model.specialty_mode.name,
             'description': model.specialty_mode.description,
             'syllabus': model.specialty_mode.syllabus.id,
@@ -175,7 +173,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = [{
             'id': model.specialty_mode.id,
-            'slug': model.specialty_mode.slug,
             'name': model.specialty_mode.name,
             'description': model.specialty_mode.description,
             'syllabus': model.specialty_mode.syllabus.id,
@@ -210,7 +207,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                          capability='crud_certificate',
                                          role='potato',
                                          certificate_kwargs=certificate_kwargs,
-                                         academy_specialty_mode=True,
+                                         syllabus=True,
                                          specialty_mode=True,
                                          models=base)
             url = (reverse_lazy('admissions:academy_schedule') + f'?{field}=' +
@@ -268,7 +265,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                           capability='crud_certificate',
                                           role='potato',
                                           certificate_kwargs=certificate_kwargs,
-                                          academy_specialty_mode=True,
+                                          syllabus=True,
                                           specialty_mode=True,
                                           models=base)
 
@@ -276,7 +273,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                                           capability='crud_certificate',
                                           role='potato',
                                           certificate_kwargs=certificate_kwargs,
-                                          academy_specialty_mode=True,
+                                          syllabus=True,
                                           specialty_mode=True,
                                           models=base)
 
@@ -340,7 +337,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {
-            'slug': ['This field is required.'],
             'name': ['This field is required.'],
             'description': ['This field is required.'],
         }
@@ -360,7 +356,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:academy_schedule')
         data = {
             'syllabus': 1,
-            'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'description': 'Oh my god!',
         }
@@ -384,7 +379,6 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_specialty_mode_dict(), [{
             'id': 1,
-            'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'description': 'Oh my god!',
             'schedule_type': 'PART-TIME',

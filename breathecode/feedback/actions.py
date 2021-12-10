@@ -133,13 +133,6 @@ def send_question(user, cohort=None):
 def answer_survey(user, data):
     answer = Answer.objects.create(**{**data, 'user': user})
 
-    # log = SurveyLog.objects.filter(
-    #     user__id=user.id,
-    #     cohort__id=answer.cohort.id,
-    #     academy__id=answer.academy.id,
-    #     mentor__id=answer.academy.id
-    # )
-
 
 def get_student_answer_avg(user_id, cohort_id=None, academy_id=None):
 

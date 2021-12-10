@@ -21,8 +21,11 @@ def take_screenshot(self, certificate_id):
     # unittest.mock.patch is poor applying mocks
     from .actions import certificate_screenshot
 
-    certificate_screenshot(certificate_id)
-    return True
+    try:
+        certificate_screenshot(certificate_id)
+        return True
+    except:
+        return False
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)

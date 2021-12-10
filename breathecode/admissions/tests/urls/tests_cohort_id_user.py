@@ -156,6 +156,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 'never_ends': False,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
+                'online_meeting_url': model['cohort'].online_meeting_url,
+                'timezone': model['cohort'].timezone,
                 'academy': {
                     'id': model['cohort'].academy.id,
                     'name': model['cohort'].academy.name,
@@ -255,6 +257,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 'never_ends': False,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
+                'online_meeting_url': model['cohort'].online_meeting_url,
+                'timezone': model['cohort'].timezone,
                 'academy': {
                     'id': model['cohort'].academy.id,
                     'name': model['cohort'].academy.name,
@@ -315,6 +319,8 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                 'never_ends': False,
                 'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
                 'current_day': model['cohort'].current_day,
+                'online_meeting_url': model['cohort'].online_meeting_url,
+                'timezone': model['cohort'].timezone,
                 'academy': {
                     'id': model['cohort'].academy.id,
                     'name': model['cohort'].academy.name,

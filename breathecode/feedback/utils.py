@@ -20,6 +20,11 @@ strings = {
             'highest': 'muy probable',
             'lowest': 'poco probable',
         },
+        'session': {
+            'title': '¿Cómo fue tu experiencia en tu mentoría con {}?',
+            'highest': 'muy útil',
+            'lowest': 'poco útil',
+        },
         'button_label':
         'Responder',
         'survey_subject':
@@ -47,6 +52,11 @@ strings = {
             'title': 'How likely are you to recommend {} to your friends and family?',
             'highest': 'very likely',
             'lowest': 'not likely',
+        },
+        'session': {
+            'title': 'How was your experience in your mentoring with {}?',
+            'highest': 'muy útil',
+            'lowest': 'poco útil',
         },
         'button_label':
         'Answer the question',

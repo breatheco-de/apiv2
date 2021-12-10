@@ -1,8 +1,7 @@
 """
 Test /eventbrite/webhook
 """
-from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 from rest_framework import status
 from django.urls.base import reverse_lazy
 from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_client_mock,
@@ -10,7 +9,21 @@ from breathecode.tests.mocks import (GOOGLE_CLOUD_PATH, apply_google_cloud_clien
                                      EVENTBRITE_PATH, apply_eventbrite_requests_post_mock,
                                      EVENTBRITE_ORDER_URL, OLD_BREATHECODE_PATH,
                                      apply_old_breathecode_requests_request_mock)
+from breathecode.tests.mocks.requests import REQUESTS_PATH, apply_requests_get_mock
+from breathecode.tests.mocks.eventbrite.constants.event import EVENTBRITE_EVENT
+import breathecode.events.actions as actions
 from ..mixins import EventTestCase
+
+eventbrite_url = 'https://www.eventbriteapi.com/v3/events/1/'
+eventbrite_url_with_query = eventbrite_url + '?expand=organizer,venue'
+
+
+def update_or_create_event_mock(raise_error=False):
+    def update_or_create_event(self, *args, **kwargs):
+        if raise_error:
+            raise Exception('Random error in creating')
+
+    return MagicMock(side_effect=update_or_create_event)
 
 
 class EventbriteWebhookTestSuite(EventTestCase):
@@ -30,6 +43,10 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(self.all_event_checkin_dict(), [])
         self.assertEqual(self.all_eventbrite_webhook_dict(), [])
         self.check_old_breathecode_calls({}, [])
+
+    """
+    🔽🔽🔽 order.placed
+    """
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -346,3 +363,139 @@ class EventbriteWebhookTestSuite(EventTestCase):
         }])
 
         self.check_old_breathecode_calls(model, ['create_contact', 'contact_automations'])
+
+    """
+    🔽🔽🔽 event.created
+    """
+
+    @patch(REQUESTS_PATH['get'],
+           apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
+    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock(raise_error=True))
+    def test_eventbrite_webhook__event_created__raise_error(self):
+        """Test /eventbrite/webhook without auth"""
+        model = self.generate_models(organization=True)
+
+        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+        response = self.client.post(url,
+                                    self.data('event.created', eventbrite_url),
+                                    headers=self.headers('event.created'),
+                                    format='json')
+        content = response.content
+
+        self.assertEqual(content, b'ok')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(actions.update_or_create_event.call_args_list,
+                         [call(EVENTBRITE_EVENT, model.organization)])
+
+        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+            'action': 'event.created',
+            'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
+            'endpoint_url': 'https://something.io/eventbrite/webhook',
+            'id': 1,
+            'organization_id': '1',
+            'status': 'ERROR',
+            'status_text': 'Random error in creating',
+            'user_id': '123456789012',
+            'webhook_id': '1234567'
+        }])
+
+    @patch(REQUESTS_PATH['get'],
+           apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
+    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock())
+    def test_eventbrite_webhook__event_created(self):
+        """Test /eventbrite/webhook without auth"""
+        model = self.generate_models(organization=True)
+
+        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+        response = self.client.post(url,
+                                    self.data('event.created', eventbrite_url),
+                                    headers=self.headers('event.created'),
+                                    format='json')
+        content = response.content
+
+        self.assertEqual(content, b'ok')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(actions.update_or_create_event.call_args_list,
+                         [call(EVENTBRITE_EVENT, model.organization)])
+
+        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+            'action': 'event.created',
+            'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
+            'endpoint_url': 'https://something.io/eventbrite/webhook',
+            'id': 1,
+            'organization_id': '1',
+            'status': 'DONE',
+            'status_text': 'OK',
+            'user_id': '123456789012',
+            'webhook_id': '1234567'
+        }])
+
+    """
+    🔽🔽🔽 event.updated
+    """
+
+    @patch(REQUESTS_PATH['get'],
+           apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
+    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock(raise_error=True))
+    def test_eventbrite_webhook__event_updated__raise_error(self):
+        """Test /eventbrite/webhook without auth"""
+        model = self.generate_models(organization=True)
+
+        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+        response = self.client.post(url,
+                                    self.data('event.updated', eventbrite_url),
+                                    headers=self.headers('event.updated'),
+                                    format='json')
+        content = response.content
+
+        self.assertEqual(content, b'ok')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(actions.update_or_create_event.call_args_list,
+                         [call(EVENTBRITE_EVENT, model.organization)])
+
+        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+            'action': 'event.updated',
+            'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
+            'endpoint_url': 'https://something.io/eventbrite/webhook',
+            'id': 1,
+            'organization_id': '1',
+            'status': 'ERROR',
+            'status_text': 'Random error in creating',
+            'user_id': '123456789012',
+            'webhook_id': '1234567'
+        }])
+
+    @patch(REQUESTS_PATH['get'],
+           apply_requests_get_mock([(200, eventbrite_url_with_query, EVENTBRITE_EVENT)]))
+    @patch.object(actions, 'update_or_create_event', update_or_create_event_mock())
+    def test_eventbrite_webhook__event_updated(self):
+        """Test /eventbrite/webhook without auth"""
+        model = self.generate_models(organization=True)
+
+        url = reverse_lazy('events:eventbrite_webhook_id', kwargs={'organization_id': 1})
+        response = self.client.post(url,
+                                    self.data('event.updated', eventbrite_url),
+                                    headers=self.headers('event.updated'),
+                                    format='json')
+        content = response.content
+
+        self.assertEqual(content, b'ok')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(actions.update_or_create_event.call_args_list,
+                         [call(EVENTBRITE_EVENT, model.organization)])
+
+        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+            'action': 'event.updated',
+            'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
+            'endpoint_url': 'https://something.io/eventbrite/webhook',
+            'id': 1,
+            'organization_id': '1',
+            'status': 'DONE',
+            'status_text': 'OK',
+            'user_id': '123456789012',
+            'webhook_id': '1234567'
+        }])

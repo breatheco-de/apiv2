@@ -77,10 +77,14 @@ def get_config(request, asset_slug):
     except Exception as e:
         data = {
             'MESSAGE': f'learn.json or bc.json not found or invalid for for {asset.url}',
+            'TITLE': f'Error fetching the exercise meta-data learn.json for {asset.slug}',
         }
-        send_email_message('Error fetching the exercise meta-data learn.json for {asset.slug}',
-                           to=asset.author.email,
-                           data=data)
+
+        to = 'support@4geeksacademy.com'
+        if asset.author is not None:
+            to = asset.author.email
+
+        send_email_message('message', to=to, data=data)
         raise ValidationException(f'Config file invalid or not found for {asset.url}',
                                   code=404,
                                   slug='config_not_found')
