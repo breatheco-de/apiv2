@@ -596,6 +596,11 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             logger.debug(f'Cohort not be found in related academies')
             raise ValidationException('Specified cohort not be found')
 
+        if cohort.stage == 'DELETED':
+            raise ValidationException('cannot add or edit a user to a cohort that has been deleted',
+                                      slug='cohort-with-stage-deleted',
+                                      code=400)
+
         count_cohort_users = CohortUser.objects.filter(user_id=user_id, cohort_id=cohort_id).count()
 
         if is_post_method and count_cohort_users:

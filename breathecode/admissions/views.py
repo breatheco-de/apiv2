@@ -215,6 +215,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         if not many:
             current = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id).first()
+
         else:
             current = []
             index = -1
