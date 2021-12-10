@@ -215,6 +215,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         if not many:
             current = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id).first()
+
         else:
             current = []
             index = -1
@@ -976,7 +977,6 @@ class SyllabusView(APIView):
 
     @capable_of('crud_syllabus')
     def put(self, request, syllabus_id=None, syllabus_slug=None, academy_id=None):
-        print('asdasdasdasads', syllabus_id, syllabus_slug, academy_id)
 
         if 'slug' in request.data and not request.data['slug']:
             raise ValidationException('slug can\'t be empty', slug='empty-slug')

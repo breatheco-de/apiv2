@@ -661,6 +661,30 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'educational_status': None
         }])
 
+    def test_cohort_user_put_in_bulk_with_stage_delete(self):
+        """Test /cohort/user without auth"""
+        cohort_kwargs = {'stage': 'DELETED'}
+        url = reverse_lazy('admissions:cohort_user')
+        model = self.generate_models(authenticate=True,
+                                     cohort_user=True,
+                                     profile_academy=True,
+                                     cohort_kwargs=cohort_kwargs)
+        data = [{'id': model['cohort_user'].id}]
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+        expected = {'detail': 'cohort-with-stage-deleted', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400)
+        self.assertEqual(self.all_cohort_user_dict(), [{
+            'id': 1,
+            'user_id': 1,
+            'cohort_id': 1,
+            'role': 'STUDENT',
+            'finantial_status': None,
+            'educational_status': None
+        }])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
