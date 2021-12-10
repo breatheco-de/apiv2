@@ -15,6 +15,29 @@ class Platform(models.Model):
         return f'{self.name} ({self.id})'
 
 
+class Position(models.Model):
+    """ something """
+    name = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.name} ({self.id})'
+
+
+class ZyteProject(models.Model):
+    """ Create a new platform for Jobs"""
+    zyte_api_key = models.CharField(max_length=150)
+    zyte_api_deploy = models.CharField(max_length=50)
+
+    platform = models.ForeignKey(Platform, on_delete=models.CASCADE, null=False, blank=False)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.platform} {self.zyte_api_key} {self.zyte_api_deploy} ({self.id})'
+
+
 SYNCHED = 'SYNCHED'
 PENDING = 'PENDING'
 WARNING = 'WARNING'
@@ -30,16 +53,17 @@ SPIDER_STATUS = (
 class Spider(models.Model):
     """ Create a new platform for Jobs"""
     name = models.CharField(max_length=150)
+    position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
     job = models.CharField(max_length=150)
     loc = models.CharField(max_length=150)
-    ZYTE_API_KEY = models.CharField(max_length=50)
-    ZYTE_API_DEPLOY = models.CharField(max_length=50)
-    ZYTE_FETCH_COUNT = models.IntegerField()
-    zyte_spider_number = models.IntegerField()
-    zyte_job_number = models.IntegerField()
+    zyte_project = models.ForeignKey(ZyteProject, on_delete=models.CASCADE, null=False, blank=False)
+    zyte_spider_number = models.IntegerField(help_text='This number must be copy from ZYTE')
+    zyte_job_number = models.IntegerField(help_text='Start at 0 but increase on each fetch')
+    zyte_fetch_count = models.IntegerField(help_text='The number of spider job excecutions to fetch')
+    zyte_last_fetch_date = models.DateField(null=True)
     status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
-
-    platform = models.ForeignKey(Platform, on_delete=models.CASCADE, null=False, blank=False)
+    sync_status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
+    sync_desc = models.CharField(max_length=200, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -59,19 +83,9 @@ class Employer(models.Model):
         return f'{self.name} ({self.id})'
 
 
-class Position(models.Model):
-    """ something """
-    name = models.CharField(max_length=100, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    def __str__(self):
-        return f'{self.name} ({self.id})'
-
-
 class PositionAlias(models.Model):
     """ something """
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -82,7 +96,7 @@ class PositionAlias(models.Model):
 
 class Tag(models.Model):
     """ something """
-    slug = models.SlugField(max_length=100)
+    slug = models.SlugField(max_length=200, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
@@ -102,7 +116,7 @@ class Location(models.Model):
 
 class LocationAlias(models.Model):
     """ something """
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -124,7 +138,7 @@ PARTTIME = 'Part-time'
 TEMPORARY = 'Temporary'
 CONTRACT = 'Contract'
 JOB_TYPE = (
-    (FULLTIME, 'Full'),
+    (FULLTIME, 'Full-time'),
     (INTERNSHIP, 'Internship'),
     (PARTTIME, 'Part-time'),
     (TEMPORARY, 'Temporary'),
@@ -139,13 +153,13 @@ class Job(models.Model):
     published = models.CharField(max_length=20)
     status = models.CharField(max_length=15, choices=JOB_STATUS, default=OPENED)
     apply_url = models.URLField(max_length=500)
-    salary = models.CharField(max_length=12)
+    salary = models.CharField(max_length=253, null=True, blank=True)
     job_type = models.CharField(max_length=15, choices=JOB_TYPE, default=FULLTIME)
     remote = models.BooleanField(default=False, verbose_name='Remote')
     employer = models.ForeignKey(Employer, on_delete=models.CASCADE, null=False, blank=False)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, null=True, blank=True)
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=False, blank=False)
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

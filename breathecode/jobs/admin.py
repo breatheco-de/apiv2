@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Platform, Spider, Job, Employer, Position, PositionAlias, Tag, Location, LocationAlias
+from .models import Platform, ZyteProject, Spider, Job, Employer, Position, PositionAlias, Tag, Location, LocationAlias
 from .actions import fetch_spider_data, fetch_sync_all_data, run_spider
 
 
@@ -41,6 +41,11 @@ class SpiderAdmin(admin.ModelAdmin):
         fetch_sync_all_data_admin,
         run_spider_admin,
     )
+
+
+@admin.register(ZyteProject)
+class ZyteProjectAdmin(admin.ModelAdmin):
+    list_display = ('platform', 'zyte_api_key', 'zyte_api_deploy', 'created_at')
 
 
 @admin.register(Job)
