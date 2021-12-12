@@ -22,7 +22,7 @@ Any view decorated with the @capable_of must be used passing an academy id eithe
 
 ## Available capabilities:
 
-This list is alive, it will grow and vary overe time:
+This list is alive, it will grow and vary over time:
 
 | slug              | description                                               |
 | ----------------- | --------------------------------------------------------- |
