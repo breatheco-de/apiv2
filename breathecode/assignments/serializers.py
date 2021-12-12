@@ -132,4 +132,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
                     'Only staff members or teachers from the same academy as this student can update the review status'
                 )
 
+        if data['task_status'] == 'Pending' and data['revision_status'] == 'Approved':
+            raise ValidationException('Only tasks that are DONE should be approved by the teacher')
+
         return data
