@@ -1,6 +1,11 @@
 import os
+import re
+import pytz
+from datetime import datetime
+from dateutil import parser
+from dateutil.tz import gettz, tzutc
 from django.contrib.auth.models import User
-from django.core.validators import RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from .actions import get_bucket_object
 from .signals import student_edu_status_updated
@@ -310,11 +315,27 @@ RECURRENCY_TYPE = (
     # (YEARLY, 'Yearly'),
 )
 
+# YYYYMMDDHHMM
+date_interger_description = ('The first 4 number are year, the next 2 number are month, the next 2 number '
+                             'are day, the next 2 number are hour and the last 2 number are second')
+
 
 class TimeSlot(models.Model):
-    starting_at = models.DateTimeField()
-    ending_at = models.DateTimeField()
+    starting_at = models.IntegerField(
+        help_text=date_interger_description,
+        validators=[
+            MaxValueValidator(300000000000),  # year 3000
+            MinValueValidator(202101010000),  # year 2021, month 1 and day 1
+        ])
 
+    ending_at = models.IntegerField(
+        help_text=date_interger_description,
+        validators=[
+            MaxValueValidator(300000000000),  # year 3000
+            MinValueValidator(202101010000),  # year 2021, month 1 and day 1
+        ])
+
+    timezone = models.CharField(max_length=50, default='America/New_York')
     recurrent = models.BooleanField(default=True)
     recurrency_type = models.CharField(max_length=10, choices=RECURRENCY_TYPE, default=WEEKLY)
 
@@ -323,6 +344,17 @@ class TimeSlot(models.Model):
 
     class Meta:
         abstract = True
+
+    @staticmethod
+    def format_date_interger_from_date(timezone: str, date: datetime):
+        return int(date.strftime('%Y%m%d%H%M'))
+
+    @staticmethod
+    def format_date_interger_from_iso_string(timezone: str, string: str):
+        date = parser.parse(string)
+        tz = gettz(timezone)
+
+        return int(date.astimezone(tzutc()).astimezone(tz).strftime('%Y%m%d%H%M'))
 
 
 class SpecialtyModeTimeSlot(TimeSlot):

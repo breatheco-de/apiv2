@@ -3,8 +3,9 @@ Headers mixin
 """
 
 import re
-from datetime import datetime, time, tzinfo, timedelta
+from datetime import datetime
 from django.utils import timezone
+from breathecode.utils.datetime_interger import DatetimeInterger
 
 
 def get_utc():
@@ -26,14 +27,20 @@ class DatetimeMixin():
     def datetime_to_iso(self, date=datetime.utcnow()) -> str:
         return re.sub(r'\+00:00$', 'Z', date.replace(tzinfo=UTC).isoformat())
 
+    def interger_to_iso(self, timezone, interger: int) -> str:
+        return DatetimeInterger.to_iso_string(timezone, interger)
+
+    def datetime_to_interger(self, timezone, date: datetime) -> str:
+        return DatetimeInterger.from_datetime(timezone, date)
+
     def iso_to_datetime(self, iso: str):
         string = re.sub(r'Z$', '', iso)
         date = datetime.fromisoformat(string)
         return timezone.make_aware(date)
 
-    def datetime_to_ical(self, date=datetime.utcnow()) -> str:
-        return '{:4d}{:02d}{:02d}T{:02d}{:02d}{:02d}Z'.format(date.year, date.month, date.day, date.hour,
-                                                              date.minute, date.second)
+    def datetime_to_ical(self, date=datetime.utcnow(), utc=True) -> str:
+        return '{:4d}{:02d}{:02d}T{:02d}{:02d}{:02d}'.format(date.year, date.month, date.day, date.hour,
+                                                             date.minute, date.second) + ('Z' if utc else '')
 
     def assertDatetime(self, date):
         if not isinstance(date, str):

@@ -1,11 +1,25 @@
 """
 Collections of mixins used to login in authorize microservice
 """
+from random import choice, randint
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from breathecode.admissions.models import Cohort
-from django.utils import timezone
-from datetime import datetime, timedelta
 from mixer.backend.django import mixer
+
+TIMEZONES = [
+    'America/New_York', 'America/Bogota', 'America/Santiago', 'America/Buenos_Aires', 'Europe/Madrid',
+    'America/Caracas'
+]
+
+
+def random_datetime_interger():
+    year = '{:04d}'.format(randint(2021, 2999))
+    month = '{:02d}'.format(randint(1, 12))
+    day = '{:02d}'.format(randint(1, 28))
+    hour = '{:02d}'.format(randint(0, 23))
+    minute = '{:02d}'.format(randint(0, 59))
+
+    return int(year + month + day + hour + minute)
 
 
 class AdmissionsModelsMixin(ModelsMixin):
@@ -139,13 +153,21 @@ class AdmissionsModelsMixin(ModelsMixin):
             models['cohort_user'] = mixer.blend('admissions.CohortUser', **kargs)
 
         if not 'time_slot' in models and time_slot:
-            kargs = {}
+            kargs = {
+                'starting_at': random_datetime_interger(),
+                'ending_at': random_datetime_interger(),
+                'timezone': choice(TIMEZONES),
+            }
 
             kargs = {**kargs, **time_slot_kwargs}
             models['time_slot'] = mixer.blend('admissions.TimeSlot', **kargs)
 
         if not 'specialty_mode_time_slot' in models and specialty_mode_time_slot:
-            kargs = {}
+            kargs = {
+                'starting_at': random_datetime_interger(),
+                'ending_at': random_datetime_interger(),
+                'timezone': choice(TIMEZONES),
+            }
 
             if 'academy' in models:
                 kargs['academy'] = models['academy']
@@ -157,7 +179,11 @@ class AdmissionsModelsMixin(ModelsMixin):
             models['specialty_mode_time_slot'] = mixer.blend('admissions.SpecialtyModeTimeSlot', **kargs)
 
         if not 'cohort_time_slot' in models and cohort_time_slot:
-            kargs = {}
+            kargs = {
+                'starting_at': random_datetime_interger(),
+                'ending_at': random_datetime_interger(),
+                'timezone': choice(TIMEZONES),
+            }
 
             if 'cohort' in models:
                 kargs['cohort'] = models['cohort']

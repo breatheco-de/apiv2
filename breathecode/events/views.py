@@ -24,13 +24,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
 from rest_framework.response import Response
-from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
+from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination, DatetimeInterger
 from rest_framework.decorators import renderer_classes
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
 from breathecode.utils import ValidationException
-from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
+from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText, vDatetime
 
 logger = logging.getLogger(__name__)
 MONDAY = 0
@@ -366,6 +366,7 @@ class ICalStudentView(APIView):
 
         calendar = iCalendar()
         calendar.add('prodid', f'-//BreatheCode//Student Schedule ({user_id}) {key}//EN')
+        calendar.add('METHOD', 'PUBLISH')
         calendar.add('X-WR-CALNAME', f'Academy - Schedule')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
@@ -383,8 +384,8 @@ class ICalStudentView(APIView):
             event.add('summary', item.cohort.name)
             event.add('uid', f'breathecode_cohort_time_slot_{item.id}_{key}')
 
-            event.add('dtstart', item.starting_at)
-            event.add('dtstamp', item.starting_at)
+            event.add('dtstart', DatetimeInterger.to_datetime(item.timezone, item.starting_at))
+            event.add('dtstamp', DatetimeInterger.to_datetime(item.timezone, item.starting_at))
 
             until_date = item.cohort.ending_date
 
@@ -395,7 +396,7 @@ class ICalStudentView(APIView):
             if item.recurrent:
                 event.add('rrule', {'freq': item.recurrency_type, 'until': until_date})
 
-            event.add('dtend', item.ending_at)
+            event.add('dtend', DatetimeInterger.to_datetime(item.timezone, item.ending_at))
 
             teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.cohort.id).first()
 
@@ -469,6 +470,7 @@ class ICalCohortsView(APIView):
 
         calendar = iCalendar()
         calendar.add('prodid', f'-//BreatheCode//Academy Cohorts{academies_repr} {key}//EN')
+        calendar.add('METHOD', 'PUBLISH')
         calendar.add('X-WR-CALNAME', f'Academy - Cohorts')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
@@ -508,8 +510,11 @@ class ICalCohortsView(APIView):
             if first_timeslot:
                 event_first_day.add('summary', f'{item.name} - First day')
                 event_first_day.add('uid', f'breathecode_cohort_{item.id}_first_{key}')
-                event_first_day.add('dtstart', first_timeslot.starting_at)
-                event_first_day.add('dtend', first_timeslot.ending_at)
+                event_first_day.add(
+                    'dtstart',
+                    DatetimeInterger.to_datetime(first_timeslot.timezone, first_timeslot.starting_at))
+                event_first_day.add(
+                    'dtend', DatetimeInterger.to_datetime(first_timeslot.timezone, first_timeslot.ending_at))
                 event_first_day.add('dtstamp', first_timeslot.created_at)
 
             if item.ending_date:
@@ -517,8 +522,8 @@ class ICalCohortsView(APIView):
                 timeslots_datetime = []
 
                 for timeslot in timeslots:
-                    starting_at = timeslot.starting_at
-                    ending_at = timeslot.ending_at
+                    starting_at = DatetimeInterger.to_datetime(timeslot.timezone, timeslot.starting_at)
+                    ending_at = DatetimeInterger.to_datetime(timeslot.timezone, timeslot.ending_at)
                     diff = ending_at - starting_at
 
                     if timeslot.recurrent:
@@ -630,6 +635,7 @@ class ICalEventView(APIView):
 
         calendar = iCalendar()
         calendar.add('prodid', f'-//BreatheCode//Academy Events{academies_repr} {key}//EN')
+        calendar.add('METHOD', 'PUBLISH')
         calendar.add('X-WR-CALNAME', f'Academy - Events')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')

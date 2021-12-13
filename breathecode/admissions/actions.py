@@ -63,13 +63,14 @@ def create_or_update_cohort_timeslot(certificate_timeslot):
             create_cohort_timeslot(certificate_timeslot, cohort_id)
 
 
-def fill_cohort_timeslot(certificate_timeslot, cohort_id):
+def fill_cohort_timeslot(certificate_timeslot, cohort_id, timezone):
     from breathecode.admissions.models import CohortTimeSlot
     cohort_timeslot = CohortTimeSlot(cohort_id=cohort_id,
                                      starting_at=certificate_timeslot.starting_at,
                                      ending_at=certificate_timeslot.ending_at,
                                      recurrent=certificate_timeslot.recurrent,
-                                     recurrency_type=certificate_timeslot.recurrency_type)
+                                     recurrency_type=certificate_timeslot.recurrency_type,
+                                     timezone=timezone)
 
     return cohort_timeslot
 
@@ -85,7 +86,9 @@ def append_cohort_id_if_not_exist(cohort_timeslot):
             starting_at=cohort_timeslot.starting_at,
             ending_at=cohort_timeslot.ending_at,
             recurrent=cohort_timeslot.recurrent,
-            recurrency_type=cohort_timeslot.recurrency_type).values_list('id', flat=True).first()
+            recurrency_type=cohort_timeslot.recurrency_type,
+            timezone=cohort_timeslot.timezone,
+        ).values_list('id', flat=True).first()
 
     return cohort_timeslot
 
@@ -94,13 +97,20 @@ def sync_cohort_timeslots(cohort_id):
     from breathecode.admissions.models import SpecialtyModeTimeSlot, CohortTimeSlot, Cohort
     CohortTimeSlot.objects.filter(cohort__id=cohort_id).delete()
 
-    cohort_values = Cohort.objects.filter(id=cohort_id).values('academy__id', 'specialty_mode__id').first()
+    cohort_values = Cohort.objects.filter(id=cohort_id).values('academy__id', 'academy__timezone',
+                                                               'specialty_mode__id', 'slug').first()
+
+    timezone = cohort_values['academy__timezone']
+    if not timezone:
+        slug = cohort_values['slug']
+        logger.warning(f'Cohort `{slug}` was skipped because not have a timezone')
+        return
 
     certificate_timeslots = SpecialtyModeTimeSlot.objects.filter(
         academy__id=cohort_values['academy__id'], specialty_mode__id=cohort_values['specialty_mode__id'])
 
     timeslots = CohortTimeSlot.objects.bulk_create([
-        fill_cohort_timeslot(certificate_timeslot, cohort_id)
+        fill_cohort_timeslot(certificate_timeslot, cohort_id, timezone)
         for certificate_timeslot in certificate_timeslots
     ])
 
