@@ -99,11 +99,40 @@ class AcademyEventsTestSuite(EventTestCase):
                 'city': {
                     'name': model['event'].academy.city.name
                 }
-            }
+            },
+            'sync_with_eventbrite': False,
+            'eventbrite_sync_status': 'PENDING',
+            'eventbrite_sync_description': None,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_id_put__without_organization(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        data = {}
+
+        response = self.client.put(url, data)
+        json = response.json()
+        expected = {'detail': 'organization-not-exist', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [{
+            **self.model_to_dict(model, 'event'),
+        }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -113,6 +142,7 @@ class AcademyEventsTestSuite(EventTestCase):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
+                                     organization=True,
                                      profile_academy=True,
                                      capability='crud_event',
                                      role='potato2',
@@ -149,6 +179,7 @@ class AcademyEventsTestSuite(EventTestCase):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
+                                     organization=True,
                                      profile_academy=True,
                                      capability='crud_event',
                                      role='potato2',
@@ -165,7 +196,7 @@ class AcademyEventsTestSuite(EventTestCase):
             'ending_at': self.datetime_to_iso(current_date),
         }
 
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json['created_at'])
@@ -188,13 +219,16 @@ class AcademyEventsTestSuite(EventTestCase):
             'id': 2,
             'lang': None,
             'online_event': False,
-            'organization': None,
+            'organization': 1,
             'published_at': None,
             'status': 'DRAFT',
-            'sync_desc': None,
-            'sync_status': 'PENDING',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'sync_with_eventbrite': False,
+            'eventbrite_sync_status': 'PENDING',
+            'currency': 'USD',
             **data,
         }
 
@@ -203,6 +237,7 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(self.all_event_dict(), [{
             **self.model_to_dict(model, 'event'),
             **data,
+            'organization_id': 1,
             'starting_at': current_date,
             'ending_at': current_date,
         }])
@@ -232,6 +267,7 @@ class AcademyEventsTestSuite(EventTestCase):
         del base['user']
 
         model = self.generate_models(authenticate=True,
+                                     organization=True,
                                      profile_academy=True,
                                      capability='crud_event',
                                      role='potato2',
@@ -248,7 +284,7 @@ class AcademyEventsTestSuite(EventTestCase):
             'ending_at': self.datetime_to_iso(current_date),
         }
 
-        response = self.client.put(url, data)
+        response = self.client.put(url, data, format='json')
         json = response.json()
 
         self.assertDatetime(json['created_at'])
@@ -271,13 +307,15 @@ class AcademyEventsTestSuite(EventTestCase):
             'id': 2,
             'lang': None,
             'online_event': False,
-            'organization': None,
+            'organization': 1,
             'published_at': None,
             'status': 'DRAFT',
-            'sync_desc': None,
-            'sync_status': 'PENDING',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
             'title': None,
             'venue': None,
+            'sync_with_eventbrite': False,
+            'currency': 'USD',
             **data,
         }
 

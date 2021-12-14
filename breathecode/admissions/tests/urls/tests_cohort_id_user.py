@@ -97,6 +97,32 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    '''
+    post to a cohort with stage DELETED
+    '''
+
+    def test_cohort_id_user__post__stage_deleted(self):
+        """Test /cohort/:id/user without auth"""
+        cohort_kwargs = {'stage': 'DELETED'}
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     cohort_kwargs=cohort_kwargs)
+        models_dict = self.all_cohort_user_dict()
+        url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
+        data = {
+            'user': model['user'].id,
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {'detail': 'cohort-with-stage-deleted', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.assertEqual(self.all_cohort_user_dict(), [])
+
     """
     🔽🔽🔽 Post
     """
@@ -166,6 +192,26 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Post in bulk mode
     """
+
+    def test_cohort_id_user__post__in_bulk__cohort_with_stage_deleted(self):
+        """Test /cohort/:id/user without auth"""
+        cohort_kwargs = {'stage': 'DELETED'}
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     cohort_kwargs=cohort_kwargs)
+        url = reverse_lazy('admissions:cohort_id_user', kwargs={'cohort_id': model['cohort'].id})
+        data = [{
+            'user': model['user'].id,
+        }]
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {'detail': 'cohort-with-stage-deleted', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_user_dict(), [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
