@@ -639,12 +639,10 @@ class AcademySpecialtyModeTimeSlotView(APIView, GenerateLookupsMixin):
         }
 
         if 'starting_at' in data:
-            data['starting_at'] = SpecialtyModeTimeSlot.format_date_interger_from_iso_string(
-                timezone, data['starting_at'])
+            data['starting_at'] = DatetimeInteger.from_iso_string(timezone, data['starting_at'])
 
         if 'ending_at' in data:
-            data['ending_at'] = SpecialtyModeTimeSlot.format_date_interger_from_iso_string(
-                timezone, data['ending_at'])
+            data['ending_at'] = DatetimeInteger.from_iso_string(timezone, data['ending_at'])
 
         serializer = SpecialtyModeTimeSlotSerializer(item, data=data)
         if serializer.is_valid():
