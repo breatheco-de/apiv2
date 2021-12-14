@@ -15,7 +15,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
-                               GenerateLookupsMixin, HeaderLimitOffsetPagination)
+                               GenerateLookupsMixin, HeaderLimitOffsetPagination, private_view)
 from .serializers import (
     PostFormEntrySerializer,
     FormEntrySerializer,
@@ -28,10 +28,11 @@ from .serializers import (
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
-from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable
+from .models import PrivateShortLink, ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
+from breathecode.utils.private_view import private_view, render_message
 
 logger = logging.getLogger(__name__)
 
@@ -220,6 +221,52 @@ def redirect_link(request, link_slug):
 
     params = {**destination_params, **params}
     return HttpResponseRedirect(redirect_to=url_parts[0] + '?' + parse.urlencode(params))
+
+
+@private_view
+def forward_meet_url(request, mentor_slug, token):
+    if isinstance(token, HttpResponseRedirect):
+        return token
+
+    redirect = request.GET.get('redirect', None)
+
+    mentor = PrivateShortLink.objects.filter(slug=mentor_slug).first()
+    if mentor is None:
+        return render_message(request, f'No mentor found with slug {mentor_slug}')
+
+    if mentor.status != 'ACTIVE':
+        return render_message(request, f'This mentor is not active')
+
+    session = MentorshipSession.objects.filter(mentor__slug=mentor_slug,
+                                               mentee__id=token.user.id,
+                                               status='PENDING').first()
+    if session is None and redirect is not None:
+        return render_message(
+            request, f'No mentoring session found with {mentor.user.first_name} {mentor.user.last_name}')
+
+    if session is None:
+        session = MentorshipSession(mentor=mentor,
+                                    mentee=token.user,
+                                    is_online=True,
+                                    online_meeting_url=mentor.online_meeting_url)
+        session.save()
+    elif redirect is not None:
+        session.started_at = timezone.now()
+        session.status = 'STARTED'
+        session.save()
+        return HttpResponseRedirect(redirect_to=session.online_meeting_url)
+
+    return render(
+        request, 'message.html', {
+            'SUBJECT':
+            'Mentoring Session',
+            'BUTTON':
+            'Start Session',
+            'LINK':
+            set_query_parameter('?' + request.GET.urlencode(), 'redirect', 'true'),
+            'MESSAGE':
+            f'Hello {session.mentee.first_name }, you are about to start a {session.mentor.service.name} with: {session.mentor.user.first_name} {session.mentor.user.last_name}',
+        })
 
 
 @api_view(['GET'])
@@ -447,7 +494,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if slug is not None:
             link = ShortLink.objects.filter(slug=slug).first()
             if link is None or (link.private and link.academy.id != academy_id):
-                raise ValidationError(
+                raise ValidationException(
                     f'Shortlink with slug {slug} not found or its private and it belongs to another academy',
                     slug='shortlink-not-found')
 

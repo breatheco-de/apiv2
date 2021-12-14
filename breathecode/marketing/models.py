@@ -351,6 +351,25 @@ class ShortLink(models.Model):
         return f'{str(self.hits)} {self.slug}'
 
 
+class HiddenLink(models.Model):
+    slug = models.SlugField(max_length=150, unique=True)
+    destination = models.URLField()
+    hits = models.IntegerField(default=0)
+    active = models.BooleanField(default=True)
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    last_click_at = models.DateTimeField(blank=True,
+                                         null=True,
+                                         default=None,
+                                         help_text='Last time a click was registered for this link')
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.slug} {self.hits}'
+
+
 PENDING = 'PENDING'
 DONE = 'DONE'
 ERROR = 'ERROR'
