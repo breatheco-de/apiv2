@@ -451,30 +451,6 @@ class ICalStudentView(APIView):
         return response
 
 
-def get_ical_cohort_description(item: Cohort):
-    description = ''
-    # description = f'{description}Url: {item.url}\n'
-
-    if item.name:
-        description = f'{description}Name: {item.name}\n'
-
-    if item.academy:
-        description = f'{description}Academy: {item.academy.name}\n'
-
-    if item.language:
-        description = f'{description}Language: {item.language.upper()}\n'
-
-    if item.private:
-        description = f'{description}Private: {"Yes" if item.private else "No"}\n'
-
-    if item.remote_available:
-        description = f'{description}Online: {"Yes" if item.remote_available else "No"}\n'
-
-    # TODO: add private url to meeting url
-
-    return description
-
-
 class ICalCohortsView(APIView):
     permission_classes = [AllowAny]
 
