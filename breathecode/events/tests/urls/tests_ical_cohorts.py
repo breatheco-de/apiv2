@@ -9,7 +9,7 @@ from datetime import datetime
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
-from breathecode.utils import DatetimeInterger
+from breathecode.utils import DatetimeInteger
 from ..mixins.new_events_tests_case import EventTestCase
 
 
@@ -680,9 +680,9 @@ class AcademyCohortTestSuite(EventTestCase):
         key = model.device_id.key
 
         starting_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
+            DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
 
-        ending_at = self.datetime_to_ical(DatetimeInterger.to_datetime(timeslot.timezone, timeslot.ending_at),
+        ending_at = self.datetime_to_ical(DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at),
                                           False)
 
         expected = '\r\n'.join([
@@ -769,9 +769,9 @@ class AcademyCohortTestSuite(EventTestCase):
         key = model.device_id.key
 
         starting_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
+            DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
 
-        ending_at = self.datetime_to_ical(DatetimeInterger.to_datetime(timeslot.timezone, timeslot.ending_at),
+        ending_at = self.datetime_to_ical(DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at),
                                           False)
 
         expected = '\r\n'.join([
@@ -856,9 +856,9 @@ class AcademyCohortTestSuite(EventTestCase):
         key = model.device_id.key
 
         starting_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
+            DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
 
-        ending_at = self.datetime_to_ical(DatetimeInterger.to_datetime(timeslot.timezone, timeslot.ending_at),
+        ending_at = self.datetime_to_ical(DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at),
                                           False)
 
         expected = '\r\n'.join([
@@ -1077,15 +1077,15 @@ class AcademyCohortTestSuite(EventTestCase):
     #                                        tzinfo=gettz('Europe/Madrid'))
     #     key = base.device_id.key
     #     first_starting_at = self.datetime_to_ical(
-    #         DatetimeInterger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
+    #         DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
 
     #     starting_at = self.datetime_to_ical(
-    #         DatetimeInterger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
+    #         DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at), False)
 
     #     starting_at_utc = self.datetime_to_ical(
-    #         DatetimeInterger.to_utc_datetime(timeslot.timezone, timeslot.starting_at), True)
+    #         DatetimeInteger.to_utc_datetime(timeslot.timezone, timeslot.starting_at), True)
 
-    #     ending_at = self.datetime_to_ical(DatetimeInterger.to_datetime(timeslot.timezone, timeslot.ending_at),
+    #     ending_at = self.datetime_to_ical(DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at),
     #                                       False)
 
     #     expected = '\r\n'.join([

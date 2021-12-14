@@ -6,7 +6,7 @@ import urllib
 from django.urls.base import reverse_lazy
 from rest_framework import status
 
-from breathecode.utils.datetime_interger import DatetimeInterger
+from breathecode.utils.datetime_interger import DatetimeInteger
 from ..mixins.new_events_tests_case import EventTestCase
 
 
@@ -89,15 +89,15 @@ class AcademyCohortTestSuite(EventTestCase):
 
         key = model.device_id.key
         starting_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
+            DatetimeInteger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
             False)
 
         starting_at_utc = self.datetime_to_ical(
-            DatetimeInterger.to_utc_datetime(model.cohort_time_slot.timezone,
-                                             model.cohort_time_slot.starting_at), True)
+            DatetimeInteger.to_utc_datetime(model.cohort_time_slot.timezone,
+                                            model.cohort_time_slot.starting_at), True)
 
         ending_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.ending_at),
+            DatetimeInteger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.ending_at),
             False)
 
         expected = '\r\n'.join([
@@ -155,15 +155,15 @@ class AcademyCohortTestSuite(EventTestCase):
 
         key = model.device_id.key
         starting_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
+            DatetimeInteger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
             False)
 
         starting_at_utc = self.datetime_to_ical(
-            DatetimeInterger.to_utc_datetime(model.cohort_time_slot.timezone,
-                                             model.cohort_time_slot.starting_at), True)
+            DatetimeInteger.to_utc_datetime(model.cohort_time_slot.timezone,
+                                            model.cohort_time_slot.starting_at), True)
 
         ending_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.ending_at),
+            DatetimeInteger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.ending_at),
             False)
 
         expected = '\r\n'.join([
@@ -217,15 +217,15 @@ class AcademyCohortTestSuite(EventTestCase):
 
         key = model.device_id.key
         starting_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
+            DatetimeInteger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
             False)
 
         starting_at_utc = self.datetime_to_ical(
-            DatetimeInterger.to_utc_datetime(model.cohort_time_slot.timezone,
-                                             model.cohort_time_slot.starting_at), True)
+            DatetimeInteger.to_utc_datetime(model.cohort_time_slot.timezone,
+                                            model.cohort_time_slot.starting_at), True)
 
         ending_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.ending_at),
+            DatetimeInteger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.ending_at),
             False)
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
@@ -366,15 +366,15 @@ class AcademyCohortTestSuite(EventTestCase):
 
         key = model.device_id.key
         starting_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
+            DatetimeInteger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
             False)
 
         starting_at_utc = self.datetime_to_ical(
-            DatetimeInterger.to_utc_datetime(model.cohort_time_slot.timezone,
-                                             model.cohort_time_slot.starting_at), True)
+            DatetimeInteger.to_utc_datetime(model.cohort_time_slot.timezone,
+                                            model.cohort_time_slot.starting_at), True)
 
         ending_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.ending_at),
+            DatetimeInteger.to_datetime(model.cohort_time_slot.timezone, model.cohort_time_slot.ending_at),
             False)
 
         expected = '\r\n'.join([
@@ -442,15 +442,15 @@ class AcademyCohortTestSuite(EventTestCase):
         key = model1.device_id.key
 
         starting_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model1.cohort_time_slot.timezone,
-                                         model1.cohort_time_slot.starting_at), False)
+            DatetimeInteger.to_datetime(model1.cohort_time_slot.timezone,
+                                        model1.cohort_time_slot.starting_at), False)
 
         starting_at_utc = self.datetime_to_ical(
-            DatetimeInterger.to_utc_datetime(model1.cohort_time_slot.timezone,
-                                             model1.cohort_time_slot.starting_at), True)
+            DatetimeInteger.to_utc_datetime(model1.cohort_time_slot.timezone,
+                                            model1.cohort_time_slot.starting_at), True)
 
         ending_at = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model1.cohort_time_slot.timezone, model1.cohort_time_slot.ending_at),
+            DatetimeInteger.to_datetime(model1.cohort_time_slot.timezone, model1.cohort_time_slot.ending_at),
             False)
 
         expected = '\r\n'.join([
@@ -528,27 +528,27 @@ class AcademyCohortTestSuite(EventTestCase):
         key = model1.device_id.key
 
         starting_at1 = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model1.cohort_time_slot.timezone,
-                                         model1.cohort_time_slot.starting_at), False)
+            DatetimeInteger.to_datetime(model1.cohort_time_slot.timezone,
+                                        model1.cohort_time_slot.starting_at), False)
 
         starting_at3 = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model3.cohort_time_slot.timezone,
-                                         model3.cohort_time_slot.starting_at), False)
+            DatetimeInteger.to_datetime(model3.cohort_time_slot.timezone,
+                                        model3.cohort_time_slot.starting_at), False)
 
         starting_at_utc1 = self.datetime_to_ical(
-            DatetimeInterger.to_utc_datetime(model1.cohort_time_slot.timezone,
-                                             model1.cohort_time_slot.starting_at), True)
+            DatetimeInteger.to_utc_datetime(model1.cohort_time_slot.timezone,
+                                            model1.cohort_time_slot.starting_at), True)
 
         starting_at_utc3 = self.datetime_to_ical(
-            DatetimeInterger.to_utc_datetime(model3.cohort_time_slot.timezone,
-                                             model3.cohort_time_slot.starting_at), True)
+            DatetimeInteger.to_utc_datetime(model3.cohort_time_slot.timezone,
+                                            model3.cohort_time_slot.starting_at), True)
 
         ending_at1 = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model1.cohort_time_slot.timezone, model1.cohort_time_slot.ending_at),
+            DatetimeInteger.to_datetime(model1.cohort_time_slot.timezone, model1.cohort_time_slot.ending_at),
             False)
 
         ending_at3 = self.datetime_to_ical(
-            DatetimeInterger.to_datetime(model3.cohort_time_slot.timezone, model3.cohort_time_slot.ending_at),
+            DatetimeInteger.to_datetime(model3.cohort_time_slot.timezone, model3.cohort_time_slot.ending_at),
             False)
 
         expected = '\r\n'.join([

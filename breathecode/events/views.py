@@ -24,7 +24,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
 from rest_framework.response import Response
-from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination, DatetimeInterger
+from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination, DatetimeInteger
 from rest_framework.decorators import renderer_classes
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
@@ -384,8 +384,8 @@ class ICalStudentView(APIView):
             event.add('summary', item.cohort.name)
             event.add('uid', f'breathecode_cohort_time_slot_{item.id}_{key}')
 
-            event.add('dtstart', DatetimeInterger.to_datetime(item.timezone, item.starting_at))
-            event.add('dtstamp', DatetimeInterger.to_datetime(item.timezone, item.starting_at))
+            event.add('dtstart', DatetimeInteger.to_datetime(item.timezone, item.starting_at))
+            event.add('dtstamp', DatetimeInteger.to_datetime(item.timezone, item.starting_at))
 
             until_date = item.cohort.ending_date
 
@@ -396,7 +396,7 @@ class ICalStudentView(APIView):
             if item.recurrent:
                 event.add('rrule', {'freq': item.recurrency_type, 'until': until_date})
 
-            event.add('dtend', DatetimeInterger.to_datetime(item.timezone, item.ending_at))
+            event.add('dtend', DatetimeInteger.to_datetime(item.timezone, item.ending_at))
 
             teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.cohort.id).first()
 
@@ -511,10 +511,10 @@ class ICalCohortsView(APIView):
                 event_first_day.add('summary', f'{item.name} - First day')
                 event_first_day.add('uid', f'breathecode_cohort_{item.id}_first_{key}')
                 event_first_day.add(
-                    'dtstart',
-                    DatetimeInterger.to_datetime(first_timeslot.timezone, first_timeslot.starting_at))
+                    'dtstart', DatetimeInteger.to_datetime(first_timeslot.timezone,
+                                                           first_timeslot.starting_at))
                 event_first_day.add(
-                    'dtend', DatetimeInterger.to_datetime(first_timeslot.timezone, first_timeslot.ending_at))
+                    'dtend', DatetimeInteger.to_datetime(first_timeslot.timezone, first_timeslot.ending_at))
                 event_first_day.add('dtstamp', first_timeslot.created_at)
 
             if item.ending_date:
@@ -522,8 +522,8 @@ class ICalCohortsView(APIView):
                 timeslots_datetime = []
 
                 for timeslot in timeslots:
-                    starting_at = DatetimeInterger.to_datetime(timeslot.timezone, timeslot.starting_at)
-                    ending_at = DatetimeInterger.to_datetime(timeslot.timezone, timeslot.ending_at)
+                    starting_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at)
+                    ending_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at)
                     diff = ending_at - starting_at
 
                     if timeslot.recurrent:

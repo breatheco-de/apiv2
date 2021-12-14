@@ -7,7 +7,7 @@ from dateutil.tz import gettz, tzutc
 from breathecode.admissions.actions import sync_cohort_timeslots
 from django.db.models import Q
 from breathecode.assignments.models import Task
-from breathecode.utils import ValidationException, localize_query
+from breathecode.utils import ValidationException, localize_query, SerpyExtensions
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
@@ -236,42 +236,10 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
 class SmallCohortTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
-    starting_at = serpy.MethodField()
-    ending_at = serpy.MethodField()
+    starting_at = SerpyExtensions.DatetimeIntegerField()
+    ending_at = SerpyExtensions.DatetimeIntegerField()
     recurrent = serpy.Field()
     recurrency_type = serpy.Field()
-
-    def get_starting_at(self, obj):
-        timezone = gettz(obj.timezone)
-        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(obj.starting_at))
-        if not matches:
-            return None
-
-        elements = matches.groups()
-        date = datetime(int(elements[0]),
-                        int(elements[1]),
-                        int(elements[2]),
-                        int(elements[3]),
-                        int(elements[4]),
-                        tzinfo=timezone)
-
-        return re.sub(r'\+00:00', 'Z', date.astimezone(tzutc()).isoformat())
-
-    def get_ending_at(self, obj):
-        timezone = gettz(obj.timezone)
-        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(obj.ending_at))
-        if not matches:
-            return None
-
-        elements = matches.groups()
-        date = datetime(int(elements[0]),
-                        int(elements[1]),
-                        int(elements[2]),
-                        int(elements[3]),
-                        int(elements[4]),
-                        tzinfo=timezone)
-
-        return re.sub(r'\+00:00', 'Z', date.astimezone(tzutc()).isoformat())
 
 
 class GetCohortSerializer(serpy.Serializer):
@@ -361,8 +329,8 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
     cohort = serpy.MethodField()
-    starting_at = serpy.MethodField()
-    ending_at = serpy.MethodField()
+    starting_at = SerpyExtensions.DatetimeIntegerField()
+    ending_at = SerpyExtensions.DatetimeIntegerField()
     recurrent = serpy.Field()
     recurrency_type = serpy.Field()
     created_at = serpy.Field()
@@ -371,46 +339,14 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
     def get_cohort(self, obj):
         return obj.cohort.id
 
-    def get_starting_at(self, obj):
-        timezone = gettz(obj.timezone)
-        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(obj.starting_at))
-        if not matches:
-            return None
-
-        elements = matches.groups()
-        date = datetime(int(elements[0]),
-                        int(elements[1]),
-                        int(elements[2]),
-                        int(elements[3]),
-                        int(elements[4]),
-                        tzinfo=timezone)
-
-        return re.sub(r'\+00:00', 'Z', date.astimezone(tzutc()).isoformat())
-
-    def get_ending_at(self, obj):
-        timezone = gettz(obj.timezone)
-        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(obj.ending_at))
-        if not matches:
-            return None
-
-        elements = matches.groups()
-        date = datetime(int(elements[0]),
-                        int(elements[1]),
-                        int(elements[2]),
-                        int(elements[3]),
-                        int(elements[4]),
-                        tzinfo=timezone)
-
-        return re.sub(r'\+00:00', 'Z', date.astimezone(tzutc()).isoformat())
-
 
 class GETSpecialtyModeTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
     academy = serpy.MethodField()
     specialty_mode = serpy.MethodField()
-    starting_at = serpy.MethodField()
-    ending_at = serpy.MethodField()
+    starting_at = SerpyExtensions.DatetimeIntegerField()
+    ending_at = SerpyExtensions.DatetimeIntegerField()
     recurrent = serpy.Field()
     recurrency_type = serpy.Field()
     created_at = serpy.Field()
@@ -421,38 +357,6 @@ class GETSpecialtyModeTimeSlotSerializer(serpy.Serializer):
 
     def get_specialty_mode(self, obj):
         return obj.specialty_mode.id if obj.specialty_mode else None
-
-    def get_starting_at(self, obj):
-        timezone = gettz(obj.timezone)
-        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(obj.starting_at))
-        if not matches:
-            return None
-
-        elements = matches.groups()
-        date = datetime(int(elements[0]),
-                        int(elements[1]),
-                        int(elements[2]),
-                        int(elements[3]),
-                        int(elements[4]),
-                        tzinfo=timezone)
-
-        return re.sub(r'\+00:00', 'Z', date.astimezone(tzutc()).isoformat())
-
-    def get_ending_at(self, obj):
-        timezone = gettz(obj.timezone)
-        matches = re.match('^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})$', str(obj.ending_at))
-        if not matches:
-            return None
-
-        elements = matches.groups()
-        date = datetime(int(elements[0]),
-                        int(elements[1]),
-                        int(elements[2]),
-                        int(elements[3]),
-                        int(elements[4]),
-                        tzinfo=timezone)
-
-        return re.sub(r'\+00:00', 'Z', date.astimezone(tzutc()).isoformat())
 
 
 class GETCohortUserSmallSerializer(serpy.Serializer):

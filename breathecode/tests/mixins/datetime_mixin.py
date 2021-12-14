@@ -5,7 +5,7 @@ Headers mixin
 import re
 from datetime import datetime
 from django.utils import timezone
-from breathecode.utils.datetime_interger import DatetimeInterger
+from breathecode.utils.datetime_interger import DatetimeInteger
 
 
 def get_utc():
@@ -28,10 +28,10 @@ class DatetimeMixin():
         return re.sub(r'\+00:00$', 'Z', date.replace(tzinfo=UTC).isoformat())
 
     def interger_to_iso(self, timezone, interger: int) -> str:
-        return DatetimeInterger.to_iso_string(timezone, interger)
+        return DatetimeInteger.to_iso_string(timezone, interger)
 
     def datetime_to_interger(self, timezone, date: datetime) -> str:
-        return DatetimeInterger.from_datetime(timezone, date)
+        return DatetimeInteger.from_datetime(timezone, date)
 
     def iso_to_datetime(self, iso: str):
         string = re.sub(r'Z$', '', iso)

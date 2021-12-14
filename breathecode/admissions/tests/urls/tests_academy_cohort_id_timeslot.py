@@ -7,7 +7,7 @@ import re
 from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.utils import DatetimeInterger
+from breathecode.utils import DatetimeInteger
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
     apply_google_cloud_client_mock,
@@ -209,10 +209,10 @@ class CohortUserTestSuite(AdmissionsTestCase):
             self.all_cohort_time_slot_dict(),
             [{
                 'cohort_id': 1,
-                'ending_at': DatetimeInterger.from_datetime(model.academy.timezone, ending_at),
+                'ending_at': DatetimeInteger.from_datetime(model.academy.timezone, ending_at),
                 'id': 1,
                 'recurrency_type': 'WEEKLY',
                 'recurrent': True,
-                'starting_at': DatetimeInterger.from_datetime(model.academy.timezone, starting_at),
+                'starting_at': DatetimeInteger.from_datetime(model.academy.timezone, starting_at),
                 'timezone': 'America/Caracas',
             }])

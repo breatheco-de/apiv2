@@ -27,7 +27,7 @@ from rest_framework import status
 from breathecode.utils import (localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
-from breathecode.utils import DatetimeInterger
+from breathecode.utils import DatetimeInteger
 
 logger = logging.getLogger(__name__)
 
@@ -433,10 +433,10 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         }
 
         if 'starting_at' in data:
-            data['starting_at'] = DatetimeInterger.from_iso_string(timezone, data['starting_at'])
+            data['starting_at'] = DatetimeInteger.from_iso_string(timezone, data['starting_at'])
 
         if 'ending_at' in data:
-            data['ending_at'] = DatetimeInterger.from_iso_string(timezone, data['ending_at'])
+            data['ending_at'] = DatetimeInteger.from_iso_string(timezone, data['ending_at'])
 
         serializer = CohortTimeSlotSerializer(data=data, many=False)
         if serializer.is_valid():
@@ -474,10 +474,10 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         }
 
         if 'starting_at' in data:
-            data['starting_at'] = DatetimeInterger.from_iso_string(timezone, data['starting_at'])
+            data['starting_at'] = DatetimeInteger.from_iso_string(timezone, data['starting_at'])
 
         if 'ending_at' in data:
-            data['ending_at'] = DatetimeInterger.from_iso_string(timezone, data['ending_at'])
+            data['ending_at'] = DatetimeInteger.from_iso_string(timezone, data['ending_at'])
 
         serializer = CohortTimeSlotSerializer(item, data=data)
         if serializer.is_valid():
@@ -595,10 +595,10 @@ class AcademySpecialtyModeTimeSlotView(APIView, GenerateLookupsMixin):
         }
 
         if 'starting_at' in data:
-            data['starting_at'] = DatetimeInterger.from_iso_string(timezone, data['starting_at'])
+            data['starting_at'] = DatetimeInteger.from_iso_string(timezone, data['starting_at'])
 
         if 'ending_at' in data:
-            data['ending_at'] = DatetimeInterger.from_iso_string(timezone, data['ending_at'])
+            data['ending_at'] = DatetimeInteger.from_iso_string(timezone, data['ending_at'])
 
         serializer = SpecialtyModeTimeSlotSerializer(data=data, many=False)
         if serializer.is_valid():

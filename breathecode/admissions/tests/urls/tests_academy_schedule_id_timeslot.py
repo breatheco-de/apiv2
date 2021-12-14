@@ -3,7 +3,7 @@ Test /cohort/user
 """
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.utils import DatetimeInterger
+from breathecode.utils import DatetimeInteger
 from ..mixins import AdmissionsTestCase
 
 
@@ -216,11 +216,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
             [{
                 'academy_id': 1,
                 'specialty_mode_id': 1,
-                'ending_at': DatetimeInterger.from_datetime(model.academy.timezone, ending_at),
+                'ending_at': DatetimeInteger.from_datetime(model.academy.timezone, ending_at),
                 'id': 1,
                 'recurrency_type': 'WEEKLY',
                 'recurrent': True,
-                'starting_at': DatetimeInterger.from_datetime(model.academy.timezone, starting_at),
+                'starting_at': DatetimeInteger.from_datetime(model.academy.timezone, starting_at),
                 'timezone': model.academy.timezone,
             }],
         )
