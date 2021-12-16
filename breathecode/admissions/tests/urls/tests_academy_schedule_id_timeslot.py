@@ -3,6 +3,7 @@ Test /cohort/user
 """
 from django.urls.base import reverse_lazy
 from rest_framework import status
+from breathecode.utils import DatetimeInteger
 from ..mixins import AdmissionsTestCase
 
 
@@ -87,15 +88,26 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': model.specialty_mode_time_slot.id,
-            'academy': model.specialty_mode_time_slot.academy.id,
-            'specialty_mode': model.specialty_mode_time_slot.specialty_mode.id,
-            'starting_at': self.datetime_to_iso(model.specialty_mode_time_slot.starting_at),
-            'ending_at': self.datetime_to_iso(model.specialty_mode_time_slot.ending_at),
-            'recurrent': model.specialty_mode_time_slot.recurrent,
-            'recurrency_type': model.specialty_mode_time_slot.recurrency_type,
-            'created_at': self.datetime_to_iso(model.specialty_mode_time_slot.created_at),
-            'updated_at': self.datetime_to_iso(model.specialty_mode_time_slot.updated_at),
+            'id':
+            model.specialty_mode_time_slot.id,
+            'academy':
+            model.specialty_mode_time_slot.academy.id,
+            'specialty_mode':
+            model.specialty_mode_time_slot.specialty_mode.id,
+            'starting_at':
+            self.interger_to_iso(model.specialty_mode_time_slot.timezone,
+                                 model.specialty_mode_time_slot.starting_at),
+            'ending_at':
+            self.interger_to_iso(model.specialty_mode_time_slot.timezone,
+                                 model.specialty_mode_time_slot.ending_at),
+            'recurrent':
+            model.specialty_mode_time_slot.recurrent,
+            'recurrency_type':
+            model.specialty_mode_time_slot.recurrency_type,
+            'created_at':
+            self.datetime_to_iso(model.specialty_mode_time_slot.created_at),
+            'updated_at':
+            self.datetime_to_iso(model.specialty_mode_time_slot.updated_at),
         }]
 
         self.assertEqual(json, expected)
@@ -127,7 +139,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_specialty_mode_time_slot_dict(), [])
 
-    def test_specialty_mode_time_slot__post__without_ending_at_and_starting_at(self):
+    def test_specialty_mode_time_slot__post__without_timezone(self):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
@@ -135,6 +147,26 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      specialty_mode=True)
+        url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
+        data = {}
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {'detail': 'academy-without-timezone', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_specialty_mode_time_slot_dict(), [])
+
+    def test_specialty_mode_time_slot__post__without_ending_at_and_starting_at(self):
+        self.headers(academy=1)
+        academy_kwargs = {'timezone': 'America/Caracas'}
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_certificate',
+                                     role='potato',
+                                     syllabus=True,
+                                     specialty_mode=True,
+                                     academy_kwargs=academy_kwargs)
         url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
         data = {}
         response = self.client.post(url, data, format='json')
@@ -150,12 +182,14 @@ class CohortUserTestSuite(AdmissionsTestCase):
 
     def test_specialty_mode_time_slot__post(self):
         self.headers(academy=1)
+        academy_kwargs = {'timezone': 'America/Caracas'}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='crud_certificate',
                                      role='potato',
                                      syllabus=True,
-                                     specialty_mode=True)
+                                     specialty_mode=True,
+                                     academy_kwargs=academy_kwargs)
         url = reverse_lazy('admissions:academy_schedule_id_timeslot', kwargs={'certificate_id': 1})
 
         starting_at = self.datetime_now()
@@ -169,22 +203,24 @@ class CohortUserTestSuite(AdmissionsTestCase):
         expected = {
             'academy': 1,
             'specialty_mode': 1,
-            'ending_at': None,
             'id': 1,
             'recurrency_type': 'WEEKLY',
             'recurrent': True,
-            'starting_at': None,
-            **data,
+            'timezone': model.academy.timezone,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_specialty_mode_time_slot_dict(), [{
-            'academy_id': 1,
-            'specialty_mode_id': 1,
-            'ending_at': ending_at,
-            'id': 1,
-            'recurrency_type': 'WEEKLY',
-            'recurrent': True,
-            'starting_at': starting_at,
-        }])
+        self.assertEqual(
+            self.all_specialty_mode_time_slot_dict(),
+            [{
+                'academy_id': 1,
+                'specialty_mode_id': 1,
+                'ending_at': DatetimeInteger.from_datetime(model.academy.timezone, ending_at),
+                'id': 1,
+                'recurrency_type': 'WEEKLY',
+                'recurrent': True,
+                'starting_at': DatetimeInteger.from_datetime(model.academy.timezone, starting_at),
+                'timezone': model.academy.timezone,
+            }],
+        )

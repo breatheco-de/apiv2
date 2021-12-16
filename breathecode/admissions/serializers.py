@@ -1,9 +1,13 @@
-from breathecode.admissions.actions import sync_cohort_timeslots
+import re
+import pytz
 import logging
 import serpy
+from datetime import datetime
+from dateutil.tz import gettz, tzutc
+from breathecode.admissions.actions import sync_cohort_timeslots
 from django.db.models import Q
 from breathecode.assignments.models import Task
-from breathecode.utils import ValidationException, localize_query
+from breathecode.utils import ValidationException, localize_query, SerpyExtensions
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
@@ -229,6 +233,15 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
         return obj.syllabus.github_url if obj.syllabus else None
 
 
+class SmallCohortTimeSlotSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    id = serpy.Field()
+    starting_at = SerpyExtensions.DatetimeIntegerField()
+    ending_at = SerpyExtensions.DatetimeIntegerField()
+    recurrent = serpy.Field()
+    recurrency_type = serpy.Field()
+
+
 class GetCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -247,6 +260,11 @@ class GetCohortSerializer(serpy.Serializer):
     specialty_mode = GetSmallSpecialtyModeSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
+    timeslots = serpy.MethodField()
+
+    def get_timeslots(self, obj):
+        timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
+        return SmallCohortTimeSlotSerializer(timeslots, many=True).data
 
 
 class PublicCohortSerializer(serpy.Serializer):
@@ -311,8 +329,8 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
     cohort = serpy.MethodField()
-    starting_at = serpy.Field()
-    ending_at = serpy.Field()
+    starting_at = SerpyExtensions.DatetimeIntegerField()
+    ending_at = SerpyExtensions.DatetimeIntegerField()
     recurrent = serpy.Field()
     recurrency_type = serpy.Field()
     created_at = serpy.Field()
@@ -327,8 +345,8 @@ class GETSpecialtyModeTimeSlotSerializer(serpy.Serializer):
     id = serpy.Field()
     academy = serpy.MethodField()
     specialty_mode = serpy.MethodField()
-    starting_at = serpy.Field()
-    ending_at = serpy.Field()
+    starting_at = SerpyExtensions.DatetimeIntegerField()
+    ending_at = SerpyExtensions.DatetimeIntegerField()
     recurrent = serpy.Field()
     recurrency_type = serpy.Field()
     created_at = serpy.Field()
@@ -701,9 +719,12 @@ class CohortUserSerializer(CohortUserSerializerMixin):
 
 
 class CohortTimeSlotSerializer(serializers.ModelSerializer):
+    starting_at = serializers.IntegerField(write_only=True)
+    ending_at = serializers.IntegerField(write_only=True)
+
     class Meta:
         model = CohortTimeSlot
-        fields = ['id', 'cohort', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type']
+        fields = ['id', 'cohort', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type', 'timezone']
 
 
 class SpecialtyModeSerializer(serializers.ModelSerializer):
@@ -725,10 +746,20 @@ class SpecialtyModePUTSerializer(serializers.ModelSerializer):
 
 
 class SpecialtyModeTimeSlotSerializer(serializers.ModelSerializer):
+    starting_at = serializers.IntegerField(write_only=True)
+    ending_at = serializers.IntegerField(write_only=True)
+
     class Meta:
         model = SpecialtyModeTimeSlot
         fields = [
-            'id', 'academy', 'specialty_mode', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type'
+            'id',
+            'academy',
+            'specialty_mode',
+            'starting_at',
+            'ending_at',
+            'recurrent',
+            'recurrency_type',
+            'timezone',
         ]
 
 

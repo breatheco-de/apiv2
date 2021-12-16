@@ -16,7 +16,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
     def tearDown(self):
         self.clear_cache()
 
-    def fill_cohort_timeslot(self, id, cohort_id, certificate_timeslot):
+    def fill_cohort_timeslot(self, id, cohort_id, certificate_timeslot, timezone='America/New_York'):
         return {
             'id': id,
             'cohort_id': cohort_id,
@@ -24,6 +24,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
             'ending_at': certificate_timeslot.ending_at,
             'recurrent': certificate_timeslot.recurrent,
             'recurrency_type': certificate_timeslot.recurrency_type,
+            'timezone': timezone,
         }
 
     def check_cohort_user_that_not_have_role_student_can_be_teacher(self, role, update=False):

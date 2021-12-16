@@ -1,10 +1,10 @@
 """
 Test /academy/cohort
 """
+import re
 from django.utils import timezone
 from breathecode.admissions.caches import CohortCache
 from breathecode.services import datetime_to_iso_format
-import re
 from random import choice
 from datetime import datetime, timedelta
 from django.urls.base import reverse_lazy
@@ -276,7 +276,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_dict(), [])
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    def test_academy_cohort__post(self):
+    def test_academy_cohort__post__without_timezone(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
@@ -341,6 +341,75 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_cohort_dict(), models_dict)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+
+    def test_academy_cohort__post__with_timezone(self):
+        """Test /academy/cohort without auth"""
+        self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        academy_kwargs = {'timezone': 'America/Caracas'}
+        model = self.generate_models(authenticate=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato',
+                                     specialty_mode=True,
+                                     syllabus=True,
+                                     syllabus_version=True,
+                                     skip_cohort=True,
+                                     specialty_mode_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs,
+                                     academy_kwargs=academy_kwargs)
+        models_dict = self.all_cohort_dict()
+        url = reverse_lazy('admissions:academy_cohort')
+        data = {
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'kickoff_date': datetime.today().isoformat(),
+            'never_ends': True,
+            'specialty_mode': 1,
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        cohort = self.get_cohort(1)
+        expected = {
+            'id': cohort.id,
+            'slug': cohort.slug,
+            'name': cohort.name,
+            'never_ends': True,
+            'kickoff_date': self.datetime_to_iso(cohort.kickoff_date),
+            'current_day': cohort.current_day,
+            'specialty_mode': cohort.specialty_mode.id,
+            'online_meeting_url': cohort.online_meeting_url,
+            'timezone': cohort.timezone,
+            'academy': {
+                'id': cohort.academy.id,
+                'slug': cohort.academy.slug,
+                'name': cohort.academy.name,
+                'street_address': cohort.academy.street_address,
+                'country': cohort.academy.country.code,
+                'city': cohort.academy.city.id,
+            },
+            'syllabus_version': model['syllabus'].slug + '.v' + str(model['syllabus_version'].version),
+            'ending_date': cohort.ending_date,
+            'stage': cohort.stage,
+            'language': cohort.language,
+            'created_at': self.datetime_to_iso(cohort.created_at),
+            'updated_at': self.datetime_to_iso(cohort.updated_at),
+        }
+
+        del data['kickoff_date']
+        cohort_two = cohort.__dict__.copy()
+        cohort_two.update(data)
+        del cohort_two['syllabus']
+        del cohort_two['specialty_mode']
+
+        models_dict.append(self.remove_dinamics_fields({**cohort_two}))
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.all_cohort_dict(), models_dict)
         self.assertEqual(self.all_cohort_time_slot_dict(),
                          [{
                              'id': 1,
@@ -349,6 +418,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                              'ending_at': model.specialty_mode_time_slot.ending_at,
                              'recurrent': model.specialty_mode_time_slot.recurrent,
                              'recurrency_type': model.specialty_mode_time_slot.recurrency_type,
+                             'timezone': model.academy.timezone,
                          }])
 
     # """
@@ -378,15 +448,20 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
     """
-    🔽🔽🔽 With data
+    🔽🔽🔽 With data (this method is reusable)
     """
 
     def test_academy_cohort__with_data(self, models=None):
         """Test /cohort without auth"""
         self.headers(academy=1)
 
+        cohort_time_slots = self.all_cohort_time_slot_dict()
+        if cohort_time_slots:
+            cohort_time_slot = cohort_time_slots[0]
+
         if models is None:
             syllabus_kwargs = {'slug': 'they-killed-kenny'}
+            academy_kwargs = {'timezone': 'America/Caracas'}
             models = [
                 self.generate_models(authenticate=True,
                                      cohort=True,
@@ -397,7 +472,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      syllabus_version=True,
                                      specialty_mode=True,
                                      specialty_mode_time_slot=True,
-                                     syllabus_kwargs=syllabus_kwargs)
+                                     syllabus_kwargs=syllabus_kwargs,
+                                     academy_kwargs=academy_kwargs)
             ]
 
         models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
@@ -407,18 +483,42 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         json = response.json()
 
         expected = [{
-            'id': model['cohort'].id,
-            'slug': model['cohort'].slug,
-            'name': model['cohort'].name,
-            'never_ends': model['cohort'].never_ends,
-            'private': model['cohort'].private,
-            'kickoff_date': re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
-            'ending_date': model['cohort'].ending_date,
-            'stage': model['cohort'].stage,
-            'language': model['cohort'].language,
-            'current_day': model['cohort'].current_day,
-            'online_meeting_url': model['cohort'].online_meeting_url,
-            'timezone': model['cohort'].timezone,
+            'id':
+            model['cohort'].id,
+            'slug':
+            model['cohort'].slug,
+            'name':
+            model['cohort'].name,
+            'never_ends':
+            model['cohort'].never_ends,
+            'private':
+            model['cohort'].private,
+            'kickoff_date':
+            re.sub(r'\+00:00$', 'Z', model['cohort'].kickoff_date.isoformat()),
+            'ending_date':
+            model['cohort'].ending_date,
+            'stage':
+            model['cohort'].stage,
+            'language':
+            model['cohort'].language,
+            'current_day':
+            model['cohort'].current_day,
+            'online_meeting_url':
+            model['cohort'].online_meeting_url,
+            'timezone':
+            model['cohort'].timezone,
+            'timeslots': [{
+                'ending_at':
+                self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['ending_at']),
+                'id':
+                cohort_time_slot['id'],
+                'recurrency_type':
+                cohort_time_slot['recurrency_type'],
+                'recurrent':
+                cohort_time_slot['recurrent'],
+                'starting_at':
+                self.interger_to_iso(cohort_time_slot['timezone'], cohort_time_slot['starting_at']),
+            }] if cohort_time_slots and model.cohort.id != 1 else [],
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -510,6 +610,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
+            'timeslots': [],
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -606,6 +707,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
+            'timeslots': [],
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -699,6 +801,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
+            'timeslots': [],
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -767,6 +870,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
+            'timeslots': [],
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -844,6 +948,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
+            'timeslots': [],
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -919,6 +1024,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'language': model['cohort'].language,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
+            'timeslots': [],
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -1011,6 +1117,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
+            'timeslots': [],
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -1079,6 +1186,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
+            'timeslots': [],
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -1156,6 +1264,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
+            'timeslots': [],
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -1232,6 +1341,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'current_day': model['cohort'].current_day,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
+            'timeslots': [],
             'specialty_mode': {
                 'id': model['cohort'].specialty_mode.id,
                 'name': model['cohort'].specialty_mode.name,
@@ -1321,6 +1431,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'current_day': model['cohort'].current_day,
                 'online_meeting_url': model['cohort'].online_meeting_url,
                 'timezone': model['cohort'].timezone,
+                'timeslots': [],
                 'specialty_mode': {
                     'id': model['cohort'].specialty_mode.id,
                     'name': model['cohort'].specialty_mode.name,
@@ -1411,6 +1522,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'current_day': model['cohort'].current_day,
                 'online_meeting_url': model['cohort'].online_meeting_url,
                 'timezone': model['cohort'].timezone,
+                'timeslots': [],
                 'specialty_mode': {
                     'id': model['cohort'].specialty_mode.id,
                     'name': model['cohort'].specialty_mode.name,
@@ -1648,6 +1760,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         del base['user']
 
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        academy_kwargs = {'timezone': 'America/Caracas'}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='crud_cohort',
@@ -1657,6 +1770,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      specialty_mode=True,
                                      specialty_mode_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs,
+                                     academy_kwargs=academy_kwargs,
                                      models=base)
 
         url = reverse_lazy('admissions:academy_cohort')
@@ -1708,9 +1822,12 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             }, 'cohort')
         }])
 
-        self.assertEqual(self.all_cohort_time_slot_dict(), [{
-            **self.fill_cohort_timeslot(1, 2, model.specialty_mode_time_slot)
-        }])
+        self.assertEqual(
+            self.all_cohort_time_slot_dict(),
+            [{
+                **self.fill_cohort_timeslot(1, 2, model.specialty_mode_time_slot),
+                'timezone': 'America/Caracas',
+            }])
 
         base = [
             self.generate_models(authenticate=True, models=old_models[0]),
