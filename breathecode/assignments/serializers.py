@@ -112,8 +112,9 @@ class PUTTaskSerializer(serializers.ModelSerializer):
                 raise ValidationException('Only the task owner can modify its github_url')
 
             # the teacher shouldn't be allowed to approve a project that isn't done
-            if ('task_status' in data and 'revision_status' in data and data['task_status'] == 'Pending'
-                    and data['revision_status'] == 'Approved'):
+            if ('task_status' in data and 'revision_status' in data and data['task_status'] == 'PENDING'
+                    and data['revision_status'] == 'APPROVED'):
+                print(data['revision_status'], data['task_status'])
                 raise ValidationException('Only tasks that are DONE should be approved by the teacher')
             if (self.instance.task_status == 'PENDING' and 'revision_status' in data
                     and data['revision_status'] == 'APPROVED'):
