@@ -2,7 +2,7 @@ import os, requests, sys, pytz
 from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from ...models import Spider
-from ...tasks import async_run_spider
+from ...tasks import async_fetch_sync_all_data
 from django.utils import timezone
 
 
@@ -14,16 +14,18 @@ class Command(BaseCommand):
         spidrs = Spider.objects.all()
         count = 0
         for spi in spidrs:
-            if spi.job is None or spi.job == '' or spi.zyte_project is None or spi.zyte_project == '' or spi.zyte_spider_number is None or spi.zyte_spider_number == '':
+            if spi.zyte_project.zyte_api_deploy is None or spi.zyte_project.zyte_api_deploy == '' or spi.zyte_spider_number is None or spi.zyte_spider_number == '' or spi.zyte_job_number is None or spi.zyte_job_number == '' or spi.zyte_project.zyte_api_key is None or spi.zyte_project.zyte_api_key == '':
                 spi.sync_status = 'ERROR'
-                spi.sync_desc = 'Missing run_spider key or id'
+                spi.sync_desc = 'Missing async_fetch_sync_all_data key or id'
                 spi.save()
-                self.stdout.write(self.style.ERROR(f'Spider {str(spi)} is missing run_spider key or ID'))
+                self.stdout.write(
+                    self.style.ERROR(f'Spider {str(spi)} is missing async_fetch_sync_all_data key or ID'))
             else:
                 spi.sync_status = 'PENDING'
                 spi.sync_desc = 'Running run_spider command at ' + str(now)
                 spi.save()
-                async_run_spider.delay({'spi_id': spi.id})
+                async_fetch_sync_all_data.delay({'spi_id': spi.id})
                 count = count + 1
             # print('async_run_spider ', async_run_spider)
-        self.stdout.write(self.style.SUCCESS(f'Enqueued {count} of {len(spidrs)} for sync spider'))
+        self.stdout.write(
+            self.style.SUCCESS(f'Enqueued {count} of {len(spidrs)} for async fetch all spiders'))

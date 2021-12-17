@@ -72,17 +72,6 @@ class Spider(models.Model):
         return f'{self.name} ({self.id})'
 
 
-class Employer(models.Model):
-    """ something """
-    name = models.CharField(max_length=100)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    def __str__(self):
-        return f'{self.name} ({self.id})'
-
-
 class PositionAlias(models.Model):
     """ something """
     name = models.CharField(max_length=100)
@@ -125,6 +114,17 @@ class LocationAlias(models.Model):
         return f'{self.name} ({self.id})'
 
 
+class Employer(models.Model):
+    """ something """
+    name = models.CharField(max_length=100)
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.name} {self.name} ({self.id})'
+
+
 OPENED = 'OPENED'
 FILLED = 'FILLED'
 JOB_STATUS = (
@@ -150,16 +150,16 @@ class Job(models.Model):
     """ Create a new platform for Jobs"""
     title = models.CharField(max_length=150)
     platform = models.ForeignKey(Platform, on_delete=models.CASCADE, null=False, blank=False)
-    published = models.CharField(max_length=20)
+    published = models.CharField(max_length=50)
     status = models.CharField(max_length=15, choices=JOB_STATUS, default=OPENED)
     apply_url = models.URLField(max_length=500)
     salary = models.CharField(max_length=253, null=True, blank=True)
     job_type = models.CharField(max_length=15, choices=JOB_TYPE, default=FULLTIME)
     remote = models.BooleanField(default=False, verbose_name='Remote')
-    employer = models.ForeignKey(Employer, on_delete=models.CASCADE, null=False, blank=False)
+    employer = models.ForeignKey(Employer, on_delete=models.CASCADE, null=True, blank=True)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
-    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, null=True, blank=True)
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True)
+    tags = models.ManyToManyField(Tag)
+    locations = models.ManyToManyField(Location)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
