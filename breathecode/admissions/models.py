@@ -1,9 +1,4 @@
 import os
-import re
-import pytz
-from datetime import datetime
-from dateutil import parser
-from dateutil.tz import gettz, tzutc
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
@@ -323,6 +318,7 @@ date_interger_description = ('The first 4 number are year, the next 2 number are
 class TimeSlot(models.Model):
     starting_at = models.IntegerField(
         help_text=date_interger_description,
+        default=202101010000,
         validators=[
             MaxValueValidator(300000000000),  # year 3000
             MinValueValidator(202101010000),  # year 2021, month 1 and day 1
@@ -330,6 +326,7 @@ class TimeSlot(models.Model):
 
     ending_at = models.IntegerField(
         help_text=date_interger_description,
+        default=202101010000,
         validators=[
             MaxValueValidator(300000000000),  # year 3000
             MinValueValidator(202101010000),  # year 2021, month 1 and day 1
@@ -344,17 +341,6 @@ class TimeSlot(models.Model):
 
     class Meta:
         abstract = True
-
-    @staticmethod
-    def format_date_interger_from_date(timezone: str, date: datetime):
-        return int(date.strftime('%Y%m%d%H%M'))
-
-    @staticmethod
-    def format_date_interger_from_iso_string(timezone: str, string: str):
-        date = parser.parse(string)
-        tz = gettz(timezone)
-
-        return int(date.astimezone(tzutc()).astimezone(tz).strftime('%Y%m%d%H%M'))
 
 
 class SpecialtyModeTimeSlot(TimeSlot):
