@@ -316,7 +316,7 @@ date_interger_description = ('The first 4 number are year, the next 2 number are
 
 
 class TimeSlot(models.Model):
-    starting_at = models.IntegerField(
+    starting_at = models.BigIntegerField(
         help_text=date_interger_description,
         default=202101010000,
         validators=[
@@ -324,7 +324,7 @@ class TimeSlot(models.Model):
             MinValueValidator(202101010000),  # year 2021, month 1 and day 1
         ])
 
-    ending_at = models.IntegerField(
+    ending_at = models.BigIntegerField(
         help_text=date_interger_description,
         default=202101010000,
         validators=[
