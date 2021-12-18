@@ -675,12 +675,14 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
     def get(self, request, cohort_id=None, academy_id=None):
         upcoming = request.GET.get('upcoming', None)
         academy = request.GET.get('academy', None)
+        stage = request.GET.get('stage', None)
         location = request.GET.get('location', None)
         like = request.GET.get('like', None)
         cache_kwargs = {
             'resource': cohort_id,
             'academy_id': academy_id,
             'upcoming': upcoming,
+            'stage': stage,
             'academy': academy,
             'location': location,
             'like': like,
@@ -715,6 +717,11 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         if location is not None:
             items = items.filter(academy__slug__in=location.split(','))
+
+        if stage is not None:
+            items = items.filter(stage__in=stage.upper().split(','))
+        else:
+            items = items.exclude(stage='DELETED')
 
         if like is not None:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
