@@ -25,6 +25,15 @@ strings = {
 }
 
 
+def certificate_correction_issued_at():
+    query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
+    for item in query:
+        # item.issued_at = item.cohort.ending_date
+        # item.save()
+        if item.cohort:
+            UserSpecialty.objects.filter(id=item.id).update(issued_at=item.cohort.ending_date)
+
+
 def generate_certificate(user, cohort=None, layout=None):
     query = {'user__id': user.id}
 
@@ -119,6 +128,9 @@ def generate_certificate(user, cohort=None, layout=None):
             raise ValidationException(
                 f"The student cohort stage has to be 'ENDED' before you can issue any certificates",
                 slug='cohort-without-status-ended')
+
+        if not uspe.issued_at:
+            uspe.issued_at = timezone.now()
 
         uspe.status = PERSISTED
         uspe.status_text = 'Certificate successfully queued for PDF generation'
