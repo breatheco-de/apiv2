@@ -114,6 +114,8 @@ def fetch_spider_data(spider):
                        published=j['Post_date'],
                        apply_url=j['Apply_to'],
                        salary=j['Salary'],
+                       min_salary=j['Salary'],
+                       max_salary=j['Salary'],
                        remote=_remote,
                        employer=get_employer_from_string(j['Company_name']),
                        position=get_position_from_string(j['Searched_job']),
@@ -311,11 +313,32 @@ def fetch_sync_all_data(spider):
 
                         _employer = get_employer_from_string(j['Company_name'])
                         # print('employer', _employer)
-
+                        _min_salary = 0
+                        _max_salary = 0
                         if 'getonboard' in platafom:
                             tags = j['Tags']
+                            print('salary===>', j['Salary'])
+                            if j['Salary'] is not None and j['Salary'] is not 'Not supplied' and j[
+                                    'Salary'] is not 'Remote':
+                                _salary = get_salary_from_string(j['Salary'])
+                                print('no salary========>', _salary)
+                                if _salary:
+                                    _min_salary = float(_salary[0]) * 12
+                                    _max_salary = float(_salary[1]) * 12
+                                    _salary_str = f'${_min_salary} - ${_max_salary} a year.'
+                                else:
+                                    _salary_str = j['Salary']
                         else:
                             tags = ['web-developer']
+                            print('salary===>', j['Salary'])
+                            if j['Salary'] is not None and j['Salary'] is not 'Not supplied':
+                                _salary = get_salary_from_string(j['Salary'])
+                                if _salary:
+                                    _min_salary = float(_salary[0])
+                                    _max_salary = float(_salary[1])
+                                    _salary_str = f'${_min_salary} - ${_max_salary} a year.'
+                                else:
+                                    _salary_str = j['Salary']
 
                         if tags is not None:
                             for tag in tags:
@@ -332,7 +355,9 @@ def fetch_sync_all_data(spider):
                                 platform=spider.zyte_project.platform,
                                 published=j['Post_date'],
                                 apply_url=j['Apply_to'],
-                                salary=j['Salary'],
+                                salary=_salary_str,
+                                min_salary=_min_salary,
+                                max_salary=_max_salary,
                                 remote=_remote,
                                 employer=_employer,
                                 position=_position,
@@ -388,7 +413,7 @@ def fetch_sync_all_data(spider):
 def parse_date(job):
     print('job ::: ', get_date_from_string(job.published))
 
-    job.published = get_date_from_string(job.published)
+    job.processed_date = get_date_from_string(job.published)
     job.save()
 
     return job
@@ -542,9 +567,9 @@ def change_format_to_date(findings, string_date):
 
 
 def format_corret_to_date(findings, string_date):
-    job_id_fecth = string_date
-    _datetime = datetime.strptime(job_id_fecth, '%Y-%m-%d %H:%M:%S')
-    return _datetime
+    # job_id_fecth = string_date
+    # _datetime = datetime.strptime(job_id_fecth, '%Y-%m-%d %H:%M:%S')
+    return string_date
 
 
 def remote_to_strin(findings, string_date):
@@ -561,15 +586,54 @@ def remote_to_strin(findings, string_date):
     return _remote
 
 
+def salary(findings, string_salary):
+    salary = findings.pop()
+    val = []
+
+    for sal in salary:
+        val += [sal.replace('$', '').replace('K', '').replace(',', '').strip()]
+
+    return val
+
+
+def salary_month(findings, string_salary):
+    salary = findings.pop()
+    val = []
+
+    for sal in salary:
+        val += [sal.replace('$', '').replace('K', '').strip()]
+
+    return val
+
+
+def salary_month_only_one(findings, string_salary):
+    salary = findings
+    val = []
+
+    for sal in salary:
+        val += [sal.replace('$', '').replace('K', '').replace(',', '').strip()]
+
+    val += '0'
+    return val
+
+
 _cases = {
     '^(?:Active\s)?(\d{1,2})\+? days? ago': days_ago_to_date,
     '^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$': fetch_id_job_strin_to_list,
     '^(\d{1,4}-\d{1,2}-\d{1,2}\s\d{1,2}:\d{1,2}:\d{1,2})$': format_corret_to_date,
     '(.*\s?\d{1,2}\+?,? \d{1,4})': change_format_to_date,
     '(.*\s)?\((.*)\)': loc,
-    '^\s?(.*)': remote_to_strin,
     '^today': today,
+    '^Just posted': today,
     '^just posted': today,
+    '^\s?(.*)': remote_to_strin,
+}
+
+_cases_to = {
+    '^(.*)\s?-\s(.*)\+? a? year': salary,
+    '^(.*)\s?to\s(.*)\+? per? year': salary,
+    '^(.*)\s?-\s(.*)\+? USD/month': salary_month,
+    '^(.*)\s?\+? USD/month': salary_month_only_one,
 }
 
 
@@ -589,3 +653,11 @@ def get_date_from_string(string_date):
 # Remote (chile, Venezuela, Peru,colombia)
 # Santiago (chile, Venezuela, Peru,colombia)
 # 570286/2/33
+
+
+def get_salary_from_string(string_salary):
+    for regex in _cases_to:
+        findings = re.findall(regex, string_salary)
+        if isinstance(findings, list) and len(findings) > 0:
+            return _cases_to[regex](findings, string_salary)
+    return None

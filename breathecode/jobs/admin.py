@@ -48,7 +48,7 @@ parse_date_admin.short_description = 'Parse date.'
 # Register your models here.
 @admin.register(Spider)
 class SpiderAdmin(admin.ModelAdmin):
-    list_display = ('name', 'created_at')
+    list_display = ('name', 'status', 'sync_desc', 'zyte_last_fetch_date')
     actions = (
         fetch_spider_data_admin,
         fetch_sync_all_data_admin,
@@ -63,8 +63,8 @@ class ZyteProjectAdmin(admin.ModelAdmin):
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display = ('title', 'platform', 'published', 'status', 'employer', 'position', 'apply_url', 'remote',
-                    'created_at')
+    list_display = ('title', 'platform', 'published', 'salary', 'status', 'employer', 'position', 'apply_url',
+                    'remote', 'created_at')
     actions = (parse_date_admin, )
 
 
