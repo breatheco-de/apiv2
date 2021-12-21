@@ -9,6 +9,8 @@ from django.contrib import admin
 from django import forms
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
+
+from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag
 from .models import (Academy, SpecialtyMode, AcademySpecialtyMode, Cohort, CohortUser, Country, City,
                      SyllabusVersion, UserAdmissions, Syllabus, CohortTimeSlot, SpecialtyModeTimeSlot)
 from .actions import sync_cohort_timeslots
@@ -179,7 +181,18 @@ class CohortForm(forms.ModelForm):
         self.fields['timezone'] = forms.ChoiceField(choices=timezones)
 
 
-cohort_actions = [sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots]
+def add_cohort_slug_to_active_campaign(modeladmin, request, queryset):
+    cohorts = queryset.all()
+    for cohort in cohorts:
+        add_cohort_slug_as_acp_tag.delay(cohort.id, cohort.academy.id)
+
+
+add_cohort_slug_to_active_campaign.short_description = 'Add cohort slug to active campaign'
+
+cohort_actions = [
+    sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots,
+    add_cohort_slug_to_active_campaign
+]
 
 if os.getenv('ENVIRONMENT') == 'DEVELOPMENT':
     pass
