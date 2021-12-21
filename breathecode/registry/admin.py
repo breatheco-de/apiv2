@@ -86,7 +86,7 @@ own_lesson.short_description = 'Make myself the owner of these assets (github ac
 class AssetAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug', 'author__email', 'url']
     list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'url_path')
-    list_filter = ['asset_type', 'lang']
+    list_filter = ['asset_type', 'status', 'lang']
     actions = [add_gitpod, remove_gitpod, sync_github, author_lesson, own_lesson, process_github_authors]
 
     def url_path(self, obj):
