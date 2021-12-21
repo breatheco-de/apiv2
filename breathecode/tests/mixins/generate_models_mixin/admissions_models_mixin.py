@@ -73,7 +73,8 @@ class AdmissionsModelsMixin(ModelsMixin):
             kargs = {**kargs, **city_kwargs}
             models['city'] = mixer.blend('admissions.City', **kargs)
 
-        if not 'academy' in models and (academy or profile_academy or syllabus or academy_specialty_mode):
+        if not 'academy' in models and (academy or profile_academy or syllabus or academy_specialty_mode
+                                        or cohort):
             kargs = {}
 
             if 'country' in models:
@@ -136,6 +137,9 @@ class AdmissionsModelsMixin(ModelsMixin):
 
             if 'specialty_mode' in models or specialty_mode:
                 kargs['specialty_mode'] = models['specialty_mode']
+
+            if 'academy' in models:
+                kargs['academy'] = models['academy']
 
             kargs = {**kargs, **cohort_kwargs}
             models['cohort'] = mixer.blend('admissions.Cohort', **kargs)

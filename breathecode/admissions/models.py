@@ -241,6 +241,14 @@ class Cohort(models.Model):
     def __str__(self):
         return self.name + '(' + self.slug + ')'
 
+    def save(self, *args, **kwargs):
+        from .signals import cohort_saved
+
+        created = not self.id
+        super().save(*args, **kwargs)
+
+        cohort_saved.send(instance=self, sender=self.__class__, created=created)
+
 
 TEACHER = 'TEACHER'
 ASSISTANT = 'ASSISTANT'
