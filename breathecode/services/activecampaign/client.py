@@ -113,6 +113,8 @@ class ActiveCampaign:
         return resp.json()
 
     def get_contact_by_email(self, email):
+        import requests
+
         #/api/3/deals/id
         #Api-Token
         resp = requests.get(f'{self.host}/api/3/contacts',
@@ -120,11 +122,10 @@ class ActiveCampaign:
                             params={'email': email})
         logger.debug(f'Get contact by email {self.host}/api/3/contacts', resp.status_code)
         data = resp.json()
-        if 'contacts' in data and len(data['contacts']) == 1:
+        if data and 'contacts' in data and len(data['contacts']) == 1:
             return data['contacts'][0]
         else:
-            logger.error(f'Problem fetching contact in activecampaign with email {email}')
-            return None
+            raise Exception(f'Problem fetching contact in activecampaign with email {email}')
 
     def get_deal_customfields(self, deal_id):
         #/api/3/deals/id
@@ -145,6 +146,8 @@ class ActiveCampaign:
         return None
 
     def add_tag_to_contact(self, contact_id: int, tag_id: int):
+        import requests
+
         #/api/3/deals/id
         #Api-Token
         body = {'contactTag': {'contact': contact_id, 'tag': tag_id}}
@@ -158,7 +161,7 @@ class ActiveCampaign:
             else:
                 raise Exception(f'Bad response format from ActiveCampaign when adding a new tag to contact')
         else:
-            logger.debug(resp.json())
+            logger.error(resp.json())
             raise Exception(f'Failed to add tag to contact {contact_id} with status={resp.status_code}')
 
     def create_tag(self, slug: str, description: str):

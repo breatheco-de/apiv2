@@ -10,7 +10,7 @@ from django import forms
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
 
-from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag
+from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag, add_cohort_task_to_student
 from .models import (Academy, SpecialtyMode, AcademySpecialtyMode, Cohort, CohortUser, Country, City,
                      SyllabusVersion, UserAdmissions, Syllabus, CohortTimeSlot, SpecialtyModeTimeSlot)
 from .actions import sync_cohort_timeslots
@@ -189,9 +189,18 @@ def add_cohort_slug_to_active_campaign(modeladmin, request, queryset):
 
 add_cohort_slug_to_active_campaign.short_description = 'Add cohort slug to active campaign'
 
+
+def add_student_tag_to_active_campaign(modeladmin, request, queryset):
+    cohort_users = queryset.all()
+    for v in cohort_users:
+        add_cohort_task_to_student.delay(v.user.id, v.cohort.id, v.cohort.academy.id)
+
+
+add_student_tag_to_active_campaign.short_description = 'Add student tag to active campaign'
+
 cohort_actions = [
     sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots,
-    add_cohort_slug_to_active_campaign
+    add_cohort_slug_to_active_campaign, add_student_tag_to_active_campaign
 ]
 
 if os.getenv('ENVIRONMENT') == 'DEVELOPMENT':
