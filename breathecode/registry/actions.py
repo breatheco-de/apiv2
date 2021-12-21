@@ -16,6 +16,10 @@ def create_asset(data, asset_type, force=False):
     aa = AssetAlias.objects.filter(slug=slug).first()
     if aa is not None and not force:
         raise APIException('Asset with this alias ' + slug + ' alrady exists')
+    elif aa is not None and asset_type != aa.asset.asset_type:
+        raise APIException(
+            f'Cannot override asset {slug} because it already exists as a different type {aa.asset.asset_type}'
+        )
 
     a = Asset.objects.filter(slug=slug).first()
     if a is None:
