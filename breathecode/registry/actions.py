@@ -226,6 +226,9 @@ def sync_learnpack_asset(github, asset):
 
         if 'translations' in config:
             for lang in config['translations']:
+                if lang == 'en':
+                    lang = 'us'
+
                 language = AssetTranslation.objects.filter(slug__iexact=lang).first()
                 if language is None:
                     raise Exception(f"Language '{lang}' not found")
