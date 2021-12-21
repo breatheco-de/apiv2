@@ -41,7 +41,7 @@ TYPE = (
     (EXERCISE, 'Exercise'),
     (QUIZ, 'Quiz'),
     (LESSON, 'Lesson'),
-    (LESSON, 'Video'),
+    (VIDEO, 'Video'),
 )
 
 BEGINNER = 'BEGINNER'
@@ -52,10 +52,12 @@ DIFFICULTY = (
 )
 
 DRAFT = 'DRAFT'
+UNNASIGNED = 'UNNASIGNED'
 OK = 'OK'
 WARNING = 'WARNING'
 ERROR = 'ERROR'
 ASSET_STATUS = (
+    (UNNASIGNED, 'Unnasigned'),
     (DRAFT, 'Draft'),
     (OK, 'Ok'),
     (WARNING, 'Warning'),
@@ -102,7 +104,24 @@ class Asset(models.Model):
     status = models.CharField(max_length=20, choices=ASSET_STATUS, default=DRAFT)
     status_text = models.TextField(null=True, default=None, blank=True)
 
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, default=None, blank=True, null=True)
+    authors_username = models.CharField(max_length=80,
+                                        null=True,
+                                        default=None,
+                                        blank=True,
+                                        help_text='Github usernames separated by comma')
+    author = models.ForeignKey(User,
+                               on_delete=models.SET_NULL,
+                               default=None,
+                               blank=True,
+                               null=True,
+                               help_text='Who wrote the lesson, not necessarily the owner')
+    owner = models.ForeignKey(User,
+                              on_delete=models.SET_NULL,
+                              related_name='owned_lessons',
+                              default=None,
+                              blank=True,
+                              null=True,
+                              help_text='The owner has the github premissions to update the lesson')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

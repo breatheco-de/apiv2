@@ -6,7 +6,7 @@ from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
 from .models import Asset, AssetTranslation, AssetTechnology, AssetAlias
 from .tasks import async_sync_with_github
-from .actions import sync_with_github
+from .actions import sync_with_github, get_user_from_github_username
 
 logger = logging.getLogger(__name__)
 
@@ -15,14 +15,14 @@ def add_gitpod(modeladmin, request, queryset):
     assets = queryset.update(gitpod=True)
 
 
-add_gitpod.short_description = 'Add GITPOD'
+add_gitpod.short_description = 'Add GITPOD flag (to open on gitpod)'
 
 
 def remove_gitpod(modeladmin, request, queryset):
     assets = queryset.update(gitpod=False)
 
 
-remove_gitpod.short_description = 'Remove GITPOD'
+remove_gitpod.short_description = 'Remove GITPOD flag'
 
 
 def make_external(modeladmin, request, queryset):
@@ -36,28 +36,49 @@ def make_internal(modeladmin, request, queryset):
     result = queryset.update(external=False)
 
 
-make_internal.short_description = 'Make it an INTERNAL resource'
+make_internal.short_description = 'Make it an INTERNAL resource (same window)'
 
 
 def sync_github(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         async_sync_with_github.delay(a.slug, request.user.id)
-        # sync_with_github(a.slug, request.user.id)
+        # sync_with_github(a.slug) # uncomment for testing purposes
 
 
 sync_github.short_description = 'Sync With Github'
 
 
-def author_aalejo(modeladmin, request, queryset):
+def author_lesson(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         a.author = request.user
         a.save()
-        # sync_with_github(a.slug, request.user.id)
 
 
-author_aalejo.short_description = 'Make myself the author of these assets'
+author_lesson.short_description = 'Make myself the author of these assets'
+
+
+def process_github_authors(modeladmin, request, queryset):
+    assets = queryset.all()
+    for a in assets:
+        authors = get_user_from_github_username(a.authors_username)
+        if len(authors) > 0:
+            a.author = authors.pop()
+            a.save()
+
+
+process_github_authors.short_description = 'Get author from github usernames'
+
+
+def own_lesson(modeladmin, request, queryset):
+    assets = queryset.all()
+    for a in assets:
+        a.owner = request.user
+        a.save()
+
+
+own_lesson.short_description = 'Make myself the owner of these assets (github access)'
 
 
 # Register your models here.
@@ -66,17 +87,21 @@ class AssetAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug', 'author__email', 'url']
     list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'url_path')
     list_filter = ['asset_type', 'lang']
-    actions = [add_gitpod, remove_gitpod, sync_github, author_aalejo]
+    actions = [add_gitpod, remove_gitpod, sync_github, author_lesson, own_lesson, process_github_authors]
 
     def url_path(self, obj):
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{obj.url}'>open</a>")
 
     def current_status(self, obj):
         colors = {
+            'PUBLISHED': 'bg-success',
             'OK': 'bg-success',
             'ERROR': 'bg-error',
             'WARNING': 'bg-warning',
-            'DRAFT': '',
+            'DRAFT': 'bg-error',
+            'PENDING_TRANSLATION': 'bg-error',
+            'UNASSIGNED': 'bg-error',
+            'UNLISTED': 'bg-warning',
         }
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
