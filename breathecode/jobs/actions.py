@@ -315,11 +315,12 @@ def fetch_sync_all_data(spider):
                         # print('employer', _employer)
                         _min_salary = 0
                         _max_salary = 0
+                        _salary_str = 'Not supplied'
                         if 'getonboard' in platafom:
                             tags = j['Tags']
                             print('salary===>', j['Salary'])
-                            if j['Salary'] is not None and j['Salary'] is not 'Not supplied' and j[
-                                    'Salary'] is not 'Remote':
+                            if j['Salary'] is not None and j['Salary'] != 'Not supplied' and j[
+                                    'Salary'] != 'Remote':
                                 _salary = get_salary_from_string(j['Salary'])
                                 print('no salary========>', _salary)
                                 if _salary:
@@ -331,7 +332,7 @@ def fetch_sync_all_data(spider):
                         else:
                             tags = ['web-developer']
                             print('salary===>', j['Salary'])
-                            if j['Salary'] is not None and j['Salary'] is not 'Not supplied':
+                            if j['Salary'] is not None and j['Salary'] != 'Not supplied':
                                 _salary = get_salary_from_string(j['Salary'])
                                 if _salary:
                                     _min_salary = float(_salary[0])
