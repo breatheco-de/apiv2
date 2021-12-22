@@ -1,8 +1,0 @@
-{% extends "base.txt" %}
-{% block content %}
-
-You are about to start a mentoring session with {{session.mentor.first_name}} {{session.mentor.last_name}}
-
-Click here to start the session: {{ session.online_meeting_url }}
-
-{% endblock %}

@@ -69,7 +69,8 @@ def order_placed(self, webhook, payload: dict):
     if local_event.lang:
         contact = set_optional(contact, 'utm_language', custom, 'language')
 
-    if not ActiveCampaignAcademy.objects.filter(academy__id=academy_id).count():
+    academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    if academy is None:
         message = 'ActiveCampaignAcademy doesn\'t exist'
         logger.debug(message)
         raise Exception(message)

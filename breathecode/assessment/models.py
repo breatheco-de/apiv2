@@ -38,7 +38,7 @@ class Assessment(models.Model):
         default=None,
         blank=True,
         null=True,
-        help_text='The original translation (will only be set if the quiz is a translation of anotherone)')
+        help_text='The original translation (will only be set if the quiz is a translation of another one)')
 
     comment = models.CharField(max_length=255, default=None, blank=True, null=True)
 

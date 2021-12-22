@@ -68,6 +68,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'never_ends': False,
                 'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
                 'current_day': model['cohort'].current_day,
+                'online_meeting_url': model['cohort'].online_meeting_url,
+                'timezone': model['cohort'].timezone,
                 'academy': {
                     'id': model['cohort'].academy.id,
                     'name': model['cohort'].academy.name,

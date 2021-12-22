@@ -21,8 +21,11 @@ def take_screenshot(self, certificate_id):
     # unittest.mock.patch is poor applying mocks
     from .actions import certificate_screenshot
 
-    certificate_screenshot(certificate_id)
-    return True
+    try:
+        certificate_screenshot(certificate_id)
+        return True
+    except:
+        return False
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
@@ -55,7 +58,7 @@ def generate_cohort_certificates(self, cohort_id):
 
     cohort_users = CohortUser.objects.filter(cohort__id=cohort_id, role='STUDENT')
 
-    logger.debug(f'Generating gertificate for {str(cohort_users.count())} students that GRADUATED')
+    logger.debug(f'Generating certificate for {str(cohort_users.count())} students that GRADUATED')
     for cu in cohort_users:
         try:
             result = generate_certificate(cu.user, cu.cohort)

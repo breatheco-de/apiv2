@@ -6,7 +6,7 @@ from django.utils.html import format_html
 @admin.register(Media)
 class MediaAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'mime', 'hits', 'academy', 'open_url')
-    list_filter = ['name', 'slug', 'hash', 'categories']
+    list_filter = ['categories', 'mime', 'academy']
 
     def open_url(self, obj):
         return format_html(

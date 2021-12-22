@@ -53,7 +53,7 @@ uritemplate = "*"
 psycopg2-binary = "*"
 django-sql-explorer = {extras = ["xls"], version = "*"}
 google-cloud-ndb = "*"
-pandas = "*"
+whitenoise = {extras = ["brotli"], version = "*"}
 
 [scripts]
 update_sql_keywords="python -m scripts.update_sql_keywords_json"
