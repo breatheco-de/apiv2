@@ -37,7 +37,7 @@ class EventsModelsMixin(ModelsMixin):
             kargs = {**kargs, **organization_kwargs}
             models['organization'] = mixer.blend('events.Organization', **kargs)
 
-        if not 'organizer' in models or organizer:
+        if not 'organizer' in models and organizer:
             kargs = {}
 
             if 'academy' in models or academy:

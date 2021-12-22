@@ -1,6 +1,6 @@
 import os
 from django.contrib.auth.models import User
-from django.core.validators import RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from .actions import get_bucket_object
 from .signals import student_edu_status_updated
@@ -241,6 +241,14 @@ class Cohort(models.Model):
     def __str__(self):
         return self.name + '(' + self.slug + ')'
 
+    def save(self, *args, **kwargs):
+        from .signals import cohort_saved
+
+        created = not self.id
+        super().save(*args, **kwargs)
+
+        cohort_saved.send(instance=self, sender=self.__class__, created=created)
+
 
 TEACHER = 'TEACHER'
 ASSISTANT = 'ASSISTANT'
@@ -310,11 +318,29 @@ RECURRENCY_TYPE = (
     # (YEARLY, 'Yearly'),
 )
 
+# YYYYMMDDHHMM
+date_interger_description = ('The first 4 number are year, the next 2 number are month, the next 2 number '
+                             'are day, the next 2 number are hour and the last 2 number are second')
+
 
 class TimeSlot(models.Model):
-    starting_at = models.DateTimeField()
-    ending_at = models.DateTimeField()
+    starting_at = models.BigIntegerField(
+        help_text=date_interger_description,
+        default=202101010000,
+        validators=[
+            MaxValueValidator(300000000000),  # year 3000
+            MinValueValidator(202101010000),  # year 2021, month 1 and day 1
+        ])
 
+    ending_at = models.BigIntegerField(
+        help_text=date_interger_description,
+        default=202101010000,
+        validators=[
+            MaxValueValidator(300000000000),  # year 3000
+            MinValueValidator(202101010000),  # year 2021, month 1 and day 1
+        ])
+
+    timezone = models.CharField(max_length=50, default='America/New_York')
     recurrent = models.BooleanField(default=True)
     recurrency_type = models.CharField(max_length=10, choices=RECURRENCY_TYPE, default=WEEKLY)
 

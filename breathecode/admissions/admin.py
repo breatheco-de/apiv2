@@ -9,6 +9,8 @@ from django.contrib import admin
 from django import forms
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
+
+from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag, add_cohort_task_to_student
 from .models import (Academy, SpecialtyMode, AcademySpecialtyMode, Cohort, CohortUser, Country, City,
                      SyllabusVersion, UserAdmissions, Syllabus, CohortTimeSlot, SpecialtyModeTimeSlot)
 from .actions import sync_cohort_timeslots
@@ -179,7 +181,27 @@ class CohortForm(forms.ModelForm):
         self.fields['timezone'] = forms.ChoiceField(choices=timezones)
 
 
-cohort_actions = [sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots]
+def add_cohort_slug_to_active_campaign(modeladmin, request, queryset):
+    cohorts = queryset.all()
+    for cohort in cohorts:
+        add_cohort_slug_as_acp_tag.delay(cohort.id, cohort.academy.id)
+
+
+add_cohort_slug_to_active_campaign.short_description = 'Add cohort slug to active campaign'
+
+
+def add_student_tag_to_active_campaign(modeladmin, request, queryset):
+    cohort_users = queryset.all()
+    for v in cohort_users:
+        add_cohort_task_to_student.delay(v.user.id, v.cohort.id, v.cohort.academy.id)
+
+
+add_student_tag_to_active_campaign.short_description = 'Add student tag to active campaign'
+
+cohort_actions = [
+    sync_tasks, mark_as_ended, mark_as_started, mark_as_innactive, sync_timeslots,
+    add_cohort_slug_to_active_campaign, add_student_tag_to_active_campaign
+]
 
 if os.getenv('ENVIRONMENT') == 'DEVELOPMENT':
     pass
@@ -313,34 +335,53 @@ class SyllabusVersionAdmin(admin.ModelAdmin):
 
 @admin.register(CohortTimeSlot)
 class CohortTimeSlotAdmin(admin.ModelAdmin):
-    list_display = ('cohort', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type')
-    list_filter = ['cohort__academy__slug', 'recurrent', 'recurrency_type']
-    search_fields = ['cohort__slug', 'cohort__name', 'cohort__academy__city__name']
+    list_display = ('cohort', 'timezone', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type')
+    list_filter = ['cohort__academy__slug', 'timezone', 'recurrent', 'recurrency_type']
+    search_fields = ['cohort__slug', 'timezone', 'cohort__name', 'cohort__academy__city__name']
 
 
 def replicate_in_all(modeladmin, request, queryset):
     from django.contrib import messages
 
+    slugs = []
     cert_timeslot = queryset.all()
     academies = Academy.objects.all()
-    for a in academies:
+
+    for academy in academies:
+        if not academy.timezone:
+            slugs.append(academy.slug)
+            continue
+
         to_filter = {}
+
         for c in cert_timeslot:
             key = c.specialty_mode.id
+
             # delete all timeslots for that academy and specialty mode ONLY the first time
             if key not in to_filter:
-                SpecialtyModeTimeSlot.objects.filter(specialty_mode=c.specialty_mode, academy=a).delete()
+                SpecialtyModeTimeSlot.objects.filter(specialty_mode=c.specialty_mode,
+                                                     academy=academy).delete()
+
                 to_filter[key] = True
+
             # and then re add the timeslots one by one
             new_timeslot = SpecialtyModeTimeSlot(recurrent=c.recurrent,
                                                  starting_at=c.starting_at,
                                                  ending_at=c.ending_at,
                                                  specialty_mode=c.specialty_mode,
-                                                 academy=a)
+                                                 academy=academy,
+                                                 timezone=academy.timezone)
 
             new_timeslot.save()
-        logger.info(f'All academies in sync with those timeslots')
-    messages.add_message(request, messages.INFO, f'All academies in sync with those timeslots')
+
+    if slugs:
+        messages.add_message(
+            request, messages.ERROR,
+            f'The following academies ({", ".join(slugs)}) was skipped because it doesn\'t have a timezone '
+            'assigned')
+
+    else:
+        messages.add_message(request, messages.INFO, f'All academies in sync with those timeslots')
 
 
 replicate_in_all.short_description = 'Replicate same timeslots in all academies'
@@ -348,8 +389,10 @@ replicate_in_all.short_description = 'Replicate same timeslots in all academies'
 
 @admin.register(SpecialtyModeTimeSlot)
 class SpecialtyModeTimeSlotAdmin(admin.ModelAdmin):
-    list_display = ('id', 'specialty_mode', 'starting_at', 'ending_at', 'academy', 'recurrent',
+    list_display = ('id', 'specialty_mode', 'timezone', 'starting_at', 'ending_at', 'academy', 'recurrent',
                     'recurrency_type')
-    list_filter = ['specialty_mode__name', 'academy__slug', 'recurrent', 'recurrency_type']
-    search_fields = ['specialty_mode__name', 'specialty_mode__name', 'academy__slug', 'academy__name']
+    list_filter = ['specialty_mode__name', 'timezone', 'academy__slug', 'recurrent', 'recurrency_type']
+    search_fields = [
+        'specialty_mode__name', 'timezone', 'specialty_mode__name', 'academy__slug', 'academy__name'
+    ]
     actions = [replicate_in_all]

@@ -44,8 +44,9 @@ class OrganizerAdmin(admin.ModelAdmin):
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['title']
-    list_display = ('sync_status', 'title', 'eventbrite_status', 'starting_at', 'ending_at', 'sync_desc')
-    list_filter = ['eventbrite_status', 'sync_status']
+    list_display = ('eventbrite_sync_status', 'title', 'eventbrite_status', 'starting_at', 'ending_at',
+                    'eventbrite_sync_description', 'sync_with_eventbrite')
+    list_filter = ['eventbrite_status', 'eventbrite_sync_status', 'sync_with_eventbrite']
     actions = ['export_as_csv']
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
