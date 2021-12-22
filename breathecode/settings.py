@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     'breathecode.assessment',
     'breathecode.registry',
     'breathecode.mentorship',
+    'breathecode.jobs',
     'explorer',
 ]
 
