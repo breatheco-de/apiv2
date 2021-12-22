@@ -120,13 +120,13 @@ def add_cohort_task_to_student(self, user_id, cohort_id, academy_id):
         return
 
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
-    tag = Tag.objects.filter(slug=cohort.slug, ac_academy__id=ac_academy.id).first()
+    tag = Tag.objects.filter(slug__iexact=cohort.slug, ac_academy__id=ac_academy.id).first()
 
     if tag is None:
         logger.error(
             f'Cohort tag `{cohort.slug}` does not exist in the system, the tag could not be added to the student. '
             'This tag was supposed to be created by the system when creating a new cohort')
-        return
+        return False
 
     try:
         contact = client.get_contact_by_email(user.email)
