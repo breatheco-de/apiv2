@@ -15,7 +15,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from .models import Event, EventType, EventCheckin, Venue
+from .models import Event, EventType, EventCheckin, Organization, Venue
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
@@ -24,13 +24,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
 from rest_framework.response import Response
-from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
+from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination, DatetimeInteger
 from rest_framework.decorators import renderer_classes
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
 from breathecode.utils import ValidationException
 from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
+import breathecode.events.receivers
 
 logger = logging.getLogger(__name__)
 MONDAY = 0
@@ -195,9 +196,18 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         if academy is None:
             raise ValidationException(f'Academy {academy_id} not found')
 
+        organization_id = Organization.objects.filter(academy__id=academy_id).values_list('id',
+                                                                                          flat=True).first()
+        if not organization_id:
+            raise ValidationException('Your academy doesn\'t have the integrations with Eventbrite done',
+                                      slug='organization-not-exist')
+
         data = {}
         for key in request.data.keys():
             data[key] = request.data.get(key)
+
+        data['sync_status'] = 'PENDING'
+        data['organization'] = organization_id
 
         serializer = EventSerializer(data={**data, 'academy': academy.id})
         if serializer.is_valid():
@@ -212,7 +222,20 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         if already is None:
             raise ValidationException(f'Event not found for this academy {academy_id}')
 
-        serializer = EventSerializer(already, data=request.data)
+        organization_id = Organization.objects.filter(academy__id=academy_id).values_list('id',
+                                                                                          flat=True).first()
+        if not organization_id:
+            raise ValidationException('Your academy doesn\'t have the integrations with Eventbrite done',
+                                      slug='organization-not-exist')
+
+        data = {}
+        for key in request.data.keys():
+            data[key] = request.data.get(key)
+
+        data['sync_status'] = 'PENDING'
+        data['organization'] = organization_id
+
+        serializer = EventSerializer(already, data=data)
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
@@ -366,6 +389,7 @@ class ICalStudentView(APIView):
 
         calendar = iCalendar()
         calendar.add('prodid', f'-//BreatheCode//Student Schedule ({user_id}) {key}//EN')
+        calendar.add('METHOD', 'PUBLISH')
         calendar.add('X-WR-CALNAME', f'Academy - Schedule')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
@@ -383,8 +407,8 @@ class ICalStudentView(APIView):
             event.add('summary', item.cohort.name)
             event.add('uid', f'breathecode_cohort_time_slot_{item.id}_{key}')
 
-            event.add('dtstart', item.starting_at)
-            event.add('dtstamp', item.starting_at)
+            event.add('dtstart', DatetimeInteger.to_datetime(item.timezone, item.starting_at))
+            event.add('dtstamp', DatetimeInteger.to_datetime(item.timezone, item.starting_at))
 
             until_date = item.cohort.ending_date
 
@@ -395,7 +419,7 @@ class ICalStudentView(APIView):
             if item.recurrent:
                 event.add('rrule', {'freq': item.recurrency_type, 'until': until_date})
 
-            event.add('dtend', item.ending_at)
+            event.add('dtend', DatetimeInteger.to_datetime(item.timezone, item.ending_at))
 
             teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.cohort.id).first()
 
@@ -469,6 +493,7 @@ class ICalCohortsView(APIView):
 
         calendar = iCalendar()
         calendar.add('prodid', f'-//BreatheCode//Academy Cohorts{academies_repr} {key}//EN')
+        calendar.add('METHOD', 'PUBLISH')
         calendar.add('X-WR-CALNAME', f'Academy - Cohorts')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
@@ -508,8 +533,11 @@ class ICalCohortsView(APIView):
             if first_timeslot:
                 event_first_day.add('summary', f'{item.name} - First day')
                 event_first_day.add('uid', f'breathecode_cohort_{item.id}_first_{key}')
-                event_first_day.add('dtstart', first_timeslot.starting_at)
-                event_first_day.add('dtend', first_timeslot.ending_at)
+                event_first_day.add(
+                    'dtstart', DatetimeInteger.to_datetime(first_timeslot.timezone,
+                                                           first_timeslot.starting_at))
+                event_first_day.add(
+                    'dtend', DatetimeInteger.to_datetime(first_timeslot.timezone, first_timeslot.ending_at))
                 event_first_day.add('dtstamp', first_timeslot.created_at)
 
             if item.ending_date:
@@ -517,8 +545,8 @@ class ICalCohortsView(APIView):
                 timeslots_datetime = []
 
                 for timeslot in timeslots:
-                    starting_at = timeslot.starting_at
-                    ending_at = timeslot.ending_at
+                    starting_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at)
+                    ending_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at)
                     diff = ending_at - starting_at
 
                     if timeslot.recurrent:
@@ -535,6 +563,7 @@ class ICalCohortsView(APIView):
                     has_last_day = True
 
                     event_last_day.add('summary', f'{item.name} - Last day')
+
                     event_last_day.add('uid', f'breathecode_cohort_{item.id}_last_{key}')
                     event_last_day.add('dtstart', last_timeslot[0])
                     event_last_day.add('dtend', last_timeslot[1])
@@ -630,6 +659,7 @@ class ICalEventView(APIView):
 
         calendar = iCalendar()
         calendar.add('prodid', f'-//BreatheCode//Academy Events{academies_repr} {key}//EN')
+        calendar.add('METHOD', 'PUBLISH')
         calendar.add('X-WR-CALNAME', f'Academy - Events')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')

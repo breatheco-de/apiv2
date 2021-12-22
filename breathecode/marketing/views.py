@@ -5,7 +5,6 @@ from datetime import timedelta
 from rest_framework_csv.renderers import CSVRenderer
 from breathecode.renderers import PlainTextRenderer
 from rest_framework.decorators import renderer_classes
-from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.response import Response
@@ -26,7 +25,7 @@ from .serializers import (
     ShortLinkSerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
-from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
+from .actions import sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
 from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable
 from breathecode.admissions.models import Academy
@@ -447,7 +446,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if slug is not None:
             link = ShortLink.objects.filter(slug=slug).first()
             if link is None or (link.private and link.academy.id != academy_id):
-                raise ValidationError(
+                raise ValidationException(
                     f'Shortlink with slug {slug} not found or its private and it belongs to another academy',
                     slug='shortlink-not-found')
 
