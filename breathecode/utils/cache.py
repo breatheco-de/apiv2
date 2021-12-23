@@ -61,6 +61,16 @@ class Cache(DatetimeMixin):
             if isinstance(data[key], datetime):
                 data[key] = self.datetime_to_iso(data[key])
 
+            if isinstance(data[key], dict):
+                data[key] = self.__fix_fields__(data[key])
+
+            if isinstance(data[key], list):
+                if data[key] and isinstance(data[key][0], dict):
+                    data[key] = [self.__fix_fields__(item) for item in data[key]]
+
+                if data[key] and isinstance(data[key][0], datetime):
+                    data[key] = [self.datetime_to_iso(item) for item in data[key]]
+
         return data
 
     def __fix_fields_in_array__(self, data):

@@ -1,13 +1,8 @@
-from breathecode.certificate.models import Specialty
-from breathecode.admissions.actions import sync_cohort_timeslots
 from breathecode.admissions.caches import CohortCache
 import logging
-import re
 import pytz
 from django.db.models import Q
-from django.http import HttpResponse
 from django.utils import timezone
-from django.shortcuts import render
 from django.contrib.auth.models import AnonymousUser
 from breathecode.utils import HeaderLimitOffsetPagination
 from rest_framework.views import APIView
@@ -24,7 +19,7 @@ from .serializers import (AcademySerializer, GetSyllabusSerializer, SpecialtyMod
                           GetSpecialtyModeSerializer, GetSyllabusVersionSerializer, SyllabusVersionSerializer,
                           GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer)
 from .models import (Academy, SpecialtyModeTimeSlot, CohortTimeSlot, CohortUser, SpecialtyMode, Cohort,
-                     Country, STUDENT, DELETED, Syllabus, SyllabusVersion)
+                     STUDENT, DELETED, Syllabus, SyllabusVersion)
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -32,10 +27,7 @@ from rest_framework import status
 from breathecode.utils import (localize_query, capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
 from rest_framework.exceptions import ParseError, PermissionDenied, ValidationError
-
-from rest_framework.decorators import renderer_classes
-from rest_framework_csv import renderers as r
-from rest_framework.renderers import JSONRenderer
+from breathecode.utils import DatetimeInteger
 
 logger = logging.getLogger(__name__)
 
@@ -215,6 +207,7 @@ class CohortUserView(APIView, GenerateLookupsMixin):
 
         if not many:
             current = CohortUser.objects.filter(user__id=user_id, cohort__id=cohort_id).first()
+
         else:
             current = []
             index = -1
@@ -429,9 +422,24 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if cohort_id and not cohort:
             raise ValidationException('Cohort not found', 404, slug='cohort-not-found')
 
-        request.data['cohort'] = cohort.id
+        timezone = Academy.objects.filter(id=academy_id).values_list('timezone', flat=True).first()
+        if not timezone:
+            raise ValidationException('Academy doesn\'t have a timezone assigned',
+                                      slug='academy-without-timezone')
 
-        serializer = CohortTimeSlotSerializer(data=request.data, many=False)
+        data = {
+            **request.data,
+            'cohort': cohort.id,
+            'timezone': timezone,
+        }
+
+        if 'starting_at' in data:
+            data['starting_at'] = DatetimeInteger.from_iso_string(timezone, data['starting_at'])
+
+        if 'ending_at' in data:
+            data['ending_at'] = DatetimeInteger.from_iso_string(timezone, data['ending_at'])
+
+        serializer = CohortTimeSlotSerializer(data=data, many=False)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -454,7 +462,23 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if not item:
             raise ValidationException('Time slot not found', 404, slug='time-slot-not-found')
 
-        data = {**request.data, 'id': timeslot_id, 'cohort': cohort.id}
+        timezone = Academy.objects.filter(id=academy_id).values_list('timezone', flat=True).first()
+        if not timezone:
+            raise ValidationException('Academy doesn\'t have a timezone assigned',
+                                      slug='academy-without-timezone')
+
+        data = {
+            **request.data,
+            'id': timeslot_id,
+            'cohort': cohort.id,
+            'timezone': timezone,
+        }
+
+        if 'starting_at' in data:
+            data['starting_at'] = DatetimeInteger.from_iso_string(timezone, data['starting_at'])
+
+        if 'ending_at' in data:
+            data['ending_at'] = DatetimeInteger.from_iso_string(timezone, data['ending_at'])
 
         serializer = CohortTimeSlotSerializer(item, data=data)
         if serializer.is_valid():
@@ -493,9 +517,13 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
 
         for cohort in cohorts:
             if not cohort.specialty_mode:
-                raise ValidationException("Cohort doesn't have any certificate",
+                raise ValidationException("Cohort doesn't have any schedule",
                                           400,
                                           slug='cohort-without-specialty-mode')
+
+        academy = Academy.objects.filter(id=academy_id).first()
+        if not academy.timezone:
+            raise ValidationException('Academy doesn\'t have any timezone assigned', slug='without-timezone')
 
         CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).delete()
 
@@ -512,6 +540,7 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
                     'ending_at': certificate_timeslot.ending_at,
                     'recurrent': certificate_timeslot.recurrent,
                     'recurrency_type': certificate_timeslot.recurrency_type,
+                    'timezone': academy.timezone,
                 })
 
         serializer = CohortTimeSlotSerializer(data=data, many=True)
@@ -552,13 +581,25 @@ class AcademySpecialtyModeTimeSlotView(APIView, GenerateLookupsMixin):
                                                    syllabus__academy_owner__id=academy_id).first()
 
         if certificate_id and not certificate:
-            raise ValidationException('Certificate not found', 404, slug='certificate-not-found')
+            raise ValidationException('Schedule not found', 404, slug='certificate-not-found')
+
+        timezone = Academy.objects.filter(id=academy_id).values_list('timezone', flat=True).first()
+        if not timezone:
+            raise ValidationException('Academy doesn\'t have a timezone assigned',
+                                      slug='academy-without-timezone')
 
         data = {
             **request.data,
             'academy': academy_id,
             'specialty_mode': certificate.id,
+            'timezone': timezone,
         }
+
+        if 'starting_at' in data:
+            data['starting_at'] = DatetimeInteger.from_iso_string(timezone, data['starting_at'])
+
+        if 'ending_at' in data:
+            data['ending_at'] = DatetimeInteger.from_iso_string(timezone, data['ending_at'])
 
         serializer = SpecialtyModeTimeSlotSerializer(data=data, many=False)
         if serializer.is_valid():
@@ -584,12 +625,24 @@ class AcademySpecialtyModeTimeSlotView(APIView, GenerateLookupsMixin):
         if not item:
             raise ValidationException('Time slot not found', 404, slug='time-slot-not-found')
 
+        timezone = Academy.objects.filter(id=academy_id).values_list('timezone', flat=True).first()
+        if not timezone:
+            raise ValidationException('Academy doesn\'t have a timezone assigned',
+                                      slug='academy-without-timezone')
+
         data = {
             **request.data,
             'id': timeslot_id,
             'academy': academy_id,
             'specialty_mode': certificate.id,
+            'timezone': timezone,
         }
+
+        if 'starting_at' in data:
+            data['starting_at'] = DatetimeInteger.from_iso_string(timezone, data['starting_at'])
+
+        if 'ending_at' in data:
+            data['ending_at'] = DatetimeInteger.from_iso_string(timezone, data['ending_at'])
 
         serializer = SpecialtyModeTimeSlotSerializer(item, data=data)
         if serializer.is_valid():

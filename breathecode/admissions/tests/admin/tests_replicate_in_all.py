@@ -1,7 +1,7 @@
 """
 Test /cohort/user
 """
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 from breathecode.tests.mocks.django_contrib import DJANGO_CONTRIB_PATH, apply_django_contrib_messages_mock
 from breathecode.admissions.models import SpecialtyModeTimeSlot
 from breathecode.admissions.admin import replicate_in_all
@@ -14,7 +14,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 With zero Academy
     """
-    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
+    @patch('django.contrib.messages.add_message', MagicMock())
     def test_replicate_in_all(self):
         request = HttpRequest()
         queryset = SpecialtyModeTimeSlot.objects.all()
@@ -27,7 +27,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With one Academy and zero SpecialtyMode
     """
 
-    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
+    @patch('django.contrib.messages.add_message', MagicMock())
     def test_replicate_in_all__with_zero_specialty_modes(self):
         self.generate_models(academy=True)
 
@@ -41,7 +41,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 With one Academy and one SpecialtyMode
     """
 
-    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
+    @patch('django.contrib.messages.add_message', MagicMock())
     def test_replicate_in_all__with_one_specialty_mode(self):
         self.generate_models(academy=True, specialty_mode=True)
 
@@ -52,29 +52,94 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_specialty_mode_time_slot_dict(), [])
 
     """
-    🔽🔽🔽 With one Academy and one SpecialtyMode
+    🔽🔽🔽 With one Academy without timezone and one SpecialtyMode
     """
 
-    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
-    def test_replicate_in_all__with_one_specialty_mode_type_slot(self):
-        model = self.generate_models(academy=True, specialty_mode=True, specialty_mode_time_slot=True)
+    @patch('django.contrib.messages.add_message', MagicMock())
+    def test_replicate_in_all__with_one_specialty_mode_type_slot__without_timezone(self):
+        from django.contrib import messages
 
+        model = self.generate_models(academy=True, specialty_mode=True, specialty_mode_time_slot=True)
         request = HttpRequest()
         queryset = SpecialtyModeTimeSlot.objects.all()
 
         replicate_in_all(None, request, queryset)
 
         data = self.model_to_dict(model, 'specialty_mode_time_slot')
-        self.assertEqual(self.all_specialty_mode_time_slot_dict(), [{**data, 'id': 2}])
+        self.assertEqual(self.all_specialty_mode_time_slot_dict(), [data])
+        self.assertEqual(messages.add_message.call_args_list, [
+            call(
+                request,
+                messages.ERROR,
+                f'The following academies ({model.academy.slug}) was skipped because it doesn\'t have a timezone '
+                'assigned',
+            )
+        ])
 
     """
-    🔽🔽🔽 With one Academy, one SpecialtyMode and two Academy
+    🔽🔽🔽 With two Academy without timezone and one SpecialtyMode
     """
 
-    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
-    def test_replicate_in_all__with_one_specialty_mode_type_slot__with_two_academies(self):
+    @patch('django.contrib.messages.add_message', MagicMock())
+    def test_replicate_in_all__with_two_specialty_mode_type_slot__without_timezone(self):
+        from django.contrib import messages
+
         model1 = self.generate_models(academy=True, specialty_mode=True, specialty_mode_time_slot=True)
         model2 = self.generate_models(academy=True)
+
+        request = HttpRequest()
+        queryset = SpecialtyModeTimeSlot.objects.all()
+
+        replicate_in_all(None, request, queryset)
+
+        data = self.model_to_dict(model1, 'specialty_mode_time_slot')
+        self.assertEqual(self.all_specialty_mode_time_slot_dict(), [data])
+        self.assertEqual(messages.add_message.call_args_list, [
+            call(
+                request,
+                messages.ERROR,
+                f'The following academies ({model1.academy.slug}, {model2.academy.slug}) was skipped because it doesn\'t have a timezone '
+                'assigned',
+            )
+        ])
+
+    """
+    🔽🔽🔽 With one Academy and one SpecialtyMode
+    """
+
+    @patch('django.contrib.messages.add_message', MagicMock())
+    def test_replicate_in_all__with_one_specialty_mode_type_slot(self):
+        from django.contrib import messages
+
+        academy_kwargs = {'timezone': 'America/Caracas'}
+        model = self.generate_models(academy=True,
+                                     specialty_mode=True,
+                                     specialty_mode_time_slot=True,
+                                     academy_kwargs=academy_kwargs)
+        request = HttpRequest()
+        queryset = SpecialtyModeTimeSlot.objects.all()
+
+        replicate_in_all(None, request, queryset)
+
+        data = self.model_to_dict(model, 'specialty_mode_time_slot')
+        self.assertEqual(self.all_specialty_mode_time_slot_dict(), [{**data, **academy_kwargs, 'id': 2}])
+        self.assertEqual(messages.add_message.call_args_list, [
+            call(request, messages.INFO, 'All academies in sync with those timeslots'),
+        ])
+
+    """
+    🔽🔽🔽 With two Academy, one SpecialtyModeTimeSlot
+    """
+
+    @patch('django.contrib.messages.add_message', MagicMock())
+    def test_replicate_in_all__with_one_specialty_mode_time_slot__with_two_academies(self):
+        academy_caracas_kwargs = {'timezone': 'America/Caracas'}
+        academy_madrid_kwargs = {'timezone': 'Europe/Madrid'}
+        model1 = self.generate_models(academy=True,
+                                      specialty_mode=True,
+                                      specialty_mode_time_slot=True,
+                                      academy_kwargs=academy_caracas_kwargs)
+        model2 = self.generate_models(academy=True, academy_kwargs=academy_madrid_kwargs)
 
         request = HttpRequest()
         queryset = SpecialtyModeTimeSlot.objects.filter(id=1)
@@ -84,9 +149,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
         data = self.model_to_dict(model1, 'specialty_mode_time_slot')
         self.assertEqual(self.all_specialty_mode_time_slot_dict(), [{
             **data,
+            **academy_caracas_kwargs,
             'id': 2,
         }, {
             **data,
+            **academy_madrid_kwargs,
             'id': 3,
             'academy_id': model2.academy.id,
         }])
@@ -95,10 +162,13 @@ class CohortUserTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Select many timeslots from diferent academies
     """
 
-    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
+    @patch('django.contrib.messages.add_message', MagicMock())
     def test_replicate_in_all__with_many_timeslots_from_diferent_academies(self):
-        academy_model1 = self.generate_models(academy=True)
-        academy_model2 = self.generate_models(academy=True)
+        academy_caracas_kwargs = {'timezone': 'America/Caracas'}
+        academy_madrid_kwargs = {'timezone': 'Europe/Madrid'}
+        academy_model1 = self.generate_models(academy=True, academy_kwargs=academy_caracas_kwargs)
+        academy_model2 = self.generate_models(academy=True, academy_kwargs=academy_madrid_kwargs)
+
         models = [
             self.generate_models(
                 academy=academy_model1.academy, specialty_mode=True, specialty_mode_time_slot=True)
@@ -125,31 +195,37 @@ class CohortUserTestSuite(AdmissionsTestCase):
             data3,
             {
                 **data2,
+                **academy_caracas_kwargs,
                 'id': 6,
                 'academy_id': academy_model1.academy.id,
             },
             {
                 **data4,
+                **academy_caracas_kwargs,
                 'id': 7,
                 'academy_id': academy_model1.academy.id,
             },
             {
                 **data5,
+                **academy_caracas_kwargs,
                 'id': 8,
                 'academy_id': academy_model1.academy.id,
             },
             {
                 **data2,
+                **academy_madrid_kwargs,
                 'id': 9,
                 'academy_id': academy_model2.academy.id,
             },
             {
                 **data4,
+                **academy_madrid_kwargs,
                 'id': 10,
                 'academy_id': academy_model2.academy.id,
             },
             {
                 **data5,
+                **academy_madrid_kwargs,
                 'id': 11,
                 'academy_id': academy_model2.academy.id,
             },

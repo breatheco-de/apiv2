@@ -1,6 +1,7 @@
 """
 Test cases for
 """
+import os
 import re
 from unittest.mock import patch
 from django.urls.base import reverse_lazy
@@ -11,6 +12,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_client_mock,
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
+    apply_requests_post_mock,
 )
 from datetime import timedelta, datetime
 from django.utils import timezone
@@ -95,6 +97,10 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('requests.post',
+           apply_requests_post_mock([
+               (201, f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages", {})
+           ]))
     def test_resend_invite_with_invitation(self):
         """Test """
         self.headers(academy=1)

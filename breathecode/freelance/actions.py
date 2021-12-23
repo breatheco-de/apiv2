@@ -179,7 +179,7 @@ def generate_freelancer_bill(freelancer):
 
 
 def run_hook(modeladmin, request, queryset):
-    # stay this here for use the poor mocking system
+    # TODO: ActiveCampaign and acp_ids is not defined
     for hook in queryset.all():
         ac_academy = hook.ac_academy
         client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)

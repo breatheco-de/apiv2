@@ -65,9 +65,6 @@ class MarketingModelsMixin(ModelsMixin):
         if not 'tag' in models and tag:
             kargs = {}
 
-            if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
-
             if 'active_campaign_academy' in models or active_campaign_academy:
                 kargs['ac_academy'] = models['active_campaign_academy']
 

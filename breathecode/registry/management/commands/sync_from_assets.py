@@ -37,17 +37,20 @@ class Command(BaseCommand):
         aa = AssetAlias.objects.filter(Q(slug=slug) | Q(asset__slug=slug)).first()
         return aa is not None
 
-    def exercises(self, *args, **options):
+    def exercises(self, options):
         response = requests.get(f'{HOST_ASSETS}/registry/all')
         items = response.json()
         for slug in items:
-            if self._exists(slug):
-                print('Skipping: Asset with this alias ' + slug + ' already exists')
+            if self._exists(slug) and options['override'] == False:
+                print('Skipping: Asset with this alias ' + slug + ' already exists, use the')
                 continue
             data = items[slug]
-            create_asset(data, asset_type='EXERCISE')
+            if 'grading' in data:
+                data['graded'] = data['grading']
 
-    def projects(self, *args, **options):
+            create_asset(data, asset_type='EXERCISE', force=(options['override'] == True))
+
+    def projects(self, options):
         response = requests.get(f'{HOST_ASSETS}/project/registry/all')
         items = response.json()
         for slug in items:
