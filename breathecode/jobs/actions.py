@@ -111,7 +111,7 @@ def fetch_spider_data(spider):
         if get_job_from_string(j['Apply_to']) is None:
             _job = Job(title=j['Job_title'],
                        platform=spider.zyte_project.platform,
-                       published=j['Post_date'],
+                       published_date_raw=j['Post_date'],
                        apply_url=j['Apply_to'],
                        salary=j['Salary'],
                        min_salary=j['Salary'],
@@ -154,6 +154,7 @@ def fetch_sync_all_data(spider):
 
     print(res)
     _prub = []
+    new_jobs = 0
     while i < res['count']:
         if res['jobs'][i]['items_scraped'] > 0:
 
@@ -162,7 +163,7 @@ def fetch_sync_all_data(spider):
             # spider.save()
             _num_spider = res['jobs'][i]['id']
             # _spider = Platform.objects.filter(name__iexact=res['jobs'][i]['spider']).first()
-            _num_spid = get_date_from_string(_num_spider)
+            _num_spid = get_loc_from_string(_num_spider)
             # _num_job = get_date_from_string(_num_spider)
             # print(_num_spid[0])
             # print(int(spider.zyte_spider_number))
@@ -185,15 +186,15 @@ def fetch_sync_all_data(spider):
                         break
 
                     jobs = response.json()
-                    print(jobs)
+                    # print(jobs)
 
                     for j in jobs:
                         _remote = False
                         if j['Location'] is not None:
-                            _validate_loc = get_date_from_string(j['Location'])
+                            _validate_loc = get_loc_from_string(j['Location'])
                         else:
                             j['Location'] = 'Remote'
-                            _validate_loc = get_date_from_string(j['Location'])
+                            _validate_loc = get_loc_from_string(j['Location'])
                             # print('llego así: ', j['Location'])
                             # print('Modificado: ', _validate_loc)
 
@@ -318,11 +319,11 @@ def fetch_sync_all_data(spider):
                         _salary_str = 'Not supplied'
                         if 'getonboard' in platafom:
                             tags = j['Tags']
-                            print('salary===>', j['Salary'])
+                            # print('salary===>', j['Salary'])
                             if j['Salary'] is not None and j['Salary'] != 'Not supplied' and j[
                                     'Salary'] != 'Remote':
                                 _salary = get_salary_from_string(j['Salary'])
-                                print('no salary========>', _salary)
+                                # print('no salary========>', _salary)
                                 if _salary:
                                     _min_salary = float(_salary[0]) * 12
                                     _max_salary = float(_salary[1]) * 12
@@ -331,7 +332,7 @@ def fetch_sync_all_data(spider):
                                     _salary_str = j['Salary']
                         else:
                             tags = ['web-developer']
-                            print('salary===>', j['Salary'])
+                            # print('salary===>', j['Salary'])
                             if j['Salary'] is not None and j['Salary'] != 'Not supplied':
                                 _salary = get_salary_from_string(j['Salary'])
                                 if _salary:
@@ -347,14 +348,14 @@ def fetch_sync_all_data(spider):
                                 tagsave = get_tag_from_string(t)
                                 if tagsave is None:
                                     Tag.objects.create(slug=t)
-                                    print(t)
+                                    # print(t)
 
                         _validate = validate_diplicate_job(j['Job_title'], _employer)
                         if _validate is None:
                             _job = Job(
                                 title=j['Job_title'],
                                 platform=spider.zyte_project.platform,
-                                published=j['Post_date'],
+                                published_date_raw=j['Post_date'],
                                 apply_url=j['Apply_to'],
                                 salary=_salary_str,
                                 min_salary=_min_salary,
@@ -368,10 +369,10 @@ def fetch_sync_all_data(spider):
 
                             _job.save()
 
-                            _validate_loc = get_date_from_string(j['Location'])
-                            print('_validate_loc ===>', _validate_loc)
+                            _validate_loc = get_loc_from_string(j['Location'])
+                            # print('_validate_loc ===>', _validate_loc)
                             if len(_validate_loc) > 1:
-                                print('Base ', _validate_loc)
+                                # print('Base ', _validate_loc)
                                 # print('mayor a uno ', _validate_loc[1][0])
                                 loc_list = _validate_loc[1]
 
@@ -397,8 +398,10 @@ def fetch_sync_all_data(spider):
 
                                         _job.tags.add(_tag)
                                         # _employer.save()
-
+                            new_jobs = new_jobs + 1
                     spider.status = 'SYNCHED'
+                    spider.sync_desc = f"The spider's career ended successfully. Added {new_jobs} new jobs to {spider.name} at " + str(
+                        datetime.now())
                     spider.save()
 
         i = i + 1
@@ -407,14 +410,16 @@ def fetch_sync_all_data(spider):
         spider.zyte_job_number = _prub[0]
         spider.zyte_last_fetch_date = datetime.now()
         spider.save()
+    # new_jobs += new_jobs
+    print(f'Added {new_jobs} new jobs to {spider.name}')
 
     return spider
 
 
 def parse_date(job):
-    print('job ::: ', get_date_from_string(job.published))
+    print('job ::: ', get_date_from_string(job.published_date_raw))
 
-    job.processed_date = get_date_from_string(job.published)
+    job.published_date_processed = get_date_from_string(job.published_date_raw)
     job.save()
 
     return job
@@ -540,12 +545,12 @@ def today(findings, string_date):
     return _datetime
 
 
-def fetch_id_job_strin_to_list(findings, string_date):
+def fetch_id_job_strin_to_list(findings, string_loc):
     job_id_fecth = list(findings.pop())
     return job_id_fecth
 
 
-def loc(findings, string_date):
+def loc(findings, string_loc):
     job_id_fecth = list(findings.pop())
     v = ''.join(job_id_fecth[1])
     v = v.replace(' o ', ',').replace(';', ',').strip()
@@ -573,17 +578,17 @@ def format_corret_to_date(findings, string_date):
     return string_date
 
 
-def remote_to_strin(findings, string_date):
-    if '.' in string_date:
-        string_date = 'Remote'
-    elif ')' in string_date:
-        string_date = 'Remote'
-    elif '(' in string_date:
-        string_date = 'Remote'
-    elif '' in string_date:
-        string_date = 'Remote'
+def remote_to_strin(findings, string_loc):
+    if '.' in string_loc:
+        string_loc = 'Remote'
+    elif ')' in string_loc:
+        string_loc = 'Remote'
+    elif '(' in string_loc:
+        string_loc = 'Remote'
+    elif '' in string_loc:
+        string_loc = 'Remote'
 
-    _remote = [string_date.strip()]
+    _remote = [string_loc.strip()]
     return _remote
 
 
@@ -620,13 +625,16 @@ def salary_month_only_one(findings, string_salary):
 
 _cases = {
     '^(?:Active\s)?(\d{1,2})\+? days? ago': days_ago_to_date,
-    '^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$': fetch_id_job_strin_to_list,
     '^(\d{1,4}-\d{1,2}-\d{1,2}\s\d{1,2}:\d{1,2}:\d{1,2})$': format_corret_to_date,
     '(.*\s?\d{1,2}\+?,? \d{1,4})': change_format_to_date,
-    '(.*\s)?\((.*)\)': loc,
     '^today': today,
     '^Just posted': today,
     '^just posted': today,
+}
+
+_cases_loc = {
+    '^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$': fetch_id_job_strin_to_list,
+    '(.*\s)?\((.*)\)': loc,
     '^\s?(.*)': remote_to_strin,
 }
 
@@ -661,4 +669,12 @@ def get_salary_from_string(string_salary):
         findings = re.findall(regex, string_salary)
         if isinstance(findings, list) and len(findings) > 0:
             return _cases_to[regex](findings, string_salary)
+    return None
+
+
+def get_loc_from_string(string_loc):
+    for regex in _cases_loc:
+        findings = re.findall(regex, string_loc)
+        if isinstance(findings, list) and len(findings) > 0:
+            return _cases_loc[regex](findings, string_loc)
     return None

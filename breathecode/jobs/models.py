@@ -150,8 +150,8 @@ class Job(models.Model):
     """ Create a new platform for Jobs"""
     title = models.CharField(max_length=150)
     platform = models.ForeignKey(Platform, on_delete=models.CASCADE, null=False, blank=False)
-    published = models.CharField(max_length=50)
-    processed_date = models.DateField(null=True)
+    published_date_raw = models.CharField(max_length=50)
+    published_date_processed = models.DateField(null=True)
     status = models.CharField(max_length=15, choices=JOB_STATUS, default=OPENED)
     apply_url = models.URLField(max_length=500)
     min_salary = models.FloatField(null=True, blank=True)

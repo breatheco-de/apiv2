@@ -45,7 +45,7 @@ def async_fetch_sync_all_data(self, args):
     if result:
         logger.debug(f'Starting async_fetch_sync_all_data in spider name {_spider.name}')
         _spider.sync_status = 'SYNCHED'
-        _spider.sync_desc = 'The run of the spider ended successfully command at ' + str(now)
+
         _spider.save()
     else:
         message = '400 Bad Request command at ' + str(now)

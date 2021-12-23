@@ -63,8 +63,8 @@ class ZyteProjectAdmin(admin.ModelAdmin):
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display = ('title', 'platform', 'published', 'salary', 'status', 'employer', 'position', 'apply_url',
-                    'remote', 'created_at')
+    list_display = ('title', 'platform', 'published_date_raw', 'salary', 'status', 'employer', 'position',
+                    'apply_url', 'remote', 'created_at')
     actions = (parse_date_admin, )
 
 
