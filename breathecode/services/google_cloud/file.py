@@ -22,17 +22,13 @@ class File:
 
     def upload(self, content, public: bool = False, content_type: str = 'text/plain') -> None:
         """Upload Blob from Bucker"""
-        from django.core.files.uploadedfile import InMemoryUploadedFile
-
         self.blob = self.bucket.blob(self.file_name)
 
         if type(content) == 'string' or isinstance(content, bytes):
             self.blob.upload_from_string(content, content_type=content_type)
 
         else:
-            # if isinstance(content, InMemoryUploadedFile):
-            #     content = content.file
-
+            content.seek(0)
             self.blob.upload_from_file(content, content_type=content_type)
 
         with open('') as e:
