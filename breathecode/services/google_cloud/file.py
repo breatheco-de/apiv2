@@ -31,9 +31,6 @@ class File:
             content.seek(0)
             self.blob.upload_from_file(content, content_type=content_type)
 
-        with open('') as e:
-            pass
-
         if public:
             self.blob.make_public()
 
