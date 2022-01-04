@@ -126,6 +126,7 @@ class LeadTestSuite(MarketingTestCase):
                 'contact': None,
                 'academy': None,
                 'user': None,
+                'lead_generation_app': None,
                 'tag_objects': [],
                 'automation_objects': []
             })
@@ -173,6 +174,7 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': None,
             'ac_deal_id': None,
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': None
         }])
 
@@ -256,6 +258,7 @@ class LeadTestSuite(MarketingTestCase):
                 'contact': None,
                 'academy': None,
                 'user': None,
+                'lead_generation_app': None,
                 'tag_objects': [],
                 'automation_objects': []
             })
@@ -302,6 +305,7 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])
 
@@ -370,6 +374,7 @@ class LeadTestSuite(MarketingTestCase):
                 'academy': 1,
                 'user': None,
                 'tag_objects': [],
+                'lead_generation_app': None,
                 'automation_objects': []
             })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -415,6 +420,7 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])
 
@@ -485,6 +491,7 @@ class LeadTestSuite(MarketingTestCase):
                 'academy': 1,
                 'user': None,
                 'tag_objects': [],
+                'lead_generation_app': None,
                 'automation_objects': []
             })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -530,6 +537,7 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])
 
@@ -601,6 +609,7 @@ class LeadTestSuite(MarketingTestCase):
                 'contact': None,
                 'academy': 2,
                 'user': None,
+                'lead_generation_app': None,
                 'tag_objects': [],
                 'automation_objects': []
             })
@@ -647,5 +656,6 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])

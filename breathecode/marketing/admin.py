@@ -1,16 +1,8 @@
-import logging
+import logging, secrets
 from django.contrib import admin, messages
 from django import forms
-from .models import (
-    FormEntry,
-    Tag,
-    Automation,
-    ShortLink,
-    ActiveCampaignAcademy,
-    ActiveCampaignWebhook,
-    AcademyAlias,
-    Downloadable,
-)
+from .models import (FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook,
+                     AcademyAlias, Downloadable, LeadGenerationApp)
 from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
                       sync_tags, sync_automations, acp_ids)
 from breathecode.services.activecampaign import ActiveCampaign
@@ -143,8 +135,8 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course',
                     'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
     list_filter = [
-        'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'tag_objects__tag_type',
-        'automation_objects__slug', 'utm_medium', 'country'
+        'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app',
+        'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium', 'country'
     ]
     actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'export_as_csv']
 
@@ -271,3 +263,27 @@ class DownloadableAdmin(admin.ModelAdmin):
         }
         return format_html(
             f"<span class='badge {colors[obj.destination_status]}'>{obj.destination_status}</span>")
+
+
+def reset_app_id(modeladmin, request, queryset):
+    for app in queryset.all():
+        app.app_id = secrets.token_urlsafe(16)
+        app.save()
+
+
+reset_app_id.short_description = 'Reset app id'
+
+
+@admin.register(LeadGenerationApp)
+class LeadGenerationAppAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name', 'academy', 'status', 'last_call_at')
+    readonly_fields = ('app_id', )
+    actions = (reset_app_id, )
+
+    def status(self, obj):
+        colors = {
+            'OK': 'bg-success',
+            'ERROR': 'bg-error',
+        }
+        return format_html(
+            f"<span class='badge {colors[obj.last_call_status]}'>{obj.last_call_status}</span>")

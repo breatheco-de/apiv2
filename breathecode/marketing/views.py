@@ -1,4 +1,4 @@
-import os, re, datetime, logging, csv, pytz
+import os, re, datetime, logging, csv, pytz, secrets, json
 from urllib import parse
 from django.utils import timezone
 from datetime import timedelta
@@ -27,7 +27,7 @@ from .serializers import (
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
-from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable
+from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
@@ -80,6 +80,50 @@ def create_lead(request):
         persist_single_lead.delay(serializer.data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_lead_from_app(request, app_slug=None):
+
+    app_id = request.GET.get('app_id', None)
+    if app_slug is None or app_id is None:
+        raise APIException(f'Invalid app slug and/or id', code=400)
+
+    app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
+    if app is None:
+        raise APIException(f'App not found with those credentials', code=401)
+
+    app.hits += 1
+    app.last_call_at = timezone.now()
+    app.last_request_data = json.dumps(request.data)
+
+    ## apply defaults from the app
+    payload = {
+        'location': app.location,
+        'language': app.language,
+        'utm_url': app.utm_url,
+        'utm_medium': app.utm_medium,
+        'utm_campaign': app.utm_campaign,
+        'utm_source': app.utm_source,
+        'academy': app.academy.id,
+        'lead_generation_app': app.id
+    }
+    payload.update(request.data)
+    serializer = PostFormEntrySerializer(data=payload)
+    if serializer.is_valid():
+        serializer.save()
+
+        persist_single_lead.delay(serializer.data)
+        app.last_call_status = 'OK'
+        app.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    else:
+        app.last_call_status = 'ERROR'
+        app.last_call_log = json.dumps(serializer.errors)
+        app.save()
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
