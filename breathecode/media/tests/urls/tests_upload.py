@@ -1,22 +1,12 @@
 """
-Test /answer
+Test /v1/media/upload
 """
-import re
-import urllib
 import tempfile
 import os
-import random
 import hashlib
-from unittest.mock import MagicMock, Mock, call, patch, mock_open, sentinel
+from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    GOOGLE_CLOUD_INSTANCES,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
 from ..mixins import MediaTestCase
 from breathecode.media.views import MIME_ALLOW
 
@@ -32,7 +22,7 @@ class FileMock():
         return 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
 
 
-file_mock = Mock(side_effect=FileMock)
+file_mock = MagicMock(side_effect=FileMock)
 
 
 class StorageMock():
@@ -40,7 +30,7 @@ class StorageMock():
         return file_mock
 
 
-storage_mock = Mock(side_effect=StorageMock)
+storage_mock = MagicMock(side_effect=StorageMock)
 
 
 class MediaTestSuite(MediaTestCase):
@@ -126,7 +116,7 @@ class MediaTestSuite(MediaTestCase):
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
     def test_upload(self):
         """Test /answer without auth"""
-        self.headers(academy=1, )
+        self.headers(academy=1)
 
         storage_mock.call_args_list = []
         file_mock.delete.call_args_list = []
@@ -184,7 +174,7 @@ class MediaTestSuite(MediaTestCase):
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
     def test_upload_with_media(self):
         """Test /answer without auth"""
-        self.headers(academy=1, )
+        self.headers(academy=1)
 
         storage_mock.call_args_list = []
         file_mock.delete.call_args_list = []
@@ -239,7 +229,7 @@ class MediaTestSuite(MediaTestCase):
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
     def test_upload_with_media_with_same_slug(self):
         """Test /answer without auth"""
-        self.headers(academy=1, )
+        self.headers(academy=1)
 
         storage_mock.call_args_list = []
         file_mock.delete.call_args_list = []
@@ -298,7 +288,7 @@ class MediaTestSuite(MediaTestCase):
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
     def test_upload_categories(self):
         """Test /answer without auth"""
-        self.headers(academy=1, )
+        self.headers(academy=1)
 
         storage_mock.call_args_list = []
         file_mock.delete.call_args_list = []
@@ -419,7 +409,15 @@ class MediaTestSuite(MediaTestCase):
                 }])
 
             self.assertEqual(storage_mock.call_args_list, [call()])
-            self.assertEqual(file_mock.upload.call_args_list, [call(file_bytes, content_type='image/png')])
+
+            args1, kwargs1 = file_mock.upload.call_args_list[0]
+
+            self.assertEqual(len(file_mock.upload.call_args_list), 1)
+            self.assertEqual(len(args1), 1)
+            self.assertEqual(args1[0].name, os.path.basename(file.name))
+            self.assertEqual(args1[0].size, 1024)
+            self.assertEqual(kwargs1, {'content_type': 'image/png'})
+
             self.assertEqual(file_mock.url.call_args_list, [call()])
 
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
@@ -446,16 +444,17 @@ class MediaTestSuite(MediaTestCase):
         file2.write(os.urandom(1024))
         file2.close()
 
-        with open(file1.name, 'rb') as file:
-            file_bytes1 = file.read()
+        with open(file1.name, 'rb') as file1:
+            file_bytes1 = file1.read()
             hash1 = hashlib.sha256(file_bytes1).hexdigest()
 
-        with open(file2.name, 'rb') as file:
-            file_bytes2 = file.read()
+        with open(file2.name, 'rb') as file2:
+            file_bytes2 = file2.read()
             hash2 = hashlib.sha256(file_bytes2).hexdigest()
 
         file1 = open(file1.name, 'rb')
         file2 = open(file2.name, 'rb')
+
         file_mock.url.return_value = 'https://storage.cloud.google.com/media-breathecode/hardcoded_url'
         file_mock.url.call_args_list = []
 
@@ -513,16 +512,27 @@ class MediaTestSuite(MediaTestCase):
             }])
 
         self.assertEqual(storage_mock.call_args_list, [call(), call()])
-        self.assertEqual(
-            file_mock.upload.call_args_list,
-            [call(file_bytes1, content_type='image/png'),
-             call(file_bytes2, content_type='image/png')])
+
+        args1, kwargs1 = file_mock.upload.call_args_list[0]
+        args2, kwargs2 = file_mock.upload.call_args_list[1]
+
+        self.assertEqual(len(file_mock.upload.call_args_list), 2)
+        self.assertEqual(len(args1), 1)
+        self.assertEqual(len(args2), 1)
+
+        self.assertEqual(args1[0].name, os.path.basename(file1.name))
+        self.assertEqual(args1[0].size, 1024)
+        self.assertEqual(args2[0].name, os.path.basename(file2.name))
+        self.assertEqual(args2[0].size, 1024)
+        self.assertEqual(kwargs1, {'content_type': 'image/png'})
+        self.assertEqual(kwargs2, {'content_type': 'image/png'})
+
         self.assertEqual(file_mock.url.call_args_list, [call(), call()])
 
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
     def test_upload_valid_format(self):
         """Test / valid format"""
-        self.headers(academy=1, )
+        self.headers(academy=1)
         storage_mock.call_args_list = []
         file_mock.delete.call_args_list = []
         file_mock.upload.call_args_list = []
@@ -572,7 +582,7 @@ class MediaTestSuite(MediaTestCase):
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
     def test_upload_invalid_format(self):
         """Test /invalid format"""
-        self.headers(academy=1, )
+        self.headers(academy=1)
 
         storage_mock.call_args_list = []
         file_mock.delete.call_args_list = []
