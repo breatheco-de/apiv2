@@ -1,4 +1,5 @@
 import logging
+from google.cloud.storage import Client
 from .credentials import resolve_credentials
 from .file import File
 
@@ -7,12 +8,12 @@ logger = logging.getLogger(__name__)
 
 class Storage:
     """Google Cloud Storage"""
-    client = None
+    client: Client
 
     def __init__(self):
-        from google.cloud import storage
+        from google.cloud.storage import Client
         resolve_credentials()
-        self.client = storage.Client()
+        self.client = Client()
 
     def file(self, bucket_name: str, file_name: str):
         """Get File object

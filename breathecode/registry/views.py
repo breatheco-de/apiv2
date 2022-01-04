@@ -73,7 +73,7 @@ def get_config(request, asset_slug):
                                           code=404,
                                           slug='config_not_found')
 
-            return Response(response.json())
+        return Response(response.json())
     except Exception as e:
         data = {
             'MESSAGE': f'learn.json or bc.json not found or invalid for for {asset.url}',
