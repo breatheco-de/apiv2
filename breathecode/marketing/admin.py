@@ -285,5 +285,7 @@ class LeadGenerationAppAdmin(admin.ModelAdmin):
             'OK': 'bg-success',
             'ERROR': 'bg-error',
         }
+        if obj.last_call_status is None:
+            return format_html(f"<span class='badge'>Not yet called</span>")
         return format_html(
             f"<span class='badge {colors[obj.last_call_status]}'>{obj.last_call_status}</span>")
