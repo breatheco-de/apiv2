@@ -274,8 +274,23 @@ def reset_app_id(modeladmin, request, queryset):
 reset_app_id.short_description = 'Reset app id'
 
 
+class LeadAppCustomForm(forms.ModelForm):
+    class Meta:
+        model = LeadGenerationApp
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super(LeadAppCustomForm, self).__init__(*args, **kwargs)
+
+        self.fields['default_automations'].queryset = Automation.objects.filter(
+            ac_academy__academy__id=self.instance.academy.id).exclude(slug='')  # or something else
+        self.fields['default_tags'].queryset = Tag.objects.filter(
+            ac_academy__academy__id=self.instance.academy.id)  # or something else
+
+
 @admin.register(LeadGenerationApp)
 class LeadGenerationAppAdmin(admin.ModelAdmin):
+    form = LeadAppCustomForm
     list_display = ('slug', 'name', 'academy', 'status', 'last_call_at')
     readonly_fields = ('app_id', )
     actions = (reset_app_id, )

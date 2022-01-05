@@ -196,7 +196,10 @@ class LeadGenerationApp(models.Model):
 
     # defaults
     default_tags = models.ManyToManyField(Tag, blank=True)
-    default_automations = models.ManyToManyField(Automation, blank=True)
+    default_automations = models.ManyToManyField(
+        Automation,
+        blank=True,
+        help_text='Automations with are slug will be excluded, make sure to set slug to them')
     location = models.CharField(max_length=70, blank=True, null=True, default=None)
     language = models.CharField(max_length=2, blank=True, null=True, default=None)
     utm_url = models.URLField(max_length=2000, null=True, default=None, blank=True)
