@@ -111,6 +111,12 @@ def create_lead_from_app(request, app_slug=None):
         'lead_generation_app': app.id
     }
     payload.update(request.data)
+
+    if 'automations' not in request:
+        payload['automations'] = ','.join([auto.slug for auto in app.default_automations])
+    if 'tags' not in request:
+        payload['tags'] = ','.join([tag.slug for tag in app.default_tags])
+
     serializer = PostFormEntrySerializer(data=payload)
     if serializer.is_valid():
         serializer.save()

@@ -300,8 +300,11 @@ class FormEntry(models.Model):
 
     gclid = models.CharField(max_length=255, blank=True, null=True, default=None)
 
-    tags = models.CharField(max_length=100, blank=True, default='')
-    automations = models.CharField(max_length=100, blank=True, default='')
+    tags = models.CharField(max_length=100, blank=True, default='', help_text='Comma separated list of tags')
+    automations = models.CharField(max_length=100,
+                                   blank=True,
+                                   default='',
+                                   help_text='Comma separated list of automations')
 
     tag_objects = models.ManyToManyField(Tag, blank=True)
     automation_objects = models.ManyToManyField(Automation, blank=True)
