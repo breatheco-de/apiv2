@@ -130,7 +130,7 @@ class AuthenticateTestSuite(AuthTestCase):
         data = {'email': model['user'].email}
         response = self.client.post(url, data)
         content = response.content.decode('utf-8')
-        token, created = Token.get_or_create(model['user'])
+        token, created = Token.get_or_create(model['user'], token_type='temporal')
 
         self.assertNotEqual(content.find('Check your email for a password reset!'), -1)
 
@@ -156,7 +156,7 @@ class AuthenticateTestSuite(AuthTestCase):
         }
         response = self.client.post(url, data)
         content = response.content.decode('utf-8')
-        token, created = Token.get_or_create(model['user'])
+        token, created = Token.get_or_create(model['user'], token_type='temporal')
 
         self.assertNotEqual(content.find('Check your email for a password reset!'), -1)
 
@@ -200,7 +200,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'callback': 'https://naturo.io/',
         }
         response = self.client.post(url, data)
-        token, created = Token.get_or_create(model['user'])
+        token, created = Token.get_or_create(model['user'], token_type='temporal')
 
         self.assertEqual(response.url,
                          'https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!')
@@ -226,7 +226,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'callback': 'https://naturo.io/',
         }
         response = self.client.post(url, data)
-        token, created = Token.get_or_create(model['user'])
+        token, created = Token.get_or_create(model['user'], token_type='temporal')
 
         self.assertEqual(response.url,
                          'https://naturo.io/?msg=Check%20your%20email%20for%20a%20password%20reset!')
