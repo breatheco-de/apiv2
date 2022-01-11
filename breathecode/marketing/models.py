@@ -1,3 +1,4 @@
+import secrets
 from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
@@ -158,6 +159,72 @@ class Contact(models.Model):
         return self.first_name + ' ' + self.last_name
 
 
+OK = 'OK'
+ERROR = 'ERROR'
+LAST_CALL_STATUS = (
+    (OK, 'Ok'),
+    (ERROR, 'Error'),
+)
+
+
+class LeadGenerationApp(models.Model):
+    slug = models.SlugField(max_length=150, unique=True)
+    name = models.CharField(max_length=100)
+    description = models.TextField(max_length=450)
+    app_id = models.CharField(
+        max_length=255,
+        unique=True,
+        help_text='Unique token generated only for this app, can be reset to revoke acceess')
+
+    hits = models.IntegerField(default=0)
+
+    last_request_data = models.TextField(max_length=450,
+                                         default=None,
+                                         null=True,
+                                         blank=True,
+                                         help_text='Incomig payload from the last request')
+
+    last_call_status = models.CharField(max_length=9,
+                                        choices=LAST_CALL_STATUS,
+                                        default=None,
+                                        null=True,
+                                        blank=True)
+    last_call_at = models.DateTimeField(default=None,
+                                        blank=True,
+                                        null=True,
+                                        help_text='Timestamp from the last time this app called our API')
+
+    # defaults
+    default_tags = models.ManyToManyField(Tag, blank=True)
+    default_automations = models.ManyToManyField(
+        Automation,
+        blank=True,
+        help_text='Automations with are slug will be excluded, make sure to set slug to them')
+    location = models.CharField(max_length=70, blank=True, null=True, default=None)
+    language = models.CharField(max_length=2, blank=True, null=True, default=None)
+    utm_url = models.URLField(max_length=2000, null=True, default=None, blank=True)
+    utm_medium = models.CharField(max_length=70, blank=True, null=True, default=None)
+    utm_campaign = models.CharField(max_length=70, blank=True, null=True, default=None)
+    utm_source = models.CharField(max_length=70, blank=True, null=True, default=None)
+
+    # Status
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.slug}'
+
+    def save(self, *args, **kwargs):
+        created = not self.id
+
+        if created:
+            self.app_id = secrets.token_urlsafe(16)
+
+        super().save(*args, **kwargs)
+
+
 PENDING = 'PENDING'
 PERSISTED = 'PERSISTED'
 STORAGE_SATUS = (
@@ -236,8 +303,11 @@ class FormEntry(models.Model):
 
     gclid = models.CharField(max_length=255, blank=True, null=True, default=None)
 
-    tags = models.CharField(max_length=100, blank=True, default='')
-    automations = models.CharField(max_length=100, blank=True, default='')
+    tags = models.CharField(max_length=100, blank=True, default='', help_text='Comma separated list of tags')
+    automations = models.CharField(max_length=100,
+                                   blank=True,
+                                   default='',
+                                   help_text='Comma separated list of automations')
 
     tag_objects = models.ManyToManyField(Tag, blank=True)
     automation_objects = models.ManyToManyField(Automation, blank=True)
@@ -259,6 +329,13 @@ class FormEntry(models.Model):
     sentiment = models.CharField(max_length=15, choices=DEAL_SENTIMENT, default=None, null=True, blank=True)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
+
+    lead_generation_app = models.ForeignKey(
+        LeadGenerationApp,
+        on_delete=models.CASCADE,
+        null=True,
+        default=None,
+        help_text='Other apps can send leads to breathecode but they need to be registered here')
 
     # if user is not null, it probably means the lead was won and we invited it to breathecode
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, default=None, blank=True)
@@ -312,7 +389,6 @@ class FormEntry(models.Model):
 
 _ACTIVE = 'ACTIVE'
 NOT_FOUND = 'NOT_FOUND'
-ERROR = 'ERROR'
 DESTINATION_STATUS = (
     (_ACTIVE, 'Active'),
     (NOT_FOUND, 'Not found'),
