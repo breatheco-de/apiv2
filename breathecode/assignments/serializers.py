@@ -54,6 +54,11 @@ class PostTaskSerializer(serializers.ModelSerializer):
         if user is None:
             raise ValidationException('User does not exists')
 
+        # the teacher shouldn't be allowed to approve a project that isn't done
+        if ('associated_slug' in data and 'task_status' in data and 'revision_status' in data
+                and data['task_status'] == 'PENDING' and data['revision_status'] == 'APPROVED'):
+            raise ValidationException('Only tasks that are DONE should be approved by the teacher')
+
         return super(PostTaskSerializer, self).validate({**data, 'user': user})
 
     def create(self, validated_data):
@@ -100,7 +105,6 @@ class PUTTaskSerializer(serializers.ModelSerializer):
         exclude = ('user', 'task_type')
 
     def validate(self, data):
-        print(self.instance.task_status, self.instance.revision_status)
         user = self.context['request'].user
 
         if self.instance.user.id != self.context['request'].user.id:
@@ -112,12 +116,11 @@ class PUTTaskSerializer(serializers.ModelSerializer):
                 raise ValidationException('Only the task owner can modify its github_url')
 
             # the teacher shouldn't be allowed to approve a project that isn't done
-            if ('task_status' in data and 'revision_status' in data and data['task_status'] == 'PENDING'
-                    and data['revision_status'] == 'APPROVED'):
-                print(data['revision_status'], data['task_status'])
+            if ('associated_slug' in data and 'task_status' in data and 'revision_status' in data
+                    and data['task_status'] == 'PENDING' and data['revision_status'] == 'APPROVED'):
                 raise ValidationException('Only tasks that are DONE should be approved by the teacher')
-            if (self.instance.task_status == 'PENDING' and 'revision_status' in data
-                    and data['revision_status'] == 'APPROVED'):
+            if ('associated_slug' in data and self.instance.task_status == 'PENDING'
+                    and 'revision_status' in data and data['revision_status'] == 'APPROVED'):
                 raise ValidationException('Only tasks that are DONE should be approved by the teacher')
 
         if 'revision_status' in data and data['revision_status'] != self.instance.revision_status:

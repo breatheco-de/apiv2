@@ -14,11 +14,6 @@ from django.db.models import Q
 destination_status_error_or_not_found = ShortLink.objects.filter(
     Q(destination_status='ERROR') | Q(destination_status='NOT_FOUND'))
 
-# Mapping of filtered list to display key information
-# print([
-#     vars(item) for item in destination_status_error_or_not_found
-# ])
-
 destination_status_error_or_not_found_list = [
     '- URL: ' + item.destination + ' Status: ' + item.destination_status + ' Last clicked: ' +
     f'{item.lastclick_at.strftime("%m/%d/%Y, %H:%M:%S") if item.lastclick_at != None else "never"}'
@@ -27,9 +22,6 @@ destination_status_error_or_not_found_list = [
 
 # Joining the list together for a display format
 destination_status_error_or_not_found_list_display = ('\n').join(destination_status_error_or_not_found_list)
-
-# print(destination_status_error_or_not_found_list_display)
-# print(type(destination_status_error_or_not_found_list_display))
 
 if len(destination_status_error_or_not_found_list_display) > 0:
     raise ScriptNotification(

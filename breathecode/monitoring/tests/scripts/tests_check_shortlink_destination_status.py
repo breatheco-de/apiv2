@@ -1,7 +1,6 @@
 import datetime
 from ..mixins import MonitoringTestCase
 from breathecode.monitoring.actions import run_script
-from pprint import pprint
 
 
 class ShortLinkTestSuite(MonitoringTestCase):
@@ -44,8 +43,6 @@ class ShortLinkTestSuite(MonitoringTestCase):
                                      short_link=True,
                                      monitor_script_kwargs=monitor_script_kwargs)
 
-        # pprint(vars(model.short_link))
-
         script = run_script(model.monitor_script)
 
         del script['slack_payload']
@@ -57,12 +54,7 @@ class ShortLinkTestSuite(MonitoringTestCase):
             'title': None
         }
 
-        # pprint([{
-        #     **self.model_to_dict(model, 'monitor_script')
-        # }])
-
         self.assertEqual(script, expected)
-        # self.assertEqual(self.all_short_link_dict(), [self.model_to_dict(model, 'short_link')])
         self.assertEqual(self.all_monitor_script_dict(), [{
             **self.model_to_dict(model, 'monitor_script'),
         }])
@@ -85,7 +77,6 @@ class ShortLinkTestSuite(MonitoringTestCase):
         db = self.model_to_dict(model, 'monitor_script')
 
         script = run_script(model.monitor_script)
-        print('Text: ', script['text'])
 
         del script['slack_payload']
 
@@ -181,8 +172,6 @@ class ShortLinkTestSuite(MonitoringTestCase):
                                      short_link_kwargs=short_link_kwargs,
                                      monitor_script_kwargs=monitor_script_kwargs)
 
-        print('Last Clicked: ', model.short_link.lastclick_at)
-
         db = self.model_to_dict(model, 'monitor_script')
 
         script = run_script(model.monitor_script)
@@ -236,8 +225,6 @@ class ShortLinkTestSuite(MonitoringTestCase):
                                      short_link=True,
                                      short_link_kwargs=short_link_kwargs,
                                      monitor_script_kwargs=monitor_script_kwargs)
-
-        print('Last Clicked: ', model.short_link.lastclick_at)
 
         db = self.model_to_dict(model, 'monitor_script')
 
