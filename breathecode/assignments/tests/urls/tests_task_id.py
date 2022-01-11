@@ -21,7 +21,7 @@ class TaskTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_task_status_and_revision_status_pending_accepted(self):
+    def test_task_status_pending_and_revision_status_pending(self):
         """Test /task with task_status = pending and revision_status = pending should pass"""
 
         model = self.generate_models(task=True, authenticate=True)
@@ -62,3 +62,56 @@ class TaskTestSuite(AssignmentsTestCase):
             'user_id': 1
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_task_status_pending_and_revision_status_approved(self):
+        """Test /task with task_status = pending and revision_status = approved should fail"""
+
+        model = self.generate_models(
+            task=True,
+            authenticate=True,
+        )
+        url = reverse_lazy('assignments:task_id', kwargs={
+            'task_id': model.task.id,
+        })
+
+        data = {
+            'associated_slug': 'hello',
+            'title': 'hello',
+            'revision_status': 'APPROVED',
+        }
+
+        response = self.client.put(url, data)
+        json = response.json()
+
+        expected = {'detail': 'task-marked-approved-when-pending', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_task_dict(), [self.model_to_dict(model, 'task')])
+
+    def test_task_status_pending_and_revision_status_approved_both(self):
+        """Test /task with task_status = pending and revision_status = approved should fail"""
+
+        model = self.generate_models(
+            task=True,
+            authenticate=True,
+        )
+        url = reverse_lazy('assignments:task_id', kwargs={
+            'task_id': model.task.id,
+        })
+
+        data = {
+            'associated_slug': 'hello',
+            'title': 'hello',
+            'task_status': 'DONE',
+            'revision_status': 'APPROVED'
+        }
+
+        response = self.client.put(url, data)
+        json = response.json()
+
+        expected = {'detail': 'task-marked-approved-when-pending', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_task_dict(), [self.model_to_dict(model, 'task')])

@@ -115,13 +115,17 @@ class PUTTaskSerializer(serializers.ModelSerializer):
             if 'github_url' in data and data['github_url'] != self.instance.github_url:
                 raise ValidationException('Only the task owner can modify its github_url')
 
-            # the teacher shouldn't be allowed to approve a project that isn't done
-            if ('associated_slug' in data and 'task_status' in data and 'revision_status' in data
-                    and data['task_status'] == 'PENDING' and data['revision_status'] == 'APPROVED'):
-                raise ValidationException('Only tasks that are DONE should be approved by the teacher')
-            if ('associated_slug' in data and self.instance.task_status == 'PENDING'
-                    and 'revision_status' in data and data['revision_status'] == 'APPROVED'):
-                raise ValidationException('Only tasks that are DONE should be approved by the teacher')
+        print('Data: ', data)
+
+        # the teacher shouldn't be allowed to approve a project that isn't done
+        if ('task_status' in data and 'revision_status' in data and data['task_status'] == 'PENDING'
+                and data['revision_status'] == 'APPROVED'):
+            raise ValidationException('Only tasks that are DONE should be approved by the teacher',
+                                      slug='task-marked-approved-when-pending')
+        if (self.instance.task_status == 'PENDING' and 'revision_status' in data
+                and data['revision_status'] == 'APPROVED'):
+            raise ValidationException('Only tasks that are DONE should be approved by the teacher',
+                                      slug='task-marked-approved-when-pending')
 
         if 'revision_status' in data and data['revision_status'] != self.instance.revision_status:
             student_cohorts = CohortUser.objects.filter(user__id=self.instance.user.id,
