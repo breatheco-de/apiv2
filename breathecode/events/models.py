@@ -126,11 +126,13 @@ CURRENCIES = (
 
 
 class Event(models.Model):
+    slug = models.SlugField(max_length=150, blank=True, default=None, null=True)
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
     excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
     title = models.CharField(max_length=255, blank=True, default=None, null=True)
     lang = models.CharField(max_length=2, blank=True, default=None, null=True)
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
+    tags = models.CharField(max_length=100, default='', blank=True)
 
     url = models.URLField(max_length=255)
     banner = models.URLField(max_length=255)
