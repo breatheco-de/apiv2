@@ -13,7 +13,7 @@ from rest_framework import status, serializers
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from .tasks import take_screenshot, generate_one_certificate
-from .actions import generate_certificate, certificate_correction_issued_at
+from .actions import generate_certificate
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 
 logger = logging.getLogger(__name__)
@@ -96,7 +96,7 @@ class CertificateView(APIView):
 
         if cu is None:
             raise ValidationException('Student not found for this cohort', code=404, slug='student-not-found')
-        certificate_correction_issued_at()
+
         cert = generate_certificate(cu.user, cu.cohort, layout_slug)
 
         serializer = UserSpecialtySerializer(cert, many=False)
@@ -147,7 +147,7 @@ class CertificateCohortView(APIView):
 
             else:
                 cohort__users.append(cohort_user)
-        certificate_correction_issued_at()
+
         for cu in cohort__users:
             cert = generate_certificate(cu.user, cu.cohort, layout_slug)
             serializer = UserSpecialtySerializer(cert, many=False)

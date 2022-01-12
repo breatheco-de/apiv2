@@ -5,6 +5,8 @@ import re
 from random import choice
 from unittest.mock import patch
 from django.urls.base import reverse_lazy
+from django.utils import timezone
+from ...actions import generate_certificate
 from rest_framework import status
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
@@ -187,6 +189,16 @@ class CertificateTestSuite(CertificateTestCase):
                 'last_name': model['user'].last_name
             }
         }
+        # print(json)
+        # print(expected)
+
+        start = timezone.now()
+        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
+        end = timezone.now()
+        issued_at = result['issued_at']
+        self.assertGreater(issued_at, start)
+        self.assertLess(issued_at, end)
+        del result['issued_at']
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)

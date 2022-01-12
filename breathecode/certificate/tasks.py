@@ -3,7 +3,6 @@ import logging, time
 from celery import shared_task, Task
 from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import ProfileAcademy
-from .actions import certificate_correction_issued_at
 
 # Get an instance of a logger
 logger = logging.getLogger(__name__)
@@ -65,7 +64,6 @@ def generate_cohort_certificates(self, cohort_id):
             generate_certificate(cu.user, cu.cohort)
         except Exception:
             logger.exception(f'Error generating certificate for {str(cu.user.id)} cohort {str(cu.cohort.id)}')
-    certificate_correction_issued_at()
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
@@ -82,7 +80,6 @@ def generate_one_certificate(self, cohort_id, user_id, layout):
     logger.debug(f'Generating gertificate for {str(cohort__user.user)} student that GRADUATED')
     try:
         generate_certificate(cohort__user.user, cohort__user.cohort, layout)
-        certificate_correction_issued_at()
 
     except Exception:
         logger.exception(

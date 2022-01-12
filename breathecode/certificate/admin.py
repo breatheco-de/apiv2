@@ -5,7 +5,7 @@ from django.utils.html import format_html
 from breathecode.admissions.admin import CohortAdmin
 from .models import Badge, Specialty, UserSpecialty, UserProxy, LayoutDesign, CohortProxy
 from .tasks import remove_screenshot, reset_screenshot, generate_cohort_certificates
-from .actions import generate_certificate, certificate_correction_issued_at
+from .actions import generate_certificate
 from django.http import HttpResponse
 
 logger = logging.getLogger(__name__)
@@ -112,7 +112,6 @@ def user_bulk_certificate(modeladmin, request, queryset):
             logger.debug(f'Generating certificate for user {u.id}')
             generate_certificate(u)
 
-        certificate_correction_issued_at()
         messages.success(request, message='Certificates generated sucessfully')
 
     except Exception as e:

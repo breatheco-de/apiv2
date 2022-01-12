@@ -4,6 +4,7 @@ Tasks tests
 import re
 from unittest.mock import patch
 from breathecode.utils import APIException
+from django.utils import timezone
 from ...actions import generate_certificate, strings
 from ..mixins import CertificateTestCase
 from ..mocks import (
@@ -104,6 +105,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'signed_by': (teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name),
             'signed_by_role': translation['Main Instructor'],
             'specialty_id': 1,
+            'issued_at': None,
             'status': 'ERROR',
             'token': None,
             'status_text': 'cohort-without-status-ended',
@@ -273,6 +275,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'signed_by': (teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name),
             'signed_by_role': translation['Main Instructor'],
             'specialty_id': 1,
+            'issued_at': None,
             'status': 'ERROR',
             'token': None,
             'status_text': 'bad-finantial-status',
@@ -331,6 +334,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
             'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
+            'issued_at': None,
             'status': 'ERROR',
             'token': None,
             'status_text': 'with-pending-tasks',
@@ -385,6 +389,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
             'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
+            'issued_at': None,
             'status': 'ERROR',
             'status_text': 'bad-educational-status',
             'token': None,
@@ -438,6 +443,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
             'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
+            'issued_at': None,
             'status': 'ERROR',
             'status_text': 'bad-educational-status',
             'token': None,
@@ -493,6 +499,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
             'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
+            'issued_at': None,
             'status': 'ERROR',
             'status_text': 'bad-educational-status',
             'token': None,
@@ -544,6 +551,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'signed_by': teacher_model['user'].first_name + ' ' + teacher_model['user'].last_name,
             'signed_by_role': strings[model['cohort'].language]['Main Instructor'],
             'specialty_id': 1,
+            'issued_at': None,
             'status': 'ERROR',
             'status_text': 'cohort-not-finished',
             'user_id': 1,
@@ -591,7 +599,14 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                              cohort_user=True,
                                              cohort_user_kwargs=cohort_user_kwargs,
                                              models=base)
+
+        start = timezone.now()
         result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
+        end = timezone.now()
+        issued_at = result['issued_at']
+        self.assertGreater(issued_at, start)
+        self.assertLess(issued_at, end)
+        del result['issued_at']
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -615,8 +630,10 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertEqual(result, expected)
         del expected['is_cleaned']
 
+        print({**expected, 'token': token, 'issued_at': issued_at})
         self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
-            **expected, 'token': token
+            **expected, 'token': token,
+            'issued_at': issued_at
         }])
 
     """
@@ -651,7 +668,16 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                              cohort_user=True,
                                              cohort_user_kwargs=cohort_user_kwargs,
                                              models=base)
+
+        start = timezone.now()
         result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
+        end = timezone.now()
+        issued_at = result['issued_at']
+        self.assertGreater(issued_at, start)
+        self.assertLess(issued_at, end)
+
+        del result['issued_at']
+
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -676,7 +702,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         del expected['is_cleaned']
 
         self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
-            **expected, 'token': token
+            **expected, 'token': token,
+            'issued_at': issued_at
         }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -707,7 +734,13 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                              cohort_user=True,
                                              cohort_user_kwargs=cohort_user_kwargs,
                                              models=base)
+        start = timezone.now()
         result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
+        end = timezone.now()
+        issued_at = result['issued_at']
+        self.assertGreater(issued_at, start)
+        self.assertLess(issued_at, end)
+        del result['issued_at']
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -731,8 +764,15 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertEqual(result, expected)
         del expected['is_cleaned']
 
+        # db = self.clear_preview_url(self.all_user_specialty_dict())
+        # issued_at = db[0]['issued_at']
+        # self.assertGreater(issued_at, start)
+        # self.assertLess(issued_at, end)
+        # del db[0]['issued_at']
+        print({**expected, 'token': token, 'issued_at': issued_at})
         self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
-            **expected, 'token': token
+            **expected, 'token': token,
+            'issued_at': issued_at
         }])
 
     """

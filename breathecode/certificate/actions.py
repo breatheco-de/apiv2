@@ -25,7 +25,7 @@ strings = {
 }
 
 
-def certificate_correction_issued_at():
+def certificate_set_default_issued_at():
     query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
     for item in query:
         # item.issued_at = item.cohort.ending_date
