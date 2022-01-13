@@ -139,7 +139,7 @@ class Event(models.Model):
     starting_at = models.DateTimeField(blank=False)
     ending_at = models.DateTimeField(blank=False)
 
-    host = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='host', blank=True, null=True)
+    host = models.CharField(max_length=100, blank=True, default=None, null=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, blank=True, null=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)
