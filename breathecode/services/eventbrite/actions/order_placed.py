@@ -12,6 +12,7 @@ def order_placed(self, webhook, payload: dict):
     from breathecode.events.models import EventCheckin, Event
     from breathecode.events.models import Organization
     from breathecode.marketing.models import ActiveCampaignAcademy
+    from breathecode.marketing.tasks import add_event_tags_to_student
 
     org = Organization.objects.filter(id=webhook.organization_id).first()
 
@@ -28,9 +29,6 @@ def order_placed(self, webhook, payload: dict):
     email = payload['email']
 
     local_event = Event.objects.filter(eventbrite_id=event_id).first()
-
-    if local_event:
-        print(local_event.__dict__)
 
     if not local_event:
         message = 'event doesn\'t exist'
@@ -84,3 +82,5 @@ def order_placed(self, webhook, payload: dict):
         message = f'Automation for order_placed doesn\'t exist'
         logger.debug(message)
         raise Exception(message)
+
+    add_event_tags_to_student.delay(local_event.id, email=email)

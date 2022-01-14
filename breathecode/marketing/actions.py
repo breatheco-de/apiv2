@@ -10,6 +10,8 @@ from .serializers import FormEntrySerializer
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import CredentialsFacebook
 from breathecode.services.activecampaign import AC_Old_Client
+from breathecode.utils.validation_exception import ValidationException
+from breathecode.marketing.models import Tag
 
 logger = logging.getLogger(__name__)
 
@@ -430,3 +432,37 @@ def get_facebook_lead_info(lead_id, academy_id=None):
             logger.fatal('No information about the lead')
     else:
         logger.fatal('Imposible to connect to facebook API and retrieve lead information')
+
+
+STARTS_WITH_COMMA_PATTERN = re.compile(r'^,')
+ENDS_WITH_COMMA_PATTERN = re.compile(r',$')
+
+
+def validate_marketing_tags(tags: str) -> None:
+    if tags.find(',,') != -1:
+        raise ValidationException(f'You can\'t have two commas together',
+                                  code=400,
+                                  slug='two-commas-together')
+
+    if tags.find(' ') != -1:
+        raise ValidationException(f'Spaces are not allowed', code=400, slug='spaces-are-not-allowed')
+
+    if STARTS_WITH_COMMA_PATTERN.search(tags):
+        raise ValidationException(f'Starts with comma', code=400, slug='starts-with-comma')
+
+    if ENDS_WITH_COMMA_PATTERN.search(tags):
+        raise ValidationException(f'Ends with comma', code=400, slug='ends-with-comma')
+
+    tags = [x for x in tags.split(',') if x]
+
+    founds = [x.slug for x in Tag.objects.filter(slug__in=tags)]
+
+    if len(tags) == len(founds):
+        return
+
+    not_founds = []
+    for tag in tags:
+        if tag not in founds:
+            not_founds.append(tag)
+
+    raise ValidationException(f'Tags not found ({",".join(not_founds)})', code=400, slug='tag-not-exist')

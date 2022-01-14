@@ -1,3 +1,4 @@
+from breathecode.marketing.actions import validate_marketing_tags
 from .models import Event
 from rest_framework import serializers
 import serpy
@@ -52,6 +53,7 @@ class EventTinySerializer(serpy.Serializer):
 
 class EventSmallSerializer(serpy.Serializer):
     id = serpy.Field()
+    slug = serpy.Field()
     excerpt = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
@@ -69,10 +71,12 @@ class EventSmallSerializer(serpy.Serializer):
     sync_with_eventbrite = serpy.Field()
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
+    tags = serpy.Field()
 
 
 class EventSmallSerializerNoAcademy(serpy.Serializer):
     id = serpy.Field()
+    slug = serpy.Field()
     excerpt = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
@@ -87,6 +91,7 @@ class EventSmallSerializerNoAcademy(serpy.Serializer):
     sync_with_eventbrite = serpy.Field()
     eventbrite_sync_status = serpy.Field()
     eventbrite_sync_description = serpy.Field()
+    tags = serpy.Field()
 
 
 class EventCheckinSerializer(serpy.Serializer):
@@ -122,3 +127,7 @@ class EventSerializer(serializers.ModelSerializer):
             pass
 
         return super().update(instance, validated_data)
+
+    def validate_tags(self, value):
+        validate_marketing_tags(value)
+        return value

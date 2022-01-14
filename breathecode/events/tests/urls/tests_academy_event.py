@@ -81,6 +81,8 @@ class AcademyEventTestSuite(EventTestCase):
             'ending_at': datetime_to_iso_format(model['event'].ending_at),
             'event_type': model['event'].event_type,
             'excerpt': model['event'].excerpt,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
             'id': model['event'].id,
             'lang': model['event'].lang,
             'online_event': model['event'].online_event,
@@ -141,6 +143,8 @@ class AcademyEventTestSuite(EventTestCase):
             'ending_at': datetime_to_iso_format(model['event'].ending_at),
             'event_type': model['event'].event_type,
             'excerpt': model['event'].excerpt,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
             'id': model['event'].id,
             'lang': model['event'].lang,
             'online_event': model['event'].online_event,
@@ -201,6 +205,8 @@ class AcademyEventTestSuite(EventTestCase):
             'ending_at': datetime_to_iso_format(model['event'].ending_at),
             'event_type': model['event'].event_type,
             'excerpt': model['event'].excerpt,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
             'id': model['event'].id,
             'lang': model['event'].lang,
             'online_event': model['event'].online_event,
@@ -244,6 +250,8 @@ class AcademyEventTestSuite(EventTestCase):
             'ending_at': datetime_to_iso_format(model['event'].ending_at),
             'event_type': model['event'].event_type,
             'excerpt': model['event'].excerpt,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
             'id': model['event'].id,
             'lang': model['event'].lang,
             'online_event': model['event'].online_event,
@@ -267,9 +275,6 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_all_academy_events_not_found(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_all_events')
@@ -286,9 +291,6 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_all_academy_events(self, models=None):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_all_events')
@@ -314,6 +316,8 @@ class AcademyEventTestSuite(EventTestCase):
             'excerpt': model['event'].excerpt,
             'lang': model['event'].lang,
             'online_event': model['event'].online_event,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
             'starting_at': datetime_to_iso_format(model['event'].starting_at),
             'status': model['event'].status,
             'title': model['event'].title,
@@ -334,9 +338,6 @@ class AcademyEventTestSuite(EventTestCase):
         } for model in models])
         return models
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_all_academy_events__post__without_organization(self):
         self.headers(academy=1)
 
@@ -355,10 +356,11 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(self.all_event_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_all_academy_events__post__without_required_fields(self):
+    """
+    🔽🔽🔽 Post - bad tags
+    """
+
+    def test_all_academy_events__post__bad_tags__two_commas(self):
         self.headers(academy=1)
 
         model = self.generate_models(authenticate=True,
@@ -370,6 +372,186 @@ class AcademyEventTestSuite(EventTestCase):
         url = reverse_lazy('events:academy_all_events')
         current_date = self.datetime_now()
         data = {
+            'tags': ',,',
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.post(url, data)
+        json = response.json()
+
+        expected = {'detail': 'two-commas-together', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [])
+
+    def test_all_academy_events__post__bad_tags__with_spaces(self):
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato')
+
+        url = reverse_lazy('events:academy_all_events')
+        current_date = self.datetime_now()
+        data = {
+            'tags': ' expecto-patronum sirius-black ',
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.post(url, data)
+        json = response.json()
+
+        expected = {'detail': 'spaces-are-not-allowed', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [])
+
+    def test_all_academy_events__post__bad_tags__starts_with_comma(self):
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato')
+
+        url = reverse_lazy('events:academy_all_events')
+        current_date = self.datetime_now()
+        data = {
+            'tags': ',expecto-patronum',
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.post(url, data)
+        json = response.json()
+
+        expected = {'detail': 'starts-with-comma', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [])
+
+    def test_all_academy_events__post__bad_tags__ends_with_comma(self):
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato')
+
+        url = reverse_lazy('events:academy_all_events')
+        current_date = self.datetime_now()
+        data = {
+            'tags': 'expecto-patronum,',
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.post(url, data)
+        json = response.json()
+
+        expected = {'detail': 'ends-with-comma', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [])
+
+    def test_all_academy_events__post__bad_tags__one_tag_not_exists(self):
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato')
+
+        url = reverse_lazy('events:academy_all_events')
+        current_date = self.datetime_now()
+        data = {
+            'tags': 'expecto-patronum',
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.post(url, data)
+        json = response.json()
+
+        expected = {'detail': 'tag-not-exist', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [])
+
+    def test_all_academy_events__post__bad_tags__one_of_two_tags_not_exists(self):
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     tag=True,
+                                     capability='crud_event',
+                                     role='potato')
+
+        url = reverse_lazy('events:academy_all_events')
+        current_date = self.datetime_now()
+        data = {
+            'tags': f'expecto-patronum,{model.tag.slug}',
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.post(url, data)
+        json = response.json()
+
+        expected = {'detail': 'tag-not-exist', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [])
+
+    """
+    🔽🔽🔽 Post
+    """
+
+    def test_all_academy_events__post__tags_is_blank(self):
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato')
+
+        url = reverse_lazy('events:academy_all_events')
+        current_date = self.datetime_now()
+        data = {
+            'tags': '',
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
             'capacity': 11,
@@ -395,6 +577,100 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_organizer_id': None,
             'eventbrite_status': None,
             'eventbrite_url': None,
+            'tags': '',
+            'slug': None,
+            'excerpt': None,
+            'host': None,
+            'id': 1,
+            'slug': None,
+            'lang': None,
+            'online_event': False,
+            'organization': 1,
+            'published_at': None,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'venue': None,
+            'sync_with_eventbrite': False,
+            'currency': 'USD',
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(self.all_event_dict(), [{
+            'academy_id': 1,
+            'author_id': None,
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'description': None,
+            'ending_at': current_date,
+            'event_type_id': None,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'excerpt': None,
+            'tags': '',
+            'slug': None,
+            'host': None,
+            'id': 1,
+            'lang': None,
+            'online_event': False,
+            'organization_id': 1,
+            'published_at': None,
+            'starting_at': current_date,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'url': 'https://www.google.com/',
+            'venue_id': None,
+            'sync_with_eventbrite': False,
+            'currency': 'USD',
+        }])
+
+    def test_all_academy_events__post__with_tags(self):
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     tag=True,
+                                     capability='crud_event',
+                                     role='potato')
+
+        url = reverse_lazy('events:academy_all_events')
+        current_date = self.datetime_now()
+        data = {
+            'tags': model.tag.slug,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.post(url, data)
+        json = response.json()
+
+        self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
+
+        del json['created_at']
+        del json['updated_at']
+
+        expected = {
+            'academy': 1,
+            'author': None,
+            'description': None,
+            'event_type': None,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'slug': None,
             'excerpt': None,
             'host': None,
             'id': 1,
@@ -427,7 +703,9 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_status': None,
             'eventbrite_url': None,
             'excerpt': None,
-            'host_id': None,
+            'tags': data['tags'],
+            'slug': None,
+            'host': None,
             'id': 1,
             'lang': None,
             'online_event': False,
@@ -444,9 +722,10 @@ class AcademyEventTestSuite(EventTestCase):
             'currency': 'USD',
         }])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    """
+    🔽🔽🔽 Pagination
+    """
+
     def test_all_academy_events_pagination(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_all_events')
@@ -465,6 +744,8 @@ class AcademyEventTestSuite(EventTestCase):
         json = response.json()
         expected = [{
             'id': model['event'].id,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
             'excerpt': model['event'].excerpt,
             'title': model['event'].title,
             'lang': model['event'].lang,
@@ -498,12 +779,14 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_status': None,
             'eventbrite_url': None,
             'excerpt': None,
-            'host_id': model['event'].host_id,
+            'host': model['event'].host,
             'id': model['event'].id,
             'lang': None,
             'online_event': False,
             'organization_id': None,
             'published_at': None,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
             'starting_at': model['event'].starting_at,
             'status': 'DRAFT',
             'eventbrite_sync_description': None,
@@ -515,9 +798,6 @@ class AcademyEventTestSuite(EventTestCase):
             'currency': 'USD',
         } for model in models])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_all_academy_events_pagination_first_five(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_all_events') + '?limit=5&offset=0'
@@ -545,6 +825,8 @@ class AcademyEventTestSuite(EventTestCase):
             'ending_at': self.datetime_to_iso(model['event'].ending_at),
             'status': model['event'].status,
             'event_type': model['event'].event_type,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
             'online_event': model['event'].online_event,
             'venue': model['event'].venue,
             'sync_with_eventbrite': model['event'].sync_with_eventbrite,
@@ -577,7 +859,9 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_status': None,
             'eventbrite_url': None,
             'excerpt': None,
-            'host_id': model['event'].host_id,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
+            'host': model['event'].host,
             'id': model['event'].id,
             'lang': None,
             'online_event': False,
@@ -594,9 +878,6 @@ class AcademyEventTestSuite(EventTestCase):
             'currency': 'USD',
         } for model in models])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_all_academy_events_pagination_last_five(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_all_events') + '?limit=5&offset=5'
@@ -615,6 +896,8 @@ class AcademyEventTestSuite(EventTestCase):
         json = response.json()
         expected = [{
             'id': model['event'].id,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
             'excerpt': model['event'].excerpt,
             'title': model['event'].title,
             'lang': model['event'].lang,
@@ -650,13 +933,15 @@ class AcademyEventTestSuite(EventTestCase):
             'capacity': model['event'].capacity,
             'description': None,
             'ending_at': model['event'].ending_at,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
             'event_type_id': None,
             'eventbrite_id': None,
             'eventbrite_organizer_id': None,
             'eventbrite_status': None,
             'eventbrite_url': None,
             'excerpt': None,
-            'host_id': model['event'].host_id,
+            'host': model['event'].host,
             'id': model['event'].id,
             'lang': None,
             'online_event': False,
@@ -673,9 +958,6 @@ class AcademyEventTestSuite(EventTestCase):
             'currency': 'USD',
         } for model in models])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_all_academy_events_pagination_after_last_five(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_all_events') + '?limit=5&offset=10'
@@ -716,7 +998,9 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_status': None,
             'eventbrite_url': None,
             'excerpt': None,
-            'host_id': model['event'].host_id,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
+            'host': model['event'].host,
             'id': model['event'].id,
             'lang': None,
             'online_event': False,
@@ -733,9 +1017,6 @@ class AcademyEventTestSuite(EventTestCase):
             'currency': 'USD',
         } for model in models])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_all_academy_events_with_data_testing_cache(self):
         """Test /cohort without auth"""
         cache_keys = [
@@ -751,9 +1032,6 @@ class AcademyEventTestSuite(EventTestCase):
         self.test_all_academy_events(old_models)
         self.assertEqual(self.cache.keys(), cache_keys)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_event_type_no_results(self):
         self.headers(academy=1)
         url = reverse_lazy('events:type')
@@ -766,9 +1044,6 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_with_data_testing_cache_and_remove_in_post(self):
         """Test /cohort without auth"""
         cache_keys = [
@@ -833,6 +1108,8 @@ class AcademyEventTestSuite(EventTestCase):
             'organization': 1,
             'published_at': None,
             'status': 'DRAFT',
+            'tags': '',
+            'slug': None,
             'eventbrite_sync_description': None,
             'eventbrite_sync_status': 'PENDING',
             'title': None,
@@ -859,7 +1136,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_status': None,
             'eventbrite_url': None,
             'excerpt': None,
-            'host_id': None,
+            'host': None,
             'id': 2,
             'lang': None,
             'online_event': False,
@@ -873,6 +1150,8 @@ class AcademyEventTestSuite(EventTestCase):
             'url': 'https://www.google.com/',
             'venue_id': None,
             'sync_with_eventbrite': False,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
             'currency': 'USD',
         }])
         self.assertEqual(self.cache.keys(), [])
@@ -885,9 +1164,6 @@ class AcademyEventTestSuite(EventTestCase):
         self.test_all_academy_events(base)
         self.assertEqual(self.cache.keys(), cache_keys)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_event_type_with_results(self):
         self.headers(academy=1)
         # TODO: this is bad placed
@@ -919,9 +1195,6 @@ class AcademyEventTestSuite(EventTestCase):
             **self.model_to_dict(model, 'event_type'),
         }])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_event_type_no_match_slug(self):
         self.headers(academy=1)
         url = reverse_lazy('events:type') + '?academy=banana'
