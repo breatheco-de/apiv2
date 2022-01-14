@@ -12,7 +12,6 @@ from ..mixins.new_auth_test_case import AuthTestCase
 # TODO: this test is incompleted
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
-
     def test_academy_member_without_auth(self):
         """Test /academy/member without auth"""
         url = reverse_lazy('authenticate:academy_member')

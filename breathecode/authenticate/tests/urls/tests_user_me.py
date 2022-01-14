@@ -11,7 +11,6 @@ class AuthenticateTestSuite(AuthTestCase):
     """
     🔽🔽🔽 Auth
     """
-
     def test_user_me__without_auth(self):
         """Test /user/me without auth"""
         url = reverse_lazy('authenticate:user_me')

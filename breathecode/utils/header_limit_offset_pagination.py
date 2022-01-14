@@ -5,7 +5,6 @@ from rest_framework.utils.urls import replace_query_param, remove_query_param
 
 
 class HeaderLimitOffsetPagination(LimitOffsetPagination):
-
     def paginate_queryset(self, queryset, request, view=None):
         self.use_envelope = True
         if str(request.GET.get('envelope')).lower() in ['false', '0']:

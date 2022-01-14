@@ -17,7 +17,6 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
-
     def test_cohort_id__without_auth(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)

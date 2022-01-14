@@ -12,7 +12,6 @@ from breathecode.media.views import MIME_ALLOW
 
 
 class FileMock():
-
     def delete(*args, **kwargs):
         pass
 
@@ -27,7 +26,6 @@ file_mock = MagicMock(side_effect=FileMock)
 
 
 class StorageMock():
-
     def file(*args, **kwargs):
         return file_mock
 
@@ -37,7 +35,6 @@ storage_mock = MagicMock(side_effect=StorageMock)
 
 class MediaTestSuite(MediaTestCase):
     """Test /answer"""
-
     @patch('breathecode.services.google_cloud.Storage', storage_mock)
     def test_upload_without_auth(self):
         """Test /answer without auth"""

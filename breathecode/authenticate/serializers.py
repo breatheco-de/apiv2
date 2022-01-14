@@ -219,14 +219,12 @@ class GroupSerializer(serpy.Serializer):
 
 
 class StaffSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = ProfileAcademy
         fields = ('user', 'role', 'academy', 'first_name', 'last_name', 'address', 'phone', 'status')
 
 
 class UserMeProfileSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Profile
         exclude = ()
@@ -480,7 +478,6 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
 
 class MemberPUTSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = ProfileAcademy
         fields = ('user', 'role', 'academy', 'first_name', 'last_name', 'phone', 'address')
@@ -535,7 +532,6 @@ class AuthSerializer(serializers.Serializer):
 
 
 class UserInvitePUTSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = UserInvite
         fields = ('status', 'id')

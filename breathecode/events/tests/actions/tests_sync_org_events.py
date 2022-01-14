@@ -14,7 +14,6 @@ eventbrite_events_endpoint = get_eventbrite_events_url('1')
 
 
 def log_mock():
-
     def log(self, *args):
         print(*args)
 
@@ -22,7 +21,6 @@ def log_mock():
 
 
 def update_or_create_event_mock(raise_error=False):
-
     def update_or_create_event(self, *args, **kwargs):
         if raise_error:
             raise Exception('Random error in creating')
@@ -31,7 +29,6 @@ def update_or_create_event_mock(raise_error=False):
 
 
 def export_event_to_eventbrite_mock(raise_error=False):
-
     def export_event_to_eventbrite(self, *args, **kwargs):
         if raise_error:
             raise Exception('Random error getting')
@@ -43,7 +40,6 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     """
     🔽🔽🔽 Without academy
     """
-
     @patch.object(logging.Logger, 'info', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'update_or_create_event', update_or_create_event_mock())

@@ -11,7 +11,6 @@ class CertificateTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
-
     def test_academy_schedule_id__without_auth(self):
         """Test /certificate without auth"""
         url = reverse_lazy('admissions:academy_schedule_id', kwargs={'certificate_id': 1})

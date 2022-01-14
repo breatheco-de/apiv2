@@ -14,7 +14,6 @@ class BaseSQL(object):
 
 
 class DurationAgr(BaseSQL, DM.Aggregate):
-
     def __init__(self, expression, **extra):
         super(DurationAgr, self).__init__(expression, output_field=DM.DateTimeField(), **extra)
 

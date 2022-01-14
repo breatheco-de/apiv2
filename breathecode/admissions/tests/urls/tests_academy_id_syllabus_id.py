@@ -8,7 +8,6 @@ from ..mixins import AdmissionsTestCase
 
 class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
-
     def test_syllabus_id_without_auth(self):
         """Test /certificate without auth"""
         url = reverse_lazy('admissions:academy_id_syllabus_id', kwargs={

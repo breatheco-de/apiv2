@@ -12,7 +12,6 @@ from breathecode.media.serializers import GetMediaSerializer
 class MediaTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, GenerateQueriesMixin,
                     HeadersMixin, DatetimeMixin, Sha256Mixin):
     """FeedbackTestCase with auth methods"""
-
     def tearDown(self):
         self.clear_cache()
 

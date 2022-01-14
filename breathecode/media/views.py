@@ -280,7 +280,6 @@ class CategoryView(ViewSet, HeaderLimitOffsetPagination):
     delete:
         Delete a Category by slug.
     """
-
     @capable_of('read_media')
     def get(self, request, category_id=None, category_slug=None, academy_id=None):
         items = Category.objects.filter()
@@ -577,7 +576,6 @@ class ResolutionView(ViewSet):
     delete:
         Delete a Resolution by id.
     """
-
     @capable_of('read_media_resolution')
     def get_id(self, request, resolution_id: int, academy_id=None):
         resolutions = MediaResolution.objects.filter(id=resolution_id).first()

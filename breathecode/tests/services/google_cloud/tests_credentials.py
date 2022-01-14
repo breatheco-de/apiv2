@@ -10,7 +10,6 @@ logger = logging.getLogger('breathecode.services.google_cloud.credentials')
 
 
 class CredentialsTestCase(TestCase):
-
     @patch('builtins.open', mock_open(read_data='{}\n'))
     @patch('os.path.exists', MagicMock(return_value=False))
     @patch.object(logger, 'error')

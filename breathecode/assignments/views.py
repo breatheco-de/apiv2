@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 class TaskTeacherView(APIView):
-
     def get(self, request):
 
         items = Task.objects.all()
@@ -106,7 +105,6 @@ class TaskMeView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-
     def get(self, request, task_id=None, user_id=None):
 
         if task_id is not None:
@@ -161,7 +159,6 @@ class TaskMeDeliverView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-
     @capable_of('task_delivery_details')
     def get(self, request, task_id, academy_id):
 

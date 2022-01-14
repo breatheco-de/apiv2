@@ -7,7 +7,6 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     """
     🔽🔽🔽 Without academy
     """
-
     def test_create_or_update_organizer__without_academy(self):
         organization_kwargs = {'eventbrite_id': '1'}
         model = self.generate_models(organization=True, organization_kwargs=organization_kwargs)

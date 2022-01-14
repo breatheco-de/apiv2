@@ -5,10 +5,8 @@ from unittest.mock import Mock
 
 
 class GoogleCloudStorageMock():
-
     @staticmethod
     def get_bucket_object():
-
         def side_effect():
             return None
 

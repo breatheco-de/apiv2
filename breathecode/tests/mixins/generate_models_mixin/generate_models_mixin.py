@@ -22,7 +22,6 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
                           CertificateModelsMixin, FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,
                           AssessmentModelsMixin, FreelanceModelsMixin, MarketingModelsMixin,
                           MonitoringModelsMixin, MediaModelsMixin):
-
     def __detect_invalid_arguments__(self, models={}, **kwargs):
         """check if one argument is invalid to prevent errors"""
         for key in kwargs:
@@ -50,7 +49,6 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
         return models
 
     def __flow__(self, *args):
-
         def inner_wrapper(**kwargs):
             return self.__flow_wrapper__(*args, **kwargs)
 

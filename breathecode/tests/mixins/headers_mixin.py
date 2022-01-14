@@ -5,7 +5,6 @@ Headers mixin
 
 class HeadersMixin():
     """Headers mixin"""
-
     def headers(self, **kargs):
         headers = {}
 

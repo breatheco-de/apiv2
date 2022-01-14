@@ -5,9 +5,7 @@ from .validation_exception import ValidationException
 
 
 def capable_of(capability=None):
-
     def decorator(function):
-
         def wrapper(*args, **kwargs):
 
             if isinstance(capability, str) == False:

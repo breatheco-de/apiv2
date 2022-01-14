@@ -56,7 +56,6 @@ class LayoutView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-
     @capable_of('read_layout')
     def get(self, request, academy_id=None):
 
@@ -70,7 +69,6 @@ class CertificateView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-
     @capable_of('read_certificate')
     def get(self, request, cohort_id, student_id, academy_id=None):
 
@@ -108,7 +106,6 @@ class CertificateCohortView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-
     @capable_of('read_certificate')
     def get(self, request, cohort_id, academy_id=None):
 
@@ -162,7 +159,6 @@ class CertificateAcademyView(APIView, HeaderLimitOffsetPagination, GenerateLooku
     """
     List all snippets, or create a new snippet.
     """
-
     @capable_of('read_certificate')
     def get(self, request, academy_id=None):
         items = UserSpecialty.objects.filter(cohort__academy__id=academy_id)

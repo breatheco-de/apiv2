@@ -12,7 +12,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
-
     def test_academy_cohort_user__without_auth(self):
         """Test /cohort/user without auth"""
         self.headers(academy=1)

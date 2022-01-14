@@ -6,7 +6,6 @@ from mixer.backend.django import mixer
 
 
 class NotifyModelsMixin(ModelsMixin):
-
     def generate_notify_models(self,
                                device=False,
                                user=False,

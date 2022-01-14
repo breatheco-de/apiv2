@@ -6,7 +6,6 @@ from .response_mock import ResponseMock
 
 
 def request_mock(endpoints=[]):
-
     def base(url: str, *args, **kwargs):
         """Requests get mock"""
         if (url == 'GET' or url == 'POST' or url == 'PUT' or url == 'PATCH' or url == 'DELETE'

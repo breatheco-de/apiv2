@@ -11,7 +11,6 @@ from ..mixins import AdmissionsTestCase
 
 class CohortAllTestSuite(AdmissionsTestCase):
     """Test /cohort/all"""
-
     def test_cohort_all_without_auth(self):
         """Test /cohort/all without auth"""
         url = reverse_lazy('admissions:cohort_all')

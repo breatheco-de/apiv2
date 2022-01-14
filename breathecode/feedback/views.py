@@ -68,7 +68,6 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
-
     @capable_of('read_nps_answers')
     def get(self, request, format=None, academy_id=None):
 
@@ -122,7 +121,6 @@ class AnswerMeView(APIView):
     """
     Student answers a survey (normally several answers are required for each survey)
     """
-
     def put(self, request, answer_id=None):
         if answer_id is None:
             raise ValidationException('Missing answer_id', slug='missing-answer-id')
@@ -159,7 +157,6 @@ class AnswerMeView(APIView):
 
 
 class AcademyAnswerView(APIView):
-
     @capable_of('read_nps_answers')
     def get(self, request, academy_id=None, answer_id=None):
         if answer_id is None:
@@ -177,7 +174,6 @@ class SurveyView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
-
     @capable_of('crud_survey')
     def post(self, request, academy_id=None):
 
@@ -274,7 +270,6 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-
     @capable_of('read_review')
     def get(self, request, format=None, academy_id=None):
 

@@ -17,13 +17,11 @@ __all__ = [
 
 
 class UserProxy(User):
-
     class Meta:
         proxy = True
 
 
 class AcademyProxy(Academy):
-
     class Meta:
         proxy = True
 
@@ -119,7 +117,6 @@ PROFILE_ACADEMY_STATUS = (
 
 
 class ProfileAcademy(models.Model):
-
     def __init__(self, *args, **kwargs):
         super(ProfileAcademy, self).__init__(*args, **kwargs)
         self.__old_status = self.status

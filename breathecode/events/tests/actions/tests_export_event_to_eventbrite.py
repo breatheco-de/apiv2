@@ -22,7 +22,6 @@ status_map = {
 
 
 def log_mock():
-
     def log(self, *args):
         print(*args)
 
@@ -30,7 +29,6 @@ def log_mock():
 
 
 def get_current_iso_string_mock():
-
     def get_current_iso_string():
         return sync_desc
 
@@ -41,7 +39,6 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     """
     🔽🔽🔽 Without academy
     """
-
     @patch.object(logging.Logger, 'warn', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())

@@ -14,7 +14,6 @@ CURRENT_PATH = 'breathecode.monitoring.tasks.monitor_app'
 # tested in tests_monitor.py, we just need check that functions are called
 # correctly
 class AcademyCohortTestSuite(MonitoringTestCase):
-
     @patch(CURRENT_PATH, CURRENT_MOCK)
     def tests_test_app_length_0(self):
         request = HttpRequest()

@@ -6,7 +6,6 @@ from django.core.cache import cache
 
 class CacheMixin():
     """Cache mixin"""
-
     def clear_cache(self, **kargs):
         cache.clear()
 

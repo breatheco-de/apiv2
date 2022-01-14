@@ -11,7 +11,6 @@ from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatterMixin
 
 class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
     """CapacitiesTestCase with auth methods"""
-
     def remove_model_state(self, dict):
         result = None
         if dict:

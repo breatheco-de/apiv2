@@ -2,7 +2,6 @@ import math
 
 
 class ICallMixin():
-
     def line_limit(self, line: str):
         linebreak = '\r\n'
         max_length = 74

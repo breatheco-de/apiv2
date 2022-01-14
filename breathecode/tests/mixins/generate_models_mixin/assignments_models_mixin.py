@@ -6,7 +6,6 @@ from mixer.backend.django import mixer
 
 
 class AssignmentsModelsMixin(ModelsMixin):
-
     def generate_assignments_models(self,
                                     task=False,
                                     task_status='',

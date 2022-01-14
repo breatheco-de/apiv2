@@ -44,7 +44,6 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Without data
     """
-
     def test_file_slug__without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)

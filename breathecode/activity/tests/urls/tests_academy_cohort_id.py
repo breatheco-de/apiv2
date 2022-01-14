@@ -36,7 +36,6 @@ def generate_data(num_objs):
 
 
 def datastore_fetch_mock(first_fetch=[]):
-
     class Vars():
         fetch_call_counter = 0
         fetch_call_one = first_fetch
@@ -62,7 +61,6 @@ def datastore_fetch_mock(first_fetch=[]):
 
 
 def datastore_count_mock(how_many):
-
     def count(**kwargs):
         return how_many
 
@@ -73,7 +71,6 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Auth
     """
-
     def test_type__without_auth(self):
         url = reverse_lazy('activity:academy_cohort_id', kwargs={'cohort_id': 1}) + '?slug=breathecode_login'
         response = self.client.get(url)

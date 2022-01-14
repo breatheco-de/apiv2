@@ -15,7 +15,6 @@ RUN_SCRIPT_PATH = 'breathecode.monitoring.tasks.execute_scripts'
 # tested in tests_monitor.py, we just need check that functions are called
 # correctly
 class AcademyCohortTestSuite(MonitoringTestCase):
-
     @patch(RUN_SCRIPT_PATH, RUN_SCRIPT_MOCK)
     def tests_run_single_script_length_0(self):
         request = HttpRequest()

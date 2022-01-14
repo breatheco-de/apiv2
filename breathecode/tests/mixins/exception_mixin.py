@@ -1,6 +1,5 @@
 class ExceptionMixin():
     """Headers mixin"""
-
     def assertException(self, callback, message: str, exception=Exception):
         if not callable(callback):
             raise Exception('function is not callable')

@@ -23,7 +23,6 @@ def random_datetime_interger():
 
 
 class AdmissionsModelsMixin(ModelsMixin):
-
     def count_cohort_stage(self, cohort_id):
         cohort = Cohort.objects.get(id=cohort_id)
         return cohort.stage

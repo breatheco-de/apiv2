@@ -106,7 +106,6 @@ class GETServiceBigSerializer(serpy.Serializer):
 
 
 class ServiceSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = MentorshipService
         exclude = ('created_at', 'updated_at', 'academy')
@@ -122,14 +121,12 @@ class ServiceSerializer(serializers.ModelSerializer):
 
 
 class MentorSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = MentorProfile
         exclude = ('created_at', 'updated_at')
 
 
 class SessionSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = MentorshipSession
         exclude = ('created_at', 'updated_at')

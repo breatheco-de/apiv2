@@ -14,7 +14,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 With zero Academy
     """
-
     @patch('django.contrib.messages.add_message', MagicMock())
     def test_replicate_in_all(self):
         request = HttpRequest()

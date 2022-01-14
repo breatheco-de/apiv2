@@ -14,7 +14,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 With zero Cohort
     """
-
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     def test_link_randomly_relations_to_cohorts__with_zero_cohorts(self):
         request = HttpRequest()

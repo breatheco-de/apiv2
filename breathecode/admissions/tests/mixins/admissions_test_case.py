@@ -12,7 +12,6 @@ from rest_framework import status
 class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, DatetimeMixin,
                          ICallMixin):
     """AdmissionsTestCase with auth methods"""
-
     def setUp(self):
         self.generate_queries()
 

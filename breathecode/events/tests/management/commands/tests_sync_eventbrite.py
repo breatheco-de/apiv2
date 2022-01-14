@@ -7,7 +7,6 @@ import breathecode.events.actions as actions
 
 
 def write_mock():
-
     def write(self, *args):
         pass
 
@@ -15,7 +14,6 @@ def write_mock():
 
 
 def sync_org_events_mock():
-
     def sync_org_events(org):
         pass
 
@@ -27,7 +25,6 @@ class SyncEventbriteTestSuite(EventTestCase):
     """
     🔽🔽🔽 Without pass entity argument
     """
-
     @patch.object(sys.stdout, 'write', write_mock())
     @patch.object(sys.stderr, 'write', write_mock())
     @patch.object(actions, 'sync_org_events', sync_org_events_mock())

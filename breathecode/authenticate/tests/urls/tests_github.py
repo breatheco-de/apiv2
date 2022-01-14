@@ -11,7 +11,6 @@ from ..mixins import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
-
     def test_github_without_url(self):
         """Test /github without auth"""
         url = reverse_lazy('authenticate:github')

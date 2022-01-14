@@ -6,7 +6,6 @@ from mixer.backend.django import mixer
 
 
 class MarketingModelsMixin(ModelsMixin):
-
     def generate_marketing_models(self,
                                   active_campaign_academy=False,
                                   automation=False,

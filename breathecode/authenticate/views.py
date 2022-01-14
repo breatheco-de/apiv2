@@ -112,7 +112,6 @@ class LogoutView(APIView):
 
 
 class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
-
     @capable_of('read_member')
     def get(self, request, academy_id, user_id_or_email=None):
         is_many = bool(not user_id_or_email)
@@ -222,7 +221,6 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
 
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
-
     def get(self, request):
 
         if request.user is None:
@@ -265,7 +263,6 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
 
 class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
-
     @capable_of('read_invite')
     def get(self, request, academy_id, profileacademy_id):
 
@@ -296,7 +293,6 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
 
 class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
-
     @capable_of('read_student')
     def get(self, request, academy_id=None, user_id_or_email=None):
         if user_id_or_email is not None:
@@ -429,7 +425,6 @@ def get_token_info(request, token):
 
 
 class UserMeView(APIView):
-
     def get(self, request, format=None):
         # TODO: This should be not accessible because this endpoint require auth
         try:
@@ -974,7 +969,6 @@ def change_password(request, token):
 
 
 class TokenTemporalView(APIView):
-
     @capable_of('generate_temporal_token')
     def post(self, request, profile_academy_id=None, academy_id=None):
         profile_academy = ProfileAcademy.objects.filter(id=profile_academy_id).first()
@@ -1048,7 +1042,6 @@ def pick_password(request, token):
 
 
 class PasswordResetView(APIView):
-
     @capable_of('send_reset_password')
     def post(self, request, profileacademy_id=None, academy_id=None):
 
@@ -1065,7 +1058,6 @@ class PasswordResetView(APIView):
 
 
 class AcademyInviteView(APIView):
-
     @capable_of('crud_member')
     def put(self, request, pa_id=None, academy_id=None):
         if pa_id is not None:

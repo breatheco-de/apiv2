@@ -19,7 +19,6 @@ eventbrite_url_with_query = eventbrite_url + '?expand=organizer,venue'
 
 
 def update_or_create_event_mock(raise_error=False):
-
     def update_or_create_event(self, *args, **kwargs):
         if raise_error:
             raise Exception('Random error in creating')
@@ -29,7 +28,6 @@ def update_or_create_event_mock(raise_error=False):
 
 class EventbriteWebhookTestSuite(EventTestCase):
     """Test /eventbrite/webhook"""
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())

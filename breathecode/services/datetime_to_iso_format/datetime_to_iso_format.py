@@ -3,7 +3,6 @@ from datetime import datetime, tzinfo, timedelta
 
 
 class simple_utc(tzinfo):
-
     def tzname(self, **kwargs):
         return 'UTC'
 

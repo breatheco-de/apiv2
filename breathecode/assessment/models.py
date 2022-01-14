@@ -6,7 +6,6 @@ __all__ = ['UserProxy', 'Assessment', 'Question', 'Option', 'UserAssessment', 'A
 
 
 class UserProxy(User):
-
     class Meta:
         proxy = True
 

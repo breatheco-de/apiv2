@@ -6,7 +6,6 @@ from mixer.backend.django import mixer
 
 
 class MonitoringModelsMixin(ModelsMixin):
-
     def generate_monitoring_models(self,
                                    application=False,
                                    academy=False,

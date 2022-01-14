@@ -18,7 +18,6 @@ UTC = get_utc()
 
 class DatetimeMixin():
     """Datetime mixin"""
-
     def time_to_string(self, t):
         return t.strftime('%H:%M:%S')
 

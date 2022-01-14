@@ -3,7 +3,6 @@ from django.http import HttpResponse
 
 
 class AdminExportCsvMixin:
-
     def export_as_csv(self, request, queryset):
 
         meta = self.model._meta

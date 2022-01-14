@@ -16,7 +16,6 @@ from ..mixins import AdmissionsTestCase
 
 class CertificateTestSuite(AdmissionsTestCase):
     """Test /certificate"""
-
     def test_syllabus_slug_version_version_without_auth(self):
         """Test /certificate without auth"""
         self.headers(academy=1)

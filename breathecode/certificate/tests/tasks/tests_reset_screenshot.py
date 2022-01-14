@@ -14,7 +14,6 @@ from ..mocks import (
 
 class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """Tests action reset_screenshot"""
-
     @patch(ACTIONS_PATH['certificate_screenshot'], apply_certificate_screenshot_mock())
     @patch(ACTIONS_PATH['remove_certificate_screenshot'], apply_remove_certificate_screenshot_mock())
     def test_reset_screenshot_return_true_and_call_certificate_screenshot(self):

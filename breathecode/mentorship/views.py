@@ -319,7 +319,6 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
-
     @capable_of('crud_mentorship_session')
     def post(self, request, academy_id=None):
 

@@ -11,7 +11,6 @@ from ...models import Endpoint
 # tested in tests_monitor.py, we just need check that functions are called
 # correctly
 class AcademyCohortTestSuite(MonitoringTestCase):
-
     def tests_pause_for_one_day_length_0(self):
         request = HttpRequest()
 

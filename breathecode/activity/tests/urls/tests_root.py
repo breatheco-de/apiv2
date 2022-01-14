@@ -41,7 +41,6 @@ DATASTORE_PRIVATE_SEED = [
 
 
 def datastore_fetch_mock(first_fetch=[], second_fetch=[]):
-
     class Vars():
         fetch_call_counter = 0
         fetch_call_one = first_fetch
@@ -64,7 +63,6 @@ def datastore_fetch_mock(first_fetch=[], second_fetch=[]):
 
 
 def datastore_update_mock():
-
     def update(key: str, data: dict):
         pass
 
@@ -76,7 +74,6 @@ class MediaTestSuite(MediaTestCase):
     """
     🔽🔽🔽 Auth
     """
-
     def test_type__without_auth(self):
         url = reverse_lazy('activity:root')
         response = self.client.get(url)
