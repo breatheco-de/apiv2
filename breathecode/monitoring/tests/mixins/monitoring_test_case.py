@@ -10,6 +10,7 @@ from breathecode.authenticate.models import Token
 class MonitoringTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin,
                          DatetimeMixin, ExceptionMixin):
     """AdmissionsTestCase with auth methods"""
+
     def setUp(self):
         self.generate_queries()
 

@@ -13,6 +13,7 @@ from ..mocks import GithubRequestsMock
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     def test_github_callback__without_code(self):
         """Test /github/callback without auth"""
         url = reverse_lazy('authenticate:github_callback')

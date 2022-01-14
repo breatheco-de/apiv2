@@ -57,6 +57,7 @@ sync_ac_automations.short_description = '♼ Sync AC Automations'
 
 
 class CustomForm(forms.ModelForm):
+
     class Meta:
         model = ActiveCampaignAcademy
         fields = '__all__'
@@ -170,6 +171,7 @@ mark_tag_as_other.short_description = 'Mark tags as OTHER'
 
 
 class CustomTagModelForm(forms.ModelForm):
+
     class Meta:
         model = Tag
         fields = '__all__'
@@ -275,6 +277,7 @@ reset_app_id.short_description = 'Reset app id'
 
 
 class LeadAppCustomForm(forms.ModelForm):
+
     class Meta:
         model = LeadGenerationApp
         fields = '__all__'

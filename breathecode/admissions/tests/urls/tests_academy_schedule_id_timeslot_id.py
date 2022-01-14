@@ -15,6 +15,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
     """
     🔽🔽🔽 Auth
     """
+
     def test_specialty_mode_time_slot__without_auth(self):
         url = reverse_lazy('admissions:academy_schedule_id_timeslot_id',
                            kwargs={

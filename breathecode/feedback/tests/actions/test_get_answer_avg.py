@@ -22,6 +22,7 @@ class AnswerTestSuite(FeedbackTestCase):
     """
     🔽🔽🔽 Without Cohort
     """
+
     def test_get_answer_avg(self):
 
         model = self.generate_models(authenticate=True,

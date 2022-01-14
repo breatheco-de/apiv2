@@ -95,6 +95,7 @@ class PostTaskSerializer(serializers.ModelSerializer):
 
 
 class PUTTaskSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Task
         exclude = ('user', 'task_type')

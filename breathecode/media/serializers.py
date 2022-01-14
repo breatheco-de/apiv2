@@ -66,6 +66,7 @@ class MediaSerializer(serializers.ModelSerializer):
 
 
 class MediaListSerializer(serializers.ListSerializer):
+
     def update(self, instance, validated_data):
         ret = []
 

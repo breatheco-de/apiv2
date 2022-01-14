@@ -14,6 +14,7 @@ from ..mocks import (
 
 class ActionCertificateGenerateOneCertificateTestCase(CertificateTestCase):
     """Tests action generate_one_certificate"""
+
     def test_generate_one_certificate_bad_request(self):
         """generate_one_certificate cant create the certificate"""
         with patch('breathecode.certificate.actions.generate_certificate') as mock:

@@ -6,6 +6,7 @@ from mixer.backend.django import mixer
 
 
 class EventsModelsMixin(ModelsMixin):
+
     def generate_events_models(self,
                                organization=False,
                                user=False,

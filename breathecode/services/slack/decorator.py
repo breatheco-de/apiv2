@@ -7,7 +7,9 @@ logger = logging.getLogger(__name__)
 
 
 def command(only=None):
+
     def decorator(function):
+
         def wrapper(*args, **kwargs):
 
             if 'context' not in kwargs or kwargs['context'] is None:
@@ -39,7 +41,9 @@ def command(only=None):
 
 
 def action(only=None):
+
     def decorator(function):
+
         def wrapper(*args, **kwargs):
             if 'payload' not in kwargs or kwargs['payload'] is None:
                 raise Exception('Missing payload information on slack action')

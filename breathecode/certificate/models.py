@@ -9,11 +9,13 @@ __all__ = ['UserProxy', 'Specialty', 'Badge', 'LayoutDesign', 'UserSpecialty']
 
 
 class UserProxy(User):
+
     class Meta:
         proxy = True
 
 
 class CohortProxy(Cohort):
+
     class Meta:
         proxy = True
 

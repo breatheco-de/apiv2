@@ -11,6 +11,7 @@ from ..mixins.new_events_tests_case import EventTestCase
 
 class AcademyCohortTestSuite(EventTestCase):
     """Test /academy/cohort"""
+
     def test_ical_events__without_academy(self):
         """Test /academy/cohort without auth"""
         url = reverse_lazy('events:academy_id_ical_events')

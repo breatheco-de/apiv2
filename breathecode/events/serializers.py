@@ -100,6 +100,7 @@ class EventCheckinSerializer(serpy.Serializer):
 
 
 class EventSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Event
         exclude = ()

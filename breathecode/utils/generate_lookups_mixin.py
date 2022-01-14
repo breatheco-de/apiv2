@@ -2,6 +2,7 @@ from rest_framework.exceptions import APIException
 
 
 class GenerateLookupsMixin(APIException):
+
     def __field_exists__(self, request, field: str):
         return field in request.GET
 

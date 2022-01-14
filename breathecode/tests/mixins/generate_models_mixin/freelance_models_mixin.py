@@ -6,6 +6,7 @@ from mixer.backend.django import mixer
 
 
 class FreelanceModelsMixin(ModelsMixin):
+
     def generate_freelance_models(self,
                                   freelancer=False,
                                   user=False,

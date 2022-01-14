@@ -14,6 +14,7 @@ from breathecode.tests.mixins.cache_mixin import CacheMixin
 
 
 class AcademyVenueTestSuite(EventTestCase):
+
     def test_academy_venues_no_auth(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_venues')

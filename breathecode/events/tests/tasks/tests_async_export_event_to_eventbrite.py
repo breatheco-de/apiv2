@@ -11,6 +11,7 @@ class AcademyEventTestSuite(EventTestCase):
     """
     🔽🔽🔽 Without event
     """
+
     @patch.object(actions, 'export_event_to_eventbrite', MagicMock())
     @patch.object(logging.Logger, 'error', MagicMock())
     @patch.object(logging.Logger, 'debug', MagicMock())

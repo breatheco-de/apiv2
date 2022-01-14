@@ -9,6 +9,7 @@ from ..mixins import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     def test_logout_without_token(self):
         """Test /logout without token"""
         self.create_user()

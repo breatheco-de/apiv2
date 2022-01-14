@@ -9,6 +9,7 @@ from ..mixins import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     def test_academy_id_member_id_without_auth(self):
         """Test /academy/:id/member/:id without auth"""
         url = reverse_lazy('authenticate:academy_id_member_id',

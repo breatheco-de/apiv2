@@ -28,6 +28,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
     __generate_queries_was_loaded__ = False
 
     def __get_model__(self, Model, key='id'):
+
         def get_model(pk):
             kwargs = {key: pk}
 
@@ -36,6 +37,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
         return get_model
 
     def __get_model_dict__(self, Model, key='id'):
+
         def get_model_dict(pk):
             kwargs = {key: pk}
 
@@ -45,18 +47,21 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
         return get_model_dict
 
     def __all_model__(self, Model):
+
         def all_model():
             return Model.objects.filter()
 
         return all_model
 
     def __all_model_dict__(self, Model):
+
         def all_model_dict():
             return [self.remove_dinamics_fields(data.__dict__.copy()) for data in Model.objects.filter()]
 
         return all_model_dict
 
     def __count_model__(self, Model):
+
         def count_model():
             return Model.objects.count()
 

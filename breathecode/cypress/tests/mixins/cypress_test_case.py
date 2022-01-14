@@ -12,6 +12,7 @@ from breathecode.tests.mixins import (CacheMixin, DatetimeMixin, GenerateModelsM
 class CypressTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, HeadersMixin,
                       DatetimeMixin, ICallMixin):
     """AdmissionsTestCase with auth methods"""
+
     def setUp(self):
         self.generate_queries()
         os.environ['API_URL'] = 'http://localhost:8000'

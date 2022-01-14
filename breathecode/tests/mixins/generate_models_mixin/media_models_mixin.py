@@ -6,6 +6,7 @@ from mixer.backend.django import mixer
 
 
 class MediaModelsMixin(ModelsMixin):
+
     def generate_media_models(self,
                               category=False,
                               media=False,

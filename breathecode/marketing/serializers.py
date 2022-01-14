@@ -95,6 +95,7 @@ class FormEntrySmallSerializer(serpy.Serializer):
 
 
 class PostFormEntrySerializer(serializers.ModelSerializer):
+
     class Meta:
         model = FormEntry
         exclude = ()
@@ -121,6 +122,7 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
 
 
 class ShortLinkSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = ShortLink
         exclude = ('academy', )

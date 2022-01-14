@@ -85,6 +85,7 @@ class EventView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, format=None):
 
         items = Event.objects.all()
@@ -247,6 +248,7 @@ class EventTypeView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     def get(self, request, format=None):
 
         items = EventType.objects.all()
@@ -265,6 +267,7 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
+
     @capable_of('read_eventcheckin')
     def get(self, request, format=None, academy_id=None):
 
@@ -329,6 +332,7 @@ class AcademyVenueView(APIView):
     """
     List all snippets
     """
+
     @capable_of('read_event')
     def get(self, request, format=None, academy_id=None, user_id=None):
 
@@ -427,7 +431,8 @@ class ICalStudentView(APIView):
                 organizer = vCalAddress(f'MAILTO:{teacher.user.email}')
 
                 if teacher.user.first_name and teacher.user.last_name:
-                    organizer.params['cn'] = vText(f'{teacher.user.first_name} ' f'{teacher.user.last_name}')
+                    organizer.params['cn'] = vText(f'{teacher.user.first_name} '
+                                                   f'{teacher.user.last_name}')
                 elif teacher.user.first_name:
                     organizer.params['cn'] = vText(teacher.user.first_name)
                 elif teacher.user.last_name:
@@ -577,7 +582,8 @@ class ICalCohortsView(APIView):
                 organizer = vCalAddress(f'MAILTO:{teacher.user.email}')
 
                 if teacher.user.first_name and teacher.user.last_name:
-                    organizer.params['cn'] = vText(f'{teacher.user.first_name} ' f'{teacher.user.last_name}')
+                    organizer.params['cn'] = vText(f'{teacher.user.first_name} '
+                                                   f'{teacher.user.last_name}')
                 elif teacher.user.first_name:
                     organizer.params['cn'] = vText(teacher.user.first_name)
                 elif teacher.user.last_name:
@@ -714,7 +720,8 @@ class ICalEventView(APIView):
                 organizer = vCalAddress(f'MAILTO:{item.author.email}')
 
                 if item.author.first_name and item.author.last_name:
-                    organizer.params['cn'] = vText(f'{item.author.first_name} ' f'{item.author.last_name}')
+                    organizer.params['cn'] = vText(f'{item.author.first_name} '
+                                                   f'{item.author.last_name}')
                 elif item.author.first_name:
                     organizer.params['cn'] = vText(item.author.first_name)
                 elif item.author.last_name:

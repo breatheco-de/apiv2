@@ -7,6 +7,7 @@ from ..mixins import EventTestCase
 
 
 def log_mock():
+
     def log(self, *args):
         print(*args)
 
@@ -17,6 +18,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     """
     🔽🔽🔽 Without academy
     """
+
     @patch.object(logging.Logger, 'error', log_mock())
     def test_create_or_update_venue__without_academy(self):
         import logging

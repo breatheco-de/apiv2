@@ -8,6 +8,7 @@ class AcademyEventTestSuite(EventTestCase):
     """
     🔽🔽🔽 No sync, sync_status PENDING
     """
+
     @patch.object(event_saved, 'send', MagicMock())
     @patch.object(async_export_event_to_eventbrite, 'delay', MagicMock())
     def test_sync_with_eventbrite__no_sync__status_pending(self):

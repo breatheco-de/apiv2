@@ -18,6 +18,7 @@ from ...models import Cohort
 # TODO: reimplement this test based in Survey model
 class SendSurveyTestSuite(FeedbackTestCase):
     """Test /answer"""
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())

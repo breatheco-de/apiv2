@@ -9,6 +9,7 @@ from ..mixins.new_auth_test_case import AuthTestCase
 
 
 class AuthenticateTestSuite(AuthTestCase):
+
     def test_invite_delete_in_bulk_without_auth(self):
         """Test /academy/user/invite without auth"""
         url = reverse_lazy('authenticate:user_invite')

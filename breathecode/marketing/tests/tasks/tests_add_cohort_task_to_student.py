@@ -29,6 +29,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Without Academy
     """
+
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.admissions.signals.student_edu_status_updated.send', MagicMock())

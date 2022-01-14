@@ -12,6 +12,7 @@ from ..mocks import SlackRequestsMock
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     def test_slack_without_url(self):
         """Test /slack without auth"""
         url = reverse_lazy('authenticate:slack')

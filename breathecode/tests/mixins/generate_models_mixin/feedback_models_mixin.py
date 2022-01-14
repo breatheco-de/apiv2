@@ -7,6 +7,7 @@ from mixer.backend.django import mixer
 
 
 class FeedbackModelsMixin(ModelsMixin):
+
     def generate_feedback_models(self,
                                  answer=False,
                                  event=False,

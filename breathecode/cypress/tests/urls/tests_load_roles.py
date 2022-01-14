@@ -290,6 +290,7 @@ ROLES = [
 
 
 def get_capabilities_mock():
+
     def get_capabilities():
         return CAPABILITIES
 
@@ -297,6 +298,7 @@ def get_capabilities_mock():
 
 
 def get_roles_mock():
+
     def get_roles():
         return ROLES
 
@@ -304,6 +306,7 @@ def get_roles_mock():
 
 
 class AcademyEventTestSuite(CypressTestCase):
+
     def test_load_roles__bad_environment__not_exits(self):
         if 'ALLOW_UNSAFE_CYPRESS_APP' in os.environ:
             del os.environ['ALLOW_UNSAFE_CYPRESS_APP']

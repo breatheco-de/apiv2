@@ -34,6 +34,7 @@ class UserAdmin(UserAdmin):
 
 
 class AcademyForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         super(AcademyForm, self).__init__(*args, **kwargs)
         self.fields['timezone'] = forms.ChoiceField(choices=timezones)
@@ -187,6 +188,7 @@ sync_timeslots.short_description = 'Sync Timeslots With Certificate ⏱ '
 
 
 class CohortForm(forms.ModelForm):
+
     def __init__(self, *args, **kwargs):
         super(CohortForm, self).__init__(*args, **kwargs)
         self.fields['timezone'] = forms.ChoiceField(choices=timezones)

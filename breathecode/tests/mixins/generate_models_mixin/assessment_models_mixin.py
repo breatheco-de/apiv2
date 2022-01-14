@@ -7,6 +7,7 @@ from mixer.backend.django import mixer
 
 
 class AssessmentModelsMixin(ModelsMixin):
+
     def generate_assessment_models(self,
                                    assessment=False,
                                    question=False,

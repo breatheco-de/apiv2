@@ -14,6 +14,7 @@ from ..mixins import MediaTestCase
 
 
 class FileMock():
+
     def delete(*args, **kwargs):
         pass
 
@@ -22,6 +23,7 @@ file_mock = Mock(side_effect=FileMock)
 
 
 class StorageMock():
+
     def file(*args, **kwargs):
         return file_mock
 
@@ -31,6 +33,7 @@ storage_mock = Mock(side_effect=StorageMock)
 
 class MediaTestSuite(MediaTestCase):
     """Test /answer"""
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())

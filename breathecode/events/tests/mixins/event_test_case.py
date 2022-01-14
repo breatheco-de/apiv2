@@ -9,6 +9,7 @@ from breathecode.tests.mixins import (GenerateModelsMixin, CacheMixin, GenerateQ
 class EventTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQueriesMixin, OldBreathecodeMixin,
                     DatetimeMixin):
     """AdmissionsTestCase with auth methods"""
+
     def setUp(self):
         self.generate_queries()
         self.reset_old_breathecode_calls()

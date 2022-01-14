@@ -7,6 +7,7 @@ import pytz
 
 
 class Datetime(datetime):
+
     def __setattr__(self, key, value):
         if key == 'info':
             object.__setattr__(self, key, value)
@@ -15,6 +16,7 @@ class Datetime(datetime):
 
 
 class DatetimeInteger:
+
     def __init__(self, year, month, day, hour, minute):
         self.year = str(year)
         self.month = str(month)

@@ -3,6 +3,7 @@ import urllib
 
 
 class Eventbrite(object):
+
     def __init__(self, token=None):
         if token is None:
             token = os.getenv('EVENTBRITE_KEY', '')

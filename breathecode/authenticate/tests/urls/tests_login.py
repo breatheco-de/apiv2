@@ -10,6 +10,7 @@ from ..mixins import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     def test_login_with_bad_credentials(self):
         """Test /login with incorrect credentials"""
         response = self.create_user(email='Konan@naruto.io', password='Pain!$%')

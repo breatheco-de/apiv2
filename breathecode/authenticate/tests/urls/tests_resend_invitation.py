@@ -20,6 +20,7 @@ from django.utils import timezone
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+
     def test_resend_invite_no_auth(self):
         """Test """
         self.headers(academy=1)

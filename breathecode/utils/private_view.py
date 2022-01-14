@@ -13,6 +13,7 @@ def render_message(r, msg):
 
 
 def private_view(func):
+
     def inner(*args, **kwargs):
         req = args[0]
 

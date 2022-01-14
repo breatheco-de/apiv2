@@ -160,6 +160,7 @@ class ActivityViewMixin(APIView):
 
 
 class ActivityTypeView(APIView):
+
     def get_activity_object(self, slug):
         return {'slug': slug, 'description': ACTIVITIES[slug]}
 
@@ -178,6 +179,7 @@ class ActivityTypeView(APIView):
 
 
 class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
+
     @capable_of('read_activity')
     def get(self, request, cohort_id=None, academy_id=None):
         self.queryargs = []
@@ -200,6 +202,7 @@ class ActivityCohortView(ActivityViewMixin, HeaderLimitOffsetPagination):
 
 
 class ActivityMeView(APIView):
+
     @capable_of('read_activity')
     def get(self, request, academy_id=None):
         from breathecode.services.google_cloud import Datastore
@@ -265,6 +268,7 @@ class ActivityMeView(APIView):
 
 
 class ActivityClassroomView(APIView, HeaderLimitOffsetPagination):
+
     @capable_of('classroom_activity')
     def post(self, request, cohort_id=None, academy_id=None):
 
@@ -415,6 +419,7 @@ def add_student_activity(user, data, academy_id):
 
 
 class StudentActivityView(APIView, HeaderLimitOffsetPagination):
+
     @capable_of('read_activity')
     def get(self, request, student_id=None, academy_id=None):
         from breathecode.services.google_cloud import Datastore

@@ -147,6 +147,7 @@ class ReviewSmallSerializer(serpy.Serializer):
 
 
 class AnswerPUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Answer
         exclude = ('token', )
@@ -271,6 +272,7 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
 
 
 class ReviewPUTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Review
         exclude = ('created_at', 'updated_at', 'author', 'platform', 'nps_previous_rating')

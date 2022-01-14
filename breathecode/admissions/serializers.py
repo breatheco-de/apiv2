@@ -442,6 +442,7 @@ class AcademySerializer(serializers.ModelSerializer):
 
 
 class SyllabusPOSTSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Syllabus
         fields = ['id', 'slug']
@@ -674,6 +675,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 
 
 class CohortUserListSerializer(serializers.ListSerializer):
+
     def create(self, validated_data):
         books = [CohortUser(**item) for item in validated_data]
         items = CohortUser.objects.bulk_create(books)
@@ -728,6 +730,7 @@ class CohortTimeSlotSerializer(serializers.ModelSerializer):
 
 
 class SpecialtyModeSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = SpecialtyMode
         exclude = ()
@@ -772,6 +775,7 @@ class CohortUserPOSTSerializer(serpy.Serializer):
 
 
 class CohortUserPUTSerializer(CohortUserSerializerMixin):
+
     class Meta:
         model = CohortUser
         fields = ['id', 'role', 'educational_status', 'finantial_status']
@@ -779,6 +783,7 @@ class CohortUserPUTSerializer(CohortUserSerializerMixin):
 
 
 class SyllabusSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Syllabus
         fields = [

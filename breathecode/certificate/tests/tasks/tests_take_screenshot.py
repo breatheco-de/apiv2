@@ -13,6 +13,7 @@ from ..mocks import (
 
 class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """Tests action take_screenshot"""
+
     @patch(ACTIONS_PATH['certificate_screenshot'], apply_certificate_screenshot_mock())
     def test_take_screenshot_return_true_and_call_certificate_screenshot(self):
         """take_screenshot don't call open in development environment"""
