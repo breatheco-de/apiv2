@@ -19,6 +19,7 @@ from .serializers import (
     PostFormEntrySerializer,
     FormEntrySerializer,
     FormEntrySmallSerializer,
+    ShortlinkSmallSerializer,
     TagSmallSerializer,
     AutomationSmallSerializer,
     DownloadableSerializer,
