@@ -1,5 +1,5 @@
 """
-Test /cohort/user
+Test /cohort/:id/user/:id
 """
 import re
 from django.urls.base import reverse_lazy

@@ -3,6 +3,7 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
+from .utils import is_valid, create_models
 
 
 class NotifyModelsMixin(ModelsMixin):
@@ -25,16 +26,15 @@ class NotifyModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        if not 'device' in models and device:
+        if not 'device' in models and is_valid(device):
             kargs = {}
 
             if 'user' in models or user:
                 kargs['user'] = models['user']
 
-            kargs = {**kargs, **device_kwargs}
-            models['device'] = mixer.blend('notify.Device', **kargs)
+            models['device'] = create_models(device, 'notify.Device', **{**kargs, **device_kwargs})
 
-        if not 'slack_team' in models and slack_team:
+        if not 'slack_team' in models and is_valid(slack_team):
             kargs = {}
 
             if 'user' in models or user:
@@ -43,19 +43,23 @@ class NotifyModelsMixin(ModelsMixin):
             if 'academy' in models or academy:
                 kargs['academy'] = models['academy']
 
-            kargs = {**kargs, **slack_team_kwargs}
-            models['slack_team'] = mixer.blend('notify.SlackTeam', **kargs)
+            models['slack_team'] = create_models(slack_team, 'notify.SlackTeam', **{
+                **kargs,
+                **slack_team_kwargs
+            })
 
-        if not 'slack_user' in models and slack_user:
+        if not 'slack_user' in models and is_valid(slack_user):
             kargs = {}
 
             if 'user' in models or user:
                 kargs['user'] = models['user']
 
-            kargs = {**kargs, **slack_user_kwargs}
-            models['slack_user'] = mixer.blend('notify.SlackUser', **kargs)
+            models['slack_user'] = create_models(slack_user, 'notify.SlackUser', **{
+                **kargs,
+                **slack_user_kwargs
+            })
 
-        if not 'slack_user_team' in models and slack_user_team:
+        if not 'slack_user_team' in models and is_valid(slack_user_team):
             kargs = {}
 
             if 'slack_user' in models or slack_user:
@@ -64,10 +68,12 @@ class NotifyModelsMixin(ModelsMixin):
             if 'slack_team' in models or slack_team:
                 kargs['slack_team'] = models['slack_team']
 
-            kargs = {**kargs, **slack_user_team_kwargs}
-            models['slack_user_team'] = mixer.blend('notify.SlackUserTeam', **kargs)
+            models['slack_user_team'] = create_models(slack_user_team, 'notify.SlackUserTeam', **{
+                **kargs,
+                **slack_user_team_kwargs
+            })
 
-        if not 'slack_channel' in models and slack_channel:
+        if not 'slack_channel' in models and is_valid(slack_channel):
             kargs = {}
 
             if 'cohort' in models or cohort:
@@ -76,7 +82,9 @@ class NotifyModelsMixin(ModelsMixin):
             if 'slack_team' in models or slack_team:
                 kargs['team'] = models['slack_team']
 
-            kargs = {**kargs, **slack_channel_kwargs}
-            models['slack_channel'] = mixer.blend('notify.SlackChannel', **kargs)
+            models['slack_channel'] = create_models(slack_channel, 'notify.SlackChannel', **{
+                **kargs,
+                **slack_channel_kwargs
+            })
 
         return models

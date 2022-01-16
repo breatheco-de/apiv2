@@ -4,6 +4,7 @@ Collections of mixins used to login in authorize microservice
 from breathecode.certificate.models import Badge, LayoutDesign, Specialty, UserSpecialty
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
+from .utils import is_valid, create_models
 
 
 class CertificateModelsMixin(ModelsMixin):
@@ -28,34 +29,36 @@ class CertificateModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        if not 'specialty' in models and specialty:
+        if not 'specialty' in models and is_valid(specialty):
             kargs = {}
 
             if 'syllabus' in models or syllabus:
                 kargs['syllabus'] = models['syllabus']
 
-            kargs = {**kargs, **syllabus_kwargs}
-            models['specialty'] = mixer.blend('certificate.Specialty', **kargs)
-
+            models['specialty'] = create_models(specialty, 'certificate.Specialty', **{
+                **kargs,
+                **syllabus_kwargs
+            })
         if not 'badge' in models and badge:
             kargs = {}
 
-            if 'specialty' in models or specialty:
+            if 'specialty' in models or is_valid(specialty):
                 kargs['specialties'] = [models['specialty']]
 
-            kargs = {**kargs, **badge_kwargs}
-            models['badge'] = mixer.blend('certificate.Badge', **kargs)
+            models['badge'] = create_models(specialty, 'certificate.Badge', **{**kargs, **badge_kwargs})
 
-        if not 'layout_design' in models and layout_design:
+        if not 'layout_design' in models and is_valid(layout_design):
             kargs = {'slug': 'default'}
 
             if layout_design_slug:
                 kargs['slug'] = layout_design_slug
 
-            kargs = {**kargs, **layout_design_kwargs}
-            models['layout_design'] = mixer.blend('certificate.LayoutDesign', **kargs)
+            models['layout_design'] = create_models(layout_design, 'certificate.LayoutDesign', **{
+                **kargs,
+                **layout_design_kwargs
+            })
 
-        if not 'user_specialty' in models and user_specialty:
+        if not 'user_specialty' in models and is_valid(user_specialty):
             kargs = {
                 'token': self.user_specialty_token,
                 'preview_url': 'https://asdasd.com',
@@ -82,7 +85,9 @@ class CertificateModelsMixin(ModelsMixin):
             if 'cohort' in models:
                 kargs['cohort'] = models['cohort']
 
-            kargs = {**kargs, **user_specialty_kwargs}
-            models['user_specialty'] = mixer.blend('certificate.UserSpecialty', **kargs)
+            models['user_specialty'] = create_models(user_specialty, 'certificate.UserSpecialty', **{
+                **kargs,
+                **user_specialty_kwargs
+            })
 
         return models

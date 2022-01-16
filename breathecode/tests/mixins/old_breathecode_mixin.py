@@ -5,6 +5,8 @@ from breathecode.tests.mocks import OLD_BREATHECODE_INSTANCES
 from unittest.mock import call
 from breathecode.services import SOURCE, CAMPAIGN
 
+__all__ = ['OldBreathecodeMixin']
+
 
 class OldBreathecodeMixin():
     """Cache mixin"""

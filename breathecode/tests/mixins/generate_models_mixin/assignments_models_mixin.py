@@ -3,6 +3,7 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
+from .utils import is_valid, create_models
 
 
 class AssignmentsModelsMixin(ModelsMixin):
@@ -16,7 +17,7 @@ class AssignmentsModelsMixin(ModelsMixin):
                                     **kwargs):
         models = models.copy()
 
-        if not 'task' in models and task:
+        if not 'task' in models and is_valid(task):
             kargs = {}
 
             if 'user' in models:
@@ -31,7 +32,6 @@ class AssignmentsModelsMixin(ModelsMixin):
             if task_revision_status:
                 kargs['revision_status'] = task_revision_status
 
-            kargs = {**kargs, **task_kwargs}
-            models['task'] = mixer.blend('assignments.Task', **kargs)
+            models['task'] = create_models(task, 'assignments.Task', **{**kargs, **task_kwargs})
 
         return models
