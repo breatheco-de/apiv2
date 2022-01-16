@@ -4,6 +4,7 @@ Collections of mixins used to login in authorize microservice
 import os
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
+from .utils import is_valid, create_models
 
 
 class FeedbackModelsMixin(ModelsMixin):
@@ -27,16 +28,15 @@ class FeedbackModelsMixin(ModelsMixin):
         os.environ['EMAIL_NOTIFICATIONS_ENABLED'] = 'TRUE'
         models = models.copy()
 
-        if not 'survey' in models and survey:
+        if not 'survey' in models and is_valid(survey):
             kargs = {}
 
             if 'cohort' in models or cohort:
                 kargs['cohort'] = models['cohort']
 
-            kargs = {**kargs, **survey_kwargs}
-            models['survey'] = mixer.blend('feedback.Survey', **kargs)
+            models['survey'] = create_models(survey, 'feedback.Survey', **{**kargs, **survey_kwargs})
 
-        if not 'answer' in models and answer:
+        if not 'answer' in models and is_valid(answer):
             kargs = {}
 
             if 'event' in models or event:
@@ -69,7 +69,6 @@ class FeedbackModelsMixin(ModelsMixin):
             if language:
                 kargs['lang'] = language
 
-            kargs = {**kargs, **answer_kwargs}
-            models['answer'] = mixer.blend('feedback.Answer', **kargs)
+            models['answer'] = create_models(answer, 'feedback.Answer', **{**kargs, **answer_kwargs})
 
         return models

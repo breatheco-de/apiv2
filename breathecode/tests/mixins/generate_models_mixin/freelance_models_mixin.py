@@ -3,6 +3,7 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
+from .utils import is_valid, create_models
 
 
 class FreelanceModelsMixin(ModelsMixin):
@@ -20,7 +21,7 @@ class FreelanceModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        if not 'freelancer' in models and freelancer:
+        if not 'freelancer' in models and is_valid(freelancer):
             kargs = {}
 
             if 'user' in models or user:
@@ -29,10 +30,12 @@ class FreelanceModelsMixin(ModelsMixin):
             if 'credentials_github' in models or credentials_github:
                 kargs['github_user'] = models['credentials_github']
 
-            kargs = {**kargs, **freelancer_kwargs}
-            models['freelancer'] = mixer.blend('freelance.Freelancer', **kargs)
+            models['freelancer'] = create_models(freelancer, 'freelance.Freelancer', **{
+                **kargs,
+                **freelancer_kwargs
+            })
 
-        if not 'bill' in models and bill:
+        if not 'bill' in models and is_valid(bill):
             kargs = {}
 
             if 'user' in models or user:
@@ -41,10 +44,9 @@ class FreelanceModelsMixin(ModelsMixin):
             if 'freelancer' in models or freelancer:
                 kargs['freelancer'] = models['freelancer']
 
-            kargs = {**kargs, **bill_kwargs}
-            models['bill'] = mixer.blend('freelance.Bill', **kargs)
+            models['bill'] = create_models(bill, 'freelance.Bill', **{**kargs, **bill_kwargs})
 
-        if not 'issue' in models and issue:
+        if not 'issue' in models and is_valid(issue):
             kargs = {}
 
             if 'user' in models or user:
@@ -56,7 +58,6 @@ class FreelanceModelsMixin(ModelsMixin):
             if 'bill' in models or bill:
                 kargs['bill'] = models['bill']
 
-            kargs = {**kargs, **issue_kwargs}
-            models['issue'] = mixer.blend('freelance.Issue', **kargs)
+            models['issue'] = create_models(issue, 'freelance.Issue', **{**kargs, **issue_kwargs})
 
         return models

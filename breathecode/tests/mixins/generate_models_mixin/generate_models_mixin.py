@@ -17,6 +17,8 @@ from .marketing_models_mixin import MarketingModelsMixin
 from .monitoring_models_mixin import MonitoringModelsMixin
 from .media_models_mixin import MediaModelsMixin
 
+__all__ = ['GenerateModelsMixin']
+
 
 class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMixin, AuthenticateMixin,
                           CertificateModelsMixin, FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,

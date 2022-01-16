@@ -18,6 +18,8 @@ from .marketing_queries_mixin import MarketingQueriesMixin
 from .monitoring_queries_mixin import MonitoringQueriesMixin
 from .media_queries_mixin import MediaQueriesMixin
 
+__all__ = ['GenerateQueriesMixin']
+
 
 class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQueriesMixin,
                            AssignmentsQueriesMixin, AuthenticateQueriesMixin, CertificateQueriesMixin,

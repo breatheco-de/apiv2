@@ -1,0 +1,2 @@
+class BadArgument(Exception):
+    pass
