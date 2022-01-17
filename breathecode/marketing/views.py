@@ -90,11 +90,11 @@ def create_lead_from_app(request, app_slug=None):
 
     app_id = request.GET.get('app_id', None)
     if app_slug is None or app_id is None:
-        raise APIException(f'Invalid app slug and/or id', code=400)
+        raise ValidationException(f'Invalid app slug and/or id', code=400, slug='without-app-slug-or-app-id')
 
     app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
     if app is None:
-        raise APIException(f'App not found with those credentials', code=401)
+        raise ValidationException(f'App not found with those credentials', code=401, slug='without-app-id')
 
     app.hits += 1
     app.last_call_at = timezone.now()
@@ -342,8 +342,6 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     """
     @capable_of('crud_lead')
     def get(self, request, format=None, academy_id=None):
-
-        print('academy_id', academy_id)
         tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
 
         serializer = TagSmallSerializer(tags, many=True)
