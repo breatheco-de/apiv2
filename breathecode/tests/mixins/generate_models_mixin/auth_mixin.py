@@ -6,6 +6,7 @@ from breathecode.tests.mixins.headers_mixin import HeadersMixin
 from breathecode.authenticate.models import Token
 from mixer.backend.django import mixer
 from breathecode.tests.mixins import DateFormatterMixin
+from .utils import is_valid, create_models
 
 
 class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
@@ -25,14 +26,11 @@ class AuthMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                              **kwargs):
         models = models.copy()
 
-        if not 'user' in models and (user or authenticate or profile_academy or manual_authenticate
-                                     or cohort_user or task or slack_team):
+        if not 'user' in models and (is_valid(user) or is_valid(authenticate) or is_valid(profile_academy)
+                                     or is_valid(manual_authenticate) or is_valid(cohort_user)
+                                     or is_valid(task) or is_valid(slack_team)):
             kargs = {}
-
-            kargs = {**kargs, **user_kwargs}
-            models['user'] = mixer.blend('auth.User', **kargs)
-            models['user'].set_password(self.password)
-            models['user'].save()
+            models['user'] = create_models(user, 'auth.User', **{**kargs, **user_kwargs})
 
         if authenticate:
             self.client.force_authenticate(user=models['user'])

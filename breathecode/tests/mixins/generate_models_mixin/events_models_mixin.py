@@ -3,6 +3,7 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
+from .utils import is_valid, create_models
 
 
 class EventsModelsMixin(ModelsMixin):
@@ -28,28 +29,18 @@ class EventsModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        if not 'organization' in models and organization:
+        if not 'organization' in models and is_valid(organization):
             kargs = {}
 
             if 'academy' in models or academy:
                 kargs['academy'] = models['academy']
 
-            kargs = {**kargs, **organization_kwargs}
-            models['organization'] = mixer.blend('events.Organization', **kargs)
+            models['organization'] = create_models(organization, 'events.Organization', **{
+                **kargs,
+                **organization_kwargs
+            })
 
-        if not 'organizer' in models and organizer:
-            kargs = {}
-
-            if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
-
-            if 'organization' in models or organization:
-                kargs['organization'] = models['organization']
-
-            kargs = {**kargs, **organizer_kwargs}
-            models['organizer'] = mixer.blend('events.Organizer', **kargs)
-
-        if not 'venue' in models and venue:
+        if not 'organizer' in models and is_valid(organizer):
             kargs = {}
 
             if 'academy' in models or academy:
@@ -58,19 +49,34 @@ class EventsModelsMixin(ModelsMixin):
             if 'organization' in models or organization:
                 kargs['organization'] = models['organization']
 
-            kargs = {**kargs, **venue_kwargs}
-            models['venue'] = mixer.blend('events.Venue', **kargs)
+            models['organizer'] = create_models(organizer, 'events.Organizer', **{
+                **kargs,
+                **organizer_kwargs
+            })
 
-        if not 'event_type' in models and event_type:
+        if not 'venue' in models and is_valid(venue):
             kargs = {}
 
             if 'academy' in models or academy:
                 kargs['academy'] = models['academy']
 
-            kargs = {**kargs, **event_type_kwargs}
-            models['event_type'] = mixer.blend('events.EventType', **kargs)
+            if 'organization' in models or organization:
+                kargs['organization'] = models['organization']
 
-        if not 'event' in models and event:
+            models['venue'] = create_models(venue, 'events.Venue', **{**kargs, **venue_kwargs})
+
+        if not 'event_type' in models and is_valid(event_type):
+            kargs = {}
+
+            if 'academy' in models or academy:
+                kargs['academy'] = models['academy']
+
+            models['event_type'] = create_models(event_type, 'events.EventType', **{
+                **kargs,
+                **event_type_kwargs
+            })
+
+        if not 'event' in models and is_valid(event):
             kargs = {}
 
             if 'user' in models or user:
@@ -91,10 +97,9 @@ class EventsModelsMixin(ModelsMixin):
             if 'event_type' in models or event_type:
                 kargs['event_type'] = models['event_type']
 
-            kargs = {**kargs, **event_kwargs}
-            models['event'] = mixer.blend('events.Event', **kargs)
+            models['event'] = create_models(event, 'events.Event', **{**kargs, **event_kwargs})
 
-        if not 'event_checkin' in models and event_checkin:
+        if not 'event_checkin' in models and is_valid(event_checkin):
             kargs = {}
 
             if 'user' in models or user:
@@ -103,13 +108,17 @@ class EventsModelsMixin(ModelsMixin):
             if 'event' in models or event:
                 kargs['event'] = models['event']
 
-            kargs = {**kargs, **event_checkin_kwargs}
-            models['event_checkin'] = mixer.blend('events.EventCheckin', **kargs)
+            models['event_checkin'] = create_models(event_checkin, 'events.EventCheckin', **{
+                **kargs,
+                **event_checkin_kwargs
+            })
 
-        if not 'eventbrite_webhook' in models and eventbrite_webhook:
+        if not 'eventbrite_webhook' in models and is_valid(eventbrite_webhook):
             kargs = {}
 
-            kargs = {**kargs, **eventbrite_webhook_kwargs}
-            models['eventbrite_webhook'] = mixer.blend('events.EventbriteWebhook', **kargs)
+            models['eventbrite_webhook'] = create_models(eventbrite_webhook, 'events.EventbriteWebhook', **{
+                **kargs,
+                **eventbrite_webhook_kwargs
+            })
 
         return models

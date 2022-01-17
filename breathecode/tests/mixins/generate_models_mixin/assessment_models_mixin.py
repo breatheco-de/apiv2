@@ -4,6 +4,7 @@ Collections of mixins used to login in authorize microservice
 import os
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
+from .utils import is_valid, create_models
 
 
 class AssessmentModelsMixin(ModelsMixin):
@@ -25,7 +26,7 @@ class AssessmentModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        if not 'assessment' in models and assessment:
+        if not 'assessment' in models and is_valid(assessment):
             kargs = {}
 
             if 'academy' in models or academy:
@@ -34,10 +35,12 @@ class AssessmentModelsMixin(ModelsMixin):
             if 'user' in models or user:
                 kargs['author'] = models['user']
 
-            kargs = {**kargs, **assessment_kwargs}
-            models['assessment'] = mixer.blend('assessment.Assessment', **kargs)
+            models['assessment'] = create_models(assessment, 'assessment.Assessment', **{
+                **kargs,
+                **assessment_kwargs
+            })
 
-        if not 'question' in models and question:
+        if not 'question' in models and is_valid(question):
             kargs = {}
 
             if 'assessment' in models or assessment:
@@ -46,19 +49,20 @@ class AssessmentModelsMixin(ModelsMixin):
             if 'user' in models or user:
                 kargs['author'] = models['user']
 
-            kargs = {**kargs, **question_kwargs}
-            models['question'] = mixer.blend('assessment.Question', **kargs)
+            models['question'] = create_models(question, 'assessment.Question', **{
+                **kargs,
+                **question_kwargs
+            })
 
-        if not 'option' in models and option:
+        if not 'option' in models and is_valid(option):
             kargs = {}
 
             if 'question' in models or question:
                 kargs['question'] = models['question']
 
-            kargs = {**kargs, **option_kwargs}
-            models['option'] = mixer.blend('assessment.Option', **kargs)
+            models['option'] = create_models(option, 'assessment.Option', **{**kargs, **option_kwargs})
 
-        if not 'student_assessment' in models and student_assessment:
+        if not 'student_assessment' in models and is_valid(student_assessment):
             kargs = {}
 
             if 'academy' in models or academy:
@@ -70,16 +74,18 @@ class AssessmentModelsMixin(ModelsMixin):
             if 'user' in models or user:
                 kargs['student'] = models['user']
 
-            kargs = {**kargs, **student_assessment_kwargs}
-            models['student_assessment'] = mixer.blend('assessment.StudentAssessment', **kargs)
+            models['student_assessment'] = create_models(student_assessment, 'assessment.StudentAssessment',
+                                                         **{
+                                                             **kargs,
+                                                             **student_assessment_kwargs
+                                                         })
 
-        if not 'answer' in models and answer:
+        if not 'answer' in models and is_valid(answer):
             kargs = {}
 
             if 'student_assessment' in models or student_assessment:
                 kargs['student_assesment'] = models['student_assessment']
 
-            kargs = {**kargs, **answer_kwargs}
-            models['answer'] = mixer.blend('assessment.Answer', **kargs)
+            models['answer'] = create_models(answer, 'assessment.Answer', **{**kargs, **answer_kwargs})
 
         return models

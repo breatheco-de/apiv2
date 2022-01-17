@@ -2,10 +2,12 @@
 Headers mixin
 """
 
+__all__ = ['HeadersMixin']
+
 
 class HeadersMixin():
     """Headers mixin"""
-    def headers(self, **kargs):
+    def headers(self, **kargs: str) -> None:
         headers = {}
 
         items = [
