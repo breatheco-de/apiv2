@@ -6,7 +6,7 @@ from .views import (TaskMeView, sync_cohort_tasks_view, TaskTeacherView, deliver
 
 app_name = 'assignments'
 urlpatterns = [
-    path('task/', TaskTeacherView.as_view()),
+    path('task/', TaskTeacherView.as_view(), name='task'),
     path('user/me/task', TaskMeView.as_view()),
     path('user/<int:user_id>/task', TaskMeView.as_view()),
     path('user/<int:user_id>/task/<int:task_id>', TaskMeView.as_view()),

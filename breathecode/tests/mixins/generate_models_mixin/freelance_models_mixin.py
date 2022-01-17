@@ -3,7 +3,7 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
-from .utils import is_valid, create_models
+from .utils import is_valid, create_models, just_one
 
 
 class FreelanceModelsMixin(ModelsMixin):
@@ -24,11 +24,11 @@ class FreelanceModelsMixin(ModelsMixin):
         if not 'freelancer' in models and is_valid(freelancer):
             kargs = {}
 
-            if 'user' in models or user:
-                kargs['user'] = models['user']
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
 
-            if 'credentials_github' in models or credentials_github:
-                kargs['github_user'] = models['credentials_github']
+            if 'credentials_github' in models:
+                kargs['github_user'] = just_one(models['credentials_github'])
 
             models['freelancer'] = create_models(freelancer, 'freelance.Freelancer', **{
                 **kargs,
@@ -38,11 +38,11 @@ class FreelanceModelsMixin(ModelsMixin):
         if not 'bill' in models and is_valid(bill):
             kargs = {}
 
-            if 'user' in models or user:
-                kargs['reviewer'] = models['user']
+            if 'user' in models:
+                kargs['reviewer'] = just_one(models['user'])
 
-            if 'freelancer' in models or freelancer:
-                kargs['freelancer'] = models['freelancer']
+            if 'freelancer' in models:
+                kargs['freelancer'] = just_one(models['freelancer'])
 
             models['bill'] = create_models(bill, 'freelance.Bill', **{**kargs, **bill_kwargs})
 
@@ -50,13 +50,13 @@ class FreelanceModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'user' in models or user:
-                kargs['author'] = models['user']
+                kargs['author'] = just_one(models['user'])
 
             if 'freelancer' in models or freelancer:
-                kargs['freelancer'] = models['freelancer']
+                kargs['freelancer'] = just_one(models['freelancer'])
 
             if 'bill' in models or bill:
-                kargs['bill'] = models['bill']
+                kargs['bill'] = just_one(models['bill'])
 
             models['issue'] = create_models(issue, 'freelance.Issue', **{**kargs, **issue_kwargs})
 

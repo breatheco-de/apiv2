@@ -74,8 +74,8 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
 
         fn = self.__flow__(
             self.generate_credentials,
-            self.generate_assignments_models,
             self.generate_admissions_models,
+            self.generate_assignments_models,
             self.generate_media_models,
             self.generate_marketing_models,
             self.generate_events_models,

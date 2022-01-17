@@ -9,3 +9,6 @@ class Check:
 
     sha256 = Sha256Mixin.assertHash
     token = TokenMixin.assertToken
+
+    def __init__(self, parent) -> None:
+        self.parent = parent

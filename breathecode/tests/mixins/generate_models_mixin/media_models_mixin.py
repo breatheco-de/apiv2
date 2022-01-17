@@ -3,7 +3,7 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
-from .utils import is_valid, create_models
+from .utils import is_valid, create_models, just_one, get_list
 
 
 class MediaModelsMixin(ModelsMixin):
@@ -27,10 +27,10 @@ class MediaModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'category' in models:
-                kargs['categories'] = [models['category']]
+                kargs['categories'] = get_list(models['category'])
 
             if 'academy' in models:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             models['media'] = create_models(media, 'media.Media', **{**kargs, **media_kwargs})
 
