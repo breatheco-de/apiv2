@@ -32,6 +32,7 @@ from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
+import breathecode.marketing.tasks as tasks
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,6 @@ def create_lead(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead_from_app(request, app_slug=None):
-
     app_id = request.GET.get('app_id', None)
     if app_slug is None or app_id is None:
         raise ValidationException(f'Invalid app slug and/or id', code=400, slug='without-app-slug-or-app-id')
@@ -115,6 +115,7 @@ def create_lead_from_app(request, app_slug=None):
 
     if 'automations' not in request.data:
         payload['automations'] = ','.join([str(auto.slug) for auto in app.default_automations.all()])
+
     if 'tags' not in request.data:
         payload['tags'] = ','.join([tag.slug for tag in app.default_tags.all()])
 
@@ -122,15 +123,18 @@ def create_lead_from_app(request, app_slug=None):
     if serializer.is_valid():
         serializer.save()
 
-        persist_single_lead.delay(serializer.data)
+        tasks.persist_single_lead.delay(serializer.data)
+
         app.last_call_status = 'OK'
         app.save()
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     else:
         app.last_call_status = 'ERROR'
         app.last_call_log = json.dumps(serializer.errors)
         app.save()
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
