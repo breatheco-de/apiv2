@@ -26,6 +26,8 @@ acp_ids = {
     'utm_url': '15',
     'utm_location': '18',
     'course': '2',
+    'utm_medium': '36',
+    'utm_content': '35',
     'client_comments': '13',
     'current_download': '46',  # use in downloadables
     'utm_language': '16',
@@ -210,6 +212,8 @@ def register_new_lead(form_entry=None):
     contact = set_optional(contact, 'utm_country', form_entry, 'country')
     contact = set_optional(contact, 'utm_campaign', form_entry, 'utm_campaign')
     contact = set_optional(contact, 'utm_source', form_entry, 'utm_source')
+    contact = set_optional(contact, 'utm_content', form_entry, 'utm_content')
+    contact = set_optional(contact, 'utm_medium', form_entry, 'utm_medium')
     contact = set_optional(contact, 'client_comments', form_entry, 'client_comments')
     contact = set_optional(contact, 'gclid', form_entry)
     contact = set_optional(contact, 'current_download', form_entry)
