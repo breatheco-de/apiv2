@@ -10,10 +10,10 @@ class Request:
     """Wrapper of last implementation for request for testing purposes"""
 
     set_headers = HeadersMixin.headers
-    parent: APITestCase
+    _parent: APITestCase
 
     def __init__(self, parent) -> None:
-        self.parent = parent
+        self._parent = parent
 
     def authenticate(self, user: User) -> None:
         """
@@ -22,7 +22,7 @@ class Request:
         Keywords arguments:
         - user: a instance of user model `breathecode.authenticate.models.User`
         """
-        self.parent.client.force_authenticate(user=user)
+        self._parent.client.force_authenticate(user=user)
 
     def manual_authentication(self, user: User) -> None:
         """
@@ -32,4 +32,4 @@ class Request:
         - user: a instance of user model `breathecode.authenticate.models.User`
         """
         token = Token.objects.create(user=user)
-        self.parent.client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
+        self._parent.client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')

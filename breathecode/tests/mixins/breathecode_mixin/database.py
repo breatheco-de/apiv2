@@ -1,6 +1,7 @@
 import re
 from importlib import import_module
 from typing import Any
+from rest_framework.test import APITestCase
 from django.db.models import Model
 from ..generate_models_mixin import GenerateModelsMixin
 from ..models_mixin import ModelsMixin
@@ -12,10 +13,12 @@ __all__ = ['Database']
 
 class Database:
     """Wrapper of last implementation for generate_queries for testing purposes"""
-    _cache = {}
+
+    _cache: dict[str, Model] = {}
+    _parent: APITestCase
 
     def __init__(self, parent) -> None:
-        self.parent = parent
+        self._parent = parent
 
     @classmethod
     def _get_model(cls, path: str) -> Model:
@@ -103,4 +106,4 @@ class Database:
         - authenticate: create a user and use `APITestCase.client.force_authenticate(user=models['user'])` to
         get credentials.
         """
-        return GenerateModelsMixin.generate_models(self.parent, *args, **kwargs)
+        return GenerateModelsMixin.generate_models(self._parent, *args, **kwargs)

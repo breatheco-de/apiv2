@@ -26,12 +26,6 @@ class AssignmentsModelsMixin(ModelsMixin):
             if 'cohort' in models:
                 kargs['cohort'] = just_one(models['cohort'])
 
-            if task_status:
-                kargs['task_status'] = just_one(kargs['task_status'])
-
-            if task_type:
-                kargs['task_type'] = just_one(kargs['task_type'])
-
             if task_revision_status:
                 kargs['revision_status'] = just_one(kargs['revision_status'])
 

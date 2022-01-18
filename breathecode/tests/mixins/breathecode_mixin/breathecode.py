@@ -1,5 +1,6 @@
 import re
 import inspect
+from rest_framework.test import APITestCase
 from typing import Optional
 from .cache import Cache
 from .datetime import Datetime
@@ -29,9 +30,10 @@ class Breathecode:
     database: Database
     check: Check
     format: Format
+    _parent: APITestCase
 
     def __init__(self, parent) -> None:
-        self.parent = parent
+        self._parent = parent
 
         self.cache = Cache(parent)
         self.datetime = Datetime(parent)

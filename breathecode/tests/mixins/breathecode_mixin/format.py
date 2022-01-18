@@ -1,4 +1,5 @@
 from typing import Any
+from rest_framework.test import APITestCase
 from django.db.models import Model
 from ..models_mixin import ModelsMixin
 
@@ -7,8 +8,11 @@ __all__ = ['Format']
 
 class Format:
     """Wrapper of last implementation for request for testing purposes"""
+
+    _parent: APITestCase
+
     def __init__(self, parent) -> None:
-        self.parent = parent
+        self._parent = parent
 
     def to_dict(self, arg: Any) -> dict[str, Any] | list[dict[str, Any]]:
         """Parse the object to a `dict` or `list[dict]`"""
