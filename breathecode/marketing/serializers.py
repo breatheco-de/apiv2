@@ -126,7 +126,7 @@ class ShortLinkSerializer(serializers.ModelSerializer):
         exclude = ('academy', )
 
     def validate(self, data):
-
+        is_put = self.instance
         link = ShortLink.objects.filter(slug=data['slug']).first()
         if link is not None and self.instance is None and self.instance.id != link.id:
             raise ValidationException(f'Shortlink with slug {data["slug"]} already exists',
@@ -137,13 +137,14 @@ class ShortLinkSerializer(serializers.ModelSerializer):
             raise ValidationException(f'Destination URL is invalid, returning status {status["status_code"]}')
 
         academy = Academy.objects.filter(id=self.context['academy']).first()
+
         if academy is None:
             raise ValidationException(f'Academy {self.context["academy"]} not found',
                                       slug='academy-not-found')
 
         utc_now = timezone.now()
-        days_ago = self.instance.created_at + timedelta(days=1)
-        if days_ago < utc_now:
+
+        if is_put and self.instance.created_at + timedelta(days=1) < utc_now:
             raise ValidationException(
                 f'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
                 slug='update-days-ago')
