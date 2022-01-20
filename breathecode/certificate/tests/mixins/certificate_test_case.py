@@ -29,3 +29,9 @@ class CertificateTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMix
             _d[k] = None
 
         return [{**item, **_d} for item in dicts]
+
+    def remove_is_clean(self, items):
+        for item in items:
+            if 'is_cleaned' in item:
+                del item['is_cleaned']
+        return items

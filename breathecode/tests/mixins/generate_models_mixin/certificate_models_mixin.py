@@ -83,6 +83,7 @@ class CertificateModelsMixin(ModelsMixin):
                 kargs['cohort'] = models['cohort']
 
             kargs = {**kargs, **user_specialty_kwargs}
+            print(kargs)
             models['user_specialty'] = mixer.blend('certificate.UserSpecialty', **kargs)
 
         return models

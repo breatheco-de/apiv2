@@ -27,11 +27,13 @@ strings = {
 
 def certificate_set_default_issued_at():
     query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
+
     for item in query:
-        # item.issued_at = item.cohort.ending_date
-        # item.save()
         if item.cohort:
+
             UserSpecialty.objects.filter(id=item.id).update(issued_at=item.cohort.ending_date)
+
+    return query
 
 
 def generate_certificate(user, cohort=None, layout=None):
@@ -59,6 +61,9 @@ def generate_certificate(user, cohort=None, layout=None):
         raise ValidationException('Specialty has no Syllabus assigned', slug='missing-specialty')
 
     uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
+
+    if uspe:
+        print(vars(uspe), 255237626738128)
 
     if (uspe is not None and uspe.status == 'PERSISTED' and uspe.preview_url):
         raise ValidationException('This user already has a certificate created', slug='already-exists')

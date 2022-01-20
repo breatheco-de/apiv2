@@ -99,6 +99,7 @@ class CertificateTestSuite(CertificateTestCase):
         self.headers(academy=1)
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 112113114115}
         syllabus_kwargs = {'duration_in_days': 112113114115}
+        user_specialty_kwargs = {'status': 'ERROR'}
         cohort_user_kwargs = {'educational_status': 'GRADUATED', 'finantial_status': 'UP_TO_DATE'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
@@ -114,6 +115,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      user_specialty=True,
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs,
+                                     user_specialty_kwargs=user_specialty_kwargs,
                                      cohort_user_kwargs=cohort_user_kwargs,
                                      syllabus_kwargs=syllabus_kwargs)
         base = model.copy()

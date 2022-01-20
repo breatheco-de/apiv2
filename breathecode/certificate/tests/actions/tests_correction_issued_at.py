@@ -1,8 +1,8 @@
 """
 Tasks tests
 """
-from unittest.mock import patch, call
-from ...actions import certificate_screenshot
+from unittest.mock import patch, call, MagicMock
+from ...actions import certificate_set_default_issued_at
 from ..mixins import CertificateTestCase
 from ...models import UserSpecialty
 from ..mocks import (
@@ -15,41 +15,247 @@ from ..mocks import (
     apply_screenshotmachine_requests_get_mock,
 )
 
+from django.utils import timezone
 
-class ActionCertificateScreenshotTestCase(CertificateTestCase):
-    """Tests action certificate_screenshot"""
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(SCREENSHOTMACHINE_PATH['get'], apply_screenshotmachine_requests_get_mock())
-    def test_certificate_screenshot_with_invalid_id(self):
-        """certificate_screenshot don't call open in development environment"""
-        SCREENSHOTMACHINE_INSTANCES['get'].call_args_list = []
+# def certificate_set_default_issued_at():
+#     query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
+#     for item in query:
+#         # item.issued_at = item.cohort.ending_date
+#         # item.save()
+#         if item.cohort:
+#             UserSpecialty.objects.filter(id=item.id).update(issued_at=item.cohort.ending_date)
 
-        try:
-            certificate_screenshot(0)
-        except UserSpecialty.DoesNotExist as error:
-            self.assertEqual(str(error), 'UserSpecialty matching query does not exist.')
+# test status ERROR issued_at null = no hace nada, no hay cambios
+# test status ERROR issued_at set = no hace nada, no hay cambios
+# test status PERSISTED issued_at null = edita el issued_at con una data que proviene del cohort
+# test status PERSISTED issued_at null, dos instancias de la clase = edita el issued_at con una data que proviene del cohort para las dos instancias
+# test status PERSISTED issued_at set = no hace nada, no hay cambios
+# test status PENDING issued_at null = no hace nada, no hay cambios
+# test status PENDING issued_at set = no hace nada, no hay cambios
 
-        self.assertEqual(SCREENSHOTMACHINE_INSTANCES['get'].call_args_list, [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch(SCREENSHOTMACHINE_PATH['get'], apply_screenshotmachine_requests_get_mock())
-    # TODO: fix this test, I'm hiding it
-    def hide_test_certificate_screenshot_with_valid_id(self):
-        """certificate_screenshot don't call open in development environment"""
-        SCREENSHOTMACHINE_INSTANCES['get'].call_args_list = []
+class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
+    def test_issued_at_null_status_error(self):
 
-        model = self.generate_models(specialty=True,
-                                     layout_design=True,
-                                     teacher=True,
-                                     stage=True,
-                                     specialty_mode=True,
-                                     user_specialty=True)
-        url = self.generate_screenshotmachine_url(model['user_specialty'])
+        model = self.generate_models(user_specialty=True,
+                                     user_specialty_kwargs={
+                                         'status': 'ERROR',
+                                         'issued_at': None
+                                     })
+        query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
 
-        self.assertEqual(certificate_screenshot(model['certificate'].id), None)
-        self.assertEqual(SCREENSHOTMACHINE_INSTANCES['get'].call_args_list, [call(url, stream=True)])
-        self.assertEqual(self.user_specialty_has_preview_url(model['certificate'].id), True)
+        result = certificate_set_default_issued_at()
+
+        # print(result)
+        self.assertEqual(list(result), list(query))
+        self.assertEqual(
+            self.all_user_specialty_dict(),
+            self.remove_is_clean([{
+                **self.model_to_dict(model, 'user_specialty'),
+                'status': 'ERROR',
+                'issued_at': None,
+            }]))
+
+    def test_issued_at_set_status_error(self):
+
+        now = timezone.now()
+
+        model = self.generate_models(user_specialty=True,
+                                     user_specialty_kwargs={
+                                         'status': 'ERROR',
+                                         'issued_at': now
+                                     })
+
+        query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
+
+        result = certificate_set_default_issued_at()
+
+        # print(result)
+        self.assertEqual(list(result), list(query))
+        self.assertEqual(
+            self.all_user_specialty_dict(),
+            self.remove_is_clean([{
+                **self.model_to_dict(model, 'user_specialty'),
+                'status': 'ERROR',
+                'issued_at': now,
+            }]))
+
+    def test_issued_at_null_status_persisted_one_item(self):
+
+        model = self.generate_models(user_specialty=True,
+                                     user_specialty_kwargs={
+                                         'status': 'PERSISTED',
+                                         'issued_at': None
+                                     })
+
+        query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
+
+        result = certificate_set_default_issued_at()
+
+        # print(result)
+        self.assertEqual(list(result), list(query))
+        self.assertEqual(
+            self.all_user_specialty_dict(),
+            self.remove_is_clean([{
+                **self.model_to_dict(model, 'user_specialty'),
+                'status': 'PERSISTED',
+                'issued_at': None,
+            }]))
+
+    def test_issued_at_null_status_persisted_two_items(self):
+
+        model1 = self.generate_models(user_specialty=True,
+                                      user_specialty_kwargs={
+                                          'status': 'PERSISTED',
+                                          'issued_at': None,
+                                          'token': '123abcd'
+                                      })
+        model2 = self.generate_models(user_specialty=True,
+                                      user_specialty_kwargs={
+                                          'status': 'PERSISTED',
+                                          'issued_at': None,
+                                          'token': '567pqrst'
+                                      })
+
+        query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
+
+        result = certificate_set_default_issued_at()
+
+        # print(result)
+        self.assertEqual(list(result), list(query))
+        self.assertEqual(
+            self.all_user_specialty_dict(),
+            self.remove_is_clean([{
+                **self.model_to_dict(model1, 'user_specialty'),
+                'status': 'PERSISTED',
+                'issued_at': None,
+            }, {
+                **self.model_to_dict(model2, 'user_specialty'),
+                'status': 'PERSISTED',
+                'issued_at': None,
+            }]))
+
+    def test_issued_at_null_status_persisted_one_item_with_cohort(self):
+
+        model = self.generate_models(user_specialty=True,
+                                     cohort=True,
+                                     user_specialty_kwargs={
+                                         'status': 'PERSISTED',
+                                         'issued_at': None
+                                     })
+
+        query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
+
+        result = certificate_set_default_issued_at()
+
+        # print(result)
+        self.assertEqual(list(result), list(query))
+        self.assertEqual(
+            self.all_user_specialty_dict(),
+            self.remove_is_clean([{
+                **self.model_to_dict(model, 'user_specialty'),
+                'status': 'PERSISTED',
+                'issued_at': model.cohort.ending_date,
+            }]))
+
+    def test_issued_at_null_status_persisted_two_items_with_cohort(self):
+
+        model1 = self.generate_models(user_specialty=True,
+                                      cohort=True,
+                                      user_specialty_kwargs={
+                                          'status': 'PERSISTED',
+                                          'issued_at': None,
+                                          'token': '123abcd'
+                                      })
+        model2 = self.generate_models(user_specialty=True,
+                                      cohort=True,
+                                      user_specialty_kwargs={
+                                          'status': 'PERSISTED',
+                                          'issued_at': None,
+                                          'token': '567pqrst'
+                                      })
+
+        query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
+
+        result = certificate_set_default_issued_at()
+
+        # print(result)
+        self.assertEqual(list(result), list(query))
+        self.assertEqual(
+            self.all_user_specialty_dict(),
+            self.remove_is_clean([{
+                **self.model_to_dict(model1, 'user_specialty'),
+                'status': 'PERSISTED',
+                'issued_at': model1.cohort.ending_date,
+            }, {
+                **self.model_to_dict(model2, 'user_specialty'),
+                'status': 'PERSISTED',
+                'issued_at': model2.cohort.ending_date,
+            }]))
+
+    def test_issued_at_set_status_persisted(self):
+        now = timezone.now()
+        model = self.generate_models(user_specialty=True,
+                                     user_specialty_kwargs={
+                                         'status': 'PERSISTED',
+                                         'issued_at': now
+                                     })
+
+        query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
+
+        result = certificate_set_default_issued_at()
+
+        # print(result)
+        self.assertEqual(list(result), list(query))
+        self.assertEqual(
+            self.all_user_specialty_dict(),
+            self.remove_is_clean([{
+                **self.model_to_dict(model, 'user_specialty'),
+                'status': 'PERSISTED',
+                'issued_at': now,
+            }]))
+
+    def test_issued_at_set_status_pending(self):
+
+        now = timezone.now()
+        model = self.generate_models(user_specialty=True,
+                                     user_specialty_kwargs={
+                                         'status': 'PENDING',
+                                         'issued_at': now
+                                     })
+
+        query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
+
+        result = certificate_set_default_issued_at()
+
+        # print(result)
+        self.assertEqual(list(result), list(query))
+        self.assertEqual(
+            self.all_user_specialty_dict(),
+            self.remove_is_clean([{
+                **self.model_to_dict(model, 'user_specialty'),
+                'status': 'PENDING',
+                'issued_at': now,
+            }]))
+
+    def test_issued_at_null_status_pending(self):
+
+        model = self.generate_models(user_specialty=True,
+                                     user_specialty_kwargs={
+                                         'status': 'PENDING',
+                                         'issued_at': None
+                                     })
+
+        query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
+
+        result = certificate_set_default_issued_at()
+
+        # print(result)
+        self.assertEqual(list(result), list(query))
+        self.assertEqual(
+            self.all_user_specialty_dict(),
+            self.remove_is_clean([{
+                **self.model_to_dict(model, 'user_specialty'),
+                'status': 'PENDING',
+                'issued_at': None,
+            }]))

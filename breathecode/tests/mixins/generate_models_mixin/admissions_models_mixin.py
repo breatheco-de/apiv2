@@ -20,6 +20,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    profile_academy=False,
                                    cohort_user=False,
                                    city=False,
+                                   user_specialty=False,
                                    country=False,
                                    skip_cohort=False,
                                    syllabus=False,
@@ -59,7 +60,8 @@ class AdmissionsModelsMixin(ModelsMixin):
             kargs = {**kargs, **city_kwargs}
             models['city'] = mixer.blend('admissions.City', **kargs)
 
-        if not 'academy' in models and (academy or profile_academy or syllabus or academy_specialty_mode):
+        if not 'academy' in models and (academy or profile_academy or syllabus or academy_specialty_mode
+                                        or user_specialty):
             kargs = {}
 
             if 'country' in models:
