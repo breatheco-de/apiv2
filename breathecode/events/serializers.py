@@ -1,5 +1,5 @@
 from breathecode.marketing.actions import validate_marketing_tags
-from .models import Event
+from .models import Event, Organization
 from rest_framework import serializers
 import serpy
 
@@ -41,6 +41,17 @@ class VenueSerializer(serpy.Serializer):
     city = serpy.Field()
     zip_code = serpy.Field()
     state = serpy.Field()
+
+
+class OrganizationBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    eventbrite_id = serpy.Field()
+    eventbrite_key = serpy.Field()
+    name = serpy.Field()
+    sync_status = serpy.Field()
+    sync_desc = serpy.Field()
+    updated_at = serpy.Field()
+    created_at = serpy.Field()
 
 
 class EventTinySerializer(serpy.Serializer):
@@ -131,3 +142,9 @@ class EventSerializer(serializers.ModelSerializer):
     def validate_tags(self, value):
         validate_marketing_tags(value)
         return value
+
+
+class OrganizationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Organization
+        exclude = ()

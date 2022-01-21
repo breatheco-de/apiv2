@@ -81,6 +81,14 @@ CAPABILITIES = [
         'description': 'Create, update or delete syllabus versions'
     },
     {
+        'slug': 'read_organization',
+        'description': 'Read academy organization details'
+    },
+    {
+        'slug': 'crud_organization',
+        'description': 'Update, create or delete academy organization details'
+    },
+    {
         'slug': 'read_event',
         'description': 'List and retrieve event information'
     },
@@ -436,7 +444,7 @@ class Command(BaseCommand):
             'caps':
             extend(roles, [
                 'academy_coordinator', 'student', 'career_support', 'growth_manager', 'admissions_developer',
-                'syllabus_coordinator'
+                'syllabus_coordinator', 'read_organization', 'crud_organization'
             ]) +
             ['crud_my_academy', 'generate_academy_token', 'send_reset_password', 'generate_temporal_token']
         })
