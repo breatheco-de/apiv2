@@ -1,10 +1,13 @@
 import re
 import inspect
+from rest_framework.test import APITestCase
 from typing import Optional
 from .cache import Cache
 from .datetime import Datetime
 from .request import Request
 from .database import Database
+from .check import Check
+from .format import Format
 
 __all__ = ['Breathecode']
 
@@ -21,10 +24,23 @@ def print_arguments(func: callable) -> str:
 class Breathecode:
     """Collection of wrappers of last implementation mixin for testing purposes"""
 
-    cache = Cache()
-    datetime = Datetime()
-    request = Request()
-    database = Database()
+    cache: Cache
+    datetime: Datetime
+    request: Request
+    database: Database
+    check: Check
+    format: Format
+    _parent: APITestCase
+
+    def __init__(self, parent) -> None:
+        self._parent = parent
+
+        self.cache = Cache(parent)
+        self.datetime = Datetime(parent)
+        self.request = Request(parent)
+        self.database = Database(parent)
+        self.check = Check(parent)
+        self.format = Format(parent)
 
     def help(self, level: int = 0, parent: Optional[dict] = None, last_item: bool = False) -> list[str]:
         """Print a list of mixin with a tree style (command of Linux)"""

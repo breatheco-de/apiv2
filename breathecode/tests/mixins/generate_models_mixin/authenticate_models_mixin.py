@@ -3,9 +3,8 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from breathecode.tests.mixins.headers_mixin import HeadersMixin
-from mixer.backend.django import mixer
 from breathecode.tests.mixins import DateFormatterMixin
-from .utils import is_valid, create_models
+from .utils import is_valid, create_models, just_one, get_list
 
 
 class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
@@ -43,7 +42,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
             models['profile'] = create_models(profile, 'authenticate.Profile', **{**kargs, **profile_kwargs})
 
@@ -65,7 +64,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             } if isinstance(role, str) else {}
 
             if capability:
-                kargs['capabilities'] = [models['capability']]
+                kargs['capabilities'] = get_list(models['capability'])
 
             models['role'] = create_models(role if isinstance(role, dict) else {}, 'authenticate.Role', **{
                 **kargs,
@@ -76,16 +75,16 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             kargs = {}
 
             if 'academy' in models:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             if 'cohort' in models:
-                kargs['cohort'] = models['cohort']
+                kargs['cohort'] = just_one(models['cohort'])
 
             if 'role' in models:
-                kargs['role'] = models['role']
+                kargs['role'] = just_one(models['role'])
 
             if 'user' in models:
-                kargs['author'] = models['user']
+                kargs['author'] = just_one(models['user'])
 
             models['user_invite'] = create_models(user_invite, 'authenticate.UserInvite', **{
                 **kargs,
@@ -96,13 +95,13 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
             if 'role' in models:
-                kargs['role'] = models['role']
+                kargs['role'] = just_one(models['role'])
 
             if 'academy' in models:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             models['profile_academy'] = create_models(profile_academy, 'authenticate.ProfileAcademy', **{
                 **kargs,
@@ -113,7 +112,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
             models['credentials_github'] = create_models(credentials_github, 'authenticate.CredentialsGithub',
                                                          **{
@@ -125,7 +124,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
             models['credentials_slack'] = create_models(credentials_slack, 'authenticate.CredentialsSlack',
                                                         **{
@@ -137,10 +136,10 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
             if 'academy' in models:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             models['credentials_facebook'] = create_models(credentials_facebook,
                                                            'authenticate.CredentialsFacebook', **{
@@ -152,7 +151,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
             models['credentials_quick_books'] = create_models(credentials_quick_books,
                                                               'authenticate.CredentialsQuickBooks', **{
@@ -164,7 +163,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             kargs = {}
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
             models['token'] = create_models(token, 'authenticate.Token', **{**kargs, **token_kwargs})
 

@@ -3,7 +3,7 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
-from .utils import is_valid, create_models
+from .utils import is_valid, create_models, just_one, get_list
 
 
 class MarketingModelsMixin(ModelsMixin):
@@ -35,7 +35,7 @@ class MarketingModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             models['active_campaign_academy'] = create_models(active_campaign_academy,
                                                               'marketing.ActiveCampaignAcademy', **{
@@ -46,8 +46,8 @@ class MarketingModelsMixin(ModelsMixin):
         if not 'automation' in models and is_valid(automation):
             kargs = {}
 
-            if 'active_campaign_academy' in models or active_campaign_academy:
-                kargs['ac_academy'] = models['active_campaign_academy']
+            if 'active_campaign_academy' in models:
+                kargs['ac_academy'] = just_one(models['active_campaign_academy'])
 
             models['automation'] = create_models(automation, 'marketing.Automation', **{
                 **kargs,
@@ -57,8 +57,8 @@ class MarketingModelsMixin(ModelsMixin):
         if not 'academy_alias' in models and is_valid(academy_alias):
             kargs = {}
 
-            if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
 
             models['academy_alias'] = create_models(academy_alias, 'marketing.AcademyAlias', **{
                 **kargs,
@@ -67,27 +67,27 @@ class MarketingModelsMixin(ModelsMixin):
 
         # OneToOneField
         if 'active_campaign_academy' in models and is_valid(active_campaign_academy):
-            if 'automation' in models or automation:
-                models['active_campaign_academy'].event_attendancy_automation = models['automation']
+            if 'automation' in models:
+                models['active_campaign_academy'].event_attendancy_automation = just_one(models['automation'])
 
             models['active_campaign_academy'].save()
 
         if not 'tag' in models and is_valid(tag):
             kargs = {}
 
-            if 'active_campaign_academy' in models or active_campaign_academy:
-                kargs['ac_academy'] = models['active_campaign_academy']
+            if 'active_campaign_academy' in models:
+                kargs['ac_academy'] = just_one(models['active_campaign_academy'])
 
-            if 'automation' in models or automation:
-                kargs['automation'] = models['automation']
+            if 'automation' in models:
+                kargs['automation'] = just_one(models['automation'])
 
             models['tag'] = create_models(tag, 'marketing.Tag', **{**kargs, **tag_kwargs})
 
         if not 'contact' in models and is_valid(contact):
             kargs = {}
 
-            if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
 
             models['contact'] = create_models(contact, 'marketing.Contact', **{**kargs, **contact_kwargs})
 
@@ -111,20 +111,20 @@ class MarketingModelsMixin(ModelsMixin):
         if not 'form_entry' in models and is_valid(form_entry):
             kargs = {}
 
-            if 'contact' in models or contact:
-                kargs['contact'] = models['contact']
+            if 'contact' in models:
+                kargs['contact'] = just_one(models['contact'])
 
-            if 'tag' in models or tag:
-                kargs['tag_objects'] = [models['tag']]
+            if 'tag' in models:
+                kargs['tag_objects'] = get_list(models['tag'])
 
-            if 'automation' in models or automation:
-                kargs['automation_objects'] = [models['automation']]
+            if 'automation' in models:
+                kargs['automation_objects'] = get_list(models['automation'])
 
             if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
-            if 'active_campaign_academy' in models or active_campaign_academy:
-                kargs['ac_academy'] = models['active_campaign_academy']
+            if 'active_campaign_academy' in models:
+                kargs['ac_academy'] = just_one(models['active_campaign_academy'])
 
             models['form_entry'] = create_models(form_entry, 'marketing.FormEntry', **{
                 **kargs,
@@ -134,11 +134,11 @@ class MarketingModelsMixin(ModelsMixin):
         if not 'short_link' in models and is_valid(short_link):
             kargs = {}
 
-            if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
 
-            if 'user' in models or user:
-                kargs['author'] = models['user']
+            if 'user' in models:
+                kargs['author'] = just_one(models['user'])
 
             models['short_link'] = create_models(short_link, 'marketing.ShortLink', **{
                 **kargs,

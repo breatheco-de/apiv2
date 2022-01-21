@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from django.contrib.auth.models import AnonymousUser
 from django.contrib import messages
 from breathecode.utils import ValidationException, capable_of, localize_query
-from breathecode.admissions.models import CohortUser, Cohort
+from breathecode.admissions.models import Academy, CohortUser, Cohort
 from breathecode.authenticate.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -28,13 +28,15 @@ class TaskTeacherView(APIView):
         items = Task.objects.all()
         logger.debug(f'Found {items.count()} tasks')
 
-        if request.user is not None:
-            profile_ids = ProfileAcademy.objects.filter(user=request.user.id).values_list('academy__id',
-                                                                                          flat=True)
-            if profile_ids is None:
-                raise APIException(
-                    'The quest user must belong to at least one academy to be able to request student tasks')
-            items = items.filter(Q(cohort__academy__id__in=profile_ids) | Q(cohort__isnull=True))
+        profile_ids = ProfileAcademy.objects.filter(user=request.user.id).values_list('academy__id',
+                                                                                      flat=True)
+        if not profile_ids:
+            raise ValidationException(
+                'The quest user must belong to at least one academy to be able to request student tasks',
+                code=400,
+                slug='without-profile-academy')
+
+        items = items.filter(Q(cohort__academy__id__in=profile_ids) | Q(cohort__isnull=True))
 
         academy = request.GET.get('academy', None)
         if academy is not None:
@@ -83,6 +85,7 @@ class TaskTeacherView(APIView):
             items = items.filter(task_type__in=task_type.split(','))
 
         items = items.order_by('created_at')
+
         serializer = TaskGETSerializer(items, many=True)
         return Response(serializer.data)
 

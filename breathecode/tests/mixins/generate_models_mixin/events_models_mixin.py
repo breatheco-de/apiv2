@@ -3,7 +3,7 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
-from .utils import is_valid, create_models
+from .utils import is_valid, create_models, just_one
 
 
 class EventsModelsMixin(ModelsMixin):
@@ -33,7 +33,7 @@ class EventsModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             models['organization'] = create_models(organization, 'events.Organization', **{
                 **kargs,
@@ -44,10 +44,10 @@ class EventsModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             if 'organization' in models or organization:
-                kargs['organization'] = models['organization']
+                kargs['organization'] = just_one(models['organization'])
 
             models['organizer'] = create_models(organizer, 'events.Organizer', **{
                 **kargs,
@@ -58,10 +58,10 @@ class EventsModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             if 'organization' in models or organization:
-                kargs['organization'] = models['organization']
+                kargs['organization'] = just_one(models['organization'])
 
             models['venue'] = create_models(venue, 'events.Venue', **{**kargs, **venue_kwargs})
 
@@ -69,7 +69,7 @@ class EventsModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             models['event_type'] = create_models(event_type, 'events.EventType', **{
                 **kargs,
@@ -80,22 +80,22 @@ class EventsModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'user' in models or user:
-                kargs['host'] = models['user']
+                kargs['host'] = just_one(models['user'])
 
             if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             if 'organization' in models or organization:
-                kargs['organization'] = models['organization']
+                kargs['organization'] = just_one(models['organization'])
 
             if 'user' in models or user:
-                kargs['author'] = models['user']
+                kargs['author'] = just_one(models['user'])
 
             if 'venue' in models or venue:
-                kargs['venue'] = models['venue']
+                kargs['venue'] = just_one(models['venue'])
 
             if 'event_type' in models or event_type:
-                kargs['event_type'] = models['event_type']
+                kargs['event_type'] = just_one(models['event_type'])
 
             models['event'] = create_models(event, 'events.Event', **{**kargs, **event_kwargs})
 
@@ -103,10 +103,10 @@ class EventsModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'user' in models or user:
-                kargs['attendee'] = models['user']
+                kargs['attendee'] = just_one(models['user'])
 
             if 'event' in models or event:
-                kargs['event'] = models['event']
+                kargs['event'] = just_one(models['event'])
 
             models['event_checkin'] = create_models(event_checkin, 'events.EventCheckin', **{
                 **kargs,
