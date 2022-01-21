@@ -218,6 +218,14 @@ CAPABILITIES = [
         'slug': 'crud_mentorship_session',
         'description': 'Get all session from one academy'
     },
+    {
+        'slug': 'read_mentor',
+        'description': 'Get update academy mentors'
+    },
+    {
+        'slug': 'crud_mentor',
+        'description': 'Update, create and delete academy mentors'
+    },
 ]
 
 ROLES = [
@@ -432,6 +440,8 @@ class Command(BaseCommand):
                 'generate_temporal_token',
                 'crud_certificate',
                 'crud_review',
+                'crud_mentor',
+                'read_mentor',
                 'read_assignment_sensitive_details',
                 'crud_shortlink',
             ]
