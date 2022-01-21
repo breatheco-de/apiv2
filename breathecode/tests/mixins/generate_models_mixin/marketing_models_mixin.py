@@ -18,6 +18,7 @@ class MarketingModelsMixin(ModelsMixin):
                                   user=False,
                                   academy_alias=False,
                                   lead_generation_app=False,
+                                  downloadable=False,
                                   active_campaign_academy_kwargs={},
                                   automation_kwargs={},
                                   tag_kwargs={},
@@ -26,6 +27,7 @@ class MarketingModelsMixin(ModelsMixin):
                                   form_entry_kwargs={},
                                   short_link_kwargs={},
                                   lead_generation_app_kwargs={},
+                                  downloadable_kwargs={},
                                   models={},
                                   **kwargs):
         """Generate models"""
@@ -143,6 +145,20 @@ class MarketingModelsMixin(ModelsMixin):
             models['short_link'] = create_models(short_link, 'marketing.ShortLink', **{
                 **kargs,
                 **short_link_kwargs
+            })
+
+        if not 'downloadable' in models and is_valid(downloadable):
+            kargs = {}
+
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
+
+            if 'user' in models:
+                kargs['author'] = just_one(models['user'])
+
+            models['downloadable'] = create_models(downloadable, 'marketing.Downloadable', **{
+                **kargs,
+                **downloadable_kwargs
             })
 
         return models
