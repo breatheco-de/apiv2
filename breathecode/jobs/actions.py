@@ -12,8 +12,14 @@ logger = logging.getLogger(__name__)
 
 def run_spider(spider):
     """ This method run spider for a given position on admin"""
-    #result = f'curl -u {spider.ZYTE_API_KEY}: https://app.scrapinghub.com/api/run.json -d project={spider.zyte_api_deploy} -d spider={spider.platform.name} -d job={spider.job} -d loc={spider.loc}'
+    # result = f'curl -u {spider.ZYTE_API_KEY}: https://app.scrapinghub.com/api/run.json -d project={spider.zyte_api_deploy} -d spider={spider.platform.name} -d job={spider.job} -d loc={spider.loc}'
     # curl -u d62b44e4e9934393b54c679b5fcb001b: https://app.scrapinghub.com/api/run.json -d project=570286 -d spider=indeed -d job=javascript -d loc=remote
+    if spider is None:
+        raise Exception('First you must specify a spider')
+
+    if spider.job is None:
+        raise Exception('First you must specify a job')
+
     _position = get_position_from_string(spider.job)
 
     if _position is None:
@@ -30,12 +36,15 @@ def run_spider(spider):
     # rbl=New%20York%2C%20NY
     data['loc'] = spider.loc
     # data['jt'] = 'fulltime'
-
+    valor = '1'
+    int(valor)
     response = requests.post('https://app.scrapinghub.com/api/run.json',
                              data=data,
                              auth=(spider.zyte_project.zyte_api_key, ''))
 
-    return response
+    result = response.json()
+
+    return (response.status_code == 200 and 'status' in result and result['status'] == 'ok', result)
 
 
 def fetch_spider_data(spider):
@@ -130,10 +139,12 @@ def fetch_spider_data(spider):
     return spider
 
 
-def fetch_sync_all_data(spider):
+def fetch_to_api(spider):
     # print('Plataforma ', spider.zyte_project.platform.name)
     """ Fetch sync all spiders"""
     # curl -u d62b44e4e9934393b54c679b5fcb001b: "https://app.scrapinghub.com/api/jobs/list.json?project=570286&spider=indeed&state=finished&count=10"
+    if spider is None:
+        raise Exception('First you must specify a spider')
 
     params = (
         ('project', spider.zyte_project.zyte_api_deploy),
@@ -149,6 +160,16 @@ def fetch_sync_all_data(spider):
     res = requests.get('https://app.scrapinghub.com/api/jobs/list.json',
                        params=params,
                        auth=(spider.zyte_project.zyte_api_key, '')).json()
+
+    return res
+
+
+def fetch_sync_all_data(spider):
+
+    if spider is None:
+        raise Exception('First you must specify a spider')
+
+    res = fetch_to_api(spider)
 
     i = 0
 
@@ -413,10 +434,16 @@ def fetch_sync_all_data(spider):
     # new_jobs += new_jobs
     print(f'Added {new_jobs} new jobs to {spider.name}')
 
-    return spider
+    return res
 
 
 def parse_date(job):
+
+    if job is None:
+        raise Exception('First you must specify a job')
+
+    if job.published_date_raw is None:
+        raise Exception('Error: The job no has a publiched date')
     print('job ::: ', get_date_from_string(job.published_date_raw))
 
     job.published_date_processed = get_date_from_string(job.published_date_raw)

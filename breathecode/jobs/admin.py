@@ -17,20 +17,35 @@ def fetch_spider_data_admin(modeladmin, request, queryset):
 
 
 def fetch_sync_all_data_admin(modeladmin, request, queryset):
+    from django.contrib import messages
+    from .actions import fetch_sync_all_data
     spiders = queryset.all()
-    for s in spiders:
-        fetch_sync_all_data(s)
+    try:
+        for s in spiders:
+            fetch_sync_all_data(s)
+            messages.success(request, f'{s.sync_desc}')
+    except Exception as e:
+        print('error', str(e))
+        messages.error(request, f'There was an error retriving the spider {str(e)}')
 
 
 def run_spider_admin(modeladmin, request, queryset):
+    from django.contrib import messages
+    from .actions import run_spider
     spiders = queryset.all()
-    for s in spiders:
-        run_spider(s)
+    try:
+        for s in spiders:
+            run_spider(s)
+            messages.success(request, f'The execution of the spider {s} was successful')
+    except Exception as e:
+        print('error', str(e))
+        messages.error(request, f'There was an error retriving the jobs {str(e)}')
 
 
 def parse_date_admin(modeladmin, request, queryset):
     jobs = queryset.all()
-
+    from django.contrib import messages
+    from .actions import parse_date
     try:
         for job in jobs:
             parse_date(job)
