@@ -4,7 +4,7 @@ Collections of mixins used to login in authorize microservice
 import os
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
-from .utils import is_valid, create_models
+from .utils import is_valid, create_models, just_one
 
 
 class FeedbackModelsMixin(ModelsMixin):
@@ -31,34 +31,34 @@ class FeedbackModelsMixin(ModelsMixin):
         if not 'survey' in models and is_valid(survey):
             kargs = {}
 
-            if 'cohort' in models or cohort:
-                kargs['cohort'] = models['cohort']
+            if 'cohort' in models:
+                kargs['cohort'] = just_one(models['cohort'])
 
             models['survey'] = create_models(survey, 'feedback.Survey', **{**kargs, **survey_kwargs})
 
         if not 'answer' in models and is_valid(answer):
             kargs = {}
 
-            if 'event' in models or event:
-                kargs['event'] = models['event']
+            if 'event' in models:
+                kargs['event'] = just_one(models['event'])
 
             if 'user' in models or mentor:
-                kargs['mentor'] = models['user']
+                kargs['mentor'] = just_one(models['user'])
 
-            if 'cohort' in models or cohort:
-                kargs['cohort'] = models['cohort']
+            if 'cohort' in models:
+                kargs['cohort'] = just_one(models['cohort'])
 
-            if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
 
-            if 'token' in models or token:
-                kargs['token'] = models['token']
+            if 'token' in models:
+                kargs['token'] = just_one(models['token'])
 
-            if 'survey' in models or survey:
-                kargs['survey'] = models['survey']
+            if 'survey' in models:
+                kargs['survey'] = just_one(models['survey'])
 
-            if 'user' in models or user:
-                kargs['user'] = models['user']
+            if 'user' in models:
+                kargs['user'] = just_one(models['user'])
 
             if answer_status:
                 kargs['status'] = answer_status

@@ -1,10 +1,8 @@
 """
 Collections of mixins used to login in authorize microservice
 """
-from breathecode.certificate.models import Badge, LayoutDesign, Specialty, UserSpecialty
 from breathecode.tests.mixins.models_mixin import ModelsMixin
-from mixer.backend.django import mixer
-from .utils import is_valid, create_models
+from .utils import is_valid, create_models, just_one, get_list
 
 
 class CertificateModelsMixin(ModelsMixin):
@@ -33,7 +31,7 @@ class CertificateModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'syllabus' in models or syllabus:
-                kargs['syllabus'] = models['syllabus']
+                kargs['syllabus'] = just_one(models['syllabus'])
 
             models['specialty'] = create_models(specialty, 'certificate.Specialty', **{
                 **kargs,
@@ -43,7 +41,7 @@ class CertificateModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'specialty' in models or is_valid(specialty):
-                kargs['specialties'] = [models['specialty']]
+                kargs['specialties'] = get_list(['specialty'])
 
             models['badge'] = create_models(specialty, 'certificate.Badge', **{**kargs, **badge_kwargs})
 
@@ -71,19 +69,19 @@ class CertificateModelsMixin(ModelsMixin):
                 kargs['token'] = user_specialty_token
 
             if 'user' in models:
-                kargs['user'] = models['user']
+                kargs['user'] = just_one(models['user'])
 
             if 'specialty' in models:
-                kargs['specialty'] = models['specialty']
+                kargs['specialty'] = just_one(models['specialty'])
 
             if 'academy' in models:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             if 'layout_design' in models:
-                kargs['layout'] = models['layout_design']
+                kargs['layout'] = just_one(models['layout_design'])
 
             if 'cohort' in models:
-                kargs['cohort'] = models['cohort']
+                kargs['cohort'] = just_one(models['cohort'])
 
             models['user_specialty'] = create_models(user_specialty, 'certificate.UserSpecialty', **{
                 **kargs,

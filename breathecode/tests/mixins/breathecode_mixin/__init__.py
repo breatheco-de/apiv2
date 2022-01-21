@@ -7,4 +7,7 @@ __all__ = ['BreathecodeMixin']
 
 
 class BreathecodeMixin():
-    bc = Breathecode()
+    bc: Breathecode
+
+    def set_test_instance(self, parent) -> None:
+        self.bc = Breathecode(parent)

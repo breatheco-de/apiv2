@@ -4,7 +4,7 @@ Collections of mixins used to login in authorize microservice
 import os
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
-from .utils import is_valid, create_models
+from .utils import is_valid, create_models, just_one
 
 
 class AssessmentModelsMixin(ModelsMixin):
@@ -30,10 +30,10 @@ class AssessmentModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             if 'user' in models or user:
-                kargs['author'] = models['user']
+                kargs['author'] = just_one(models['user'])
 
             models['assessment'] = create_models(assessment, 'assessment.Assessment', **{
                 **kargs,
@@ -44,10 +44,10 @@ class AssessmentModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'assessment' in models or assessment:
-                kargs['assessment'] = models['assessment']
+                kargs['assessment'] = just_one(models['assessment'])
 
             if 'user' in models or user:
-                kargs['author'] = models['user']
+                kargs['author'] = just_one(models['user'])
 
             models['question'] = create_models(question, 'assessment.Question', **{
                 **kargs,
@@ -58,7 +58,7 @@ class AssessmentModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'question' in models or question:
-                kargs['question'] = models['question']
+                kargs['question'] = just_one(models['question'])
 
             models['option'] = create_models(option, 'assessment.Option', **{**kargs, **option_kwargs})
 
@@ -66,13 +66,13 @@ class AssessmentModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
             if 'assessment' in models or assessment:
-                kargs['assessment'] = models['assessment']
+                kargs['assessment'] = just_one(models['assessment'])
 
             if 'user' in models or user:
-                kargs['student'] = models['user']
+                kargs['student'] = just_one(models['user'])
 
             models['student_assessment'] = create_models(student_assessment, 'assessment.StudentAssessment',
                                                          **{
@@ -84,7 +84,7 @@ class AssessmentModelsMixin(ModelsMixin):
             kargs = {}
 
             if 'student_assessment' in models or student_assessment:
-                kargs['student_assesment'] = models['student_assessment']
+                kargs['student_assesment'] = just_one(models['student_assessment'])
 
             models['answer'] = create_models(answer, 'assessment.Answer', **{**kargs, **answer_kwargs})
 
