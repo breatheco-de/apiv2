@@ -75,13 +75,21 @@ def get_downloadable(request, slug=None):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead(request):
-    serializer = PostFormEntrySerializer(data=request.data)
+
+    data = request.data.copy()
+
+    # remove spaces from phone
+    if 'phone' in data:
+        data['phone'] = data['phone'].replace(' ', '')
+
+    serializer = PostFormEntrySerializer(data=data)
     if serializer.is_valid():
         serializer.save()
 
         persist_single_lead.delay(serializer.data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    print(serializer.errors)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -118,6 +126,10 @@ def create_lead_from_app(request, app_slug=None):
 
     if 'tags' not in request.data:
         payload['tags'] = ','.join([tag.slug for tag in app.default_tags.all()])
+
+    # remove spaces from phone
+    if 'phone' in request.data:
+        payload['phone'] = payload['phone'].replace(' ', '')
 
     serializer = PostFormEntrySerializer(data=payload)
     if serializer.is_valid():
