@@ -13,6 +13,6 @@ urlpatterns = [
     path('academy/user/<int:user_id>/task', TaskMeView.as_view()),
     path('task/<int:task_id>/deliver/<str:token>', deliver_assignment_view),
     path('task/<int:task_id>/deliver', TaskMeDeliverView.as_view()),
-    path('task/<int:task_id>', TaskMeView.as_view()),
+    path('task/<int:task_id>', TaskMeView.as_view(), name='task_id'),
     path('sync/cohort/<int:cohort_id>/task', sync_cohort_tasks_view),
 ]
