@@ -41,6 +41,7 @@ class VenueSerializer(serpy.Serializer):
     city = serpy.Field()
     zip_code = serpy.Field()
     state = serpy.Field()
+    updated_at = serpy.Field()
 
 
 class OrganizationBigSerializer(serpy.Serializer):
