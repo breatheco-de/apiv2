@@ -74,11 +74,6 @@ class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
                 'issued_at': None,
             }]))
 
-
-# test status PERSISTED issued_at null = edita el issued_at con una data que proviene del cohort
-# test status PERSISTED issued_at null, dos instancias de la clase = edita el issued_at con una data que proviene del cohort para las dos instancias
-#
-
     def test_issued_at_null_status_persisted_two_items(self):
 
         model1 = self.generate_models(user_specialty=True,

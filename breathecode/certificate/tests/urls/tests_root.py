@@ -446,8 +446,7 @@ class CertificateTestSuite(CertificateTestCase):
         }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        print(json[0]['issued_at'])
-        print(json[1]['issued_at'])
+
         certificates = self.all_user_specialty_dict()
         self.assertDatetime(certificates[0]['issued_at'])
         self.assertDatetime(certificates[1]['issued_at'])

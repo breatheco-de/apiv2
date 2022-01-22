@@ -114,10 +114,6 @@ class UserSpecialty(models.Model):
         if self.status == ERROR:
             return
 
-        print(self.cohort)
-        if self.cohort:
-            print(self.cohort.academy)
-
         if self.cohort is not None and self.cohort.academy.id != self.academy.id:
             raise ValidationError('Cohort academy does not match the specified academy for this certificate')
 

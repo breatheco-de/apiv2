@@ -630,7 +630,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertEqual(result, expected)
         del expected['is_cleaned']
 
-        print({**expected, 'token': token, 'issued_at': issued_at})
         self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
             **expected, 'token': token,
             'issued_at': issued_at
@@ -764,12 +763,6 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertEqual(result, expected)
         del expected['is_cleaned']
 
-        # db = self.clear_preview_url(self.all_user_specialty_dict())
-        # issued_at = db[0]['issued_at']
-        # self.assertGreater(issued_at, start)
-        # self.assertLess(issued_at, end)
-        # del db[0]['issued_at']
-        print({**expected, 'token': token, 'issued_at': issued_at})
         self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
             **expected, 'token': token,
             'issued_at': issued_at

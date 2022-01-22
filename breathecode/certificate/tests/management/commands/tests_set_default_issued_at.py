@@ -15,7 +15,5 @@ class SetDefaultIssuedAtTestCase(CertificateTestCase):
         instance = Command()
         instance.handle()
 
-        # print(certificate_set_default_issued_at.call_args_list)
-
         self.assertEqual(certificate_set_default_issued_at.call_args_list, [call()])
         self.assertEqual(instance.handle(), None)
