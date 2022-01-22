@@ -23,8 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class TaskTeacherView(APIView):
-    def get(self, request):
-
+    def get(self, request, task_id=None, user_id=None):
         items = Task.objects.all()
         logger.debug(f'Found {items.count()} tasks')
 
@@ -49,16 +48,24 @@ class TaskTeacherView(APIView):
         # tasks these cohorts (not the users, but the tasts belong to the cohort)
         cohort = request.GET.get('cohort', None)
         if cohort is not None:
-            items = items.filter(Q(cohort__slug__in=cohort.split(',')) | Q(cohort__id__in=cohort.split(',')))
+            cohorts = cohort.split(',')
+            ids = [x for x in cohorts if x.isnumeric()]
+            slugs = [x for x in cohorts if not x.isnumeric()]
+            items = items.filter(Q(cohort__slug__in=slugs) | Q(cohort__id__in=ids))
 
         # tasks from users that belong to these cohort
         stu_cohort = request.GET.get('stu_cohort', None)
         if stu_cohort is not None:
             ids = stu_cohort.split(',')
-            if ids[0].isnumeric():
-                items = items.filter(user__cohortuser__cohort__id__in=ids, user__cohortuser__role='STUDENT')
-            else:
-                items = items.filter(user__cohortuser__cohort__slug__in=ids, user__cohortuser__role='STUDENT')
+
+            stu_cohorts = stu_cohort.split(',')
+            ids = [x for x in stu_cohorts if x.isnumeric()]
+            slugs = [x for x in stu_cohorts if not x.isnumeric()]
+
+            items = items.filter(
+                Q(user__cohortuser__cohort__id__in=ids) | Q(user__cohortuser__cohort__slug__in=slugs),
+                user__cohortuser__role='STUDENT',
+            )
 
         edu_status = request.GET.get('edu_status', None)
         if edu_status is not None:
@@ -70,7 +77,7 @@ class TaskTeacherView(APIView):
             teacher_cohorts = CohortUser.objects.filter(user__id__in=teacher.split(','),
                                                         role='TEACHER').values_list('cohort__id', flat=True)
             items = items.filter(user__cohortuser__cohort__id__in=teacher_cohorts,
-                                 user__cohortuser__role='STUDENT')
+                                 user__cohortuser__role='STUDENT').distinct()
 
         task_status = request.GET.get('task_status', None)
         if task_status is not None:
@@ -109,16 +116,17 @@ class TaskMeView(APIView):
     List all snippets, or create a new snippet.
     """
     def get(self, request, task_id=None, user_id=None):
+        if not user_id:
+            user_id = request.user.id
 
         if task_id is not None:
-            item = Task.objects.filter(id=task_id).first()
+            item = Task.objects.filter(id=task_id, user__id=user_id).first()
             if item is None:
-                raise ValidationException('Task not found')
+                raise ValidationException('Task not found', code=404, slug='task-not-found')
 
             serializer = TaskGETSerializer(item, many=False)
             return Response(serializer.data)
 
-        user_id = request.user.id
         tasks = Task.objects.filter(user__id=user_id)
         serializer = TaskGETSerializer(tasks, many=True)
         return Response(serializer.data)
@@ -127,7 +135,7 @@ class TaskMeView(APIView):
 
         item = Task.objects.filter(id=task_id).first()
         if item is None:
-            raise ValidationException('Task not found')
+            raise ValidationException('Task not found', slug='task-not-found')
 
         serializer = PUTTaskSerializer(item, data=request.data, context={'request': request})
         if serializer.is_valid():
