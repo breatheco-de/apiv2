@@ -126,11 +126,13 @@ CURRENCIES = (
 
 
 class Event(models.Model):
+    slug = models.SlugField(max_length=150, blank=True, default=None, null=True)
     description = models.TextField(max_length=2000, blank=True, default=None, null=True)
     excerpt = models.TextField(max_length=500, blank=True, default=None, null=True)
     title = models.CharField(max_length=255, blank=True, default=None, null=True)
     lang = models.CharField(max_length=2, blank=True, default=None, null=True)
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
+    tags = models.CharField(max_length=100, default='', blank=True)
 
     url = models.URLField(max_length=255)
     banner = models.URLField(max_length=255)
@@ -139,7 +141,7 @@ class Event(models.Model):
     starting_at = models.DateTimeField(blank=False)
     ending_at = models.DateTimeField(blank=False)
 
-    host = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='host', blank=True, null=True)
+    host = models.CharField(max_length=100, blank=True, default=None, null=True)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, blank=True, null=True)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, blank=True, null=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL, blank=True, null=True)

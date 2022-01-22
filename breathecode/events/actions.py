@@ -1,9 +1,13 @@
-import logging
-from datetime import datetime, timedelta
+import pytz
 import re
+import logging
+
+from datetime import datetime, timedelta
+from breathecode.admissions.models import Cohort, CohortTimeSlot
+from django.utils import timezone
+
 from .models import Organization, Venue, Event, Organizer
 from .utils import Eventbrite
-from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
@@ -283,3 +287,61 @@ def fix_datetime_weekday(current, timeslot, prev=False, next=False):
                 return res
 
         days = days + 1
+
+
+RECURRENCY_TYPE = {
+    'DAILY': 'day',
+    'WEEKLY': 'week',
+    'MONTHLY': 'month',
+}
+
+
+def get_cohort_description(timeslot: CohortTimeSlot) -> str:
+    description = ''
+
+    if timeslot.recurrent:
+        description += f'every {RECURRENCY_TYPE[timeslot.recurrency_type]}, '
+
+    localtime = pytz.timezone(timeslot.cohort.academy.timezone)
+
+    starting_at = localtime.localize(timeslot.starting_at)
+    ending_at = localtime.localize(timeslot.ending_at)
+
+    starting_weekday = starting_at.strftime('%A').upper()
+    ending_weekday = ending_at.strftime('%A').upper()
+
+    if starting_weekday == ending_weekday:
+        description += f'{starting_weekday}'
+
+    else:
+        description += f'{starting_weekday} and {ending_weekday} '
+
+    starting_hour = starting_at.strftime('%I:%M %p')
+    ending_hour = ending_at.strftime('%I:%M %p')
+    description += f'from {starting_hour} to {ending_hour}'
+
+    return description.capitalize()
+
+
+def get_ical_cohort_description(item: Cohort):
+    description = ''
+    # description = f'{description}Url: {item.url}\n'
+
+    if item.name:
+        description = f'{description}Name: {item.name}\n'
+
+    if item.academy:
+        description = f'{description}Academy: {item.academy.name}\n'
+
+    if item.language:
+        description = f'{description}Language: {item.language.upper()}\n'
+
+    if item.private:
+        description = f'{description}Private: {"Yes" if item.private else "No"}\n'
+
+    if item.remote_available:
+        description = f'{description}Online: {"Yes" if item.remote_available else "No"}\n'
+
+    # TODO: add private url to meeting url
+
+    return description

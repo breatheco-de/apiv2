@@ -1,4 +1,4 @@
 """
 Global mixins
 """
-from .generate_models_mixin import GenerateModelsMixin
+from .generate_models_mixin import *

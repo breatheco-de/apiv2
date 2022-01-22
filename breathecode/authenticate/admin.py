@@ -4,8 +4,8 @@ from urllib.parse import urlparse
 from django.contrib.auth.admin import UserAdmin
 from .actions import delete_tokens, generate_academy_token
 from django.utils.html import format_html
-from .models import (CredentialsGithub, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy, Role,
-                     CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy)
+from .models import (CredentialsGithub, DeviceId, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy,
+                     Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy)
 from .actions import reset_password
 
 logger = logging.getLogger(__name__)
@@ -199,3 +199,9 @@ class AcademyAdmin(admin.ModelAdmin):
 
     def token(self, obj):
         return Token.objects.filter(user__username=obj.slug).first()
+
+
+@admin.register(DeviceId)
+class DeviceIdAdmin(admin.ModelAdmin):
+    list_display = ('name', 'key')
+    search_fields = ['name']

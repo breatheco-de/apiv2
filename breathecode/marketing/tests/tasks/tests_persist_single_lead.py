@@ -467,6 +467,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             'utm_source': None,
             'utm_url': None,
             'won_at': None,
+            'lead_generation_app_id': None,
             'zip_code': None
         }])
 
@@ -629,6 +630,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             'utm_source': model['form_entry'].utm_source,
             'utm_url': model['form_entry'].utm_url,
             'won_at': model['form_entry'].won_at,
+            'lead_generation_app_id': None,
             'zip_code': 10028
         }])
 

@@ -39,7 +39,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         try:
             send_question(model['user'])
         except Exception as e:
-            self.assertEquals(str(e), 'without-cohort-or-cannot-determine-cohort')
+            self.assertEqual(str(e), 'without-cohort-or-cannot-determine-cohort')
 
         self.assertEqual(self.all_answer_dict(), [])
         self.assertEqual(mock_mailgun.call_args_list, [])
@@ -74,7 +74,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         try:
             send_question(model1['user'])
         except Exception as e:
-            self.assertEquals(str(e), 'without-cohort-or-cannot-determine-cohort')
+            self.assertEqual(str(e), 'without-cohort-or-cannot-determine-cohort')
 
         self.assertEqual(self.all_answer_dict(), [])
         self.assertEqual(mock_mailgun.call_args_list, [])

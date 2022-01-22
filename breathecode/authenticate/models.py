@@ -1,3 +1,5 @@
+from datetime import datetime
+from typing import Any
 from django.contrib.auth.models import User
 from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
@@ -6,6 +8,9 @@ from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
 from django.core.validators import RegexValidator
+
+from breathecode.authenticate.exceptions import (BadArguments, InvalidTokenType, TokenNotFound,
+                                                 TryToGetOrCreateAOneTimeToken)
 from .signals import invite_accepted
 from breathecode.admissions.models import Academy, Cohort
 
@@ -14,6 +19,10 @@ __all__ = [
     'CredentialsSlack', 'CredentialsFacebook', 'CredentialsQuickBooks', 'CredentialsGoogle', 'DeviceId',
     'Token'
 ]
+
+TOKEN_TYPE = ['login', 'one_time', 'temporal', 'permanent']
+LOGIN_TOKEN_LIFETIME = timezone.timedelta(days=1)
+TEMPORAL_TOKEN_LIFETIME = timezone.timedelta(minutes=10)
 
 
 class UserProxy(User):
@@ -252,52 +261,83 @@ class Token(rest_framework.authtoken.models.Token):
     expires_at = models.DateTimeField(default=None, blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        # by default token expires one day after
-        if self.expires_at == None:
+        without_expire_at = not self.expires_at
+        if without_expire_at and self.token_type == 'login':
             utc_now = timezone.now()
-            if self.token_type == 'login':
-                self.expires_at = utc_now + timezone.timedelta(days=1)
-            elif self.token_type == 'permanent':
-                self.expires_at = None
-            else:
-                self.expires_at = utc_now + timezone.timedelta(minutes=10)
+            self.expires_at = utc_now + LOGIN_TOKEN_LIFETIME
+
+        if without_expire_at and self.token_type == 'temporal':
+            utc_now = timezone.now()
+            self.expires_at = utc_now + TEMPORAL_TOKEN_LIFETIME
+
+        if self.token_type == 'one_time' or self.token_type == 'permanent':
+            self.expires_at = None
+
         super().save(*args, **kwargs)
 
     @staticmethod
-    def get_or_create(user, **kwargs):
-
+    def delete_expired_tokens(utc_now: datetime = timezone.now()) -> None:
+        """Delete expired tokens"""
         utc_now = timezone.now()
-        if 'token_type' not in kwargs:
-            kwargs['token_type'] = 'temporal'
+        Token.objects.filter(expires_at__lt=utc_now).delete()
 
-        if 'hours_length' in kwargs:
+    @classmethod
+    def get_or_create(cls, user, token_type: str, **kwargs: Any):
+        utc_now = timezone.now()
+        kwargs['token_type'] = token_type
+
+        cls.delete_expired_tokens(utc_now)
+
+        if token_type not in TOKEN_TYPE:
+            raise InvalidTokenType(f'Invalid token_type, correct values are {", ".join(TOKEN_TYPE)}')
+
+        has_hours_length = 'hours_length' in kwargs
+        has_expires_at = 'expires_at' in kwargs
+
+        if (token_type == 'one_time' or token_type == 'permanent') and (has_hours_length or has_expires_at):
+            raise BadArguments(f'You can\'t provide token_type=\'{token_type}\' and '
+                               'has_hours_length or has_expires_at together')
+
+        if has_hours_length and has_expires_at:
+            raise BadArguments('You can\'t provide hours_length and expires_at argument together')
+
+        if has_hours_length:
             kwargs['expires_at'] = utc_now + timezone.timedelta(hours=kwargs['hours_length'])
             del kwargs['hours_length']
 
         token = None
         created = False
+
         try:
+            if token_type == 'one_time':
+                raise TryToGetOrCreateAOneTimeToken()
+
             token, created = Token.objects.get_or_create(user=user, **kwargs)
+
         except MultipleObjectsReturned:
             token = Token.objects.filter(user=user, **kwargs).first()
 
-        if not created:
-            if token.expires_at < utc_now:
-                token.delete()
-                created = True
-                token = Token.objects.create(user=user, **kwargs)
+        except TryToGetOrCreateAOneTimeToken:
+            created = True
+            token = Token.objects.create(user=user, **kwargs)
 
         return token, created
 
-    @staticmethod
-    def get_valid(token):
+    @classmethod
+    def get_valid(cls, token: str):
         utc_now = timezone.now()
-        # delete expired tokens
-        Token.objects.filter(expires_at__lt=utc_now).delete()
-        # find among any non-expired token
-        _token = Token.objects.filter(key=token, expires_at__gt=utc_now).first()
+        cls.delete_expired_tokens(utc_now)
 
-        return _token
+        # find among any non-expired token
+        return Token.objects.filter(key=token, expires_at__gt=utc_now).first()
+
+    @classmethod
+    def validate_and_destroy(cls, user: User, hash: str) -> None:
+        token = Token.objects.filter(key=hash, user=user, token_type='one_time').first()
+        if not token:
+            raise TokenNotFound()
+
+        token.delete()
 
     class Meta:
         # ensure user and name are unique

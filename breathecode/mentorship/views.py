@@ -1,4 +1,4 @@
-import os
+import os, hashlib
 from urllib.parse import urlencode, parse_qs, urlsplit, urlunsplit
 from django.shortcuts import render
 from django.utils import timezone
@@ -18,6 +18,7 @@ from .serializers import (
     GETSessionSmallSerializer,
     GETMentorSmallSerializer,
     MentorSerializer,
+    MentorUpdateSerializer,
     SessionSerializer,
     ServiceSerializer,
     GETMentorBigSerializer,
@@ -244,43 +245,52 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
     # """
     # List all snippets, or create a new snippet.
     # """
-    # @capable_of('crud_service')
-    # def post(self, request, academy_id=None):
+    @capable_of('crud_mentor')
+    def post(self, request, academy_id=None):
 
-    #     serializer = SurveySerializer(data=request.data,
-    #                                   context={
-    #                                       'request': request,
-    #                                       'academy_id': academy_id
-    #                                   })
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        utc_now = timezone.now()
+        token = hashlib.sha1((str(request.data['slug']) + str(utc_now)).encode('UTF-8')).hexdigest()
+
+        serializer = MentorSerializer(data={
+            **request.data, 'token': token
+        },
+                                      context={
+                                          'request': request,
+                                          'academy_id': academy_id
+                                      })
+
+        if serializer.is_valid():
+            mentor = serializer.save()
+
+            _serializer = GETMentorBigSerializer(mentor, many=False)
+            return Response(_serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     # """
     # List all snippets, or create a new snippet.
     # """
 
-    # @capable_of('crud_service')
-    # def put(self, request, survey_id=None, academy_id=None):
-    #     if survey_id is None:
-    #         raise ValidationException('Missing survey_id')
+    @capable_of('crud_mentor')
+    def put(self, request, mentor_id=None, academy_id=None):
 
-    #     survey = MentorService.objects.filter(id=survey_id).first()
-    #     if survey is None:
-    #         raise NotFound('This survey does not exist')
+        if mentor_id is None:
+            raise ValidationException('Missing mentor ID on the URL', 404)
 
-    #     serializer = SurveyPUTSerializer(survey,
-    #                                      data=request.data,
-    #                                      context={
-    #                                          'request': request,
-    #                                          'survey': survey_id,
-    #                                          'academy_id': academy_id
-    #                                      })
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        mentor = MentorProfile.objects.filter(id=mentor_id, service__academy__id=academy_id).first()
+        if mentor is None:
+            raise ValidationException('This mentor does not exist for this academy', 404)
+
+        serializer = MentorUpdateSerializer(mentor,
+                                            data=request.data,
+                                            context={
+                                                'request': request,
+                                                'academy_id': academy_id
+                                            })
+        if serializer.is_valid():
+            mentor = serializer.save()
+            _serializer = GETMentorBigSerializer(mentor)
+            return Response(_serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('read_mentorship_mentor')
     def get(self, request, mentor_id=None, academy_id=None):

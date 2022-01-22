@@ -1,6 +1,6 @@
 ## Activity API
 
-This API uses Google DataStore as storage, there is not local storage on Heroku or Postgress.
+This API uses Google DataStore as storage, there is not local storage on Heroku or Postgres.
 
 We need Google DataStore because we plan to store hugh amounts of activities that the user can do inside breathecode.
 
@@ -14,7 +14,7 @@ Possible activities (so far):
 "lesson_opened" //when a lessons is opened on the platform
 "office_attendance" //when the office raspberry pi detects the student
 "nps_survey_answered" //when a nps survey is answered by the student
-"exercise_success" //when student successfuly tests exercise
+"exercise_success" //when student successfully tests exercise
 ```
 
 Any activity has the following inputs:
@@ -34,7 +34,7 @@ Get recent user activity
 GET: activity/user/{email_or_id}?slug=activity_slug
 ```
 
-Add a new user activity (requiers autentication)
+Add a new user activity (requires authentication)
 ```
 POST: activity/user/{email_or_id}
 {
@@ -62,13 +62,13 @@ Get recent user coding_errors
 GET: activity/coding_error/{email_or_id}?slug=activity_slug
 ```
 ```
-Add a new coding_error (requiers autentication)
+Add a new coding_error (requires authentication)
 POST: activity/coding_error/
 
 {
     "user_id" => "my@email.com",
     "slug" => "webpack_error",
-    "data" => "optiona additional information about the error",
+    "data" => "optional additional information about the error",
     "message" => "file not found",
     "name" => "module-not-found,
     "severity" => "900",

@@ -1,9 +1,10 @@
-import requests, json
-from requests.auth import HTTPBasicAuth
+import os
+import requests
+import json
+import logging
 import breathecode.services.activecampaign.actions as actions
 from breathecode.utils import APIException
 from slugify import slugify
-import logging, re, os, json, inspect, urllib
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,8 @@ class ActiveCampaign:
         return resp.json()
 
     def get_contact_by_email(self, email):
+        import requests
+
         #/api/3/deals/id
         #Api-Token
         resp = requests.get(f'{self.host}/api/3/contacts',
@@ -119,11 +122,10 @@ class ActiveCampaign:
                             params={'email': email})
         logger.debug(f'Get contact by email {self.host}/api/3/contacts', resp.status_code)
         data = resp.json()
-        if 'contacts' in data and len(data['contacts']) == 1:
+        if data and 'contacts' in data and len(data['contacts']) == 1:
             return data['contacts'][0]
         else:
-            logger.error(f'Problem fetching contact in activecampaign with email {email}')
-            return None
+            raise Exception(f'Problem fetching contact in activecampaign with email {email}')
 
     def get_deal_customfields(self, deal_id):
         #/api/3/deals/id
@@ -144,6 +146,8 @@ class ActiveCampaign:
         return None
 
     def add_tag_to_contact(self, contact_id: int, tag_id: int):
+        import requests
+
         #/api/3/deals/id
         #Api-Token
         body = {'contactTag': {'contact': contact_id, 'tag': tag_id}}
@@ -157,30 +161,37 @@ class ActiveCampaign:
             else:
                 raise Exception(f'Bad response format from ActiveCampaign when adding a new tag to contact')
         else:
-            logger.debug(resp.json())
+            logger.error(resp.json())
             raise Exception(f'Failed to add tag to contact {contact_id} with status={resp.status_code}')
 
     def create_tag(self, slug: str, description: str):
+        import requests
+
         #/api/3/deals/id
         #Api-Token
         body = {'tag': {'tag': slugify(slug), 'tagType': 'contact', 'description': description}}
         resp = requests.post(f'{self.host}/api/3/tags', headers={'Api-Token': self.token}, json=body)
-        logger.debug(f'Creating tag {body["tag"]["tag"]} on active campaign')
+        logger.warn(f'Creating tag `{body["tag"]["tag"]}` on active campaign')
 
         if resp.status_code == 201:
-            logger.debug(f'Tag created successfully')
+            logger.warn(f'Tag created successfully')
             body = resp.json()
+
             if 'tag' in body:
                 return body['tag']
+
             else:
-                logger.debug(f'Error creating ta {slug}')
-                logger.debug(error)
-                raise Exception(f'Failed to create tag {slug}, status_code={str(resp.status_code)}')
+                logger.error(f'Failed to create tag `{slug}` because the structure of response was changed')
+                raise Exception(
+                    f'Failed to create tag `{slug}` because the structure of response was changed')
+
         else:
-            logger.debug(f'Error creating tag {slug} with status= {str(resp.status_code)}')
+            logger.error(f'Error creating tag `{slug}` with status={str(resp.status_code)}')
+
             error = resp.json()
-            logger.debug(error)
-            raise Exception(f'Failed to create tag {slug}, status_code={str(resp.status_code)}')
+            logger.error(error)
+
+            raise Exception(f'Error creating tag `{slug}` with status={str(resp.status_code)}')
 
 
 class Contacts(object):
