@@ -5,33 +5,8 @@ from unittest.mock import patch, call, MagicMock
 from ...actions import certificate_set_default_issued_at
 from ..mixins import CertificateTestCase
 from ...models import UserSpecialty
-from ..mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-    SCREENSHOTMACHINE_INSTANCES,
-    SCREENSHOTMACHINE_PATH,
-    apply_screenshotmachine_requests_get_mock,
-)
 
 from django.utils import timezone
-
-# def certificate_set_default_issued_at():
-#     query = UserSpecialty.objects.filter(status='PERSISTED', issued_at__isnull=True)
-#     for item in query:
-#         # item.issued_at = item.cohort.ending_date
-#         # item.save()
-#         if item.cohort:
-#             UserSpecialty.objects.filter(id=item.id).update(issued_at=item.cohort.ending_date)
-
-# test status ERROR issued_at null = no hace nada, no hay cambios
-# test status ERROR issued_at set = no hace nada, no hay cambios
-# test status PERSISTED issued_at null = edita el issued_at con una data que proviene del cohort
-# test status PERSISTED issued_at null, dos instancias de la clase = edita el issued_at con una data que proviene del cohort para las dos instancias
-# test status PERSISTED issued_at set = no hace nada, no hay cambios
-# test status PENDING issued_at null = no hace nada, no hay cambios
-# test status PENDING issued_at set = no hace nada, no hay cambios
 
 
 class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
@@ -46,7 +21,6 @@ class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
 
         result = certificate_set_default_issued_at()
 
-        # print(result)
         self.assertEqual(list(result), list(query))
         self.assertEqual(
             self.all_user_specialty_dict(),
@@ -70,7 +44,6 @@ class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
 
         result = certificate_set_default_issued_at()
 
-        # print(result)
         self.assertEqual(list(result), list(query))
         self.assertEqual(
             self.all_user_specialty_dict(),
@@ -92,7 +65,6 @@ class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
 
         result = certificate_set_default_issued_at()
 
-        # print(result)
         self.assertEqual(list(result), list(query))
         self.assertEqual(
             self.all_user_specialty_dict(),
@@ -101,6 +73,11 @@ class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
                 'status': 'PERSISTED',
                 'issued_at': None,
             }]))
+
+
+# test status PERSISTED issued_at null = edita el issued_at con una data que proviene del cohort
+# test status PERSISTED issued_at null, dos instancias de la clase = edita el issued_at con una data que proviene del cohort para las dos instancias
+#
 
     def test_issued_at_null_status_persisted_two_items(self):
 
@@ -121,7 +98,6 @@ class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
 
         result = certificate_set_default_issued_at()
 
-        # print(result)
         self.assertEqual(list(result), list(query))
         self.assertEqual(
             self.all_user_specialty_dict(),
@@ -148,7 +124,6 @@ class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
 
         result = certificate_set_default_issued_at()
 
-        # print(result)
         self.assertEqual(list(result), list(query))
         self.assertEqual(
             self.all_user_specialty_dict(),
@@ -179,7 +154,6 @@ class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
 
         result = certificate_set_default_issued_at()
 
-        # print(result)
         self.assertEqual(list(result), list(query))
         self.assertEqual(
             self.all_user_specialty_dict(),
@@ -205,7 +179,6 @@ class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
 
         result = certificate_set_default_issued_at()
 
-        # print(result)
         self.assertEqual(list(result), list(query))
         self.assertEqual(
             self.all_user_specialty_dict(),
@@ -228,7 +201,6 @@ class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
 
         result = certificate_set_default_issued_at()
 
-        # print(result)
         self.assertEqual(list(result), list(query))
         self.assertEqual(
             self.all_user_specialty_dict(),
@@ -250,7 +222,6 @@ class ActionCertificateSetDefaultIssuedAtTestCase(CertificateTestCase):
 
         result = certificate_set_default_issued_at()
 
-        # print(result)
         self.assertEqual(list(result), list(query))
         self.assertEqual(
             self.all_user_specialty_dict(),

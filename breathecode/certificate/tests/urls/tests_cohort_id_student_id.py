@@ -130,10 +130,19 @@ class CertificateTestSuite(CertificateTestCase):
 
         url = reverse_lazy('certificate:cohort_id_student_id', kwargs={'cohort_id': 1, 'student_id': 1})
         data = {'layout_slug': 'vanilla'}
+        start = timezone.now()
         response = self.client.post(url, data, format='json')
+
+        end = timezone.now()
         json = response.json()
         self.assertDatetime(json['updated_at'])
         del json['updated_at']
+
+        issued_at = self.iso_to_datetime(json['issued_at'])
+        self.assertGreater(issued_at, start)
+        self.assertLess(issued_at, end)
+        del json['issued_at']
+
         expected = {
             'academy': {
                 'id': 1,
@@ -191,16 +200,6 @@ class CertificateTestSuite(CertificateTestCase):
                 'last_name': model['user'].last_name
             }
         }
-        # print(json)
-        # print(expected)
-
-        start = timezone.now()
-        result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
-        end = timezone.now()
-        issued_at = result['issued_at']
-        self.assertGreater(issued_at, start)
-        self.assertLess(issued_at, end)
-        del result['issued_at']
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -217,6 +216,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'PERSISTED',
+                'issued_at': issued_at,
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
                 'user_id': 1

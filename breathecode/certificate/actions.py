@@ -62,9 +62,6 @@ def generate_certificate(user, cohort=None, layout=None):
 
     uspe = UserSpecialty.objects.filter(user=user, cohort=cohort).first()
 
-    if uspe:
-        print(vars(uspe), 255237626738128)
-
     if (uspe is not None and uspe.status == 'PERSISTED' and uspe.preview_url):
         raise ValidationException('This user already has a certificate created', slug='already-exists')
 
