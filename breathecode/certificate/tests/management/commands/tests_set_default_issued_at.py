@@ -13,7 +13,7 @@ class SetDefaultIssuedAtTestCase(CertificateTestCase):
         """certificate_screenshot don't call open in development environment"""
         from breathecode.certificate.actions import certificate_set_default_issued_at
         instance = Command()
-        instance.handle()
+        result = instance.handle()
 
         self.assertEqual(certificate_set_default_issued_at.call_args_list, [call()])
-        self.assertEqual(instance.handle(), None)
+        self.assertEqual(result, None)
