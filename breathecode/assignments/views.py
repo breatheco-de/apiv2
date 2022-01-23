@@ -18,6 +18,7 @@ from .actions import deliver_task
 from .forms import DeliverAssigntmentForm
 from .serializers import (TaskGETSerializer, PUTTaskSerializer, PostTaskSerializer, TaskGETDeliverSerializer)
 from .actions import sync_cohort_tasks
+import breathecode.assignments.tasks as tasks
 
 logger = logging.getLogger(__name__)
 
@@ -132,7 +133,6 @@ class TaskMeView(APIView):
         return Response(serializer.data)
 
     def put(self, request, task_id):
-
         item = Task.objects.filter(id=task_id).first()
         if item is None:
             raise ValidationException('Task not found', slug='task-not-found')
@@ -140,6 +140,13 @@ class TaskMeView(APIView):
         serializer = PUTTaskSerializer(item, data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
+
+            if request.user.id == item.user.id:
+                tasks.teacher_task_notification.delay(item.id)
+
+            else:
+                tasks.student_task_notification.delay(item.id)
+
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

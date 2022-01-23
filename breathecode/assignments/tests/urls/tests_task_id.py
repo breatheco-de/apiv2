@@ -102,7 +102,12 @@ class MediaTestSuite(AssignmentsTestCase):
     🔽🔽🔽 Put without Task
     """
 
+    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
+    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
     def test_task_id__put__without_tasks(self):
+        from breathecode.assignments.tasks import student_task_notification
+        from breathecode.assignments.tasks import teacher_task_notification
+
         model = self.bc.database.create(user=1)
         self.bc.request.authenticate(model.user)
 
@@ -116,11 +121,19 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
 
+        self.assertEqual(student_task_notification.delay.call_args_list, [])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
     """
     🔽🔽🔽 Put with Task
     """
 
+    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
+    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
     def test_task_id__put__with_one_task__bad_fields(self):
+        from breathecode.assignments.tasks import student_task_notification
+        from breathecode.assignments.tasks import teacher_task_notification
+
         model = self.bc.database.create(user=1, task=1)
         self.bc.request.authenticate(model.user)
 
@@ -134,11 +147,19 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
+        self.assertEqual(student_task_notification.delay.call_args_list, [])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
     """
     🔽🔽🔽 Put with Task
     """
 
+    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
+    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
     def test_task_id__put__with_one_task(self):
+        from breathecode.assignments.tasks import student_task_notification
+        from breathecode.assignments.tasks import teacher_task_notification
+
         model = self.bc.database.create(user=1, task=1)
         self.bc.request.authenticate(model.user)
 
@@ -173,11 +194,19 @@ class MediaTestSuite(AssignmentsTestCase):
             **data,
         }])
 
+        self.assertEqual(student_task_notification.delay.call_args_list, [])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [call(1)])
+
     """
     🔽🔽🔽 Put with Task of other user passing task_status
     """
 
+    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
+    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
     def test_task_id__put__with_one_task__with_task_status(self):
+        from breathecode.assignments.tasks import student_task_notification
+        from breathecode.assignments.tasks import teacher_task_notification
+
         task = {'task_status': 'PENDING', 'user_id': 2}
         model = self.bc.database.create(user=2, task=task)
         self.bc.request.authenticate(model.user[0])
@@ -197,11 +226,19 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
+        self.assertEqual(student_task_notification.delay.call_args_list, [])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
     """
     🔽🔽🔽 Put with Task of other user passing live_url
     """
 
+    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
+    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
     def test_task_id__put__with_one_task__with_live_url(self):
+        from breathecode.assignments.tasks import student_task_notification
+        from breathecode.assignments.tasks import teacher_task_notification
+
         task = {'live_url': 'PENDING', 'user_id': 2}
         model = self.bc.database.create(user=2, task=task)
         self.bc.request.authenticate(model.user[0])
@@ -221,11 +258,19 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
+        self.assertEqual(student_task_notification.delay.call_args_list, [])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
     """
     🔽🔽🔽 Put with Task of other user passing github_url
     """
 
+    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
+    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
     def test_task_id__put__with_one_task__with_github_url(self):
+        from breathecode.assignments.tasks import student_task_notification
+        from breathecode.assignments.tasks import teacher_task_notification
+
         task = {'github_url': 'PENDING', 'user_id': 2}
         model = self.bc.database.create(user=2, task=task)
         self.bc.request.authenticate(model.user[0])
@@ -245,11 +290,19 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
+        self.assertEqual(student_task_notification.delay.call_args_list, [])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
     """
     🔽🔽🔽 Put with Task of other user passing revision_status
     """
 
+    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
+    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
     def test_task_id__put__with_one_task__with_revision_status(self):
+        from breathecode.assignments.tasks import student_task_notification
+        from breathecode.assignments.tasks import teacher_task_notification
+
         task = {'revision_status': 'PENDING', 'user_id': 2}
         model = self.bc.database.create(user=2, task=task)
         self.bc.request.authenticate(model.user[0])
@@ -269,7 +322,15 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
+        self.assertEqual(student_task_notification.delay.call_args_list, [])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
+    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
+    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
     def test_task_id__put__with_one_task__with_revision_status__teacher_auth(self):
+        from breathecode.assignments.tasks import student_task_notification
+        from breathecode.assignments.tasks import teacher_task_notification
+
         task = {'revision_status': 'PENDING', 'user_id': 1}
         cohort_users = [{'role': 'STUDENT', 'user_id': 1}, {'role': 'TEACHER', 'user_id': 2}]
         model = self.bc.database.create(user=2, task=task, cohort=1, cohort_user=cohort_users)
@@ -309,7 +370,15 @@ class MediaTestSuite(AssignmentsTestCase):
             **data,
         }])
 
+        self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
+    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
+    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
     def test_task_id__put__with_one_task__with_revision_status__staff_auth(self):
+        from breathecode.assignments.tasks import student_task_notification
+        from breathecode.assignments.tasks import teacher_task_notification
+
         task = {'revision_status': 'PENDING', 'user_id': 1}
         cohort_user = {'role': 'STUDENT', 'user_id': 1}
         profile_academy = {'user_id': 2}
@@ -353,3 +422,6 @@ class MediaTestSuite(AssignmentsTestCase):
             **self.bc.format.to_dict(model.task),
             **data,
         }])
+
+        self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
