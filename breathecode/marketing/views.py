@@ -32,6 +32,7 @@ from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
+import breathecode.marketing.tasks as tasks
 
 logger = logging.getLogger(__name__)
 
@@ -74,27 +75,34 @@ def get_downloadable(request, slug=None):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead(request):
-    serializer = PostFormEntrySerializer(data=request.data)
+
+    data = request.data.copy()
+
+    # remove spaces from phone
+    if 'phone' in data:
+        data['phone'] = data['phone'].replace(' ', '')
+
+    serializer = PostFormEntrySerializer(data=data)
     if serializer.is_valid():
         serializer.save()
 
         persist_single_lead.delay(serializer.data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    print(serializer.errors)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead_from_app(request, app_slug=None):
-
     app_id = request.GET.get('app_id', None)
     if app_slug is None or app_id is None:
-        raise APIException(f'Invalid app slug and/or id', code=400)
+        raise ValidationException(f'Invalid app slug and/or id', code=400, slug='without-app-slug-or-app-id')
 
     app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
     if app is None:
-        raise APIException(f'App not found with those credentials', code=401)
+        raise ValidationException(f'App not found with those credentials', code=401, slug='without-app-id')
 
     app.hits += 1
     app.last_call_at = timezone.now()
@@ -115,22 +123,30 @@ def create_lead_from_app(request, app_slug=None):
 
     if 'automations' not in request.data:
         payload['automations'] = ','.join([str(auto.slug) for auto in app.default_automations.all()])
+
     if 'tags' not in request.data:
         payload['tags'] = ','.join([tag.slug for tag in app.default_tags.all()])
+
+    # remove spaces from phone
+    if 'phone' in request.data:
+        payload['phone'] = payload['phone'].replace(' ', '')
 
     serializer = PostFormEntrySerializer(data=payload)
     if serializer.is_valid():
         serializer.save()
 
-        persist_single_lead.delay(serializer.data)
+        tasks.persist_single_lead.delay(serializer.data)
+
         app.last_call_status = 'OK'
         app.save()
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     else:
         app.last_call_status = 'ERROR'
         app.last_call_log = json.dumps(serializer.errors)
         app.save()
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -342,8 +358,6 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     """
     @capable_of('crud_lead')
     def get(self, request, format=None, academy_id=None):
-
-        print('academy_id', academy_id)
         tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
 
         serializer = TagSmallSerializer(tags, many=True)

@@ -425,3 +425,126 @@ class MediaTestSuite(AssignmentsTestCase):
 
         self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
+    """
+    🔽🔽🔽 Put prevent mark task as done if it is not delivered
+    """
+
+    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
+    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    def test_task_status_pending_and_revision_status_pending(self):
+        """Test /task with task_status = pending and revision_status = pending should pass"""
+
+        from breathecode.assignments.tasks import student_task_notification
+        from breathecode.assignments.tasks import teacher_task_notification
+
+        model = self.bc.database.create(task=1, user=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('assignments:task_id', kwargs={
+            'task_id': model.task.id,
+        })
+        data = {'associated_slug': 'hello', 'title': 'hello'}
+        response = self.client.put(url, data)
+        json = response.json()
+        self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
+        del json['created_at']
+        del json['updated_at']
+        expected = {
+            'id': 1,
+            'associated_slug': 'hello',
+            'title': 'hello',
+            'task_status': 'PENDING',
+            'revision_status': 'PENDING',
+            'github_url': None,
+            'live_url': None,
+            'description': model.task.description,
+            'cohort': None
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
+            'id': 1,
+            'associated_slug': 'hello',
+            'title': 'hello',
+            'task_status': 'PENDING',
+            'revision_status': 'PENDING',
+            'task_type': model.task.task_type,
+            'github_url': None,
+            'live_url': None,
+            'description': model.task.description,
+            'cohort_id': None,
+            'user_id': 1
+        }])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(student_task_notification.delay.call_args_list, [])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
+    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
+    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    def test_task_status_pending_and_revision_status_approved(self):
+        """Test /task with task_status = pending and revision_status = approved should fail"""
+
+        from breathecode.assignments.tasks import student_task_notification
+        from breathecode.assignments.tasks import teacher_task_notification
+
+        model = self.bc.database.create(task=1, user=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('assignments:task_id', kwargs={
+            'task_id': model.task.id,
+        })
+
+        data = {
+            'associated_slug': 'hello',
+            'title': 'hello',
+            'revision_status': 'APPROVED',
+        }
+
+        response = self.client.put(url, data)
+        json = response.json()
+
+        expected = {'detail': 'task-marked-approved-when-pending', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+
+        self.assertEqual(student_task_notification.delay.call_args_list, [])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+
+    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
+    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
+    def test_task_status_pending_and_revision_status_approved_both(self):
+        """Test /task with task_status = pending and revision_status = approved should fail"""
+
+        from breathecode.assignments.tasks import student_task_notification
+        from breathecode.assignments.tasks import teacher_task_notification
+
+        model = self.bc.database.create(task=1, user=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('assignments:task_id', kwargs={
+            'task_id': model.task.id,
+        })
+
+        data = {
+            'associated_slug': 'hello',
+            'title': 'hello',
+            'task_status': 'DONE',
+            'revision_status': 'APPROVED'
+        }
+
+        response = self.client.put(url, data)
+        json = response.json()
+
+        expected = {'detail': 'task-marked-approved-when-pending', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
+
+        self.assertEqual(student_task_notification.delay.call_args_list, [])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])

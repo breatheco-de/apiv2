@@ -257,6 +257,7 @@ def run_script(script):
                 script.status = 'OPERATIONAL'
                 results['severity_level'] = 5
                 script.response_text = s.getvalue()
+
             except ScriptNotification as e:
                 script.status_code = 1
                 script.response_text = str(e)
@@ -270,16 +271,15 @@ def run_script(script):
                     script.status = 'MINOR'
                     results['severity_level'] = 5
                 results['error_slug'] = e.slug
-                print(e)
+
             except Exception as e:
                 import traceback
                 script.special_status_text = str(e)
                 script.response_text = ''.join(traceback.format_exception(None, e, e.__traceback__))
                 script.status_code = 1
                 script.status = 'CRITICAL'
-                results['error_slug'] = 'uknown'
+                results['error_slug'] = 'unknown'
                 results['severity_level'] = 100
-                print(e)
 
         script.last_run = timezone.now()
         script.save()

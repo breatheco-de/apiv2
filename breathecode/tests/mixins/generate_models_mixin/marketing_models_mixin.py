@@ -17,6 +17,7 @@ class MarketingModelsMixin(ModelsMixin):
                                   short_link=False,
                                   user=False,
                                   academy_alias=False,
+                                  lead_generation_app=False,
                                   active_campaign_academy_kwargs={},
                                   automation_kwargs={},
                                   tag_kwargs={},
@@ -24,6 +25,7 @@ class MarketingModelsMixin(ModelsMixin):
                                   contact_kwargs={},
                                   form_entry_kwargs={},
                                   short_link_kwargs={},
+                                  lead_generation_app_kwargs={},
                                   models={},
                                   **kwargs):
         """Generate models"""
@@ -88,6 +90,23 @@ class MarketingModelsMixin(ModelsMixin):
                 kargs['academy'] = just_one(models['academy'])
 
             models['contact'] = create_models(contact, 'marketing.Contact', **{**kargs, **contact_kwargs})
+
+        if not 'lead_generation_app' in models and is_valid(lead_generation_app):
+            kargs = {}
+
+            if 'academy' in models:
+                kargs['academy'] = models['academy']
+
+            if 'tag' in models:
+                kargs['default_tags'] = [models['tag']]
+
+            if 'automation' in models:
+                kargs['default_automations'] = [models['automation']]
+
+            models['lead_generation_app'] = create_models(contact, 'marketing.LeadGenerationApp', **{
+                **kargs,
+                **lead_generation_app_kwargs
+            })
 
         if not 'form_entry' in models and is_valid(form_entry):
             kargs = {}
