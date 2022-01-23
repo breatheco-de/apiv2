@@ -203,6 +203,7 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'created_at': self.datetime_to_iso(model['user_specialty'].created_at),
             'expires_at': model['user_specialty'].expires_at,
+            'issued_at': model.user_specialty.issued_at,
             'id': 1,
             'layout': {
                 'name': model['layout_design'].name,
@@ -230,9 +231,13 @@ class CertificateTestSuite(CertificateTestCase):
         }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        certificates = self.all_user_specialty_dict()
+        self.assertDatetime(certificates[0]['issued_at'])
+
+        del certificates[0]['issued_at']
+
         self.assertEqual(
-            self.all_user_specialty_dict(),
-            [{
+            certificates, [{
                 'academy_id': 1,
                 'cohort_id': 1,
                 'expires_at': None,
@@ -357,6 +362,7 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
             'expires_at': models[0].user_specialty.expires_at,
+            'issued_at': models[0].user_specialty.issued_at,
             'id': 1,
             'layout': {
                 'name': models[0].layout_design.name,
@@ -412,6 +418,7 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'created_at': self.datetime_to_iso(models[1].user_specialty.created_at),
             'expires_at': models[1].user_specialty.expires_at,
+            'issued_at': models[1].user_specialty.issued_at,
             'id': 2,
             'layout': {
                 'name': models[1].layout_design.name,
@@ -439,7 +446,14 @@ class CertificateTestSuite(CertificateTestCase):
         }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_user_specialty_dict(), [
+
+        certificates = self.all_user_specialty_dict()
+        self.assertDatetime(certificates[0]['issued_at'])
+        self.assertDatetime(certificates[1]['issued_at'])
+        del certificates[0]['issued_at']
+        del certificates[1]['issued_at']
+
+        self.assertEqual(certificates, [
             {
                 'academy_id': 1,
                 'cohort_id': 1,
@@ -554,6 +568,7 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
             'expires_at': models[0].user_specialty.expires_at,
+            'issued_at': models[0].user_specialty.issued_at,
             'id': 1,
             'layout': None,
             'preview_url': models[0].user_specialty.preview_url,
@@ -665,6 +680,7 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
             'expires_at': models[0].user_specialty.expires_at,
+            'issued_at': models[0].user_specialty.issued_at,
             'id': 1,
             'layout': None,
             'preview_url': models[0].user_specialty.preview_url,
@@ -776,6 +792,7 @@ class CertificateTestSuite(CertificateTestCase):
             'layout': None,
             'preview_url': models[0].user_specialty.preview_url,
             'signed_by': models[0].user_specialty.signed_by,
+            'issued_at': models[0].user_specialty.issued_at,
             'signed_by_role': 'Director',
             'specialty': {
                 'created_at': self.datetime_to_iso(models[0].specialty.created_at),
@@ -880,6 +897,7 @@ class CertificateTestSuite(CertificateTestCase):
             },
             'created_at': self.datetime_to_iso(models[0].user_specialty.created_at),
             'expires_at': models[0].user_specialty.expires_at,
+            'issued_at': models[0].user_specialty.issued_at,
             'id': 1,
             'layout': None,
             'preview_url': models[0].user_specialty.preview_url,
@@ -900,7 +918,7 @@ class CertificateTestSuite(CertificateTestCase):
             'user': {
                 'first_name': models[0].user.first_name,
                 'id': 2,
-                'last_name': models[0].user.last_name
+                'last_name': models[0].user.last_name,
             }
         }]
 
