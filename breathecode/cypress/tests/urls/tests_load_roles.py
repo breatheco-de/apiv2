@@ -212,6 +212,14 @@ CAPABILITIES = [
         'slug': 'crud_mentorship_session',
         'description': 'Get all session from one academy'
     },
+    {
+        'slug': 'read_mentor',
+        'description': 'Get update academy mentors'
+    },
+    {
+        'slug': 'crud_mentor',
+        'description': 'Update, create and delete academy mentors'
+    },
 ]
 
 ROLES = [
@@ -289,20 +297,6 @@ ROLES = [
 ]
 
 
-def get_capabilities_mock():
-    def get_capabilities():
-        return CAPABILITIES
-
-    return MagicMock(side_effect=get_capabilities)
-
-
-def get_roles_mock():
-    def get_roles():
-        return ROLES
-
-    return MagicMock(side_effect=get_roles)
-
-
 class AcademyEventTestSuite(CypressTestCase):
     def test_load_roles__bad_environment__not_exits(self):
         if 'ALLOW_UNSAFE_CYPRESS_APP' in os.environ:
@@ -331,8 +325,10 @@ class AcademyEventTestSuite(CypressTestCase):
         self.assertEqual(self.all_role_dict(), [])
         self.assertEqual(self.all_capability_dict(), [])
 
-    @patch.object(create_roles, 'get_capabilities', new=get_capabilities_mock())
-    @patch.object(create_roles, 'get_roles', new=get_roles_mock())
+    @patch('breathecode.authenticate.management.commands.create_roles.get_capabilities',
+           MagicMock(return_value=CAPABILITIES))
+    @patch('breathecode.authenticate.management.commands.create_roles.get_roles',
+           MagicMock(return_value=ROLES))
     def test_load_roles(self):
         self.maxDiff = None
         os.environ['ALLOW_UNSAFE_CYPRESS_APP'] = 'True'
@@ -610,7 +606,15 @@ class AcademyEventTestSuite(CypressTestCase):
             },
             {
                 'slug': 'crud_mentorship_session',
-                'description': 'Get all session from one academy'
+                'description': 'Get all session from one academy',
+            },
+            {
+                'slug': 'read_mentor',
+                'description': 'Get update academy mentors'
+            },
+            {
+                'slug': 'crud_mentor',
+                'description': 'Update, create and delete academy mentors'
             },
         ])
 

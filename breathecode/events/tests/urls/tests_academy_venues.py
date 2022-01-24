@@ -1,16 +1,6 @@
 import re
 from django.urls.base import reverse_lazy
-from rest_framework import status
-from unittest.mock import patch
 from ..mixins.new_events_tests_case import EventTestCase
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
-from breathecode.services import datetime_to_iso_format
-from breathecode.tests.mixins.cache_mixin import CacheMixin
 
 
 class AcademyVenueTestSuite(EventTestCase):
@@ -69,7 +59,8 @@ class AcademyVenueTestSuite(EventTestCase):
             'state': model['venue'].state,
             'street_address': model['venue'].street_address,
             'title': model['venue'].title,
-            'zip_code': model['venue'].zip_code
+            'zip_code': model['venue'].zip_code,
+            'updated_at': self.bc.datetime.to_iso_string(model['venue'].updated_at),
         }]
 
         self.assertEqual(json, expected)

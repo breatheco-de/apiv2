@@ -303,7 +303,7 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
 
-        task = {'revision_status': 'PENDING', 'user_id': 2}
+        task = {'revision_status': 'PENDING', 'user_id': 2, 'task_status': 'DONE'}
         model = self.bc.database.create(user=2, task=task)
         self.bc.request.authenticate(model.user[0])
 
@@ -331,7 +331,7 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
 
-        task = {'revision_status': 'PENDING', 'user_id': 1}
+        task = {'revision_status': 'PENDING', 'user_id': 1, 'task_status': 'DONE'}
         cohort_users = [{'role': 'STUDENT', 'user_id': 1}, {'role': 'TEACHER', 'user_id': 2}]
         model = self.bc.database.create(user=2, task=task, cohort=1, cohort_user=cohort_users)
         self.bc.request.authenticate(model.user[1])
@@ -379,7 +379,7 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
 
-        task = {'revision_status': 'PENDING', 'user_id': 1}
+        task = {'revision_status': 'PENDING', 'user_id': 1, 'task_status': 'DONE'}
         cohort_user = {'role': 'STUDENT', 'user_id': 1}
         profile_academy = {'user_id': 2}
         model = self.bc.database.create(user=2,
@@ -480,7 +480,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
-        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [call(1)])
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())

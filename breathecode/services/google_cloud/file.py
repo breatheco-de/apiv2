@@ -3,6 +3,8 @@ from google.cloud.storage import Bucket, Blob
 
 logger = logging.getLogger(__name__)
 
+__all__ = ['File']
+
 
 class File:
     """Google Cloud Storage"""
