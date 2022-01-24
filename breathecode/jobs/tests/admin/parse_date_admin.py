@@ -1,6 +1,3 @@
-"""
-Test /cohort/user
-"""
 from unittest.mock import patch, MagicMock, call
 from breathecode.tests.mocks.django_contrib import DJANGO_CONTRIB_PATH, apply_django_contrib_messages_mock
 from breathecode.jobs.models import Job
@@ -42,7 +39,6 @@ class RunSpiderAdminTestSuite(JobsTestCase):
         queryset = Job.objects.all()
 
         parse_date_admin(None, request, queryset)
-
         self.assertEqual(parse_date.call_args_list, [call(model.job)])
 
     """

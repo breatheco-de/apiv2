@@ -5,7 +5,6 @@ from unittest.mock import patch, call
 from ...actions import parse_date
 from ..mixins import JobsTestCase
 from datetime import datetime, timedelta, date
-# from datetime import date
 from breathecode.tests.mocks import (
     REQUESTS_PATH,
     apply_requests_post_mock,
@@ -14,9 +13,6 @@ from breathecode.tests.mocks import (
 
 class ActionRunSpiderTestCase(JobsTestCase):
     """Tests action certificate_screenshot"""
-
-    # @patch(REQUESTS_PATH['post'],
-    #        apply_requests_post_mock([(200, 'https://app.scrapinghub.com/api/run.json', DATA)]))
     def test_parse_date__without_job(self):
         """Test /run_spider without spider"""
         try:
@@ -26,7 +22,6 @@ class ActionRunSpiderTestCase(JobsTestCase):
 
     def test_parse_date__verify_format_published_date(self):
         """Test /run_spider without spider"""
-        # 30+ days ago July 17, 1977 Active 6 days ago
         model = self.generate_models(job=True, job_kwargs={'published_date_raw': '30+ days ago'})
 
         result = parse_date(model.job)

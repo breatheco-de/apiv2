@@ -1,19 +1,13 @@
 from django.contrib import admin
 from django.contrib import messages
 from .models import Platform, ZyteProject, Spider, Job, Employer, Position, PositionAlias, Tag, Location, LocationAlias
-from .actions import fetch_spider_data, fetch_sync_all_data, run_spider, parse_date
+from .actions import fetch_sync_all_data, run_spider, parse_date
 
 
 # Register your models here.
 @admin.register(Platform)
 class PlatformAdmin(admin.ModelAdmin):
     list_display = ('name', 'created_at')
-
-
-def fetch_spider_data_admin(modeladmin, request, queryset):
-    spiders = queryset.all()
-    for s in spiders:
-        fetch_spider_data(s)
 
 
 def fetch_sync_all_data_admin(modeladmin, request, queryset):
@@ -54,7 +48,6 @@ def parse_date_admin(modeladmin, request, queryset):
         messages.error(request, f'There was an error retriving the jobs {str(e)}')
 
 
-fetch_spider_data_admin.short_description = 'Fetch latest data.'
 fetch_sync_all_data_admin.short_description = 'Fetch sync all data.'
 run_spider_admin.short_description = 'Run spider.'
 parse_date_admin.short_description = 'Parse date.'
@@ -65,7 +58,6 @@ parse_date_admin.short_description = 'Parse date.'
 class SpiderAdmin(admin.ModelAdmin):
     list_display = ('name', 'status', 'sync_desc', 'zyte_last_fetch_date')
     actions = (
-        fetch_spider_data_admin,
         fetch_sync_all_data_admin,
         run_spider_admin,
     )

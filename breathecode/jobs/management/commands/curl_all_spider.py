@@ -26,6 +26,6 @@ class Command(BaseCommand):
                 spi.save()
                 async_fetch_sync_all_data.delay({'spi_id': spi.id})
                 count = count + 1
-            # print('async_run_spider ', async_run_spider)
+
         self.stdout.write(
             self.style.SUCCESS(f'Enqueued {count} of {len(spidrs)} for async fetch all spiders'))

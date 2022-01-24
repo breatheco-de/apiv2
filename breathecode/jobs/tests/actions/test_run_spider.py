@@ -12,9 +12,6 @@ from breathecode.tests.mocks import (
 
 class ActionRunSpiderTestCase(JobsTestCase):
     """Tests action certificate_screenshot"""
-
-    # @patch(REQUESTS_PATH['post'],
-    #        apply_requests_post_mock([(200, 'https://app.scrapinghub.com/api/run.json', DATA)]))
     def test_run_spider__without_spider(self):
         """Test /run_spider without spider"""
         try:

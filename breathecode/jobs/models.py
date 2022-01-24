@@ -168,7 +168,3 @@ class Job(models.Model):
 
     def __str__(self):
         return f'{self.title} ({self.id})'
-
-
-# Create your models here.
-#This is a mommit

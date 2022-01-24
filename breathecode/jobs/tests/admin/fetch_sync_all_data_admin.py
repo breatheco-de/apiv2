@@ -1,6 +1,3 @@
-"""
-Test /cohort/user
-"""
 from unittest.mock import patch, MagicMock, call
 from breathecode.tests.mocks.django_contrib import DJANGO_CONTRIB_PATH, apply_django_contrib_messages_mock
 from breathecode.jobs.models import Spider

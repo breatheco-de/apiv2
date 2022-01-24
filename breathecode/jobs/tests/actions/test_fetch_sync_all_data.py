@@ -164,30 +164,3 @@ class ActionTestFetchSyncAllDataAdminTestCase(JobsTestCase):
         result = fetch_sync_all_data(model.spider)
         requests.get.assert_called()
         self.assertEqual(result, DATA)
-
-    """
-    🔽🔽🔽 status ok.fetch.to.api
-    """
-
-    @patch(REQUESTS_PATH['get'],
-           apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', {
-               'status': 'ok',
-               'data': []
-           })]))
-    def test_status_ok_fetch_to_api(self):
-        """Test /status ok.fetch.to.api"""
-        import requests
-
-        model = self.generate_models(spider=True)
-        result = fetch_to_api(model.spider)
-
-        self.assertEqual(result, {'status': 'ok', 'data': []})
-        self.assertEqual(requests.get.call_args_list, [
-            call('https://app.scrapinghub.com/api/jobs/list.json',
-                 params=(
-                     ('project', model.zyte_project.zyte_api_deploy),
-                     ('spider', model.zyte_project.platform.name),
-                     ('state', 'finished'),
-                 ),
-                 auth=(model.zyte_project.zyte_api_key, ''))
-        ])
