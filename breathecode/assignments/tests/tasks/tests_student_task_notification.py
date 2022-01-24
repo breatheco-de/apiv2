@@ -17,23 +17,6 @@ from ...tasks import student_task_notification
 
 class MediaTestSuite(AssignmentsTestCase):
     """Test /answer"""
-    # """
-    # 🔽🔽🔽 Without env
-    # """
-    # @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    # @patch('logging.Logger.debug', MagicMock())
-    # @patch('logging.Logger.error', MagicMock())
-    # def test_student_task_notification__without_env(self):
-    #     from logging import Logger
-    #     from breathecode.notify.actions import send_email_message
-
-    #     student_task_notification.delay(1)
-
-    #     self.assertEqual(self.bc.database.list_of('assignments.Task'), [])
-    #     self.assertEqual(send_email_message.call_args_list, [])
-    #     self.assertEqual(Logger.debug.call_args_list, [call('Starting student_task_notification')])
-    #     self.assertEqual(Logger.error.call_args_list,
-    #                      [call('TEACHER_URL is not set as environment variable')])
     """
     🔽🔽🔽 Without Task
     """
