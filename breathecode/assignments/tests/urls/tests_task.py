@@ -827,7 +827,6 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
     def test_task__query_edu_status__found_two(self):
-        tasks = [{'user_id': 1, 'cohort_id': 1}, {'user_id': 2, 'cohort_id': 2}]
         cohort_user = {'user_id': 1, 'educational_status': 'ACTIVE'}
         model = self.bc.database.create(profile_academy=1, task=2, cohort=1, cohort_user=cohort_user)
         self.bc.request.authenticate(model.user)
@@ -1017,7 +1016,8 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     def test_task__query_task_status__found_zero__task_status_not_exists(self):
-        model = self.bc.database.create(profile_academy=1, task=1)
+        task = {'task_status': 'PENDING'}
+        model = self.bc.database.create(profile_academy=1, task=task)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?task_status=DONE'
@@ -1123,7 +1123,8 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     def test_task__query_revision_status__found_zero__revision_status_not_exists(self):
-        model = self.bc.database.create(profile_academy=1, task=1)
+        task = {'revision_status': 'PENDING'}
+        model = self.bc.database.create(profile_academy=1, task=task)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?revision_status=APPROVED'
@@ -1228,7 +1229,8 @@ class MediaTestSuite(AssignmentsTestCase):
     """
 
     def test_task__query_task_type__found_zero__task_type_not_exists(self):
-        model = self.bc.database.create(profile_academy=1, task=1)
+        task = {'task_type': 'QUIZ'}
+        model = self.bc.database.create(profile_academy=1, task=task)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('assignments:task') + '?task_type=PROJECT'
