@@ -11,9 +11,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         now = timezone.now()
-        spidrs = Spider.objects.all()
+        spiders = Spider.objects.all()
         count = 0
-        for spi in spidrs:
+        for spi in spiders:
             if spi.zyte_project.zyte_api_deploy is None or spi.zyte_project.zyte_api_deploy == '' or spi.zyte_spider_number is None or spi.zyte_spider_number == '' or spi.zyte_job_number is None or spi.zyte_job_number == '' or spi.zyte_project.zyte_api_key is None or spi.zyte_project.zyte_api_key == '':
                 spi.sync_status = 'ERROR'
                 spi.sync_desc = 'Missing async_fetch_sync_all_data key or id'
@@ -28,4 +28,4 @@ class Command(BaseCommand):
                 count = count + 1
 
         self.stdout.write(
-            self.style.SUCCESS(f'Enqueued {count} of {len(spidrs)} for async fetch all spiders'))
+            self.style.SUCCESS(f'Enqueued {count} of {len(spiders)} for async fetch all spiders'))
