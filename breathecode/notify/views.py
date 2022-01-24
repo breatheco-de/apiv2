@@ -21,14 +21,6 @@ from breathecode.services.slack.client import Slack
 logger = logging.getLogger(__name__)
 
 
-@receiver(post_save, sender=Cohort)
-def post_save_cohort(sender, **kwargs):
-
-    instance = kwargs['instance']
-    logger.debug('New cohort was saved')
-    logger.debug(instance)
-
-
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def preview_template(request, slug):
