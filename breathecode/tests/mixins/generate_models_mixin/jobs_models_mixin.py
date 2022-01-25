@@ -117,7 +117,7 @@ class JobsModelsMixin(ModelsMixin):
                 kargs['position'] = models['position']
 
             if 'tag' in models or tag:
-                kargs['tag'] = [models['tag']]
+                kargs['tags'] = [models['tag']]
 
             if 'location' in models or location:
                 kargs['locations'] = [models['location']]
