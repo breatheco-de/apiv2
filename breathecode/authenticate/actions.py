@@ -1,7 +1,7 @@
 import os, string, logging, urllib.parse, random
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User
 from django.utils import timezone
-from .models import DeviceId, Token, CredentialsSlack, UserInvite, Role, ProfileAcademy
+from .models import DeviceId, Token, Role, ProfileAcademy
 from breathecode.notify.actions import send_email_message
 from breathecode.admissions.models import Academy
 from random import randint

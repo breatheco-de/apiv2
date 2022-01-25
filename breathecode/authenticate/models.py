@@ -79,13 +79,14 @@ class Role(models.Model):
 
 PENDING = 'PENDING'
 ACCEPTED = 'ACCEPTED'
+WAITING_LIST = 'WAITING_LIST'
 INVITE_STATUS = (
     (PENDING, 'Pending'),
     (ACCEPTED, 'Accepted'),
+    (WAITING_LIST, 'Waiting list'),
 )
 
 
-# TODO: list this invite
 class UserInvite(models.Model):
 
     email = models.CharField(blank=False, max_length=150, null=True, default=None)
@@ -99,7 +100,7 @@ class UserInvite(models.Model):
 
     token = models.CharField(max_length=255, unique=True)
 
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
 
     status = models.CharField(max_length=15, choices=INVITE_STATUS, default=PENDING)
 
