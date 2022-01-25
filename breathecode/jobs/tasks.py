@@ -39,7 +39,7 @@ def async_run_spider(self, args):
 def async_fetch_sync_all_data(self, args):
     logger.debug('Starting async_fetch_sync_all_data')
     now = timezone.now()
-    spider = Spider.objects.get(id=args['spi_id'])
+    spider = Spider.objects.filter(id=args['spi_id']).first()
     result = fetch_sync_all_data(spider)
 
     if result:
