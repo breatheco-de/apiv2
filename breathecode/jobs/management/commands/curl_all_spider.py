@@ -16,7 +16,7 @@ class Command(BaseCommand):
         for spi in spiders:
             if spi.zyte_project.zyte_api_deploy is None or spi.zyte_project.zyte_api_deploy == '' or spi.zyte_spider_number is None or spi.zyte_spider_number == '' or spi.zyte_job_number is None or spi.zyte_job_number == '' or spi.zyte_project.zyte_api_key is None or spi.zyte_project.zyte_api_key == '':
                 spi.sync_status = 'ERROR'
-                spi.sync_desc = 'Missing async_fetch_sync_all_data key or id'
+                spi.sync_desc = "Missing the spider's args (Invalid args)"
                 spi.save()
                 self.stdout.write(
                     self.style.ERROR(f'Spider {str(spi)} is missing async_fetch_sync_all_data key or ID'))
