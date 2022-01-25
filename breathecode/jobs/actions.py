@@ -72,7 +72,6 @@ def fetch_sync_all_data(spider):
     new_jobs = 0
     while i < res['count']:
         if res['jobs'][i]['items_scraped'] > 0:
-
             platafom = spider.zyte_project.platform.name
             spider.status = 'PENDING'
             num_spider = res['jobs'][i]['id']
@@ -81,9 +80,7 @@ def fetch_sync_all_data(spider):
             if int(num_spid[1]) == int(spider.zyte_spider_number):
 
                 if int(num_spid[2]) >= int(spider.zyte_job_number):
-
                     prub.append(num_spid[2])
-
                     response = requests.get(
                         f'https://storage.scrapinghub.com/items/{num_spider}?apikey={spider.zyte_project.zyte_api_key}&format=json'
                     )
@@ -106,11 +103,8 @@ def fetch_sync_all_data(spider):
                             validate_loc = get_loc_from_string(j['Location'])
 
                         if validate_loc is not None:
-
                             if len(validate_loc) > 1:
-
                                 loc_list = validate_loc[1]
-
                                 for loc in loc_list:
                                     if 'temporarily remote' in loc:
                                         loc = validate_loc[0]
@@ -119,59 +113,48 @@ def fetch_sync_all_data(spider):
                                     location = get_location_from_string(loc)
 
                                     if location is None:
-                                        locations = Location()
-                                        locations.name = loc
+                                        locations = Location(name=loc)
                                         locations.save()
 
                                         locationAls = get_location_alias_from_string(loc)
                                         if locationAls is None:
-                                            locationAlias = LocationAlias()
-                                            locationAlias.name = loc
-                                            locationAlias.location = locations
+                                            locationAlias = LocationAlias(name=loc, location=locations)
                                             locationAlias.save()
 
                                     else:
                                         locationAls = get_location_alias_from_string(loc)
                                         if locationAls is None:
-                                            locationAlias = LocationAlias()
-                                            locationAlias.name = loc
-                                            locationAlias.location = location
-
+                                            locationAlias = LocationAlias(name=loc, location=location)
+                                            locationAlias.save()
                             else:
-
                                 if 'Remote' in validate_loc[0]:
                                     remote = True
 
                                 else:
-
                                     location = get_location_from_string(validate_loc[0])
 
                                     if location is None:
-                                        locations = Location()
-                                        locations.name = validate_loc[0]
+                                        locations = Location(name=validate_loc[0])
                                         locations.save()
 
                                         locationAls = get_location_alias_from_string(validate_loc[0])
                                         if locationAls is None:
-                                            locationAlias = LocationAlias()
-                                            locationAlias.name = validate_loc[0]
-                                            locationAlias.location = locations
+                                            locationAlias = LocationAlias(name=validate_loc[0],
+                                                                          location=locations)
                                             locationAlias.save()
 
                                     else:
                                         locationAls = get_location_alias_from_string(validate_loc[0])
                                         if locationAls is None:
-                                            locationAlias = LocationAlias()
-                                            locationAlias.name = validate_loc[0]
-                                            locationAlias.location = location
+                                            locationAlias = LocationAlias(name=validate_loc[0],
+                                                                          location=location)
+                                            locationAlias.save()
 
                         if len(validate_loc) > 1:
-
                             if 'Remote' in validate_loc[0]:
                                 remote = True
 
                             if 'temporarily remote' in validate_loc[1][0]:
-
                                 remote = True
                                 if validate_loc[0] is not None:
                                     loc = validate_loc[0]
@@ -181,15 +164,10 @@ def fetch_sync_all_data(spider):
 
                                 if validate_loc[0] is not None:
                                     loc = validate_loc[1][0]
-
                                     location = get_location_from_string(loc)
-
                                     employer = get_employer_from_string(j['Company_name'])
                                     if employer is None:
-
-                                        employer = Employer()
-                                        employer.name = j['Company_name']
-                                        employer.location = location
+                                        employer = Employer(name=j['Company_name'], location=location)
                                         employer.save()
                         else:
                             if 'Remote' in validate_loc[0]:
@@ -198,22 +176,15 @@ def fetch_sync_all_data(spider):
                             location = get_location_from_string(validate_loc[0])
                             employer = get_employer_from_string(j['Company_name'])
                             if employer is None:
-
-                                employer = Employer()
-                                employer.name = j['Company_name']
-                                employer.location = location
+                                employer = Employer(name=j['Company_name'], location=location)
                                 employer.save()
 
                         position = get_position_from_string(j['Searched_job'])
-
                         if position is None:
-                            position = Position()
-                            position.name = j['Searched_job']
+                            position = Position(name=j['Searched_job'])
                             position.save()
 
-                            positionAlias = PositionAlias()
-                            positionAlias.name = j['Searched_job']
-                            positionAlias.position = position
+                            positionAlias = PositionAlias(name=j['Searched_job'], position=position)
                             positionAlias.save()
 
                         employer = get_employer_from_string(j['Company_name'])
@@ -222,11 +193,9 @@ def fetch_sync_all_data(spider):
                         salary_str = 'Not supplied'
                         if 'getonboard' in platafom:
                             tags = j['Tags']
-
                             if j['Salary'] is not None and j['Salary'] != 'Not supplied' and j[
                                     'Salary'] != 'Remote':
                                 salary = get_salary_from_string(j['Salary'])
-
                                 if salary:
                                     min_salary = float(salary[0]) * 12
                                     max_salary = float(salary[1]) * 12
@@ -266,26 +235,19 @@ def fetch_sync_all_data(spider):
                                 employer=employer,
                                 position=position,
                             )
-
                             job.save()
 
                             validate_loc = get_loc_from_string(j['Location'])
-
                             if len(validate_loc) > 1:
-
                                 loc_list = validate_loc[1]
-
                                 for loc in loc_list:
                                     if 'temporarily remote' in loc:
                                         loc = validate_loc[0]
 
                                     location = get_location_from_string(loc)
                                     if location is not None:
-
                                         job.locations.add(location)
-
                             else:
-
                                 location = get_location_from_string(validate_loc[0])
                                 if location is not None:
                                     job.locations.add(location)
@@ -294,7 +256,6 @@ def fetch_sync_all_data(spider):
                                 for tag in tags:
                                     _tag = get_tag_from_string(tag)
                                     if _tag is not None:
-
                                         job.tags.add(_tag)
 
                             new_jobs = new_jobs + 1
