@@ -151,13 +151,13 @@ class ActionTestFetchSyncAllDataAdminTestCase(JobsTestCase):
         ])
 
     """
-    🔽🔽🔽 Verify fetch.function.was.calletd with.one.Spider
+    🔽🔽🔽 Verify fetch function was calletd with one Spider
     """
 
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA)]))
     def test_verify_fetch_funtions_was_calletd(self):
-        """Test /Verify fetch.function.was.calletd with.one.Spider"""
+        """Test /Verify fetch function was calletd with one Spider"""
         import requests
 
         model = self.generate_models(spider=True)
