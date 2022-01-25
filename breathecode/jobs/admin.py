@@ -1,7 +1,10 @@
+import logging
 from django.contrib import admin
 from django.contrib import messages
 from .models import Platform, ZyteProject, Spider, Job, Employer, Position, PositionAlias, Tag, Location, LocationAlias
 from .actions import fetch_sync_all_data, run_spider, parse_date
+
+logger = logging.getLogger(__name__)
 
 
 # Register your models here.
@@ -19,7 +22,7 @@ def fetch_sync_all_data_admin(modeladmin, request, queryset):
             fetch_sync_all_data(s)
             messages.success(request, f'{s.sync_desc}')
     except Exception as e:
-        print('error', str(e))
+        logger.debug(f'There was an error retriving the spider {str(e)}')
         messages.error(request, f'There was an error retriving the spider {str(e)}')
 
 
@@ -32,7 +35,7 @@ def run_spider_admin(modeladmin, request, queryset):
             run_spider(s)
             messages.success(request, f'The execution of the spider {s} was successful')
     except Exception as e:
-        print('error', str(e))
+        logger.debug(f'There was an error retriving the jobs {str(e)}')
         messages.error(request, f'There was an error retriving the jobs {str(e)}')
 
 
@@ -44,7 +47,7 @@ def parse_date_admin(modeladmin, request, queryset):
         for job in jobs:
             parse_date(job)
     except Exception as e:
-        print('error', str(e))
+        logger.debug(f'There was an error retriving the jobs {str(e)}')
         messages.error(request, f'There was an error retriving the jobs {str(e)}')
 
 

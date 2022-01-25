@@ -28,8 +28,6 @@ def run_spider(spider):
         'job': spider.job,
     }
     data['loc'] = spider.loc
-    valor = '1'
-    int(valor)
     response = requests.post('https://app.scrapinghub.com/api/run.json',
                              data=data,
                              auth=(spider.zyte_project.zyte_api_key, ''))
@@ -95,7 +93,7 @@ def fetch_sync_all_data(spider):
                             f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spider}'
                         )
                     elif response.status_code == 404:
-                        break
+                        continue
 
                     jobs = response.json()
 
@@ -284,13 +282,13 @@ def fetch_sync_all_data(spider):
                                     location = get_location_from_string(loc)
                                     if location is not None:
 
-                                        job.locations.add(_location)
+                                        job.locations.add(location)
 
                             else:
 
                                 location = get_location_from_string(validate_loc[0])
                                 if location is not None:
-                                    job.locations.add(_location)
+                                    job.locations.add(location)
 
                             if tags is not None:
                                 for tag in tags:
