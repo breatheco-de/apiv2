@@ -23,7 +23,7 @@ acp_ids = {
     # "soft": "48",
     # "newsletter_list": "3",
     'utm_source': '59',
-    'utm_url': '15',
+    'utm_url': '60',
     'utm_location': '18',
     'course': '2',
     'utm_medium': '36',
