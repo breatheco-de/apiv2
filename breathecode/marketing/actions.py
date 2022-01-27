@@ -29,7 +29,7 @@ acp_ids = {
     'utm_medium': '36',
     'utm_content': '35',
     'client_comments': '13',
-    'current_download': '46',  # use in downloadables
+    'current_download': '46',  # used in downloadables
     'utm_language': '16',
     'utm_country': '19',
     'gclid': '26',
@@ -194,6 +194,7 @@ def register_new_lead(form_entry=None):
     if not 'id' in form_entry:
         raise Exception('The id doesn\'t exist')
 
+    # apply default language and make sure english is "en" and not "us"
     if 'utm_language' in form_entry and form_entry['utm_language'] == 'us':
         form_entry['utm_language'] = 'en'
     elif 'language' in form_entry and form_entry['language'] == 'us':
