@@ -162,6 +162,27 @@ def mark_tag_as_discovery(modeladmin, request, queryset):
 mark_tag_as_discovery.short_description = 'Mark tags as DISCOVERY'
 
 
+def mark_tag_as_event(modeladmin, request, queryset):
+    queryset.update(tag_type='EVENT')
+
+
+mark_tag_as_event.short_description = 'Mark tags as EVENT'
+
+
+def mark_tag_as_downloadable(modeladmin, request, queryset):
+    queryset.update(tag_type='DOWNLOADABLE')
+
+
+mark_tag_as_downloadable.short_description = 'Mark tags as DOWNLOADABLE'
+
+
+def mark_tag_as_cohort(modeladmin, request, queryset):
+    queryset.update(tag_type='COHORT')
+
+
+mark_tag_as_cohort.short_description = 'Mark tags as COHORT'
+
+
 def mark_tag_as_other(modeladmin, request, queryset):
     queryset.update(tag_type='OTHER')
 
@@ -188,7 +209,8 @@ class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = ('id', 'slug', 'tag_type', 'ac_academy', 'acp_id', 'subscribers')
     list_filter = ['tag_type', 'ac_academy__academy__slug']
     actions = [
-        mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery, mark_tag_as_other, 'export_as_csv'
+        mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery, mark_tag_as_other, mark_tag_as_cohort,
+        mark_tag_as_downloadable, mark_tag_as_event, 'export_as_csv'
     ]
 
 

@@ -98,11 +98,17 @@ class Automation(models.Model):
 STRONG = 'STRONG'
 SOFT = 'SOFT'
 DISCOVERY = 'DISCOVERY'
+COHORT = 'COHORT'
+DOWNLOADABLE = 'DOWNLOADABLE'
+EVENT = 'EVENT'
 OTHER = 'OTHER'
 TAG_TYPE = (
     (STRONG, 'Strong'),
     (SOFT, 'Soft'),
     (DISCOVERY, 'Discovery'),
+    (COHORT, 'Cohort'),
+    (DOWNLOADABLE, 'Downloadable'),
+    (EVENT, 'Event'),
     (OTHER, 'Other'),
 )
 

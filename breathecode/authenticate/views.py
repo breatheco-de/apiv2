@@ -622,18 +622,21 @@ def save_github_token(request):
                 user = User(username=github_user['email'], email=github_user['email'])
                 user.save()
 
-            CredentialsGithub.objects.filter(github_id=github_user['id']).delete()
-            github_credentials = CredentialsGithub(github_id=github_user['id'],
-                                                   user=user,
-                                                   token=github_token,
-                                                   username=github_user['login'],
-                                                   email=github_user['email'],
-                                                   avatar_url=github_user['avatar_url'],
-                                                   name=github_user['name'],
-                                                   blog=github_user['blog'],
-                                                   bio=github_user['bio'],
-                                                   company=github_user['company'],
-                                                   twitter_username=github_user['twitter_username'])
+            github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
+            if github_credentials is not None and github_credentials.user.id != user.id:
+                github_credentials.delete()
+            elif github_credentials is None:
+                github_credentials = CredentialsGithub(github_id=github_user['id'], user=user)
+
+            github_credentials.token = github_token,
+            github_credentials.username = github_user['login']
+            github_credentials.email = github_user['email']
+            github_credentials.avatar_url = github_user['avatar_url']
+            github_credentials.name = github_user['name']
+            github_credentials.blog = github_user['blog']
+            github_credentials.bio = github_user['bio']
+            github_credentials.company = github_user['company']
+            github_credentials.twitter_username = github_user['twitter_username']
             github_credentials.save()
 
             profile = Profile.objects.filter(user=user).first()
