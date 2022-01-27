@@ -451,13 +451,13 @@ def validate_marketing_tags(tags: str) -> None:
                                   slug='two-commas-together')
 
     if tags.find(' ') != -1:
-        raise ValidationException(f'Spaces are not allowed', code=400, slug='spaces-are-not-allowed')
+        raise ValidationException(f'Spaces are not allowed on tags', code=400, slug='spaces-are-not-allowed')
 
     if STARTS_WITH_COMMA_PATTERN.search(tags):
-        raise ValidationException(f'Starts with comma', code=400, slug='starts-with-comma')
+        raise ValidationException(f'Tags string cannot start with comma', code=400, slug='starts-with-comma')
 
     if ENDS_WITH_COMMA_PATTERN.search(tags):
-        raise ValidationException(f'Ends with comma', code=400, slug='ends-with-comma')
+        raise ValidationException(f'Tags string cannot ends with comma', code=400, slug='ends-with-comma')
 
     tags = [x for x in tags.split(',') if x]
 
