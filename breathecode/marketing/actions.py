@@ -444,7 +444,7 @@ STARTS_WITH_COMMA_PATTERN = re.compile(r'^,')
 ENDS_WITH_COMMA_PATTERN = re.compile(r',$')
 
 
-def validate_marketing_tags(tags: str) -> None:
+def validate_marketing_tags(tags: str, academy_id: int, types: list = None) -> None:
     if tags.find(',,') != -1:
         raise ValidationException(f'You can\'t have two commas together on tags',
                                   code=400,
@@ -461,7 +461,10 @@ def validate_marketing_tags(tags: str) -> None:
 
     tags = [x for x in tags.split(',') if x]
 
-    founds = [x.slug for x in Tag.objects.filter(slug__in=tags)]
+    _tags = Tag.objects.filter(slug__in=tags, ac_academy__academy__id=academy_id)
+    if types is not None and len(types) > 0:
+        _tags = _tags.filter(tag_type__in=types)
+    founds = [x.slug for x in _tags]
 
     if len(tags) == len(founds):
         return
@@ -471,4 +474,10 @@ def validate_marketing_tags(tags: str) -> None:
         if tag not in founds:
             not_founds.append(tag)
 
-    raise ValidationException(f'Tags not found ({",".join(not_founds)})', code=400, slug='tag-not-exist')
+    if len(types) == 0:
+        types = ['ANY']
+
+    raise ValidationException(
+        f'Following tags not found with types {",".join(types)}: {",".join(not_founds)}',
+        code=400,
+        slug='tag-not-exist')

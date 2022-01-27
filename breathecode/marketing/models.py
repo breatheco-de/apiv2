@@ -113,7 +113,7 @@ class Tag(models.Model):
         max_length=15,
         choices=TAG_TYPE,
         null=True,
-        default=None,
+        default=OTHER,
         help_text=
         "The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON"
     )
@@ -123,6 +123,7 @@ class Tag(models.Model):
         Automation,
         on_delete=models.CASCADE,
         null=True,
+        blank=True,
         default=None,
         help_text='Leads that contain this tag will be asociated to this automation')
 

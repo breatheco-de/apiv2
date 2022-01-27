@@ -185,7 +185,7 @@ class CustomTagModelForm(forms.ModelForm):
 class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     form = CustomTagModelForm
     search_fields = ['slug']
-    list_display = ('id', 'slug', 'tag_type', 'acp_id', 'subscribers')
+    list_display = ('id', 'slug', 'tag_type', 'ac_academy', 'acp_id', 'subscribers')
     list_filter = ['tag_type', 'ac_academy__academy__slug']
     actions = [
         mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery, mark_tag_as_other, 'export_as_csv'
