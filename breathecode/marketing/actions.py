@@ -446,7 +446,7 @@ ENDS_WITH_COMMA_PATTERN = re.compile(r',$')
 
 def validate_marketing_tags(tags: str) -> None:
     if tags.find(',,') != -1:
-        raise ValidationException(f'You can\'t have two commas together',
+        raise ValidationException(f'You can\'t have two commas together on tags',
                                   code=400,
                                   slug='two-commas-together')
 
