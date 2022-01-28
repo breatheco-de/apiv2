@@ -75,31 +75,31 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
         lookup = {}
             
         users = request.GET.get('user', None)
-        if users is not None:
+        if users is not None and users != '':
             items = items.filter(user__id__in=users.split(','))
 
         cohorts = request.GET.get('cohort', None)
-        if cohorts is not None:
+        if cohorts is not None and cohorts != '':
             items = items.filter(cohort__slug__in=cohorts.split(','))
             
         mentors = request.GET.get('mentor', None)
-        if mentors is not None:
+        if mentors is not None and mentors != '':
             items = items.filter(mentor__id__in=mentors.split(','))
 
         events = request.GET.get('event', None)
-        if events is not None:
+        if events is not None and events != '':
             items = items.filter(event__id__in=events.split(','))
 
         score = request.GET.get('score', None)
-        if score is not None:
+        if score is not None and score != '':
             lookup['score'] = score
             
         status = request.GET.get('status', None)
-        if status is not None:
+        if status is not None and status != '':
             items = items.filter(status__in=status.split(','))
 
         surveys = request.GET.get('survey', None)
-        if surveys is not None:
+        if surveys is not None and surveys != '':
             items = items.filter(survey__id__in=surveys.split(','))
 
         items = items.filter(**lookup).order_by('-created_at')
