@@ -212,6 +212,15 @@ class SurveyView(APIView, HeaderLimitOffsetPagination):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @capable_of('crud_survey')
+    def delete(self, request, survey_id=None, academy_id=None):
+        if survey_id is None:
+            raise ValidationException('Missing survey_id')
+
+        survey = Survey.objects.filter(id=survey_id).delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
     @capable_of('read_survey')
     def get(self, request, survey_id=None, academy_id=None):
 
