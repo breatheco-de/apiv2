@@ -3,6 +3,8 @@ Test /certificate
 """
 from unittest.mock import patch
 from django.urls.base import reverse_lazy
+from django.utils import timezone
+from ...actions import generate_certificate
 from rest_framework import status
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
@@ -342,6 +344,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'updated_at': self.datetime_to_iso(model['specialty'].updated_at),
             },
             'status': 'ERROR',
+            'issued_at': None,
             'status_text': 'bad-finantial-status',
             'user': {
                 'first_name': model['user'].first_name,
@@ -365,6 +368,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'ERROR',
+                'issued_at': None,
                 'status_text': 'bad-finantial-status',
                 'user_id': 1,
                 'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
@@ -460,6 +464,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'updated_at': self.datetime_to_iso(model['specialty'].updated_at),
             },
             'status': 'ERROR',
+            'issued_at': None,
             'status_text': 'bad-educational-status',
             'user': {
                 'first_name': model['user'].first_name,
@@ -483,6 +488,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'ERROR',
+                'issued_at': None,
                 'status_text': 'bad-educational-status',
                 'user_id': 1,
                 'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
@@ -578,6 +584,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'updated_at': self.datetime_to_iso(model['specialty'].updated_at),
             },
             'status': 'ERROR',
+            'issued_at': None,
             'status_text': 'cohort-not-finished',
             'user': {
                 'first_name': model['user'].first_name,
@@ -601,6 +608,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'ERROR',
+                'issued_at': None,
                 'status_text': 'cohort-not-finished',
                 'user_id': 1,
                 'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
@@ -645,11 +653,18 @@ class CertificateTestSuite(CertificateTestCase):
 
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
         data = {'layout_slug': 'vanilla'}
+        start = timezone.now()
         response = self.client.post(url, data, format='json')
+        end = timezone.now()
         json = response.json()
 
         self.assertDatetime(json[0]['updated_at'])
         del json[0]['updated_at']
+
+        issued_at = self.iso_to_datetime(json[0]['issued_at'])
+        self.assertGreater(issued_at, start)
+        self.assertLess(issued_at, end)
+        del json[0]['issued_at']
 
         expected = [{
             'academy': {
@@ -711,6 +726,7 @@ class CertificateTestSuite(CertificateTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
         self.assertEqual(
             self.all_user_specialty_dict(),
             [{
@@ -724,6 +740,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'PERSISTED',
+                'issued_at': issued_at,
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 1,
                 'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'

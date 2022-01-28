@@ -82,6 +82,7 @@ class AcademyEventsTestSuite(EventTestCase):
             'banner': model['event'].banner,
             'tags': model['event'].tags,
             'slug': model['event'].slug,
+            'host': model['event'].host,
             'starting_at': datetime_to_iso_format(model['event'].starting_at),
             'ending_at': datetime_to_iso_format(model['event'].ending_at),
             'status': model['event'].status,
