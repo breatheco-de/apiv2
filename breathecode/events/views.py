@@ -384,9 +384,7 @@ class OrganizationWebhookView(APIView):
     @capable_of('read_organization')
     def get(self, request, academy_id=None):
 
-        webhooks = EventbriteWebhook.objects.filter(academy__id=academy_id)
-        # if org is None:
-        #     raise ValidationException('Organization not found for this academy', 404)
+        webhooks = EventbriteWebhook.objects.filter(organization_id=organization_id)
 
         serializer = EventbriteWebhookSerializer()
         return Response(serializer.data)

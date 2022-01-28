@@ -11,7 +11,7 @@ urlpatterns = [
     path('academy/organization', AcademyOrganizationView.as_view(), name='academy_organization'),
     path('academy/organization/eventbrite/webhook',
          OrganizationWebhookView.as_view(),
-         name='eventbrite_webhook'),
+         name='academy_organizarion_eventbrite_webhook'),
     path('ical/cohorts', ICalCohortsView.as_view(),
          name='academy_id_ical_cohorts'),  # don't correct that name
     path('ical/events', ICalEventView.as_view(), name='academy_id_ical_events'),  # don't correct that name
