@@ -628,7 +628,7 @@ def save_github_token(request):
             elif github_credentials is None:
                 github_credentials = CredentialsGithub(github_id=github_user['id'], user=user)
 
-            github_credentials.token = github_token,
+            github_credentials.token = github_token
             github_credentials.username = github_user['login']
             github_credentials.email = github_user['email']
             github_credentials.avatar_url = github_user['avatar_url']
