@@ -252,6 +252,7 @@ ROLES = [
             'read_review',
             'read_shortlink',
             'read_nps_answers',
+            'read_won_lead',
             'read_mentorship_service',
             'read_mentorship_mentor',
         ],
