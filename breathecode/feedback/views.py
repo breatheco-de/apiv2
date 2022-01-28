@@ -86,13 +86,13 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
         if mentors is not None:
             items = items.filter(mentor__id__in=mentors.split(','))
 
-        if 'event' in self.request.GET:
-            param = self.request.GET.get('event')
-            lookup['event__id'] = param
+        events = request.GET.get('event', None)
+        if events is not None:
+            items = items.filter(event__id__in=events.split(','))
 
-        if 'score' in self.request.GET:
-            param = self.request.GET.get('score')
-            lookup['score'] = param
+        score = request.GET.get('score', None)
+        if score is not None:
+            lookup['score'] = score
             
         status = request.GET.get('status', None)
         if status is not None:
