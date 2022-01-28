@@ -41,9 +41,12 @@ class TokenSmallSerializer(serpy.Serializer):
 
 class RoleSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
-    id = serpy.Field()
+    id = serpy.MethodField()
     slug = serpy.Field()
     name = serpy.Field()
+
+    def get_id(self, obj):
+        return obj.slug
 
 
 class GithubSmallSerializer(serpy.Serializer):
