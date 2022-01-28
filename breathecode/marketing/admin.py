@@ -304,10 +304,14 @@ class LeadAppCustomForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(LeadAppCustomForm, self).__init__(*args, **kwargs)
 
-        self.fields['default_automations'].queryset = Automation.objects.filter(
-            ac_academy__academy__id=self.instance.academy.id).exclude(slug='')  # or something else
-        self.fields['default_tags'].queryset = Tag.objects.filter(
-            ac_academy__academy__id=self.instance.academy.id)  # or something else
+        try:
+            self.fields['default_automations'].queryset = Automation.objects.filter(
+                ac_academy__academy__id=self.instance.academy.id).exclude(slug='')  # or something else
+            self.fields['default_tags'].queryset = Tag.objects.filter(
+                ac_academy__academy__id=self.instance.academy.id)  # or something else
+        except:
+            self.fields['default_automations'].queryset = Automation.objects.none()
+            self.fields['default_tags'].queryset = Tag.objects.none()
 
 
 @admin.register(LeadGenerationApp)
