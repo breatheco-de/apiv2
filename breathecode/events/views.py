@@ -386,7 +386,7 @@ class OrganizationWebhookView(APIView):
 
         # webhooks = EventbriteWebhook.objects.filter(organization_id=organization_id)
         org = Organization.objects.filter(academy__id=academy_id).first()
-        if org is none:
+        if not org:
             raise ValidationException(f'Academy has no organization', code=400, slug='organization-no-found')
 
         webhooks = EventbriteWebhook.objects.filter(organization_id=org.id)
