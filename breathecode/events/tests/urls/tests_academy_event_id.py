@@ -82,8 +82,10 @@ class AcademyEventsTestSuite(EventTestCase):
             'banner': model['event'].banner,
             'tags': model['event'].tags,
             'slug': model['event'].slug,
+            'host': model['event'].host,
             'starting_at': datetime_to_iso_format(model['event'].starting_at),
             'ending_at': datetime_to_iso_format(model['event'].ending_at),
+            # 'updated_at': datetime_to_iso_format(model['event'].updated_at),
             'status': model['event'].status,
             'event_type': model['event'].event_type,
             'online_event': model['event'].online_event,
@@ -439,7 +441,8 @@ class AcademyEventsTestSuite(EventTestCase):
         model = self.generate_models(authenticate=True,
                                      organization=True,
                                      profile_academy=True,
-                                     tag=True,
+                                     academy=True,
+                                     tag={'tag_type': 'DISCOVERY'},
                                      capability='crud_event',
                                      role='potato2',
                                      event=True)
@@ -459,11 +462,8 @@ class AcademyEventsTestSuite(EventTestCase):
         response = self.client.put(url, data, format='json')
         json = response.json()
 
-        self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
-
-        del json['created_at']
         del json['updated_at']
+        del json['created_at']
 
         expected = {
             'academy': 1,

@@ -96,9 +96,9 @@ class CertificateView(APIView):
 
         if cu is None:
             raise ValidationException('Student not found for this cohort', code=404, slug='student-not-found')
-
         cert = generate_certificate(cu.user, cu.cohort, layout_slug)
         serializer = UserSpecialtySerializer(cert, many=False)
+
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 

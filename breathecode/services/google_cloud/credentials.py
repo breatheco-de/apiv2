@@ -8,6 +8,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+__all__ = ['resolve_credentials']
+
 
 def resolve_credentials():
     """Resolve Google Cloud credentials, returns True if is successfully"""

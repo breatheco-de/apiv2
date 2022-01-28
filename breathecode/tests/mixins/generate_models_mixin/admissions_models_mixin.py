@@ -36,6 +36,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    profile_academy=False,
                                    cohort_user=False,
                                    city=False,
+                                   user_specialty=False,
                                    country=False,
                                    skip_cohort=False,
                                    syllabus=False,

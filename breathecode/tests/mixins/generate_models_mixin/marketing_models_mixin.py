@@ -73,6 +73,7 @@ class MarketingModelsMixin(ModelsMixin):
             models['active_campaign_academy'].save()
 
         if not 'tag' in models and is_valid(tag):
+
             kargs = {}
 
             if 'active_campaign_academy' in models:
