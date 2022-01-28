@@ -360,6 +360,15 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     def get(self, request, format=None, academy_id=None):
         tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
 
+        like = request.GET.get('like', None)
+        if like is not None:
+            tags = tags.filter(slug__icontains=like)
+
+        types = request.GET.get('type', None)
+        if types is not None:
+            _types = types.split(',')
+            tags = tags.filter(tag_type__in=[x.upper() for x in _types])
+
         serializer = TagSmallSerializer(tags, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 

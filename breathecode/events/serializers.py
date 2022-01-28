@@ -143,7 +143,8 @@ class EventSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
     def validate_tags(self, value):
-        validate_marketing_tags(value)
+        academy = self.initial_data.get('academy')
+        validate_marketing_tags(value, academy, types=['DISCOVERY'])
         return value
 
 

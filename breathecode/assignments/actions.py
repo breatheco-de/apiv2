@@ -1,10 +1,39 @@
 import requests, os, logging
+
+from breathecode.utils.validation_exception import ValidationException
 from .models import Task, User
 from breathecode.admissions.models import CohortUser
 
 logger = logging.getLogger(__name__)
 
 HOST = os.environ.get('OLD_BREATHECODE_API')
+
+NOTIFICATION_STRINGS = {
+    'en': {
+        'teacher': {
+            'subject': '{first_name} {last_name} send their task',
+            'details': '{first_name} {last_name} send their task "{title}", you can review the task at {url}',
+        },
+        'student': {
+            'subject': 'Your task "{title}" has been reviewed',
+            'PENDING': 'Your task has been marked as pending',
+            'APPROVED': 'Your task has been marked as approved',
+            'REJECTED': 'Your task has been marked as rejected',
+        },
+    },
+    'es': {
+        'teacher': {
+            'subject': '{first_name} {last_name} envió su tarea',
+            'details': '{first_name} {last_name} envió su tarea "{title}", puedes revisarla en {url}',
+        },
+        'student': {
+            'subject': 'Tu tarea "{title}" ha sido revisada',
+            'PENDING': 'Tu tarea se ha marcado como pendiente',
+            'APPROVED': 'Tu tarea se ha marcado como aprobada',
+            'REJECTED': 'Tu tarea se ha marcado como rechazada',
+        },
+    },
+}
 
 
 def deliver_task(github_url, live_url=None, task_id=None, task=None):
@@ -97,3 +126,21 @@ def sync_cohort_tasks(cohort):
             continue
 
     return synchronized
+
+
+def task_is_valid_for_notifications(task: Task) -> bool:
+    if not task:
+        logger.error('Task not found')
+        return False
+
+    if not task.cohort:
+        logger.error('Can\'t determine the student cohort')
+        return False
+
+    language = task.cohort.language
+
+    if language not in NOTIFICATION_STRINGS:
+        logger.error(f'The language {language} is not implemented in teacher_task_notification')
+        return False
+
+    return True
