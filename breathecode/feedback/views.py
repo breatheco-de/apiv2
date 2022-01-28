@@ -73,18 +73,18 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
 
         items = Answer.objects.filter(academy__id=academy_id)
         lookup = {}
+            
+        users = request.GET.get('user', None)
+        if users is not None:
+            items = items.filter(user__id__in=users.split(','))
 
-        if 'user' in self.request.GET:
-            param = self.request.GET.get('user')
-            lookup['user__id'] = param
-
-        if 'cohort' in self.request.GET:
-            param = self.request.GET.get('cohort')
-            lookup['cohort__slug'] = param
-
-        if 'mentor' in self.request.GET:
-            param = self.request.GET.get('mentor')
-            lookup['mentor__id'] = param
+        cohorts = request.GET.get('cohort', None)
+        if cohorts is not None:
+            items = items.filter(cohort__slug__in=cohorts.split(','))
+            
+        mentors = request.GET.get('mentor', None)
+        if mentors is not None:
+            items = items.filter(mentor__id__in=mentors.split(','))
 
         if 'event' in self.request.GET:
             param = self.request.GET.get('event')
@@ -93,14 +93,14 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
         if 'score' in self.request.GET:
             param = self.request.GET.get('score')
             lookup['score'] = param
+            
+        status = request.GET.get('status', None)
+        if status is not None:
+            items = items.filter(status__in=status.split(','))
 
-        if 'status' in self.request.GET:
-            param = self.request.GET.get('status')
-            lookup['status'] = param
-
-        if 'survey' in self.request.GET:
-            param = self.request.GET.get('survey')
-            lookup['survey__id'] = param
+        surveys = request.GET.get('survey', None)
+        if surveys is not None:
+            items = items.filter(survey__id__in=surveys.split(','))
 
         items = items.filter(**lookup).order_by('-created_at')
 
