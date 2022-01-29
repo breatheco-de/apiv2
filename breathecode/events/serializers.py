@@ -1,5 +1,5 @@
 from breathecode.marketing.actions import validate_marketing_tags
-from .models import Event, Organization
+from .models import Event, Organization, EventbriteWebhook
 from rest_framework import serializers
 import serpy
 
@@ -151,4 +151,10 @@ class EventSerializer(serializers.ModelSerializer):
 class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
+        exclude = ()
+
+
+class EventbriteWebhookSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EventbriteWebhook
         exclude = ()

@@ -16,12 +16,12 @@ from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from .models import Event, EventType, EventCheckin, Organization, Venue
+from .models import Event, EventType, EventCheckin, Organization, Venue, EventbriteWebhook
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
                           EventSmallSerializerNoAcademy, VenueSerializer, OrganizationBigSerializer,
-                          OrganizationSerializer)
+                          OrganizationSerializer, EventbriteWebhookSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -377,6 +377,21 @@ class AcademyOrganizationView(APIView):
         organization.delete()
 
         return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+# list eventbride webhook
+class OrganizationWebhookView(APIView):
+    @capable_of('read_organization')
+    def get(self, request, academy_id=None):
+
+        # webhooks = EventbriteWebhook.objects.filter(organization_id=organization_id)
+        org = Organization.objects.filter(academy__id=academy_id).first()
+        if not org:
+            raise ValidationException(f'Academy has no organization', code=400, slug='organization-no-found')
+
+        webhooks = EventbriteWebhook.objects.filter(organization_id=org.id)
+        serializer = EventbriteWebhookSerializer(webhooks)
+        return Response(serializer.data)
 
 
 # list venues
