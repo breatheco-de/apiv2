@@ -7,9 +7,7 @@ from ..mixins import JobsTestCase
 
 
 class ActionGetLocFromStringTestCase(JobsTestCase):
-    """Tests action certificate_screenshot"""
     def test_get_loc_from_string_is_Empty(self):
-        """Test /run_spider without spider"""
         result = get_loc_from_string('')
         result_1 = get_loc_from_string('.')
         result_2 = get_loc_from_string(')')

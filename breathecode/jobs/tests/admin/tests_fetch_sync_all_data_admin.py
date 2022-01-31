@@ -21,12 +21,7 @@ class RunSpiderAdminTestSuite(JobsTestCase):
 
         fetch_sync_all_data_admin(None, request, queryset)
 
-        # self.assertEqual(fetch_sync_all_data.call_args_list, [])
-
-        try:
-            fetch_sync_all_data_admin(None, request, queryset)
-        except Exception as e:
-            self.assertEquals(str(e), (f'There was an error retriving the spider {str(e)}'))
+        self.assertEqual(fetch_sync_all_data.call_args_list, [])
 
     """
     🔽🔽🔽 With one Spider

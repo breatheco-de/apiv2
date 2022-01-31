@@ -11,9 +11,7 @@ from breathecode.tests.mocks import (
 
 
 class ActionGetSalaryFormatTestCase(JobsTestCase):
-    """Tests action certificate_screenshot"""
-    def test_get_salary_format__with_salary(self):
-        """Test /run_spider without spider"""
+    def test_get_salary_format__with_salary_month(self):
         platform = 'getonboard'
         salary = '$2700 - 3700 USD/month'
         tags = ['PHP', 'GO', 'javascript']
@@ -24,7 +22,6 @@ class ActionGetSalaryFormatTestCase(JobsTestCase):
         self.assertEqual(salary_str, '$32400.0 - $44400.0 a year.')
 
     def test_get_salary_format__with_salary_is_null(self):
-        """Test /run_spider without spider"""
         platform = 'getonboard'
         salary = None
         tags = ['PHP', 'GO', 'javascript']
@@ -35,7 +32,6 @@ class ActionGetSalaryFormatTestCase(JobsTestCase):
         self.assertEqual(salary_str, 'Not supplied')
 
     def test_get_salary_format__with_salary_and_platform_is_other(self):
-        """Test /run_spider without spider"""
         platform = 'indeed'
         salary = '$32400.0 - $44400.0 a year.'
         tags = []
@@ -46,7 +42,6 @@ class ActionGetSalaryFormatTestCase(JobsTestCase):
         self.assertEqual(salary_str, '$32400.0 - $44400.0 a year.')
 
     def test_salary_with_salary_is_null_and_platform_is_other(self):
-        """Test /run_spider without spider"""
         platform = 'indeed'
         salary = None
         tags = []
@@ -56,8 +51,7 @@ class ActionGetSalaryFormatTestCase(JobsTestCase):
         self.assertEqual(max_salary, 0)
         self.assertEqual(salary_str, 'Not supplied')
 
-    def test_get_salary_format__with_salary(self):
-        """Test /run_spider without spider"""
+    def test_get_salary_format__with_only_salary(self):
         platform = 'getonboard'
         salary = '$2700 USD/month'
         tags = ['PHP', 'GO', 'javascript']
@@ -67,8 +61,7 @@ class ActionGetSalaryFormatTestCase(JobsTestCase):
         self.assertEqual(max_salary, 0.0)
         self.assertEqual(salary_str, '$32400.0 - $0.0 a year.')
 
-    def test_get_salary_format__with_salary(self):
-        """Test /run_spider without spider"""
+    def test_get_salary_format__with_salary_bad_format(self):
         platform = 'getonboard'
         salary = '$2700 - K3700 USD/month'
         tags = ['PHP', 'GO', 'javascript']

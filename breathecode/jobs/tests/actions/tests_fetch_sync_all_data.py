@@ -200,28 +200,6 @@ class ActionTestFetchSyncAllDataAdminTestCase(JobsTestCase):
            apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA)]))
     def test_fetch_funtion__with_one_spider(self):
         """Test /answer With one Spider"""
-        try:
-            fetch_sync_all_data(None)
-        except Exception as e:
-            self.assertEquals(str(e), ('First you must specify a spider'))
-
-        model = self.generate_models(spider=True)
-        result = fetch_sync_all_data(model.spider)
-        self.assertEqual(result, DATA)
-        # self.assertEqual(requests.get.call_args_list, [
-        #     call('https://app.scrapinghub.com/api/jobs/list.json',
-        #          params=(
-        #              ('project', model.zyte_project.zyte_api_deploy),
-        #              ('spider', model.zyte_project.platform.name),
-        #              ('state', 'finished'),
-        #          ),
-        #          auth=(model.zyte_project.zyte_api_key, ''))
-        # ])
-
-    @patch(REQUESTS_PATH['get'],
-           apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA)]))
-    def test_fetch_funtion__with_one_spider(self):
-        """Test /answer With one Spider"""
         import requests
 
         model = self.generate_models(spider=True)
@@ -285,16 +263,3 @@ class ActionTestFetchSyncAllDataAdminTestCase(JobsTestCase):
         result = fetch_sync_all_data(model.spider)
         requests.get.assert_called()
         self.assertEqual(result, DATA)
-
-    # @patch(REQUESTS_PATH['get'],
-    #        apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA)]))
-    def test_verify_fetch_funtions_was_calletd_2(self):
-        """Test /Verify fetch function was calletd with one Spider"""
-
-        model = self.generate_models(spider=True)
-        res = JOBS
-        data_jobs = fetch_data_to_json(model.spider, res)
-        # if len(data_jobs) > 0:
-        #     pass
-
-        self.assertEqual(data_jobs, JOBS)

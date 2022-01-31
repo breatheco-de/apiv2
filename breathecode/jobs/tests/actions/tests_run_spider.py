@@ -11,7 +11,6 @@ from breathecode.tests.mocks import (
 
 
 class ActionRunSpiderTestCase(JobsTestCase):
-    """Tests action certificate_screenshot"""
     def test_run_spider__without_spider(self):
         """Test /run_spider without spider"""
         try:

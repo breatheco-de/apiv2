@@ -12,9 +12,8 @@ from breathecode.tests.mocks import (
 
 
 class ActionRunSpiderTestCase(JobsTestCase):
-    """Tests action certificate_screenshot"""
     def test_parse_date__without_job(self):
-        """Test /run_spider without spider"""
+        """Test /parse_date without spider"""
         try:
             parse_date(None)
         except Exception as e:

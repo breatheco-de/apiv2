@@ -67,7 +67,6 @@ def fetch_data_to_json(*args):
 
     data_project = []
     for res_api_jobs in api_fetch['jobs']:
-        print(f"{res_api_jobs['id']}")
         num_spid = get_job_id_from_string(res_api_jobs['id'])
 
         if int(num_spid[1]) == int(
@@ -82,9 +81,6 @@ def fetch_data_to_json(*args):
                 )
             elif response.status_code == 404:
                 continue
-            print(
-                f'https://storage.scrapinghub.com/items/{res_api_jobs["id"]}?apikey={spider.zyte_project.zyte_api_key}&format=json'
-            )
 
             data_project.append({
                 'status': 'ok',
@@ -246,6 +242,8 @@ def save_data(spider, jobs):
         datetime.now())
     spider.save()
 
+    return jobs
+
 
 def fetch_sync_all_data(spider):
     if spider is None:
@@ -253,7 +251,6 @@ def fetch_sync_all_data(spider):
 
     res = fetch_to_api(spider)
     data_jobs = fetch_data_to_json(spider, res)
-    print('data_jobs', data_jobs)
     prub = []
     if len(data_jobs) > 0:
         for item_jobs in data_jobs:
