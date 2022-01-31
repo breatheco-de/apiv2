@@ -94,9 +94,9 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
         if score is not None and score != '':
             lookup['score'] = score
             
-        status = request.GET.get('status', None)
-        if status is not None and status != '':
-            items = items.filter(status__in=status.split(','))
+        _status = request.GET.get('status', None)
+        if _status is not None and _status != '':
+            items = items.filter(status__in=_status.split(','))
 
         surveys = request.GET.get('survey', None)
         if surveys is not None and surveys != '':
