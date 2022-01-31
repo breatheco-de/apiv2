@@ -21,7 +21,7 @@ class ActionRunSpiderTestCase(JobsTestCase):
             self.assertEquals(str(e), ('First you must specify a job'))
 
     def test_parse_date__verify_format_published_date(self):
-        """Test /run_spider without spider"""
+        """Test /parse_date verify format published date"""
         model = self.generate_models(job=True, job_kwargs={'published_date_raw': '30+ days ago'})
 
         result = parse_date(model.job)

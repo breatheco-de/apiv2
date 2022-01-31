@@ -11,9 +11,6 @@ def run_spider(spider):
     if spider is None:
         raise Exception('First you must specify a spider')
 
-    if spider.job is None:
-        raise Exception('First you must specify a job')
-
     position = get_position_from_string(spider.job)
 
     if position is None:
@@ -59,217 +56,216 @@ def fetch_to_api(spider):
     return res
 
 
-def fetch_sync_all_data(spider):
+def fetch_data_to_json(*args):
+    spider, api_fetch = args
 
     if spider is None:
         raise Exception('First you must specify a spider')
 
-    res = fetch_to_api(spider)
+    if api_fetch is None:
+        raise Exception('First you must specify result of the api fetch')
 
-    i = 0
+    data_project = []
+    for res_api_jobs in api_fetch['jobs']:
+        print(f"{res_api_jobs['id']}")
+        num_spid = get_job_id_from_string(res_api_jobs['id'])
 
-    prub = []
+        if int(num_spid[1]) == int(
+                spider.zyte_spider_number) and int(num_spid[2]) >= int(spider.zyte_job_number):
+            response = requests.get(
+                f'https://storage.scrapinghub.com/items/{res_api_jobs["id"]}?apikey={spider.zyte_project.zyte_api_key}&format=json'
+            )
+
+            if response.status_code != 200:
+                raise Exception(
+                    f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spid[1]}'
+                )
+            elif response.status_code == 404:
+                continue
+            print(
+                f'https://storage.scrapinghub.com/items/{res_api_jobs["id"]}?apikey={spider.zyte_project.zyte_api_key}&format=json'
+            )
+
+            data_project.append({
+                'status': 'ok',
+                'platform_name': spider.zyte_project.platform.name,
+                'num_spider': num_spid[1],
+                'num_job': num_spid[2],
+                'jobs': response.json()
+            })
+
+    return data_project
+
+
+def save_data(spider, jobs):
+    platform = spider.zyte_project.platform.name
     new_jobs = 0
-    while i < res['count']:
-        if res['jobs'][i]['items_scraped'] > 0:
-            platafom = spider.zyte_project.platform.name
-            spider.status = 'PENDING'
-            num_spider = res['jobs'][i]['id']
-            num_spid = get_loc_from_string(num_spider)
 
-            if int(num_spid[1]) == int(spider.zyte_spider_number):
+    for j in jobs:
+        remote = False
+        if j['Location'] is not None:
+            validate_loc = get_loc_from_string(j['Location'])
+        else:
+            j['Location'] = 'Remote'
+            validate_loc = get_loc_from_string(j['Location'])
 
-                if int(num_spid[2]) >= int(spider.zyte_job_number):
-                    prub.append(num_spid[2])
-                    response = requests.get(
-                        f'https://storage.scrapinghub.com/items/{num_spider}?apikey={spider.zyte_project.zyte_api_key}&format=json'
-                    )
+        if validate_loc is not None:
+            if len(validate_loc) > 1:
+                loc_list = validate_loc[1]
+                for loc in loc_list:
+                    if 'temporarily remote' in loc:
+                        loc = validate_loc[0]
+                        remote = True
 
-                    if response.status_code != 200:
-                        raise Exception(
-                            f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spider}'
-                        )
-                    elif response.status_code == 404:
-                        continue
+                    location = get_location_from_string(loc)
 
-                    jobs = response.json()
+                    if location is None:
+                        locations = Location(name=loc)
+                        locations.save()
 
-                    for j in jobs:
-                        remote = False
-                        if j['Location'] is not None:
-                            validate_loc = get_loc_from_string(j['Location'])
-                        else:
-                            j['Location'] = 'Remote'
-                            validate_loc = get_loc_from_string(j['Location'])
+                        locationAls = get_location_alias_from_string(loc)
+                        if locationAls is None:
+                            locationAlias = LocationAlias(name=loc, location=locations)
+                            locationAlias.save()
 
-                        if validate_loc is not None:
-                            if len(validate_loc) > 1:
-                                loc_list = validate_loc[1]
-                                for loc in loc_list:
-                                    if 'temporarily remote' in loc:
-                                        loc = validate_loc[0]
-                                        remote = True
+                    else:
+                        locationAls = get_location_alias_from_string(loc)
+                        if locationAls is None:
+                            locationAlias = LocationAlias(name=loc, location=location)
+                            locationAlias.save()
+            else:
+                if 'Remote' in validate_loc[0]:
+                    remote = True
 
-                                    location = get_location_from_string(loc)
+                else:
+                    location = get_location_from_string(validate_loc[0])
 
-                                    if location is None:
-                                        locations = Location(name=loc)
-                                        locations.save()
+                    if location is None:
+                        locations = Location(name=validate_loc[0])
+                        locations.save()
 
-                                        locationAls = get_location_alias_from_string(loc)
-                                        if locationAls is None:
-                                            locationAlias = LocationAlias(name=loc, location=locations)
-                                            locationAlias.save()
+                        locationAls = get_location_alias_from_string(validate_loc[0])
+                        if locationAls is None:
+                            locationAlias = LocationAlias(name=validate_loc[0], location=locations)
+                            locationAlias.save()
 
-                                    else:
-                                        locationAls = get_location_alias_from_string(loc)
-                                        if locationAls is None:
-                                            locationAlias = LocationAlias(name=loc, location=location)
-                                            locationAlias.save()
-                            else:
-                                if 'Remote' in validate_loc[0]:
-                                    remote = True
+                    else:
+                        locationAls = get_location_alias_from_string(validate_loc[0])
+                        if locationAls is None:
+                            locationAlias = LocationAlias(name=validate_loc[0], location=location)
+                            locationAlias.save()
 
-                                else:
-                                    location = get_location_from_string(validate_loc[0])
+        if len(validate_loc) > 1:
+            if 'Remote' in validate_loc[0]:
+                remote = True
 
-                                    if location is None:
-                                        locations = Location(name=validate_loc[0])
-                                        locations.save()
+            if 'temporarily remote' in validate_loc[1][0]:
+                remote = True
+                if validate_loc[0] is not None:
+                    loc = validate_loc[0]
+            else:
+                if 'Remote' in validate_loc[0]:
+                    remote = True
 
-                                        locationAls = get_location_alias_from_string(validate_loc[0])
-                                        if locationAls is None:
-                                            locationAlias = LocationAlias(name=validate_loc[0],
-                                                                          location=locations)
-                                            locationAlias.save()
+                if validate_loc[0] is not None:
+                    loc = validate_loc[1][0]
+                    location = get_location_from_string(loc)
+                    employer = get_employer_from_string(j['Company_name'])
+                    if employer is None:
+                        employer = Employer(name=j['Company_name'], location=location)
+                        employer.save()
+        else:
+            if 'Remote' in validate_loc[0]:
+                remote = True
 
-                                    else:
-                                        locationAls = get_location_alias_from_string(validate_loc[0])
-                                        if locationAls is None:
-                                            locationAlias = LocationAlias(name=validate_loc[0],
-                                                                          location=location)
-                                            locationAlias.save()
+            location = get_location_from_string(validate_loc[0])
+            employer = get_employer_from_string(j['Company_name'])
+            if employer is None:
+                employer = Employer(name=j['Company_name'], location=location)
+                employer.save()
 
-                        if len(validate_loc) > 1:
-                            if 'Remote' in validate_loc[0]:
-                                remote = True
+        position = get_position_from_string(j['Searched_job'])
+        if position is None:
+            position = Position(name=j['Searched_job'])
+            position.save()
 
-                            if 'temporarily remote' in validate_loc[1][0]:
-                                remote = True
-                                if validate_loc[0] is not None:
-                                    loc = validate_loc[0]
-                            else:
-                                if 'Remote' in validate_loc[0]:
-                                    remote = True
+            positionAlias = PositionAlias(name=j['Searched_job'], position=position)
+            positionAlias.save()
 
-                                if validate_loc[0] is not None:
-                                    loc = validate_loc[1][0]
-                                    location = get_location_from_string(loc)
-                                    employer = get_employer_from_string(j['Company_name'])
-                                    if employer is None:
-                                        employer = Employer(name=j['Company_name'], location=location)
-                                        employer.save()
-                        else:
-                            if 'Remote' in validate_loc[0]:
-                                remote = True
+        employer = get_employer_from_string(j['Company_name'])
 
-                            location = get_location_from_string(validate_loc[0])
-                            employer = get_employer_from_string(j['Company_name'])
-                            if employer is None:
-                                employer = Employer(name=j['Company_name'], location=location)
-                                employer.save()
+        (min_salary, max_salary, salary_str, tags) = get_salary_format(platform, j['Salary'], j['Tags'])
+        if tags is not None:
+            for tag in tags:
+                t = tag.replace(' ', '-').lower()
+                tagsave = get_tag_from_string(t)
+                if tagsave is None:
+                    Tag.objects.create(slug=t)
 
-                        position = get_position_from_string(j['Searched_job'])
-                        if position is None:
-                            position = Position(name=j['Searched_job'])
-                            position.save()
+        validate = validate_diplicate_job(j['Job_title'], employer)
+        if validate is None:
+            job = Job(
+                title=j['Job_title'],
+                platform=spider.zyte_project.platform,
+                published_date_raw=j['Post_date'],
+                apply_url=j['Apply_to'],
+                salary=salary_str,
+                min_salary=min_salary,
+                max_salary=max_salary,
+                remote=remote,
+                employer=employer,
+                position=position,
+            )
+            job.save()
 
-                            positionAlias = PositionAlias(name=j['Searched_job'], position=position)
-                            positionAlias.save()
+            validate_loc = get_loc_from_string(j['Location'])
+            if len(validate_loc) > 1:
+                loc_list = validate_loc[1]
+                for loc in loc_list:
+                    if 'temporarily remote' in loc:
+                        loc = validate_loc[0]
 
-                        employer = get_employer_from_string(j['Company_name'])
-                        min_salary = 0
-                        max_salary = 0
-                        salary_str = 'Not supplied'
-                        if 'getonboard' in platafom:
-                            tags = j['Tags']
-                            if j['Salary'] is not None and j['Salary'] != 'Not supplied' and j[
-                                    'Salary'] != 'Remote':
-                                salary = get_salary_from_string(j['Salary'])
-                                if salary:
-                                    min_salary = float(salary[0]) * 12
-                                    max_salary = float(salary[1]) * 12
-                                    salary_str = f'${min_salary} - ${max_salary} a year.'
-                                else:
-                                    salary_str = j['Salary']
-                        else:
-                            tags = ['web-developer']
+                    location = get_location_from_string(loc)
+                    if location is not None:
+                        job.locations.add(location)
+            else:
+                location = get_location_from_string(validate_loc[0])
+                if location is not None:
+                    job.locations.add(location)
 
-                            if j['Salary'] is not None and j['Salary'] != 'Not supplied':
-                                salary = get_salary_from_string(j['Salary'])
-                                if salary:
-                                    min_salary = float(salary[0])
-                                    max_salary = float(salary[1])
-                                    salary_str = f'${min_salary} - ${max_salary} a year.'
-                                else:
-                                    salary_str = j['Salary']
+            if tags is not None:
+                for tag in tags:
+                    _tag = get_tag_from_string(tag)
+                    if _tag is not None:
+                        job.tags.add(_tag)
 
-                        if tags is not None:
-                            for tag in tags:
-                                t = tag.replace(' ', '-').lower()
-                                tagsave = get_tag_from_string(t)
-                                if tagsave is None:
-                                    Tag.objects.create(slug=t)
+            new_jobs = new_jobs + 1
 
-                        validate = validate_diplicate_job(j['Job_title'], employer)
-                        if validate is None:
-                            job = Job(
-                                title=j['Job_title'],
-                                platform=spider.zyte_project.platform,
-                                published_date_raw=j['Post_date'],
-                                apply_url=j['Apply_to'],
-                                salary=salary_str,
-                                min_salary=min_salary,
-                                max_salary=max_salary,
-                                remote=remote,
-                                employer=employer,
-                                position=position,
-                            )
-                            job.save()
+    spider.status = 'SYNCHED'
+    spider.sync_desc = f"The spider's career ended successfully. Added {new_jobs} new jobs to {spider.name} at " + str(
+        datetime.now())
+    spider.save()
 
-                            validate_loc = get_loc_from_string(j['Location'])
-                            if len(validate_loc) > 1:
-                                loc_list = validate_loc[1]
-                                for loc in loc_list:
-                                    if 'temporarily remote' in loc:
-                                        loc = validate_loc[0]
 
-                                    location = get_location_from_string(loc)
-                                    if location is not None:
-                                        job.locations.add(location)
-                            else:
-                                location = get_location_from_string(validate_loc[0])
-                                if location is not None:
-                                    job.locations.add(location)
+def fetch_sync_all_data(spider):
+    if spider is None:
+        raise Exception('First you must specify a spider')
 
-                            if tags is not None:
-                                for tag in tags:
-                                    _tag = get_tag_from_string(tag)
-                                    if _tag is not None:
-                                        job.tags.add(_tag)
+    res = fetch_to_api(spider)
+    data_jobs = fetch_data_to_json(spider, res)
+    print('data_jobs', data_jobs)
+    prub = []
+    if len(data_jobs) > 0:
+        for item_jobs in data_jobs:
+            jobs = item_jobs['jobs']
+            prub.append(item_jobs['num_job'])
 
-                            new_jobs = new_jobs + 1
-                    spider.status = 'SYNCHED'
-                    spider.sync_desc = f"The spider's career ended successfully. Added {new_jobs} new jobs to {spider.name} at " + str(
-                        datetime.now())
-                    spider.save()
+        save_data(spider, jobs)
 
-        i = i + 1
-
-    if len(prub) > 0:
-        spider.zyte_job_number = prub[0]
-        spider.zyte_last_fetch_date = datetime.now()
-        spider.save()
+        if len(prub) > 0:
+            spider.zyte_job_number = prub[0]
+            spider.zyte_last_fetch_date = datetime.now()
+            spider.save()
 
     return res
 
@@ -279,19 +275,36 @@ def parse_date(job):
     if job is None:
         raise Exception('First you must specify a job')
 
-    if job.published_date_raw is None:
-        raise Exception('Error: The job no has a publiched date')
-
     job.published_date_processed = get_date_from_string(job.published_date_raw)
     job.save()
 
     return job
 
 
-def tags_exitst(obj):
-    if job is None:
-        return ['web']
-    return obj
+def get_salary_format(*args):
+    (platform, salary, tags) = args
+    min_salary = 0
+    max_salary = 0
+    salary_str = 'Not supplied'
+    if 'getonboard' in platform:
+        tags = tags
+        if salary is not None and salary != 'Not supplied' and salary != 'Remote':
+            salary = get_salary_from_string(salary)
+            if salary:
+                min_salary = float(salary[0]) * 12
+                max_salary = float(salary[1]) * 12
+                salary_str = f'${min_salary} - ${max_salary} a year.'
+    else:
+        tags = ['web-developer']
+
+        if salary is not None and salary != 'Not supplied':
+            salary = get_salary_from_string(salary)
+            if salary:
+                min_salary = float(salary[0])
+                max_salary = float(salary[1])
+                salary_str = f'${min_salary} - ${max_salary} a year.'
+
+    return (min_salary, max_salary, salary_str, tags)
 
 
 def list_to_tuple(params, item):
@@ -494,9 +507,12 @@ _cases = {
 }
 
 _cases_loc = {
-    '^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$': fetch_id_job_strin_to_list,
     '(.*\s)?\((.*)\)': loc,
     '^\s?(.*)': remote_to_strin,
+}
+
+_cases_job_id = {
+    '^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$': fetch_id_job_strin_to_list,
 }
 
 _cases_to = {
@@ -528,4 +544,11 @@ def get_loc_from_string(string_loc):
         findings = re.findall(regex, string_loc)
         if isinstance(findings, list) and len(findings) > 0:
             return _cases_loc[regex](findings, string_loc)
+
+
+def get_job_id_from_string(string_job):
+    for regex in _cases_job_id:
+        findings = re.findall(regex, string_job)
+        if isinstance(findings, list) and len(findings) > 0:
+            return _cases_job_id[regex](findings, string_job)
     return None

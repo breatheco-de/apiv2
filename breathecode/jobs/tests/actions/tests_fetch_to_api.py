@@ -2,7 +2,7 @@
 Tasks tests
 """
 from unittest.mock import patch, call
-from ...actions import fetch_sync_all_data, fetch_to_api
+from ...actions import fetch_to_api
 from ..mixins import JobsTestCase
 from breathecode.tests.mocks import (
     REQUESTS_PATH,
@@ -81,31 +81,33 @@ DATA = {
 }
 
 
-class ActionTestFetchSyncAllDataAdminTestCase(JobsTestCase):
-    """Tests action fetch_sync_all_data"""
+class ActionTestfetchToApiTestCase(JobsTestCase):
     """
-    🔽🔽🔽 With zero Spider
+    🔽🔽🔽 without spider fetch to api
     """
-    def test_fetch_funtion___with_zero_spider(self):
-        """Test /answer.With zero Spider"""
+    def test_fetch_to_api__without_spider(self):
         try:
-            fetch_sync_all_data(None)
+            fetch_to_api(None)
         except Exception as e:
             self.assertEquals(str(e), ('First you must specify a spider'))
 
     """
-    🔽🔽🔽 With one Spider
+    🔽🔽🔽 status ok fetch to api
     """
 
     @patch(REQUESTS_PATH['get'],
-           apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA)]))
-    def test_fetch_funtion__with_one_spider(self):
-        """Test /answer With one Spider"""
+           apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', {
+               'status': 'ok',
+               'data': []
+           })]))
+    def test_status_ok_fetch_to_api(self):
+        """Test /status ok fetch to api"""
         import requests
 
         model = self.generate_models(spider=True)
-        result = fetch_sync_all_data(model.spider)
-        self.assertEqual(result, DATA)
+        result = fetch_to_api(model.spider)
+
+        self.assertEqual(result, {'status': 'ok', 'data': []})
         self.assertEqual(requests.get.call_args_list, [
             call('https://app.scrapinghub.com/api/jobs/list.json',
                  params=(
@@ -115,52 +117,3 @@ class ActionTestFetchSyncAllDataAdminTestCase(JobsTestCase):
                  ),
                  auth=(model.zyte_project.zyte_api_key, ''))
         ])
-
-    """
-    🔽🔽🔽 With two Spiders
-    """
-
-    @patch(REQUESTS_PATH['get'],
-           apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA)]))
-    def test_fetch_funtion__with_two_spiders(self):
-        """Test /answer With two Spiders"""
-        import requests
-
-        model_1 = self.generate_models(spider=True)
-        model_2 = self.generate_models(spider=True)
-        result_1 = fetch_sync_all_data(model_1.spider)
-        result_2 = fetch_sync_all_data(model_2.spider)
-
-        self.assertEqual(result_1, DATA)
-        self.assertEqual(result_2, DATA)
-        self.assertEqual(requests.get.call_args_list, [
-            call('https://app.scrapinghub.com/api/jobs/list.json',
-                 params=(
-                     ('project', model_1.zyte_project.zyte_api_deploy),
-                     ('spider', model_1.zyte_project.platform.name),
-                     ('state', 'finished'),
-                 ),
-                 auth=(model_1.zyte_project.zyte_api_key, '')),
-            call('https://app.scrapinghub.com/api/jobs/list.json',
-                 params=(
-                     ('project', model_2.zyte_project.zyte_api_deploy),
-                     ('spider', model_2.zyte_project.platform.name),
-                     ('state', 'finished'),
-                 ),
-                 auth=(model_2.zyte_project.zyte_api_key, ''))
-        ])
-
-    """
-    🔽🔽🔽 Verify fetch function was calletd with one Spider
-    """
-
-    @patch(REQUESTS_PATH['get'],
-           apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA)]))
-    def test_verify_fetch_funtions_was_calletd(self):
-        """Test /Verify fetch function was calletd with one Spider"""
-        import requests
-
-        model = self.generate_models(spider=True)
-        result = fetch_sync_all_data(model.spider)
-        requests.get.assert_called()
-        self.assertEqual(result, DATA)
