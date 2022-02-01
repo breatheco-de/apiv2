@@ -9,9 +9,11 @@ ports:
 # List the start up tasks. You can start them in parallel in multiple terminals. See https://www.gitpod.io/docs/config-start-tasks/
 tasks:
   - command: redis-server
-  - init: python -m scripts.install
+  - init: >
+      python -m scripts.install
+      gp sync-done deps
     command: pipenv run celery
-  - init: gp sync-await init
+  - init: gp sync-await deps
     command: >
       psql -U gitpod -c 'CREATE DATABASE breathecode;' &&
       psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode &&
@@ -19,7 +21,7 @@ tasks:
       pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
       pipenv run python manage.py create_roles &&
       pipenv run start;
-  - init: gp sync-await init
+  - init: gp sync-await deps
 
 vscode:
   extensions:
