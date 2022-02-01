@@ -311,7 +311,7 @@ class GetMeCohortSerializer(serpy.Serializer):
 
 class GetCohortUserSerializer(serpy.Serializer):
     """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     user = UserSerializer()
     cohort = GetSmallCohortSerializer()
     role = serpy.Field()

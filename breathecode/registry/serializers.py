@@ -25,6 +25,7 @@ class AssetSerializer(serpy.Serializer):
     graded = serpy.Field()
     gitpod = serpy.Field()
     preview = serpy.Field()
+    external = serpy.Field()
     readme_url = serpy.Field()
     solution_video_url = serpy.Field()
     intro_video_url = serpy.Field()
