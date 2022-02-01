@@ -542,3 +542,20 @@ class UserInvitePUTSerializer(serializers.ModelSerializer):
             raise ValidationException('Missing status on invite')
 
         return data
+
+
+class UserInviteWaitingListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserInvite
+        fields = ('id', 'email')  # this serializer just get as input a email
+
+    def validate(self, data: dict):
+        if 'email' not in data:
+            raise ValidationException('Email is required', slug='without-email')
+
+        if UserInvite.objects.filter(email=data['email'], status='WAITING_LIST').exists():
+            raise ValidationException('User already exists in the waiting list', slug='user-invite-exists')
+
+        data['status'] = 'WAITING_LIST'
+
+        return data

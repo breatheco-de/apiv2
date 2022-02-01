@@ -41,10 +41,10 @@ from breathecode.notify.models import SlackTeam
 from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from .serializers import (GetProfileAcademySmallSerializer, UserSerializer, AuthSerializer,
-                          UserSmallSerializer, GetProfileAcademySerializer, MemberPOSTSerializer,
-                          MemberPUTSerializer, StudentPOSTSerializer, RoleSmallSerializer, UserMeSerializer,
-                          UserInviteSerializer, TokenSmallSerializer)
+from .serializers import (GetProfileAcademySmallSerializer, UserInviteWaitingListSerializer, UserSerializer,
+                          AuthSerializer, UserSmallSerializer, GetProfileAcademySerializer,
+                          MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
+                          RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer)
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +109,17 @@ class LogoutView(APIView):
         return Response({
             'message': 'User tokens successfully deleted',
         })
+
+
+class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = UserInviteWaitingListSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -860,7 +871,6 @@ def get_facebook_token(request):
 def save_facebook_token(request):
     """Save facebook token"""
     logger.debug('Facebook callback just landed')
-    print(request.GET)
     error = request.query_params.get('error_code', False)
     error_description = request.query_params.get('error_message', '')
     if error:
