@@ -195,7 +195,7 @@ class MediaTestSuite(AssignmentsTestCase):
         }])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
-        self.assertEqual(teacher_task_notification.delay.call_args_list, [call(1)])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
 
     """
     🔽🔽🔽 Put with Task of other user passing task_status
@@ -480,7 +480,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
-        self.assertEqual(teacher_task_notification.delay.call_args_list, [call(1)])
+        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
