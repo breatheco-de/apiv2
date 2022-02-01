@@ -646,7 +646,9 @@ class AcademyEventTestSuite(EventTestCase):
         model = self.generate_models(authenticate=True,
                                      organization=True,
                                      profile_academy=True,
-                                     tag=True,
+                                     academy=True,
+                                     active_campaign_academy=True,
+                                     tag={'tag_type': 'DISCOVERY'},
                                      capability='crud_event',
                                      role='potato')
 
@@ -664,11 +666,8 @@ class AcademyEventTestSuite(EventTestCase):
         response = self.client.post(url, data)
         json = response.json()
 
-        self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
-
-        del json['created_at']
         del json['updated_at']
+        del json['created_at']
 
         expected = {
             'academy': 1,

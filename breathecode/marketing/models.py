@@ -98,11 +98,17 @@ class Automation(models.Model):
 STRONG = 'STRONG'
 SOFT = 'SOFT'
 DISCOVERY = 'DISCOVERY'
+COHORT = 'COHORT'
+DOWNLOADABLE = 'DOWNLOADABLE'
+EVENT = 'EVENT'
 OTHER = 'OTHER'
 TAG_TYPE = (
     (STRONG, 'Strong'),
     (SOFT, 'Soft'),
     (DISCOVERY, 'Discovery'),
+    (COHORT, 'Cohort'),
+    (DOWNLOADABLE, 'Downloadable'),
+    (EVENT, 'Event'),
     (OTHER, 'Other'),
 )
 
@@ -113,7 +119,7 @@ class Tag(models.Model):
         max_length=15,
         choices=TAG_TYPE,
         null=True,
-        default=None,
+        default=OTHER,
         help_text=
         "The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON"
     )
@@ -123,6 +129,7 @@ class Tag(models.Model):
         Automation,
         on_delete=models.CASCADE,
         null=True,
+        blank=True,
         default=None,
         help_text='Leads that contain this tag will be asociated to this automation')
 
@@ -290,7 +297,9 @@ class FormEntry(models.Model):
     language = models.CharField(max_length=2, default='en')
     utm_url = models.CharField(max_length=2000, null=True, default=None, blank=True)
     utm_medium = models.CharField(max_length=70, blank=True, null=True, default=None)
+    utm_content = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_campaign = models.CharField(max_length=70, blank=True, null=True, default=None)
+    utm_content = models.CharField(max_length=70, blank=True, null=True, default=None)
     utm_source = models.CharField(max_length=70, blank=True, null=True, default=None)
 
     current_download = models.CharField(max_length=255,
