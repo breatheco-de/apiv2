@@ -12,6 +12,7 @@ class AcademyEventbriteWebhookTestSuite(EventTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      profile_academy=1,
+                                     organization=True,
                                      capability='read_organization',
                                      role='potato',
                                      cohort=True)

@@ -156,4 +156,5 @@ class OrganizationSerializer(serializers.ModelSerializer):
 class EventbriteWebhookSerializer(serializers.ModelSerializer):
     class Meta:
         model = EventbriteWebhook
+        fields = '__all_'
         exclude = ()
