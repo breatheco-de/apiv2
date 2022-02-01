@@ -9,7 +9,7 @@ ports:
 # List the start up tasks. You can start them in parallel in multiple terminals. See https://www.gitpod.io/docs/config-start-tasks/
 tasks:
   - command: redis-server
-  - init: >
+  - init: |
       python -m scripts.install
       gp sync-done deps
     command: pipenv run celery
