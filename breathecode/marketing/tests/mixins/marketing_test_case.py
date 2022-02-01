@@ -17,10 +17,10 @@ class MarketingTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin
     """MarketingTestCase with auth methods"""
     def tearDown(self):
         self.clear_cache()
-        self.set_test_instance(self)
 
     def setUp(self):
         self.generate_queries()
+        self.set_test_instance(self)
 
     def get_token_key(self, id=None):
         kwargs = {}
