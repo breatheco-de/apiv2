@@ -12,8 +12,8 @@ class MediaTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, Ge
     """FeedbackTestCase with auth methods"""
     def tearDown(self):
         self.clear_cache()
-        self.set_test_instance(self)
 
     def setUp(self):
         self.generate_queries()
         os.environ['MEDIA_GALLERY_BUCKET'] = 'bucket-name'
+        self.set_test_instance(self)

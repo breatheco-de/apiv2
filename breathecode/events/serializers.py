@@ -1,5 +1,5 @@
 from breathecode.marketing.actions import validate_marketing_tags
-from .models import Event, Organization
+from .models import Event, Organization, EventbriteWebhook
 from rest_framework import serializers
 import serpy
 
@@ -143,11 +143,18 @@ class EventSerializer(serializers.ModelSerializer):
         return super().update(instance, validated_data)
 
     def validate_tags(self, value):
-        validate_marketing_tags(value)
+        academy = self.initial_data.get('academy')
+        validate_marketing_tags(value, academy, types=['DISCOVERY'])
         return value
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
+        exclude = ()
+
+
+class EventbriteWebhookSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EventbriteWebhook
         exclude = ()
