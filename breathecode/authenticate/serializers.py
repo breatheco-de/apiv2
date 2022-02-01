@@ -554,7 +554,7 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
             raise ValidationException('Email is required', slug='without-email')
 
         if UserInvite.objects.filter(email=data['email'], status='WAITING_LIST').exists():
-            raise ValidationException('User already exists in the waiting list', slug='')
+            raise ValidationException('User already exists in the waiting list', slug='user-invite-exists')
 
         data['status'] = 'WAITING_LIST'
 
