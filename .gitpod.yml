@@ -19,3 +19,14 @@ tasks:
       pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
       pipenv run python manage.py create_roles &&
       pipenv run start;
+
+vscode:
+  extensions:
+    - ms-python.python
+    - mikestead.dotenv
+    - ms-azuretools.vscode-docker
+    - github.vscode-pull-request-github
+    - eamodio.gitlens
+    - tabnine.tabnine-vscode
+    - gruntfuggly.todo-tree
+    - redhat.vscode-yaml
