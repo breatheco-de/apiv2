@@ -11,7 +11,7 @@ tasks:
   - command: redis-server
   - init: python -m scripts.install
     command: pipenv run celery
-  - init: python -m scripts.install
+  - init: gp sync-await init
     command: >
       psql -U gitpod -c 'CREATE DATABASE breathecode;' &&
       psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode &&
@@ -19,6 +19,7 @@ tasks:
       pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
       pipenv run python manage.py create_roles &&
       pipenv run start;
+  - init: gp sync-await init
 
 vscode:
   extensions:
