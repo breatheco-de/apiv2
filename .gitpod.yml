@@ -15,8 +15,8 @@ tasks:
     command: pipenv run celery
   - init: gp sync-await deps
     command: >
-      psql -U gitpod -c 'CREATE DATABASE breathecode;' &&
-      psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode &&
+      (psql -U gitpod -c 'CREATE DATABASE breathecode;' || true) &&
+      (psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode || true) &&
       pipenv run migrate &&
       pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
       pipenv run python manage.py create_roles &&
