@@ -189,8 +189,9 @@ class ActionTestFetchSyncAllDataAdminTestCase(JobsTestCase):
         """Test /answer.With zero Spider"""
         try:
             fetch_sync_all_data(None)
+            assert False
         except Exception as e:
-            self.assertEquals(str(e), ('First you must specify a spider'))
+            self.assertEqual(str(e), 'without-spider')
 
     """
     🔽🔽🔽 With one Spider

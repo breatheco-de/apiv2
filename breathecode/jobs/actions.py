@@ -1,7 +1,9 @@
-import requests, os, logging
-from .models import Platform, Spider, Job, Employer, Position, PositionAlias, Tag, Location, LocationAlias, ZyteProject
-
+import requests
+import os
+import logging
 import re
+from .models import Platform, Spider, Job, Employer, Position, PositionAlias, Tag, Location, LocationAlias, ZyteProject
+from breathecode.utils import ValidationException
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -9,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 def run_spider(spider):
     if spider is None:
-        raise Exception('First you must specify a spider')
+        logger.debug(f'First you must specify a spider (run_spider)')
+        raise ValidationException('First you must specify a spider', slug='missing-spider')
 
     position = get_position_from_string(spider.job)
 
@@ -36,8 +39,8 @@ def run_spider(spider):
 
 def fetch_to_api(spider):
     if spider is None:
-        raise Exception('First you must specify a spider')
-
+        logger.debug(f'First you must specify a spider (fetch_to_api)')
+        raise ValidationException('First you must specify a spider', slug='without-spider')
     params = (
         ('project', spider.zyte_project.zyte_api_deploy),
         ('spider', spider.zyte_project.platform.name),
@@ -60,10 +63,12 @@ def fetch_data_to_json(*args):
     spider, api_fetch = args
 
     if spider is None:
-        raise Exception('First you must specify a spider')
+        logger.debug(f'First you must specify a spider (fetch_data_to_json)')
+        raise ValidationException('First you must specify a spider', slug='without-spider')
 
     if api_fetch is None:
-        raise Exception('First you must specify result of the api fetch')
+        logger.debug(f'I did not receive results from the API (fetch_data_to_json)')
+        raise ValidationException('I did not receive results from the API', slug='no-return-json-data')
 
     data_project = []
     for res_api_jobs in api_fetch['jobs']:
@@ -76,11 +81,12 @@ def fetch_data_to_json(*args):
             )
 
             if response.status_code != 200:
-                raise Exception(
-                    f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spid[1]}'
+                logger.debug(
+                    f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spid[1]} (fetch_data_to_json)'
                 )
-            elif response.status_code == 404:
-                continue
+                raise ValidationException(
+                    f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spid[1]}',
+                    slug='bad-resmponse-fetch')
 
             data_project.append({
                 'status': 'ok',
@@ -247,7 +253,8 @@ def save_data(spider, jobs):
 
 def fetch_sync_all_data(spider):
     if spider is None:
-        raise Exception('First you must specify a spider')
+        logger.debug(f'First you must specify a spider (fetch_sync_all_data)')
+        raise ValidationException('First you must specify a spider', slug='without-spider')
 
     res = fetch_to_api(spider)
     data_jobs = fetch_data_to_json(spider, res)
@@ -270,7 +277,8 @@ def fetch_sync_all_data(spider):
 def parse_date(job):
 
     if job is None:
-        raise Exception('First you must specify a job')
+        logger.debug(f'First you must specify a job (parse_date)')
+        raise ValidationException('First you must specify a job', slug='data-job-none')
 
     job.published_date_processed = get_date_from_string(job.published_date_raw)
     job.save()
@@ -400,11 +408,6 @@ def validate_diplicate_job(job: str, employer):
         return None
 
     return True
-
-
-def get_split(value):
-    result = value.split('/')
-    return result
 
 
 def days_ago_to_date(findings, string_date):

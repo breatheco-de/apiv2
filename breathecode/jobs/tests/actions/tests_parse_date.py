@@ -16,8 +16,9 @@ class ActionRunSpiderTestCase(JobsTestCase):
         """Test /parse_date without spider"""
         try:
             parse_date(None)
+            assert False
         except Exception as e:
-            self.assertEquals(str(e), ('First you must specify a job'))
+            self.assertEquals(str(e), ('data-job-none'))
 
     def test_parse_date__verify_format_published_date(self):
         """Test /parse_date verify format published date"""

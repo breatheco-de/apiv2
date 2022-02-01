@@ -213,7 +213,7 @@ class ActionFetchDataToJsonTestCase(JobsTestCase):
         try:
             fetch_data_to_json(None, DATA)
         except Exception as e:
-            self.assertEquals(str(e), ('First you must specify a spider'))
+            self.assertEquals(str(e), ('without-spider'))
 
     def test_fetch_data_to_json__without_data(self):
         """Test /run_spider without spider"""
@@ -223,7 +223,7 @@ class ActionFetchDataToJsonTestCase(JobsTestCase):
 
             fetch_data_to_json(model.spider, None)
         except Exception as e:
-            self.assertEquals(str(e), ('First you must specify result of the api fetch'))
+            self.assertEquals(str(e), ('no-return-json-data'))
 
     def test_fetch_data_to_json__with_spider_data(self):
         """Test /run_spider without spider"""

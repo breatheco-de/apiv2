@@ -3,6 +3,7 @@ Tasks tests
 """
 from unittest.mock import patch, call
 from ...actions import run_spider
+from breathecode.utils import APIException
 from ..mixins import JobsTestCase
 from breathecode.tests.mocks import (
     REQUESTS_PATH,
@@ -15,8 +16,9 @@ class ActionRunSpiderTestCase(JobsTestCase):
         """Test /run_spider without spider"""
         try:
             run_spider(None)
+            assert False
         except Exception as e:
-            self.assertEquals(str(e), ('First you must specify a spider'))
+            self.assertEqual(str(e), 'missing-spider')
 
     @patch(REQUESTS_PATH['post'],
            apply_requests_post_mock([(200, 'https://app.scrapinghub.com/api/run.json', {

@@ -88,8 +88,9 @@ class ActionTestfetchToApiTestCase(JobsTestCase):
     def test_fetch_to_api__without_spider(self):
         try:
             fetch_to_api(None)
+            assert False
         except Exception as e:
-            self.assertEquals(str(e), ('First you must specify a spider'))
+            self.assertEquals(str(e), ('without-spider'))
 
     """
     🔽🔽🔽 status ok fetch to api
