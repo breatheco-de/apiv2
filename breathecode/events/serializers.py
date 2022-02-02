@@ -55,6 +55,23 @@ class OrganizationBigSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
+class OrganizationSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    name = serpy.Field()
+    sync_status = serpy.Field()
+    sync_desc = serpy.Field()
+
+
+class OrganizerSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    eventbrite_id = serpy.Field()
+    name = serpy.Field()
+    description = serpy.Field()
+    organization = OrganizationSmallSerializer()
+    updated_at = serpy.Field()
+    created_at = serpy.Field()
+
+
 class EventTinySerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()

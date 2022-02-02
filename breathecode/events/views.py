@@ -327,6 +327,22 @@ def eventbrite_webhook(request, organization_id):
 
 
 # list venues
+class AcademyOrganizerView(APIView):
+    """
+    List all snippets
+    """
+    @capable_of('read_organization')
+    def get(self, request, academy_id=None):
+
+        orgs = Organizer.objects.filter(academy__id=academy_id)
+        if orgs is None:
+            raise ValidationException('Organizers not found for this academy', 404)
+
+        serializer = OrganizerSmallSerializer(orgs, many=True)
+        return Response(serializer.data)
+
+
+# list venues
 class AcademyOrganizationView(APIView):
     """
     List all snippets
