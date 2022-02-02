@@ -385,6 +385,10 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
         if 'status' in self.request.GET:
             param = self.request.GET.get('status')
             lookup['status'] = param
+            
+        mentor = request.GET.get('mentor', None)
+        if mentor is not None:
+            lookup['mentor__id__in'] = mentor.split(",")
 
         items = items.filter(**lookup).order_by('-created_at')
 
