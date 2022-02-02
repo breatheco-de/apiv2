@@ -9,6 +9,63 @@ from django.utils import timezone
 
 
 class AcademyEventbriteWebhookTestSuite(EventTestCase):
+    def test_all_eventbrite_webhooks_no_auth(self):
+        self.headers(academy=1)
+
+        url = reverse_lazy('events:academy_organizarion_eventbrite_webhook')
+        eventbrite_webhook = {'organization_id': 1}
+        model = self.bc.database.create(eventbrite_webhook=eventbrite_webhook,
+                                        profile_academy=1,
+                                        organization=1,
+                                        capability='read_organization',
+                                        role='potato',
+                                        cohort=1)
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 401)
+
+    def test_all_eventbrite_webhooks_no_organization(self):
+        self.headers(academy=1)
+
+        url = reverse_lazy('events:academy_organizarion_eventbrite_webhook')
+        eventbrite_webhook = {'organization_id': 1}
+        model = self.bc.database.create(eventbrite_webhook=eventbrite_webhook,
+                                        profile_academy=1,
+                                        capability='read_organization',
+                                        role='potato',
+                                        cohort=1)
+        self.bc.request.authenticate(model.user)
+        response = self.client.get(url)
+        json = response.json()
+        expected = {'detail': 'organization-no-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+
+    def test_all_eventbrite_webhooks_no_academy(self):
+
+        url = reverse_lazy('events:academy_organizarion_eventbrite_webhook')
+        eventbrite_webhook = {'organization_id': 1}
+        model = self.bc.database.create(eventbrite_webhook=eventbrite_webhook,
+                                        profile_academy=1,
+                                        capability='read_organization',
+                                        role='potato',
+                                        cohort=1)
+        self.bc.request.authenticate(model.user)
+        response = self.client.get(url)
+        json = response.json()
+        expected = {
+            'detail': "Missing academy_id parameter expected for the endpoint url or 'Academy' header",
+            'status_code': 403
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 403)
+
     def test_all_eventbrite_webhooks(self):
         self.headers(academy=1)
 
