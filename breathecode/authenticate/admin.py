@@ -77,7 +77,7 @@ class TokenAdmin(admin.ModelAdmin):
 @admin.register(UserInvite)
 class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ['email', 'first_name', 'last_name']
-    list_filter = ['academy', 'cohort', 'role']
+    list_filter = ['academy', 'cohort', 'role', 'status']
     list_display = ('email', 'first_name', 'last_name', 'status', 'academy', 'token', 'created_at',
                     'invite_url')
 

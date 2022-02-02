@@ -360,6 +360,15 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     def get(self, request, format=None, academy_id=None):
         tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
 
+        like = request.GET.get('like', None)
+        if like is not None:
+            tags = tags.filter(slug__icontains=like)
+
+        types = request.GET.get('type', None)
+        if types is not None:
+            _types = types.split(',')
+            tags = tags.filter(tag_type__in=[x.upper() for x in _types])
+
         serializer = TagSmallSerializer(tags, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -388,13 +397,13 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
         items = FormEntry.objects.filter(academy__id=academy.id, deal_status='WON')
         lookup = {}
 
-        start = request.GET.get('start', None)
-        if start is not None:
+        start = request.GET.get('start', '')
+        if start != '':
             start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
             lookup['created_at__gte'] = start_date
 
-        end = request.GET.get('end', None)
-        if end is not None:
+        end = request.GET.get('end', '')
+        if end != '':
             end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date()
             lookup['created_at__lte'] = end_date
 
@@ -402,13 +411,13 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
             param = self.request.GET.get('storage_status')
             lookup['storage_status'] = param
 
-        if 'course' in self.request.GET:
-            param = self.request.GET.get('course')
-            lookup['course'] = param
+        course = request.GET.get('course', '')
+        if course != '':
+            lookup['course__in'] = course.split(',')
 
-        if 'location' in self.request.GET:
-            param = self.request.GET.get('location')
-            lookup['location'] = param
+        location = request.GET.get('location', '')
+        if location != '':
+            lookup['location__in'] = location.split(',')
 
         sort_by = '-created_at'
         if 'sort' in self.request.GET and self.request.GET['sort'] != '':

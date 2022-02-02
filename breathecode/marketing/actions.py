@@ -22,14 +22,14 @@ acp_ids = {
     # "strong": "49",
     # "soft": "48",
     # "newsletter_list": "3",
-    'utm_source': '34',
-    'utm_url': '15',
+    'utm_source': '59',
+    'utm_url': '60',
     'utm_location': '18',
     'course': '2',
     'utm_medium': '36',
     'utm_content': '35',
     'client_comments': '13',
-    'current_download': '46',  # use in downloadables
+    'current_download': '46',  # used in downloadables
     'utm_language': '16',
     'utm_country': '19',
     'gclid': '26',
@@ -194,6 +194,7 @@ def register_new_lead(form_entry=None):
     if not 'id' in form_entry:
         raise Exception('The id doesn\'t exist')
 
+    # apply default language and make sure english is "en" and not "us"
     if 'utm_language' in form_entry and form_entry['utm_language'] == 'us':
         form_entry['utm_language'] = 'en'
     elif 'language' in form_entry and form_entry['language'] == 'us':
@@ -444,24 +445,27 @@ STARTS_WITH_COMMA_PATTERN = re.compile(r'^,')
 ENDS_WITH_COMMA_PATTERN = re.compile(r',$')
 
 
-def validate_marketing_tags(tags: str) -> None:
+def validate_marketing_tags(tags: str, academy_id: int, types: list = None) -> None:
     if tags.find(',,') != -1:
-        raise ValidationException(f'You can\'t have two commas together',
+        raise ValidationException(f'You can\'t have two commas together on tags',
                                   code=400,
                                   slug='two-commas-together')
 
     if tags.find(' ') != -1:
-        raise ValidationException(f'Spaces are not allowed', code=400, slug='spaces-are-not-allowed')
+        raise ValidationException(f'Spaces are not allowed on tags', code=400, slug='spaces-are-not-allowed')
 
     if STARTS_WITH_COMMA_PATTERN.search(tags):
-        raise ValidationException(f'Starts with comma', code=400, slug='starts-with-comma')
+        raise ValidationException(f'Tags string cannot start with comma', code=400, slug='starts-with-comma')
 
     if ENDS_WITH_COMMA_PATTERN.search(tags):
-        raise ValidationException(f'Ends with comma', code=400, slug='ends-with-comma')
+        raise ValidationException(f'Tags string cannot ends with comma', code=400, slug='ends-with-comma')
 
     tags = [x for x in tags.split(',') if x]
 
-    founds = [x.slug for x in Tag.objects.filter(slug__in=tags)]
+    _tags = Tag.objects.filter(slug__in=tags, ac_academy__academy__id=academy_id)
+    if types is not None and len(types) > 0:
+        _tags = _tags.filter(tag_type__in=types)
+    founds = [x.slug for x in _tags]
 
     if len(tags) == len(founds):
         return
@@ -471,4 +475,10 @@ def validate_marketing_tags(tags: str) -> None:
         if tag not in founds:
             not_founds.append(tag)
 
-    raise ValidationException(f'Tags not found ({",".join(not_founds)})', code=400, slug='tag-not-exist')
+    if len(types) == 0:
+        types = ['ANY']
+
+    raise ValidationException(
+        f'Following tags not found with types {",".join(types)}: {",".join(not_founds)}',
+        code=400,
+        slug='tag-not-exist')

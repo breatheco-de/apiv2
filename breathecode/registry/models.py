@@ -76,7 +76,7 @@ class Asset(models.Model):
     url = models.URLField()
     solution_url = models.URLField(null=True, blank=True, default=None)
     preview = models.URLField(null=True, blank=True, default=None)
-    description = models.TextField()
+    description = models.TextField(null=True, blank=True, default=None)
     readme_url = models.URLField(null=True, blank=True, default=None)
     intro_video_url = models.URLField(null=True, blank=True, default=None)
     solution_video_url = models.URLField(null=True, blank=True, default=None)

@@ -89,7 +89,7 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
 
     if issue['body'] is not None:
         _issue.body = issue['body'][:500]
-        
+
     _issue.url = issue['html_url']
 
     if freelancer is None:

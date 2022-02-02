@@ -16,15 +16,16 @@ Including another URLconf
 # from django.contrib import admin
 # from rest_framework.authtoken import views
 from django.urls import path
-from .views import (TokenTemporalView, get_users, get_user_by_id_or_email, UserMeView, LoginView, LogoutView,
-                    TemporalTokenView, get_github_token, save_github_token, get_slack_token, save_slack_token,
-                    pick_password, get_token_info, get_facebook_token, save_facebook_token, MemberView,
-                    reset_password_view, login_html_view, StudentView, get_roles, render_invite,
-                    AcademyInviteView, ProfileInviteView, MeInviteView, AcademyTokenView, PasswordResetView,
-                    get_google_token, save_google_token)
+from .views import (TokenTemporalView, WaitingListView, get_users, get_user_by_id_or_email, UserMeView,
+                    LoginView, LogoutView, TemporalTokenView, get_github_token, save_github_token,
+                    get_slack_token, save_slack_token, pick_password, get_token_info, get_facebook_token,
+                    save_facebook_token, MemberView, reset_password_view, login_html_view, StudentView,
+                    get_roles, render_invite, AcademyInviteView, ProfileInviteView, MeInviteView,
+                    AcademyTokenView, PasswordResetView, get_google_token, save_google_token)
 
 app_name = 'authenticate'
 urlpatterns = [
+    path('subscribe/', WaitingListView.as_view(), name='subscribe'),
     path('user/', get_users, name='user'),
     path('user/me', UserMeView.as_view(), name='user_me'),
     path('user/<str:id_or_email>', get_user_by_id_or_email),

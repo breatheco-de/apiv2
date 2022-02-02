@@ -141,10 +141,7 @@ class TaskMeView(APIView):
         if serializer.is_valid():
             serializer.save()
 
-            if request.user.id == item.user.id:
-                tasks.teacher_task_notification.delay(item.id)
-
-            else:
+            if request.user.id != item.user.id:
                 tasks.student_task_notification.delay(item.id)
 
             return Response(serializer.data, status=status.HTTP_200_OK)

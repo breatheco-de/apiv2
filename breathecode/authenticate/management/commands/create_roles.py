@@ -226,6 +226,10 @@ CAPABILITIES = [
         'slug': 'crud_mentor',
         'description': 'Update, create and delete academy mentors'
     },
+    {
+        'slug': 'crud_asset',
+        'description': 'Update, create and delete registry assets'
+    },
 ]
 
 ROLES = [
@@ -251,6 +255,8 @@ ROLES = [
             'crud_lead',
             'read_review',
             'read_shortlink',
+            'read_nps_answers',
+            'read_won_lead',
             'read_mentorship_service',
             'read_mentorship_mentor',
         ],
@@ -386,7 +392,7 @@ class Command(BaseCommand):
         roles.append({
             'slug': 'syllabus_coordinator',
             'name': 'Syllabus Coordinator',
-            'caps': extend(roles, ['staff']) + ['crud_syllabus', 'crud_media']
+            'caps': extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset']
         })
         roles.append({
             'slug': 'culture_and_recruitment',
