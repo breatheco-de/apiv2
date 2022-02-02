@@ -153,6 +153,7 @@ def sync_org_events(org):
     result = client.get_organization_events(org.eventbrite_id)
 
     try:
+
         for data in result['events']:
             update_or_create_event(data, org)
 
@@ -196,10 +197,10 @@ def update_or_create_event(data, org):
     event = Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).first()
     try:
         venue = None
-        if 'venue' in data:
+        if 'venue' in data and data['venue'] is not None:
             venue = create_or_update_venue(data['venue'], org)
         organizer = None
-        if 'organizer' in data:
+        if 'organizer' in data and data['organizer'] is not None:
             organizer = create_or_update_organizer(data['organizer'], org, force_update=True)
         else:
             print('Event without organizer', data)
