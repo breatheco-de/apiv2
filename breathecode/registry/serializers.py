@@ -67,3 +67,9 @@ class AssetBigSerializer(AssetMidSerializer):
 class AssetTechnologySerializer(serpy.Serializer):
     slug = serpy.Field()
     title = serpy.Field()
+
+
+class PostAssetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Asset
+        exclude = ()

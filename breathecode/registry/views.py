@@ -8,8 +8,9 @@ from breathecode.notify.actions import send_email_message
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer)
-from breathecode.utils import ValidationException
+from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
+                          PostAssetSerializer)
+from breathecode.utils import ValidationException, capable_of
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
@@ -91,7 +92,7 @@ def get_config(request, asset_slug):
 
 
 # Create your views here.
-class GetAssetView(APIView):
+class AssetView(APIView):
     """
     List all snippets, or create a new snippet.
     """
@@ -114,13 +115,19 @@ class GetAssetView(APIView):
             param = self.request.GET.get('author')
             lookup['author__id'] = param
 
+        like = request.GET.get('like', None)
+        if like is not None:
+            items = items.filter(
+                Q(slug__icontains=like) | Q(title__icontains=like)
+                | Q(assetalias__slug__icontains=like))
+
         if 'type' in self.request.GET:
             param = self.request.GET.get('type')
             lookup['asset_type__iexact'] = param
 
         if 'slug' in self.request.GET:
-            param = self.request.GET.get('academy')
-            lookup['academy__id'] = param
+            param = self.request.GET.get('slug')
+            lookup['slug'] = param
 
         if 'language' in self.request.GET:
             param = self.request.GET.get('language')
@@ -162,3 +169,16 @@ class GetAssetView(APIView):
         else:
             serializer = AssetSerializer(items, many=True)
         return Response(serializer.data)
+
+    @capable_of('crud_asset')
+    def post(self, request, academy_id=None):
+
+        serializer = PostAssetSerializer(data=request.data,
+                                         context={
+                                             'request': request,
+                                             'academy': academy_id
+                                         })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
