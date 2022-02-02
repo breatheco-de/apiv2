@@ -1,4 +1,4 @@
 """
 Global mixins
 """
-from .generate_queries_mixin import GenerateQueriesMixin
+from .generate_queries_mixin import *

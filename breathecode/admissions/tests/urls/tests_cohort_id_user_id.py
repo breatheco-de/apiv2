@@ -221,14 +221,13 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_unsuccess_task(self):
         """Test /cohort/:id/user/:id without auth"""
+        task = {'task_status': 'PENDING', 'task_type': 'PROJECT'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
                                      cohort_user=True,
-                                     task=True,
-                                     task_status='PENDING',
-                                     task_type='PROJECT')
+                                     task=task)
         url = reverse_lazy('admissions:cohort_id_user_id',
                            kwargs={
                                'cohort_id': model.cohort.id,

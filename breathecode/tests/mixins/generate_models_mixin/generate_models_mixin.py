@@ -17,6 +17,8 @@ from .marketing_models_mixin import MarketingModelsMixin
 from .monitoring_models_mixin import MonitoringModelsMixin
 from .media_models_mixin import MediaModelsMixin
 
+__all__ = ['GenerateModelsMixin']
+
 
 class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMixin, AuthenticateMixin,
                           CertificateModelsMixin, FeedbackModelsMixin, NotifyModelsMixin, EventsModelsMixin,
@@ -72,8 +74,8 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
 
         fn = self.__flow__(
             self.generate_credentials,
-            self.generate_assignments_models,
             self.generate_admissions_models,
+            self.generate_assignments_models,
             self.generate_media_models,
             self.generate_marketing_models,
             self.generate_events_models,

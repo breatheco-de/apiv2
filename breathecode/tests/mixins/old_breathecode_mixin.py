@@ -5,6 +5,8 @@ from breathecode.tests.mocks import OLD_BREATHECODE_INSTANCES
 from unittest.mock import call
 from breathecode.services import SOURCE, CAMPAIGN
 
+__all__ = ['OldBreathecodeMixin']
+
 
 class OldBreathecodeMixin():
     """Cache mixin"""
@@ -18,7 +20,7 @@ class OldBreathecodeMixin():
             'first_name': model['user'].first_name,
             'last_name': model['user'].last_name,
             'field[18,0]': model['academy'].slug,
-            'field[34,0]': SOURCE,
+            'field[59,0]': SOURCE,
             'field[33,0]': CAMPAIGN,
         }
 

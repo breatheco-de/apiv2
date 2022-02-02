@@ -3,6 +3,7 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
+from .utils import is_valid, create_models, just_one, get_list
 
 
 class MediaModelsMixin(ModelsMixin):
@@ -17,28 +18,28 @@ class MediaModelsMixin(ModelsMixin):
                               **kwargs):
         models = models.copy()
 
-        if not 'category' in models and category:
+        if not 'category' in models and is_valid(category):
             kargs = {}
 
-            kargs = {**kargs, **category_kwargs}
-            models['category'] = mixer.blend('media.Category', **kargs)
+            models['category'] = create_models(category, 'media.Category', **{**kargs, **category_kwargs})
 
-        if not 'media' in models and media:
+        if not 'media' in models and is_valid(media):
             kargs = {}
 
             if 'category' in models:
-                kargs['categories'] = [models['category']]
+                kargs['categories'] = get_list(models['category'])
 
             if 'academy' in models:
-                kargs['academy'] = models['academy']
+                kargs['academy'] = just_one(models['academy'])
 
-            kargs = {**kargs, **media_kwargs}
-            models['media'] = mixer.blend('media.Media', **kargs)
+            models['media'] = create_models(media, 'media.Media', **{**kargs, **media_kwargs})
 
-        if not 'media_resolution' in models and media_resolution:
+        if not 'media_resolution' in models and is_valid(media_resolution):
             kargs = {}
 
-            kargs = {**kargs, **media_resolution_kwargs}
-            models['media_resolution'] = mixer.blend('media.MediaResolution', **kargs)
+            models['media_resolution'] = create_models(media_resolution, 'media.MediaResolution', **{
+                **kargs,
+                **media_resolution_kwargs
+            })
 
         return models

@@ -311,7 +311,7 @@ class GetMeCohortSerializer(serpy.Serializer):
 
 class GetCohortUserSerializer(serpy.Serializer):
     """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     user = UserSerializer()
     cohort = GetSmallCohortSerializer()
     role = serpy.Field()
@@ -570,8 +570,6 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         is_many = isinstance(request.data, list)
         cohort_id = self.context['cohort_id']
         user_id = self.context['user_id']
-        disable_cohort_user_just_once = True
-        disable_certificate_validations = True
         body = request.data if is_many else [request.data]
         request_item = body[self.index]
         is_post_method = request.method == 'POST'
@@ -653,8 +651,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         is_late = (True if cohort_user and cohort_user.finantial_status == 'LATE' else
                    request_item.get('finantial_status') == 'LATE')
         if is_graduated and is_late:
-            raise ValidationException(('Cannot be marked as `GRADUATED` if its financial '
-                                       'status is `LATE`'))
+            raise ValidationException('Cannot be marked as `GRADUATED` if its financial ' 'status is `LATE`')
 
         has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
                                         task_type='PROJECT').exclude(revision_status='IGNORED').count()

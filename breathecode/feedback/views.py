@@ -74,33 +74,33 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
         items = Answer.objects.filter(academy__id=academy_id)
         lookup = {}
 
-        if 'user' in self.request.GET:
-            param = self.request.GET.get('user')
-            lookup['user__id'] = param
+        users = request.GET.get('user', None)
+        if users is not None and users != '':
+            items = items.filter(user__id__in=users.split(','))
 
-        if 'cohort' in self.request.GET:
-            param = self.request.GET.get('cohort')
-            lookup['cohort__slug'] = param
+        cohorts = request.GET.get('cohort', None)
+        if cohorts is not None and cohorts != '':
+            items = items.filter(cohort__slug__in=cohorts.split(','))
 
-        if 'mentor' in self.request.GET:
-            param = self.request.GET.get('mentor')
-            lookup['mentor__id'] = param
+        mentors = request.GET.get('mentor', None)
+        if mentors is not None and mentors != '':
+            items = items.filter(mentor__id__in=mentors.split(','))
 
-        if 'event' in self.request.GET:
-            param = self.request.GET.get('event')
-            lookup['event__id'] = param
+        events = request.GET.get('event', None)
+        if events is not None and events != '':
+            items = items.filter(event__id__in=events.split(','))
 
-        if 'score' in self.request.GET:
-            param = self.request.GET.get('score')
-            lookup['score'] = param
+        score = request.GET.get('score', None)
+        if score is not None and score != '':
+            lookup['score'] = score
 
-        if 'status' in self.request.GET:
-            param = self.request.GET.get('status')
-            lookup['status'] = param
+        _status = request.GET.get('status', None)
+        if _status is not None and _status != '':
+            items = items.filter(status__in=_status.split(','))
 
-        if 'survey' in self.request.GET:
-            param = self.request.GET.get('survey')
-            lookup['survey__id'] = param
+        surveys = request.GET.get('survey', None)
+        if surveys is not None and surveys != '':
+            items = items.filter(survey__id__in=surveys.split(','))
 
         items = items.filter(**lookup).order_by('-created_at')
 

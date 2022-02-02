@@ -1,9 +1,11 @@
 import logging
+from typing import Optional
 from celery import shared_task, Task
 from django.db.models import F
 from django.utils import timezone
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
+from breathecode.events.models import Event
 from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.monitoring.actions import test_link
 from .models import FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag
@@ -133,6 +135,65 @@ def add_cohort_task_to_student(self, user_id, cohort_id, academy_id):
 
         logger.warn(f'Adding tag {tag.id} to acp contact {contact["id"]}')
         client.add_tag_to_contact(contact['id'], tag.acp_id)
+
+    except Exception as e:
+        logger.error(str(e))
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def add_event_tags_to_student(self,
+                              event_id: int,
+                              user_id: Optional[int] = None,
+                              email: Optional[str] = None):
+    logger.warn('Task add_event_tags_to_student started')
+
+    if not user_id and not email:
+        logger.error('Imposible to determine the user email')
+        return
+
+    if user_id and email:
+        logger.error('You can\'t provide the user_id and email together')
+        return
+
+    if not email:
+        email = User.objects.filter(id=user_id).values_list('email', flat=True).first()
+
+    if not email:
+        logger.error('We can\'t get the user email')
+        return
+
+    event = Event.objects.filter(id=event_id).first()
+    if event is None:
+        logger.error(f'Event {event_id} not found')
+        return
+
+    if not event.academy:
+        logger.error(f'Imposible to determine the academy')
+        return
+
+    academy = event.academy
+
+    ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy.id).first()
+    if ac_academy is None:
+        logger.error(f'ActiveCampaign Academy {academy.id} not found')
+        return
+
+    client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+    tag_slugs = [x for x in event.tags.split(',') if x]  # prevent a tag with the slug ''
+    if event.slug:
+        tag_slugs.append(event.slug)
+
+    tags = Tag.objects.filter(slug__in=tag_slugs, ac_academy__id=ac_academy.id)
+
+    if not tags:
+        logger.warn('Tags not found')
+        return
+
+    try:
+        contact = client.get_contact_by_email(email)
+        for tag in tags:
+            logger.warn(f'Adding tag {tag.id} to acp contact {contact["id"]}')
+            client.add_tag_to_contact(contact['id'], tag.acp_id)
 
     except Exception as e:
         logger.error(str(e))

@@ -43,9 +43,6 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 403)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_single_event_invalid_id(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
@@ -62,9 +59,6 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 404)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_single_event_valid_id(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
@@ -86,8 +80,12 @@ class AcademyEventsTestSuite(EventTestCase):
             'lang': model['event'].lang,
             'url': model['event'].url,
             'banner': model['event'].banner,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
+            'host': model['event'].host,
             'starting_at': datetime_to_iso_format(model['event'].starting_at),
             'ending_at': datetime_to_iso_format(model['event'].ending_at),
+            # 'updated_at': datetime_to_iso_format(model['event'].updated_at),
             'status': model['event'].status,
             'event_type': model['event'].event_type,
             'online_event': model['event'].online_event,
@@ -108,9 +106,6 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_put__without_organization(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -134,9 +129,6 @@ class AcademyEventsTestSuite(EventTestCase):
             **self.model_to_dict(model, 'event'),
         }])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_cohort_id_put_without_required_fields(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -171,10 +163,11 @@ class AcademyEventsTestSuite(EventTestCase):
             **self.model_to_dict(model, 'event'),
         }])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_cohort_id_put(self):
+    """
+    🔽🔽🔽 Put - bad tags
+    """
+
+    def test_academy_cohort_id__put__two_commas(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
 
@@ -191,6 +184,204 @@ class AcademyEventsTestSuite(EventTestCase):
             'id': 1,
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
+            'tags': ',,',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'two-commas-together', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+
+    def test_academy_cohort_id__put__with_spaces(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': ' expecto-patronum sirius-black ',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'spaces-are-not-allowed', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+
+    def test_academy_cohort_id__put__starts_with_comma(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': ',expecto-patronum',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'starts-with-comma', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+
+    def test_academy_cohort_id__put__ends_with_comma(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': 'expecto-patronum,',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'ends-with-comma', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+
+    def test_academy_cohort_id__put__one_tag_not_exists(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': 'expecto-patronum',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'tag-not-exist', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+
+    def test_academy_cohort_id__put__one_of_two_tags_not_exists(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     tag=True,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': f'expecto-patronum,{model.tag.slug}',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'tag-not-exist', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+
+    """
+    🔽🔽🔽 Put
+    """
+
+    def test_academy_cohort_id__put__tags_is_blank(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': '',
             'capacity': 11,
             'starting_at': self.datetime_to_iso(current_date),
             'ending_at': self.datetime_to_iso(current_date),
@@ -215,9 +406,10 @@ class AcademyEventsTestSuite(EventTestCase):
             'eventbrite_status': None,
             'eventbrite_url': None,
             'excerpt': None,
-            'host': 1,
+            'host': model['event'].host,
             'id': 2,
             'lang': None,
+            'slug': None,
             'online_event': False,
             'organization': 1,
             'published_at': None,
@@ -242,9 +434,75 @@ class AcademyEventsTestSuite(EventTestCase):
             'ending_at': current_date,
         }])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_cohort_id__put__with_tags(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     academy=True,
+                                     tag={'tag_type': 'DISCOVERY'},
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': model.tag.slug,
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        del json['updated_at']
+        del json['created_at']
+
+        expected = {
+            'academy': 1,
+            'author': 1,
+            'description': None,
+            'event_type': None,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'excerpt': None,
+            'host': model['event'].host,
+            'id': 2,
+            'lang': None,
+            'slug': None,
+            'online_event': False,
+            'organization': 1,
+            'published_at': None,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'venue': None,
+            'sync_with_eventbrite': False,
+            'eventbrite_sync_status': 'PENDING',
+            'currency': 'USD',
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(self.all_event_dict(), [{
+            **self.model_to_dict(model, 'event'),
+            **data,
+            'organization_id': 1,
+            'starting_at': current_date,
+            'ending_at': current_date,
+        }])
+
     def test_academy_cohort_with_data_testing_cache_and_remove_in_put(self):
         """Test /cohort without auth"""
         cache_keys = [
@@ -303,7 +561,9 @@ class AcademyEventsTestSuite(EventTestCase):
             'eventbrite_status': None,
             'eventbrite_url': None,
             'excerpt': None,
-            'host': 1,
+            'tags': model['event'].tags,
+            'slug': model['event'].slug,
+            'host': model['event'].host,
             'id': 2,
             'lang': None,
             'online_event': False,

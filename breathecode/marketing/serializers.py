@@ -78,6 +78,7 @@ class FormEntrySmallSerializer(serpy.Serializer):
     last_name = serpy.Field()
     email = serpy.Field()
     course = serpy.Field()
+    phone = serpy.Field()
     location = serpy.Field()
     language = serpy.Field()
     gclid = serpy.Field()

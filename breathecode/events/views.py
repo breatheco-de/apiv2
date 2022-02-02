@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.db.models.query_utils import Q
 from breathecode.authenticate.actions import server_id
 from breathecode.events.caches import EventCache
+from breathecode.utils import APIException
 from datetime import datetime, timedelta
 import logging
 import re
@@ -15,11 +16,12 @@ from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from .models import Event, EventType, EventCheckin, Organization, Venue
+from .models import Event, EventType, EventCheckin, Organization, Venue, EventbriteWebhook
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
-                          EventSmallSerializerNoAcademy, VenueSerializer)
+                          EventSmallSerializerNoAcademy, VenueSerializer, OrganizationBigSerializer,
+                          OrganizationSerializer, EventbriteWebhookSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -322,6 +324,74 @@ def eventbrite_webhook(request, organization_id):
 
     # async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')
+
+
+# list venues
+class AcademyOrganizationView(APIView):
+    """
+    List all snippets
+    """
+    @capable_of('read_organization')
+    def get(self, request, academy_id=None):
+
+        org = Organization.objects.filter(academy__id=academy_id).first()
+        if org is None:
+            raise ValidationException('Organization not found for this academy', 404)
+
+        serializer = OrganizationBigSerializer(org, many=False)
+        return Response(serializer.data)
+
+    @capable_of('crud_organization')
+    def post(self, request, format=None, academy_id=None):
+
+        organization = Organization.objects.filter(academy__id=academy_id).first()
+        if organization:
+            raise ValidationException('Academy already has an organization asociated', slug='already-created')
+
+        serializer = OrganizationSerializer(data={**request.data, 'academy': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_organization')
+    def put(self, request, format=None, academy_id=None):
+
+        organization = Organization.objects.filter(academy__id=academy_id).first()
+        if not organization:
+            raise ValidationException('Organization not found for this academy', slug='org-not-found')
+
+        serializer = OrganizationSerializer(organization, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_organization')
+    def delete(self, request, format=None, academy_id=None):
+
+        organization = Organization.objects.filter(academy__id=academy_id).first()
+        if not organization:
+            raise ValidationException('Organization not found for this academy', slug='org-not-found')
+
+        organization.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+# list eventbride webhook
+class OrganizationWebhookView(APIView):
+    @capable_of('read_organization')
+    def get(self, request, academy_id=None):
+
+        # webhooks = EventbriteWebhook.objects.filter(organization_id=organization_id)
+        org = Organization.objects.filter(academy__id=academy_id).first()
+        if not org:
+            raise ValidationException(f'Academy has no organization', code=400, slug='organization-no-found')
+
+        webhooks = EventbriteWebhook.objects.filter(organization_id=org.id)
+        serializer = EventbriteWebhookSerializer(webhooks)
+        return Response(serializer.data)
 
 
 # list venues

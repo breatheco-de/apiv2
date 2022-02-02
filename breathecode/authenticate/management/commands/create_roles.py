@@ -81,6 +81,14 @@ CAPABILITIES = [
         'description': 'Create, update or delete syllabus versions'
     },
     {
+        'slug': 'read_organization',
+        'description': 'Read academy organization details'
+    },
+    {
+        'slug': 'crud_organization',
+        'description': 'Update, create or delete academy organization details'
+    },
+    {
         'slug': 'read_event',
         'description': 'List and retrieve event information'
     },
@@ -210,6 +218,18 @@ CAPABILITIES = [
         'slug': 'crud_mentorship_session',
         'description': 'Get all session from one academy'
     },
+    {
+        'slug': 'read_mentor',
+        'description': 'Get update academy mentors'
+    },
+    {
+        'slug': 'crud_mentor',
+        'description': 'Update, create and delete academy mentors'
+    },
+    {
+        'slug': 'crud_asset',
+        'description': 'Update, create and delete registry assets'
+    },
 ]
 
 ROLES = [
@@ -235,6 +255,8 @@ ROLES = [
             'crud_lead',
             'read_review',
             'read_shortlink',
+            'read_nps_answers',
+            'read_won_lead',
             'read_mentorship_service',
             'read_mentorship_mentor',
         ],
@@ -370,7 +392,7 @@ class Command(BaseCommand):
         roles.append({
             'slug': 'syllabus_coordinator',
             'name': 'Syllabus Coordinator',
-            'caps': extend(roles, ['staff']) + ['crud_syllabus', 'crud_media']
+            'caps': extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset']
         })
         roles.append({
             'slug': 'culture_and_recruitment',
@@ -424,6 +446,8 @@ class Command(BaseCommand):
                 'generate_temporal_token',
                 'crud_certificate',
                 'crud_review',
+                'crud_mentor',
+                'read_mentor',
                 'read_assignment_sensitive_details',
                 'crud_shortlink',
             ]
@@ -436,7 +460,7 @@ class Command(BaseCommand):
             'caps':
             extend(roles, [
                 'academy_coordinator', 'student', 'career_support', 'growth_manager', 'admissions_developer',
-                'syllabus_coordinator'
+                'syllabus_coordinator', 'read_organization', 'crud_organization'
             ]) +
             ['crud_my_academy', 'generate_academy_token', 'send_reset_password', 'generate_temporal_token']
         })

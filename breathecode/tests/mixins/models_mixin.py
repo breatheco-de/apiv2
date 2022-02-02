@@ -2,6 +2,8 @@
 Collections of mixins used to login in authorize microservice
 """
 
+__all__ = ['ModelsMixin']
+
 
 class ModelsMixin():
     """Mixins for models"""

@@ -1,6 +1,6 @@
+from breathecode.authenticate.models import Token
 from breathecode.notify.actions import send_email_message
 import logging
-from .models import UserAssessment
 
 logger = logging.getLogger(__name__)
 

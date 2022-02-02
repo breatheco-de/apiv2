@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from django.contrib.auth.models import AnonymousUser
 from django.contrib import messages
 from breathecode.utils import ValidationException, capable_of, localize_query
-from breathecode.admissions.models import CohortUser, Cohort
+from breathecode.admissions.models import Academy, CohortUser, Cohort
 from breathecode.authenticate.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -18,23 +18,25 @@ from .actions import deliver_task
 from .forms import DeliverAssigntmentForm
 from .serializers import (TaskGETSerializer, PUTTaskSerializer, PostTaskSerializer, TaskGETDeliverSerializer)
 from .actions import sync_cohort_tasks
+import breathecode.assignments.tasks as tasks
 
 logger = logging.getLogger(__name__)
 
 
 class TaskTeacherView(APIView):
-    def get(self, request):
-
+    def get(self, request, task_id=None, user_id=None):
         items = Task.objects.all()
         logger.debug(f'Found {items.count()} tasks')
 
-        if request.user is not None:
-            profile_ids = ProfileAcademy.objects.filter(user=request.user.id).values_list('academy__id',
-                                                                                          flat=True)
-            if profile_ids is None:
-                raise APIException(
-                    'The quest user must belong to at least one academy to be able to request student tasks')
-            items = items.filter(Q(cohort__academy__id__in=profile_ids) | Q(cohort__isnull=True))
+        profile_ids = ProfileAcademy.objects.filter(user=request.user.id).values_list('academy__id',
+                                                                                      flat=True)
+        if not profile_ids:
+            raise ValidationException(
+                'The quest user must belong to at least one academy to be able to request student tasks',
+                code=400,
+                slug='without-profile-academy')
+
+        items = items.filter(Q(cohort__academy__id__in=profile_ids) | Q(cohort__isnull=True))
 
         academy = request.GET.get('academy', None)
         if academy is not None:
@@ -47,16 +49,24 @@ class TaskTeacherView(APIView):
         # tasks these cohorts (not the users, but the tasts belong to the cohort)
         cohort = request.GET.get('cohort', None)
         if cohort is not None:
-            items = items.filter(Q(cohort__slug__in=cohort.split(',')) | Q(cohort__id__in=cohort.split(',')))
+            cohorts = cohort.split(',')
+            ids = [x for x in cohorts if x.isnumeric()]
+            slugs = [x for x in cohorts if not x.isnumeric()]
+            items = items.filter(Q(cohort__slug__in=slugs) | Q(cohort__id__in=ids))
 
         # tasks from users that belong to these cohort
         stu_cohort = request.GET.get('stu_cohort', None)
         if stu_cohort is not None:
             ids = stu_cohort.split(',')
-            if ids[0].isnumeric():
-                items = items.filter(user__cohortuser__cohort__id__in=ids, user__cohortuser__role='STUDENT')
-            else:
-                items = items.filter(user__cohortuser__cohort__slug__in=ids, user__cohortuser__role='STUDENT')
+
+            stu_cohorts = stu_cohort.split(',')
+            ids = [x for x in stu_cohorts if x.isnumeric()]
+            slugs = [x for x in stu_cohorts if not x.isnumeric()]
+
+            items = items.filter(
+                Q(user__cohortuser__cohort__id__in=ids) | Q(user__cohortuser__cohort__slug__in=slugs),
+                user__cohortuser__role='STUDENT',
+            )
 
         edu_status = request.GET.get('edu_status', None)
         if edu_status is not None:
@@ -68,7 +78,7 @@ class TaskTeacherView(APIView):
             teacher_cohorts = CohortUser.objects.filter(user__id__in=teacher.split(','),
                                                         role='TEACHER').values_list('cohort__id', flat=True)
             items = items.filter(user__cohortuser__cohort__id__in=teacher_cohorts,
-                                 user__cohortuser__role='STUDENT')
+                                 user__cohortuser__role='STUDENT').distinct()
 
         task_status = request.GET.get('task_status', None)
         if task_status is not None:
@@ -83,6 +93,7 @@ class TaskTeacherView(APIView):
             items = items.filter(task_type__in=task_type.split(','))
 
         items = items.order_by('created_at')
+
         serializer = TaskGETSerializer(items, many=True)
         return Response(serializer.data)
 
@@ -106,29 +117,33 @@ class TaskMeView(APIView):
     List all snippets, or create a new snippet.
     """
     def get(self, request, task_id=None, user_id=None):
+        if not user_id:
+            user_id = request.user.id
 
         if task_id is not None:
-            item = Task.objects.filter(id=task_id).first()
+            item = Task.objects.filter(id=task_id, user__id=user_id).first()
             if item is None:
-                raise ValidationException('Task not found')
+                raise ValidationException('Task not found', code=404, slug='task-not-found')
 
             serializer = TaskGETSerializer(item, many=False)
             return Response(serializer.data)
 
-        user_id = request.user.id
         tasks = Task.objects.filter(user__id=user_id)
         serializer = TaskGETSerializer(tasks, many=True)
         return Response(serializer.data)
 
     def put(self, request, task_id):
-
         item = Task.objects.filter(id=task_id).first()
         if item is None:
-            raise ValidationException('Task not found')
+            raise ValidationException('Task not found', slug='task-not-found')
 
         serializer = PUTTaskSerializer(item, data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save()
+
+            if request.user.id != item.user.id:
+                tasks.student_task_notification.delay(item.id)
+
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -151,6 +166,7 @@ class TaskMeView(APIView):
                                         many=True)
         if serializer.is_valid():
             serializer.save()
+            # tasks.teacher_task_notification.delay(serializer.data['id'])
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

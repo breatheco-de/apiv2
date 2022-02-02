@@ -3,6 +3,8 @@ Token mixin
 """
 import re
 
+__all__ = ['Sha256Mixin']
+
 
 class Sha256Mixin():
     """Token mixin"""

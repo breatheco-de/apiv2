@@ -103,6 +103,7 @@ class UserSpecialty(models.Model):
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE, blank=True, null=True)
     signed_by = models.CharField(max_length=100)
     signed_by_role = models.CharField(max_length=100, default='Director')
+    issued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     preview_url = models.CharField(max_length=250, blank=True, null=True, default=None)
 
