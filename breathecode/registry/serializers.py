@@ -89,10 +89,3 @@ class PostAssetSerializer(serializers.ModelSerializer):
             raise ValidationException('Asset alias already exists with this slug')
 
         return validated_data
-
-    def create(self, validated_data):
-
-        asset = super().create({**validated_data})
-        AssetAlias.objects.create(slug=validated_data['slug'], asset=asset)
-
-        return asset

@@ -4,6 +4,7 @@ from django.utils import timezone
 from django.db.models import Q
 from django.http import HttpResponse
 from .models import Asset, AssetAlias, AssetTechnology, AssetTranslation
+from .actions import test_syllabus
 from breathecode.notify.actions import send_email_message
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -49,6 +50,13 @@ def get_translations(request):
 
     serializer = AssetTranslationSerializer(langs, many=True)
     return Response(serializer.data)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def handle_test_syllabus(request):
+    syl = test_syllabus(request.data)
+    return Response({'status': 'ok'})
 
 
 @api_view(['GET'])

@@ -129,6 +129,16 @@ class Asset(models.Model):
     def __str__(self):
         return f'{self.title} ({self.slug})'
 
+    def save(self, *args, **kwargs):
+
+        alias = AssetAlias.objects.filter(slug=self.slug).first()
+        if alias is not None:
+            raise Exception('Slug is already taken by alias')
+
+        super().save(*args, **kwargs)
+
+        AssetAlias.objects.create(slug=self.slug, asset=self)
+
 
 class AssetAlias(models.Model):
     slug = models.SlugField(max_length=200, primary_key=True)

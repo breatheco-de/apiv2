@@ -1,4 +1,6 @@
 import logging, json, os
+from breathecode.utils.validation_exception import ValidationException
+from django.db.models import Q
 from urllib.parse import urlparse
 from slugify import slugify
 from breathecode.utils import APIException
@@ -30,8 +32,12 @@ def create_asset(data, asset_type, force=False):
         logger.debug(f'Updating asset project {slug}')
 
     a.title = data['title']
-    a.url = data['repository']
-    a.readme_url = data['readme']
+
+    if 'repository' in data:
+        a.url = data['repository']
+
+    if 'readme' in data:
+        a.readme_url = data['readme']
 
     if 'intro' in data:
         a.intro_video_url = data['intro']
@@ -243,3 +249,28 @@ def sync_learnpack_asset(github, asset):
                     technology.save()
                 asset.technologies.add(technology)
     return asset
+
+
+def test_syllabus(syl):
+
+    if 'days' not in syl:
+        raise ValidationException("Syllabus must have a 'days' or 'modules' property")
+
+    def validate(type, day):
+        if type not in day:
+            raise ValidationException(f'Missing {type} property on module {count}')
+        for a in day[type]:
+            exists = AssetAlias.objects.filter(Q(slug=a['slug']) | Q(asset__slug=a['slug'])).first()
+            if exists is None:
+                raise ValidationException(f'Missing {type} with slug {a["slug"]} on module {count}')
+
+    count = 0
+    for day in syl['days']:
+        count += 1
+        validate('lessons', day)
+        validate('quizzes', day)
+        validate('replits', day)
+        validate('assignments', day)
+
+        if 'teacher_instructions' not in day or day['teacher_instructions'] == '':
+            raise ValidationException(f'Empty teacher instructions on module {count}')
