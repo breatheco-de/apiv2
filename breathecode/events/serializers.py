@@ -68,6 +68,7 @@ class OrganizerSmallSerializer(serpy.Serializer):
     name = serpy.Field()
     description = serpy.Field()
     organization = OrganizationSmallSerializer()
+    academy = AcademySerializer(required=False)
     updated_at = serpy.Field()
     created_at = serpy.Field()
 
