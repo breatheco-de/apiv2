@@ -98,10 +98,6 @@ def create_asset(data, asset_type, force=False):
             if a.technologies.filter(slug=tech).first() is None:
                 a.technologies.add(t)
 
-    if aa is None:
-        aa = AssetAlias(slug=slug, asset=a)
-    aa.save()
-
     return a, created
 
 
