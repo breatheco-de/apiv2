@@ -68,6 +68,25 @@ class CohortUserTestSuite(AdmissionsTestCase):
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
             'created_at': re.sub(r'\+00:00$', 'Z', model['cohort_user'].created_at.isoformat()),
+            'id': model['cohort_user'].id,
+            'user': {
+                'id': model['cohort_user'].user.id,
+                'first_name': model['cohort_user'].user.first_name,
+                'last_name': model['cohort_user'].user.last_name,
+                'email': model['cohort_user'].user.email,
+                'profile': {
+                    'id': model['cohort_user'].user.profile.id,
+                    'avatar_url': model['cohort_user'].user.profile.avatar_url,
+                    'github_username': model['cohort_user'].user.profile.github_username,
+                    'show_tutorial': model['cohort_user'].user.profile.show_tutorial,
+                },
+            },
+            'profile': {
+                'id': model['cohort_user'].user.profile.id,
+                'avatar_url': model['cohort_user'].user.profile.avatar_url,
+                'github_username': model['cohort_user'].user.profile.github_username,
+                'show_tutorial': model['cohort_user'].user.profile.show_tutorial,
+            },
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
@@ -76,12 +95,6 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                        model['cohort_user'].cohort.kickoff_date.isoformat()),
                 'ending_date': model['cohort_user'].cohort.ending_date,
                 'stage': model['cohort_user'].cohort.stage,
-            },
-            'user': {
-                'id': model['cohort_user'].user.id,
-                'first_name': model['cohort_user'].user.first_name,
-                'last_name': model['cohort_user'].user.last_name,
-                'email': model['cohort_user'].user.email,
             },
             'profile_academy': {
                 'id': model['profile_academy'].id,

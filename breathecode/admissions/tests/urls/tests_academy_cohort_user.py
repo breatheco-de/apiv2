@@ -152,6 +152,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
             },
+            'profile': None,
             'profile_academy': {
                 'id': model['profile_academy'].id,
                 'first_name': model['profile_academy'].first_name,
@@ -195,6 +196,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['profile_academy'].email,
                 'phone': model['profile_academy'].phone,
             },
+            'profile': None,
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
@@ -272,6 +274,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'last_name': model['cohort_user'].user.last_name,
                 'email': model['cohort_user'].user.email,
             },
+            'profile': None,
             'profile_academy': {
                 'id': model['profile_academy'].id,
                 'first_name': model['profile_academy'].first_name,
@@ -319,6 +322,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['profile_academy'].email,
                 'phone': model['profile_academy'].phone,
             },
+            'profile': None,
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
@@ -391,6 +395,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['profile_academy'].email,
                 'phone': model['profile_academy'].phone,
             },
+            'profile': None,
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
@@ -441,6 +446,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['profile_academy'].email,
                 'phone': model['profile_academy'].phone,
             },
+            'profile': None,
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
@@ -494,6 +500,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['profile_academy'].email,
                 'phone': model['profile_academy'].phone,
             },
+            'profile': None,
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
@@ -543,6 +550,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['profile_academy'].email,
                 'phone': model['profile_academy'].phone,
             },
+            'profile': None,
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
@@ -615,6 +623,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                 'email': model['profile_academy'].email,
                 'phone': model['profile_academy'].phone,
             },
+            'profile': None,
             'cohort': {
                 'id': model['cohort_user'].cohort.id,
                 'slug': model['cohort_user'].cohort.slug,
