@@ -69,6 +69,11 @@ class AssetTechnologySerializer(serpy.Serializer):
     title = serpy.Field()
 
 
+class AssetTranslationSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    title = serpy.Field()
+
+
 class PostAssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset

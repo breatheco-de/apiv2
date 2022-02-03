@@ -1,11 +1,12 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import AssetView, redirect_gitpod, get_readme, get_technologies, get_config
+from .views import AssetView, redirect_gitpod, get_readme, get_technologies, get_config, get_translations
 
 app_name = 'feedback'
 urlpatterns = [
     path('asset', AssetView.as_view()),
     path('technology', get_technologies),
+    path('translations', get_translations),
     path('asset/<str:asset_slug>', AssetView.as_view()),
     path('asset/gitpod/<str:asset_slug>', redirect_gitpod),
     path('asset/readme/<str:asset_slug>', get_readme),
