@@ -6,7 +6,7 @@ app_name = 'feedback'
 urlpatterns = [
     path('asset', AssetView.as_view()),
     path('technology', get_technologies),
-    path('translations', get_translations),
+    path('translation', get_translations),
     path('asset/<str:asset_slug>', AssetView.as_view()),
     path('asset/gitpod/<str:asset_slug>', redirect_gitpod),
     path('asset/readme/<str:asset_slug>', get_readme),
