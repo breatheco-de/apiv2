@@ -1,7 +1,8 @@
-from .models import Asset
+from .models import Asset, AssetAlias
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 import serpy
+from breathecode.utils.validation_exception import ValidationException
 from django.utils import timezone
 
 
@@ -78,3 +79,20 @@ class PostAssetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Asset
         exclude = ()
+
+    def validate(self, data):
+
+        validated_data = super().validate(data)
+
+        alias = AssetAlias.objects.filter(slug=validated_data['slug']).first()
+        if alias is not None:
+            raise ValidationException('Asset alias already exists with this slug')
+
+        return validated_data
+
+    def create(self, validated_data):
+
+        asset = super().create({**validated_data})
+        AssetAlias.objects.create(slug=validated_data['slug'], asset=asset)
+
+        return asset

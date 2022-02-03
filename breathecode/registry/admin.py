@@ -124,5 +124,5 @@ class AssetTechnologyAdmin(admin.ModelAdmin):
 @admin.register(AssetAlias)
 class AssetAliasAdmin(admin.ModelAdmin):
     search_fields = ['slug']
-    list_display = ('slug', 'asset')
+    list_display = ('slug', 'asset', 'created_at')
     raw_id_fields = ['asset']
