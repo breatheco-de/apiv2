@@ -354,10 +354,24 @@ class AcademyOrganizationOrganizerView(APIView):
             raise ValidationException('Organization not found for this academy', 404)
 
         organizers = Organizer.objects.filter(organization_id=org.id)
-        if organizers is None:
+        serializer = OrganizerSmallSerializer(organizers, many=True)
+        return Response(serializer.data)
+
+    @capable_of('crud_organization')
+    def delete(self, request, academy_id=None, organizer_id=None):
+
+        org = Organization.objects.filter(academy__id=academy_id).first()
+        if org is None:
+            raise ValidationException('Organization not found for this academy', 404)
+
+        organizer = Organizer.objects.filter(organization_id=org.id, id=organizer_id).first()
+        if organizer is None:
             raise ValidationException('Organizers not found for this academy organization', 404)
 
-        serializer = OrganizerSmallSerializer(organizers, many=True)
+        organizer.academy = None
+        organizer.save()
+
+        serializer = OrganizerSmallSerializer(organizer, many=False)
         return Response(serializer.data)
 
 
