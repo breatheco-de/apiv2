@@ -232,3 +232,38 @@ def add_cohort_slug_as_acp_tag(self, cohort_id: int, academy_id: int) -> None:
 
     except:
         pass
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
+    logger.warn('Task add_event_slug_as_acp_tag started')
+
+    if not Academy.objects.filter(id=academy_id).exists():
+        logger.error(f'Academy {academy_id} not found')
+        return
+
+    ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    if ac_academy is None:
+        logger.error(f'ActiveCampaign Academy {academy_id} not found')
+        return
+
+    event = Event.objects.filter(id=event_id).first()
+    if event is None:
+        logger.error(f'Event {event_id} not found')
+        return
+
+    client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+    new_tag_slug = f'event-{event.slug}'
+    tag = Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()
+    if tag:
+        logger.warn(f'Tag for event `{event.slug}` already exists')
+        return
+
+    try:
+        data = client.create_tag(new_tag_slug, description=f'Event {event.slug} at {ac_academy.academy.slug}')
+
+        tag = Tag(slug=data['tag'], acp_id=data['id'], tag_type='EVENT', ac_academy=ac_academy, subscribers=0)
+        tag.save()
+
+    except:
+        pass
