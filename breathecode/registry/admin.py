@@ -4,6 +4,7 @@ from django.utils.html import format_html
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
+from breathecode.utils.admin import change_field
 from .models import Asset, AssetTranslation, AssetTechnology, AssetAlias
 from .tasks import async_sync_with_github
 from .actions import sync_with_github, get_user_from_github_username
@@ -87,7 +88,8 @@ class AssetAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug', 'author__email', 'url']
     list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'url_path')
     list_filter = ['asset_type', 'status', 'lang']
-    actions = [add_gitpod, remove_gitpod, sync_github, author_lesson, own_lesson, process_github_authors]
+    actions = [add_gitpod, remove_gitpod, sync_github, author_lesson, own_lesson, process_github_authors
+               ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status')
 
     def url_path(self, obj):
         return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{obj.url}'>open</a>")

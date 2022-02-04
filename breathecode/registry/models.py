@@ -131,13 +131,16 @@ class Asset(models.Model):
 
     def save(self, *args, **kwargs):
 
-        alias = AssetAlias.objects.filter(slug=self.slug).first()
-        if alias is not None:
-            raise Exception('Slug is already taken by alias')
+        # only validate this on creation
+        if self.created_at is None:
+            alias = AssetAlias.objects.filter(slug=self.slug).first()
+            if alias is not None:
+                raise Exception('Slug is already taken by alias')
+            super().save(*args, **kwargs)
+            AssetAlias.objects.create(slug=self.slug, asset=self)
 
-        super().save(*args, **kwargs)
-
-        AssetAlias.objects.create(slug=self.slug, asset=self)
+        else:
+            super().save(*args, **kwargs)
 
 
 class AssetAlias(models.Model):
