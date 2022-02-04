@@ -97,6 +97,7 @@ class SurveySmallSerializer(serpy.Serializer):
     lang = serpy.Field()
     cohort = GetCohortSerializer()
     avg_score = serpy.Field()
+    response_rate = serpy.Field()
     status = serpy.Field()
     duration = serpy.Field()
     created_at = serpy.Field()

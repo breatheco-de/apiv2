@@ -59,6 +59,8 @@ class Survey(models.Model):
                                  help_text='The avg from all the answers taken under this survey',
                                  editable=False)
 
+    response_rate = models.FloatField(default=None, blank=True, null=True)
+
     status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=PENDING)
     status_json = models.JSONField(default=None, null=True, blank=True)
 
