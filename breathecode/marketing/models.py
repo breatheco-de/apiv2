@@ -492,3 +492,12 @@ class Downloadable(models.Model):
 
     def __str__(self):
         return f'{self.slug}'
+
+    def save(self, *args, **kwargs):
+        from .signals import downloadable_saved
+        created = not self.id
+
+        if created:
+            super().save(*args, **kwargs)
+
+            downloadable_saved.send(instance=self, sender=self.__class__, created=created)

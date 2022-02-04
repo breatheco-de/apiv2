@@ -8,7 +8,7 @@ from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.monitoring.actions import test_link
-from .models import FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag
+from .models import FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag, Downloadable
 from .actions import register_new_lead, save_get_geolocal, acp_ids
 
 logger = logging.getLogger(__name__)
@@ -263,6 +263,49 @@ def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
         data = client.create_tag(new_tag_slug, description=f'Event {event.slug} at {ac_academy.academy.slug}')
 
         tag = Tag(slug=data['tag'], acp_id=data['id'], tag_type='EVENT', ac_academy=ac_academy, subscribers=0)
+        tag.save()
+
+    except:
+        pass
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int) -> None:
+    logger.warn('Task add_downloadable_slug_as_acp_tag started')
+
+    print(1)
+    if not Academy.objects.filter(id=academy_id).exists():
+        logger.error(f'Academy {academy_id} not found')
+        return
+
+    print(2)
+    ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    if ac_academy is None:
+        logger.error(f'ActiveCampaign Academy {academy_id} not found')
+        return
+
+    print(3)
+    downloadable = Downloadable.objects.filter(id=downloadable_id).first()
+    if downloadable is None:
+        logger.error(f'Downloadable {downloadable_id} not found')
+        return
+    print(4)
+    client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+    tag = Tag.objects.filter(slug=downloadable.slug, ac_academy__id=ac_academy.id).first()
+    if tag:
+        logger.warn(f'Tag for downloadable `{downloadable.slug}` already exists')
+        return
+
+    print(5)
+    try:
+        data = client.create_tag(new_tag_slug,
+                                 description=f'Downloadable {downloadable.slug} at {ac_academy.academy.slug}')
+
+        tag = Tag(slug=data['tag'],
+                  acp_id=data['id'],
+                  tag_type='DOWNLOADABLE',
+                  ac_academy=ac_academy,
+                  subscribers=0)
         tag.save()
 
     except:
