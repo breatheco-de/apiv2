@@ -22,6 +22,8 @@ class ShortlinkSmallSerializer(serpy.Serializer):
     destination = serpy.Field()
     hits = serpy.Field()
     private = serpy.Field()
+    destination_status = serpy.Field()
+    destination_status_text = serpy.Field()
     lastclick_at = serpy.Field()
 
 
