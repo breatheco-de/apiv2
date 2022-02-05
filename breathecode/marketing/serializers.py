@@ -155,4 +155,4 @@ class ShortLinkSerializer(serializers.ModelSerializer):
         return {**data, 'academy': academy}
 
     def create(self, validated_data):
-        return ShortLink.objects.create(**validated_data)
+        return ShortLink.objects.create({ **validated_data, author: self.context.get('request').user })
