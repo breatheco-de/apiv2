@@ -127,7 +127,7 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
 class ShortLinkSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShortLink
-        exclude = ('academy', )
+        exclude = ('academy', 'author')
 
     def validate(self, data):
 
