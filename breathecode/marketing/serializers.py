@@ -22,7 +22,10 @@ class ShortlinkSmallSerializer(serpy.Serializer):
     destination = serpy.Field()
     hits = serpy.Field()
     private = serpy.Field()
+    destination_status = serpy.Field()
+    destination_status_text = serpy.Field()
     lastclick_at = serpy.Field()
+    active = serpy.Field()
 
 
 class UserSmallSerializer(serpy.Serializer):
@@ -124,7 +127,7 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
 class ShortLinkSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShortLink
-        exclude = ('academy', )
+        exclude = ('academy', 'author', 'hits', 'destination_status', 'destination_status_text')
 
     def validate(self, data):
 
@@ -144,7 +147,7 @@ class ShortLinkSerializer(serializers.ModelSerializer):
 
         utc_now = timezone.now()
         days_ago = self.instance.created_at + timedelta(days=1)
-        if days_ago < utc_now:
+        if days_ago < utc_now and (self.instance.destination != data['destination'] or self.instance.slug != data['slug']):
             raise ValidationException(
                 f'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
                 slug='update-days-ago')
@@ -152,4 +155,4 @@ class ShortLinkSerializer(serializers.ModelSerializer):
         return {**data, 'academy': academy}
 
     def create(self, validated_data):
-        return ShortLink.objects.create(**validated_data)
+        return ShortLink.objects.create({ **validated_data, author: self.context.get('request').user })
