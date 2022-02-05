@@ -191,7 +191,7 @@ class SurveySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        exclude = ('avg_score', 'status_json')
+        exclude = ('avg_score', 'status_json', 'response_rate')
 
     def validate(self, data):
 
@@ -239,7 +239,7 @@ class SurveyPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Survey
-        exclude = ('avg_score', 'status_json', 'status')
+        exclude = ('avg_score', 'status_json', 'status', 'response_rate')
 
     def validate(self, data):
 

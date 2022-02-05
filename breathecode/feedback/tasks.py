@@ -190,21 +190,21 @@ def process_answer_received(self, answer_id):
     logger.debug('Starting notify_bad_nps_score')
     answer = Answer.objects.filter(id=answer_id).first()
     if answer is None:
-        raise ValidationException('Answer not found')
+        logger.error('Answer not found')
+        return
+
+    if answer.survey is None:
+        logger.error('No survey connected to answer.')
+        return
 
     if answer.survey is not None:
         survey_score = Answer.objects.filter(survey=answer.survey).aggregate(Avg('score'))
         answer.survey.avg_score = survey_score['score__avg']
         answer.survey.save()
 
-        responses = Answer.objects.filter(survey=answer.survey)
-        answered_responses = Answer.objects.filter(survey=answer.survey, status=ANSWERED)
-
-        number_responses = responses.count()
-        number_answered_responses = responses.count()
-
-        response_rate = (number_answered_responses / number_responses) * 100
-
+        total_responses = Answer.objects.filter(survey=answer.survey).count()
+        answered_responses = Answer.objects.filter(survey=answer.survey, status=ANSWERED).count()
+        response_rate = (answered_responses / total_responses) * 100
         answer.survey.response_rate = response_rate
         answer.survey.save()
 
