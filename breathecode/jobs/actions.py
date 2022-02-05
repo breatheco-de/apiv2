@@ -421,7 +421,7 @@ def today(findings, string_date):
     return _datetime
 
 
-def fetch_id_job_strin_to_list(findings, string_loc):
+def fetch_id_job_string_to_list(findings, string_loc):
     job_id_fecth = list(findings.pop())
     return job_id_fecth
 
@@ -512,7 +512,7 @@ _cases_loc = {
 }
 
 _cases_job_id = {
-    '^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$': fetch_id_job_strin_to_list,
+    '^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$': fetch_id_job_string_to_list,
 }
 
 _cases_to = {
@@ -536,7 +536,6 @@ def get_salary_from_string(string_salary):
         findings = re.findall(regex, string_salary)
         if isinstance(findings, list) and len(findings) > 0:
             return _cases_to[regex](findings, string_salary)
-    return None
 
 
 def get_loc_from_string(string_loc):
@@ -551,4 +550,3 @@ def get_job_id_from_string(string_job):
         findings = re.findall(regex, string_job)
         if isinstance(findings, list) and len(findings) > 0:
             return _cases_job_id[regex](findings, string_job)
-    return None

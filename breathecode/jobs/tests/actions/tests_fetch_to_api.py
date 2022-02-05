@@ -85,12 +85,16 @@ class ActionTestfetchToApiTestCase(JobsTestCase):
     """
     🔽🔽🔽 without spider fetch to api
     """
+    @patch('logging.Logger.debug', MagicMock())
     def test_fetch_to_api__without_spider(self):
+        from logging import Logger
         try:
+
             fetch_to_api(None)
             assert False
         except Exception as e:
             self.assertEquals(str(e), ('without-spider'))
+            self.assertEqual(Logger.debug.call_args_list, [])
 
     """
     🔽🔽🔽 status ok fetch to api
