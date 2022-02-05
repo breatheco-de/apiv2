@@ -221,14 +221,13 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_unsuccess_task(self):
         """Test /cohort/:id/user/:id without auth"""
+        task = {'task_status': 'PENDING', 'task_type': 'PROJECT'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
                                      cohort_user=True,
-                                     task=True,
-                                     task_status='PENDING',
-                                     task_type='PROJECT')
+                                     task=task)
         url = reverse_lazy('admissions:cohort_id_user_id',
                            kwargs={
                                'cohort_id': model.cohort.id,
@@ -271,6 +270,35 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         expected = {
             'status_code': 400,
             'detail': 'Cannot be marked as `GRADUATED` if its financial status is `LATE`',
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_cohort_id_user_id_put_with_stage_delete(self):
+        """Test /cohort/:id/user/:id without auth"""
+        cohort_kwargs = {'stage': 'DELETED'}
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     cohort_user=True,
+                                     cohort_kwargs=cohort_kwargs)
+
+        url = reverse_lazy('admissions:cohort_id_user_id',
+                           kwargs={
+                               'cohort_id': model.cohort.id,
+                               'user_id': model.user.id
+                           })
+        data = {
+            'educational_status': 'GRADUATED',
+            'finantial_status': 'LATE',
+        }
+        response = self.client.put(url, data)
+        json = response.json()
+        expected = {
+            'status_code': 400,
+            'detail': 'cohort-with-stage-deleted',
         }
 
         self.assertEqual(json, expected)

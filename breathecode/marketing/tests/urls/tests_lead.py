@@ -102,6 +102,7 @@ class LeadTestSuite(MarketingTestCase):
                 'utm_url': None,
                 'utm_medium': None,
                 'utm_campaign': None,
+                'utm_content': None,
                 'utm_source': None,
                 'referral_key': None,
                 'gclid': None,
@@ -126,6 +127,7 @@ class LeadTestSuite(MarketingTestCase):
                 'contact': None,
                 'academy': None,
                 'user': None,
+                'lead_generation_app': None,
                 'tag_objects': [],
                 'automation_objects': []
             })
@@ -150,6 +152,7 @@ class LeadTestSuite(MarketingTestCase):
             'language': 'en',
             'utm_url': None,
             'utm_medium': None,
+            'utm_content': None,
             'utm_campaign': None,
             'utm_source': None,
             'referral_key': None,
@@ -173,6 +176,7 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': None,
             'ac_deal_id': None,
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': None
         }])
 
@@ -233,6 +237,7 @@ class LeadTestSuite(MarketingTestCase):
                 'utm_medium': data['utm_medium'],
                 'utm_campaign': data['utm_campaign'],
                 'utm_source': data['utm_source'],
+                'utm_content': None,
                 'referral_key': data['referral_key'],
                 'gclid': data['gclid'],
                 'tags': data['tags'],
@@ -256,6 +261,7 @@ class LeadTestSuite(MarketingTestCase):
                 'contact': None,
                 'academy': None,
                 'user': None,
+                'lead_generation_app': None,
                 'tag_objects': [],
                 'automation_objects': []
             })
@@ -280,6 +286,7 @@ class LeadTestSuite(MarketingTestCase):
             'utm_url': json['utm_url'],
             'utm_medium': json['utm_medium'],
             'utm_campaign': json['utm_campaign'],
+            'utm_content': None,
             'utm_source': json['utm_source'],
             'referral_key': json['referral_key'],
             'gclid': json['gclid'],
@@ -302,6 +309,7 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])
 
@@ -345,6 +353,7 @@ class LeadTestSuite(MarketingTestCase):
                 'utm_url': data['utm_url'],
                 'utm_medium': data['utm_medium'],
                 'utm_campaign': data['utm_campaign'],
+                'utm_content': None,
                 'utm_source': data['utm_source'],
                 'referral_key': data['referral_key'],
                 'gclid': data['gclid'],
@@ -370,6 +379,7 @@ class LeadTestSuite(MarketingTestCase):
                 'academy': 1,
                 'user': None,
                 'tag_objects': [],
+                'lead_generation_app': None,
                 'automation_objects': []
             })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -394,6 +404,7 @@ class LeadTestSuite(MarketingTestCase):
             'utm_medium': json['utm_medium'],
             'utm_campaign': json['utm_campaign'],
             'utm_source': json['utm_source'],
+            'utm_content': json['utm_content'],
             'referral_key': json['referral_key'],
             'gclid': json['gclid'],
             'tags': json['tags'],
@@ -415,6 +426,7 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])
 
@@ -460,6 +472,7 @@ class LeadTestSuite(MarketingTestCase):
                 'utm_url': data['utm_url'],
                 'utm_medium': data['utm_medium'],
                 'utm_campaign': data['utm_campaign'],
+                'utm_content': None,
                 'utm_source': data['utm_source'],
                 'referral_key': data['referral_key'],
                 'gclid': data['gclid'],
@@ -485,6 +498,7 @@ class LeadTestSuite(MarketingTestCase):
                 'academy': 1,
                 'user': None,
                 'tag_objects': [],
+                'lead_generation_app': None,
                 'automation_objects': []
             })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -509,6 +523,7 @@ class LeadTestSuite(MarketingTestCase):
             'utm_medium': json['utm_medium'],
             'utm_campaign': json['utm_campaign'],
             'utm_source': json['utm_source'],
+            'utm_content': json['utm_content'],
             'referral_key': json['referral_key'],
             'gclid': json['gclid'],
             'tags': json['tags'],
@@ -530,6 +545,7 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])
 
@@ -577,6 +593,7 @@ class LeadTestSuite(MarketingTestCase):
                 'utm_url': data['utm_url'],
                 'utm_medium': data['utm_medium'],
                 'utm_campaign': data['utm_campaign'],
+                'utm_content': None,
                 'utm_source': data['utm_source'],
                 'referral_key': data['referral_key'],
                 'gclid': data['gclid'],
@@ -601,6 +618,7 @@ class LeadTestSuite(MarketingTestCase):
                 'contact': None,
                 'academy': 2,
                 'user': None,
+                'lead_generation_app': None,
                 'tag_objects': [],
                 'automation_objects': []
             })
@@ -625,6 +643,7 @@ class LeadTestSuite(MarketingTestCase):
             'utm_url': json['utm_url'],
             'utm_medium': json['utm_medium'],
             'utm_campaign': json['utm_campaign'],
+            'utm_content': json['utm_content'],
             'utm_source': json['utm_source'],
             'referral_key': json['referral_key'],
             'gclid': json['gclid'],
@@ -647,5 +666,6 @@ class LeadTestSuite(MarketingTestCase):
             'ac_contact_id': json['ac_contact_id'],
             'ac_deal_id': json['ac_deal_id'],
             'ac_expected_cohort': None,
+            'lead_generation_app_id': None,
             'won_at': json['won_at']
         }])

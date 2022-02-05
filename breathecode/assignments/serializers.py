@@ -54,6 +54,11 @@ class PostTaskSerializer(serializers.ModelSerializer):
         if user is None:
             raise ValidationException('User does not exists')
 
+        # the teacher shouldn't be allowed to approve a project that isn't done
+        if ('associated_slug' in data and 'task_status' in data and 'revision_status' in data
+                and data['task_status'] == 'PENDING' and data['revision_status'] == 'APPROVED'):
+            raise ValidationException('Only tasks that are DONE should be approved by the teacher')
+
         return super(PostTaskSerializer, self).validate({**data, 'user': user})
 
     def create(self, validated_data):
@@ -100,16 +105,28 @@ class PUTTaskSerializer(serializers.ModelSerializer):
         exclude = ('user', 'task_type')
 
     def validate(self, data):
-
         user = self.context['request'].user
 
         if self.instance.user.id != self.context['request'].user.id:
             if 'task_status' in data and data['task_status'] != self.instance.task_status:
-                raise ValidationException('Only the task owner can modify its status')
+                raise ValidationException('Only the task owner can modify its status',
+                                          slug='put-task-status-of-other-user')
             if 'live_url' in data and data['live_url'] != self.instance.live_url:
-                raise ValidationException('Only the task owner can modify its live_url')
+                raise ValidationException('Only the task owner can modify its live_url',
+                                          slug='put-live-url-of-other-user')
             if 'github_url' in data and data['github_url'] != self.instance.github_url:
-                raise ValidationException('Only the task owner can modify its github_url')
+                raise ValidationException('Only the task owner can modify its github_url',
+                                          slug='put-github-url-of-other-user')
+
+        # the teacher shouldn't be allowed to approve a project that isn't done
+        if ('task_status' in data and 'revision_status' in data and data['task_status'] == 'PENDING'
+                and data['revision_status'] == 'APPROVED'):
+            raise ValidationException('Only tasks that are DONE should be approved by the teacher',
+                                      slug='task-marked-approved-when-pending')
+        if (self.instance.task_status == 'PENDING' and 'revision_status' in data
+                and data['revision_status'] == 'APPROVED'):
+            raise ValidationException('Only tasks that are DONE should be approved by the teacher',
+                                      slug='task-marked-approved-when-pending')
 
         if 'revision_status' in data and data['revision_status'] != self.instance.revision_status:
             student_cohorts = CohortUser.objects.filter(user__id=self.instance.user.id,
@@ -129,7 +146,8 @@ class PUTTaskSerializer(serializers.ModelSerializer):
 
             if staff is None and teacher is None:
                 raise ValidationException(
-                    'Only staff members or teachers from the same academy as this student can update the review status'
-                )
+                    'Only staff members or teachers from the same academy as this student can update the '
+                    'review status',
+                    slug='editing-revision-status-but-is-not-teacher-or-assistant')
 
         return data

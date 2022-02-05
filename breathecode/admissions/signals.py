@@ -1,3 +1,5 @@
-from django import dispatch
+from django.dispatch import Signal
 
-student_edu_status_updated = dispatch.Signal(providing_args=['task_id'])
+# add your receives here
+student_edu_status_updated = Signal(providing_args=['task_id'])
+cohort_saved = Signal()

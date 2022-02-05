@@ -1,11 +1,10 @@
-import os, re, datetime, logging, csv, pytz
+import os, re, datetime, logging, csv, pytz, secrets, json
 from urllib import parse
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework_csv.renderers import CSVRenderer
 from breathecode.renderers import PlainTextRenderer
 from rest_framework.decorators import renderer_classes
-from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseNotFound, HttpResponse, HttpResponseRedirect
 from django.contrib.auth.models import AnonymousUser
 from rest_framework.response import Response
@@ -20,18 +19,20 @@ from .serializers import (
     PostFormEntrySerializer,
     FormEntrySerializer,
     FormEntrySmallSerializer,
+    ShortlinkSmallSerializer,
     TagSmallSerializer,
     AutomationSmallSerializer,
     DownloadableSerializer,
     ShortLinkSerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
-from .actions import register_new_lead, sync_tags, sync_automations, get_facebook_lead_info
+from .actions import sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
-from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable
+from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
+import breathecode.marketing.tasks as tasks
 
 logger = logging.getLogger(__name__)
 
@@ -74,13 +75,78 @@ def get_downloadable(request, slug=None):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def create_lead(request):
-    serializer = PostFormEntrySerializer(data=request.data)
+
+    data = request.data.copy()
+
+    # remove spaces from phone
+    if 'phone' in data:
+        data['phone'] = data['phone'].replace(' ', '')
+
+    serializer = PostFormEntrySerializer(data=data)
     if serializer.is_valid():
         serializer.save()
 
         persist_single_lead.delay(serializer.data)
 
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    print(serializer.errors)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def create_lead_from_app(request, app_slug=None):
+    app_id = request.GET.get('app_id', None)
+    if app_slug is None or app_id is None:
+        raise ValidationException(f'Invalid app slug and/or id', code=400, slug='without-app-slug-or-app-id')
+
+    app = LeadGenerationApp.objects.filter(slug=app_slug, app_id=app_id).first()
+    if app is None:
+        raise ValidationException(f'App not found with those credentials', code=401, slug='without-app-id')
+
+    app.hits += 1
+    app.last_call_at = timezone.now()
+    app.last_request_data = json.dumps(request.data)
+
+    ## apply defaults from the app
+    payload = {
+        'location': app.location,
+        'language': app.language,
+        'utm_url': app.utm_url,
+        'utm_medium': app.utm_medium,
+        'utm_campaign': app.utm_campaign,
+        'utm_source': app.utm_source,
+        'academy': app.academy.id,
+        'lead_generation_app': app.id
+    }
+    payload.update(request.data)
+
+    if 'automations' not in request.data:
+        payload['automations'] = ','.join([str(auto.slug) for auto in app.default_automations.all()])
+
+    if 'tags' not in request.data:
+        payload['tags'] = ','.join([tag.slug for tag in app.default_tags.all()])
+
+    # remove spaces from phone
+    if 'phone' in request.data:
+        payload['phone'] = payload['phone'].replace(' ', '')
+
+    serializer = PostFormEntrySerializer(data=payload)
+    if serializer.is_valid():
+        serializer.save()
+
+        tasks.persist_single_lead.delay(serializer.data)
+
+        app.last_call_status = 'OK'
+        app.save()
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    else:
+        app.last_call_status = 'ERROR'
+        app.last_call_log = json.dumps(serializer.errors)
+        app.save()
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -292,9 +358,16 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     """
     @capable_of('crud_lead')
     def get(self, request, format=None, academy_id=None):
-
-        print('academy_id', academy_id)
         tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            tags = tags.filter(slug__icontains=like)
+
+        types = request.GET.get('type', None)
+        if types is not None:
+            _types = types.split(',')
+            tags = tags.filter(tag_type__in=[x.upper() for x in _types])
 
         serializer = TagSmallSerializer(tags, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -324,13 +397,13 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
         items = FormEntry.objects.filter(academy__id=academy.id, deal_status='WON')
         lookup = {}
 
-        start = request.GET.get('start', None)
-        if start is not None:
+        start = request.GET.get('start', '')
+        if start != '':
             start_date = datetime.datetime.strptime(start, '%Y-%m-%d').date()
             lookup['created_at__gte'] = start_date
 
-        end = request.GET.get('end', None)
-        if end is not None:
+        end = request.GET.get('end', '')
+        if end != '':
             end_date = datetime.datetime.strptime(end, '%Y-%m-%d').date()
             lookup['created_at__lte'] = end_date
 
@@ -338,13 +411,13 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
             param = self.request.GET.get('storage_status')
             lookup['storage_status'] = param
 
-        if 'course' in self.request.GET:
-            param = self.request.GET.get('course')
-            lookup['course'] = param
+        course = request.GET.get('course', '')
+        if course != '':
+            lookup['course__in'] = course.split(',')
 
-        if 'location' in self.request.GET:
-            param = self.request.GET.get('location')
-            lookup['location'] = param
+        location = request.GET.get('location', '')
+        if location != '':
+            lookup['location__in'] = location.split(',')
 
         sort_by = '-created_at'
         if 'sort' in self.request.GET and self.request.GET['sort'] != '':
@@ -447,7 +520,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if slug is not None:
             link = ShortLink.objects.filter(slug=slug).first()
             if link is None or (link.private and link.academy.id != academy_id):
-                raise ValidationError(
+                raise ValidationException(
                     f'Shortlink with slug {slug} not found or its private and it belongs to another academy',
                     slug='shortlink-not-found')
 

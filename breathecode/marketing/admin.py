@@ -1,16 +1,8 @@
-import logging
+import logging, secrets
 from django.contrib import admin, messages
 from django import forms
-from .models import (
-    FormEntry,
-    Tag,
-    Automation,
-    ShortLink,
-    ActiveCampaignAcademy,
-    ActiveCampaignWebhook,
-    AcademyAlias,
-    Downloadable,
-)
+from .models import (FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook,
+                     AcademyAlias, Downloadable, LeadGenerationApp)
 from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
                       sync_tags, sync_automations, acp_ids)
 from breathecode.services.activecampaign import ActiveCampaign
@@ -143,8 +135,8 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = ('storage_status', 'created_at', 'first_name', 'last_name', 'email', 'location', 'course',
                     'academy', 'country', 'city', 'utm_medium', 'utm_url', 'gclid', 'tags')
     list_filter = [
-        'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'tag_objects__tag_type',
-        'automation_objects__slug', 'utm_medium', 'country'
+        'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app',
+        'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium', 'country'
     ]
     actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'export_as_csv']
 
@@ -170,6 +162,27 @@ def mark_tag_as_discovery(modeladmin, request, queryset):
 mark_tag_as_discovery.short_description = 'Mark tags as DISCOVERY'
 
 
+def mark_tag_as_event(modeladmin, request, queryset):
+    queryset.update(tag_type='EVENT')
+
+
+mark_tag_as_event.short_description = 'Mark tags as EVENT'
+
+
+def mark_tag_as_downloadable(modeladmin, request, queryset):
+    queryset.update(tag_type='DOWNLOADABLE')
+
+
+mark_tag_as_downloadable.short_description = 'Mark tags as DOWNLOADABLE'
+
+
+def mark_tag_as_cohort(modeladmin, request, queryset):
+    queryset.update(tag_type='COHORT')
+
+
+mark_tag_as_cohort.short_description = 'Mark tags as COHORT'
+
+
 def mark_tag_as_other(modeladmin, request, queryset):
     queryset.update(tag_type='OTHER')
 
@@ -193,10 +206,11 @@ class CustomTagModelForm(forms.ModelForm):
 class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     form = CustomTagModelForm
     search_fields = ['slug']
-    list_display = ('id', 'slug', 'tag_type', 'acp_id', 'subscribers')
+    list_display = ('id', 'slug', 'tag_type', 'ac_academy', 'acp_id', 'subscribers')
     list_filter = ['tag_type', 'ac_academy__academy__slug']
     actions = [
-        mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery, mark_tag_as_other, 'export_as_csv'
+        mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery, mark_tag_as_other, mark_tag_as_cohort,
+        mark_tag_as_downloadable, mark_tag_as_event, 'export_as_csv'
     ]
 
 
@@ -271,3 +285,48 @@ class DownloadableAdmin(admin.ModelAdmin):
         }
         return format_html(
             f"<span class='badge {colors[obj.destination_status]}'>{obj.destination_status}</span>")
+
+
+def reset_app_id(modeladmin, request, queryset):
+    for app in queryset.all():
+        app.app_id = secrets.token_urlsafe(16)
+        app.save()
+
+
+reset_app_id.short_description = 'Reset app id'
+
+
+class LeadAppCustomForm(forms.ModelForm):
+    class Meta:
+        model = LeadGenerationApp
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super(LeadAppCustomForm, self).__init__(*args, **kwargs)
+
+        try:
+            self.fields['default_automations'].queryset = Automation.objects.filter(
+                ac_academy__academy__id=self.instance.academy.id).exclude(slug='')  # or something else
+            self.fields['default_tags'].queryset = Tag.objects.filter(
+                ac_academy__academy__id=self.instance.academy.id)  # or something else
+        except:
+            self.fields['default_automations'].queryset = Automation.objects.none()
+            self.fields['default_tags'].queryset = Tag.objects.none()
+
+
+@admin.register(LeadGenerationApp)
+class LeadGenerationAppAdmin(admin.ModelAdmin):
+    form = LeadAppCustomForm
+    list_display = ('slug', 'name', 'academy', 'status', 'last_call_at')
+    readonly_fields = ('app_id', )
+    actions = (reset_app_id, )
+
+    def status(self, obj):
+        colors = {
+            'OK': 'bg-success',
+            'ERROR': 'bg-error',
+        }
+        if obj.last_call_status is None:
+            return format_html(f"<span class='badge'>Not yet called</span>")
+        return format_html(
+            f"<span class='badge {colors[obj.last_call_status]}'>{obj.last_call_status}</span>")

@@ -61,7 +61,7 @@ def generate_cohort_certificates(self, cohort_id):
     logger.debug(f'Generating certificate for {str(cohort_users.count())} students that GRADUATED')
     for cu in cohort_users:
         try:
-            result = generate_certificate(cu.user, cu.cohort)
+            generate_certificate(cu.user, cu.cohort)
         except Exception:
             logger.exception(f'Error generating certificate for {str(cu.user.id)} cohort {str(cu.cohort.id)}')
 
@@ -80,6 +80,7 @@ def generate_one_certificate(self, cohort_id, user_id, layout):
     logger.debug(f'Generating gertificate for {str(cohort__user.user)} student that GRADUATED')
     try:
         generate_certificate(cohort__user.user, cohort__user.cohort, layout)
+
     except Exception:
         logger.exception(
             f'Error generating certificate for {str(cohort__user.user.id)}, cohort {str(cohort__user.cohort.id)}'

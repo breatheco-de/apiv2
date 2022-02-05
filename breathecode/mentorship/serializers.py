@@ -126,6 +126,25 @@ class MentorSerializer(serializers.ModelSerializer):
         exclude = ('created_at', 'updated_at')
 
 
+class MentorUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MentorProfile
+        exclude = ('created_at', 'updated_at', 'user', 'token')
+
+    def validate(self, data):
+
+        if 'user' in data:
+            raise ValidationException('Mentor user cannot be updated, please create a new mentor instead',
+                                      slug='user-read-only')
+        if 'token' in data:
+            raise ValidationException('Mentor token cannot be updated', slug='token-read-only')
+
+        if 'academy' in data:
+            raise ValidationException('Mentor academy cannot be updated', slug='academy-read-only')
+
+        return data
+
+
 class SessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = MentorshipSession

@@ -1,9 +1,13 @@
-from breathecode.admissions.actions import sync_cohort_timeslots
+import re
+import pytz
 import logging
 import serpy
+from datetime import datetime
+from dateutil.tz import gettz, tzutc
+from breathecode.admissions.actions import sync_cohort_timeslots
 from django.db.models import Q
 from breathecode.assignments.models import Task
-from breathecode.utils import ValidationException, localize_query
+from breathecode.utils import ValidationException, localize_query, SerpyExtensions
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
@@ -229,6 +233,15 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
         return obj.syllabus.github_url if obj.syllabus else None
 
 
+class SmallCohortTimeSlotSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    id = serpy.Field()
+    starting_at = SerpyExtensions.DatetimeIntegerField()
+    ending_at = SerpyExtensions.DatetimeIntegerField()
+    recurrent = serpy.Field()
+    recurrency_type = serpy.Field()
+
+
 class GetCohortSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -247,6 +260,11 @@ class GetCohortSerializer(serpy.Serializer):
     specialty_mode = GetSmallSpecialtyModeSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
+    timeslots = serpy.MethodField()
+
+    def get_timeslots(self, obj):
+        timeslots = CohortTimeSlot.objects.filter(cohort__id=obj.id)
+        return SmallCohortTimeSlotSerializer(timeslots, many=True).data
 
 
 class PublicCohortSerializer(serpy.Serializer):
@@ -293,7 +311,7 @@ class GetMeCohortSerializer(serpy.Serializer):
 
 class GetCohortUserSerializer(serpy.Serializer):
     """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     user = UserSerializer()
     cohort = GetSmallCohortSerializer()
     role = serpy.Field()
@@ -311,8 +329,8 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
     cohort = serpy.MethodField()
-    starting_at = serpy.Field()
-    ending_at = serpy.Field()
+    starting_at = SerpyExtensions.DatetimeIntegerField()
+    ending_at = SerpyExtensions.DatetimeIntegerField()
     recurrent = serpy.Field()
     recurrency_type = serpy.Field()
     created_at = serpy.Field()
@@ -327,8 +345,8 @@ class GETSpecialtyModeTimeSlotSerializer(serpy.Serializer):
     id = serpy.Field()
     academy = serpy.MethodField()
     specialty_mode = serpy.MethodField()
-    starting_at = serpy.Field()
-    ending_at = serpy.Field()
+    starting_at = SerpyExtensions.DatetimeIntegerField()
+    ending_at = SerpyExtensions.DatetimeIntegerField()
     recurrent = serpy.Field()
     recurrency_type = serpy.Field()
     created_at = serpy.Field()
@@ -552,8 +570,6 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         is_many = isinstance(request.data, list)
         cohort_id = self.context['cohort_id']
         user_id = self.context['user_id']
-        disable_cohort_user_just_once = True
-        disable_certificate_validations = True
         body = request.data if is_many else [request.data]
         request_item = body[self.index]
         is_post_method = request.method == 'POST'
@@ -596,6 +612,11 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             logger.debug(f'Cohort not be found in related academies')
             raise ValidationException('Specified cohort not be found')
 
+        if cohort.stage == 'DELETED':
+            raise ValidationException('cannot add or edit a user to a cohort that has been deleted',
+                                      slug='cohort-with-stage-deleted',
+                                      code=400)
+
         count_cohort_users = CohortUser.objects.filter(user_id=user_id, cohort_id=cohort_id).count()
 
         if is_post_method and count_cohort_users:
@@ -630,8 +651,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         is_late = (True if cohort_user and cohort_user.finantial_status == 'LATE' else
                    request_item.get('finantial_status') == 'LATE')
         if is_graduated and is_late:
-            raise ValidationException(('Cannot be marked as `GRADUATED` if its financial '
-                                       'status is `LATE`'))
+            raise ValidationException('Cannot be marked as `GRADUATED` if its financial ' 'status is `LATE`')
 
         has_tasks = Task.objects.filter(user_id=user_id, task_status='PENDING',
                                         task_type='PROJECT').exclude(revision_status='IGNORED').count()
@@ -696,9 +716,12 @@ class CohortUserSerializer(CohortUserSerializerMixin):
 
 
 class CohortTimeSlotSerializer(serializers.ModelSerializer):
+    starting_at = serializers.IntegerField(write_only=True)
+    ending_at = serializers.IntegerField(write_only=True)
+
     class Meta:
         model = CohortTimeSlot
-        fields = ['id', 'cohort', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type']
+        fields = ['id', 'cohort', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type', 'timezone']
 
 
 class SpecialtyModeSerializer(serializers.ModelSerializer):
@@ -720,10 +743,20 @@ class SpecialtyModePUTSerializer(serializers.ModelSerializer):
 
 
 class SpecialtyModeTimeSlotSerializer(serializers.ModelSerializer):
+    starting_at = serializers.IntegerField(write_only=True)
+    ending_at = serializers.IntegerField(write_only=True)
+
     class Meta:
         model = SpecialtyModeTimeSlot
         fields = [
-            'id', 'academy', 'specialty_mode', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type'
+            'id',
+            'academy',
+            'specialty_mode',
+            'starting_at',
+            'ending_at',
+            'recurrent',
+            'recurrency_type',
+            'timezone',
         ]
 
 

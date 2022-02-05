@@ -1,10 +1,12 @@
 import logging
 
-from google.cloud import datastore
+import google.cloud.datastore as datastore
 
 from .credentials import resolve_credentials
 
 logger = logging.getLogger(__name__)
+
+__all__ = ['Datastore']
 
 
 class Datastore:

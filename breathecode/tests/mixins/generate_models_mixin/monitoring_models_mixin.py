@@ -3,6 +3,7 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
+from .utils import is_valid, create_models, just_one
 
 
 class MonitoringModelsMixin(ModelsMixin):
@@ -20,34 +21,40 @@ class MonitoringModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        if not 'application' in models and (application or monitor_script):
+        if not 'application' in models and (is_valid(application) or is_valid(monitor_script)):
             kargs = {}
 
-            if 'academy' in models or academy:
-                kargs['academy'] = models['academy']
+            if 'academy' in models:
+                kargs['academy'] = just_one(models['academy'])
 
-            if 'slack_channel' in models or slack_channel:
-                kargs['notify_slack_channel'] = models['slack_channel']
+            if 'slack_channel' in models:
+                kargs['notify_slack_channel'] = just_one(models['slack_channel'])
 
-            kargs = {**kargs, **application_kwargs}
-            models['application'] = mixer.blend('monitoring.Application', **kargs)
+            models['application'] = create_models(application, 'monitoring.Application', **{
+                **kargs,
+                **application_kwargs
+            })
 
-        if not 'endpoint' in models and endpoint:
+        if not 'endpoint' in models and is_valid(endpoint):
             kargs = {}
 
-            if 'application' in models or application:
-                kargs['application'] = models['application']
+            if 'application' in models:
+                kargs['application'] = just_one(models['application'])
 
-            kargs = {**kargs, **endpoint_kwargs}
-            models['endpoint'] = mixer.blend('monitoring.Endpoint', **kargs)
+            models['endpoint'] = create_models(endpoint, 'monitoring.Endpoint', **{
+                **kargs,
+                **endpoint_kwargs
+            })
 
-        if not 'monitor_script' in models and monitor_script:
+        if not 'monitor_script' in models and is_valid(monitor_script):
             kargs = {}
 
-            if 'application' in models or application:
-                kargs['application'] = models['application']
+            if 'application' in models:
+                kargs['application'] = just_one(models['application'])
 
-            kargs = {**kargs, **monitor_script_kwargs}
-            models['monitor_script'] = mixer.blend('monitoring.MonitorScript', **kargs)
+            models['monitor_script'] = create_models(monitor_script, 'monitoring.MonitorScript', **{
+                **kargs,
+                **monitor_script_kwargs
+            })
 
         return models

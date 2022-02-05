@@ -41,10 +41,10 @@ from breathecode.notify.models import SlackTeam
 from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from .serializers import (GetProfileAcademySmallSerializer, UserSerializer, AuthSerializer,
-                          UserSmallSerializer, GetProfileAcademySerializer, MemberPOSTSerializer,
-                          MemberPUTSerializer, StudentPOSTSerializer, RoleSmallSerializer, UserMeSerializer,
-                          UserInviteSerializer, TokenSmallSerializer)
+from .serializers import (GetProfileAcademySmallSerializer, UserInviteWaitingListSerializer, UserSerializer,
+                          AuthSerializer, UserSmallSerializer, GetProfileAcademySerializer,
+                          MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
+                          RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer)
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +109,17 @@ class LogoutView(APIView):
         return Response({
             'message': 'User tokens successfully deleted',
         })
+
+
+class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = UserInviteWaitingListSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -622,18 +633,21 @@ def save_github_token(request):
                 user = User(username=github_user['email'], email=github_user['email'])
                 user.save()
 
-            CredentialsGithub.objects.filter(github_id=github_user['id']).delete()
-            github_credentials = CredentialsGithub(github_id=github_user['id'],
-                                                   user=user,
-                                                   token=github_token,
-                                                   username=github_user['login'],
-                                                   email=github_user['email'],
-                                                   avatar_url=github_user['avatar_url'],
-                                                   name=github_user['name'],
-                                                   blog=github_user['blog'],
-                                                   bio=github_user['bio'],
-                                                   company=github_user['company'],
-                                                   twitter_username=github_user['twitter_username'])
+            github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
+            if github_credentials is not None and github_credentials.user.id != user.id:
+                github_credentials.delete()
+            elif github_credentials is None:
+                github_credentials = CredentialsGithub(github_id=github_user['id'], user=user)
+
+            github_credentials.token = github_token
+            github_credentials.username = github_user['login']
+            github_credentials.email = github_user['email']
+            github_credentials.avatar_url = github_user['avatar_url']
+            github_credentials.name = github_user['name']
+            github_credentials.blog = github_user['blog']
+            github_credentials.bio = github_user['bio']
+            github_credentials.company = github_user['company']
+            github_credentials.twitter_username = github_user['twitter_username']
             github_credentials.save()
 
             profile = Profile.objects.filter(user=user).first()
@@ -857,7 +871,6 @@ def get_facebook_token(request):
 def save_facebook_token(request):
     """Save facebook token"""
     logger.debug('Facebook callback just landed')
-    print(request.GET)
     error = request.query_params.get('error_code', False)
     error_description = request.query_params.get('error_message', '')
     if error:

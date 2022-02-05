@@ -6,13 +6,13 @@ from .views import (TaskMeView, sync_cohort_tasks_view, TaskTeacherView, deliver
 
 app_name = 'assignments'
 urlpatterns = [
-    path('task/', TaskTeacherView.as_view()),
-    path('user/me/task', TaskMeView.as_view()),
-    path('user/<int:user_id>/task', TaskMeView.as_view()),
-    path('user/<int:user_id>/task/<int:task_id>', TaskMeView.as_view()),
-    path('academy/user/<int:user_id>/task', TaskMeView.as_view()),
-    path('task/<int:task_id>/deliver/<str:token>', deliver_assignment_view),
-    path('task/<int:task_id>/deliver', TaskMeDeliverView.as_view()),
-    path('task/<int:task_id>', TaskMeView.as_view()),
-    path('sync/cohort/<int:cohort_id>/task', sync_cohort_tasks_view),
+    path('task/', TaskTeacherView.as_view(), name='task'),
+    path('user/me/task', TaskMeView.as_view(), name='user_me_task'),
+    path('user/<int:user_id>/task', TaskMeView.as_view(), name='user_id_task'),
+    path('user/<int:user_id>/task/<int:task_id>', TaskMeView.as_view(), name='user_id_task_id'),
+    path('academy/user/<int:user_id>/task', TaskMeView.as_view(), name='academy_user_id_task'),
+    path('task/<int:task_id>/deliver/<str:token>', deliver_assignment_view, name='task_id_deliver_token'),
+    path('task/<int:task_id>/deliver', TaskMeDeliverView.as_view(), name='task_id_deliver'),
+    path('task/<int:task_id>', TaskMeView.as_view(), name='task_id'),
+    path('sync/cohort/<int:cohort_id>/task', sync_cohort_tasks_view, name='sync_cohort_id_task'),
 ]

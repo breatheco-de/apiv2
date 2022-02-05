@@ -41,9 +41,12 @@ class TokenSmallSerializer(serpy.Serializer):
 
 class RoleSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
-    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.MethodField()
     slug = serpy.Field()
     name = serpy.Field()
+
+    def get_id(self, obj):
+        return obj.slug
 
 
 class GithubSmallSerializer(serpy.Serializer):
@@ -540,5 +543,22 @@ class UserInvitePUTSerializer(serializers.ModelSerializer):
 
         if 'status' not in data:
             raise ValidationException('Missing status on invite')
+
+        return data
+
+
+class UserInviteWaitingListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserInvite
+        fields = ('id', 'email')  # this serializer just get as input a email
+
+    def validate(self, data: dict):
+        if 'email' not in data:
+            raise ValidationException('Email is required', slug='without-email')
+
+        if UserInvite.objects.filter(email=data['email'], status='WAITING_LIST').exists():
+            raise ValidationException('User already exists in the waiting list', slug='user-invite-exists')
+
+        data['status'] = 'WAITING_LIST'
 
         return data

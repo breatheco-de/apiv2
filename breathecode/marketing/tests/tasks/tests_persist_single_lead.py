@@ -464,9 +464,11 @@ class AnswerIdTestSuite(MarketingTestCase):
             'user_id': None,
             'utm_campaign': None,
             'utm_medium': None,
+            'utm_content': None,
             'utm_source': None,
             'utm_url': None,
             'won_at': None,
+            'lead_generation_app_id': None,
             'zip_code': None
         }])
 
@@ -627,8 +629,10 @@ class AnswerIdTestSuite(MarketingTestCase):
             'utm_campaign': model['form_entry'].utm_campaign,
             'utm_medium': model['form_entry'].utm_medium,
             'utm_source': model['form_entry'].utm_source,
+            'utm_content': model['form_entry'].utm_content,
             'utm_url': model['form_entry'].utm_url,
             'won_at': model['form_entry'].won_at,
+            'lead_generation_app_id': None,
             'zip_code': 10028
         }])
 

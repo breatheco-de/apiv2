@@ -154,3 +154,4 @@ class UserSpecialtySerializer(serpy.Serializer):
     expires_at = serpy.Field()
     updated_at = serpy.Field()
     created_at = serpy.Field()
+    issued_at = serpy.Field()

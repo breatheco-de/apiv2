@@ -5,6 +5,8 @@ import re
 from random import choice
 from unittest.mock import patch
 from django.urls.base import reverse_lazy
+from django.utils import timezone
+from ...actions import generate_certificate
 from rest_framework import status
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
@@ -97,6 +99,7 @@ class CertificateTestSuite(CertificateTestCase):
         self.headers(academy=1)
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 112113114115}
         syllabus_kwargs = {'duration_in_days': 112113114115}
+        user_specialty_kwargs = {'status': 'ERROR'}
         cohort_user_kwargs = {'educational_status': 'GRADUATED', 'finantial_status': 'UP_TO_DATE'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
@@ -112,6 +115,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      user_specialty=True,
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs,
+                                     user_specialty_kwargs=user_specialty_kwargs,
                                      cohort_user_kwargs=cohort_user_kwargs,
                                      syllabus_kwargs=syllabus_kwargs)
         base = model.copy()
@@ -126,10 +130,19 @@ class CertificateTestSuite(CertificateTestCase):
 
         url = reverse_lazy('certificate:cohort_id_student_id', kwargs={'cohort_id': 1, 'student_id': 1})
         data = {'layout_slug': 'vanilla'}
+        start = timezone.now()
         response = self.client.post(url, data, format='json')
+
+        end = timezone.now()
         json = response.json()
         self.assertDatetime(json['updated_at'])
         del json['updated_at']
+
+        issued_at = self.iso_to_datetime(json['issued_at'])
+        self.assertGreater(issued_at, start)
+        self.assertLess(issued_at, end)
+        del json['issued_at']
+
         expected = {
             'academy': {
                 'id': 1,
@@ -203,6 +216,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'PERSISTED',
+                'issued_at': issued_at,
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
                 'user_id': 1

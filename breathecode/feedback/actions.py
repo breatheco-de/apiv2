@@ -96,7 +96,7 @@ def send_question(user, cohort=None):
         answer.lang = answer.cohort.language
         answer.save()
 
-    token, created = Token.get_or_create(user, hours_length=48)
+    token, created = Token.get_or_create(user, token_type='temporal', hours_length=48)
 
     token_id = Token.objects.filter(key=token).values_list('id', flat=True).first()
     answer.token_id = token_id
