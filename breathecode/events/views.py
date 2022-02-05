@@ -439,7 +439,7 @@ class OrganizationWebhookView(APIView):
             raise ValidationException(f'Academy has no organization', code=400, slug='organization-no-found')
 
         webhooks = EventbriteWebhook.objects.filter(organization_id=org.id)
-        serializer = EventbriteWebhookSerializer(webhooks)
+        serializer = EventbriteWebhookSerializer(webhooks, many=True)
         return Response(serializer.data)
 
 
