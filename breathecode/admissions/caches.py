@@ -1,5 +1,6 @@
 from breathecode.utils import Cache
 
+
 class CohortCache(Cache):
     model = 'Cohort'
     depends = ['Academy', 'Syllabus']

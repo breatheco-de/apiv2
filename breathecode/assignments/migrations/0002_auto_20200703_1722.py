@@ -28,6 +28,9 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='task',
             name='revision_status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'), ('REJECTED', 'Rejected')], default='PENDING', max_length=15),
+            field=models.CharField(choices=[('PENDING', 'Pending'), ('APPROVED', 'Approved'),
+                                            ('REJECTED', 'Rejected')],
+                                   default='PENDING',
+                                   max_length=15),
         ),
     ]

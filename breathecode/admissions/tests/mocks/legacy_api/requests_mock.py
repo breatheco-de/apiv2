@@ -3,13 +3,14 @@ Requests mock
 """
 import os, json
 
-HOST = os.environ.get("OLD_BREATHECODE_API")
+HOST = os.environ.get('OLD_BREATHECODE_API')
 
 with open(f'{os.getcwd()}/breathecode/admissions/fixtures/legacy_teachers.json', 'r') as file:
     legacy_teachers = json.load(file)
 
 with open(f'{os.getcwd()}/breathecode/admissions/fixtures/legacy_students.json', 'r') as file:
     legacy_students = json.load(file)
+
 
 class ResponseMock():
     """Simutate Response to be used by mocks"""

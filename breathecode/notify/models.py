@@ -3,16 +3,21 @@ from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.authenticate.models import CredentialsSlack
 
+__all__ = ['UserProxy', 'CohortProxy', 'Device', 'SlackTeam', 'SlackUser', 'SlackUserTeam', 'SlackChannel']
+
+
 class UserProxy(User):
     class Meta:
         proxy = True
+
+
 class CohortProxy(Cohort):
     class Meta:
         proxy = True
 
+
 class Device(models.Model):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, blank=True, null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
     registration_id = models.TextField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -20,12 +25,15 @@ class Device(models.Model):
     def __str__(self):
         return self.user.registration_id
 
+
 INCOMPLETED = 'INCOMPLETED'
 COMPLETED = 'COMPLETED'
 SYNC_STATUS = (
     (INCOMPLETED, 'Incompleted'),
     (COMPLETED, 'Completed'),
 )
+
+
 class SlackTeam(models.Model):
 
     slack_id = models.CharField(max_length=50)
@@ -37,15 +45,24 @@ class SlackTeam(models.Model):
 
     academy = models.OneToOneField(Academy, on_delete=models.CASCADE, blank=True)
 
-    sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED, help_text="Automatically set when synqued from slack")
-    sync_message = models.CharField(max_length=100, blank=True, null=True, default=None, help_text="Contains any success or error messages depending on the status")
+    sync_status = models.CharField(max_length=15,
+                                   choices=SYNC_STATUS,
+                                   default=INCOMPLETED,
+                                   help_text='Automatically set when synqued from slack')
+    sync_message = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default=None,
+        help_text='Contains any success or error messages depending on the status')
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f"{self.name} ({self.slack_id})"
+        return f'{self.name} ({self.slack_id})'
+
 
 class SlackUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
@@ -69,11 +86,17 @@ class SlackUserTeam(models.Model):
     slack_team = models.ForeignKey(SlackTeam, on_delete=models.CASCADE)
 
     sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED)
-    sync_message = models.CharField(max_length=100, blank=True, null=True, default=None, help_text="Contains any success or error messages depending on the status")
+    sync_message = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default=None,
+        help_text='Contains any success or error messages depending on the status')
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
 
 class SlackChannel(models.Model):
     cohort = models.OneToOneField(Cohort, on_delete=models.CASCADE, blank=True, null=True, default=None)
@@ -87,7 +110,12 @@ class SlackChannel(models.Model):
     purpose = models.CharField(max_length=500, blank=True, null=True)
 
     sync_status = models.CharField(max_length=15, choices=SYNC_STATUS, default=INCOMPLETED)
-    sync_message = models.CharField(max_length=100, blank=True, null=True, default=None, help_text="Contains any success or error messages depending on the status")
+    sync_message = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default=None,
+        help_text='Contains any success or error messages depending on the status')
     synqued_at = models.DateTimeField(default=None, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)

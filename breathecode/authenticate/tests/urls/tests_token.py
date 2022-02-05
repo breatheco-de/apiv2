@@ -12,10 +12,9 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_token_without_auth(self):
         """Test /logout without auth"""
         url = reverse_lazy('authenticate:token')
-        data = { 'email': self.email, 'password': self.password }
+        data = {'email': self.email, 'password': self.password}
         # return client.post(url, data)
         response = self.client.post(url, data)
-
 
         detail = str(response.data['detail'])
         status_code = int(response.data['status_code'])
@@ -29,15 +28,15 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /token"""
         login_response = self.login()
         token = str(login_response.data['token'])
-        token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile('^[0-9a-zA-Z]{,40}$')
 
         url = reverse_lazy('authenticate:token')
-        data = { 'email': self.email, 'password': self.password }
+        data = {'email': self.email, 'password': self.password}
         response = self.client.post(url, data)
 
         token = str(response.data['token'])
         token_type = str(response.data['token_type'])
-        expires_at = response.data['expires_at'] # test it
+        expires_at = response.data['expires_at']  # test it
         user_id = int(response.data['user_id'])
         email = response.data['email']
 
@@ -53,7 +52,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_users_without_auth(self):
         """Test /token without auth"""
         url = reverse_lazy('authenticate:user')
-        data = { 'email': self.email, 'password': self.password }
+        data = {'email': self.email, 'password': self.password}
         # return client.post(url, data)
         response = self.client.post(url, data)
 

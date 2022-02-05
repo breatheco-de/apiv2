@@ -1,7 +1,11 @@
 import os
+import logging
+
 from rest_framework.exceptions import APIException
 
 IS_TEST_ENV = os.getenv('ENV') == 'test'
+logger = logging.getLogger(__name__)
+
 
 class ValidationException(APIException):
     status_code = 400
@@ -13,8 +17,11 @@ class ValidationException(APIException):
         self.status_code = code
         self.default_detail = details
         self.slug = slug
+        self.detail = details
 
         if IS_TEST_ENV and slug:
+            logger.error(f'Status {str(self.status_code)} - {slug}')
             super().__init__(slug)
         else:
+            logger.error(f'Status {str(self.status_code)} - {details}')
             super().__init__(details)

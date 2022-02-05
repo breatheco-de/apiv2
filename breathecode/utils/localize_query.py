@@ -4,18 +4,18 @@ from django.contrib.auth.models import AnonymousUser
 
 logger = logging.getLogger(__name__)
 
+
 def localize_query(query, request, matcher=None):
 
     # not a part of the staff, cannot access all info
     if isinstance(request.user, AnonymousUser):
         return None
 
-    academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list('academy__id',
-        flat=True)
+    academy_ids = ProfileAcademy.objects.filter(user=request.user).values_list('academy__id', flat=True)
 
     kwargs = {}
     if matcher is None:
-        kwargs["academy__id__in"] = academy_ids
+        kwargs['academy__id__in'] = academy_ids
     else:
         kwargs[matcher] = academy_ids
 

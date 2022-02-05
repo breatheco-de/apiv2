@@ -2,6 +2,7 @@ from .models import Bill
 from rest_framework import serializers
 import serpy
 
+
 class AcademySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -10,6 +11,7 @@ class AcademySerializer(serpy.Serializer):
     logo_url = serpy.Field()
     website_url = serpy.Field()
     street_address = serpy.Field()
+
 
 class UserSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -24,7 +26,7 @@ class SmallFreelancerSerializer(serpy.Serializer):
     id = serpy.Field()
     user = UserSerializer()
     price_per_hour = serpy.Field()
-    
+
 
 class SmallIssueSerializer(serpy.Serializer):
     """The serializer schema definition."""
@@ -39,6 +41,7 @@ class SmallIssueSerializer(serpy.Serializer):
     freelancer = SmallFreelancerSerializer()
     author = serpy.Field()
 
+
 class BigBillSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -50,7 +53,7 @@ class BigBillSerializer(serpy.Serializer):
     paid_at = serpy.Field()
     created_at = serpy.Field()
     academy = AcademySerializer(required=False)
-    
+
     freelancer = SmallFreelancerSerializer()
     reviewer = UserSerializer(required=False)
 

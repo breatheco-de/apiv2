@@ -13,9 +13,9 @@ from breathecode.tests.mocks import (
 )
 from ..mixins import AdmissionsTestCase
 
+
 class CohortIdUserIdTestSuite(AdmissionsTestCase):
     """Test /cohort/:id/user/:id"""
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -25,10 +25,11 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'Authentication credentials were not provided.',
-            'status_code': status.HTTP_401_UNAUTHORIZED
-        })
+        self.assertEqual(
+            json, {
+                'detail': 'Authentication credentials were not provided.',
+                'status_code': status.HTTP_401_UNAUTHORIZED
+            })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -36,7 +37,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_bad_cohort_id(self):
         """Test /cohort/:id/user/:id without auth"""
-        self.generate_models(authenticate=True)
+        model = self.generate_models(authenticate=True)
         url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': 1, 'user_id': 1})
         data = {}
         response = self.client.put(url, data)
@@ -51,9 +52,12 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_bad_user_id(self):
         """Test /cohort/:id/user/:id without auth"""
-        self.generate_models(authenticate=True, cohort=True)
-        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': self.cohort.id,
-            'user_id': 999})
+        model = self.generate_models(authenticate=True, cohort=True)
+        url = reverse_lazy('admissions:cohort_id_user_id',
+                           kwargs={
+                               'cohort_id': model.cohort.id,
+                               'user_id': 999
+                           })
         data = {}
         response = self.client.put(url, data)
         json = response.json()
@@ -67,9 +71,12 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_bad_id(self):
         """Test /cohort/:id/user/:id without auth"""
-        self.generate_models(authenticate=True, cohort=True, user=True)
-        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': self.cohort.id,
-            'user_id': self.user.id})
+        model = self.generate_models(authenticate=True, cohort=True, user=True)
+        url = reverse_lazy('admissions:cohort_id_user_id',
+                           kwargs={
+                               'cohort_id': model.cohort.id,
+                               'user_id': model.user.id
+                           })
         data = {}
         response = self.client.put(url, data)
         json = response.json()
@@ -83,9 +90,12 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_id_but_without_user(self):
         """Test /cohort/:id/user/:id without auth"""
-        self.generate_models(authenticate=True, cohort=True)
-        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': self.cohort.id,
-            'user_id': self.user.id})
+        model = self.generate_models(authenticate=True, cohort=True)
+        url = reverse_lazy('admissions:cohort_id_user_id',
+                           kwargs={
+                               'cohort_id': model.cohort.id,
+                               'user_id': model.user.id
+                           })
         data = {}
         response = self.client.put(url, data)
         json = response.json()
@@ -99,9 +109,12 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_id_but_with_user(self):
         """Test /cohort/:id/user/:id without auth"""
-        self.generate_models(authenticate=True, cohort=True, user=True)
-        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': self.cohort.id,
-            'user_id': self.user.id})
+        model = self.generate_models(authenticate=True, cohort=True, user=True)
+        url = reverse_lazy('admissions:cohort_id_user_id',
+                           kwargs={
+                               'cohort_id': model.cohort.id,
+                               'user_id': model.user.id
+                           })
         data = {}
         response = self.client.put(url, data)
         json = response.json()
@@ -115,21 +128,26 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_id(self):
         """Test /cohort/:id/user/:id without auth"""
-        self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
-            cohort_user=True)
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     specialty_mode=True,
+                                     profile_academy=True,
+                                     cohort_user=True)
         model_dict = self.get_cohort_user_dict(1)
-        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': self.cohort.id,
-            'user_id': self.user.id})
-        data = {
-            'certificate': self.certificate.id
-        }
+        url = reverse_lazy('admissions:cohort_id_user_id',
+                           kwargs={
+                               'cohort_id': model.cohort.id,
+                               'user_id': model.user.id
+                           })
+        data = {'specialty_mode': model.specialty_mode.id}
         response = self.client.put(url, data)
         json = response.json()
         expected = {
-            'id': self.cohort_user.id,
-            'role': self.cohort_user.role,
-            'educational_status': self.cohort_user.educational_status,
-            'finantial_status': self.cohort_user.finantial_status,
+            'id': model.cohort_user.id,
+            'role': model.cohort_user.role,
+            'educational_status': model.cohort_user.educational_status,
+            'finantial_status': model.cohort_user.finantial_status,
         }
 
         self.assertEqual(json, expected)
@@ -142,13 +160,18 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_delete_with_id_with_bad_user_id(self):
         """Test /cohort/:id/user/:id without auth"""
-        self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
-            cohort_user=True)
-        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': self.cohort.id,
-            'user_id': 9999})
-        data = {
-            'certificate': self.certificate.id
-        }
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     specialty_mode=True,
+                                     profile_academy=True,
+                                     cohort_user=True)
+        url = reverse_lazy('admissions:cohort_id_user_id',
+                           kwargs={
+                               'cohort_id': model.cohort.id,
+                               'user_id': 9999
+                           })
+        data = {'specialty_mode': model.specialty_mode.id}
         response = self.client.delete(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -157,13 +180,18 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_delete_with_id_with_bad_cohort_id(self):
         """Test /cohort/:id/user/:id without auth"""
-        self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
-            cohort_user=True)
-        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': 9999,
-            'user_id': self.user.id})
-        data = {
-            'certificate': self.certificate.id
-        }
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     specialty_mode=True,
+                                     profile_academy=True,
+                                     cohort_user=True)
+        url = reverse_lazy('admissions:cohort_id_user_id',
+                           kwargs={
+                               'cohort_id': 9999,
+                               'user_id': model.user.id
+                           })
+        data = {'specialty_mode': model.specialty_mode.id}
         response = self.client.delete(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -172,13 +200,18 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_delete_with_id(self):
         """Test /cohort/:id/user/:id without auth"""
-        self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
-            cohort_user=True)
-        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': self.cohort.id,
-            'user_id': self.user.id})
-        data = {
-            'certificate': self.certificate.id
-        }
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     specialty_mode=True,
+                                     profile_academy=True,
+                                     cohort_user=True)
+        url = reverse_lazy('admissions:cohort_id_user_id',
+                           kwargs={
+                               'cohort_id': model.cohort.id,
+                               'user_id': model.user.id
+                           })
+        data = {'specialty_mode': model.specialty_mode.id}
         response = self.client.delete(url, data)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.count_cohort_user(), 0)
@@ -188,10 +221,18 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_unsuccess_task(self):
         """Test /cohort/:id/user/:id without auth"""
-        self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
-            cohort_user=True, task=True, task_status='PENDING', task_type='PROJECT')
-        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': self.cohort.id,
-            'user_id': self.user.id})
+        task = {'task_status': 'PENDING', 'task_type': 'PROJECT'}
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     cohort_user=True,
+                                     task=task)
+        url = reverse_lazy('admissions:cohort_id_user_id',
+                           kwargs={
+                               'cohort_id': model.cohort.id,
+                               'user_id': model.user.id
+                           })
         data = {
             'educational_status': 'GRADUATED',
         }
@@ -210,10 +251,16 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_unsuccess_finantial_status(self):
         """Test /cohort/:id/user/:id without auth"""
-        self.generate_models(authenticate=True, cohort=True, user=True, profile_academy=True,
-            cohort_user=True)
-        url = reverse_lazy('admissions:cohort_id_user_id', kwargs={'cohort_id': self.cohort.id,
-            'user_id': self.user.id})
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     cohort_user=True)
+        url = reverse_lazy('admissions:cohort_id_user_id',
+                           kwargs={
+                               'cohort_id': model.cohort.id,
+                               'user_id': model.user.id
+                           })
         data = {
             'educational_status': 'GRADUATED',
             'finantial_status': 'LATE',
@@ -223,6 +270,35 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         expected = {
             'status_code': 400,
             'detail': 'Cannot be marked as `GRADUATED` if its financial status is `LATE`',
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_cohort_id_user_id_put_with_stage_delete(self):
+        """Test /cohort/:id/user/:id without auth"""
+        cohort_kwargs = {'stage': 'DELETED'}
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     cohort_user=True,
+                                     cohort_kwargs=cohort_kwargs)
+
+        url = reverse_lazy('admissions:cohort_id_user_id',
+                           kwargs={
+                               'cohort_id': model.cohort.id,
+                               'user_id': model.user.id
+                           })
+        data = {
+            'educational_status': 'GRADUATED',
+            'finantial_status': 'LATE',
+        }
+        response = self.client.put(url, data)
+        json = response.json()
+        expected = {
+            'status_code': 400,
+            'detail': 'cohort-with-stage-deleted',
         }
 
         self.assertEqual(json, expected)

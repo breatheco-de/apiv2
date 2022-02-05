@@ -13,7 +13,11 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='asset',
             name='difficulty',
-            field=models.CharField(blank=True, choices=[('BEGINNER', 'Beginner'), ('EASY', 'Easy')], default=None, max_length=20, null=True),
+            field=models.CharField(blank=True,
+                                   choices=[('BEGINNER', 'Beginner'), ('EASY', 'Easy')],
+                                   default=None,
+                                   max_length=20,
+                                   null=True),
         ),
         migrations.AddField(
             model_name='asset',

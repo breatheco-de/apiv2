@@ -16,12 +16,18 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='bill',
             name='status',
-            field=models.CharField(choices=[('DUE', 'Due'), ('APPROVED', 'Approved'), ('PAID', 'Paid')], default='DUE', max_length=20),
+            field=models.CharField(choices=[('DUE', 'Due'), ('APPROVED', 'Approved'), ('PAID', 'Paid')],
+                                   default='DUE',
+                                   max_length=20),
         ),
         migrations.AlterField(
             model_name='issue',
             name='author',
-            field=models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
+            field=models.ForeignKey(blank=True,
+                                    default=None,
+                                    null=True,
+                                    on_delete=django.db.models.deletion.CASCADE,
+                                    to=settings.AUTH_USER_MODEL),
         ),
         migrations.AlterField(
             model_name='issue',

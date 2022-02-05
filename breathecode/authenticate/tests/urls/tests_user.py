@@ -11,7 +11,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_user_without_auth(self):
         """Test /user without auth"""
         url = reverse_lazy('authenticate:user')
-        data = { 'email': self.email, 'password': self.password }
+        data = {'email': self.email, 'password': self.password}
         # return client.post(url, data)
         response = self.client.post(url, data)
         detail = str(response.data['detail'])
@@ -36,5 +36,10 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': self.user.email,
             'first_name': self.user.first_name,
             'last_name': self.user.last_name,
-            'github': {'avatar_url': None, 'name': None, 'username': None},
+            'github': {
+                'avatar_url': None,
+                'name': None,
+                'username': None
+            },
+            'profile': None,
         }])

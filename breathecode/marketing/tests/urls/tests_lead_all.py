@@ -17,8 +17,10 @@ from breathecode.tests.mocks import (
 )
 from ..mixins import MarketingTestCase
 
+
 def random_string():
     return ''.join(choices(string.ascii_letters, k=10))
+
 
 def generate_form_entry_kwargs():
     """That random values is too long that i prefer have it in one function"""
@@ -53,16 +55,15 @@ def generate_form_entry_kwargs():
         'state': random_string(),
         'zip_code': randint(0, 9999),
         'browser_lang': random_string(),
-
         'storage_status': choice(['PENDING', 'PERSISTED']),
         'lead_type': choice(['STRONG', 'SOFT', 'DISCOVERY']),
         'deal_status': choice(['WON', 'LOST']),
         'sentiment': choice(['GOOD', 'BAD']),
     }
 
+
 class CohortUserTestSuite(MarketingTestCase):
     """Test /academy/lead"""
-
     """
     🔽🔽🔽 Auth
     """
@@ -74,10 +75,7 @@ class CohortUserTestSuite(MarketingTestCase):
         url = reverse_lazy('marketing:lead_all')
         response = self.client.get(url)
         json = response.json()
-        expected = {
-            'detail': 'Authentication credentials were not provided.',
-            'status_code': 401
-        }
+        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -99,13 +97,12 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        }])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
     """
     🔽🔽🔽 Without data
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -113,8 +110,10 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:lead_all')
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato')
 
         response = self.client.get(url)
         json = response.json()
@@ -127,6 +126,7 @@ class CohortUserTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 With data
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -134,9 +134,12 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:lead_all')
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True,
-            form_entry_kwargs=generate_form_entry_kwargs())
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato',
+                                     form_entry=True,
+                                     form_entry_kwargs=generate_form_entry_kwargs())
 
         response = self.client.get(url)
         json = response.json()
@@ -146,12 +149,13 @@ class CohortUserTestSuite(MarketingTestCase):
 
         expected = [{
             'academy': {
-                'id':  model.form_entry.academy.id,
+                'id': model.form_entry.academy.id,
                 'name': model.form_entry.academy.name,
                 'slug': model.form_entry.academy.slug
             },
             'country': model.form_entry.country,
             'course': model.form_entry.course,
+            'client_comments': model.form_entry.client_comments,
             'email': model.form_entry.email,
             'first_name': model.form_entry.first_name,
             'gclid': model.form_entry.gclid,
@@ -170,13 +174,12 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        }])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
     """
     🔽🔽🔽 Academy in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -184,8 +187,11 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:lead_all') + '?academy=freyja'
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato',
+                                     form_entry=True)
 
         response = self.client.get(url)
         json = response.json()
@@ -193,9 +199,7 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        }])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -204,9 +208,12 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         academy_kwargs = {'slug': 'freyja'}
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True,
-            academy_kwargs=academy_kwargs)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato',
+                                     form_entry=True,
+                                     academy_kwargs=academy_kwargs)
 
         url = reverse_lazy('marketing:lead_all') + '?academy=freyja'
         response = self.client.get(url)
@@ -217,7 +224,7 @@ class CohortUserTestSuite(MarketingTestCase):
 
         expected = [{
             'academy': {
-                'id':  model.form_entry.academy.id,
+                'id': model.form_entry.academy.id,
                 'name': model.form_entry.academy.name,
                 'slug': model.form_entry.academy.slug
             },
@@ -225,6 +232,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'course': model.form_entry.course,
             'email': model.form_entry.email,
             'first_name': model.form_entry.first_name,
+            'client_comments': model.form_entry.client_comments,
             'gclid': model.form_entry.gclid,
             'id': model.form_entry.id,
             'language': model.form_entry.language,
@@ -241,9 +249,7 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        }])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -253,10 +259,16 @@ class CohortUserTestSuite(MarketingTestCase):
         self.headers(academy=1)
         base = self.generate_models(user=True)
 
-        models = [self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True, models=base,
-            academy_kwargs={'slug': 'konan' if index == 0 else 'freyja'})
-            for index in range(0, 2)]
+        models = [
+            self.generate_models(authenticate=True,
+                                 profile_academy=True,
+                                 capability='read_lead',
+                                 role='potato',
+                                 form_entry=True,
+                                 models=base,
+                                 academy_kwargs={'slug': 'konan' if index == 0 else 'freyja'})
+            for index in range(0, 2)
+        ]
 
         models.sort(key=lambda x: x.form_entry.created_at)
         url = reverse_lazy('marketing:lead_all') + '?academy=' + ','.join([x.academy.slug for x in models])
@@ -271,11 +283,12 @@ class CohortUserTestSuite(MarketingTestCase):
 
         expected = [{
             'academy': {
-                'id':  model.form_entry.academy.id,
+                'id': model.form_entry.academy.id,
                 'name': model.form_entry.academy.name,
                 'slug': model.form_entry.academy.slug
             },
             'country': model.form_entry.country,
+            'client_comments': model.form_entry.client_comments,
             'course': model.form_entry.course,
             'email': model.form_entry.email,
             'first_name': model.form_entry.first_name,
@@ -302,6 +315,7 @@ class CohortUserTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Start in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -309,8 +323,11 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:lead_all') + '?start=2100-01-01'
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato',
+                                     form_entry=True)
 
         response = self.client.get(url)
         json = response.json()
@@ -318,9 +335,7 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        }])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -328,9 +343,12 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_lead_all__with_start_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        query_date = (timezone.now() - timedelta(hours=48)).strftime("%Y-%m-%d")
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True)
+        query_date = (timezone.now() - timedelta(hours=48)).strftime('%Y-%m-%d')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato',
+                                     form_entry=True)
 
         url = reverse_lazy('marketing:lead_all') + f'?start={query_date}'
         response = self.client.get(url)
@@ -341,7 +359,7 @@ class CohortUserTestSuite(MarketingTestCase):
 
         expected = [{
             'academy': {
-                'id':  model.form_entry.academy.id,
+                'id': model.form_entry.academy.id,
                 'name': model.form_entry.academy.name,
                 'slug': model.form_entry.academy.slug
             },
@@ -349,6 +367,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'course': model.form_entry.course,
             'email': model.form_entry.email,
             'first_name': model.form_entry.first_name,
+            'client_comments': model.form_entry.client_comments,
             'gclid': model.form_entry.gclid,
             'id': model.form_entry.id,
             'language': model.form_entry.language,
@@ -365,13 +384,12 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        }])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
     """
     🔽🔽🔽 End in querystring
     """
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -379,8 +397,11 @@ class CohortUserTestSuite(MarketingTestCase):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
         url = reverse_lazy('marketing:lead_all') + '?end=1900-01-01'
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato',
+                                     form_entry=True)
 
         response = self.client.get(url)
         json = response.json()
@@ -388,9 +409,7 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        }])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -398,9 +417,12 @@ class CohortUserTestSuite(MarketingTestCase):
     def test_lead_all__with_end_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        query_date = (timezone.now() + timedelta(hours=48)).strftime("%Y-%m-%d")
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_lead', role='potato', form_entry=True)
+        query_date = (timezone.now() + timedelta(hours=48)).strftime('%Y-%m-%d')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato',
+                                     form_entry=True)
 
         url = reverse_lazy('marketing:lead_all') + f'?end={query_date}'
         response = self.client.get(url)
@@ -411,12 +433,13 @@ class CohortUserTestSuite(MarketingTestCase):
 
         expected = [{
             'academy': {
-                'id':  model.form_entry.academy.id,
+                'id': model.form_entry.academy.id,
                 'name': model.form_entry.academy.name,
                 'slug': model.form_entry.academy.slug
             },
             'country': model.form_entry.country,
             'course': model.form_entry.course,
+            'client_comments': model.form_entry.client_comments,
             'email': model.form_entry.email,
             'first_name': model.form_entry.first_name,
             'gclid': model.form_entry.gclid,
@@ -435,6 +458,4 @@ class CohortUserTestSuite(MarketingTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_form_entry_dict(), [{
-            **self.model_to_dict(model, 'form_entry')
-        }])
+        self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])

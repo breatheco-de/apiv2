@@ -11,6 +11,7 @@ REQUESTS_PATH = {
     'patch': 'requests.patch',
     'delete': 'requests.delete',
     'head': 'requests.head',
+    'request': 'requests.request',
 }
 
 REQUESTS_INSTANCES = {
@@ -20,7 +21,9 @@ REQUESTS_INSTANCES = {
     'patch': None,
     'delete': None,
     'head': None,
+    'request': None,
 }
+
 
 def apply_requests_mock(method='get', endpoints=[]):
     """Apply Storage Blob Mock"""
@@ -28,20 +31,30 @@ def apply_requests_mock(method='get', endpoints=[]):
     REQUESTS_INSTANCES[method] = request_mock(endpoints)
     return REQUESTS_INSTANCES[method]
 
+
 def apply_requests_get_mock(endpoints=[]):
     return apply_requests_mock('GET', endpoints)
+
 
 def apply_requests_post_mock(endpoints=[]):
     return apply_requests_mock('POST', endpoints)
 
+
 def apply_requests_put_mock(endpoints=[]):
     return apply_requests_mock('PUT', endpoints)
+
 
 def apply_requests_patch_mock(endpoints=[]):
     return apply_requests_mock('PATCH', endpoints)
 
+
 def apply_requests_delete_mock(endpoints=[]):
     return apply_requests_mock('DELETE', endpoints)
 
+
 def apply_requests_head_mock(endpoints=[]):
     return apply_requests_mock('HEAD', endpoints)
+
+
+def apply_requests_request_mock(endpoints=[]):
+    return apply_requests_mock('REQUEST', endpoints)

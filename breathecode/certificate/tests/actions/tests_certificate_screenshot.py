@@ -15,6 +15,7 @@ from ..mocks import (
     apply_screenshotmachine_requests_get_mock,
 )
 
+
 class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """Tests action certificate_screenshot"""
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -41,11 +42,14 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         """certificate_screenshot don't call open in development environment"""
         SCREENSHOTMACHINE_INSTANCES['get'].call_args_list = []
 
-        model = self.generate_models(specialty=True, layout_design=True, teacher=True, stage=True,
-            certificate=True, user_specialty=True)
+        model = self.generate_models(specialty=True,
+                                     layout_design=True,
+                                     teacher=True,
+                                     stage=True,
+                                     specialty_mode=True,
+                                     user_specialty=True)
         url = self.generate_screenshotmachine_url(model['user_specialty'])
 
         self.assertEqual(certificate_screenshot(model['certificate'].id), None)
-        self.assertEqual(SCREENSHOTMACHINE_INSTANCES['get'].call_args_list, [call(url,
-            stream=True)])
+        self.assertEqual(SCREENSHOTMACHINE_INSTANCES['get'].call_args_list, [call(url, stream=True)])
         self.assertEqual(self.user_specialty_has_preview_url(model['certificate'].id), True)

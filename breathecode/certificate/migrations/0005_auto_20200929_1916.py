@@ -12,19 +12,16 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.DeleteModel(
-            name='UserCertificate',
-        ),
+        migrations.DeleteModel(name='UserCertificate', ),
         migrations.CreateModel(
             name='UserProxy',
-            fields=[
-            ],
+            fields=[],
             options={
                 'proxy': True,
                 'indexes': [],
                 'constraints': [],
             },
-            bases=('auth.user',),
+            bases=('auth.user', ),
             managers=[
                 ('objects', django.contrib.auth.models.UserManager()),
             ],

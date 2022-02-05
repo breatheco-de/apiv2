@@ -5,7 +5,7 @@ import sys
 import shutil
 import webbrowser
 from pathlib import Path
-from utils.environment import test_environment
+from .utils.environment import test_environment, reset_environment
 
 
 def python_module_to_dir(module: str) -> str:
@@ -16,7 +16,7 @@ def python_module_to_dir(module: str) -> str:
 def help_command():
     print('Usage:')
     print('   `pipenv run cov breathecode.events` where events is the name of module and accept '
-        'add submodules using the dot(.) character as delimiter.')
+          'add submodules using the dot(.) character as delimiter.')
     print('')
     print('commands:')
     print('   --help see this help message.')
@@ -34,6 +34,7 @@ if __name__ == '__main__':
 
     dir = python_module_to_dir(module)
 
+    reset_environment()
     test_environment()
     htmlcov_path = os.path.join(os.getcwd(), 'htmlcov')
 

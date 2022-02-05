@@ -9,6 +9,7 @@ from ...models import Endpoint
 CURRENT_MOCK = MagicMock()
 CURRENT_PATH = 'breathecode.monitoring.tasks.test_endpoint'
 
+
 # This tests check functions are called, remember that this functions are
 # tested in tests_monitor.py, we just need check that functions are called
 # correctly

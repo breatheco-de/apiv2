@@ -39,7 +39,17 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='academy',
             name='marketing_phone',
-            field=models.CharField(blank=True, default=None, max_length=17, null=True, validators=[django.core.validators.RegexValidator(message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.", regex='^\\+?1?\\d{9,15}$')]),
+            field=models.CharField(
+                blank=True,
+                default=None,
+                max_length=17,
+                null=True,
+                validators=[
+                    django.core.validators.RegexValidator(
+                        message=
+                        "Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.",
+                        regex='^\\+?1?\\d{9,15}$')
+                ]),
         ),
         migrations.AddField(
             model_name='academy',

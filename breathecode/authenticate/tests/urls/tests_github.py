@@ -17,12 +17,10 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
 
         data = response.data
-        details = data['details']
-        status_code = data['status_code']
 
-        self.assertEqual(2, len(data))
-        self.assertEqual(details, 'No callback URL specified')
-        self.assertEqual(status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        expected = {'detail': 'no-callback-url', 'status_code': 400}
+
+        self.assertEqual(data, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_github(self):
@@ -32,9 +30,9 @@ class AuthenticateTestSuite(AuthTestCase):
         params = {'url': 'https://google.co.ve'}
         response = self.client.get(f'{url}?{urllib.parse.urlencode(params)}')
         params = {
-            "client_id": os.getenv('GITHUB_CLIENT_ID', ""),
-            "redirect_uri": os.getenv('GITHUB_REDIRECT_URL', "")+"?url="+original_url_callback,
-            "scope": 'user repo read:org',
+            'client_id': os.getenv('GITHUB_CLIENT_ID', ''),
+            'redirect_uri': os.getenv('GITHUB_REDIRECT_URL', '') + '?url=' + original_url_callback,
+            'scope': 'user repo read:org',
         }
 
         redirect = f'https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}'

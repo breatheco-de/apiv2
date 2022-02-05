@@ -14,6 +14,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='activecampaignacademy',
             name='event_attendancy_automation',
-            field=models.ForeignKey(blank=True, default=None, null=True, on_delete=django.db.models.deletion.CASCADE, to='marketing.automation'),
+            field=models.ForeignKey(blank=True,
+                                    default=None,
+                                    null=True,
+                                    on_delete=django.db.models.deletion.CASCADE,
+                                    to='marketing.automation'),
         ),
     ]

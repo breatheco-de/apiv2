@@ -2,6 +2,8 @@ from django.contrib.auth.models import User
 from django.db import models
 from breathecode.admissions.models import Cohort
 
+__all__ = ['UserProxy', 'CohortProxy', 'Task']
+
 PENDING = 'PENDING'
 DONE = 'DONE'
 TASK_STATUS = (
@@ -11,6 +13,7 @@ TASK_STATUS = (
 
 APPROVED = 'APPROVED'
 REJECTED = 'REJECTED'
+IGNORED = 'IGNORED'
 REVISION_STATUS = (
     (PENDING, 'Pending'),
     (APPROVED, 'Approved'),
@@ -27,6 +30,8 @@ TASK_TYPE = (
     (LESSON, 'lesson'),
     (EXERCISE, 'Exercise'),
 )
+
+
 # Create your models here.
 class Task(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -44,6 +49,7 @@ class Task(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
 
 class UserProxy(User):
     class Meta:

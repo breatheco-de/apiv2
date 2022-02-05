@@ -8,12 +8,14 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+from pathlib import Path
 import django_heroku
 import dj_database_url
-import sys
+import json
 import logging
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -28,14 +30,14 @@ ENVIRONMENT = os.environ.get('ENV')
 SECRET_KEY = '5ar3h@ha%y*dc72z=8-ju7@4xqm0o59*@k*c2i=xacmy2r=%4a'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = (ENVIRONMENT == "development")
+DEBUG = (ENVIRONMENT == 'development')
 
 ALLOWED_HOSTS = []
-
 
 # Application definition
 
 INSTALLED_APPS = [
+    'whitenoise.runserver_nostatic',
     'breathecode.admin_styles',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -45,34 +47,43 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.sites',
     'django.contrib.postgres',
-
+    'django.contrib.admindocs',
     'rest_framework',
-
     'phonenumber_field',
-
-    'drf_yasg',
     'corsheaders',
-
+    'breathecode.notify',
     'breathecode.authenticate',
+    'breathecode.monitoring',
     'breathecode.admissions',
     'breathecode.events',
     'breathecode.feedback',
-    'breathecode.notify',
     'breathecode.assignments',
     'breathecode.marketing',
     'breathecode.freelance',
     'breathecode.certificate',
-    'breathecode.monitoring',
     'breathecode.media',
+    'breathecode.assessment',
     'breathecode.registry',
+    'breathecode.mentorship',
+    'explorer',
 ]
 
+if os.getenv('ALLOW_UNSAFE_CYPRESS_APP') or ENVIRONMENT == 'test':
+    INSTALLED_APPS.append('breathecode.cypress')
+
 REST_FRAMEWORK = {
-    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.NamespaceVersioning',
-    'DEFAULT_PAGINATION_CLASS': 'breathecode.utils.HeaderLimitOffsetPagination',
-    'EXCEPTION_HANDLER': 'breathecode.utils.breathecode_exception_handler',
-    'PAGE_SIZE': 100,
-    'DEFAULT_VERSION': 'v1',
+    'DEFAULT_SCHEMA_CLASS':
+    'rest_framework.schemas.openapi.AutoSchema',
+    'DEFAULT_VERSIONING_CLASS':
+    'rest_framework.versioning.NamespaceVersioning',
+    'DEFAULT_PAGINATION_CLASS':
+    'breathecode.utils.HeaderLimitOffsetPagination',
+    'EXCEPTION_HANDLER':
+    'breathecode.utils.breathecode_exception_handler',
+    'PAGE_SIZE':
+    100,
+    'DEFAULT_VERSION':
+    'v1',
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'breathecode.authenticate.authentication.ExpiringTokenAuthentication',
         # 'rest_framework.authentication.TokenAuthentication',
@@ -90,8 +101,8 @@ REST_FRAMEWORK = {
 MIDDLEWARE = [
     # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareOnly404',
     # ⬆ This Rollbar should always be first please!
-
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
 
@@ -99,19 +110,17 @@ MIDDLEWARE = [
     # 'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
     # 'django.middleware.cache.FetchFromCacheMiddleware',
-
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    #'breathecode.utils.admin_timezone.TimezoneMiddleware',
 
-    # ⬇ Rollber is always last please!
+    # ⬇ Rollbar is always last please!
     # 'rollbar.contrib.django.middleware.RollbarNotifierMiddlewareExcluding404',
 ]
 
-AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-)
+AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend', )
 
 ROOT_URLCONF = 'breathecode.urls'
 
@@ -134,7 +143,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'breathecode.wsgi.application'
 
-
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
 
@@ -152,7 +160,6 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
 
 # Disable Django's logging setup
 LOGGING_CONFIG = None
@@ -216,14 +223,13 @@ logging.config.dictConfig({
 })
 
 ROLLBAR = {
-    'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ""),
+    'access_token': os.getenv('ROLLBAR_ACCESS_TOKEN', ''),
     'environment': 'development' if DEBUG else 'production',
     'branch': 'master',
     'root': BASE_DIR,
     # parsed POST variables placed in your output for exception handling
     'EXCEPTION_HANDLER': 'rollbar.contrib.django_rest_framework.post_exception_handler',
 }
-
 
 MESSAGE_TAGS = {
     messages.DEBUG: 'alert-info',
@@ -232,7 +238,6 @@ MESSAGE_TAGS = {
     messages.WARNING: 'alert-warning',
     messages.ERROR: 'alert-danger',
 }
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
@@ -256,30 +261,31 @@ ALLOWED_HOSTS = ['*']
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
-STATIC_ROOT = os.path.join(PROJECT_ROOT, 'staticfiles')
+# static generated automatically
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'
 
-# Extra places for collectstatic to find static files.
 STATICFILES_DIRS = [
+    # static generated by us
     os.path.join(PROJECT_ROOT, 'static'),
 ]
 
 CORS_ORIGIN_ALLOW_ALL = True
 
 CORS_ALLOW_HEADERS = [
-    "accept",
-    "academy",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "dnt",
-    "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
-    "cache-control",
-    "credentials",
-    "http-access-control-request-method",
+    'accept',
+    'academy',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'cache-control',
+    'credentials',
+    'http-access-control-request-method',
 ]
 
 REDIS_URL = os.getenv('REDIS_URL', '')
@@ -287,14 +293,12 @@ REDIS_URL = os.getenv('REDIS_URL', '')
 
 def cache_opts(is_test_env):
     if is_test_env:
-        return {
-            'OPTIONS': {}
-        }
+        return {'OPTIONS': {}}
     else:
         return {
             'OPTIONS': {
-                "CLIENT_CLASS": "django_redis.client.DefaultClient",
-                "PARSER_CLASS": "redis.connection.HiredisParser",
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'PARSER_CLASS': 'redis.connection.HiredisParser',
             }
         }
 
@@ -302,8 +306,8 @@ def cache_opts(is_test_env):
 is_test_env = os.getenv('ENV') == 'test'
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if
-        is_test_env else 'django_redis.cache.RedisCache',
+        'BACKEND':
+        'django.core.cache.backends.locmem.LocMemCache' if is_test_env else 'django_redis.cache.RedisCache',
         'LOCATION': 'breathecode' if is_test_env else [REDIS_URL],
         # **cache_opts(is_test_env),
     },
@@ -326,3 +330,17 @@ DATABASES = {
     'default': dj_database_url.config(default=DATABASE_URL),
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+# SQL Explorer
+EXPLORER_CONNECTIONS = {'Default': 'default'}
+EXPLORER_DEFAULT_CONNECTION = 'default'
+
+sql_keywords_path = Path(os.getcwd()) / 'breathecode' / 'sql_keywords.json'
+with open(sql_keywords_path, 'r') as f:
+    sql_keywords = json.load(f)
+
+    # https://www.postgresql.org/docs/8.1/sql-keywords-appendix.html
+    # scripts/update_sql_keywords_json.py
+    # breathecode/sql_keywords.json
+
+    EXPLORER_SQL_BLACKLIST = tuple(sql_keywords['blacklist'])

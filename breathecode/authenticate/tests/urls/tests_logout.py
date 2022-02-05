@@ -16,7 +16,6 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:logout')
         response = self.client.get(url)
 
-
         detail = str(response.data['detail'])
         status_code = int(response.data['status_code'])
 

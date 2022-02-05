@@ -1,24 +1,37 @@
 import os
 from django.contrib.auth.models import User
-from django.core.validators import RegexValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
 from .actions import get_bucket_object
+from .signals import student_edu_status_updated
 
-GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", None)
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
+
 
 def get_user_label(self):
-    return f"{self.first_name} {self.last_name} ({self.email})"
-User.add_to_class("__str__", get_user_label)
+    return f'{self.first_name} {self.last_name} ({self.email})'
+
+
+User.add_to_class('__str__', get_user_label)
+
+__all__ = [
+    'UserAdmissions', 'Country', 'City', 'Academy', 'Certificate', 'AcademyCertificate', 'Syllabus', 'Cohort',
+    'CohortUser', 'CertificateTimeSlot', 'CohortTimeSlot'
+]
+
+
 class UserAdmissions(User):
     class Meta:
         proxy = True
+
 
 class Country(models.Model):
     code = models.CharField(max_length=3, primary_key=True)
     name = models.CharField(max_length=30)
 
     def __str__(self):
-        return f"{self.name} ({self.code})"
+        return f'{self.name} ({self.code})'
+
 
 class City(models.Model):
     name = models.CharField(max_length=30)
@@ -26,6 +39,7 @@ class City(models.Model):
 
     def __str__(self):
         return self.name
+
 
 INACTIVE = 'INACTIVE'
 ACTIVE = 'ACTIVE'
@@ -35,6 +49,8 @@ ACADEMY_STATUS = (
     (ACTIVE, 'Active'),
     (DELETED, 'Deleted'),
 )
+
+
 class Academy(models.Model):
     slug = models.SlugField(max_length=100, unique=True)
     name = models.CharField(max_length=150)
@@ -44,8 +60,16 @@ class Academy(models.Model):
     street_address = models.CharField(max_length=250)
 
     marketing_email = models.EmailField(blank=True, null=True, default=None)
-    phone_regex = RegexValidator(regex=r'^\+?1?\d{9,15}$', message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
-    marketing_phone = models.CharField(validators=[phone_regex], max_length=17, blank=True, null=True, default=None) # validators should be a list
+    feedback_email = models.EmailField(blank=True, null=True, default=None)
+
+    phone_regex = RegexValidator(
+        regex=r'^\+?1?\d{9,15}$',
+        message="Phone number must be entered in the format: '+999999999'. Up to 15 digits allowed.")
+    marketing_phone = models.CharField(validators=[phone_regex],
+                                       max_length=17,
+                                       blank=True,
+                                       null=True,
+                                       default=None)  # validators should be a list
 
     twitter_handle = models.CharField(max_length=15, blank=True, null=True, default=None)
     facebook_handle = models.CharField(max_length=30, blank=True, null=True, default=None)
@@ -69,7 +93,7 @@ class Academy(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
-    logistical_information = models.CharField(max_length=150,  blank=True, null=True)
+    logistical_information = models.CharField(max_length=150, blank=True, null=True)
 
     def default_ac_slug(self):
         return self.slug
@@ -82,12 +106,13 @@ class Academy(models.Model):
     #     super(Image, self).delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
-        if os.getenv('ENV', "") == 'production':
+        if os.getenv('ENV', '') == 'production':
             obj = get_bucket_object(f'location-{self.slug}')
             if obj is not None:
                 self.logo_url = obj.public_url
 
         super().save(*args, **kwargs)  # Call the "real" save() method.
+
 
 PARTIME = 'PART-TIME'
 FULLTIME = 'FULL-TIME'
@@ -95,18 +120,51 @@ SCHEDULE_TYPE = (
     (PARTIME, 'Part-Time'),
     (FULLTIME, 'Full-Time'),
 )
-class Certificate(models.Model):
-    slug = models.SlugField(max_length=100)
+
+
+class Syllabus(models.Model):
+    slug = models.SlugField(max_length=100, blank=True, null=True, default=None)
+    name = models.CharField(max_length=150, blank=True, null=True, default=None)
+
+    github_url = models.URLField(max_length=255, blank=True, null=True, default=None)
+    duration_in_hours = models.IntegerField(null=True, default=None)
+    duration_in_days = models.IntegerField(null=True, default=None)
+    week_hours = models.IntegerField(null=True, default=None)
+    logo = models.CharField(max_length=250, blank=True, null=True, default=None)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    # by default a syllabus can be re-used by any other academy
+    private = models.BooleanField(default=False)
+
+    # a syllabus can be shared with other academy, but only the academy owner can update or delete it
+    academy_owner = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
+
+    def __str__(self):
+        return self.slug if self.slug else 'unknown'
+
+
+class SyllabusVersion(models.Model):
+    json = models.JSONField()
+
+    version = models.PositiveSmallIntegerField()
+    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.syllabus.slug}.v{self.version}'
+
+
+class SpecialtyMode(models.Model):
     name = models.CharField(max_length=150)
 
-    logo = models.CharField(max_length=250, blank=True, null=True, default=None)
-    duration_in_hours = models.IntegerField()
-    duration_in_days = models.IntegerField()
-    week_hours = models.IntegerField(null=True, default=None)
-
     schedule_type = models.CharField(max_length=15, choices=SCHEDULE_TYPE, default='PART-TIME')
-
     description = models.TextField(max_length=450)
+
+    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, default=None, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -118,47 +176,22 @@ class Certificate(models.Model):
     #     remove_bucket_object("certificate-logo-"+self.slug)
     #     super(Image, self).delete(*args, **kwargs)
 
-    def save(self, *args, **kwargs):
+    # def save(self, *args, **kwargs):
 
-        if GOOGLE_APPLICATION_CREDENTIALS is not None and GOOGLE_APPLICATION_CREDENTIALS!="":
-            obj = get_bucket_object("certificate-logo-"+self.slug)
-            if obj is not None:
-                self.logo = obj.public_url
+    #     if GOOGLE_APPLICATION_CREDENTIALS is not None and GOOGLE_APPLICATION_CREDENTIALS != '':
+    #         obj = get_bucket_object('certificate-logo-' + self.slug)
+    #         if obj is not None:
+    #             self.logo = obj.public_url
 
-        super().save(*args, **kwargs)  # Call the "real" save() method.
+    #     super().save(*args, **kwargs)  # Call the "real" save() method.
 
 
-class AcademyCertificate(models.Model):
-    certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)
+class AcademySpecialtyMode(models.Model):
+    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE)
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-
-class Syllabus(models.Model):
-
-    version = models.PositiveSmallIntegerField()
-
-    json = models.JSONField()
-    github_url = models.URLField(max_length=255, blank=True, null=True, default=None)
-    certificate = models.ForeignKey(Certificate, on_delete=models.CASCADE)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
-
-    # by default a syllabus can be re-used by any other academy
-    private = models.BooleanField(default=False)
-
-    # a syllabus can be shared with other academy, but only the academy owner can update or delete it
-    academy_owner = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
-
-    @property
-    def slug(self):
-        return f'{self.certificate.slug}.v{self.version}'
-
-    def __str__(self):
-        return f'{self.certificate.slug}.v{self.version}'
 
 
 INACTIVE = 'INACTIVE'
@@ -175,6 +208,8 @@ COHORT_STAGE = (
     (ENDED, 'Ended'),
     (DELETED, 'Deleted'),
 )
+
+
 class Cohort(models.Model):
     slug = models.CharField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
@@ -186,11 +221,17 @@ class Cohort(models.Model):
     private = models.BooleanField(default=False)
     never_ends = models.BooleanField(default=False)
 
+    remote_available = models.BooleanField(
+        default=True, help_text='True (default) if the students from other cities can take it from home')
+    online_meeting_url = models.URLField(max_length=255, blank=True, default=None, null=True)
+
     timezone = models.CharField(max_length=50, null=True, default=None)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
-    syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, default=None, null=True)
+    syllabus_version = models.ForeignKey(SyllabusVersion, on_delete=models.CASCADE, default=None, null=True)
+
+    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE, default=None, null=True)
 
     language = models.CharField(max_length=2, default='en')
 
@@ -198,7 +239,16 @@ class Cohort(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.name + "(" + self.slug + ")"
+        return self.name + '(' + self.slug + ')'
+
+    def save(self, *args, **kwargs):
+        from .signals import cohort_saved
+
+        created = not self.id
+        super().save(*args, **kwargs)
+
+        cohort_saved.send(instance=self, sender=self.__class__, created=created)
+
 
 TEACHER = 'TEACHER'
 ASSISTANT = 'ASSISTANT'
@@ -232,15 +282,79 @@ EDU_STATUS = (
     (SUSPENDED, 'Suspended'),
     (DROPPED, 'Dropped'),
 )
+
+
 class CohortUser(models.Model):
+    def __init__(self, *args, **kwargs):
+        super(CohortUser, self).__init__(*args, **kwargs)
+        self.__old_edu_status = self.educational_status
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)
     role = models.CharField(max_length=9, choices=COHORT_ROLE, default=STUDENT)
 
-    finantial_status = models.CharField(max_length=15, choices=FINANTIAL_STATUS, default=None,
-        null=True)
-    educational_status = models.CharField(max_length=15, choices=EDU_STATUS, default=None,
-        null=True)
+    finantial_status = models.CharField(max_length=15, choices=FINANTIAL_STATUS, default=None, null=True)
+    educational_status = models.CharField(max_length=15, choices=EDU_STATUS, default=None, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def save(self, *args, **kwargs):
+
+        if self.__old_edu_status != self.educational_status:
+            student_edu_status_updated.send(instance=self, sender=CohortUser)
+
+        super().save(*args, **kwargs)  # Call the "real" save() method.
+
+
+DAILY = 'DAILY'
+WEEKLY = 'WEEKLY'
+MONTHLY = 'MONTHLY'
+# YEARLY = 'YEARLY'
+RECURRENCY_TYPE = (
+    (DAILY, 'Daily'),
+    (WEEKLY, 'Weekly'),
+    (MONTHLY, 'Monthly'),
+    # (YEARLY, 'Yearly'),
+)
+
+# YYYYMMDDHHMM
+date_interger_description = ('The first 4 number are year, the next 2 number are month, the next 2 number '
+                             'are day, the next 2 number are hour and the last 2 number are second')
+
+
+class TimeSlot(models.Model):
+    starting_at = models.BigIntegerField(
+        help_text=date_interger_description,
+        default=202101010000,
+        validators=[
+            MaxValueValidator(300000000000),  # year 3000
+            MinValueValidator(202101010000),  # year 2021, month 1 and day 1
+        ])
+
+    ending_at = models.BigIntegerField(
+        help_text=date_interger_description,
+        default=202101010000,
+        validators=[
+            MaxValueValidator(300000000000),  # year 3000
+            MinValueValidator(202101010000),  # year 2021, month 1 and day 1
+        ])
+
+    timezone = models.CharField(max_length=50, default='America/New_York')
+    recurrent = models.BooleanField(default=True)
+    recurrency_type = models.CharField(max_length=10, choices=RECURRENCY_TYPE, default=WEEKLY)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    class Meta:
+        abstract = True
+
+
+class SpecialtyModeTimeSlot(TimeSlot):
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE)
+
+
+class CohortTimeSlot(TimeSlot):
+    cohort = models.ForeignKey(Cohort, on_delete=models.CASCADE)

@@ -13,7 +13,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='answer',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('SENT', 'Send'), ('ANSWERED', 'Answered'), ('EXPIRED', 'Expired')], default='PENDING', max_length=15),
+            field=models.CharField(choices=[('PENDING', 'Pending'), ('SENT', 'Send'),
+                                            ('ANSWERED', 'Answered'), ('EXPIRED', 'Expired')],
+                                   default='PENDING',
+                                   max_length=15),
         ),
         migrations.AlterField(
             model_name='answer',
@@ -25,7 +28,5 @@ class Migration(migrations.Migration):
             name='score',
             field=models.CharField(blank=True, default=None, max_length=250, null=True),
         ),
-        migrations.DeleteModel(
-            name='SurveyLog',
-        ),
+        migrations.DeleteModel(name='SurveyLog', ),
     ]

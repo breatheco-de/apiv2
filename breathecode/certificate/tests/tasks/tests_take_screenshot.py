@@ -21,5 +21,5 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         for number in range(1, 10):
             self.assertEqual(take_screenshot(number), True)
 
-        self.assertEqual(ACTIONS_INSTANCES['certificate_screenshot'].call_args_list, 
-            [call(number) for number in range(1, 10)])
+        self.assertEqual(ACTIONS_INSTANCES['certificate_screenshot'].call_args_list,
+                         [call(number) for number in range(1, 10)])

@@ -1,7 +1,13 @@
+from breathecode.events.actions import fix_datetime_weekday
 import os
+
+from django.contrib.auth.models import User
+from django.db.models.query_utils import Q
 from breathecode.authenticate.actions import server_id
 from breathecode.events.caches import EventCache
-import logging, datetime
+from breathecode.utils import APIException
+from datetime import datetime, timedelta
+import logging
 import re
 
 from django.http.response import HttpResponse
@@ -10,27 +16,33 @@ from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from .models import Event, EventType, EventCheckin, Venue
-from breathecode.admissions.models import Academy, Cohort, CohortUser
+from .models import Event, EventType, EventCheckin, Organization, Venue, EventbriteWebhook, Organizer
+from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser
 from rest_framework.decorators import api_view, permission_classes
-from .serializers import (
-    EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
-    EventSmallSerializerNoAcademy, VenueSerializer
-)
+from .serializers import (EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
+                          EventSmallSerializerNoAcademy, VenueSerializer, OrganizationBigSerializer,
+                          OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
 from rest_framework.response import Response
-from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
+from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination, DatetimeInteger
 from rest_framework.decorators import renderer_classes
 from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
 from breathecode.utils import ValidationException
 from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
-
+import breathecode.events.receivers
 
 logger = logging.getLogger(__name__)
+MONDAY = 0
+TUESDAY = 1
+WEDNESDAY = 2
+THURSDAY = 3
+FRIDAY = 4
+SATURDAY = 5
+SUNDAY = 6
 
 
 @api_view(['GET'])
@@ -57,12 +69,12 @@ def get_events(request):
 
     if 'academy' in request.GET:
         value = request.GET.get('academy')
-        lookup['academy__slug__in'] = value.split(",")
+        lookup['academy__slug__in'] = value.split(',')
 
     lookup['starting_at__gte'] = timezone.now()
     if 'past' in request.GET:
-        if request.GET.get('past') == "true":
-            lookup.pop("starting_at__gte")
+        if request.GET.get('past') == 'true':
+            lookup.pop('starting_at__gte')
             lookup['starting_at__lte'] = timezone.now()
 
     items = items.filter(**lookup).order_by('starting_at')
@@ -75,7 +87,6 @@ class EventView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-
     def get(self, request, format=None):
 
         items = Event.objects.all()
@@ -95,8 +106,8 @@ class EventView(APIView):
 
         lookup['starting_at__gte'] = timezone.now()
         if 'past' in self.request.GET:
-            if self.request.GET.get('past') == "true":
-                lookup.pop("starting_at__gte")
+            if self.request.GET.get('past') == 'true':
+                lookup.pop('starting_at__gte')
                 lookup['starting_at__lte'] = timezone.now()
 
         items = items.filter(**lookup).order_by('-created_at')
@@ -142,10 +153,9 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
             return Response(cache, status=status.HTTP_200_OK)
 
         if event_id is not None:
-            single_event = Event.objects.filter(
-                id=event_id, academy__id=academy_id).first()
+            single_event = Event.objects.filter(id=event_id, academy__id=academy_id).first()
             if single_event is None:
-                raise ValidationException("Event not found", 404)
+                raise ValidationException('Event not found', 404)
 
             serializer = EventSmallSerializer(single_event, many=False)
             self.cache.set(serializer.data, **cache_kwargs)
@@ -167,8 +177,8 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
             lookup['starting_at__gte'] = timezone.now()
         elif past:
             if 'starting_at__gte' in lookup:
-                lookup.pop("starting_at__gte")
-            if past == "true":
+                lookup.pop('starting_at__gte')
+            if past == 'true':
                 lookup['starting_at__lte'] = timezone.now()
 
         items = items.filter(**lookup).order_by('-starting_at')
@@ -177,11 +187,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         serializer = EventSmallSerializerNoAcademy(page, many=True)
 
         if self.is_paginate(request):
-            return self.get_paginated_response(
-                serializer.data,
-                cache=self.cache,
-                cache_kwargs=cache_kwargs
-            )
+            return self.get_paginated_response(serializer.data, cache=self.cache, cache_kwargs=cache_kwargs)
         else:
             self.cache.set(serializer.data, **cache_kwargs)
             return Response(serializer.data, status=200)
@@ -190,13 +196,22 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
     def post(self, request, format=None, academy_id=None):
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
-            raise ValidationException(f"Academy {academy_id} not found")
+            raise ValidationException(f'Academy {academy_id} not found')
+
+        organization_id = Organization.objects.filter(academy__id=academy_id).values_list('id',
+                                                                                          flat=True).first()
+        if not organization_id:
+            raise ValidationException('Your academy doesn\'t have the integrations with Eventbrite done',
+                                      slug='organization-not-exist')
 
         data = {}
         for key in request.data.keys():
             data[key] = request.data.get(key)
 
-        serializer = EventSerializer(data={**data, "academy": academy.id})
+        data['sync_status'] = 'PENDING'
+        data['organization'] = organization_id
+
+        serializer = EventSerializer(data={**data, 'academy': academy.id})
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
@@ -205,12 +220,24 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
 
     @capable_of('crud_event')
     def put(self, request, academy_id=None, event_id=None):
-        already = Event.objects.filter(id=event_id,academy__id=academy_id).first()
+        already = Event.objects.filter(id=event_id, academy__id=academy_id).first()
         if already is None:
-            raise ValidationException(
-                f"Event not found for this academy {academy_id}")
+            raise ValidationException(f'Event not found for this academy {academy_id}')
 
-        serializer = EventSerializer(already, data=request.data)
+        organization_id = Organization.objects.filter(academy__id=academy_id).values_list('id',
+                                                                                          flat=True).first()
+        if not organization_id:
+            raise ValidationException('Your academy doesn\'t have the integrations with Eventbrite done',
+                                      slug='organization-not-exist')
+
+        data = {}
+        for key in request.data.keys():
+            data[key] = request.data.get(key)
+
+        data['sync_status'] = 'PENDING'
+        data['organization'] = organization_id
+
+        serializer = EventSerializer(already, data=data)
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
@@ -222,7 +249,6 @@ class EventTypeView(APIView):
     """
     List all snippets, or create a new snippet.
     """
-
     def get(self, request, format=None):
 
         items = EventType.objects.all()
@@ -254,22 +280,22 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
         if 'event' in self.request.GET:
             value = self.request.GET.get('event')
             lookup['event__id'] = value
-            
+
+        like = self.request.GET.get('like')
         if 'like' in self.request.GET:
-            items = items.filter(Q(attendee__first_name__icontains=like) |
-                                 Q(attendee__last_name_icontains=like) |
-                                 Q(attendee__email_icontains=like) |
-                                 Q(email_icontains=like)
-                                )
+            items = items.filter(
+                Q(attendee__first_name__icontains=like)
+                | Q(attendee__last_name_icontains=like)
+                | Q(attendee__email_icontains=like) | Q(email_icontains=like))
 
         start = request.GET.get('start', None)
         if start is not None:
-            start_date = datetime.datetime.strptime(start, "%Y-%m-%d").date()
+            start_date = datetime.strptime(start, '%Y-%m-%d').date()
             items = items.filter(created_at__gte=start_date)
 
         end = request.GET.get('end', None)
         if end is not None:
-            end_date = datetime.datetime.strptime(end, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end, '%Y-%m-%d').date()
             items = items.filter(created_at__lte=end_date)
 
         items = items.filter(**lookup).order_by('-created_at')
@@ -300,6 +326,123 @@ def eventbrite_webhook(request, organization_id):
     return Response('ok', content_type='text/plain')
 
 
+class AcademyOrganizerView(APIView):
+    """
+    List all snippets
+    """
+    @capable_of('read_organization')
+    def get(self, request, academy_id=None):
+
+        orgs = Organizer.objects.filter(academy__id=academy_id)
+        if orgs is None:
+            raise ValidationException('Organizers not found for this academy', 404)
+
+        serializer = OrganizerSmallSerializer(orgs, many=True)
+        return Response(serializer.data)
+
+
+# list venues
+class AcademyOrganizationOrganizerView(APIView):
+    """
+    List all snippets
+    """
+    @capable_of('read_organization')
+    def get(self, request, academy_id=None):
+
+        org = Organization.objects.filter(academy__id=academy_id).first()
+        if org is None:
+            raise ValidationException('Organization not found for this academy', 404)
+
+        organizers = Organizer.objects.filter(organization_id=org.id)
+        serializer = OrganizerSmallSerializer(organizers, many=True)
+        return Response(serializer.data)
+
+    @capable_of('crud_organization')
+    def delete(self, request, academy_id=None, organizer_id=None):
+
+        org = Organization.objects.filter(academy__id=academy_id).first()
+        if org is None:
+            raise ValidationException('Organization not found for this academy', 404)
+
+        organizer = Organizer.objects.filter(organization_id=org.id, id=organizer_id).first()
+        if organizer is None:
+            raise ValidationException('Organizers not found for this academy organization', 404)
+
+        organizer.academy = None
+        organizer.save()
+
+        serializer = OrganizerSmallSerializer(organizer, many=False)
+        return Response(serializer.data)
+
+
+# list venues
+class AcademyOrganizationView(APIView):
+    """
+    List all snippets
+    """
+    @capable_of('read_organization')
+    def get(self, request, academy_id=None):
+
+        org = Organization.objects.filter(academy__id=academy_id).first()
+        if org is None:
+            raise ValidationException('Organization not found for this academy', 404)
+
+        serializer = OrganizationBigSerializer(org, many=False)
+        return Response(serializer.data)
+
+    @capable_of('crud_organization')
+    def post(self, request, format=None, academy_id=None):
+
+        organization = Organization.objects.filter(academy__id=academy_id).first()
+        if organization:
+            raise ValidationException('Academy already has an organization asociated', slug='already-created')
+
+        serializer = OrganizationSerializer(data={**request.data, 'academy': academy_id})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_organization')
+    def put(self, request, format=None, academy_id=None):
+
+        organization = Organization.objects.filter(academy__id=academy_id).first()
+        if not organization:
+            raise ValidationException('Organization not found for this academy', slug='org-not-found')
+
+        serializer = OrganizationSerializer(organization, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @capable_of('crud_organization')
+    def delete(self, request, format=None, academy_id=None):
+
+        organization = Organization.objects.filter(academy__id=academy_id).first()
+        if not organization:
+            raise ValidationException('Organization not found for this academy', slug='org-not-found')
+
+        organization.delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+
+# list eventbride webhook
+class OrganizationWebhookView(APIView):
+    @capable_of('read_organization')
+    def get(self, request, academy_id=None):
+
+        # webhooks = EventbriteWebhook.objects.filter(organization_id=organization_id)
+        org = Organization.objects.filter(academy__id=academy_id).first()
+        if not org:
+            raise ValidationException(f'Academy has no organization', code=400, slug='organization-no-found')
+
+        webhooks = EventbriteWebhook.objects.filter(organization_id=org.id)
+        serializer = EventbriteWebhookSerializer(webhooks)
+        return Response(serializer.data)
+
+
 # list venues
 class AcademyVenueView(APIView):
     """
@@ -308,8 +451,7 @@ class AcademyVenueView(APIView):
     @capable_of('read_event')
     def get(self, request, format=None, academy_id=None, user_id=None):
 
-        venues = Venue.objects.filter(
-            academy__id=academy_id).order_by('-created_at')
+        venues = Venue.objects.filter(academy__id=academy_id).order_by('-created_at')
 
         serializer = VenueSerializer(venues, many=True)
         return Response(serializer.data)
@@ -325,10 +467,13 @@ def ical_academies_repr(slugs=None, ids=None):
         slugs = []
 
     if ids:
-        ret = ret + list(Academy.objects.filter(id__in=ids).values_list('id', flat=True))
+        ret = ret + \
+            list(Academy.objects.filter(id__in=ids).values_list('id', flat=True))
 
     if slugs:
-        ret = ret + list(Academy.objects.filter(slug__in=slugs).values_list('id', flat=True))
+        ret = ret + \
+            list(Academy.objects.filter(
+                slug__in=slugs).values_list('id', flat=True))
 
     ret = sorted(list(dict.fromkeys(ret)))
     ret = ','.join([str(id) for id in ret])
@@ -337,6 +482,92 @@ def ical_academies_repr(slugs=None, ids=None):
         ret = f' ({ret})'
 
     return ret
+
+
+class ICalStudentView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, user_id):
+        items = Cohort.objects.all()
+
+        if not User.objects.filter(id=user_id).count():
+            raise ValidationException('Student not exist', 404, slug='student-not-exist')
+
+        cohort_ids = (CohortUser.objects.filter(user_id=user_id).values_list(
+            'cohort_id', flat=True).exclude(cohort__stage='DELETED'))
+
+        items = CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).order_by('id')
+        items = items
+
+        upcoming = request.GET.get('upcoming')
+        if upcoming == 'true':
+            now = timezone.now()
+            items = items.filter(cohort__kickoff_date__gte=now)
+
+        key = server_id()
+
+        calendar = iCalendar()
+        calendar.add('prodid', f'-//BreatheCode//Student Schedule ({user_id}) {key}//EN')
+        calendar.add('METHOD', 'PUBLISH')
+        calendar.add('X-WR-CALNAME', f'Academy - Schedule')
+        calendar.add('X-WR-CALDESC', '')
+        calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
+
+        url = os.getenv('API_URL')
+        if url:
+            url = re.sub(r'/$', '', url) + '/v1/events/ical/student/' + str(user_id)
+            calendar.add('url', url)
+
+        calendar.add('version', '2.0')
+
+        for item in items:
+            event = iEvent()
+
+            event.add('summary', item.cohort.name)
+            event.add('uid', f'breathecode_cohort_time_slot_{item.id}_{key}')
+
+            event.add('dtstart', DatetimeInteger.to_datetime(item.timezone, item.starting_at))
+            event.add('dtstamp', DatetimeInteger.to_datetime(item.timezone, item.starting_at))
+
+            until_date = item.cohort.ending_date
+
+            if not until_date:
+                until_date = timezone.make_aware(
+                    datetime(year=2100, month=12, day=31, hour=12, minute=00, second=00))
+
+            if item.recurrent:
+                event.add('rrule', {'freq': item.recurrency_type, 'until': until_date})
+
+            event.add('dtend', DatetimeInteger.to_datetime(item.timezone, item.ending_at))
+
+            teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.cohort.id).first()
+
+            if teacher:
+                organizer = vCalAddress(f'MAILTO:{teacher.user.email}')
+
+                if teacher.user.first_name and teacher.user.last_name:
+                    organizer.params['cn'] = vText(f'{teacher.user.first_name} ' f'{teacher.user.last_name}')
+                elif teacher.user.first_name:
+                    organizer.params['cn'] = vText(teacher.user.first_name)
+                elif teacher.user.last_name:
+                    organizer.params['cn'] = vText(teacher.user.last_name)
+
+                organizer.params['role'] = vText('OWNER')
+                event['organizer'] = organizer
+
+            location = item.cohort.academy.name
+
+            if item.cohort.academy.website_url:
+                location = f'{location} ({item.cohort.academy.website_url})'
+            event['location'] = vText(item.cohort.academy.name)
+
+            calendar.add_component(event)
+
+        calendar_text = calendar.to_ical()
+
+        response = HttpResponse(calendar_text, content_type='text/calendar')
+        response['Content-Disposition'] = 'attachment; filename="calendar.ics"'
+        return response
 
 
 class ICalCohortsView(APIView):
@@ -348,8 +579,8 @@ class ICalCohortsView(APIView):
         ids = request.GET.get('academy', '')
         slugs = request.GET.get('academy_slug', '')
 
-        ids = ids.split(",") if ids else []
-        slugs = slugs.split(",") if slugs else []
+        ids = ids.split(',') if ids else []
+        slugs = slugs.split(',') if slugs else []
 
         if ids:
             items = Cohort.objects.filter(academy__id__in=ids).order_by('id')
@@ -361,11 +592,13 @@ class ICalCohortsView(APIView):
             items = []
 
         if not ids and not slugs:
-            raise ValidationException("You need to specify at least one academy or academy_slug (comma separated) in the querystring")
+            raise ValidationException(
+                'You need to specify at least one academy or academy_slug (comma separated) in the querystring'
+            )
 
-        if (Academy.objects.filter(id__in=ids).count() != len(ids) or
-                Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
-            raise ValidationException("Some academy not exist")
+        if (Academy.objects.filter(id__in=ids).count() != len(ids)
+                or Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
+            raise ValidationException('Some academy not exist')
 
         items = items.exclude(stage='DELETED')
 
@@ -379,6 +612,7 @@ class ICalCohortsView(APIView):
 
         calendar = iCalendar()
         calendar.add('prodid', f'-//BreatheCode//Academy Cohorts{academies_repr} {key}//EN')
+        calendar.add('METHOD', 'PUBLISH')
         calendar.add('X-WR-CALNAME', f'Academy - Cohorts')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
@@ -404,13 +638,55 @@ class ICalCohortsView(APIView):
 
         for item in items:
             event = iEvent()
+            event_first_day = iEvent()
+            event_last_day = iEvent()
+            has_last_day = False
 
             event.add('summary', item.name)
             event.add('uid', f'breathecode_cohort_{item.id}_{key}')
             event.add('dtstart', item.kickoff_date)
 
+            timeslots = CohortTimeSlot.objects.filter(cohort__id=item.id)
+            first_timeslot = timeslots.order_by('starting_at').first()
+
+            if first_timeslot:
+                event_first_day.add('summary', f'{item.name} - First day')
+                event_first_day.add('uid', f'breathecode_cohort_{item.id}_first_{key}')
+                event_first_day.add(
+                    'dtstart', DatetimeInteger.to_datetime(first_timeslot.timezone,
+                                                           first_timeslot.starting_at))
+                event_first_day.add(
+                    'dtend', DatetimeInteger.to_datetime(first_timeslot.timezone, first_timeslot.ending_at))
+                event_first_day.add('dtstamp', first_timeslot.created_at)
+
             if item.ending_date:
                 event.add('dtend', item.ending_date)
+                timeslots_datetime = []
+
+                for timeslot in timeslots:
+                    starting_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at)
+                    ending_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at)
+                    diff = ending_at - starting_at
+
+                    if timeslot.recurrent:
+                        ending_at = fix_datetime_weekday(item.ending_date, ending_at, prev=True)
+                        starting_at = ending_at - diff
+
+                    timeslots_datetime.append((starting_at, ending_at))
+
+                last_timeslot = None
+
+                if timeslots_datetime:
+                    timeslots_datetime.sort(key=lambda x: x[1], reverse=True)
+                    last_timeslot = timeslots_datetime[0]
+                    has_last_day = True
+
+                    event_last_day.add('summary', f'{item.name} - Last day')
+
+                    event_last_day.add('uid', f'breathecode_cohort_{item.id}_last_{key}')
+                    event_last_day.add('dtstart', last_timeslot[0])
+                    event_last_day.add('dtend', last_timeslot[1])
+                    event_last_day.add('dtstamp', item.created_at)
 
             event.add('dtstamp', item.created_at)
 
@@ -420,8 +696,7 @@ class ICalCohortsView(APIView):
                 organizer = vCalAddress(f'MAILTO:{teacher.user.email}')
 
                 if teacher.user.first_name and teacher.user.last_name:
-                    organizer.params['cn'] = vText(f'{teacher.user.first_name} '
-                        f'{teacher.user.last_name}')
+                    organizer.params['cn'] = vText(f'{teacher.user.first_name} ' f'{teacher.user.last_name}')
                 elif teacher.user.first_name:
                     organizer.params['cn'] = vText(teacher.user.first_name)
                 elif teacher.user.last_name:
@@ -430,13 +705,31 @@ class ICalCohortsView(APIView):
                 organizer.params['role'] = vText('OWNER')
                 event['organizer'] = organizer
 
+                if first_timeslot:
+                    event_first_day['organizer'] = organizer
+
+                if has_last_day:
+                    event_last_day['organizer'] = organizer
+
             location = item.academy.name
 
             if item.academy.website_url:
                 location = f'{location} ({item.academy.website_url})'
+
             event['location'] = vText(item.academy.name)
 
+            if first_timeslot:
+                event_first_day['location'] = vText(item.academy.name)
+
+            if has_last_day:
+                event_last_day['location'] = vText(item.academy.name)
+
+            if first_timeslot:
+                calendar.add_component(event_first_day)
             calendar.add_component(event)
+
+            if has_last_day:
+                calendar.add_component(event_last_day)
 
         calendar_text = calendar.to_ical()
 
@@ -454,8 +747,8 @@ class ICalEventView(APIView):
         ids = request.GET.get('academy', '')
         slugs = request.GET.get('academy_slug', '')
 
-        ids = ids.split(",") if ids else []
-        slugs = slugs.split(",") if slugs else []
+        ids = ids.split(',') if ids else []
+        slugs = slugs.split(',') if slugs else []
 
         if ids:
             items = Event.objects.filter(academy__id__in=ids, status='ACTIVE').order_by('id')
@@ -467,11 +760,13 @@ class ICalEventView(APIView):
             items = []
 
         if not ids and not slugs:
-            raise ValidationException("You need to specify at least one academy or academy_slug (comma separated) in the querystring")
+            raise ValidationException(
+                'You need to specify at least one academy or academy_slug (comma separated) in the querystring'
+            )
 
-        if (Academy.objects.filter(id__in=ids).count() != len(ids) or
-                Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
-            raise ValidationException("Some academy not exist")
+        if (Academy.objects.filter(id__in=ids).count() != len(ids)
+                or Academy.objects.filter(slug__in=slugs).count() != len(slugs)):
+            raise ValidationException('Some academy not exist')
 
         upcoming = request.GET.get('upcoming')
         if upcoming == 'true':
@@ -483,6 +778,7 @@ class ICalEventView(APIView):
 
         calendar = iCalendar()
         calendar.add('prodid', f'-//BreatheCode//Academy Events{academies_repr} {key}//EN')
+        calendar.add('METHOD', 'PUBLISH')
         calendar.add('X-WR-CALNAME', f'Academy - Events')
         calendar.add('X-WR-CALDESC', '')
         calendar.add('REFRESH-INTERVAL;VALUE=DURATION', 'PT15M')
@@ -537,8 +833,7 @@ class ICalEventView(APIView):
                 organizer = vCalAddress(f'MAILTO:{item.author.email}')
 
                 if item.author.first_name and item.author.last_name:
-                    organizer.params['cn'] = vText(f'{item.author.first_name} '
-                        f'{item.author.last_name}')
+                    organizer.params['cn'] = vText(f'{item.author.first_name} ' f'{item.author.last_name}')
                 elif item.author.first_name:
                     organizer.params['cn'] = vText(item.author.first_name)
                 elif item.author.last_name:
@@ -547,8 +842,8 @@ class ICalEventView(APIView):
                 organizer.params['role'] = vText('OWNER')
                 event['organizer'] = organizer
 
-            if item.venue and (item.venue.country or item.venue.state or
-                    item.venue.city or item.venue.street_address):
+            if item.venue and (item.venue.country or item.venue.state or item.venue.city
+                               or item.venue.street_address):
                 value = ''
 
                 if item.venue.street_address:

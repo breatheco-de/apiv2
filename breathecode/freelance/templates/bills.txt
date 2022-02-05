@@ -1,0 +1,6 @@
+<h1>The following is a list of pending payments</h1>
+<ul>
+{% for bill in bills %}
+    <li><a href="v1/freelance/bills/{{ bill.id }}/html" target="_blank" rel="noopener noreferrer">{{ bill.freelancer.first_name }}</a></li>
+{% endfor %}
+</ul>

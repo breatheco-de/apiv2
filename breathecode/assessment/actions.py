@@ -1,34 +1,22 @@
+from breathecode.authenticate.models import Token
 from breathecode.notify.actions import send_email_message
 import logging
-from breathecode.authenticate.actions import create_token
-from .models import StudentAssessment
 
 logger = logging.getLogger(__name__)
 
-def send_assestment(student_assessment):
 
-    token = create_token(student_assessment.user, hours_length=48)
+def send_assestment(user_assessment):
+
+    token, created = Token.get_or_create(user_assessment.user, hours_length=48)
     data = {
-        "SUBJECT": student_assessment.assessment.title,
-        "LINK": f"https://assessment.breatheco.de/{student_assessment.id}?token={token.key}"
+        'SUBJECT': user_assessment.assessment.title,
+        'LINK': f'https://assessment.breatheco.de/{user_assessment.id}?token={token.key}'
     }
-    send_email_message("assessment", student_assessment.user.email, data)
-    
-    logger.info(f"Survey was sent for user: {str(student_assessment.user.id)}")
-    
-    student_assessment.status = "SENT"
-    student_assessment.save()
+    send_email_message('assessment', user_assessment.user.email, data)
+
+    logger.info(f'Survey was sent for user: {str(user_assessment.user.id)}')
+
+    user_assessment.status = 'SENT'
+    user_assessment.save()
 
     return True
-    # keep track of sent survays until they get answered
-
-
-# def answer_survey(user, data):
-#     answer = Answer.objects.create(**{ **data, "user": user })
-
-    # log = SurveyLog.objects.filter(
-    #     user__id=user.id, 
-    #     cohort__id=answer.cohort.id, 
-    #     academy__id=answer.academy.id,
-    #     mentor__id=answer.academy.id
-    # )

@@ -1,6 +1,0 @@
-{% extends "base.txt" %}
-{% block content %}
-Hello! Please click on the following button to pick your password:
-
-{{ LINK }}
-{% endblock %}

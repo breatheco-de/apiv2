@@ -1,27 +1,29 @@
-import requests, json
-from requests.auth import HTTPBasicAuth
+import os
+import requests
+import json
+import logging
 import breathecode.services.activecampaign.actions as actions
-import logging, re, os, json, inspect, urllib
+from breathecode.utils import APIException
+from slugify import slugify
 
 logger = logging.getLogger(__name__)
+
 
 class ActiveCampaign:
     headers = {}
 
     def __init__(self, token=None, url=None):
         if token is None:
-            token = os.getenv('ACTIVE_CAMPAIGN_KEY', "")
+            token = os.getenv('ACTIVE_CAMPAIGN_KEY', '')
 
         if url is None:
-            url = os.getenv('ACTIVE_CAMPAIGN_URL', "")
+            url = os.getenv('ACTIVE_CAMPAIGN_URL', '')
 
         self.host = url
         self.token = token
-        self.headers = {
-            "Authorization": f"Bearer {token}"
-        }
+        self.headers = {'Authorization': f'Bearer {token}'}
 
-    def execute_action(self, webhook_id: int):
+    def execute_action(self, webhook_id: int, acp_ids: dict):
         # wonderful way to fix one poor mocking system
         import requests
 
@@ -41,34 +43,34 @@ class ActiveCampaign:
         webhook = ActiveCampaignWebhook.objects.filter(id=webhook_id).first()
 
         if not webhook:
-            raise Exception("Invalid webhook")
+            raise Exception('Invalid webhook')
 
         if not webhook.webhook_type:
-            raise Exception("Imposible to webhook_type")
+            raise Exception('Imposible to webhook_type')
 
         action = webhook.webhook_type
-        logger.debug(f"Executing ActiveCampaign Webhook => {action}")
+        logger.debug(f'Executing ActiveCampaign Webhook => {action}')
         if hasattr(actions, action):
 
-            logger.debug("Action found")
+            logger.debug('Action found')
             fn = getattr(actions, action)
 
             try:
-                fn(self, webhook, json.loads(webhook.payload))
-                logger.debug("Mark active campaign action as done")
+                fn(self, webhook, json.loads(webhook.payload), acp_ids)
+                logger.debug('Mark active campaign action as done')
                 webhook.status = 'DONE'
                 webhook.status_text = 'OK'
                 webhook.save()
 
             except Exception as e:
-                logger.debug("Mark active campaign action with error")
+                logger.debug('Mark active campaign action with error')
 
                 webhook.status = 'ERROR'
                 webhook.status_text = str(e)
                 webhook.save()
 
         else:
-            message = f"ActiveCampaign Action `{action}` is not implemented"
+            message = f'ActiveCampaign Action `{action}` is not implemented'
             logger.debug(message)
 
             webhook.status = 'ERROR'
@@ -79,7 +81,6 @@ class ActiveCampaign:
 
     @staticmethod
     def add_webhook_to_log(context: dict, academy_slug: str):
-
         """Add one incoming webhook request to log"""
 
         # prevent circular dependency import between thousand modules previuosly loaded and cached
@@ -90,8 +91,8 @@ class ActiveCampaign:
 
         ac_academy = ActiveCampaignAcademy.objects.filter(academy__slug=academy_slug).first()
         if ac_academy is None:
-            logger.debug(f"ActiveCampaign academy {str(academy_slug)} not found")
-            raise APIException(f"ActiveCampaign academy {str(academy_slug)} not found")
+            logger.debug(f'ActiveCampaign academy {str(academy_slug)} not found')
+            raise APIException(f'ActiveCampaign academy {str(academy_slug)} not found')
 
         webhook = ActiveCampaignWebhook()
         webhook.webhook_type = context['type']
@@ -103,6 +104,95 @@ class ActiveCampaign:
         webhook.save()
 
         return webhook
+
+    def get_deal(self, deal_id):
+        #/api/3/deals/id
+        #Api-Token
+        resp = requests.get(f'{self.host}/api/3/deals/{deal_id}', headers={'Api-Token': self.token})
+        logger.debug(f'Get deal {self.host}/api/3/deals/{deal_id}', resp.status_code)
+        return resp.json()
+
+    def get_contact_by_email(self, email):
+        import requests
+
+        #/api/3/deals/id
+        #Api-Token
+        resp = requests.get(f'{self.host}/api/3/contacts',
+                            headers={'Api-Token': self.token},
+                            params={'email': email})
+        logger.debug(f'Get contact by email {self.host}/api/3/contacts', resp.status_code)
+        data = resp.json()
+        if data and 'contacts' in data and len(data['contacts']) == 1:
+            return data['contacts'][0]
+        else:
+            raise Exception(f'Problem fetching contact in activecampaign with email {email}')
+
+    def get_deal_customfields(self, deal_id):
+        #/api/3/deals/id
+        #Api-Token
+        resp = requests.get(f'{self.host}/api/3/deals/{deal_id}/dealCustomFieldData',
+                            headers={'Api-Token': self.token})
+        logger.debug(
+            f'Get custom fields {self.host}/api/3/deals/{deal_id}/dealCustomFieldData with status {str(resp.status_code)}'
+        )
+
+        if resp.status_code == 200:
+            data = resp.json()
+            _reponse = {}
+            for field in data['dealCustomFieldData']:
+                _reponse[str(field['customFieldId'])] = field['fieldValue']
+            return _reponse
+
+        return None
+
+    def add_tag_to_contact(self, contact_id: int, tag_id: int):
+        import requests
+
+        #/api/3/deals/id
+        #Api-Token
+        body = {'contactTag': {'contact': contact_id, 'tag': tag_id}}
+        resp = requests.post(f'{self.host}/api/3/contactTags', headers={'Api-Token': self.token}, json=body)
+        logger.debug(f'Add tag to contact')
+
+        if resp.status_code == 201:
+            data = resp.json()
+            if data and 'contactTag' in data:
+                return data['contactTag']
+            else:
+                raise Exception(f'Bad response format from ActiveCampaign when adding a new tag to contact')
+        else:
+            logger.error(resp.json())
+            raise Exception(f'Failed to add tag to contact {contact_id} with status={resp.status_code}')
+
+    def create_tag(self, slug: str, description: str):
+        import requests
+
+        #/api/3/deals/id
+        #Api-Token
+        body = {'tag': {'tag': slugify(slug), 'tagType': 'contact', 'description': description}}
+        resp = requests.post(f'{self.host}/api/3/tags', headers={'Api-Token': self.token}, json=body)
+        logger.warn(f'Creating tag `{body["tag"]["tag"]}` on active campaign')
+
+        if resp.status_code == 201:
+            logger.warn(f'Tag created successfully')
+            body = resp.json()
+
+            if 'tag' in body:
+                return body['tag']
+
+            else:
+                logger.error(f'Failed to create tag `{slug}` because the structure of response was changed')
+                raise Exception(
+                    f'Failed to create tag `{slug}` because the structure of response was changed')
+
+        else:
+            logger.error(f'Error creating tag `{slug}` with status={str(resp.status_code)}')
+
+            error = resp.json()
+            logger.error(error)
+
+            raise Exception(f'Error creating tag `{slug}` with status={str(resp.status_code)}')
+
 
 class Contacts(object):
     def __init__(self, client):
@@ -136,9 +226,9 @@ class Contacts(object):
             }
         :return: A json
         """
-        if "email" not in data:
-            raise KeyError("The contact must have an email")
-        return self.client._post("contact_sync", data=data)
+        if 'email' not in data:
+            raise KeyError('The contact must have an email')
+        return self.client._post('contact_sync', data=data)
 
     def subscribe_contact(self, data):
         """
@@ -168,10 +258,10 @@ class Contacts(object):
             }
         :return: A json
         """
-        if "email" not in data:
-            raise KeyError("The contact must have an email")
+        if 'email' not in data:
+            raise KeyError('The contact must have an email')
 
-        return self.client._post("contact_add", data=data)
+        return self.client._post('contact_add', data=data)
 
     def edit_contact(self, data):
         """
@@ -201,28 +291,27 @@ class Contacts(object):
             }
         :return: A json
         """
-        if "email" not in data:
-            raise KeyError("The contact must have an email")
-        return self.client._post("contact_edit", data=data)
+        if 'email' not in data:
+            raise KeyError('The contact must have an email')
+        return self.client._post('contact_edit', data=data)
 
     def view_contact_email(self, email):
-        return self.client._get("contact_view_email", aditional_data=[('email',email)])
+        return self.client._get('contact_view_email', aditional_data=[('email', email)])
 
     def view_contact(self, id):
-        return self.client._get("contact_view", aditional_data=[('id', id)])
+        return self.client._get('contact_view', aditional_data=[('id', id)])
 
     def delete_contact(self, id):
-        return self.client._get("contact_delete", aditional_data=[('id', id)])
+        return self.client._get('contact_delete', aditional_data=[('id', id)])
 
 
 class AC_Old_Client(object):
-
     def __init__(self, url, apikey):
 
         if url is None:
-            raise Exception("Invalid URL for active campaign API, have you setup your env variables?")
+            raise Exception('Invalid URL for active campaign API, have you setup your env variables?')
 
-        self._base_url = f"https://{url}" if not url.startswith("http") else url
+        self._base_url = f'https://{url}' if not url.startswith('http') else url
         self._apikey = apikey
         self.contacts = Contacts(self)
         # self.account = Account(self)
@@ -242,24 +331,24 @@ class AC_Old_Client(object):
         return self._request('DELETE', action)
 
     def _request(self, method, action, data=None, aditional_data=None):
-        params =[
-            ('api_action',action),
+        params = [
+            ('api_action', action),
             ('api_key', self._apikey),
             ('api_output', 'json'),
         ]
         if aditional_data is not None:
             for aditional in aditional_data:
                 params.append(aditional)
-        response = requests.request(method, self._base_url+"/admin/api.php", params=params, data=data)
+        response = requests.request(method, self._base_url + '/admin/api.php', params=params, data=data)
         if response.status_code >= 200 and response.status_code < 400:
             data = response.json()
             return self._parse(data)
         else:
-            print("Error when saving contact on AC", response.text)
-            raise Exception("Error when saving contact on AC")
+            print('Error when saving contact on AC', response.text)
+            raise Exception('Error when saving contact on AC')
 
     def _parse(self, response):
         if response['result_code'] == 1:
             return response
         else:
-            raise Exception(response["result_message"])
+            raise Exception(response['result_message'])

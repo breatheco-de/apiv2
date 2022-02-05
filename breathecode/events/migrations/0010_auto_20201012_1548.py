@@ -24,7 +24,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='eventbrite_status',
-            field=models.CharField(default='draft', help_text='One of: draft, live, started, ended, completed and canceled', max_length=9),
+            field=models.CharField(default='draft',
+                                   help_text='One of: draft, live, started, ended, completed and canceled',
+                                   max_length=9),
             preserve_default=False,
         ),
         migrations.AddField(
@@ -35,7 +37,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='organizacion',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='events.organizacion'),
+            field=models.ForeignKey(blank=True,
+                                    null=True,
+                                    on_delete=django.db.models.deletion.CASCADE,
+                                    to='events.organizacion'),
         ),
         migrations.AddField(
             model_name='event',
@@ -50,6 +55,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='sync_status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'), ('ERROR', 'Error')], default='PENDING', help_text='One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status', max_length=9),
+            field=models.CharField(
+                choices=[('PENDING', 'Pending'), ('PERSISTED', 'Persisted'), ('ERROR', 'Error')],
+                default='PENDING',
+                help_text='One of: PENDING, PERSISTED or ERROR depending on how the eventbrite sync status',
+                max_length=9),
         ),
     ]

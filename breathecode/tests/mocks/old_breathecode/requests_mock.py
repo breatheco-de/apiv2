@@ -2,7 +2,8 @@
 Requests mock
 """
 from .constants import (OLD_BREATHECODE_ADMIN, OLD_BREATHECODE_ADMIN_URL, CONTACT_AUTOMATIONS,
-    CONTACT_AUTOMATIONS_URL)
+                        CONTACT_AUTOMATIONS_URL)
+
 
 class ResponseMock():
     """Simutate Response to be used by mocks"""
@@ -24,6 +25,7 @@ class ResponseMock():
     def json(self) -> dict:
         """Convert Response to JSON"""
         return self.data
+
 
 def request_mock(method: str, url: str, auth=None, data=None, headers=None, params=None, json=None):
     """Requests get mock"""

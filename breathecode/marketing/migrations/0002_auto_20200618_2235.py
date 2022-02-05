@@ -39,7 +39,11 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='contact',
             name='phone',
-            field=phonenumber_field.modelfields.PhoneNumberField(blank=True, default=None, max_length=128, null=True, region=None),
+            field=phonenumber_field.modelfields.PhoneNumberField(blank=True,
+                                                                 default=None,
+                                                                 max_length=128,
+                                                                 null=True,
+                                                                 region=None),
         ),
         migrations.AlterField(
             model_name='contact',

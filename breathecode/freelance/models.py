@@ -2,6 +2,10 @@ from django.contrib.auth.models import User
 from django.db import models
 from breathecode.authenticate.models import CredentialsGithub
 from breathecode.admissions.models import Academy
+
+__all__ = ['Freelancer', 'Bill', 'Issue']
+
+
 class Freelancer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     github_user = models.ForeignKey(CredentialsGithub, on_delete=models.SET_DEFAULT, null=True, default=None)
@@ -9,6 +13,7 @@ class Freelancer(models.Model):
 
     def __str__(self):
         return self.user.email
+
 
 DUE = 'DUE'
 APPROVED = 'APPROVED'
@@ -18,21 +23,24 @@ BILL_STATUS = (
     (APPROVED, 'Approved'),
     (PAID, 'Paid'),
 )
+
+
 class Bill(models.Model):
     status = models.CharField(max_length=20, choices=BILL_STATUS, default=DUE)
-    
+
     total_duration_in_minutes = models.FloatField(default=0)
     total_duration_in_hours = models.FloatField(default=0)
     total_price = models.FloatField(default=0)
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
-    
+
     reviewer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
     paid_at = models.DateTimeField(null=True, default=None, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
 
 IGNORED = 'IGNORED'
 DRAFT = 'DRAFT'
@@ -46,6 +54,8 @@ ISSUE_STATUS = (
     (DOING, 'Doing'),
     (DONE, 'Done'),
 )
+
+
 class Issue(models.Model):
     title = models.CharField(max_length=255)
 
@@ -66,3 +76,42 @@ class Issue(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
+PENDING = 'PENDING'
+DONE = 'DONE'
+ERROR = 'ERROR'
+WEBHOOK_STATUS = (
+    (PENDING, 'Pending'),
+    (DONE, 'Done'),
+    (ERROR, 'Error'),
+)
+
+
+class RepositoryIssueWebhook(models.Model):
+
+    webhook_action = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        default=None,
+        help_text='The specific action that was triggered on github for this webhook')
+    run_at = models.DateTimeField(help_text='Date/time that the webhook ran',
+                                  blank=True,
+                                  null=True,
+                                  default=None)
+    repository = models.URLField(max_length=255, help_text='Github repo where the event occured')
+
+    payload = models.JSONField(
+        help_text='Info that came on the request, it varies depending on the webhook type')
+
+    academy_slug = models.SlugField()
+
+    status = models.CharField(max_length=9, choices=WEBHOOK_STATUS, default=PENDING)
+    status_text = models.CharField(max_length=255, default=None, null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'Webhook {self.webhook_action} {self.status} => {self.status_text}'

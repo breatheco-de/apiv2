@@ -6,13 +6,13 @@ def resolve_credentials():
     """Resolve Google Cloud Credentials"""
     path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
 
-    if os.path.exists( path ):
+    if os.path.exists(path):
         return True
 
     credentials = os.getenv('GOOGLE_SERVICE_KEY', None)
     if credentials:
         with open(path, 'w') as credentials_file:
-            credentials_file.write( credentials )
+            credentials_file.write(credentials)
 
 
 def help_command():
@@ -35,7 +35,7 @@ def create_bucket(name: str):
     storage_client = storage.Client()
     bucket = storage_client.create_bucket(name)
 
-    print(f"Bucket {bucket.name} created.")
+    print(f'Bucket {bucket.name} created.')
 
 
 if __name__ == '__main__':

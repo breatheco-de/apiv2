@@ -8,14 +8,24 @@ from mixer.backend.django import mixer
 from django.contrib.auth.models import User
 from breathecode.tests.mixins import DevelopmentEnvironment, DateFormatterMixin
 
+
 class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin):
     """CapacitiesTestCase with auth methods"""
-
     def remove_model_state(self, dict):
         result = None
         if dict:
             result = dict.copy()
             del result['_state']
+
+            # remove any field starting with __ (double underscore) because it is considered private
+            without_private_keys = result.copy()
+            for key in result:
+                print('key', key)
+                if '__' in key:
+                    del without_private_keys[key]
+
+            return without_private_keys
+
         return result
 
     def remove_updated_at(self, dict):
@@ -51,19 +61,20 @@ class AuthenticateMixin(APITestCase, DevelopmentEnvironment, DateFormatterMixin)
         return self.remove_dinamics_fields(data.__dict__.copy()) if data else None
 
     def all_capability_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Capability.objects.filter()]
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in Capability.objects.filter()]
 
     def all_role_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            Role.objects.filter()]
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in Role.objects.filter()]
 
     def all_profile_academy_dict(self):
-        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in
-            ProfileAcademy.objects.filter()]
+        return [self.remove_dinamics_fields(data.__dict__.copy()) for data in ProfileAcademy.objects.filter()]
 
-    def generate_credentials(self, profile_academy=False, capability='', role='',
-            models={}, external_models={}):
+    def generate_credentials(self,
+                             profile_academy=False,
+                             capability='',
+                             role='',
+                             models={},
+                             external_models={}):
         self.maxDiff = None
         external_models = external_models.copy()
         models = models.copy()

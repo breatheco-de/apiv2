@@ -1,5 +1,8 @@
 """
 Google Cloud Service
 """
-from .storage import Storage
-from .datastore import Datastore
+from .datastore import *
+from .function import *
+from .storage import *
+from .file import *
+from .credentials import *

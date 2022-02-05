@@ -18,7 +18,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Specialty',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(max_length=150, unique=True)),
                 ('name', models.CharField(max_length=150)),
                 ('logo_url', models.CharField(blank=True, default=None, max_length=250, null=True)),
@@ -31,18 +32,23 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='UserSpecialty',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('token', models.CharField(db_index=True, max_length=40, unique=True)),
                 ('expires_at', models.DateTimeField(blank=True, default=None, null=True)),
-                ('academy', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
-                ('specialty', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='certificate.specialty')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                ('academy',
+                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='admissions.academy')),
+                ('specialty',
+                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='certificate.specialty')),
+                ('user',
+                 models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),
         migrations.CreateModel(
             name='Badge',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(max_length=150, unique=True)),
                 ('name', models.CharField(max_length=150)),
                 ('logo_url', models.CharField(blank=True, default=None, max_length=250, null=True)),

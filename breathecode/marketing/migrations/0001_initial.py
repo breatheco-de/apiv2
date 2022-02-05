@@ -8,18 +8,19 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
             name='Contact',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('first_name', models.CharField(max_length=150)),
                 ('last_name', models.CharField(max_length=150)),
                 ('email', models.CharField(max_length=150)),
-                ('phone', phonenumber_field.modelfields.PhoneNumberField(blank=True, max_length=128, region=None)),
+                ('phone',
+                 phonenumber_field.modelfields.PhoneNumberField(blank=True, max_length=128, region=None)),
                 ('course', models.CharField(max_length=2)),
                 ('client_comments', models.CharField(max_length=2)),
                 ('language', models.CharField(max_length=2)),

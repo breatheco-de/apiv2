@@ -25,7 +25,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_login_without_email(self):
         """Test /login with incorrect credentials"""
         url = reverse_lazy('authenticate:login')
-        data = { 'password': 'Pain!$%' }
+        data = {'password': 'Pain!$%'}
         response = self.client.post(url, data)
         status_code = response.data['status_code']
 
@@ -38,7 +38,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_login_without_password(self):
         """Test /login with incorrect credentials"""
         url = reverse_lazy('authenticate:login')
-        data = { 'email': 'Konan@naruto.io' }
+        data = {'email': 'Konan@naruto.io'}
         response = self.client.post(url, data)
         status_code = response.data['status_code']
 
@@ -51,7 +51,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_login(self):
         """Test /login"""
         response = self.create_user()
-        token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile('^[0-9a-zA-Z]{,40}$')
 
         token = str(response.data['token'])
         user_id = int(response.data['user_id'])
@@ -67,7 +67,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_login_uppercase_email(self):
         """Test /login"""
         response = self.create_user(email=self.email.upper())
-        token_pattern = re.compile("^[0-9a-zA-Z]{,40}$")
+        token_pattern = re.compile('^[0-9a-zA-Z]{,40}$')
 
         token = str(response.data['token'])
         user_id = int(response.data['user_id'])

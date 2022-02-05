@@ -18,6 +18,8 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='eventbritewebhook',
             name='status',
-            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('ERROR', 'Error')], default='PENDING', max_length=9),
+            field=models.CharField(choices=[('PENDING', 'Pending'), ('DONE', 'Done'), ('ERROR', 'Error')],
+                                   default='PENDING',
+                                   max_length=9),
         ),
     ]

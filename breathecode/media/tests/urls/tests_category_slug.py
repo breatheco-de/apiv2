@@ -13,9 +13,9 @@ from breathecode.tests.mocks import (
 )
 from ..mixins import MediaTestCase
 
+
 class MediaTestSuite(MediaTestCase):
     """Test /answer"""
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -33,7 +33,7 @@ class MediaTestSuite(MediaTestCase):
     def test_category_slug_wrong_academy(self):
         """Test /answer without auth"""
         url = reverse_lazy('media:category_slug', kwargs={'category_slug': 'they-killed-kenny'})
-        response = self.client.get(url, **{'HTTP_Academy': 1 })
+        response = self.client.get(url, **{'HTTP_Academy': 1})
         json = response.json()
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -61,16 +61,15 @@ class MediaTestSuite(MediaTestCase):
     def test_category_slug_without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_media', role='potato')
+        models = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      capability='read_media',
+                                      role='potato')
         url = reverse_lazy('media:category_slug', kwargs={'category_slug': 'they-killed-kenny'})
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'Category not found',
-            'status_code': 404
-        })
+        self.assertEqual(json, {'detail': 'Category not found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_category_dict(), [])
 
@@ -80,8 +79,11 @@ class MediaTestSuite(MediaTestCase):
     def test_root(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_media', role='potato', category=True)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_media',
+                                     role='potato',
+                                     category=True)
         url = reverse_lazy('media:category_slug', kwargs={'category_slug': model['category'].slug})
         response = self.client.get(url)
         json = response.json()
@@ -93,9 +95,7 @@ class MediaTestSuite(MediaTestCase):
             'slug': model['category'].slug,
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_category_dict(), [{
-            **self.model_to_dict(model, 'category')
-        }])
+        self.assertEqual(self.all_category_dict(), [{**self.model_to_dict(model, 'category')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -103,8 +103,12 @@ class MediaTestSuite(MediaTestCase):
     def test_category_slug_with_media(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='read_media', role='potato', media=True, category=True)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_media',
+                                     role='potato',
+                                     media=True,
+                                     category=True)
         url = reverse_lazy('media:category_slug', kwargs={'category_slug': model['category'].slug})
         response = self.client.get(url)
         json = response.json()
@@ -116,9 +120,7 @@ class MediaTestSuite(MediaTestCase):
             'slug': model['category'].slug,
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_category_dict(), [{
-            **self.model_to_dict(model, 'category')
-        }])
+        self.assertEqual(self.all_category_dict(), [{**self.model_to_dict(model, 'category')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -169,17 +171,16 @@ class MediaTestSuite(MediaTestCase):
     def test_academy_slug_put_without_data(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        models = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_media', role='potato')
+        models = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      capability='crud_media',
+                                      role='potato')
         url = reverse_lazy('media:category_slug', kwargs={'category_slug': 'they-killed-kenny'})
         data = {}
         response = self.client.put(url, data)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'Category not found',
-            'status_code': 404
-        })
+        self.assertEqual(json, {'detail': 'Category not found', 'status_code': 404})
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_category_dict(), [])
 
@@ -189,22 +190,23 @@ class MediaTestSuite(MediaTestCase):
     def test_academy_slug_put(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_media', role='potato', category=True)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_media',
+                                     role='potato',
+                                     category=True)
         url = reverse_lazy('media:category_slug', kwargs={'category_slug': model['category'].slug})
-        data = {
-            'slug': 'they-killed-kenny',
-            'name': 'They killed kenny'
-        }
+        data = {'slug': 'they-killed-kenny', 'name': 'They killed kenny'}
         response = self.client.put(url, data)
         json = response.json()
 
         category = self.get_category(1)
 
+        self.assertDatetime(json['created_at'])
+        del json['created_at']
+
         self.assertEqual(json, {
             'id': 1,
-            'created_at': self.datetime_to_iso(model['category'].created_at),
-            'updated_at': self.datetime_to_iso(category.updated_at),
             **data,
         })
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -219,17 +221,19 @@ class MediaTestSuite(MediaTestCase):
     def test_category_slug_delete_with_media(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_media', role='potato', media=True, category=True)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_media',
+                                     role='potato',
+                                     media=True,
+                                     category=True)
         url = reverse_lazy('media:category_slug', kwargs={'category_slug': model['category'].slug})
         response = self.client.delete(url)
         json = response.json()
 
         self.assertEqual(json, {'detail': 'Category contain some medias', 'status_code': 403})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.all_category_dict(), [{
-            **self.model_to_dict(model, 'category')
-        }])
+        self.assertEqual(self.all_category_dict(), [{**self.model_to_dict(model, 'category')}])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -237,8 +241,11 @@ class MediaTestSuite(MediaTestCase):
     def test_category_slug_delete(self):
         """Test /answer without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_media', role='potato', category=True)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_media',
+                                     role='potato',
+                                     category=True)
         url = reverse_lazy('media:category_slug', kwargs={'category_slug': model['category'].slug})
         response = self.client.delete(url)
 

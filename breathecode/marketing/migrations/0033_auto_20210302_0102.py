@@ -13,11 +13,19 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='formentry',
             name='deal_status',
-            field=models.CharField(blank=True, choices=[('WON', 'Won'), ('LOST', 'Lost')], default=None, max_length=15, null=True),
+            field=models.CharField(blank=True,
+                                   choices=[('WON', 'Won'), ('LOST', 'Lost')],
+                                   default=None,
+                                   max_length=15,
+                                   null=True),
         ),
         migrations.AddField(
             model_name='formentry',
             name='sentiment',
-            field=models.CharField(blank=True, choices=[('GOOD', 'Good'), ('BAD', 'Bad')], default=None, max_length=15, null=True),
+            field=models.CharField(blank=True,
+                                   choices=[('GOOD', 'Good'), ('BAD', 'Bad')],
+                                   default=None,
+                                   max_length=15,
+                                   null=True),
         ),
     ]

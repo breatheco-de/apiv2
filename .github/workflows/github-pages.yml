@@ -1,0 +1,29 @@
+name: CI to Github Pages
+
+on:
+  push:
+    branches: [development]
+
+jobs:
+
+  docs:
+    runs-on: ubuntu-latest
+    if: ${{ github.repository == 'breatheco-de/apiv2' }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.10.2
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.10.2
+
+      - name: Install dependencies
+        run: |
+          PYTHONUNBUFFERED=1
+          python -m pip install --upgrade pip
+          python -m pip install pipenv
+          pipenv install --system --deploy --ignore-pipfile --dev
+
+      - name: Deploy docs
+        run: mkdocs gh-deploy --force

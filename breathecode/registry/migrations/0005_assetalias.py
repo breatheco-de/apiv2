@@ -16,7 +16,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('slug', models.SlugField(max_length=200, primary_key=True, serialize=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('asset', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='registry.asset')),
+                ('asset', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE,
+                                            to='registry.asset')),
             ],
         ),
     ]

@@ -1,4 +1,3 @@
-
 """
 Tasks tests
 """
@@ -37,7 +36,10 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
     @patch(CREDENTIALS_PATH['resolve_credentials'], apply_resolve_credentials_mock())
     def test_remove_certificate_screenshot_with_valid_id_cover_else_path(self):
         """remove_certificate_screenshot don't call open in development environment"""
-        model = self.generate_models(specialty=True, layout_design=True, teacher=True, stage=True,
-            user_specialty=True)
-        print("ewwowowowowoowowow", model['user_specialty'].preview_url)
+        model = self.generate_models(specialty=True,
+                                     layout_design=True,
+                                     teacher=True,
+                                     stage=True,
+                                     user_specialty=True)
+        print('ewwowowowowoowowow', model['user_specialty'].preview_url)
         self.assertEqual(remove_certificate_screenshot(model['user_specialty'].id), True)

@@ -3,9 +3,10 @@ from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 from ...models import Academy, Certificate, Cohort, User, CohortUser
 
+HOST = os.environ.get('OLD_BREATHECODE_API')
+DATETIME_FORMAT = '%Y-%m-%d'
 
-HOST = os.environ.get("OLD_BREATHECODE_API")
-DATETIME_FORMAT="%Y-%m-%d"
+
 class Command(BaseCommand):
     help = 'Sync academies from old breathecode'
 
@@ -14,11 +15,11 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            func = getattr(self,options['entity'],'entity_not_found') 
+            func = getattr(self, options['entity'], 'entity_not_found')
         except TypeError:
             print(f'Delete method for {options["entity"]} no Found!')
 
         func(options)
 
     def students(self, options):
-        User.objects.exclude(username="alesanchezr").delete()
+        User.objects.exclude(username='alesanchezr').delete()

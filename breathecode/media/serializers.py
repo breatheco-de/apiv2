@@ -1,5 +1,6 @@
 from breathecode.admissions.models import Academy
-from .models import Media, Category
+from .models import Media, Category, MediaResolution
+from slugify import slugify
 from rest_framework import serializers
 import serpy
 
@@ -27,18 +28,34 @@ class GetMediaSerializer(serpy.Serializer):
     name = serpy.Field()
     mime = serpy.Field()
     url = serpy.Field()
+    thumbnail = serpy.MethodField()
     hash = serpy.Field()
     hits = serpy.Field()
     categories = serpy.MethodField()
     owner = GetUserSerializer(required=False)
 
+    def get_thumbnail(self, obj):
+        return obj.url + '-thumbnail'
+
     def get_categories(self, obj):
         return [GetCategorySerializer(x).data for x in obj.categories.all()]
 
 
+class GetResolutionSerializer(serializers.ModelSerializer):
+    id = serpy.Field()
+    hash = serpy.Field()
+    width = serpy.Field()
+    height = serpy.Field()
+    hits = serpy.Field()
+
+    class Meta:
+        model = MediaResolution
+        fields = ('id', 'hash', 'width', 'height', 'hits')
+
+
 class MediaSerializer(serializers.ModelSerializer):
     url = serializers.CharField(read_only=True, required=False)
-    name = serializers.CharField(read_only=True, required=False)
+    name = serializers.CharField(required=False)
     mime = serializers.CharField(read_only=True, required=False)
     hits = serializers.IntegerField(read_only=True, required=False)
     hash = serializers.CharField(read_only=True, required=False)
@@ -71,9 +88,26 @@ class MediaListSerializer(serializers.ListSerializer):
         return ret
 
 
+class MediaSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+    url = serializers.CharField(read_only=True, required=False)
+    name = serializers.CharField(required=False)
+    mime = serializers.CharField(read_only=True, required=False)
+    hits = serializers.IntegerField(read_only=True, required=False)
+    hash = serializers.CharField(read_only=True, required=False)
+    slug = serializers.SlugField(required=False)
+
+    class Meta:
+        model = Media
+        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime', 'name', 'categories', 'academy')
+        exclude = ()
+        list_serializer_class = MediaListSerializer
+
+
 class MediaPUTSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
     url = serializers.CharField(required=False)
+    thumbnail = serializers.CharField(required=False)
     hash = serializers.CharField()
     slug = serializers.SlugField()
     mime = serializers.CharField()
@@ -81,20 +115,31 @@ class MediaPUTSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Media
-        fields = ('id', 'url', 'hash', 'hits', 'slug', 'mime', 'name',
-            'categories', 'academy')
+        fields = ('id', 'url', 'thumbnail', 'hash', 'hits', 'slug', 'mime', 'name', 'categories', 'academy')
         exclude = ()
         list_serializer_class = MediaListSerializer
 
     def validate(self, data):
         if 'hash' in data and 'academy' in data and isinstance(data['academy'], Academy):
             data['id'] = Media.objects.filter(hash=data['hash'],
-                academy__id=data['academy'].id).values_list('id', flat=True).first()
+                                              academy__id=data['academy'].id).values_list('id',
+                                                                                          flat=True).first()
 
         return data
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(required=False)
+    slug = serializers.SlugField(required=False)
+    name = serializers.CharField()
+    created_at = serializers.DateTimeField(read_only=True)
+
     class Meta:
         model = Category
-        exclude = ()
+        fields = ('name', 'slug', 'created_at', 'id')
+
+    def create(self, validated_data):
+
+        _slug = slugify(validated_data['name'])
+        result = super().create({**validated_data, 'slug': _slug})
+        return result

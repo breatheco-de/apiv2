@@ -2,9 +2,11 @@
 Collections of mixins used to login in authorize microservice
 """
 
+__all__ = ['ModelsMixin']
+
+
 class ModelsMixin():
     """Mixins for models"""
-
     def remove_dinamics_fields(self, dict, fields=['_state', 'created_at', 'updated_at', '_password']):
         """Remove dinamics fields from django models as dict"""
         if not dict:
@@ -15,7 +17,13 @@ class ModelsMixin():
             if field in result:
                 del result[field]
 
-        return result
+        # remove any field starting with __ (double underscore) because it is considered private
+        without_private_keys = result.copy()
+        for key in result:
+            if '__' in key or key.startswith('_'):
+                del without_private_keys[key]
+
+        return without_private_keys
 
     def model_to_dict(self, models: dict, key: str) -> dict:
         """Convert one django models to dict"""

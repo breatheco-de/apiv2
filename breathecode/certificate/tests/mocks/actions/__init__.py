@@ -6,7 +6,6 @@ from .certificate_screenshot_mock import certificate_screenshot_mock
 from .generate_certificate_mock import generate_certificate_mock
 from .remove_certificate_screenshot_mock import remove_certificate_screenshot_mock
 
-
 ACTIONS_PATH = {
     'certificate_screenshot': 'breathecode.certificate.actions.certificate_screenshot',
     'generate_certificate': 'breathecode.certificate.actions.generate_certificate',

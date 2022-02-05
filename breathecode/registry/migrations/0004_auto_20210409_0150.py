@@ -37,7 +37,10 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='asset',
             name='status',
-            field=models.CharField(choices=[('DRAFT', 'Draft'), ('OK', 'Ok'), ('WARNING', 'Warning'), ('ERROR', 'Error')], default='DRAFT', max_length=20),
+            field=models.CharField(choices=[('DRAFT', 'Draft'), ('OK', 'Ok'), ('WARNING', 'Warning'),
+                                            ('ERROR', 'Error')],
+                                   default='DRAFT',
+                                   max_length=20),
         ),
         migrations.AddField(
             model_name='asset',

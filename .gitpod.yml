@@ -4,23 +4,32 @@ image:
 # List the ports you want to expose and what to do when they are served. See https://www.gitpod.io/docs/config-ports/
 ports:
   - port: 8000
+    visibility: public
 
 # List the start up tasks. You can start them in parallel in multiple terminals. See https://www.gitpod.io/docs/config-start-tasks/
 tasks:
-    - command: redis-server
-    - init: pipenv install --dev && cp -n .env.example .env
-      command: >
-        psql -U gitpod -c 'CREATE DATABASE breathecode;' &&
-        psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode &&
-        pipenv run migrate &&
-        pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
-        pipenv run start;
-    - init: pipenv install --dev && cp -n .env.example .env
-      command: pipenv run celery
+  - command: redis-server
+  - init: |
+      python -m scripts.install
+      gp sync-done deps
+    command: pipenv run celery
+  - init: gp sync-await deps
+    command: >
+      (psql -U gitpod -c 'CREATE DATABASE breathecode;' || true) &&
+      (psql -U gitpod -c 'CREATE EXTENSION unaccent;' -d breathecode || true) &&
+      pipenv run migrate &&
+      pipenv run python manage.py loaddata breathecode/*/fixtures/dev_*.json &&
+      pipenv run python manage.py create_roles &&
+      pipenv run start;
+  - init: gp sync-await deps
 
-
-# Other commands
-# python manage.py sync_admissions academies
-# python manage.py sync_admissions certificates
-# python manage.py sync_admissions cohorts
-# python manage.py sync_admissions students --limit=5
+vscode:
+  extensions:
+    - ms-python.python
+    - mikestead.dotenv
+    - ms-azuretools.vscode-docker
+    - github.vscode-pull-request-github
+    - eamodio.gitlens
+    - tabnine.tabnine-vscode
+    - gruntfuggly.todo-tree
+    - redhat.vscode-yaml

@@ -14,14 +14,13 @@ class Migration(migrations.Migration):
     operations = [
         migrations.CreateModel(
             name='UserAdmissions',
-            fields=[
-            ],
+            fields=[],
             options={
                 'proxy': True,
                 'indexes': [],
                 'constraints': [],
             },
-            bases=('auth.user',),
+            bases=('auth.user', ),
             managers=[
                 ('objects', django.contrib.auth.models.UserManager()),
             ],

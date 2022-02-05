@@ -8,6 +8,7 @@ from random import choice
 from ...models import ProfileAcademy
 from ..mixins.new_auth_test_case import AuthTestCase
 
+
 # TODO: this test is incompleted
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
@@ -17,10 +18,11 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': 'Authentication credentials were not provided.',
-            'status_code': status.HTTP_401_UNAUTHORIZED,
-        })
+        self.assertEqual(
+            json, {
+                'detail': 'Authentication credentials were not provided.',
+                'status_code': status.HTTP_401_UNAUTHORIZED,
+            })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_academy_student_without_capability(self):
@@ -31,36 +33,39 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: read_student "
-                "for academy 1",
-            'status_code': 403
-        })
+        self.assertEqual(
+            json, {
+                'detail': "You (user: 1) don't have this capability: read_student "
+                'for academy 1',
+                'status_code': 403
+            })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_academy_student_without_academy(self):
         """Test /academy/student"""
         self.headers(academy=1)
         role = 'konan'
-        self.generate_models(authenticate=True, role=role,
-            capability='read_student')
+        self.generate_models(authenticate=True, role=role, capability='read_student')
         url = reverse_lazy('authenticate:academy_student')
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: read_student "
-                "for academy 1",
-            'status_code': 403
-        })
+        self.assertEqual(
+            json, {
+                'detail': "You (user: 1) don't have this capability: read_student "
+                'for academy 1',
+                'status_code': 403
+            })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_academy_student_without_student(self):
         """Test /academy/student"""
         self.headers(academy=1)
         role = 'konan'
-        model = self.generate_models(authenticate=True, role=role,
-            capability='read_student', profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='read_student',
+                                     profile_academy=True)
         url = reverse_lazy('authenticate:academy_student')
         response = self.client.get(url)
         json = response.json()
@@ -83,8 +88,10 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/student"""
         self.headers(academy=1)
         role = 'student'
-        model = self.generate_models(authenticate=True, role=role,
-            capability='read_student', profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='read_student',
+                                     profile_academy=True)
         url = reverse_lazy('authenticate:academy_student')
         response = self.client.get(url)
         json = response.json()
@@ -109,7 +116,66 @@ class AuthenticateTestSuite(AuthTestCase):
             'user': {
                 'email': model['profile_academy'].user.email,
                 'first_name': model['profile_academy'].user.first_name,
-                'github': None,
+                'profile': None,
+                'id': model['profile_academy'].user.id,
+                'last_name': model['profile_academy'].user.last_name
+            }
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            'academy_id': 1,
+            'address': None,
+            'email': None,
+            'first_name': None,
+            'id': 1,
+            'last_name': None,
+            'phone': '',
+            'role_id': 'student',
+            'status': 'INVITED',
+            'user_id': 1
+        }])
+
+    """
+    🔽🔽🔽 With profile
+    """
+
+    def test_academy_student__with_profile(self):
+        """Test /academy/student"""
+        self.headers(academy=1)
+        role = 'student'
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='read_student',
+                                     profile_academy=True,
+                                     profile=True)
+        url = reverse_lazy('authenticate:academy_student')
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'academy': {
+                'id': model['profile_academy'].academy.id,
+                'name': model['profile_academy'].academy.name,
+                'slug': model['profile_academy'].academy.slug
+            },
+            'address': model['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
+            'email': model['profile_academy'].email,
+            'first_name': model['profile_academy'].first_name,
+            'id': model['profile_academy'].id,
+            'last_name': model['profile_academy'].last_name,
+            'phone': model['profile_academy'].phone,
+            'role': {
+                'name': 'student',
+                'slug': 'student'
+            },
+            'status': 'INVITED',
+            'user': {
+                'email': model['profile_academy'].user.email,
+                'first_name': model['profile_academy'].user.first_name,
+                'profile': {
+                    'avatar_url': None
+                },
                 'id': model['profile_academy'].user.id,
                 'last_name': model['profile_academy'].user.last_name
             }
@@ -133,15 +199,16 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/student"""
         self.headers(academy=1)
         role = 'student'
-        model = self.generate_models(authenticate=True, role=role,
-            capability='read_student', profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='read_student',
+                                     profile_academy=True)
 
         base = model.copy()
         del base['user']
         del base['profile_academy']
 
-        models = [model] + [self.generate_models(profile_academy=True, models=base)
-            for _ in range(0, 105)]
+        models = [model] + [self.generate_models(profile_academy=True, models=base) for _ in range(0, 105)]
         url = reverse_lazy('authenticate:academy_student')
         response = self.client.get(url)
         json = response.json()
@@ -166,7 +233,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user': {
                 'email': model['profile_academy'].user.email,
                 'first_name': model['profile_academy'].user.first_name,
-                'github': None,
+                'profile': None,
                 'id': model['profile_academy'].user.id,
                 'last_name': model['profile_academy'].user.last_name
             }
@@ -190,24 +257,30 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/student"""
         self.headers(academy=1)
         role = 'student'
-        model = self.generate_models(authenticate=True, role=role,
-            capability='read_student', profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='read_student',
+                                     profile_academy=True)
 
         base = model.copy()
         del base['user']
         del base['profile_academy']
 
-        models = [model] + [self.generate_models(profile_academy=True, models=base)
-            for _ in range(0, 9)]
+        models = [model] + [self.generate_models(profile_academy=True, models=base) for _ in range(0, 9)]
         url = reverse_lazy('authenticate:academy_student') + '?limit=5&offset=0'
         response = self.client.get(url)
         json = response.json()
         expected = {
-            'count': 10,
-            'first': None,
-            'last': 'http://testserver/v1/auth/academy/student?limit=5&offset=5',
-            'next': 'http://testserver/v1/auth/academy/student?limit=5&offset=5',
-            'previous': None,
+            'count':
+            10,
+            'first':
+            None,
+            'last':
+            'http://testserver/v1/auth/academy/student?limit=5&offset=5',
+            'next':
+            'http://testserver/v1/auth/academy/student?limit=5&offset=5',
+            'previous':
+            None,
             'results': [{
                 'academy': {
                     'id': model['profile_academy'].academy.id,
@@ -229,7 +302,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'user': {
                     'email': model['profile_academy'].user.email,
                     'first_name': model['profile_academy'].user.first_name,
-                    'github': None,
+                    'profile': None,
                     'id': model['profile_academy'].user.id,
                     'last_name': model['profile_academy'].user.last_name
                 }
@@ -254,24 +327,30 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/student"""
         self.headers(academy=1)
         role = 'student'
-        model = self.generate_models(authenticate=True, role=role,
-            capability='read_student', profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='read_student',
+                                     profile_academy=True)
 
         base = model.copy()
         del base['user']
         del base['profile_academy']
 
-        models = [model] + [self.generate_models(profile_academy=True, models=base)
-            for _ in range(0, 9)]
+        models = [model] + [self.generate_models(profile_academy=True, models=base) for _ in range(0, 9)]
         url = reverse_lazy('authenticate:academy_student') + '?limit=5&offset=5'
         response = self.client.get(url)
         json = response.json()
         expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/auth/academy/student?limit=5',
-            'last': None,
-            'next': None,
-            'previous': 'http://testserver/v1/auth/academy/student?limit=5',
+            'count':
+            10,
+            'first':
+            'http://testserver/v1/auth/academy/student?limit=5',
+            'last':
+            None,
+            'next':
+            None,
+            'previous':
+            'http://testserver/v1/auth/academy/student?limit=5',
             'results': [{
                 'academy': {
                     'id': model['profile_academy'].academy.id,
@@ -293,7 +372,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'user': {
                     'email': model['profile_academy'].user.email,
                     'first_name': model['profile_academy'].user.first_name,
-                    'github': None,
+                    'profile': None,
                     'id': model['profile_academy'].user.id,
                     'last_name': model['profile_academy'].user.last_name
                 }
@@ -318,15 +397,16 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test /academy/student"""
         self.headers(academy=1)
         role = 'student'
-        model = self.generate_models(authenticate=True, role=role,
-            capability='read_student', profile_academy=True)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='read_student',
+                                     profile_academy=True)
 
         base = model.copy()
         del base['user']
         del base['profile_academy']
 
-        models = [model] + [self.generate_models(profile_academy=True, models=base)
-            for _ in range(0, 9)]
+        models = [model] + [self.generate_models(profile_academy=True, models=base) for _ in range(0, 9)]
         url = reverse_lazy('authenticate:academy_student') + '?limit=5&offset=10'
         response = self.client.get(url)
         json = response.json()
@@ -358,10 +438,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_student')
         response = self.client.delete(url)
         json = response.json()
-        expected = {
-            'detail': 'Authentication credentials were not provided.',
-            'status_code': 401
-        }
+        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -401,15 +478,14 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_academy_student_delete_without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True, profile_academy=True,
-            capability='crud_student', role='student')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='crud_student',
+                                     role='student')
         url = reverse_lazy('authenticate:academy_student')
         response = self.client.delete(url)
         json = response.json()
-        expected = {
-            'details': "Missing user_id or academy_id",
-            'status_code': 400
-        }
+        expected = {'details': 'Missing user_id or academy_id', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -433,15 +509,14 @@ class AuthenticateTestSuite(AuthTestCase):
                 'phone': choice(['123', '456', '789']),
                 'status': choice(['INVITED', 'ACTIVE']),
             }
-            model = self.generate_models(authenticate=True, profile_academy=True,
-                profile_academy_kwargs=profile_academy_kwargs, models=base)
+            model = self.generate_models(authenticate=True,
+                                         profile_academy=True,
+                                         profile_academy_kwargs=profile_academy_kwargs,
+                                         models=base)
 
             url = (reverse_lazy('authenticate:academy_student') + f'?{field}=' +
-                str(getattr(model['profile_academy'], field)))
+                   str(getattr(model['profile_academy'], field)))
             response = self.client.delete(url)
-
-            if response.status_code != 204:
-                print(response.json())
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_profile_academy_dict(), [])
@@ -462,8 +537,10 @@ class AuthenticateTestSuite(AuthTestCase):
                 'phone': choice(['123', '456', '789']),
                 'status': choice(['INVITED', 'ACTIVE']),
             }
-            model1 = self.generate_models(authenticate=True, profile_academy=True,
-                profile_academy_kwargs=profile_academy_kwargs, models=base)
+            model1 = self.generate_models(authenticate=True,
+                                          profile_academy=True,
+                                          profile_academy_kwargs=profile_academy_kwargs,
+                                          models=base)
 
             profile_academy_kwargs = {
                 'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
@@ -474,15 +551,13 @@ class AuthenticateTestSuite(AuthTestCase):
                 'status': choice(['INVITED', 'ACTIVE']),
             }
             model2 = self.generate_models(profile_academy=True,
-                profile_academy_kwargs=profile_academy_kwargs, models=base)
+                                          profile_academy_kwargs=profile_academy_kwargs,
+                                          models=base)
 
             url = (reverse_lazy('authenticate:academy_student') + f'?{field}=' +
-                str(getattr(model1['profile_academy'], field)) + ',' +
-                str(getattr(model2['profile_academy'], field)))
+                   str(getattr(model1['profile_academy'], field)) + ',' +
+                   str(getattr(model2['profile_academy'], field)))
             response = self.client.delete(url)
-
-            if response.status_code != 204:
-                print(response.json())
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_profile_academy_dict(), [])
@@ -503,8 +578,10 @@ class AuthenticateTestSuite(AuthTestCase):
                 'phone': choice(['123', '456', '789']),
                 'status': choice(['INVITED', 'ACTIVE']),
             }
-            model1 = self.generate_models(authenticate=True, profile_academy=True,
-                profile_academy_kwargs=profile_academy_kwargs, models=base)
+            model1 = self.generate_models(authenticate=True,
+                                          profile_academy=True,
+                                          profile_academy_kwargs=profile_academy_kwargs,
+                                          models=base)
 
             profile_academy_kwargs = {
                 'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
@@ -515,15 +592,13 @@ class AuthenticateTestSuite(AuthTestCase):
                 'status': choice(['INVITED', 'ACTIVE']),
             }
             model2 = self.generate_models(profile_academy=True,
-                profile_academy_kwargs=profile_academy_kwargs, models=base)
+                                          profile_academy_kwargs=profile_academy_kwargs,
+                                          models=base)
 
             url = (reverse_lazy('authenticate:academy_student') + f'?{field}=' +
-                str(getattr(model1['profile_academy'], field)) + ',' +
-                str(getattr(model2['profile_academy'], field)))
+                   str(getattr(model1['profile_academy'], field)) + ',' +
+                   str(getattr(model2['profile_academy'], field)))
             response = self.client.delete(url)
-
-            if response.status_code != 204:
-                print(response.json())
 
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_profile_academy_dict(), [{
@@ -534,3 +609,323 @@ class AuthenticateTestSuite(AuthTestCase):
 
             for model in ProfileAcademy.objects.all():
                 model.delete()
+
+    def test_academy_student_query_like_full_name(self):
+        """Test /academy/student"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, role='student', capability='read_student')
+
+        profile_academy_kwargs = {
+            'email': 'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+        }
+        profile_academy_kwargs_2 = {
+            'email': 'a@a.com',
+            'first_name': 'Rene',
+            'last_name': 'Lopez',
+        }
+        model_1 = self.generate_models(profile_academy=True,
+                                       profile_academy_kwargs=profile_academy_kwargs,
+                                       models=base)
+
+        model_2 = self.generate_models(profile_academy=True,
+                                       profile_academy_kwargs=profile_academy_kwargs_2,
+                                       models=base)
+
+        base_url = reverse_lazy('authenticate:academy_student')
+        url = f'{base_url}?like=Rene Descartes'
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'academy': {
+                'id': model_1['profile_academy'].academy.id,
+                'name': model_1['profile_academy'].academy.name,
+                'slug': model_1['profile_academy'].academy.slug
+            },
+            'address': model_1['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model_1['profile_academy'].created_at),
+            'email': model_1['profile_academy'].email,
+            'first_name': model_1['profile_academy'].first_name,
+            'id': model_1['profile_academy'].id,
+            'last_name': model_1['profile_academy'].last_name,
+            'phone': model_1['profile_academy'].phone,
+            'role': {
+                'name': 'student',
+                'slug': 'student'
+            },
+            'status': 'INVITED',
+            'user': {
+                'email': model_1['profile_academy'].user.email,
+                'first_name': model_1['profile_academy'].user.first_name,
+                'profile': None,
+                'id': model_1['profile_academy'].user.id,
+                'last_name': model_1['profile_academy'].user.last_name
+            }
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            'academy_id': 1,
+            'address': model_1['profile_academy'].address,
+            'email': model_1['profile_academy'].email,
+            'first_name': model_1['profile_academy'].first_name,
+            'id': 1,
+            'last_name': model_1['profile_academy'].last_name,
+            'phone': model_1['profile_academy'].phone,
+            'role_id': 'student',
+            'status': 'INVITED',
+            'user_id': 1
+        }, {
+            'academy_id': 2,
+            'address': model_2['profile_academy'].address,
+            'email': model_2['profile_academy'].email,
+            'first_name': model_2['profile_academy'].first_name,
+            'id': 2,
+            'last_name': model_2['profile_academy'].last_name,
+            'phone': model_2['profile_academy'].phone,
+            'role_id': 'student',
+            'status': 'INVITED',
+            'user_id': 1
+        }])
+
+    def test_academy_student_query_like_first_name(self):
+        """Test /academy/student"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, role='student', capability='read_student')
+
+        profile_academy_kwargs = {
+            'email': 'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+        }
+        profile_academy_kwargs_2 = {
+            'email': 'a@a.com',
+            'first_name': 'Michael',
+            'last_name': 'Jordan',
+        }
+        model_1 = self.generate_models(profile_academy=True,
+                                       profile_academy_kwargs=profile_academy_kwargs,
+                                       models=base)
+
+        model_2 = self.generate_models(profile_academy=True,
+                                       profile_academy_kwargs=profile_academy_kwargs_2,
+                                       models=base)
+
+        base_url = reverse_lazy('authenticate:academy_student')
+        url = f'{base_url}?like=Rene'
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'academy': {
+                'id': model_1['profile_academy'].academy.id,
+                'name': model_1['profile_academy'].academy.name,
+                'slug': model_1['profile_academy'].academy.slug
+            },
+            'address': model_1['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model_1['profile_academy'].created_at),
+            'email': model_1['profile_academy'].email,
+            'first_name': model_1['profile_academy'].first_name,
+            'id': model_1['profile_academy'].id,
+            'last_name': model_1['profile_academy'].last_name,
+            'phone': model_1['profile_academy'].phone,
+            'role': {
+                'name': 'student',
+                'slug': 'student'
+            },
+            'status': 'INVITED',
+            'user': {
+                'email': model_1['profile_academy'].user.email,
+                'first_name': model_1['profile_academy'].user.first_name,
+                'profile': None,
+                'id': model_1['profile_academy'].user.id,
+                'last_name': model_1['profile_academy'].user.last_name
+            }
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            'academy_id': 1,
+            'address': model_1['profile_academy'].address,
+            'email': model_1['profile_academy'].email,
+            'first_name': model_1['profile_academy'].first_name,
+            'id': 1,
+            'last_name': model_1['profile_academy'].last_name,
+            'phone': model_1['profile_academy'].phone,
+            'role_id': 'student',
+            'status': 'INVITED',
+            'user_id': 1
+        }, {
+            'academy_id': 2,
+            'address': model_2['profile_academy'].address,
+            'email': model_2['profile_academy'].email,
+            'first_name': model_2['profile_academy'].first_name,
+            'id': 2,
+            'last_name': model_2['profile_academy'].last_name,
+            'phone': model_2['profile_academy'].phone,
+            'role_id': 'student',
+            'status': 'INVITED',
+            'user_id': 1
+        }])
+
+    def test_academy_student_query_like_last_name(self):
+        """Test /academy/student"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, role='student', capability='read_student')
+
+        profile_academy_kwargs = {
+            'email': 'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+        }
+        profile_academy_kwargs_2 = {
+            'email': 'a@a.com',
+            'first_name': 'Michael',
+            'last_name': 'Jordan',
+        }
+        model_1 = self.generate_models(profile_academy=True,
+                                       profile_academy_kwargs=profile_academy_kwargs,
+                                       models=base)
+
+        model_2 = self.generate_models(profile_academy=True,
+                                       profile_academy_kwargs=profile_academy_kwargs_2,
+                                       models=base)
+
+        base_url = reverse_lazy('authenticate:academy_student')
+        url = f'{base_url}?like=Descartes'
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'academy': {
+                'id': model_1['profile_academy'].academy.id,
+                'name': model_1['profile_academy'].academy.name,
+                'slug': model_1['profile_academy'].academy.slug
+            },
+            'address': model_1['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model_1['profile_academy'].created_at),
+            'email': model_1['profile_academy'].email,
+            'first_name': model_1['profile_academy'].first_name,
+            'id': model_1['profile_academy'].id,
+            'last_name': model_1['profile_academy'].last_name,
+            'phone': model_1['profile_academy'].phone,
+            'role': {
+                'name': 'student',
+                'slug': 'student'
+            },
+            'status': 'INVITED',
+            'user': {
+                'email': model_1['profile_academy'].user.email,
+                'first_name': model_1['profile_academy'].user.first_name,
+                'profile': None,
+                'id': model_1['profile_academy'].user.id,
+                'last_name': model_1['profile_academy'].user.last_name
+            }
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            'academy_id': 1,
+            'address': model_1['profile_academy'].address,
+            'email': model_1['profile_academy'].email,
+            'first_name': model_1['profile_academy'].first_name,
+            'id': 1,
+            'last_name': model_1['profile_academy'].last_name,
+            'phone': model_1['profile_academy'].phone,
+            'role_id': 'student',
+            'status': 'INVITED',
+            'user_id': 1
+        }, {
+            'academy_id': 2,
+            'address': model_2['profile_academy'].address,
+            'email': model_2['profile_academy'].email,
+            'first_name': model_2['profile_academy'].first_name,
+            'id': 2,
+            'last_name': model_2['profile_academy'].last_name,
+            'phone': model_2['profile_academy'].phone,
+            'role_id': 'student',
+            'status': 'INVITED',
+            'user_id': 1
+        }])
+
+    def test_academy_student_query_like_email(self):
+        """Test /academy/student"""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, role='student', capability='read_student')
+
+        profile_academy_kwargs = {
+            'email': 'b@b.com',
+            'first_name': 'Rene',
+            'last_name': 'Descartes',
+        }
+        profile_academy_kwargs_2 = {
+            'email': 'a@a.com',
+            'first_name': 'Michael',
+            'last_name': 'Jordan',
+        }
+        model_1 = self.generate_models(profile_academy=True,
+                                       profile_academy_kwargs=profile_academy_kwargs,
+                                       models=base)
+
+        model_2 = self.generate_models(profile_academy=True,
+                                       profile_academy_kwargs=profile_academy_kwargs_2,
+                                       models=base)
+
+        base_url = reverse_lazy('authenticate:academy_student')
+        url = f'{base_url}?like=b@b.com'
+
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'academy': {
+                'id': model_1['profile_academy'].academy.id,
+                'name': model_1['profile_academy'].academy.name,
+                'slug': model_1['profile_academy'].academy.slug
+            },
+            'address': model_1['profile_academy'].address,
+            'created_at': self.datetime_to_iso(model_1['profile_academy'].created_at),
+            'email': model_1['profile_academy'].email,
+            'first_name': model_1['profile_academy'].first_name,
+            'id': model_1['profile_academy'].id,
+            'last_name': model_1['profile_academy'].last_name,
+            'phone': model_1['profile_academy'].phone,
+            'role': {
+                'name': 'student',
+                'slug': 'student'
+            },
+            'status': 'INVITED',
+            'user': {
+                'email': model_1['profile_academy'].user.email,
+                'first_name': model_1['profile_academy'].user.first_name,
+                'profile': None,
+                'id': model_1['profile_academy'].user.id,
+                'last_name': model_1['profile_academy'].user.last_name
+            }
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(self.all_profile_academy_dict(), [{
+            'academy_id': 1,
+            'address': model_1['profile_academy'].address,
+            'email': model_1['profile_academy'].email,
+            'first_name': model_1['profile_academy'].first_name,
+            'id': 1,
+            'last_name': model_1['profile_academy'].last_name,
+            'phone': model_1['profile_academy'].phone,
+            'role_id': 'student',
+            'status': 'INVITED',
+            'user_id': 1
+        }, {
+            'academy_id': 2,
+            'address': model_2['profile_academy'].address,
+            'email': model_2['profile_academy'].email,
+            'first_name': model_2['profile_academy'].first_name,
+            'id': 2,
+            'last_name': model_2['profile_academy'].last_name,
+            'phone': model_2['profile_academy'].phone,
+            'role_id': 'student',
+            'status': 'INVITED',
+            'user_id': 1
+        }])
