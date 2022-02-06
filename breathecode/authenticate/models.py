@@ -4,7 +4,6 @@ from django.contrib.auth.models import User
 from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
 from django.utils import timezone
 from django.core.validators import RegexValidator
@@ -257,7 +256,7 @@ class Token(rest_framework.authtoken.models.Token):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
                              related_name='auth_token',
                              on_delete=models.CASCADE,
-                             verbose_name=_('User'))
+                             verbose_name='User')
     token_type = models.CharField(max_length=64, default='temporal')
     expires_at = models.DateTimeField(default=None, blank=True, null=True)
 

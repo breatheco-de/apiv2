@@ -17,10 +17,11 @@ mkdocstrings = "*"
 beautifulsoup4 = "*"
 lxml = "*"
 pytest-xdist = "*"
+faker = "==12.0.1"
 
 [packages]
 django = "*"
-djangorestframework = "~=3.11.1"
+djangorestframework = "*"
 serpy = "*"
 gunicorn = "*"
 requests = "*"
