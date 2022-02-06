@@ -108,7 +108,9 @@ class AnswerIdTestSuite(MarketingTestCase):
             'id': 1,
             'slug': 'they-killed-kenny',
             'subscribers': 0,
-            'tag_type': 'OTHER',
+            'tag_type': 'COHORT',
+            'disputed_at': None,
+            'disputed_reason': None,
         }])
 
         self.assertEqual(logging.Logger.warn.call_args_list, [

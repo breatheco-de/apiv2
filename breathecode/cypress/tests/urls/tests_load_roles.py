@@ -220,6 +220,18 @@ CAPABILITIES = [
         'slug': 'crud_mentor',
         'description': 'Update, create and delete academy mentors'
     },
+    {
+        'slug': 'crud_asset',
+        'description': 'Update, create and delete registry assets'
+    },
+    {
+        'slug': 'read_tag',
+        'description': 'Read marketing tags and their details'
+    },
+    {
+        'slug': 'crud_tag',
+        'description': 'Update, create and delete a marketing tag and its details'
+    },
 ]
 
 ROLES = [
@@ -297,6 +309,108 @@ ROLES = [
 ]
 
 
+def extend_roles(roles: list):
+    roles.append({
+        'slug':
+        'assistant',
+        'name':
+        'Teacher Assistant',
+        'caps':
+        create_roles.extend(roles, ['staff']) + [
+            'read_assigment',
+            'crud_assignment',
+            'read_cohort_activity',
+            'read_nps_answers',
+            'classroom_activity',
+            'read_event',
+            'task_delivery_details',
+            'crud_cohort',
+        ]
+    })
+    roles.append({
+        'slug':
+        'career_support',
+        'name':
+        'Career Support Specialist',
+        'caps':
+        create_roles.extend(roles, ['staff']) + ['read_certificate', 'crud_certificate', 'crud_shortlink']
+    })
+    roles.append({
+        'slug':
+        'admissions_developer',
+        'name':
+        'Admissions Developer',
+        'caps':
+        create_roles.extend(roles, ['staff']) +
+        ['crud_lead', 'crud_student', 'crud_cohort', 'read_cohort', 'read_lead', 'read_activity']
+    })
+    roles.append({
+        'slug': 'syllabus_coordinator',
+        'name': 'Syllabus Coordinator',
+        'caps': create_roles.extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset']
+    })
+    roles.append({
+        'slug': 'culture_and_recruitment',
+        'name': 'Culture and Recruitment',
+        'caps': create_roles.extend(roles, ['staff']) + ['crud_member']
+    })
+    roles.append({
+        'slug':
+        'community_manager',
+        'name':
+        'Manage Syllabus, Exercises and all academy content',
+        'caps':
+        create_roles.extend(roles, ['staff']) + [
+            'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
+            'read_cohort', 'crud_media'
+        ]
+    })
+    roles.append({
+        'slug':
+        'growth_manager',
+        'name':
+        'Growth Manager',
+        'caps':
+        create_roles.extend(roles, ['staff', 'community_manager']) + [
+            'crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink',
+            'crud_tag'
+        ]
+    })
+    roles.append({
+        'slug': 'homework_reviewer',
+        'name': 'Homework Reviewer',
+        'caps': create_roles.extend(roles, ['assistant'])
+    })
+    roles.append({
+        'slug': 'teacher',
+        'name': 'Teacher',
+        'caps': create_roles.extend(roles, ['assistant']) + ['crud_cohort']
+    })
+    roles.append({
+        'slug':
+        'academy_coordinator',
+        'name':
+        'Mentor in residence',
+        'caps':
+        create_roles.extend(roles, ['teacher']) + [
+            'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
+            'send_reset_password', 'generate_temporal_token', 'crud_certificate', 'crud_review',
+            'crud_mentor', 'read_mentor', 'read_assignment_sensitive_details', 'crud_shortlink'
+        ]
+    })
+    roles.append({
+        'slug':
+        'country_manager',
+        'name':
+        'Country Manager',
+        'caps':
+        create_roles.extend(roles, [
+            'academy_coordinator', 'student', 'career_support', 'growth_manager', 'admissions_developer',
+            'syllabus_coordinator', 'read_organization', 'crud_organization'
+        ]) + ['crud_my_academy', 'generate_academy_token', 'send_reset_password', 'generate_temporal_token']
+    })
+
+
 class AcademyEventTestSuite(CypressTestCase):
     def test_load_roles__bad_environment__not_exits(self):
         if 'ALLOW_UNSAFE_CYPRESS_APP' in os.environ:
@@ -329,6 +443,8 @@ class AcademyEventTestSuite(CypressTestCase):
            MagicMock(return_value=CAPABILITIES))
     @patch('breathecode.authenticate.management.commands.create_roles.get_roles',
            MagicMock(return_value=ROLES))
+    @patch('breathecode.authenticate.management.commands.create_roles.extend_roles',
+           MagicMock(side_effect=extend_roles))
     def test_load_roles(self):
         self.maxDiff = None
         os.environ['ALLOW_UNSAFE_CYPRESS_APP'] = 'True'
@@ -615,6 +731,18 @@ class AcademyEventTestSuite(CypressTestCase):
             {
                 'slug': 'crud_mentor',
                 'description': 'Update, create and delete academy mentors'
+            },
+            {
+                'description': 'Update, create and delete registry assets',
+                'slug': 'crud_asset'
+            },
+            {
+                'slug': 'read_tag',
+                'description': 'Read marketing tags and their details'
+            },
+            {
+                'slug': 'crud_tag',
+                'description': 'Update, create and delete a marketing tag and its details'
             },
         ])
 
