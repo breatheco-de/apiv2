@@ -31,11 +31,13 @@ class Command(BaseCommand):
         if options['path'] is None:
             print('Please specify the script path')
         script_slug = options['path'].split('.')[0]
+        application = self.mock_application()
 
         print('Attempting to run script: ' + self.style.WARNING(script_slug))
+        print('Academy for this test is set to: ' + self.style.WARNING(application.academy.slug))
         script = MonitorScript.objects.filter(script_slug=script_slug).first()
         if script is None:
-            script = MonitorScript(script_slug=script_slug, application=self.mock_application())
+            script = MonitorScript(script_slug=script_slug, application=application)
         result = run_script(script)
 
         self.stdout.write(self.style.SUCCESS('The script was tested with the following outcome:'))

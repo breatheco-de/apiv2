@@ -1,7 +1,7 @@
 import serpy, logging
 from django.utils import timezone
 from datetime import timedelta
-from .models import FormEntry, AcademyAlias, ShortLink
+from .models import FormEntry, AcademyAlias, ShortLink, Tag
 from breathecode.monitoring.actions import test_link
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
@@ -47,9 +47,11 @@ class DownloadableSerializer(serpy.Serializer):
 
 
 class TagSmallSerializer(serpy.Serializer):
-    id = serpy.Field()
     slug = serpy.Field()
     tag_type = serpy.Field()
+    subscribers = serpy.Field()
+    disputed_at = serpy.Field()
+    disputed_reason = serpy.Field()
     automation = AutomationSmallSerializer(required=False)
 
 
@@ -147,7 +149,8 @@ class ShortLinkSerializer(serializers.ModelSerializer):
 
         utc_now = timezone.now()
         days_ago = self.instance.created_at + timedelta(days=1)
-        if days_ago < utc_now and (self.instance.destination != data['destination'] or self.instance.slug != data['slug']):
+        if days_ago < utc_now and (self.instance.destination != data['destination']
+                                   or self.instance.slug != data['slug']):
             raise ValidationException(
                 f'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
                 slug='update-days-ago')
@@ -155,4 +158,10 @@ class ShortLinkSerializer(serializers.ModelSerializer):
         return {**data, 'academy': academy}
 
     def create(self, validated_data):
-        return ShortLink.objects.create({ **validated_data, author: self.context.get('request').user })
+        return ShortLink.objects.create({**validated_data, author: self.context.get('request').user})
+
+
+class PUTTagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        exclude = ('slug', 'acp_id', 'subscribers', 'ac_academy', 'created_at', 'updated_at')

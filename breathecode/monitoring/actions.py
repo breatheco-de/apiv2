@@ -255,6 +255,7 @@ def run_script(script):
                 exec(content, {'academy': script.application.academy}, local)
                 script.status_code = 0
                 script.status = 'OPERATIONAL'
+                script.special_status_text = 'OK'
                 results['severity_level'] = 5
                 script.response_text = s.getvalue()
 
@@ -274,7 +275,7 @@ def run_script(script):
 
             except Exception as e:
                 import traceback
-                script.special_status_text = str(e)
+                script.special_status_text = str(e)[:255]
                 script.response_text = ''.join(traceback.format_exception(None, e, e.__traceback__))
                 script.status_code = 1
                 script.status = 'CRITICAL'

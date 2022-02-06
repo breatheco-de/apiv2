@@ -230,6 +230,14 @@ CAPABILITIES = [
         'slug': 'crud_asset',
         'description': 'Update, create and delete registry assets'
     },
+    {
+        'slug': 'read_tag',
+        'description': 'Read marketing tags and their details'
+    },
+    {
+        'slug': 'crud_tag',
+        'description': 'Update, create and delete a marketing tag and its details'
+    },
 ]
 
 ROLES = [
@@ -253,6 +261,8 @@ ROLES = [
             'read_invite',
             'read_lead',
             'crud_lead',
+            'crud_tag',
+            'read_tag',
             'read_review',
             'read_shortlink',
             'read_nps_answers',
@@ -277,6 +287,7 @@ ROLES = [
             'get_academy_token',
             'crud_activity',
             'read_survey',
+            'read_tag',
             'read_layout',
             'read_event',
             'read_certificate',
@@ -416,8 +427,10 @@ class Command(BaseCommand):
             'name':
             'Growth Manager',
             'caps':
-            extend(roles, ['staff', 'community_manager']) +
-            ['crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink']
+            extend(roles, ['staff', 'community_manager']) + [
+                'crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink',
+                'crud_tag'
+            ]
         })
         roles.append({
             'slug': 'homework_reviewer',
@@ -436,20 +449,9 @@ class Command(BaseCommand):
             'Mentor in residence',
             'caps':
             extend(roles, ['teacher']) + [
-                'crud_syllabus',
-                'crud_cohort',
-                'crud_student',
-                'crud_survey',
-                'read_won_lead',
-                'crud_member',
-                'send_reset_password',
-                'generate_temporal_token',
-                'crud_certificate',
-                'crud_review',
-                'crud_mentor',
-                'read_mentor',
-                'read_assignment_sensitive_details',
-                'crud_shortlink',
+                'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
+                'send_reset_password', 'generate_temporal_token', 'crud_certificate', 'crud_review',
+                'crud_mentor', 'read_mentor', 'read_assignment_sensitive_details', 'crud_shortlink'
             ]
         })
         roles.append({

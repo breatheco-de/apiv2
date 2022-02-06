@@ -24,6 +24,7 @@ from .serializers import (
     AutomationSmallSerializer,
     DownloadableSerializer,
     ShortLinkSerializer,
+    PUTTagSerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import sync_tags, sync_automations
@@ -356,7 +357,7 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    @capable_of('crud_lead')
+    @capable_of('read_tag')
     def get(self, request, format=None, academy_id=None):
         tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
 
@@ -371,6 +372,24 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
 
         serializer = TagSmallSerializer(tags, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('crud_tag')
+    def put(self, request, tag_slug, academy_id=None):
+
+        tag = Tag.objects.filter(slug=tag_slug, ac_academy__academy__id=academy_id).first()
+        if tag is None:
+            raise ValidationException(f'Tag {tag_slug} not found for this academy', slug='tag-not-found')
+
+        serializer = PUTTagSerializer(tag,
+                                      data=request.data,
+                                      context={
+                                          'request': request,
+                                          'academy': academy_id
+                                      })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class AcademyAutomationView(APIView, GenerateLookupsMixin):
