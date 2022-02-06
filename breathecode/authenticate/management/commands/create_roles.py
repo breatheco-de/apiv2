@@ -1,4 +1,5 @@
 import os, requests, sys, pytz
+from typing import TypedDict
 from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
 
@@ -344,6 +345,116 @@ def get_roles():
     return ROLES.copy()
 
 
+class RoleType(TypedDict):
+    slug: str
+    name: str
+    caps: list[str]
+
+
+# this function is used to can mock the list of roles
+def extend_roles(roles: list[RoleType]) -> None:
+    """
+    These are additional roles that extend from the base roles above,
+    you can exend from more than one role but also add additional capabilitis at the end.
+    """
+    roles.append({
+        'slug':
+        'assistant',
+        'name':
+        'Teacher Assistant',
+        'caps':
+        extend(roles, ['staff']) + [
+            'read_assigment',
+            'crud_assignment',
+            'read_cohort_activity',
+            'read_nps_answers',
+            'classroom_activity',
+            'read_event',
+            'task_delivery_details',
+            'crud_cohort',
+        ]
+    })
+    roles.append({
+        'slug': 'career_support',
+        'name': 'Career Support Specialist',
+        'caps': extend(roles, ['staff']) + ['read_certificate', 'crud_certificate', 'crud_shortlink']
+    })
+    roles.append({
+        'slug':
+        'admissions_developer',
+        'name':
+        'Admissions Developer',
+        'caps':
+        extend(roles, ['staff']) +
+        ['crud_lead', 'crud_student', 'crud_cohort', 'read_cohort', 'read_lead', 'read_activity']
+    })
+    roles.append({
+        'slug': 'syllabus_coordinator',
+        'name': 'Syllabus Coordinator',
+        'caps': extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset']
+    })
+    roles.append({
+        'slug': 'culture_and_recruitment',
+        'name': 'Culture and Recruitment',
+        'caps': extend(roles, ['staff']) + ['crud_member']
+    })
+    roles.append({
+        'slug':
+        'community_manager',
+        'name':
+        'Manage Syllabus, Exercises and all academy content',
+        'caps':
+        extend(roles, ['staff']) + [
+            'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
+            'read_cohort', 'crud_media'
+        ]
+    })
+    roles.append({
+        'slug':
+        'growth_manager',
+        'name':
+        'Growth Manager',
+        'caps':
+        extend(roles, ['staff', 'community_manager']) + [
+            'crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink',
+            'crud_tag'
+        ]
+    })
+    roles.append({
+        'slug': 'homework_reviewer',
+        'name': 'Homework Reviewer',
+        'caps': extend(roles, ['assistant'])
+    })
+    roles.append({
+        'slug': 'teacher',
+        'name': 'Teacher',
+        'caps': extend(roles, ['assistant']) + ['crud_cohort']
+    })
+    roles.append({
+        'slug':
+        'academy_coordinator',
+        'name':
+        'Mentor in residence',
+        'caps':
+        extend(roles, ['teacher']) + [
+            'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
+            'send_reset_password', 'generate_temporal_token', 'crud_certificate', 'crud_review',
+            'crud_mentor', 'read_mentor', 'read_assignment_sensitive_details', 'crud_shortlink'
+        ]
+    })
+    roles.append({
+        'slug':
+        'country_manager',
+        'name':
+        'Country Manager',
+        'caps':
+        extend(roles, [
+            'academy_coordinator', 'student', 'career_support', 'growth_manager', 'admissions_developer',
+            'syllabus_coordinator', 'read_organization', 'crud_organization'
+        ]) + ['crud_my_academy', 'generate_academy_token', 'send_reset_password', 'generate_temporal_token']
+    })
+
+
 class Command(BaseCommand):
     help = 'Create default system capabilities'
 
@@ -366,106 +477,7 @@ class Command(BaseCommand):
 
         # These are additional roles that extend from the base roles above,
         # you can exend from more than one role but also add additional capabilitis at the end
-        roles.append({
-            'slug':
-            'assistant',
-            'name':
-            'Teacher Assistant',
-            'caps':
-            extend(roles, ['staff']) + [
-                'read_assigment',
-                'crud_assignment',
-                'read_cohort_activity',
-                'read_nps_answers',
-                'classroom_activity',
-                'read_event',
-                'task_delivery_details',
-                'crud_cohort',
-            ]
-        })
-        roles.append({
-            'slug':
-            'career_support',
-            'name':
-            'Career Support Specialist',
-            'caps':
-            extend(roles, ['staff']) + ['read_certificate', 'crud_certificate', 'crud_shortlink']
-        })
-        roles.append({
-            'slug':
-            'admissions_developer',
-            'name':
-            'Admissions Developer',
-            'caps':
-            extend(roles, ['staff']) +
-            ['crud_lead', 'crud_student', 'crud_cohort', 'read_cohort', 'read_lead', 'read_activity']
-        })
-        roles.append({
-            'slug': 'syllabus_coordinator',
-            'name': 'Syllabus Coordinator',
-            'caps': extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset']
-        })
-        roles.append({
-            'slug': 'culture_and_recruitment',
-            'name': 'Culture and Recruitment',
-            'caps': extend(roles, ['staff']) + ['crud_member']
-        })
-        roles.append({
-            'slug':
-            'community_manager',
-            'name':
-            'Manage Syllabus, Exercises and all academy content',
-            'caps':
-            extend(roles, ['staff']) + [
-                'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
-                'read_cohort', 'crud_media'
-            ]
-        })
-        roles.append({
-            'slug':
-            'growth_manager',
-            'name':
-            'Growth Manager',
-            'caps':
-            extend(roles, ['staff', 'community_manager']) + [
-                'crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink',
-                'crud_tag'
-            ]
-        })
-        roles.append({
-            'slug': 'homework_reviewer',
-            'name': 'Homework Reviewer',
-            'caps': extend(roles, ['assistant'])
-        })
-        roles.append({
-            'slug': 'teacher',
-            'name': 'Teacher',
-            'caps': extend(roles, ['assistant']) + ['crud_cohort']
-        })
-        roles.append({
-            'slug':
-            'academy_coordinator',
-            'name':
-            'Mentor in residence',
-            'caps':
-            extend(roles, ['teacher']) + [
-                'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
-                'send_reset_password', 'generate_temporal_token', 'crud_certificate', 'crud_review',
-                'crud_mentor', 'read_mentor', 'read_assignment_sensitive_details', 'crud_shortlink'
-            ]
-        })
-        roles.append({
-            'slug':
-            'country_manager',
-            'name':
-            'Country Manager',
-            'caps':
-            extend(roles, [
-                'academy_coordinator', 'student', 'career_support', 'growth_manager', 'admissions_developer',
-                'syllabus_coordinator', 'read_organization', 'crud_organization'
-            ]) +
-            ['crud_my_academy', 'generate_academy_token', 'send_reset_password', 'generate_temporal_token']
-        })
+        extend_roles(roles)
 
         for r in roles:
             _r = Role.objects.filter(slug=r['slug']).first()

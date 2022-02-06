@@ -98,6 +98,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'last_name': None,
                 'phone': '',
                 'role': {
+                    'id': role,
                     'name': role,
                     'slug': role,
                 },
@@ -163,6 +164,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'last_name': None,
                 'phone': '',
                 'role': {
+                    'id': role,
                     'name': role,
                     'slug': role,
                 },
@@ -229,6 +231,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'last_name': None,
                 'phone': '',
                 'role': {
+                    'id': role,
                     'name': role,
                     'slug': role,
                 },
