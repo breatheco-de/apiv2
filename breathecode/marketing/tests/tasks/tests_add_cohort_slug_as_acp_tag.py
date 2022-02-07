@@ -100,7 +100,6 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
         add_cohort_slug_as_acp_tag.delay(1, 1)
-        print(self.all_tag_dict())
         self.assertEqual(self.all_tag_dict(), [{
             'ac_academy_id': 1,
             'acp_id': 1,

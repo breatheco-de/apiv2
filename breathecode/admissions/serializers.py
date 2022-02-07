@@ -319,17 +319,10 @@ class GetCohortUserSerializer(serpy.Serializer):
     educational_status = serpy.Field()
     created_at = serpy.Field()
     profile_academy = serpy.MethodField()
-    profile = serpy.MethodField(required=False)
 
     def get_profile_academy(self, obj):
         profile = ProfileAcademy.objects.filter(user=obj.user, academy=obj.cohort.academy).first()
         return GetProfileAcademySmallSerializer(profile).data if profile else None
-
-    def get_profile(self, obj):
-        if obj.user and hasattr(obj.user, 'profile'):
-            return ProfileSerializer(obj.user.profile).data
-
-        return None
 
 
 class GETCohortTimeSlotSerializer(serpy.Serializer):

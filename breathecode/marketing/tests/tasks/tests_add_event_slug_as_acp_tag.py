@@ -13,7 +13,7 @@ AC_URL = f'{AC_HOST}/api/3/tags'
 AC_RESPONSE = {
     'tag': {
         'id': 1,
-        'tag': 'event-they-killed-kenny',
+        'tag_type': 'event-they-killed-kenny',
     },
 }
 AC_ERROR_RESPONSE = {
@@ -24,8 +24,69 @@ TASK_STARTED_MESSAGE = 'Task add_event_slug_as_acp_tag started'
 
 class AnswerIdTestSuite(MarketingTestCase):
     """
+    🔽🔽🔽 Without Academy
+    """
+    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
+    def test_add_event_slug_as_acp_tag__without_academy(self):
+        import logging
+
+        add_event_slug_as_acp_tag.delay(1, 1)
+
+        self.assertEqual(self.all_tag_dict(), [])
+        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Academy 1 not found')])
+
+    """
+    🔽🔽🔽 Without ActiveCampaignAcademy
+    """
+
+    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
+    def test_add_event_slug_as_acp_tag__without_active_campaign_academy(self):
+        import logging
+
+        model = self.generate_models(academy=True)
+
+        add_event_slug_as_acp_tag.delay(1, 1)
+
+        self.assertEqual(self.all_tag_dict(), [])
+
+        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('ActiveCampaign Academy 1 not found')])
+
+    """
+    🔽🔽🔽 Without Event
+    """
+
+    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
+    def test_add_event_slug_as_acp_tag__without_event(self):
+        import logging
+
+        active_campaign_academy_kwargs = {'ac_url': AC_HOST}
+        model = self.generate_models(academy=True,
+                                     skip_event=True,
+                                     active_campaign_academy=True,
+                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
+
+        add_event_slug_as_acp_tag.delay(1, 1)
+
+        self.assertEqual(self.all_tag_dict(), [])
+
+        self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Event 1 not found')])
+
+    """
     🔽🔽🔽 Create a Tag in active campaign
     """
+
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.events.signals.event_saved.send', MagicMock())
@@ -57,5 +118,41 @@ class AnswerIdTestSuite(MarketingTestCase):
             call(TASK_STARTED_MESSAGE),
             call(f'Creating tag `event-{model.event.slug}` on active campaign'),
             call('Tag created successfully'),
+        ])
+        self.assertEqual(logging.Logger.error.call_args_list, [])
+
+    """
+    🔽🔽🔽 Tag already exists in active campaign
+    """
+
+    @patch('logging.Logger.warn', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
+    def test_add_event_slug_as_acp_tag__tag_exists(self):
+        import logging
+
+        active_campaign_academy_kwargs = {'ac_url': AC_HOST}
+        tag_kwargs = {'slug': 'event-they-killed-kenny'}
+        event_kwargs = {
+            'slug': 'they-killed-kenny',
+            'name': 'they-killed-kenny',
+            'id': 1,
+        }
+
+        model = self.generate_models(tag=True,
+                                     academy=True,
+                                     active_campaign_academy=True,
+                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs,
+                                     tag_kwargs=tag_kwargs,
+                                     event=event_kwargs)
+
+        add_event_slug_as_acp_tag.delay(1, 1)
+
+        self.assertEqual(self.all_tag_dict(), [self.model_to_dict(model, 'tag')])
+
+        self.assertEqual(logging.Logger.warn.call_args_list, [
+            call(TASK_STARTED_MESSAGE),
+            call(f'Tag for event `{model.event.slug}` already exists'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])

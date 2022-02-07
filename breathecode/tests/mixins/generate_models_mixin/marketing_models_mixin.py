@@ -59,10 +59,10 @@ class MarketingModelsMixin(ModelsMixin):
         if not 'downloadable' in models and is_valid(downloadable):
             kargs = {}
 
-            if 'academy' in models:
+            if 'academy' in models and is_valid(downloadable):
                 kargs['academy'] = just_one(models['academy'])
 
-            if 'user' in models:
+            if 'user' in models and is_valid(downloadable):
                 kargs['user'] = just_one(models['user'])
 
             models['downloadable'] = create_models(downloadable, 'marketing.Downloadable', **{
