@@ -73,7 +73,7 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
 
         items = Answer.objects.filter(academy__id=academy_id)
         lookup = {}
-            
+
         users = request.GET.get('user', None)
         if users is not None and users != '':
             items = items.filter(user__id__in=users.split(','))
@@ -81,7 +81,7 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
         cohorts = request.GET.get('cohort', None)
         if cohorts is not None and cohorts != '':
             items = items.filter(cohort__slug__in=cohorts.split(','))
-            
+
         mentors = request.GET.get('mentor', None)
         if mentors is not None and mentors != '':
             items = items.filter(mentor__id__in=mentors.split(','))
@@ -93,7 +93,7 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
         score = request.GET.get('score', None)
         if score is not None and score != '':
             lookup['score'] = score
-            
+
         _status = request.GET.get('status', None)
         if _status is not None and _status != '':
             items = items.filter(status__in=_status.split(','))
