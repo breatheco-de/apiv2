@@ -86,7 +86,7 @@ def async_activecampaign_webhook(self, webhook_id):
             status = 'error'
 
     else:
-        message = f"ActiveCampaign Academy Profile {organization_id} doesn\'t exist"
+        message = f"ActiveCampaign Academy Profile {webhook_id} doesn\'t exist"
 
         webhook.status = 'ERROR'
         webhook.status_text = message
@@ -230,6 +230,48 @@ def add_cohort_slug_as_acp_tag(self, cohort_id: int, academy_id: int) -> None:
         tag = Tag(slug=data['tag'],
                   acp_id=data['id'],
                   tag_type='COHORT',
+                  ac_academy=ac_academy,
+                  subscribers=0)
+        tag.save()
+
+    except:
+        pass
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
+    logger.warn('Task add_event_slug_as_acp_tag started')
+
+    if not Academy.objects.filter(id=academy_id).exists():
+        logger.error(f'Academy {academy_id} not found')
+        return
+
+    ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    if ac_academy is None:
+        logger.error(f'ActiveCampaign Academy {academy_id} not found')
+        return
+
+    event = Event.objects.filter(id=event_id).first()
+    if event is None:
+        logger.error(f'Event {event_id} not found')
+        return
+
+    if not event.slug:
+        logger.error(f'Event {event_id} not have a slug')
+        return
+
+    client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+    tag = Tag.objects.filter(slug=event.slug, ac_academy__id=ac_academy.id).first()
+    if tag:
+        logger.error(f'Tag for event `{event.slug}` already exists')
+        return
+
+    try:
+        data = client.create_tag(event.slug, description=f'Event {event.slug} at {ac_academy.academy.slug}')
+
+        tag = Tag(slug=data['tag'],
+                  acp_id=data['id'],
+                  tag_type='DISCOVERY',
                   ac_academy=ac_academy,
                   subscribers=0)
         tag.save()

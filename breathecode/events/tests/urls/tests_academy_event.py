@@ -1,16 +1,6 @@
-import re
 from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
-from datetime import datetime
-from breathecode.utils import Cache
-from unittest.mock import patch
 from ..mixins.new_events_tests_case import EventTestCase
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
 from breathecode.services import datetime_to_iso_format
 from django.utils import timezone
 
@@ -545,6 +535,42 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(self.all_event_dict(), [])
 
     """
+    🔽🔽🔽 Post bad slug
+    """
+
+    def test_all_academy_events__post__bad_slug(self):
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato')
+
+        url = reverse_lazy('events:academy_all_events')
+        current_date = self.datetime_now()
+        data = {
+            'slug': 'they-killed-kenny',
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.post(url, data)
+        json = response.json()
+
+        expected = {
+            'detail': 'slug-is-not-startswith-event',
+            'status_code': 400,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [])
+
+    """
     🔽🔽🔽 Post
     """
 
@@ -561,6 +587,7 @@ class AcademyEventTestSuite(EventTestCase):
         current_date = self.datetime_now()
         data = {
             'tags': '',
+            'slug': 'event-they-killed-kenny',
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
             'capacity': 11,
@@ -622,7 +649,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_url': None,
             'excerpt': None,
             'tags': '',
-            'slug': None,
+            'slug': 'event-they-killed-kenny',
             'host': None,
             'id': 1,
             'lang': None,

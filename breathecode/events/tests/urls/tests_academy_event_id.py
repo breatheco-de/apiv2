@@ -1,16 +1,7 @@
 from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
-from breathecode.utils import Cache
-from unittest.mock import patch
 from ..mixins.new_events_tests_case import EventTestCase
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
 from breathecode.services import datetime_to_iso_format
-from breathecode.tests.mixins.cache_mixin import CacheMixin
 from .tests_academy_event import AcademyEventTestSuite
 
 
@@ -361,6 +352,44 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
 
     """
+    🔽🔽🔽 Put, bad slug
+    """
+
+    def test_academy_cohort_id__put__bad_slug(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'slug': 'they-killed-kenny',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'slug-is-not-startswith-event', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [{
+            **self.model_to_dict(model, 'event'),
+        }])
+
+    """
     🔽🔽🔽 Put
     """
 
@@ -382,6 +411,7 @@ class AcademyEventsTestSuite(EventTestCase):
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
             'tags': '',
+            'slug': 'event-they-killed-kenny',
             'capacity': 11,
             'starting_at': self.datetime_to_iso(current_date),
             'ending_at': self.datetime_to_iso(current_date),
@@ -409,7 +439,7 @@ class AcademyEventsTestSuite(EventTestCase):
             'host': model['event'].host,
             'id': 2,
             'lang': None,
-            'slug': None,
+            'slug': 'event-they-killed-kenny',
             'online_event': False,
             'organization': 1,
             'published_at': None,
