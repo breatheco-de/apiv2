@@ -2,7 +2,6 @@ import os, ast
 from django.contrib import admin
 from django import forms
 from django.utils import timezone
-from django.contrib.auth.models import User
 from .models import Endpoint, Application, MonitorScript
 from breathecode.notify.models import SlackChannel
 from django.utils.html import format_html

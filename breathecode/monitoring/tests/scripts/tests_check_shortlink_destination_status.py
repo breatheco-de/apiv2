@@ -23,7 +23,7 @@ class ShortLinkTestSuite(MonitoringTestCase):
             'severity_level': 5,
             'status': 'OPERATIONAL',
             'text': 'All shortlinks working properly\n',
-            'title': None
+            'title': 'OK'
         }
 
         self.assertEqual(script, expected)
@@ -51,7 +51,7 @@ class ShortLinkTestSuite(MonitoringTestCase):
             'severity_level': 5,
             'status': 'OPERATIONAL',
             'text': 'All shortlinks working properly\n',
-            'title': None
+            'title': 'OK'
         }
 
         self.assertEqual(script, expected)
