@@ -105,6 +105,8 @@ class AnswerIdTestSuite(MarketingTestCase):
             'ac_academy_id': 1,
             'acp_id': 1,
             'automation_id': None,
+            'disputed_at': None,
+            'disputed_reason': None,
             'id': 1,
             'slug': 'they-killed-kenny',
             'subscribers': 0,
