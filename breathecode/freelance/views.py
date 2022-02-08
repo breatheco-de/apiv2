@@ -59,7 +59,11 @@ def render_html_bill(request, id=None):
         return HttpResponse(template['html'])
     else:
         serializer = BigBillSerializer(item, many=False)
-        data = {**serializer.data, 'issues': SmallIssueSerializer(item.issue_set.all(), many=True).data}
+        status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID'}
+        data = {
+            **serializer.data, 'issues': SmallIssueSerializer(item.issue_set.all(), many=True).data,
+            'status': status_map[serializer.data['status']]
+        }
         template = get_template_content('invoice', data)
         return HttpResponse(template['html'])
 
