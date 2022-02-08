@@ -126,6 +126,22 @@ class Asset(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
+    def __str__(self):
+        return f'{self.title} ({self.slug})'
+
+    def save(self, *args, **kwargs):
+
+        # only validate this on creation
+        if self.created_at is None:
+            alias = AssetAlias.objects.filter(slug=self.slug).first()
+            if alias is not None:
+                raise Exception('Slug is already taken by alias')
+            super().save(*args, **kwargs)
+            AssetAlias.objects.create(slug=self.slug, asset=self)
+
+        else:
+            super().save(*args, **kwargs)
+
 
 class AssetAlias(models.Model):
     slug = models.SlugField(max_length=200, primary_key=True)

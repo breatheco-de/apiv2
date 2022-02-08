@@ -6,9 +6,11 @@ from .models import (FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcadem
 from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
                       sync_tags, sync_automations, acp_ids)
 from breathecode.services.activecampaign import ActiveCampaign
+from django.utils import timezone
 from django.utils.html import format_html
 from django.contrib.admin import SimpleListFilter
 from breathecode.utils import AdminExportCsvMixin
+from breathecode.utils.admin import change_field
 # Register your models here.
 
 logger = logging.getLogger(__name__)
@@ -141,53 +143,23 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'export_as_csv']
 
 
-def mark_tag_as_strong(modeladmin, request, queryset):
-    queryset.update(tag_type='STRONG')
+def add_dispute(modeladmin, request, queryset):
+    queryset.update(disputed_at=timezone.now())
 
 
-mark_tag_as_strong.short_description = 'Mark tags as STRONG'
+def remove_dispute(modeladmin, request, queryset):
+    queryset.update(disputed_at=None)
 
 
-def mark_tag_as_soft(modeladmin, request, queryset):
-    queryset.update(tag_type='SOFT')
+def prepend_tech_on_name(modeladmin, request, queryset):
 
+    for t in queryset:
+        if t.slug[:5] == 'tech-':
+            continue
+        t.slug = 'tech-' + t.slug
+        t.save()
 
-mark_tag_as_soft.short_description = 'Mark tags as SOFT'
-
-
-def mark_tag_as_discovery(modeladmin, request, queryset):
-    queryset.update(tag_type='DISCOVERY')
-
-
-mark_tag_as_discovery.short_description = 'Mark tags as DISCOVERY'
-
-
-def mark_tag_as_event(modeladmin, request, queryset):
-    queryset.update(tag_type='EVENT')
-
-
-mark_tag_as_event.short_description = 'Mark tags as EVENT'
-
-
-def mark_tag_as_downloadable(modeladmin, request, queryset):
-    queryset.update(tag_type='DOWNLOADABLE')
-
-
-mark_tag_as_downloadable.short_description = 'Mark tags as DOWNLOADABLE'
-
-
-def mark_tag_as_cohort(modeladmin, request, queryset):
-    queryset.update(tag_type='COHORT')
-
-
-mark_tag_as_cohort.short_description = 'Mark tags as COHORT'
-
-
-def mark_tag_as_other(modeladmin, request, queryset):
-    queryset.update(tag_type='OTHER')
-
-
-mark_tag_as_other.short_description = 'Mark tags as OTHER'
+    prepend_tech_on_name.short_description = 'Prepend "tech-" on slug'
 
 
 class CustomTagModelForm(forms.ModelForm):
@@ -202,16 +174,59 @@ class CustomTagModelForm(forms.ModelForm):
                 ac_academy=self.instance.ac_academy.id)  # or something else
 
 
+class TagTypeFilter(SimpleListFilter):
+    title = 'tag_type'
+    parameter_name = 'tag_type'
+
+    def lookups(self, request, model_admin):
+        tags = set([c.tag_type for c in Tag.objects.filter(tag_type__isnull=False)])
+        return [(c, c) for c in tags] + [('NONE', 'No type')]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'NONE':
+            return queryset.filter(tag_type__isnull=True)
+        if self.value():
+            return queryset.filter(tag_type__exact=self.value())
+
+
+class DisputedFilter(admin.SimpleListFilter):
+
+    title = 'Disputed tag'
+
+    parameter_name = 'is_disputed'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('yes', 'Yes'),
+            ('no', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'yes':
+            return queryset.filter(disputed_at__isnull=False)
+
+        if self.value() == 'no':
+            return queryset.filter(disputed_at__isnull=True)
+
+
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     form = CustomTagModelForm
     search_fields = ['slug']
-    list_display = ('id', 'slug', 'tag_type', 'ac_academy', 'acp_id', 'subscribers')
-    list_filter = ['tag_type', 'ac_academy__academy__slug']
-    actions = [
-        mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery, mark_tag_as_other, mark_tag_as_cohort,
-        mark_tag_as_downloadable, mark_tag_as_event, 'export_as_csv'
-    ]
+    list_display = ('id', 'slug', 'tag_type', 'disputed', 'ac_academy', 'acp_id', 'subscribers')
+    list_filter = [DisputedFilter, TagTypeFilter, 'ac_academy__academy__slug']
+    actions = ['export_as_csv', add_dispute, remove_dispute, prepend_tech_on_name] + change_field(
+        ['STRONG', 'SOFT', 'DISCOVERY', 'COHORT', 'DOWNLOADABLE', 'EVENT', 'OTHER'], name='tag_type')
+
+    def disputed(self, obj):
+        if obj.disputed_at is not None:
+            return format_html(
+                f"<div><span class='badge bg-error' style='font-size: 11px;'>Will delete</span><p style='margin:0; padding: 0; font-size: 9px;'>On {obj.disputed_at.strftime('%b %d, %y')}</p></div>"
+            )
+        else:
+            return format_html(f"<span class='badge'></span>")
 
 
 @admin.register(Automation)

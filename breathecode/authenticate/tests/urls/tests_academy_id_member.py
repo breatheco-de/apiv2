@@ -81,6 +81,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': None,
             'phone': '',
             'role': {
+                'id': role,
                 'name': role,
                 'slug': role,
             },
@@ -139,6 +140,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': None,
             'phone': '',
             'role': {
+                'id': role,
                 'name': role,
                 'slug': role,
             },
@@ -197,6 +199,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'last_name': None,
                 'phone': '',
                 'role': {
+                    'id': role,
                     'name': role,
                     'slug': role,
                 },
@@ -253,6 +256,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': None,
             'phone': '',
             'role': {
+                'id': role,
                 'name': role,
                 'slug': role,
             },
@@ -336,6 +340,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': None,
             'phone': '',
             'role': {
+                'id': role,
                 'name': role,
                 'slug': role,
             },
@@ -469,6 +474,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': None,
             'phone': '',
             'role': {
+                'id': role,
                 'name': role,
                 'slug': role,
             },
@@ -539,6 +545,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'phone':
             '',
             'role': {
+                'id': roles[model['profile_academy'].id - 1],
                 'name': roles[model['profile_academy'].id - 1],
                 'slug': roles[model['profile_academy'].id - 1],
             },

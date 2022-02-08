@@ -125,6 +125,19 @@ class Tag(models.Model):
     )
     acp_id = models.IntegerField(help_text='The id coming from active campaign')
     subscribers = models.IntegerField()
+
+    # For better maintance the tags can be disputed for deletion
+    disputed_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text=
+        'Disputed tags get deleted after 10 days unless its used in 1+ automations or has 1+ subscriber')
+    disputed_reason = models.TextField(blank=True,
+                                       null=True,
+                                       default=None,
+                                       help_text='Explain why you think the tag should be deleted')
+
     automation = models.ForeignKey(
         Automation,
         on_delete=models.CASCADE,

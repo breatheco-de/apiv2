@@ -16,12 +16,12 @@ from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-from .models import Event, EventType, EventCheckin, Organization, Venue, EventbriteWebhook
+from .models import Event, EventType, EventCheckin, Organization, Venue, EventbriteWebhook, Organizer
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser
 from rest_framework.decorators import api_view, permission_classes
 from .serializers import (EventSerializer, EventSmallSerializer, EventTypeSerializer, EventCheckinSerializer,
                           EventSmallSerializerNoAcademy, VenueSerializer, OrganizationBigSerializer,
-                          OrganizationSerializer, EventbriteWebhookSerializer)
+                          OrganizationSerializer, EventbriteWebhookSerializer, OrganizerSmallSerializer)
 from rest_framework.response import Response
 from rest_framework.views import APIView
 # from django.http import HttpResponse
@@ -324,6 +324,55 @@ def eventbrite_webhook(request, organization_id):
 
     # async_eventbrite_webhook(request.data)
     return Response('ok', content_type='text/plain')
+
+
+class AcademyOrganizerView(APIView):
+    """
+    List all snippets
+    """
+    @capable_of('read_organization')
+    def get(self, request, academy_id=None):
+
+        orgs = Organizer.objects.filter(academy__id=academy_id)
+        if orgs is None:
+            raise ValidationException('Organizers not found for this academy', 404)
+
+        serializer = OrganizerSmallSerializer(orgs, many=True)
+        return Response(serializer.data)
+
+
+# list venues
+class AcademyOrganizationOrganizerView(APIView):
+    """
+    List all snippets
+    """
+    @capable_of('read_organization')
+    def get(self, request, academy_id=None):
+
+        org = Organization.objects.filter(academy__id=academy_id).first()
+        if org is None:
+            raise ValidationException('Organization not found for this academy', 404)
+
+        organizers = Organizer.objects.filter(organization_id=org.id)
+        serializer = OrganizerSmallSerializer(organizers, many=True)
+        return Response(serializer.data)
+
+    @capable_of('crud_organization')
+    def delete(self, request, academy_id=None, organizer_id=None):
+
+        org = Organization.objects.filter(academy__id=academy_id).first()
+        if org is None:
+            raise ValidationException('Organization not found for this academy', 404)
+
+        organizer = Organizer.objects.filter(organization_id=org.id, id=organizer_id).first()
+        if organizer is None:
+            raise ValidationException('Organizers not found for this academy organization', 404)
+
+        organizer.academy = None
+        organizer.save()
+
+        serializer = OrganizerSmallSerializer(organizer, many=False)
+        return Response(serializer.data)
 
 
 # list venues

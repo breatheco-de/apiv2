@@ -59,3 +59,25 @@ class Command(BaseCommand):
                 continue
             data = items[slug]
             create_asset(data, asset_type='PROJECT')
+
+    def quiz(self, options):
+        response = requests.get(f'{HOST_ASSETS}/quiz/all')
+        items = response.json()
+        for quiz in items:
+            slug = quiz['info']['slug']
+            if self._exists(slug):
+                print('Skipping: Asset with this alias ' + slug + ' already exists')
+                continue
+            data = {
+                'slug': quiz['info']['slug'],
+                'title': quiz['info']['name'],
+                'status': quiz['info']['status'].upper() if 'status' in quiz['info'] else 'DRAFT',
+                'description': quiz['info']['main'],
+                'lang': quiz['info']['lang'],
+                'config': quiz,
+                'external': True,
+                'interactive': True,
+                'with_solutions': True,
+                'graded': True,
+            }
+            create_asset(data, asset_type='QUIZ')

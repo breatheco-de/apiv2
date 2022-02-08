@@ -227,7 +227,11 @@ def add_cohort_slug_as_acp_tag(self, cohort_id: int, academy_id: int) -> None:
         data = client.create_tag(cohort.slug,
                                  description=f'Cohort {cohort.slug} at {ac_academy.academy.slug}')
 
-        tag = Tag(slug=data['tag'], acp_id=data['id'], tag_type='OTHER', ac_academy=ac_academy, subscribers=0)
+        tag = Tag(slug=data['tag'],
+                  acp_id=data['id'],
+                  tag_type='COHORT',
+                  ac_academy=ac_academy,
+                  subscribers=0)
         tag.save()
 
     except:
