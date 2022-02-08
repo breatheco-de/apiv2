@@ -141,8 +141,8 @@ class AcademyCohortTestSuite(EventTestCase):
             f'X-WR-CALNAME:Academy - Events',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event.created_at)}',
             f'UID:breathecode_event_{event.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
@@ -187,8 +187,8 @@ class AcademyCohortTestSuite(EventTestCase):
             f'X-WR-CALNAME:Academy - Events',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event.created_at)}',
             f'UID:breathecode_event_{event.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
@@ -242,8 +242,8 @@ class AcademyCohortTestSuite(EventTestCase):
             f'X-WR-CALNAME:Academy - Events',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event.created_at)}',
             f'UID:breathecode_event_{event.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
@@ -345,8 +345,8 @@ class AcademyCohortTestSuite(EventTestCase):
             f'X-WR-CALNAME:Academy - Events',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event.created_at)}',
             f'UID:breathecode_event_{event.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event.url}\\nAcademy: '
@@ -395,8 +395,8 @@ class AcademyCohortTestSuite(EventTestCase):
             f'X-WR-CALNAME:Academy - Events',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event1.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event1.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event1.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event1.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event1.created_at)}',
             f'UID:breathecode_event_{event1.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
@@ -406,8 +406,8 @@ class AcademyCohortTestSuite(EventTestCase):
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event2.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event2.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event2.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event2.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event2.created_at)}',
             f'UID:breathecode_event_{event2.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
@@ -471,8 +471,8 @@ class AcademyCohortTestSuite(EventTestCase):
             f'X-WR-CALNAME:Academy - Events',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event1.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event1.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event1.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event1.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event1.created_at)}',
             f'UID:breathecode_event_{event1.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
@@ -484,8 +484,8 @@ class AcademyCohortTestSuite(EventTestCase):
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event2.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event2.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event2.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event2.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event2.created_at)}',
             f'UID:breathecode_event_{event2.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
@@ -574,8 +574,8 @@ class AcademyCohortTestSuite(EventTestCase):
             f'X-WR-CALNAME:Academy - Events',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event1.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event1.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event1.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event1.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event1.created_at)}',
             f'UID:breathecode_event_{event1.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
@@ -587,8 +587,8 @@ class AcademyCohortTestSuite(EventTestCase):
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event2.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event2.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event2.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event2.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event2.created_at)}',
             f'UID:breathecode_event_{event2.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
@@ -600,8 +600,8 @@ class AcademyCohortTestSuite(EventTestCase):
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event3.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event3.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event3.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event3.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event3.created_at)}',
             f'UID:breathecode_event_{event3.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event3.url}\\nAcademy: '
@@ -613,8 +613,8 @@ class AcademyCohortTestSuite(EventTestCase):
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event4.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event4.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event4.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event4.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event4.created_at)}',
             f'UID:breathecode_event_{event4.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event4.url}\\nAcademy: '
@@ -703,8 +703,8 @@ class AcademyCohortTestSuite(EventTestCase):
             f'X-WR-CALNAME:Academy - Events',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event1.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event1.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event1.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event1.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event1.created_at)}',
             f'UID:breathecode_event_{event1.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event1.url}\\nAcademy: '
@@ -716,8 +716,8 @@ class AcademyCohortTestSuite(EventTestCase):
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event2.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event2.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event2.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event2.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event2.created_at)}',
             f'UID:breathecode_event_{event2.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event2.url}\\nAcademy: '
@@ -729,8 +729,8 @@ class AcademyCohortTestSuite(EventTestCase):
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event3.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event3.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event3.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event3.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event3.created_at)}',
             f'UID:breathecode_event_{event3.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event3.url}\\nAcademy: '
@@ -742,8 +742,8 @@ class AcademyCohortTestSuite(EventTestCase):
             'END:VEVENT',
             # event
             'BEGIN:VEVENT',
-            f'DTSTART;VALUE=DATE-TIME:{self.datetime_to_ical(event4.starting_at)}',
-            f'DTEND;VALUE=DATE-TIME:{self.datetime_to_ical(event4.ending_at)}',
+            f'DTSTART;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event4.starting_at)}',
+            f'DTEND;TZID=UTC;VALUE=DATE-TIME:{self.datetime_to_ical(event4.ending_at)}',
             f'DTSTAMP;VALUE=DATE-TIME:{self.datetime_to_ical(event4.created_at)}',
             f'UID:breathecode_event_{event4.id}_{key}',
             self.line_limit(f'DESCRIPTION:Url: {event4.url}\\nAcademy: '
