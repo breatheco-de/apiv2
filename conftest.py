@@ -5,9 +5,10 @@ import os
 @pytest.fixture(autouse=True)
 def no_http_requests(monkeypatch):
     def urlopen_mock(self, method, url, *args, **kwargs):
+        # this prevent a tester left pass a request to a third party service
         raise Exception(
-            f'The test was about to {method} {self.scheme}://{self.host}{url} and this is a third party service'
-        )
+            f'The test was about to {method} {self.scheme}://{self.host}{url} and this is a third party '
+            'service')
 
     monkeypatch.setattr('urllib3.connectionpool.HTTPConnectionPool.urlopen', urlopen_mock)
 
