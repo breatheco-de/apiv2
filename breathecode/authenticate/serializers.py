@@ -1,8 +1,10 @@
+import hashlib
 import serpy
 import logging
 import random
 import os
 import urllib.parse
+from django.utils import timezone
 from django.contrib.auth.models import User, Group
 from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile
 from breathecode.utils import ValidationException
@@ -552,13 +554,16 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         model = UserInvite
         fields = ('id', 'email')  # this serializer just get as input a email
 
-    def validate(self, data: dict):
+    def validate(self, data: dict[str, str]):
         if 'email' not in data:
             raise ValidationException('Email is required', slug='without-email')
 
         if UserInvite.objects.filter(email=data['email'], status='WAITING_LIST').exists():
             raise ValidationException('User already exists in the waiting list', slug='user-invite-exists')
 
+        now = str(timezone.now())
+
         data['status'] = 'WAITING_LIST'
+        data['token'] = hashlib.sha1((now + data['email']).encode('UTF-8')).hexdigest()
 
         return data
