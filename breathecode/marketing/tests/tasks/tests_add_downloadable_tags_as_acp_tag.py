@@ -13,7 +13,7 @@ AC_URL = f'{AC_HOST}/api/3/tags'
 AC_RESPONSE = {
     'tag': {
         'id': 1,
-        'tag': 'they-killed-kenny',
+        'tag': 'down-they-killed-kenny',
     },
 }
 AC_ERROR_RESPONSE = {
@@ -108,14 +108,14 @@ class AnswerIdTestSuite(MarketingTestCase):
             'disputed_at': None,
             'disputed_reason': None,
             'id': 1,
-            'slug': 'they-killed-kenny',
+            'slug': 'down-they-killed-kenny',
             'subscribers': 0,
             'tag_type': 'DOWNLOADABLE',
         }])
 
         self.assertEqual(logging.Logger.warn.call_args_list, [
             call(TASK_STARTED_MESSAGE),
-            call(f'Creating tag `{model.downloadable.slug}` on active campaign'),
+            call(f'Creating tag `down-{model.downloadable.slug}` on active campaign'),
             call('Tag created successfully'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])

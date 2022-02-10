@@ -123,7 +123,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
-    def test_add_cohort_slug_as_acp_tag_type_other(self):
+    def test_add_cohort_slug_as_acp_tag_type_cohort(self):
         import logging
 
         active_campaign_academy_kwargs = {'ac_url': AC_HOST}
@@ -133,7 +133,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_cohort_slug_as_acp_tag.delay(1, 1)
         print(self.all_tag_dict())
-        self.assertEqual(self.all_tag_dict()[0]['tag_type'], 'OTHER')
+        self.assertEqual(self.all_tag_dict()[0]['tag_type'], 'COHORT')
 
         self.assertEqual(logging.Logger.warn.call_args_list, [
             call(TASK_STARTED_MESSAGE),

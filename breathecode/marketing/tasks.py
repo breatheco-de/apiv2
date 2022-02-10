@@ -292,14 +292,16 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
         return
 
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
-    tag = Tag.objects.filter(slug=downloadable.slug, ac_academy__id=ac_academy.id).first()
+    new_tag_slug = f'down-{downloadable.slug}'
+
+    tag = Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()
 
     if tag:
         logger.warn(f'Tag for downloadable `{downloadable.slug}` already exists')
         return
 
     try:
-        data = client.create_tag(downloadable.slug,
+        data = client.create_tag(new_tag_slug,
                                  description=f'Downloadable {downloadable.slug} at {ac_academy.academy.slug}')
 
         tag = Tag(slug=data['tag'],
