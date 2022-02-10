@@ -30,7 +30,7 @@ def send_mentorship_starting_notification(session_id):
 
     session = MentorshipSession.objects.filter(id=session_id).first()
 
-    token, created = Token.get_or_create(session.mentor.user)
+    token, created = Token.get_or_create(session.mentor.user, token_type='one_time')
 
     send_email_message(
         'message', session.mentor.user.email, {
