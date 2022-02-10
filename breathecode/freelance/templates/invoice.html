@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>A simple, clean, and responsive HTML invoice template</title>
+    <title>Freelancer {{ freelancer.user.first_name }} {{ freelancer.user.last_name }} - Invoice {{ id }}</title>
 
     <style>
         .invoice-box {
@@ -34,7 +34,7 @@
         }
 
         .invoice-box table tr.top table td {
-            padding-bottom: 20px;
+            padding-bottom: 10px;
         }
 
         .invoice-box table tr.top table td.title {
@@ -44,7 +44,7 @@
         }
 
         .invoice-box table tr.information table td {
-            padding-bottom: 40px;
+            padding-bottom: 10px;
         }
 
         .invoice-box table tr.heading td {
@@ -97,6 +97,35 @@
         .rtl table tr td:nth-child(2) {
             text-align: left;
         }
+
+        .capitalize {
+            text-transform: uppercase;
+        }
+
+        .UNDER_REVIEW {
+            color: rgb(153, 0, 0);
+        }
+
+        .READY_TO_PAY {
+            color: rgb(0, 100, 50);
+        }
+
+        .alert {
+            border: 1px solid;
+            border-radius: 10px;
+            background: #BDBDBD;
+            padding: 5px;
+        }
+
+        .alert td {
+            width: 100%;
+        }
+
+        .alert.alert-danger {
+            background: #ffb8b8;
+            color: rgb(92, 0, 0);
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -119,7 +148,7 @@
                             <td>
 
                                 Invoice #{{ id }}<br>
-                                status: {{ status }}<br>
+                                Status: <span class="{{ status }}">{{ status }}</span><br>
                                 Created: {{ created_at }}<br>
                                 Paid: {{ paid_at }}<br>
                             </td>
@@ -148,6 +177,11 @@
                     </table>
                 </td>
             </tr>
+            {% if status == "UNDER_REVIEW" %}
+            <tr class="alert alert-danger {{ status }}" style="padding-top: -30px;">
+                <td colspan="2">This bill is not to be paid yet as it its still UNDER_REVIEW</td>
+            </tr>
+            {% endif %}
 
             <tr class="heading">
                 <td>
