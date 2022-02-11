@@ -32,6 +32,13 @@ class UserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
 
 
+class UTMSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    utm_type = serpy.Field()
+    updated_at = serpy.Field()
+
+
 class AutomationSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()

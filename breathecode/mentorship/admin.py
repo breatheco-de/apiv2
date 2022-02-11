@@ -1,10 +1,12 @@
-import json, pytz
+import json, pytz, logging, requests
 from django.contrib import admin, messages
 from django import forms
 from .models import MentorProfile, MentorshipService, MentorshipSession
 from django.utils.html import format_html
+from breathecode.utils.admin import change_field
 
 timezones = [(x, x) for x in pytz.common_timezones]
+logger = logging.getLogger(__name__)
 
 
 @admin.register(MentorshipService)
@@ -25,6 +27,39 @@ class MentorForm(forms.ModelForm):
         self.fields['timezone'] = forms.ChoiceField(choices=timezones)
 
 
+def mark_as_active(modeladmin, request, queryset):
+    entries = queryset.all()
+    try:
+        for entry in entries:
+            if entry.online_meeting_url is None or entry.online_meeting_url == '':
+                raise Exception(f'Mentor {entry.name} does not have online_meeting_url')
+            elif entry.booking_url is None or 'calendly' not in entry.booking_url:
+                raise Exception(f'Mentor {entry.name} booking_url must point to calendly')
+            elif len(entry.syllabus.all()) == 0:
+                raise Exception(f'Mentor {entry.name} has no syllabus associated')
+            else:
+                response = requests.head(entry.booking_url)
+                if response.status_code > 299:
+                    raise Exception(
+                        f'Mentor {entry.name} booking URL is failing with code {str(response.status_code)}')
+                response = requests.head(entry.online_meeting_url)
+                if response.status_code > 299:
+                    raise Exception(
+                        f'Mentor {entry.name} meeting URL is failing with code {str(response.status_code)}')
+
+        messages.success(request, message='Mentor updated successfully')
+    except requests.exceptions.ConnectionError:
+        message = 'Error: Booking or meeting URL for mentor is failing'
+        logger.fatal(message)
+        messages.error(request, message=message)
+    except Exception as e:
+        logger.fatal(str(e))
+        messages.error(request, message='Error: ' + str(e))
+
+
+mark_as_active.short_description = 'Mark as ACTIVE'
+
+
 @admin.register(MentorProfile)
 class MentorAdmin(admin.ModelAdmin):
     form = MentorForm
@@ -33,6 +68,7 @@ class MentorAdmin(admin.ModelAdmin):
     search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email']
     list_filter = ['service__academy__slug', 'status', 'service__slug']
     readonly_fields = ('token', )
+    actions = [mark_as_active] + change_field(['INNACTIVE', 'INVITED'], name='status')
 
     def current_status(self, obj):
         colors = {

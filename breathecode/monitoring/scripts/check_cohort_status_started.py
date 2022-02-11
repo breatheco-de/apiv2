@@ -8,7 +8,7 @@ from django.utils import timezone
 
 to_fix_cohort_stage = Cohort.objects.filter(kickoff_date__lt=timezone.now(),
                                             academy__id=academy.id,
-                                            stage='PREWORK').values_list('name', flat=True)
+                                            stage='PREWORK').exclude(never_ends=True).values_list('name', flat=True)
 
 if len(to_fix_cohort_stage) > 0:
     to_fix_cohort_name = ('\n').join(['- ' + cohort_name for cohort_name in to_fix_cohort_stage])
