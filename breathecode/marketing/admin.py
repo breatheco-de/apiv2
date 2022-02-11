@@ -2,7 +2,7 @@ import logging, secrets
 from django.contrib import admin, messages
 from django import forms
 from .models import (FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook,
-                     AcademyAlias, Downloadable, LeadGenerationApp)
+                     AcademyAlias, Downloadable, LeadGenerationApp, UTMField)
 from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
                       sync_tags, sync_automations, acp_ids)
 from breathecode.services.activecampaign import ActiveCampaign
@@ -345,3 +345,10 @@ class LeadGenerationAppAdmin(admin.ModelAdmin):
             return format_html(f"<span class='badge'>Not yet called</span>")
         return format_html(
             f"<span class='badge {colors[obj.last_call_status]}'>{obj.last_call_status}</span>")
+
+
+@admin.register(UTMField)
+class UTMFieldAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name', 'utm_type')
+    list_filter = ['utm_type', 'academy__slug']
+    actions = change_field(['SOURCE', 'MEDIUM', 'CAMPAIGN', 'CONTENT'], name='utm_type')
