@@ -505,3 +505,33 @@ class Downloadable(models.Model):
 
     def __str__(self):
         return f'{self.slug}'
+
+
+SOURCE = 'SOURCE'
+MEDIUM = 'MEDIUM'
+CONTENT = 'CONTENT'
+CAMPAIGN = 'CAMPAIGN'
+UTM_TYPE = (
+    (CONTENT, 'Source'),
+    (SOURCE, 'Medium'),
+    (MEDIUM, 'Content'),
+    (CAMPAIGN, 'Campaign'),
+)
+
+
+class UTMField(models.Model):
+    slug = models.SlugField(max_length=150, unique=True)
+    name = models.CharField(max_length=100)
+    description = models.TextField(max_length=450)
+
+    # Status
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    utm_type = models.CharField(max_length=15, choices=UTM_TYPE, default=None)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.slug}'
