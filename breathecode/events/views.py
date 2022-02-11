@@ -237,7 +237,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         data['sync_status'] = 'PENDING'
         data['organization'] = organization_id
 
-        serializer = EventSerializer(already, data=data)
+        serializer = EventSerializer(already, data=data, context={'academy_id': academy_id})
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
