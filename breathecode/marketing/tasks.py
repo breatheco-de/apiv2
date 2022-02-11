@@ -257,7 +257,11 @@ def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
         return
 
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
-    new_tag_slug = f'event-{event.slug}'
+    if event.slug.startswith('event'):
+        new_tag_slug = event.slug
+    else:
+        new_tag_slug = f'event-{event.slug}'
+
     tag = Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()
     if tag:
         logger.warn(f'Tag for event `{event.slug}` already exists')

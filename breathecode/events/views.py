@@ -445,7 +445,6 @@ class OrganizationWebhookView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=200)
-        # return Response(serializer.data)
 
 
 # list venues

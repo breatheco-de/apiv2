@@ -43,10 +43,11 @@ def cohort_post_save(sender, instance, created, *args, **kwargs):
 
 
 @receiver(event_saved, sender=Event)
-def event_save(sender, instance, *args, **kwargs):
-    ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=instance.academy.id).first()
-    if ac_academy is not None:
-        add_event_slug_as_acp_tag.delay(instance.id, instance.academy.id)
+def event_save(sender, instance, created, *args, **kwargs):
+    if created:
+        ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=instance.academy.id).first()
+        if ac_academy is not None:
+            add_event_slug_as_acp_tag.delay(instance.id, instance.academy.id)
 
 
 @receiver(downloadable_saved, sender=Downloadable)
