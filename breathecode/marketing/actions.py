@@ -1,8 +1,8 @@
 import os, re, requests, logging
+from typing import Optional
 from itertools import chain
 from django.utils import timezone
 from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy, AcademyAlias
-from schema import Schema, And, Use, Optional, SchemaError
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from activecampaign.client import Client
 from rest_framework.decorators import api_view, permission_classes
