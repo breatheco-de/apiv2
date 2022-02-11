@@ -1,8 +1,8 @@
 import os, re, requests, logging
+from typing import Optional
 from itertools import chain
 from django.utils import timezone
 from .models import FormEntry, Tag, Automation, ActiveCampaignAcademy, AcademyAlias
-from schema import Schema, And, Use, Optional, SchemaError
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from activecampaign.client import Client
 from rest_framework.decorators import api_view, permission_classes
@@ -445,7 +445,7 @@ STARTS_WITH_COMMA_PATTERN = re.compile(r'^,')
 ENDS_WITH_COMMA_PATTERN = re.compile(r',$')
 
 
-def validate_marketing_tags(tags: str, academy_id: int, types: list = None) -> None:
+def validate_marketing_tags(tags: str, academy_id: int, types: Optional[list] = None) -> None:
     if tags.find(',,') != -1:
         raise ValidationException(f'You can\'t have two commas together on tags',
                                   code=400,
@@ -461,9 +461,8 @@ def validate_marketing_tags(tags: str, academy_id: int, types: list = None) -> N
         raise ValidationException(f'Tags string cannot ends with comma', code=400, slug='ends-with-comma')
 
     tags = [x for x in tags.split(',') if x]
-
     _tags = Tag.objects.filter(slug__in=tags, ac_academy__academy__id=academy_id)
-    if types is not None and len(types) > 0:
+    if types:
         _tags = _tags.filter(tag_type__in=types)
     founds = [x.slug for x in _tags]
 

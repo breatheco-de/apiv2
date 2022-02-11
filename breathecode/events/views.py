@@ -116,7 +116,7 @@ class EventView(APIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
-        serializer = EventSerializer(data=request.data)
+        serializer = EventSerializer(data=request.data, context={'academy_id': None})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -211,7 +211,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         data['sync_status'] = 'PENDING'
         data['organization'] = organization_id
 
-        serializer = EventSerializer(data={**data, 'academy': academy.id})
+        serializer = EventSerializer(data={**data, 'academy': academy.id}, context={'academy_id': academy_id})
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
@@ -237,7 +237,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         data['sync_status'] = 'PENDING'
         data['organization'] = organization_id
 
-        serializer = EventSerializer(already, data=data)
+        serializer = EventSerializer(already, data=data, context={'academy_id': academy_id})
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
