@@ -2,7 +2,7 @@
 
 The official documentation for [django signals can be found here](https://docs.djangoproject.com/en/3.2/topics/signals/).
 
-At BreatheCode, signals are similar concept to "events", we use signals as custom "events" that can notify important things that happen in one app to all the other app's (if they are listening). 
+At BreatheCode, signals are similar concept to "events", we use signals as custom "events" that can notify important things that happen in one app to all the other app's (if they are listening).
 
 For example: When a student drops from a cohort
 
