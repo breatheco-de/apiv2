@@ -19,7 +19,7 @@ class AcademyEventTestSuite(EventTestCase):
         event_db = self.model_to_dict(model, 'event')
 
         self.assertEqual(event_saved.send.call_args_list,
-                         [call(instance=model.event, sender=model.event.__class__)])
+                         [call(instance=model.event, sender=model.event.__class__, created=True)])
 
         self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [])
         self.assertEqual(self.all_event_dict(), [event_db])
@@ -39,7 +39,7 @@ class AcademyEventTestSuite(EventTestCase):
         event_db = self.model_to_dict(model, 'event')
 
         self.assertEqual(event_saved.send.call_args_list,
-                         [call(instance=model.event, sender=model.event.__class__)])
+                         [call(instance=model.event, sender=model.event.__class__, created=True)])
 
         self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [])
         self.assertEqual(self.all_event_dict(), [event_db])
@@ -59,7 +59,7 @@ class AcademyEventTestSuite(EventTestCase):
         event_db = self.model_to_dict(model, 'event')
 
         self.assertEqual(event_saved.send.call_args_list,
-                         [call(instance=model.event, sender=model.event.__class__)])
+                         [call(instance=model.event, sender=model.event.__class__, created=True)])
 
         self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [])
         self.assertEqual(self.all_event_dict(), [event_db])
@@ -79,7 +79,7 @@ class AcademyEventTestSuite(EventTestCase):
         event_db = self.model_to_dict(model, 'event')
 
         self.assertEqual(event_saved.send.call_args_list,
-                         [call(instance=model.event, sender=model.event.__class__)])
+                         [call(instance=model.event, sender=model.event.__class__, created=True)])
 
         self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [])
         self.assertEqual(self.all_event_dict(), [event_db])
@@ -99,7 +99,7 @@ class AcademyEventTestSuite(EventTestCase):
         event_db = self.model_to_dict(model, 'event')
 
         self.assertEqual(event_saved.send.call_args_list,
-                         [call(instance=model.event, sender=model.event.__class__)])
+                         [call(instance=model.event, sender=model.event.__class__, created=True)])
 
         self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [])
         self.assertEqual(self.all_event_dict(), [event_db])
@@ -119,7 +119,7 @@ class AcademyEventTestSuite(EventTestCase):
         event_db = self.model_to_dict(model, 'event')
 
         self.assertEqual(event_saved.send.call_args_list,
-                         [call(instance=model.event, sender=model.event.__class__)])
+                         [call(instance=model.event, sender=model.event.__class__, created=True)])
 
         self.assertEqual(async_export_event_to_eventbrite.delay.call_args_list, [])
         self.assertEqual(self.all_event_dict(), [event_db])
