@@ -162,6 +162,7 @@ class EventSerializer(serializers.ModelSerializer):
 
     def validate_tags(self, value):
         academy = self.context.get('academy_id')
+        print(1, 'academy', academy)
         validate_marketing_tags(value, academy, types=['DISCOVERY'])
         return value
 
