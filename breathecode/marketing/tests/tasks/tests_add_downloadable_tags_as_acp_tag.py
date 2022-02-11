@@ -132,7 +132,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         import logging
 
         active_campaign_academy_kwargs = {'ac_url': AC_HOST}
-        tag_kwargs = {'slug': 'they-killed-kenny', 'tag_type': 'DOWNLOADABLE'}
+        tag_kwargs = {'slug': 'down-they-killed-kenny', 'tag_type': 'DOWNLOADABLE'}
         downloadable_kwargs = {
             'slug': 'they-killed-kenny',
             'name': 'they-killed-kenny',
@@ -143,7 +143,7 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      active_campaign_academy=True,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs,
                                      tag_kwargs=tag_kwargs,
-                                     downloadable_kwargs=downloadable_kwargs)
+                                     downloadable=downloadable_kwargs)
 
         add_downloadable_slug_as_acp_tag.delay(1, 1)
 

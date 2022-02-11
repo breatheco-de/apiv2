@@ -256,7 +256,12 @@ def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
         logger.error(f'Event {event_id} not found')
         return
 
+    if not event.slug:
+        logger.error(f'Event {event_id} does not have slug')
+        return
+
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+
     if event.slug.startswith('event'):
         new_tag_slug = event.slug
     else:
