@@ -13,7 +13,8 @@ AC_URL = f'{AC_HOST}/api/3/tags'
 AC_RESPONSE = {
     'tag': {
         'id': 1,
-        'tag_type': 'event-they-killed-kenny',
+        'tag_type': 'EVENT',
+        'slug': 'event-they-killed-kenny',
     },
 }
 AC_ERROR_RESPONSE = {
@@ -109,6 +110,8 @@ class AnswerIdTestSuite(MarketingTestCase):
             'acp_id': 1,
             'automation_id': None,
             'id': 1,
+            'disputed_at': None,
+            'disputed_reason': None,
             'slug': 'event-they-killed-kenny',
             'subscribers': 0,
             'tag_type': 'EVENT',
