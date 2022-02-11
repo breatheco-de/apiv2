@@ -339,13 +339,13 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                         'role': role,
                         'status': status
                     })
-        
+
         # if there is not user (first time) it will be considere an invite
         if 'user' not in validated_data:
-            validated_data.pop('invite') # the front end sends invite=true so we need to remove it 
+            validated_data.pop('invite')  # the front end sends invite=true so we need to remove it
             email = validated_data['email'].lower()
             invite = UserInvite.objects.filter(email=email, author=self.context.get('request').user).first()
-            
+
             # avoid double invite
             if invite is not None:
                 raise ValidationException(
@@ -384,6 +384,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             'role': role,
             'status': status
         })
+
 
 # This method is almost repeated but now for students instead of academy memebers.
 class StudentPOSTSerializer(serializers.ModelSerializer):
