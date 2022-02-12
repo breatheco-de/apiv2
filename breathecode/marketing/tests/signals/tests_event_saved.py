@@ -1,4 +1,5 @@
 from unittest.mock import MagicMock, call, patch
+from rest_framework import status
 from ..mixins import MarketingTestCase
 
 

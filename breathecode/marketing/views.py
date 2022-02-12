@@ -25,11 +25,12 @@ from .serializers import (
     DownloadableSerializer,
     ShortLinkSerializer,
     PUTTagSerializer,
+    UTMSmallSerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
-from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp
+from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
@@ -402,6 +403,28 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
         tags = Automation.objects.filter(ac_academy__academy__id=academy_id)
 
         serializer = AutomationSmallSerializer(tags, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class UTMView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('read_lead')
+    def get(self, request, format=None, academy_id=None):
+
+        utms = UTMField.objects.filter(academy__id=academy_id)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            utms = utms.filter(slug__icontains=like)
+
+        types = request.GET.get('type', None)
+        if types is not None:
+            _types = types.split(',')
+            utms = utms.filter(utm_type__in=[x.upper() for x in _types])
+
+        serializer = UTMSmallSerializer(utms, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

@@ -8,6 +8,9 @@ from breathecode.events.models import Event
 from breathecode.admissions.signals import student_edu_status_updated, cohort_saved
 from .models import FormEntry, ActiveCampaignAcademy
 import breathecode.marketing.tasks as tasks
+from .models import Downloadable
+from .signals import downloadable_saved
+from .tasks import add_downloadable_slug_as_acp_tag
 
 logger = logging.getLogger(__name__)
 
@@ -44,3 +47,11 @@ def cohort_post_save(sender, instance, created, *args, **kwargs):
 def event_post_saved(sender, instance: Event, created: bool, *args, **kwargs):
     if created and instance.slug and instance.academy:
         tasks.add_event_slug_as_acp_tag.delay(instance.id, instance.academy.id)
+
+
+@receiver(downloadable_saved, sender=Downloadable)
+def downloadable_post_save(sender, instance, created, *args, **kwargs):
+    if created:
+        ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=instance.academy.id).first()
+        if ac_academy is not None:
+            add_downloadable_slug_as_acp_tag.delay(instance.id, instance.academy.id)

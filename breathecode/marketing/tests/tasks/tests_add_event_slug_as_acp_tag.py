@@ -13,7 +13,8 @@ AC_URL = f'{AC_HOST}/api/3/tags'
 AC_RESPONSE = {
     'tag': {
         'id': 1,
-        'tag': 'they-killed-kenny',
+        'tag_type': 'EVENT',
+        'slug': 'event-they-killed-kenny',
     },
 }
 AC_ERROR_RESPONSE = {
@@ -101,7 +102,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(logging.Logger.warn.call_args_list, [
             call(TASK_STARTED_MESSAGE),
         ])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Event 1 not have a slug')])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Event 1 does not have slug')])
 
     """
     🔽🔽🔽 Event slug already exists
@@ -115,8 +116,8 @@ class AnswerIdTestSuite(MarketingTestCase):
         import logging
 
         active_campaign_academy = {'ac_url': AC_HOST}
-        event = {'slug': 'they-killed-kenny'}
-        tag = {'slug': 'they-killed-kenny', 'tag_type': 'DISCOVERY'}
+        event = {'slug': 'event-they-killed-kenny'}
+        tag = {'slug': 'event-they-killed-kenny', 'tag_type': 'EVENT'}
 
         model = self.bc.database.create(academy=1,
                                         tag=tag,
@@ -126,12 +127,8 @@ class AnswerIdTestSuite(MarketingTestCase):
         add_event_slug_as_acp_tag.delay(1, 1)
 
         self.assertEqual(self.bc.database.list_of('marketing.Tag'), [self.bc.format.to_dict(model.tag)])
-
-        self.assertEqual(logging.Logger.warn.call_args_list, [
-            call(TASK_STARTED_MESSAGE),
-        ])
         self.assertEqual(logging.Logger.error.call_args_list, [
-            call('Tag for event `they-killed-kenny` already exists'),
+            call('Tag for event `event-they-killed-kenny` already exists'),
         ])
 
     """
@@ -146,7 +143,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         import logging
 
         active_campaign_academy = {'ac_url': AC_HOST}
-        event = {'slug': 'they-killed-kenny'}
+        event = {'slug': 'event-they-killed-kenny'}
 
         model = self.bc.database.create(academy=1,
                                         active_campaign_academy=active_campaign_academy,
@@ -161,14 +158,14 @@ class AnswerIdTestSuite(MarketingTestCase):
             'disputed_at': None,
             'disputed_reason': None,
             'id': 1,
-            'slug': 'they-killed-kenny',
+            'slug': 'event-they-killed-kenny',
             'subscribers': 0,
-            'tag_type': 'DISCOVERY',
+            'tag_type': 'EVENT',
         }])
 
         self.assertEqual(logging.Logger.warn.call_args_list, [
             call(TASK_STARTED_MESSAGE),
-            call('Creating tag `they-killed-kenny` on active campaign'),
+            call(f'Creating tag `{model.event.slug}` on active campaign'),
             call('Tag created successfully'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
@@ -185,7 +182,7 @@ class AnswerIdTestSuite(MarketingTestCase):
         import logging
 
         active_campaign_academy = {'ac_url': AC_HOST}
-        event = {'slug': 'they-killed-kenny'}
+        event = {'slug': 'event-they-killed-kenny'}
         model = self.bc.database.create(academy=1,
                                         event=event,
                                         active_campaign_academy=active_campaign_academy)
