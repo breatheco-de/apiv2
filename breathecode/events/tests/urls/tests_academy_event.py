@@ -502,7 +502,7 @@ class AcademyEventTestSuite(EventTestCase):
                                      capability='crud_event',
                                      role='potato')
 
-        url = reverse_lazy('events:academy_all_events')
+        url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
         data = {
             'slug': 'they-killed-kenny',

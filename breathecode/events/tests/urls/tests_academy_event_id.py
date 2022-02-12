@@ -2,7 +2,6 @@ from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
 from ..mixins.new_events_tests_case import EventTestCase
 from breathecode.services import datetime_to_iso_format
-from .tests_academy_event import AcademyEventTestSuite
 from unittest.mock import MagicMock, call, patch
 
 
@@ -10,7 +9,7 @@ class AcademyEventIdTestSuite(EventTestCase):
     cache = EventCache()
 
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
-    def test_academy_single_event_no_auth(self):
+    def test_academy_event_id_no_auth(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
 
@@ -379,7 +378,7 @@ class AcademyEventIdTestSuite(EventTestCase):
                                      role='potato2',
                                      event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         current_date = self.datetime_now()
         data = {
             'id': 1,
