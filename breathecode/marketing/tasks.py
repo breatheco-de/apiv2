@@ -262,7 +262,7 @@ def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
 
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
 
-    if event.slug.startswith('event'):
+    if event.slug.startswith('event-'):
         new_tag_slug = event.slug
     else:
         new_tag_slug = f'event-{event.slug}'

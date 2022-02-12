@@ -160,10 +160,16 @@ class EventSerializer(serializers.ModelSerializer):
 
         return super().update(instance, validated_data)
 
-    def validate_tags(self, value):
+    def validate_tags(self, value: str):
         academy = self.context.get('academy_id')
         validate_marketing_tags(value, academy, types=['DISCOVERY'])
         return value
+
+    def validate_slug(self, value: str):
+        if not value or value.startswith('event-'):
+            return value.lower()
+
+        return f'event-{value.lower()}'
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
