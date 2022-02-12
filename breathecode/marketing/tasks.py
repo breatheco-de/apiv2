@@ -86,7 +86,7 @@ def async_activecampaign_webhook(self, webhook_id):
             status = 'error'
 
     else:
-        message = f"ActiveCampaign Academy Profile {organization_id} doesn\'t exist"
+        message = f"ActiveCampaign Academy Profile {webhook_id} doesn\'t exist"
 
         webhook.status = 'ERROR'
         webhook.status_text = message
@@ -262,14 +262,14 @@ def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
 
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
 
-    if event.slug.startswith('event'):
+    if event.slug.startswith('event-'):
         new_tag_slug = event.slug
     else:
         new_tag_slug = f'event-{event.slug}'
 
     tag = Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()
     if tag:
-        logger.warn(f'Tag for event `{event.slug}` already exists')
+        logger.error(f'Tag for event `{event.slug}` already exists')
         return
 
     try:
@@ -283,7 +283,6 @@ def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
         tag.save()
 
     except:
-
         pass
 
 
@@ -306,7 +305,11 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
         return
 
     client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
-    new_tag_slug = f'down-{downloadable.slug}'
+
+    if downloadable.slug.startswith('down-'):
+        new_tag_slug = downloadable.slug
+    else:
+        new_tag_slug = f'down-{downloadable.slug}'
 
     tag = Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()
 

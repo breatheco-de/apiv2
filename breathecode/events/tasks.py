@@ -1,5 +1,4 @@
 import logging
-import os
 from breathecode.services.eventbrite import Eventbrite
 from celery import shared_task, Task
 from .models import Event, Organization, EventbriteWebhook

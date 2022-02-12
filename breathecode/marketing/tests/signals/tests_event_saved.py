@@ -5,15 +5,58 @@ from ..mixins import MarketingTestCase
 
 class LeadTestSuite(MarketingTestCase):
     """
-    🔽🔽🔽 Create with ActiveCampaignAcademy
+    🔽🔽🔽 Create without slug
     """
     @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
-    def test_event_saved__create__with_active_campaign_academy(self):
-        """Test /event/:id/user without auth"""
+    def test_event_saved__create__without_slug(self):
+        """Test /cohort/:id/user without auth"""
         from breathecode.marketing.tasks import add_event_slug_as_acp_tag
 
-        base = self.generate_models(academy=True, active_campaign_academy=True, skip_event=True)
-        model = self.generate_models(event=True, models=base)
+        model = self.bc.database.create(event=1)
 
-        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.bc.format.to_dict(model.event)])
+        self.assertEqual(add_event_slug_as_acp_tag.delay.call_args_list, [])
+
+    """
+    🔽🔽🔽 Create with slug, without academy
+    """
+
+    @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
+    def test_event_saved__create__with_slug__without_academy(self):
+        """Test /cohort/:id/user without auth"""
+        from breathecode.marketing.tasks import add_event_slug_as_acp_tag
+
+        event = {'slug': 'they-killed-kenny'}
+        model = self.bc.database.create(event=event)
+
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.bc.format.to_dict(model.event)])
+        self.assertEqual(add_event_slug_as_acp_tag.delay.call_args_list, [])
+
+    """
+    🔽🔽🔽 Create without slug, with academy
+    """
+
+    @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
+    def test_event_saved__create__without_slug__with_academy(self):
+        """Test /cohort/:id/user without auth"""
+        from breathecode.marketing.tasks import add_event_slug_as_acp_tag
+
+        model = self.bc.database.create(event=1, academy=1)
+
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.bc.format.to_dict(model.event)])
+        self.assertEqual(add_event_slug_as_acp_tag.delay.call_args_list, [])
+
+    """
+    🔽🔽🔽 Create with slug, with academy
+    """
+
+    @patch('breathecode.marketing.tasks.add_event_slug_as_acp_tag.delay', MagicMock())
+    def test_event_saved__create__with_slug__with_academy(self):
+        """Test /cohort/:id/user without auth"""
+        from breathecode.marketing.tasks import add_event_slug_as_acp_tag
+
+        event = {'slug': 'they-killed-kenny'}
+        model = self.bc.database.create(event=event, academy=1)
+
+        self.assertEqual(self.bc.database.list_of('events.Event'), [self.bc.format.to_dict(model.event)])
         self.assertEqual(add_event_slug_as_acp_tag.delay.call_args_list, [call(1, 1)])
