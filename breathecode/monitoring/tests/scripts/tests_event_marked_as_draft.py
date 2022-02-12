@@ -9,7 +9,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     """
     🔽🔽🔽 With zero Event
     """
-    def test_event_marked_as_draw__zero_events(self):
+    def test_event_marked_as_draft__zero_events(self):
         """
         Descriptions of models are being generated:
 
@@ -24,7 +24,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             application: Application(id=1)
         """
 
-        monitor_script = {'script_slug': 'event_marked_as_draw'}
+        monitor_script = {'script_slug': 'event_marked_as_draft'}
         model = self.bc.database.create(monitor_script=monitor_script)
 
         script = run_script(model.monitor_script)
@@ -47,7 +47,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     🔽🔽🔽 With one Event with status ACTIVE
     """
 
-    def test_event_marked_as_draw__one_event__status_active(self):
+    def test_event_marked_as_draft__one_event__status_active(self):
         """
         Descriptions of models are being generated:
 
@@ -65,7 +65,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             application: Application(id=1)
         """
 
-        monitor_script = {'script_slug': 'event_marked_as_draw'}
+        monitor_script = {'script_slug': 'event_marked_as_draft'}
         event = {'status': 'ACTIVE'}
         model = self.bc.database.create(monitor_script=monitor_script, event=event)
 
@@ -89,7 +89,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     🔽🔽🔽 With one Event with status DELETED
     """
 
-    def test_event_marked_as_draw__one_event__status_deleted(self):
+    def test_event_marked_as_draft__one_event__status_deleted(self):
         """
         Descriptions of models are being generated:
 
@@ -107,7 +107,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             application: Application(id=1)
         """
 
-        monitor_script = {'script_slug': 'event_marked_as_draw'}
+        monitor_script = {'script_slug': 'event_marked_as_draft'}
         event = {'status': 'DELETED'}
         model = self.bc.database.create(monitor_script=monitor_script, event=event)
 
@@ -131,7 +131,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     🔽🔽🔽 With one Event with status DRAFT
     """
 
-    def test_event_marked_as_draw__one_event__status_draft(self):
+    def test_event_marked_as_draft__one_event__status_draft(self):
         """
         Descriptions of models are being generated:
 
@@ -149,7 +149,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             application: Application(id=1)
         """
 
-        monitor_script = {'script_slug': 'event_marked_as_draw'}
+        monitor_script = {'script_slug': 'event_marked_as_draft'}
         event = {'status': 'DRAFT'}
         model = self.bc.database.create(monitor_script=monitor_script, event=event)
 
@@ -178,7 +178,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
     🔽🔽🔽 With two Event with status DRAFT
     """
 
-    def test_event_marked_as_draw__two_events__status_draft(self):
+    def test_event_marked_as_draft__two_events__status_draft(self):
         """
         Descriptions of models are being generated:
 
@@ -199,7 +199,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
             application: Application(id=1)
         """
 
-        monitor_script = {'script_slug': 'event_marked_as_draw'}
+        monitor_script = {'script_slug': 'event_marked_as_draft'}
         event = {'status': 'DRAFT'}
         model = self.bc.database.create(monitor_script=monitor_script, event=(2, event))
 

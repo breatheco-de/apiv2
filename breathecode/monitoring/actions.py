@@ -243,8 +243,10 @@ def run_script(script):
         header = SCRIPT_HEADER
         content = header + \
             open(f'{dir_path}/scripts/{script.script_slug}.py').read()
+
     elif script.script_body:
         content = script.script_body
+
     else:
         raise Exception(f'Script not found or its body is empty: {script.script_slug}')
 
