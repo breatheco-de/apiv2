@@ -393,12 +393,51 @@ class AcademyEventIdTestSuite(EventTestCase):
         response = self.client.put(url, data, format='json')
         json = response.json()
 
-        expected = {'detail': 'slug-is-not-startswith-event', 'status_code': 400}
+        self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
+
+        del json['created_at']
+        del json['updated_at']
+
+        expected = {
+            'academy': 1,
+            'author': 1,
+            'description': None,
+            'event_type': None,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'excerpt': None,
+            'host': model['event'].host,
+            'id': 2,
+            'lang': None,
+            'slug': 'event-they-killed-kenny',
+            'online_event': False,
+            'organization': 1,
+            'published_at': None,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'venue': None,
+            'sync_with_eventbrite': False,
+            'eventbrite_sync_status': 'PENDING',
+            'currency': 'USD',
+            'tags': '',
+            **data,
+            'slug': 'event-they-killed-kenny',
+        }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(self.all_event_dict(), [{
             **self.model_to_dict(model, 'event'),
+            **data,
+            'organization_id': 1,
+            'starting_at': current_date,
+            'ending_at': current_date,
+            'slug': 'event-they-killed-kenny',
         }])
 
     """
@@ -468,7 +507,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(self.all_event_dict(), [{
             **self.model_to_dict(model, 'event'),
             **data,
@@ -540,7 +579,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(self.all_event_dict(), [{
             **self.model_to_dict(model, 'event'),
             **data,
@@ -649,7 +688,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(self.all_event_dict(), [{
             **self.model_to_dict(model, 'event'),
             **data,
@@ -733,7 +772,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(self.all_event_dict(), [{
             **self.model_to_dict(model, 'event'),
             **data,
@@ -824,7 +863,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(self.all_event_dict(), [{
             **self.model_to_dict(model, 'event'),
             **data,

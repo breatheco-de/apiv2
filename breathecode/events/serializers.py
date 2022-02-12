@@ -168,8 +168,8 @@ class EventSerializer(serializers.ModelSerializer):
 
     def validate_slug(self, value: str):
         if value and not value.startswith('event-') and not value.startswith('EVENT-'):
-            raise ValidationException('Each event slug have contain `event-` in the start',
-                                      slug='slug-is-not-startswith-event')
+            value = f'event-{value}'
+
         return value.lower()
 
 
