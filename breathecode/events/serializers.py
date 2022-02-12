@@ -167,10 +167,10 @@ class EventSerializer(serializers.ModelSerializer):
         return value
 
     def validate_slug(self, value: str):
-        if value and not value.startswith('event-'):
+        if value and not value.startswith('event-') and not value.startswith('EVENT-'):
             raise ValidationException('Each event slug have contain `event-` in the start',
                                       slug='slug-is-not-startswith-event')
-        return value
+        return value.lower()
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
