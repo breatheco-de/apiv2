@@ -460,32 +460,23 @@ def validate_marketing_tags(tags: str, academy_id: int, types: Optional[list] = 
     if ENDS_WITH_COMMA_PATTERN.search(tags):
         raise ValidationException(f'Tags string cannot ends with comma', code=400, slug='ends-with-comma')
 
-    print(2, 'tags', tags)
-    print(3, 'academy_id', academy_id)
-    print(4, 'types', types)
     tags = [x for x in tags.split(',') if x]
-    print(5, 'tags', tags)
     _tags = Tag.objects.filter(slug__in=tags, ac_academy__academy__id=academy_id)
-    print(6, '_tags', _tags)
     if types:
         _tags = _tags.filter(tag_type__in=types)
-    founds = [x.slug for x in _tags]
-    print(7, 'founds', founds)
 
+    founds = set([x.slug for x in _tags])
     if len(tags) == len(founds):
         return
 
     not_founds = []
-    print(8, 'not_founds', not_founds)
     for tag in tags:
         if tag not in founds:
             not_founds.append(tag)
 
-    print(9, 'not_founds', not_founds)
     if len(types) == 0:
         types = ['ANY']
 
-    print(10, 'types', types)
     raise ValidationException(
         f'Following tags not found with types {",".join(types)}: {",".join(not_founds)}',
         code=400,
