@@ -717,6 +717,110 @@ class AcademyEventTestSuite(EventTestCase):
         }])
 
     """
+    🔽🔽🔽 Put with duplicate tags
+    """
+
+    def test_all_academy_events__post__with_duplicate_tags(self):
+        self.headers(academy=1)
+
+        tags = [
+            {
+                'slug': 'they-killed-kenny',
+                'tag_type': 'DISCOVERY'
+            },
+            {
+                'slug': 'they-killed-kenny',
+                'tag_type': 'DISCOVERY'
+            },
+        ]
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     academy=True,
+                                     active_campaign_academy=True,
+                                     tag=tags,
+                                     capability='crud_event',
+                                     role='potato')
+
+        url = reverse_lazy('events:academy_event')
+        current_date = self.datetime_now()
+        data = {
+            'tags': model.tag[0].slug,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.post(url, data)
+        json = response.json()
+
+        del json['updated_at']
+        del json['created_at']
+
+        expected = {
+            'academy': 1,
+            'author': None,
+            'description': None,
+            'event_type': None,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'slug': None,
+            'excerpt': None,
+            'host': None,
+            'id': 1,
+            'lang': None,
+            'online_event': False,
+            'organization': 1,
+            'published_at': None,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'venue': None,
+            'sync_with_eventbrite': False,
+            'currency': 'USD',
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(self.all_event_dict(), [{
+            'academy_id': 1,
+            'author_id': None,
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'description': None,
+            'ending_at': current_date,
+            'event_type_id': None,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'excerpt': None,
+            'tags': data['tags'],
+            'slug': None,
+            'host': None,
+            'id': 1,
+            'lang': None,
+            'online_event': False,
+            'organization_id': 1,
+            'published_at': None,
+            'starting_at': current_date,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'url': 'https://www.google.com/',
+            'venue_id': None,
+            'sync_with_eventbrite': False,
+            'currency': 'USD',
+        }])
+
+    """
     🔽🔽🔽 Pagination
     """
 

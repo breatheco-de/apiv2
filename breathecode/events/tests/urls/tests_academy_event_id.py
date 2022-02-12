@@ -548,6 +548,94 @@ class AcademyEventIdTestSuite(EventTestCase):
             'ending_at': current_date,
         }])
 
+    """
+    🔽🔽🔽 Put with duplicate tags
+    """
+
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
+    def test_academy_cohort_id__put__with_duplicate_tags(self):
+        self.headers(academy=1)
+
+        tags = [
+            {
+                'slug': 'they-killed-kenny',
+                'tag_type': 'DISCOVERY'
+            },
+            {
+                'slug': 'they-killed-kenny',
+                'tag_type': 'DISCOVERY'
+            },
+        ]
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     academy=True,
+                                     active_campaign_academy=True,
+                                     tag=tags,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': model.tag[0].slug,
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        del json['updated_at']
+        del json['created_at']
+
+        expected = {
+            'academy': 1,
+            'author': 1,
+            'description': None,
+            'event_type': None,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'excerpt': None,
+            'host': model['event'].host,
+            'id': 2,
+            'lang': None,
+            'slug': None,
+            'online_event': False,
+            'organization': 1,
+            'published_at': None,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'venue': None,
+            'sync_with_eventbrite': False,
+            'eventbrite_sync_status': 'PENDING',
+            'currency': 'USD',
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(self.all_event_dict(), [{
+            **self.model_to_dict(model, 'event'),
+            **data,
+            'organization_id': 1,
+            'starting_at': current_date,
+            'ending_at': current_date,
+        }])
+
+    """
+    🔽🔽🔽 Cache
+    """
+
     @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_with_data_testing_cache_and_remove_in_put(self):
         """Test /cohort without auth"""
