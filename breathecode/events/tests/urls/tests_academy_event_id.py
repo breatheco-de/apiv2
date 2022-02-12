@@ -2,12 +2,16 @@ from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
 from ..mixins.new_events_tests_case import EventTestCase
 from breathecode.services import datetime_to_iso_format
+from breathecode.tests.mixins.cache_mixin import CacheMixin
+from .tests_academy_event import AcademyEventTestSuite
+from unittest.mock import MagicMock, call, patch
 
 
 class AcademyEventIdTestSuite(EventTestCase):
     cache = EventCache()
 
-    def test_academy_event_id_no_auth(self):
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
+    def test_academy_single_event_no_auth(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
 
@@ -18,6 +22,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 401)
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_all_academy_events_without_capability(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
@@ -33,6 +38,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 403)
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_event_id_invalid_id(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
@@ -49,6 +55,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 404)
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_event_id_valid_id(self):
         self.headers(academy=1)
         url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
@@ -96,6 +103,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id_put__without_organization(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -119,6 +127,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             **self.model_to_dict(model, 'event'),
         }])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id_put_without_required_fields(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -157,6 +166,7 @@ class AcademyEventIdTestSuite(EventTestCase):
     🔽🔽🔽 Put - bad tags
     """
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__two_commas(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -189,6 +199,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__with_spaces(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -221,6 +232,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__starts_with_comma(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -253,6 +265,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__ends_with_comma(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -285,6 +298,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__one_tag_not_exists(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -317,6 +331,7 @@ class AcademyEventIdTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__one_of_two_tags_not_exists(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -354,6 +369,7 @@ class AcademyEventIdTestSuite(EventTestCase):
     🔽🔽🔽 Put
     """
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__tags_is_blank(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -424,6 +440,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             'ending_at': current_date,
         }])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__with_tags__without_acp(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -460,6 +477,7 @@ class AcademyEventIdTestSuite(EventTestCase):
             **self.model_to_dict(model, 'event'),
         }])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__with_tags(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -534,6 +552,7 @@ class AcademyEventIdTestSuite(EventTestCase):
     🔽🔽🔽 Put with duplicate tags
     """
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__with_duplicate_tags(self):
         self.headers(academy=1)
 
@@ -617,6 +636,7 @@ class AcademyEventIdTestSuite(EventTestCase):
     🔽🔽🔽 Cache
     """
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_with_data_testing_cache_and_remove_in_put(self):
         """Test /cohort without auth"""
         cache_keys = [

@@ -3,7 +3,7 @@ Test /answer/:id
 """
 import os
 from unittest.mock import MagicMock, call, patch
-from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag
+from breathecode.marketing.tasks import add_event_slug_as_acp_tag
 from breathecode.tests.mocks import apply_requests_request_mock
 from ..mixins import MarketingTestCase
 
@@ -13,13 +13,14 @@ AC_URL = f'{AC_HOST}/api/3/tags'
 AC_RESPONSE = {
     'tag': {
         'id': 1,
-        'tag': 'they-killed-kenny',
+        'tag_type': 'EVENT',
+        'slug': 'event-they-killed-kenny',
     },
 }
 AC_ERROR_RESPONSE = {
     'message': 'they-killed-kenny',
 }
-TASK_STARTED_MESSAGE = 'Task add_cohort_slug_as_acp_tag started'
+TASK_STARTED_MESSAGE = 'Task add_event_slug_as_acp_tag started'
 
 
 class AnswerIdTestSuite(MarketingTestCase):
@@ -28,12 +29,12 @@ class AnswerIdTestSuite(MarketingTestCase):
     """
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
-    def test_add_cohort_slug_as_acp_tag__without_academy(self):
+    def test_add_event_slug_as_acp_tag__without_academy(self):
         import logging
 
-        add_cohort_slug_as_acp_tag.delay(1, 1)
+        add_event_slug_as_acp_tag.delay(1, 1)
 
         self.assertEqual(self.all_tag_dict(), [])
         self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
@@ -45,14 +46,14 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
-    def test_add_cohort_slug_as_acp_tag__without_active_campaign_academy(self):
+    def test_add_event_slug_as_acp_tag__without_active_campaign_academy(self):
         import logging
 
         model = self.generate_models(academy=True)
 
-        add_cohort_slug_as_acp_tag.delay(1, 1)
+        add_event_slug_as_acp_tag.delay(1, 1)
 
         self.assertEqual(self.all_tag_dict(), [])
 
@@ -60,28 +61,28 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(logging.Logger.error.call_args_list, [call('ActiveCampaign Academy 1 not found')])
 
     """
-    🔽🔽🔽 Without Cohort
+    🔽🔽🔽 Without Event
     """
 
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
-    def test_add_cohort_slug_as_acp_tag__without_cohort(self):
+    def test_add_event_slug_as_acp_tag__without_event(self):
         import logging
 
         active_campaign_academy_kwargs = {'ac_url': AC_HOST}
         model = self.generate_models(academy=True,
-                                     skip_cohort=True,
+                                     skip_event=True,
                                      active_campaign_academy=True,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
-        add_cohort_slug_as_acp_tag.delay(1, 1)
+        add_event_slug_as_acp_tag.delay(1, 1)
 
         self.assertEqual(self.all_tag_dict(), [])
 
         self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
-        self.assertEqual(logging.Logger.error.call_args_list, [call('Cohort 1 not found')])
+        self.assertEqual(logging.Logger.error.call_args_list, [call('Event 1 not found')])
 
     """
     🔽🔽🔽 Create a Tag in active campaign
@@ -89,55 +90,36 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
-    def test_add_cohort_slug_as_acp_tag(self):
+    def test_add_event_slug_as_acp_tag(self):
         import logging
 
         active_campaign_academy_kwargs = {'ac_url': AC_HOST}
         model = self.generate_models(academy=True,
+                                     event={
+                                         'slug': 'they-killed-kenny',
+                                         'id': 1,
+                                     },
                                      active_campaign_academy=True,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
-        add_cohort_slug_as_acp_tag.delay(1, 1)
+        add_event_slug_as_acp_tag.delay(1, 1)
         self.assertEqual(self.all_tag_dict(), [{
             'ac_academy_id': 1,
             'acp_id': 1,
             'automation_id': None,
             'id': 1,
-            'slug': 'they-killed-kenny',
-            'subscribers': 0,
-            'tag_type': 'COHORT',
             'disputed_at': None,
             'disputed_reason': None,
+            'slug': 'event-they-killed-kenny',
+            'subscribers': 0,
+            'tag_type': 'EVENT',
         }])
 
         self.assertEqual(logging.Logger.warn.call_args_list, [
             call(TASK_STARTED_MESSAGE),
-            call(f'Creating tag `{model.cohort.slug}` on active campaign'),
-            call('Tag created successfully'),
-        ])
-        self.assertEqual(logging.Logger.error.call_args_list, [])
-
-    @patch('logging.Logger.warn', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
-    def test_add_cohort_slug_as_acp_tag_type_cohort(self):
-        import logging
-
-        active_campaign_academy_kwargs = {'ac_url': AC_HOST}
-        model = self.generate_models(academy=True,
-                                     active_campaign_academy=True,
-                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
-
-        add_cohort_slug_as_acp_tag.delay(1, 1)
-        print(self.all_tag_dict())
-        self.assertEqual(self.all_tag_dict()[0]['tag_type'], 'COHORT')
-
-        self.assertEqual(logging.Logger.warn.call_args_list, [
-            call(TASK_STARTED_MESSAGE),
-            call(f'Creating tag `{model.cohort.slug}` on active campaign'),
+            call(f'Creating tag `event-{model.event.slug}` on active campaign'),
             call('Tag created successfully'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
@@ -148,57 +130,32 @@ class AnswerIdTestSuite(MarketingTestCase):
 
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
     @patch('requests.post', apply_requests_request_mock([(201, AC_URL, AC_RESPONSE)]))
-    def test_add_cohort_slug_as_acp_tag__tag_exists(self):
+    def test_add_event_slug_as_acp_tag__tag_exists(self):
         import logging
 
         active_campaign_academy_kwargs = {'ac_url': AC_HOST}
-        tag_kwargs = {'slug': 'they-killed-kenny'}
-        cohort_kwargs = {'slug': 'they-killed-kenny'}
+        tag_kwargs = {'slug': 'event-they-killed-kenny'}
+        event_kwargs = {
+            'slug': 'they-killed-kenny',
+            'name': 'they-killed-kenny',
+            'id': 1,
+        }
 
         model = self.generate_models(tag=True,
                                      academy=True,
                                      active_campaign_academy=True,
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs,
                                      tag_kwargs=tag_kwargs,
-                                     cohort_kwargs=cohort_kwargs)
+                                     event=event_kwargs)
 
-        add_cohort_slug_as_acp_tag.delay(1, 1)
+        add_event_slug_as_acp_tag.delay(1, 1)
 
         self.assertEqual(self.all_tag_dict(), [self.model_to_dict(model, 'tag')])
 
         self.assertEqual(logging.Logger.warn.call_args_list, [
             call(TASK_STARTED_MESSAGE),
-            call(f'Tag for cohort `{model.cohort.slug}` already exists'),
+            call(f'Tag for event `{model.event.slug}` already exists'),
         ])
         self.assertEqual(logging.Logger.error.call_args_list, [])
-
-    """
-    🔽🔽🔽 Active campaign return 404 (check cases status code are not equal to 201)
-    """
-
-    @patch('logging.Logger.warn', MagicMock())
-    @patch('logging.Logger.error', MagicMock())
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch('requests.post', apply_requests_request_mock([(404, AC_URL, AC_ERROR_RESPONSE)]))
-    def test_add_cohort_slug_as_acp_tag__status_404(self):
-        import logging
-
-        active_campaign_academy_kwargs = {'ac_url': AC_HOST}
-        model = self.generate_models(academy=True,
-                                     active_campaign_academy=True,
-                                     active_campaign_academy_kwargs=active_campaign_academy_kwargs)
-
-        add_cohort_slug_as_acp_tag.delay(1, 1)
-
-        self.assertEqual(self.all_tag_dict(), [])
-
-        self.assertEqual(logging.Logger.warn.call_args_list, [
-            call(TASK_STARTED_MESSAGE),
-            call(f'Creating tag `{model.cohort.slug}` on active campaign'),
-        ])
-        self.assertEqual(logging.Logger.error.call_args_list, [
-            call(f'Error creating tag `{model.cohort.slug}` with status=404'),
-            call(AC_ERROR_RESPONSE),
-        ])
