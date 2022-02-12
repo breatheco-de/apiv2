@@ -183,9 +183,10 @@ class Event(models.Model):
     def save(self, *args, **kwargs):
         from .signals import event_saved
 
+        created = not self.id
         super().save(*args, **kwargs)
 
-        event_saved.send(instance=self, sender=self.__class__)
+        event_saved.send(instance=self, sender=self.__class__, created=created)
 
 
 PENDING = 'PENDING'

@@ -316,6 +316,8 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
         user = None
         email = None
         status = 'INVITED'
+
+        # if the user already exists, we don't consider it and invite, we add the user immediatly to the academy.
         if 'user' in validated_data:
             user = User.objects.filter(id=validated_data['user']).first()
             if user is None:
@@ -327,6 +329,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             already_as_student = ProfileAcademy.objects.filter(user=user,
                                                                academy=academy.id,
                                                                role=student_role).first()
+            # avoid double students on the same academy and cohort
             if already_as_student is not None:
                 return super().update(
                     already_as_student, {
@@ -337,10 +340,13 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                         'status': status
                     })
 
+        # if there is not user (first time) it will be considere an invite
         if 'user' not in validated_data:
-            validated_data.pop('invite')
+            validated_data.pop('invite')  # the front end sends invite=true so we need to remove it
             email = validated_data['email'].lower()
             invite = UserInvite.objects.filter(email=email, author=self.context.get('request').user).first()
+
+            # avoid double invite
             if invite is not None:
                 raise ValidationException(
                     'You already invited this user, check for previous invites and resend')
@@ -370,6 +376,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     'FIST_NAME': validated_data['first_name']
                 })
 
+        # add member to the academy (the cohort is inside validated_data
         return super().create({
             **validated_data, 'email': email,
             'user': user,
@@ -379,6 +386,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
         })
 
 
+# This method is almost repeated but now for students instead of academy memebers.
 class StudentPOSTSerializer(serializers.ModelSerializer):
     invite = serializers.BooleanField(write_only=True, required=False)
     cohort = serializers.IntegerField(write_only=True, required=False)

@@ -3,7 +3,7 @@ from django.urls import path, include
 from .views import (create_lead, sync_tags_with_active_campaign, sync_automations_with_active_campaign,
                     receive_facebook_lead, get_leads, get_leads_report, AcademyLeadView, AcademyWonLeadView,
                     AcademyTagView, AcademyAutomationView, activecampaign_webhook, googleads_enrollments,
-                    googleads_csv, get_downloadable, ShortLinkView, create_lead_from_app)
+                    googleads_csv, get_downloadable, ShortLinkView, create_lead_from_app, UTMView)
 from rest_framework.authtoken import views
 
 app_name = 'marketing'
@@ -22,6 +22,7 @@ urlpatterns = [
     path('academy/automation', AcademyAutomationView.as_view(), name='academy_automation'),
     path('academy/short', ShortLinkView.as_view(), name='short'),
     path('academy/short/<slug:short_slug>', ShortLinkView.as_view(), name='short-slug'),
+    path('academy/utm', UTMView.as_view(), name='academy_utm'),
     path('facebook/lead', receive_facebook_lead, name='facebook_all'),
     path('report/lead', get_leads_report, name='report_lead'),
     path('downloadable', get_downloadable, name='downloadable'),

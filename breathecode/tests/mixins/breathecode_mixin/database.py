@@ -104,4 +104,4 @@ class Database:
         - authenticate: create a user and use `APITestCase.client.force_authenticate(user=models['user'])` to
         get credentials.
         """
-        return GenerateModelsMixin.generate_models(self._parent, *args, **kwargs)
+        return GenerateModelsMixin.generate_models(self._parent, _new_implementation=True, *args, **kwargs)

@@ -26,6 +26,8 @@ class MarketingModelsMixin(ModelsMixin):
                                   form_entry_kwargs={},
                                   short_link_kwargs={},
                                   lead_generation_app_kwargs={},
+                                  downloadable=False,
+                                  downloadable_kwargs={},
                                   models={},
                                   **kwargs):
         """Generate models"""
@@ -52,6 +54,20 @@ class MarketingModelsMixin(ModelsMixin):
             models['automation'] = create_models(automation, 'marketing.Automation', **{
                 **kargs,
                 **automation_kwargs
+            })
+
+        if not 'downloadable' in models and is_valid(downloadable):
+            kargs = {}
+
+            if 'academy' in models and is_valid(downloadable):
+                kargs['academy'] = just_one(models['academy'])
+
+            if 'user' in models and is_valid(downloadable):
+                kargs['user'] = just_one(models['user'])
+
+            models['downloadable'] = create_models(downloadable, 'marketing.Downloadable', **{
+                **kargs,
+                **downloadable_kwargs
             })
 
         if not 'academy_alias' in models and is_valid(academy_alias):
