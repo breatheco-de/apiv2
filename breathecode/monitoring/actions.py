@@ -55,9 +55,9 @@ def test_link(url, test_pattern=None):
         result['status_text'] = 'Connection Timeout'
     except requests.ConnectionError:
         result['status_code'] = 404
-        result['status_text'] = f'Connection Error {r.status_code}'
+        result['status_text'] = f'Connection Error 404'
 
-    logger.debug(f'Tested {url} {result["status_text"]} with 404')
+    logger.debug(f'Tested {url} {result["status_text"]} with {result["status_code"]}')
     return result
 
 
