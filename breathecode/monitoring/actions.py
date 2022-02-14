@@ -57,7 +57,7 @@ def test_link(url, test_pattern=None):
         result['status_code'] = 404
         result['status_text'] = f'Connection Error {r.status_code}'
 
-    logger.debug(f'Tested {url} {result["status_text"]} with {r.status_code}')
+    logger.debug(f'Tested {url} {result["status_text"]} with 404')
     return result
 
 
