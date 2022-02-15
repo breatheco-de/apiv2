@@ -146,10 +146,6 @@ class ActionSaveDataTestCase(JobsTestCase):
 
         model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
 
-        # result = save_data(model.spider, JOBS1)
-        # datospider = model.objects.all()
-        print(model)
-
         result = save_data(model.spider, JOBS)
         print('result', result)
         self.assertEqual(result, JOBS)
