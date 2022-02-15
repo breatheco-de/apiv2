@@ -3,6 +3,8 @@ from django.core.cache import cache, caches
 from datetime import datetime
 from breathecode.tests.mixins import DatetimeMixin
 
+__all__ = ['Cache']
+
 
 class Cache(DatetimeMixin):
     model: str

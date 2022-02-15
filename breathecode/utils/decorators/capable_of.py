@@ -1,26 +1,32 @@
 from rest_framework.exceptions import PermissionDenied
 from breathecode.authenticate.models import ProfileAcademy
 from django.contrib.auth.models import AnonymousUser
-from .validation_exception import ValidationException
-from rest_framework.request import Request
+
+from breathecode.utils.exceptions import ProgramingError
+from ..validation_exception import ValidationException
+from rest_framework.views import APIView
+
+__all__ = ['capable_of']
 
 
 def capable_of(capability=None):
     def decorator(function):
         def wrapper(*args, **kwargs):
             if isinstance(capability, str) == False:
-                raise Exception('Capability must be a string')
+                raise ProgramingError('Capability must be a string')
 
-            request = None
             try:
-                if isinstance(args[0], Request):
-                    request = args[0]
-                elif isinstance(args[1], Request):
+                if hasattr(args[0], '__class__') and isinstance(args[0], APIView):
                     request = args[1]
+
+                elif hasattr(args[0], 'user') and hasattr(args[0].user, 'has_perm'):
+                    request = args[0]
+
                 else:
                     raise IndexError()
+
             except IndexError:
-                raise Exception('Missing request information')
+                raise ProgramingError('Missing request information, use this decorator with DRF View')
 
             academy_id = None
             if 'academy_id' not in kwargs and ('Academy' not in request.headers
