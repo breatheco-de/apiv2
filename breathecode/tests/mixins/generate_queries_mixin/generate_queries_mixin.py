@@ -30,16 +30,18 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
     __project__ = 'breathecode'
     __generate_queries_was_loaded__ = False
 
-    def __get_model__(self, Model, key='id'):
+    def __get_model__(self, method_name, Model, key='id'):
         def get_model(pk):
+            print(f'The method `{method_name}` is deprecated, use `self.bc.database.list_of` instead')
             kwargs = {key: pk}
 
             return Model.objects.filter(**kwargs).first()
 
         return get_model
 
-    def __get_model_dict__(self, Model, key='id'):
+    def __get_model_dict__(self, method_name, Model, key='id'):
         def get_model_dict(pk):
+            print(f'The method `{method_name}` is deprecated, use `self.bc.database.list_of` instead')
             kwargs = {key: pk}
 
             data = Model.objects.filter(**kwargs).first()
@@ -47,20 +49,23 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
 
         return get_model_dict
 
-    def __all_model__(self, Model):
+    def __all_model__(self, method_name, Model):
         def all_model():
+            print(f'The method `{method_name}` is deprecated, use `self.bc.database.list_of` instead')
             return Model.objects.filter()
 
         return all_model
 
-    def __all_model_dict__(self, Model):
+    def __all_model_dict__(self, method_name, Model):
         def all_model_dict():
+            print(f'The method `{method_name}` is deprecated, use `self.bc.database.list_of` instead')
             return [self.remove_dinamics_fields(data.__dict__.copy()) for data in Model.objects.filter()]
 
         return all_model_dict
 
-    def __count_model__(self, Model):
+    def __count_model__(self, method_name, Model):
         def count_model():
+            print(f'The method `{method_name}` is deprecated, use `self.bc.database.list_of` instead')
             return Model.objects.count()
 
         return count_model
@@ -68,13 +73,17 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
     def __set_queries__(self, Model):
         snake_case_name = re.sub(r'(?<!^)(?=[A-Z])', '_', Model.__name__).lower()
 
-        setattr(self, f'get_{snake_case_name}', self.__get_model__(Model))
-        setattr(self, f'get_{snake_case_name}_dict', self.__get_model_dict__(Model))
-        setattr(self, f'all_{snake_case_name}', self.__all_model__(Model))
-        setattr(self, f'all_{snake_case_name}_dict', self.__all_model_dict__(Model))
-        setattr(self, f'count_{snake_case_name}', self.__count_model__(Model))
+        setattr(self, f'get_{snake_case_name}', self.__get_model__(f'get_{snake_case_name}', Model))
+        setattr(self, f'get_{snake_case_name}_dict',
+                self.__get_model_dict__(f'get_{snake_case_name}_dict', Model))
+        setattr(self, f'all_{snake_case_name}', self.__all_model__(f'all_{snake_case_name}', Model))
+        setattr(self, f'all_{snake_case_name}_dict',
+                self.__all_model_dict__(f'all_{snake_case_name}_dict', Model))
+        setattr(self, f'count_{snake_case_name}', self.__count_model__(f'count_{snake_case_name}', Model))
 
     def generate_queries(self):
+        print(f'The method `generate_queries` is deprecated, use `self.bc.database.list_of` instead')
+
         if self.__generate_queries_was_loaded__:
             return
 

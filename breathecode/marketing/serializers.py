@@ -1,7 +1,7 @@
 import serpy, logging
 from django.utils import timezone
 from datetime import timedelta
-from .models import FormEntry, AcademyAlias, ShortLink
+from .models import FormEntry, AcademyAlias, ShortLink, Tag
 from breathecode.monitoring.actions import test_link
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
@@ -22,11 +22,21 @@ class ShortlinkSmallSerializer(serpy.Serializer):
     destination = serpy.Field()
     hits = serpy.Field()
     private = serpy.Field()
+    destination_status = serpy.Field()
+    destination_status_text = serpy.Field()
     lastclick_at = serpy.Field()
+    active = serpy.Field()
 
 
 class UserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
+
+
+class UTMSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    utm_type = serpy.Field()
+    updated_at = serpy.Field()
 
 
 class AutomationSmallSerializer(serpy.Serializer):
@@ -44,9 +54,11 @@ class DownloadableSerializer(serpy.Serializer):
 
 
 class TagSmallSerializer(serpy.Serializer):
-    id = serpy.Field()
     slug = serpy.Field()
     tag_type = serpy.Field()
+    subscribers = serpy.Field()
+    disputed_at = serpy.Field()
+    disputed_reason = serpy.Field()
     automation = AutomationSmallSerializer(required=False)
 
 
@@ -124,7 +136,7 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
 class ShortLinkSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShortLink
-        exclude = ('academy', )
+        exclude = ('academy', 'author', 'hits', 'destination_status', 'destination_status_text')
 
     def validate(self, data):
 
@@ -144,7 +156,8 @@ class ShortLinkSerializer(serializers.ModelSerializer):
 
         utc_now = timezone.now()
         days_ago = self.instance.created_at + timedelta(days=1)
-        if days_ago < utc_now:
+        if days_ago < utc_now and (self.instance.destination != data['destination']
+                                   or self.instance.slug != data['slug']):
             raise ValidationException(
                 f'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
                 slug='update-days-ago')
@@ -152,4 +165,10 @@ class ShortLinkSerializer(serializers.ModelSerializer):
         return {**data, 'academy': academy}
 
     def create(self, validated_data):
-        return ShortLink.objects.create(**validated_data)
+        return ShortLink.objects.create({**validated_data, author: self.context.get('request').user})
+
+
+class PUTTagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        exclude = ('slug', 'acp_id', 'subscribers', 'ac_academy', 'created_at', 'updated_at')

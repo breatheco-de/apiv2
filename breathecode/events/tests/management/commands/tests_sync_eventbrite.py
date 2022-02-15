@@ -90,6 +90,7 @@ class SyncEventbriteTestSuite(EventTestCase):
     @patch.object(sys.stdout, 'write', write_mock())
     @patch.object(sys.stderr, 'write', write_mock())
     @patch.object(actions, 'sync_org_events', sync_org_events_mock())
+    @patch('builtins.print', MagicMock())
     def test_sync_eventbrite__with_organization__without_name(self):
         """Test /answer without auth"""
         import breathecode.events.actions as actions
@@ -113,6 +114,7 @@ class SyncEventbriteTestSuite(EventTestCase):
     @patch.object(sys.stdout, 'write', write_mock())
     @patch.object(sys.stderr, 'write', write_mock())
     @patch.object(actions, 'sync_org_events', sync_org_events_mock())
+    @patch('builtins.print', MagicMock())
     def test_sync_eventbrite__with_organization__with_name(self):
         """Test /answer without auth"""
         import breathecode.events.actions as actions
@@ -137,6 +139,7 @@ class SyncEventbriteTestSuite(EventTestCase):
     @patch.object(sys.stdout, 'write', write_mock())
     @patch.object(sys.stderr, 'write', write_mock())
     @patch.object(actions, 'sync_org_events', sync_org_events_mock())
+    @patch('builtins.print', MagicMock())
     def test_sync_eventbrite__with_organization(self):
         """Test /answer without auth"""
         import breathecode.events.actions as actions

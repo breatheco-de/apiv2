@@ -55,9 +55,9 @@ def test_link(url, test_pattern=None):
         result['status_text'] = 'Connection Timeout'
     except requests.ConnectionError:
         result['status_code'] = 404
-        result['status_text'] = f'Connection Error {r.status_code}'
+        result['status_text'] = f'Connection Error 404'
 
-    logger.debug(f'Tested {url} {result["status_text"]} with {r.status_code}')
+    logger.debug(f'Tested {url} {result["status_text"]} with {result["status_code"]}')
     return result
 
 
@@ -255,6 +255,7 @@ def run_script(script):
                 exec(content, {'academy': script.application.academy}, local)
                 script.status_code = 0
                 script.status = 'OPERATIONAL'
+                script.special_status_text = 'OK'
                 results['severity_level'] = 5
                 script.response_text = s.getvalue()
 
@@ -274,7 +275,7 @@ def run_script(script):
 
             except Exception as e:
                 import traceback
-                script.special_status_text = str(e)
+                script.special_status_text = str(e)[:255]
                 script.response_text = ''.join(traceback.format_exception(None, e, e.__traceback__))
                 script.status_code = 1
                 script.status = 'CRITICAL'

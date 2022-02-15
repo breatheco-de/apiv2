@@ -116,7 +116,7 @@ class EventView(APIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
-        serializer = EventSerializer(data=request.data)
+        serializer = EventSerializer(data=request.data, context={'academy_id': None})
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -211,7 +211,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         data['sync_status'] = 'PENDING'
         data['organization'] = organization_id
 
-        serializer = EventSerializer(data={**data, 'academy': academy.id})
+        serializer = EventSerializer(data={**data, 'academy': academy.id}, context={'academy_id': academy_id})
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
@@ -237,11 +237,11 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         data['sync_status'] = 'PENDING'
         data['organization'] = organization_id
 
-        serializer = EventSerializer(already, data=data)
+        serializer = EventSerializer(already, data=data, context={'academy_id': academy_id})
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -429,7 +429,7 @@ class AcademyOrganizationView(APIView):
 
 
 # list eventbride webhook
-class OrganizationWebhookView(APIView):
+class OrganizationWebhookView(APIView, HeaderLimitOffsetPagination):
     @capable_of('read_organization')
     def get(self, request, academy_id=None):
 
@@ -439,8 +439,12 @@ class OrganizationWebhookView(APIView):
             raise ValidationException(f'Academy has no organization', code=400, slug='organization-no-found')
 
         webhooks = EventbriteWebhook.objects.filter(organization_id=org.id)
-        serializer = EventbriteWebhookSerializer(webhooks)
-        return Response(serializer.data)
+        page = self.paginate_queryset(webhooks, request)
+        serializer = EventbriteWebhookSerializer(page, many=True)
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
 
 # list venues

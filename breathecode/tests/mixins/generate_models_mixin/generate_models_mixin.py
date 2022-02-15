@@ -69,6 +69,15 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
         return models
 
     def generate_models(self, models={}, **kwargs):
+        if '_new_implementation' not in kwargs:
+            print(f'The method `generate_models` is deprecated, use `self.bc.database.create` instead')
+
+        else:
+            del kwargs['_new_implementation']
+
+        if 'authenticate' in kwargs:
+            print(f'The argument `authenticate` is deprecated, use `self.bc.request.authenticate` instead')
+
         self.maxDiff = None
         models = models.copy()
         models = self.__inject_models__(models, **kwargs)

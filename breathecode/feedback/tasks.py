@@ -146,7 +146,7 @@ def send_cohort_survey(self, user_id, survey_id):
         logger.info(message)
         raise Exception(message)
 
-    token, created = Token.get_or_create(user, hours_length=48)
+    token, created = Token.get_or_create(user, token_type='temporal', hours_length=48)
     data = {
         'SUBJECT': strings[survey.lang]['survey_subject'],
         'MESSAGE': strings[survey.lang]['survey_message'],
@@ -222,20 +222,18 @@ def send_mentorship_session_survey(self, session_id):
         logger.error('Mentoring session not found')
         return False
 
-    if Answer.objects.filter(mentorship_session__id=session.id).first() is not None:
-        logger.info(f'There is already a NPS question for this mentoring session, IGNORING')
-        return True
-
-    answer = Answer(mentorship_session=session,
-                    academy=session.mentor.service.academy,
-                    lang=session.mentor.service.language)
-    question = build_question(answer)
-    answer.title = question['title']
-    answer.lowest = question['lowest']
-    answer.highest = question['highest']
-    answer.user = session.mentee
-    answer.status = 'SENT'
-    answer.save()
+    answer = Answer.objects.filter(mentorship_session__id=session.id).first()
+    if answer is None:
+        answer = Answer(mentorship_session=session,
+                        academy=session.mentor.service.academy,
+                        lang=session.mentor.service.language)
+        question = build_question(answer)
+        answer.title = question['title']
+        answer.lowest = question['lowest']
+        answer.highest = question['highest']
+        answer.user = session.mentee
+        answer.status = 'SENT'
+        answer.save()
 
     has_slackuser = hasattr(session.mentee, 'slackuser')
     if not session.mentee.email:
@@ -243,7 +241,7 @@ def send_mentorship_session_survey(self, session_id):
         logger.info(message)
         raise Exception(message)
 
-    token, created = Token.get_or_create(session.mentee, hours_length=48)
+    token, created = Token.get_or_create(session.mentee, token_type='temporal', hours_length=48)
     data = {
         'SUBJECT': strings[answer.lang]['survey_subject'],
         'MESSAGE': answer.title,

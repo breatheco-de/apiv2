@@ -86,7 +86,7 @@ own_lesson.short_description = 'Make myself the owner of these assets (github ac
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug', 'author__email', 'url']
-    list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'url_path')
+    list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'techs', 'url_path')
     list_filter = ['asset_type', 'status', 'lang']
     actions = [add_gitpod, remove_gitpod, sync_github, author_lesson, own_lesson, process_github_authors
                ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status')
@@ -107,6 +107,9 @@ class AssetAdmin(admin.ModelAdmin):
         }
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
+    def techs(self, obj):
+        return ', '.join([t.slug for t in obj.technologies.all()])
+
 
 # Register your models here.
 @admin.register(AssetTranslation)
@@ -115,11 +118,26 @@ class AssetTranslationsAdmin(admin.ModelAdmin):
     list_display = ('slug', 'title')
 
 
+def merge_technologies(modeladmin, request, queryset):
+    technologies = queryset.all()
+    target_tech = None
+    for t in technologies:
+        # skip the first one
+        if target_tech is None:
+            target_tech = t
+            continue
+
+        for a in t.asset_set.all():
+            a.technologies.add(target_tech)
+        t.delete()
+
+
 # Register your models here.
 @admin.register(AssetTechnology)
 class AssetTechnologyAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug']
     list_display = ('slug', 'title')
+    actions = (merge_technologies, )
 
 
 # Register your models here.
