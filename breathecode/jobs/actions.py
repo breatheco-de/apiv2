@@ -387,7 +387,7 @@ def days_ago_to_date(findings, string_date):
     return _datetime
 
 
-def today(findings, string_date):
+def today():
     _datetime = datetime.now()
     return _datetime
 
@@ -419,7 +419,7 @@ def change_format_to_date(findings, string_date):
     return _datetime
 
 
-def format_corret_to_date(findings, string_date):
+def format_correct_to_date(string_date):
     return string_date
 
 
@@ -464,11 +464,11 @@ def salary_month_only_one(findings, string_salary):
 
 _cases = {
     '^(?:Active\s)?(\d{1,2})\+? days? ago': days_ago_to_date,
-    '^(\d{1,4}-\d{1,2}-\d{1,2}\s\d{1,2}:\d{1,2}:\d{1,2})$': format_corret_to_date,
+    '^(\d{1,4}-\d{1,2}-\d{1,2}\s\d{1,2}:\d{1,2}:\d{1,2})$': format_correct_to_date,
     '(.*\s?\d{1,2}\+?,? \d{1,4})': change_format_to_date,
-    '^today': today,
-    '^Just posted': today,
-    '^just posted': today,
+    '^today': lambda *args, **kwargs: today(),
+    '^Just posted': lambda *args, **kwargs: today(),
+    '^just posted': lambda *args, **kwargs: today(),
 }
 
 _cases_loc = {

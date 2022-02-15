@@ -27,7 +27,7 @@ def async_run_spider(self, args):
         spider.sync_desc = 'The run of the spider ended successfully command at ' + str(now)
         spider.save()
 
-    elif result.status_code == 400:
+    else:
         message = '400 Bad Request command at ' + str(now)
         logger.debug(message)
         spider.sync_status = 'ERROR'
