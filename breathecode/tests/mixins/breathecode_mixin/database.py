@@ -6,8 +6,6 @@ from django.db.models import Model
 from ..generate_models_mixin import GenerateModelsMixin
 from ..models_mixin import ModelsMixin
 
-ModelsMixin
-
 __all__ = ['Database']
 
 
