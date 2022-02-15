@@ -63,17 +63,23 @@ def fetch_data_to_json(*args):
     spider, api_fetch = args
 
     if spider is None:
-        logger.debug(f'First you must specify a spider (fetch_data_to_json)')
+        logger.error(f'First you must specify a spider (fetch_data_to_json)')
         raise ValidationException('First you must specify a spider', slug='without-spider')
 
     if api_fetch is None:
-        logger.debug(f'I did not receive results from the API (fetch_data_to_json)')
-        raise ValidationException('I did not receive results from the API', slug='no-return-json-data')
+        logger.error(f'I did not receive results from the API (fetch_data_to_json)')
+        raise ValidationException('Is did not receive results from the API', slug='no-return-json-data')
 
     data_project = []
     for res_api_jobs in api_fetch['jobs']:
         num_spid = get_job_id_from_string(res_api_jobs['id'])
-
+        # print(int(num_spid[1]) == int(spider.zyte_spider_number))
+        # print(int(num_spid[1]))
+        # print(int(spider.zyte_spider_number))
+        # print('#########################################')
+        # print(int(num_spid[2]) >= int(spider.zyte_job_number))
+        # print(int(num_spid[2]))
+        # print(int(spider.zyte_job_number))
         if int(num_spid[1]) == int(
                 spider.zyte_spider_number) and int(num_spid[2]) >= int(spider.zyte_job_number):
             response = requests.get(
@@ -81,7 +87,7 @@ def fetch_data_to_json(*args):
             )
 
             if response.status_code != 200:
-                logger.debug(
+                logger.error(
                     f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spid[1]} (fetch_data_to_json)'
                 )
                 raise ValidationException(
@@ -91,8 +97,8 @@ def fetch_data_to_json(*args):
             data_project.append({
                 'status': 'ok',
                 'platform_name': spider.zyte_project.platform.name,
-                'num_spider': num_spid[1],
-                'num_job': num_spid[2],
+                'num_spider': int(num_spid[1]),
+                'num_job': int(num_spid[2]),
                 'jobs': response.json()
             })
 
@@ -204,7 +210,7 @@ def save_data(spider, jobs):
                 if tagsave is None:
                     Tag.objects.create(slug=t)
 
-        validate = validate_diplicate_job(j['Job_title'], employer)
+        validate = validate_diplicate_job(j['Job_title'], j['Company_name'])
         if validate is None:
             job = Job(
                 title=j['Job_title'],
@@ -355,15 +361,6 @@ def get_location_from_string(keyword: str):
     return loc
 
 
-def get_location_alias_to_location_from_string(keyword: str):
-    loc = LocationAlias.objects.filter(name__iexact=keyword).first()
-
-    if loc is None:
-        return None
-
-    return loc.location
-
-
 def get_employer_from_string(keyword: str):
     employer = Employer.objects.filter(name__iexact=keyword).first()
 
@@ -382,29 +379,9 @@ def get_tag_from_string(keyword: str):
     return tag
 
 
-def get_job_from_string(keyword: str):
-    job = Job.objects.filter(apply_url__iexact=keyword).first()
-
+def validate_diplicate_job(title: str, employer_name: str):
+    job = Job.objects.filter(title__iexact=title, employer__name=employer_name).first()
     if job is None:
-        return None
-
-    return job
-
-
-def get_tag_from_string(keyword: str):
-    tag = Tag.objects.filter(slug__iexact=keyword).first()
-
-    if tag is None:
-        return None
-
-    return tag
-
-
-def validate_diplicate_job(job: str, employer):
-    job = Job.objects.filter(title__iexact=job).first()
-    employer = Job.objects.filter(employer=employer).first()
-
-    if job is None and employer is None:
         return None
 
     return True
@@ -436,7 +413,7 @@ def loc(findings, string_loc):
         _res.append(tag.replace(' o ', ',').replace(';', ',').strip())
 
     location = job_id_fecth[0]
-    loc = [location]
+    loc = [location.replace('.', '').strip()]
     loc.insert(len(loc), _res)
 
     return loc
@@ -453,13 +430,7 @@ def format_corret_to_date(findings, string_date):
 
 
 def remote_to_strin(findings, string_loc):
-    if '.' in string_loc:
-        string_loc = 'Remote'
-    elif ')' in string_loc:
-        string_loc = 'Remote'
-    elif '(' in string_loc:
-        string_loc = 'Remote'
-    elif '' in string_loc:
+    if string_loc == '.' or string_loc == ')' or string_loc == '(' or string_loc == '':
         string_loc = 'Remote'
 
     remote = [string_loc.strip()]

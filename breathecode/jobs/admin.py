@@ -14,13 +14,15 @@ class PlatformAdmin(admin.ModelAdmin):
 
 
 def fetch_sync_all_data_admin(modeladmin, request, queryset):
+    from django.contrib import messages
+    from .actions import fetch_sync_all_data
     spiders = queryset.all()
     try:
         for s in spiders:
             fetch_sync_all_data(s)
             messages.success(request, f'{s.sync_desc}')
     except Exception as e:
-        logger.debug(f'There was an error retriving the spider {str(e)}')
+        logger.error(f'There was an error retriving the spider {str(e)}')
         messages.error(request, f'There was an error retriving the spider {str(e)}')
 
 
@@ -32,21 +34,21 @@ def run_spider_admin(modeladmin, request, queryset):
         for s in spiders:
             run_spider(s)
             messages.success(request, f'The execution of the spider {s} was successful')
-            print('admin1:', f'There was an error retriving the jobs')
     except Exception as e:
-        print('admin:', f'There was an error retriving the jobs {str(e)}')
         message = f'There was an error retriving the jobs {str(e)}'
         logger.error(message)
         messages.error(request, message)
 
 
 def parse_date_admin(modeladmin, request, queryset):
+    from django.contrib import messages
+    from .actions import parse_date
     jobs = queryset.all()
     try:
         for job in jobs:
             parse_date(job)
     except Exception as e:
-        logger.debug(f'There was an error retriving the jobs {str(e)}')
+        logger.error(f'There was an error retriving the jobs {str(e)}')
         messages.error(request, f'There was an error retriving the jobs {str(e)}')
 
 

@@ -1,7 +1,7 @@
 """
 Tasks tests
 """
-from unittest.mock import patch, call
+from unittest.mock import patch, call, MagicMock
 from ...actions import fetch_sync_all_data, fetch_to_api, fetch_data_to_json
 from ..mixins import JobsTestCase
 from breathecode.tests.mocks import (
@@ -181,16 +181,16 @@ JOBS = [{
 
 
 class ActionTestFetchSyncAllDataAdminTestCase(JobsTestCase):
-    """Tests action fetch_sync_all_data"""
-    """
-    🔽🔽🔽 With zero Spider
-    """
+    @patch('logging.Logger.debug', MagicMock())
     def test_fetch_funtion___with_zero_spider(self):
-        """Test /answer.With zero Spider"""
+        from logging import Logger
         try:
             fetch_sync_all_data(None)
             assert False
+
         except Exception as e:
+            self.assertEqual(Logger.debug.call_args_list,
+                             [call('First you must specify a spider (fetch_sync_all_data)')])
             self.assertEqual(str(e), 'without-spider')
 
     """

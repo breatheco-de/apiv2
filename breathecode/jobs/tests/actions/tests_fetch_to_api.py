@@ -1,7 +1,7 @@
 """
 Tasks tests
 """
-from unittest.mock import patch, call
+from unittest.mock import patch, call, MagicMock
 from ...actions import fetch_to_api
 from ..mixins import JobsTestCase
 from breathecode.tests.mocks import (
@@ -94,7 +94,8 @@ class ActionTestfetchToApiTestCase(JobsTestCase):
             assert False
         except Exception as e:
             self.assertEquals(str(e), ('without-spider'))
-            self.assertEqual(Logger.debug.call_args_list, [])
+            self.assertEqual(Logger.debug.call_args_list,
+                             [call('First you must specify a spider (fetch_to_api)')])
 
     """
     🔽🔽🔽 status ok fetch to api

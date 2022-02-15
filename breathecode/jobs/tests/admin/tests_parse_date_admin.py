@@ -8,9 +8,26 @@ from django.http.request import HttpRequest
 
 class RunSpiderAdminTestSuite(JobsTestCase):
     """Test /RunSpiderAdmin/"""
+    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
+    @patch('django.contrib.messages.add_message', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.jobs.actions.parse_date', MagicMock(side_effect=Exception('They killed kenny')))
+    def test_parse_date_admin__with_zero_spider_logger_error(self):
+        from breathecode.jobs.actions import parse_date
+        from logging import Logger
+
+        model = self.generate_models(job=True)
+        request = HttpRequest()
+        queryset = Job.objects.all()
+
+        parse_date_admin(None, request, queryset)
+        self.assertEqual(Logger.error.call_args_list,
+                         [call('There was an error retriving the jobs They killed kenny')])
+
     """
     🔽🔽🔽 With zero Job
     """
+
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('django.contrib.messages.add_message', MagicMock())
     @patch('breathecode.jobs.actions.parse_date', MagicMock())

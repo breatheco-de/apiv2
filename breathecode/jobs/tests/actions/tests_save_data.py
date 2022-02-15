@@ -1,7 +1,7 @@
 """
 Tasks tests
 """
-from unittest.mock import patch, call
+from unittest.mock import patch, call, MagicMock
 from ...actions import save_data
 from ..mixins import JobsTestCase
 from breathecode.tests.mocks import (
@@ -134,19 +134,21 @@ JOBS = [{
     'dict'
 }]
 
+spider = {'name': 'getonboard', 'zyte_spider_number': 3, 'zyte_job_number': 0}
+zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
+platform = {'name': 'getonboard'}
+
 
 class ActionSaveDataTestCase(JobsTestCase):
+    @patch('breathecode.jobs.actions.save_data', MagicMock())
     def test_save_data__without_spider(self):
         """Test /save_data with spider"""
-        spider_kwargs = {
-            'name': 'geronboard',
-            'job': 'junior web developer',
-            'loc': 'Remote',
-            'zyte_spider_number': '3',
-            'zyte_job_number': '0',
-            'zyte_fetch_count': '0'
-        }
-        model = self.generate_models(spider=True, spider_kwargs=spider_kwargs)
+
+        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+
+        # result = save_data(model.spider, JOBS1)
+        # datospider = model.objects.all()
+        print(model)
 
         result = save_data(model.spider, JOBS)
         print('result', result)

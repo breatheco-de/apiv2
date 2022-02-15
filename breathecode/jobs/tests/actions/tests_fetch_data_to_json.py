@@ -1,9 +1,10 @@
 """
 Tasks tests
 """
-from unittest.mock import patch, call
+from unittest.mock import patch, call, MagicMock
 from ...actions import fetch_data_to_json
 from ..mixins import JobsTestCase
+from breathecode.tests.mocks.django_contrib import DJANGO_CONTRIB_PATH, apply_django_contrib_messages_mock
 from breathecode.tests.mocks import (
     REQUESTS_PATH,
     apply_requests_get_mock,
@@ -205,18 +206,34 @@ JOBS = [{
     'dict'
 }]
 
+DATA2 = [{'status': 'ok', 'data': [45, 12]}]
+DATA3 = [{'status': 'ok', 'data': [1, 2]}]
+
+DATA4 = [{'status_code': 401}]
+
 
 class ActionFetchDataToJsonTestCase(JobsTestCase):
-    """Tests action certificate_screenshot"""
+    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
+    @patch('django.contrib.messages.add_message', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_fetch_data_to_json__without_spider(self):
-        """Test /run_spider without spider"""
+        from breathecode.jobs.actions import fetch_data_to_json
+        from logging import Logger
         try:
             fetch_data_to_json(None, DATA)
         except Exception as e:
             self.assertEquals(str(e), ('without-spider'))
+            self.assertEqual(Logger.error.call_args_list, [
+                call('First you must specify a spider (fetch_data_to_json)'),
+                call('Status 400 - without-spider')
+            ])
 
+    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
+    @patch('django.contrib.messages.add_message', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
     def test_fetch_data_to_json__without_data(self):
-        """Test /run_spider without spider"""
+        from breathecode.jobs.actions import fetch_data_to_json
+        from logging import Logger
 
         try:
             model = self.generate_models(spider=True)
@@ -224,10 +241,41 @@ class ActionFetchDataToJsonTestCase(JobsTestCase):
             fetch_data_to_json(model.spider, None)
         except Exception as e:
             self.assertEquals(str(e), ('no-return-json-data'))
+            self.assertEqual(Logger.error.call_args_list, [
+                call('I did not receive results from the API (fetch_data_to_json)'),
+                call('Status 400 - no-return-json-data')
+            ])
 
-    def test_fetch_data_to_json__with_spider_data(self):
-        """Test /run_spider without spider"""
-        model = self.generate_models(spider=True)
+    @patch(REQUESTS_PATH['get'],
+           apply_requests_get_mock([
+               (200, 'https://storage.scrapinghub.com/items/570286/3/35?apikey=1234567&format=json', DATA2),
+               (200, 'https://storage.scrapinghub.com/items/570286/3/34?apikey=1234567&format=json', DATA3)
+           ]))
+    def test_fetch_data__with_two_spider(self):
+        import requests
+
+        spider = {'zyte_spider_number': 3, 'zyte_job_number': 0}
+        zyte_project = {'zyte_api_key': 1234567}
+        platform = {'name': 'getonboard'}
+
+        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = fetch_data_to_json(model.spider, DATA)
-        print('to_json: ', result)
+
+        self.assertEqual(result, [{
+            'status': 'ok',
+            'platform_name': model.platform.name,
+            'num_spider': 3,
+            'num_job': 35,
+            'jobs': DATA2
+        }, {
+            'status': 'ok',
+            'platform_name': model.platform.name,
+            'num_spider': 3,
+            'num_job': 34,
+            'jobs': DATA3
+        }])
+        self.assertEqual(requests.get.call_args_list, [
+            call('https://storage.scrapinghub.com/items/570286/3/35?apikey=1234567&format=json'),
+            call('https://storage.scrapinghub.com/items/570286/3/34?apikey=1234567&format=json')
+        ])

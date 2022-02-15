@@ -3,6 +3,7 @@ Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
 from mixer.backend.django import mixer
+from .utils import is_valid, create_models, just_one, get_list
 
 
 class JobsModelsMixin(ModelsMixin):
@@ -32,97 +33,96 @@ class JobsModelsMixin(ModelsMixin):
         """Generate models"""
         models = models.copy()
 
-        if not 'platform' in models and platform:
+        if not 'platform' in models and is_valid(platform):
             kargs = {}
 
-            kargs = {**kargs, **platform_kwargs}
-            models['platform'] = mixer.blend('jobs.Platform', **kargs)
+            models['platform'] = create_models(platform, 'jobs.Platform', **{**kargs, **platform_kwargs})
 
-        if not 'position' in models and (position or spider):
+        if not 'position' in models and (is_valid(position) or is_valid(spider)):
             kargs = {}
 
-            kargs = {**kargs, **position_kwargs}
-            models['position'] = mixer.blend('jobs.Position', **kargs)
+            models['position'] = create_models(position, 'jobs.Position', **{**kargs, **position_kwargs})
 
-        if not 'zyte_project' in models and (zyte_project or spider):
+        if not 'zyte_project' in models and (is_valid(zyte_project) or is_valid(spider)):
             kargs = {}
 
-            if 'platform' in models or platform:
-                kargs['platform'] = models['platform']
+            if 'platform' in models:
+                kargs['platform'] = just_one(models['platform'])
 
-            kargs = {**kargs, **zyte_project_kwargs}
-            models['zyte_project'] = mixer.blend('jobs.ZyteProject', **kargs)
+            models['zyte_project'] = create_models(zyte_project, 'jobs.ZyteProject', **{
+                **kargs,
+                **zyte_project_kwargs
+            })
 
-        if not 'spider' in models and spider:
+        if not 'spider' in models and is_valid(spider):
             kargs = {}
 
-            if 'position' in models or position:
-                kargs['position'] = models['position']
+            if 'position' in models:
+                kargs['position'] = just_one(models['position'])
 
-            if 'zyte_project' in models or zyte_project:
-                kargs['zyte_project'] = models['zyte_project']
+            if 'zyte_project' in models:
+                kargs['zyte_project'] = just_one(models['zyte_project'])
 
-            kargs = {**kargs, **spider_kwargs}
-            models['spider'] = mixer.blend('jobs.Spider', **kargs)
+            models['spider'] = create_models(spider, 'jobs.Spider', **{**kargs, **spider_kwargs})
 
-        if not 'position_alias' in models and position_alias:
+        if not 'position_alias' in models and is_valid(position_alias):
             kargs = {}
 
-            if 'position' in models or position:
-                kargs['position'] = models['position']
+            if 'position' in models:
+                kargs['position'] = just_one(models['position'])
 
-            kargs = {**kargs, **position_alias_kwargs}
-            models['position_alias'] = mixer.blend('jobs.PositionAlias', **kargs)
+            models['position_alias'] = create_models(position_alias, 'jobs.PositionAlias', **{
+                **kargs,
+                **position_alias_kwargs
+            })
 
-        if not 'tag' in models and tag:
+        if not 'tag' in models and is_valid(tag):
             kargs = {}
 
-            kargs = {**kargs, **tag_kwargs}
-            models['tag'] = mixer.blend('jobs.Tag', **kargs)
+            models['tag'] = create_models(tag, 'jobs.Tag', **{**kargs, **tag_kwargs})
 
-        if not 'location' in models and location:
+        if not 'location' in models and is_valid(location):
             kargs = {}
 
-            kargs = {**kargs, **location_kwargs}
-            models['location'] = mixer.blend('jobs.Location', **kargs)
+            models['location'] = create_models(location, 'jobs.Location', **{**kargs, **location_kwargs})
 
-        if not 'location_alias' in models and location_alias:
+        if not 'location_alias' in models and is_valid(location_alias):
             kargs = {}
 
-            if 'location' in models or location:
-                kargs['location'] = models['location']
+            if 'location' in models:
+                kargs['location'] = just_one(models['location'])
 
-            kargs = {**kargs, **location_alias_kwargs}
-            models['location_alias'] = mixer.blend('jobs.LocationAlias', **kargs)
+            models['location_alias'] = create_models(location_alias, 'jobs.LocationAlias', **{
+                **kargs,
+                **location_alias_kwargs
+            })
 
-        if not 'employer' in models and employer:
+        if not 'employer' in models and is_valid(employer):
             kargs = {}
 
-            if 'location' in models or location:
-                kargs['location'] = models['location']
+            if 'location' in models:
+                kargs['location'] = just_one(models['location'])
 
-            kargs = {**kargs, **employer_kwargs}
-            models['employer'] = mixer.blend('jobs.Employer', **kargs)
+            models['employer'] = create_models(employer, 'jobs.Employer', **{**kargs, **employer_kwargs})
 
-        if not 'job' in models and (job or employer):
+        if not 'job' in models and (is_valid(job) or is_valid(employer)):
             kargs = {}
 
-            if 'platform' in models or platform:
-                kargs['platform'] = models['platform']
+            if 'platform' in models:
+                kargs['platform'] = just_one(models['platform'])
 
-            if 'employer' in models or employer:
-                kargs['employer'] = models['employer']
+            if 'employer' in models:
+                kargs['employer'] = just_one(models['employer'])
 
-            if 'position' in models or position:
-                kargs['position'] = models['position']
+            if 'position' in models:
+                kargs['position'] = just_one(models['position'])
 
-            if 'tag' in models or tag:
-                kargs['tags'] = [models['tag']]
+            if 'tag' in models:
+                kargs['tag'] = just_one(models['tag'])
 
-            if 'location' in models or location:
-                kargs['locations'] = [models['location']]
+            if 'location' in models:
+                kargs['location'] = just_one(models['location'])
 
-            kargs = {**kargs, **job_kwargs}
-            models['job'] = mixer.blend('jobs.Job', **kargs)
+            models['job'] = create_models(job, 'jobs.Job', **{**kargs, **job_kwargs})
 
         return models

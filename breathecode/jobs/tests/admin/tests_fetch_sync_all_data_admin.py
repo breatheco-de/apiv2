@@ -8,9 +8,27 @@ from django.http.request import HttpRequest
 
 class RunSpiderAdminTestSuite(JobsTestCase):
     """Test /RunSpiderAdmin/"""
+    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
+    @patch('django.contrib.messages.add_message', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.jobs.actions.fetch_sync_all_data',
+           MagicMock(side_effect=Exception('They killed kenny')))
+    def test_fetch_sync_all_data_admin__with_zero_spider_logger_error(self):
+        from breathecode.jobs.actions import fetch_sync_all_data
+        from logging import Logger
+
+        model = self.generate_models(spider=True)
+        request = HttpRequest()
+        queryset = Spider.objects.all()
+
+        fetch_sync_all_data_admin(None, request, queryset)
+        self.assertEqual(Logger.error.call_args_list,
+                         [call('There was an error retriving the spider They killed kenny')])
+
     """
     🔽🔽🔽 With zero Spider
     """
+
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('django.contrib.messages.add_message', MagicMock())
     @patch('breathecode.jobs.actions.fetch_sync_all_data', MagicMock())
