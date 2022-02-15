@@ -464,7 +464,7 @@ def salary_month_only_one(findings, string_salary):
 
 _cases = {
     '^(?:Active\s)?(\d{1,2})\+? days? ago': days_ago_to_date,
-    '^(\d{1,4}-\d{1,2}-\d{1,2}\s\d{1,2}:\d{1,2}:\d{1,2})$': format_correct_to_date,
+    '^(\d{1,4}-\d{1,2}-\d{1,2}\s\d{1,2}:\d{1,2}:\d{1,2})$': lambda *args, **kwargs: format_correct_to_date(),
     '(.*\s?\d{1,2}\+?,? \d{1,4})': change_format_to_date,
     '^today': lambda *args, **kwargs: today(),
     '^Just posted': lambda *args, **kwargs: today(),

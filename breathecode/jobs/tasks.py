@@ -16,40 +16,41 @@ class BaseTaskWithRetry(Task):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def async_run_spider(self, args):
-    logger.debug('Starting async_run_spider')
+    logger.error('Starting async_run_spider')
     now = timezone.now()
     spider = Spider.objects.get(id=args['spi_id'])
+    print('args', args)
     result = run_spider(spider)
 
     if result.status_code == 200:
-        logger.debug(f'Starting async_run_spider in spider name {spider.name}')
+        logger.error(f'Starting async_run_spider in spider name {spider.name}')
         spider.sync_status = 'SYNCHED'
         spider.sync_desc = 'The run of the spider ended successfully command at ' + str(now)
         spider.save()
 
     else:
         message = '400 Bad Request command at ' + str(now)
-        logger.debug(message)
+        logger.error(message)
         spider.sync_status = 'ERROR'
         spider.sync_desc = message + str(now)
-        spider.save()
+        spider.error()
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def async_fetch_sync_all_data(self, args):
-    logger.debug('Starting async_fetch_sync_all_data')
+    logger.error('Starting async_fetch_sync_all_data')
     now = timezone.now()
     spider = Spider.objects.filter(id=args['spi_id']).first()
     result = fetch_sync_all_data(spider)
 
     if result:
-        logger.debug(f'Starting async_fetch_sync_all_data in spider name {spider.name}')
+        logger.error(f'Starting async_fetch_sync_all_data in spider name {spider.name}')
         spider.sync_status = 'SYNCHED'
 
         spider.save()
     else:
         message = '400 Bad Request command at ' + str(now)
-        logger.debug(message)
+        logger.error(message)
         spider.sync_status = 'ERROR'
         spider.sync_desc = message + str(now)
         spider.save()
