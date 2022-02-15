@@ -73,13 +73,7 @@ def fetch_data_to_json(*args):
     data_project = []
     for res_api_jobs in api_fetch['jobs']:
         num_spid = get_job_id_from_string(res_api_jobs['id'])
-        # print(int(num_spid[1]) == int(spider.zyte_spider_number))
-        # print(int(num_spid[1]))
-        # print(int(spider.zyte_spider_number))
-        # print('#########################################')
-        # print(int(num_spid[2]) >= int(spider.zyte_job_number))
-        # print(int(num_spid[2]))
-        # print(int(spider.zyte_job_number))
+
         if int(num_spid[1]) == int(
                 spider.zyte_spider_number) and int(num_spid[2]) >= int(spider.zyte_job_number):
             response = requests.get(
