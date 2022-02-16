@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Any
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group, Permission
 from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
 from django.db import models
@@ -15,9 +15,9 @@ from .signals import invite_accepted
 from breathecode.admissions.models import Academy, Cohort
 
 __all__ = [
-    'User', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite', 'ProfileAcademy', 'CredentialsGithub',
-    'CredentialsSlack', 'CredentialsFacebook', 'CredentialsQuickBooks', 'CredentialsGoogle', 'DeviceId',
-    'Token'
+    'User', 'Group', 'Permission', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
+    'ProfileAcademy', 'CredentialsGithub', 'CredentialsSlack', 'CredentialsFacebook', 'CredentialsQuickBooks',
+    'CredentialsGoogle', 'DeviceId', 'Token'
 ]
 
 TOKEN_TYPE = ['login', 'one_time', 'temporal', 'permanent']

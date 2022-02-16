@@ -17,7 +17,10 @@ def cycle(how_many):
 
 def create_models(attr, path, **kwargs):
     result = [
-        cycle(how_many).blend(path, **arguments, **kwargs) for how_many, arguments in argument_parser(attr)
+        cycle(how_many).blend(path, **{
+            **kwargs,
+            **arguments,
+        }) for how_many, arguments in argument_parser(attr)
     ]
 
     if len(result) == 1:
