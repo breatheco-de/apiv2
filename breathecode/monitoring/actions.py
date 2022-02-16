@@ -55,9 +55,9 @@ def test_link(url, test_pattern=None):
         result['status_text'] = 'Connection Timeout'
     except requests.ConnectionError:
         result['status_code'] = 404
-        result['status_text'] = f'Connection Error {r.status_code}'
+        result['status_text'] = f'Connection Error 404'
 
-    logger.debug(f'Tested {url} {result["status_text"]} with {r.status_code}')
+    logger.debug(f'Tested {url} {result["status_text"]} with {result["status_code"]}')
     return result
 
 
@@ -243,8 +243,10 @@ def run_script(script):
         header = SCRIPT_HEADER
         content = header + \
             open(f'{dir_path}/scripts/{script.script_slug}.py').read()
+
     elif script.script_body:
         content = script.script_body
+
     else:
         raise Exception(f'Script not found or its body is empty: {script.script_slug}')
 

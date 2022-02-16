@@ -61,6 +61,9 @@ class Format:
 
             print(model_spaces + line)
 
+        # This make sure the element are being printed and prevent `describe_models` are pushed to dev branch
+        assert False
+
     def _describe_model(self, model: Model):
         pk_name = self._get_pk_name(model)
         attrs = dir(model)

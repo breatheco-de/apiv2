@@ -1,35 +1,47 @@
 from rest_framework.exceptions import PermissionDenied
 from breathecode.authenticate.models import ProfileAcademy
 from django.contrib.auth.models import AnonymousUser
-from .validation_exception import ValidationException
+
+from breathecode.utils.exceptions import ProgramingError
+from ..validation_exception import ValidationException
+from rest_framework.views import APIView
+
+__all__ = ['capable_of']
 
 
 def capable_of(capability=None):
     def decorator(function):
         def wrapper(*args, **kwargs):
-
             if isinstance(capability, str) == False:
-                raise Exception('Capability must be a string')
+                raise ProgramingError('Capability must be a string')
 
-            request = None
             try:
-                request = args[1]
+                if hasattr(args[0], '__class__') and isinstance(args[0], APIView):
+                    request = args[1]
+
+                elif hasattr(args[0], 'user') and hasattr(args[0].user, 'has_perm'):
+                    request = args[0]
+
+                else:
+                    raise IndexError()
+
             except IndexError:
-                raise Exception(
-                    'Missing request information, please apply this decorator to view class methods only')
+                raise ProgramingError('Missing request information, use this decorator with DRF View')
 
             academy_id = None
             if 'academy_id' not in kwargs and ('Academy' not in request.headers
                                                or 'academy' not in request.headers):
                 raise PermissionDenied(
                     "Missing academy_id parameter expected for the endpoint url or 'Academy' header")
+
             elif 'academy_id' in kwargs:
                 academy_id = kwargs['academy_id']
-            else:
-                if 'Academy' in request.headers:
-                    academy_id = request.headers['Academy']
-                if 'academy' in request.headers:
-                    academy_id = request.headers['academy']
+
+            elif 'Academy' in request.headers:
+                academy_id = request.headers['Academy']
+
+            elif 'academy' in request.headers:
+                academy_id = request.headers['academy']
 
             if not str(academy_id).isdigit():
                 raise ValidationException(f'Academy ID needs to be an integer: {str(academy_id)}',

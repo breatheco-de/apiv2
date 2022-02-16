@@ -10,7 +10,7 @@ from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, localize_query, SerpyExtensions
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, Profile
 from .models import Academy, SpecialtyModeTimeSlot, Cohort, SpecialtyMode, CohortTimeSlot, CohortUser, Syllabus, SyllabusVersion
 
 logger = logging.getLogger(__name__)

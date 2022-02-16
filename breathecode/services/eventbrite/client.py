@@ -105,7 +105,6 @@ class Eventbrite:
 
         action = webhook.action.replace('.', '_')
         api_url = webhook.api_url
-        # organization_id = webhook.organization_id
 
         if (re.search('^https://www\.eventbriteapi\.com/v3/events/\d+/?$', api_url)):
             api_url = api_url + '?expand=organizer,venue'
@@ -125,6 +124,7 @@ class Eventbrite:
                 fn(self, webhook, json)
                 logger.debug('Mark action as done')
                 webhook.status = 'DONE'
+                webhook.status_text = 'OK'
                 webhook.save()
 
             except Exception as e:

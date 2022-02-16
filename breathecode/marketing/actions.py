@@ -464,8 +464,8 @@ def validate_marketing_tags(tags: str, academy_id: int, types: Optional[list] = 
     _tags = Tag.objects.filter(slug__in=tags, ac_academy__academy__id=academy_id)
     if types:
         _tags = _tags.filter(tag_type__in=types)
-    founds = [x.slug for x in _tags]
 
+    founds = set([x.slug for x in _tags])
     if len(tags) == len(founds):
         return
 

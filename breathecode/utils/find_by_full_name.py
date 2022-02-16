@@ -1,5 +1,7 @@
 from django.db.models import Q
 
+__all__ = ['query_like_by_full_name']
+
 
 def query_like_by_full_name(prefix='', **kwargs):
     first_name_kwargs = prefix + 'first_name__icontains'

@@ -241,7 +241,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         if serializer.is_valid():
             self.cache.clear()
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -429,7 +429,7 @@ class AcademyOrganizationView(APIView):
 
 
 # list eventbride webhook
-class OrganizationWebhookView(APIView):
+class OrganizationWebhookView(APIView, HeaderLimitOffsetPagination):
     @capable_of('read_organization')
     def get(self, request, academy_id=None):
 
@@ -439,8 +439,12 @@ class OrganizationWebhookView(APIView):
             raise ValidationException(f'Academy has no organization', code=400, slug='organization-no-found')
 
         webhooks = EventbriteWebhook.objects.filter(organization_id=org.id)
-        serializer = EventbriteWebhookSerializer(webhooks, many=True)
-        return Response(serializer.data)
+        page = self.paginate_queryset(webhooks, request)
+        serializer = EventbriteWebhookSerializer(page, many=True)
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
 
 # list venues
