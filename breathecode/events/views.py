@@ -433,7 +433,6 @@ class OrganizationWebhookView(APIView, HeaderLimitOffsetPagination):
     @capable_of('read_organization')
     def get(self, request, academy_id=None):
 
-        # webhooks = EventbriteWebhook.objects.filter(organization_id=organization_id)
         org = Organization.objects.filter(academy__id=academy_id).first()
         if not org:
             raise ValidationException(f'Academy has no organization', code=400, slug='organization-no-found')
