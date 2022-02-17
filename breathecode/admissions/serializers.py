@@ -624,7 +624,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 
         if ('role' in request_item and request_item['role'] != 'STUDENT'
                 and not ProfileAcademy.objects.filter(
-                    user_id=user_id, academy__id=cohort.academy.id).exclude(role__slug='student').exists()):
+                    user_id=user_id, academy__id=cohort.academy.id).exclude(role__slug='STUDENT').exists()):
             raise ValidationException(
                 'The user must be staff member to this academy before it can be a teacher')
 
