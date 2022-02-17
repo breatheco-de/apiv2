@@ -438,7 +438,7 @@ class OrganizationWebhookView(APIView, HeaderLimitOffsetPagination):
         if not org:
             raise ValidationException(f'Academy has no organization', code=400, slug='organization-no-found')
 
-        webhooks = EventbriteWebhook.objects.filter(organization_id=org.id)
+        webhooks = EventbriteWebhook.objects.filter(organization_id=org.id).order_by('-updated_at')
         page = self.paginate_queryset(webhooks, request)
         serializer = EventbriteWebhookSerializer(page, many=True)
         if self.is_paginate(request):
