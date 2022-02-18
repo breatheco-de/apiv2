@@ -1,3 +1,5 @@
+__all__ = ['permissions']
+
 permissions = (
     ('blog_view', 'can view blog posts and categories'),
     ('blog_edit', 'can edit blog category and post'),

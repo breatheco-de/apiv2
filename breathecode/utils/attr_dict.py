@@ -1,5 +1,7 @@
 from typing import TypeVar
 
+__all__ = ['AttrDict']
+
 T = TypeVar('T')
 
 

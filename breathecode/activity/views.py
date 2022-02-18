@@ -6,8 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from breathecode.admissions.models import Cohort, CohortUser
-from breathecode.utils import ValidationException, capable_of
-from breathecode.utils import HeaderLimitOffsetPagination
+from breathecode.utils import ValidationException, capable_of, HeaderLimitOffsetPagination
 
 from .utils import (generate_created_at, validate_activity_fields, validate_activity_have_correct_data_field,
                     validate_if_activity_need_field_cohort, validate_if_activity_need_field_data,

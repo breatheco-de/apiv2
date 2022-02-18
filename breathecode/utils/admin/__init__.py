@@ -1,1 +1,1 @@
-from .change_field import change_field
+from .change_field import *

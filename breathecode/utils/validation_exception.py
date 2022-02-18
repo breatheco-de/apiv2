@@ -3,6 +3,8 @@ import logging
 
 from rest_framework.exceptions import APIException
 
+__all__ = ['ValidationException', 'APIException']
+
 IS_TEST_ENV = os.getenv('ENV') == 'test'
 logger = logging.getLogger(__name__)
 
