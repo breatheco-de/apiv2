@@ -16,7 +16,7 @@ from ..decorator import command
 from ..utils import to_string, jump
 
 
-@command(only='staff')
+@command(capable_of='read_student')
 def execute(users, academies, **context):
 
     if len(users) == 0:

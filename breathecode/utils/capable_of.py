@@ -41,7 +41,7 @@ def capable_of(capability=None):
             capable = ProfileAcademy.objects.filter(user=request.user.id,
                                                     academy__id=academy_id,
                                                     role__capabilities__slug=capability)
-            if capable.count() > 0:
+            if capable.count():
                 kwargs['academy_id'] = academy_id
                 return function(*args, **kwargs)
 

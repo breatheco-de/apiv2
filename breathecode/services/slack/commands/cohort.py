@@ -14,7 +14,7 @@ from ..decorator import command
 from ..utils import to_string
 
 
-@command(only='staff')
+@command(capable_of='read_cohort')
 def execute(channel_id, **context):
 
     response = {'blocks': []}
