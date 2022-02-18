@@ -1071,7 +1071,7 @@ class PasswordResetView(APIView):
 
 
 class AcademyInviteView(APIView):
-    @capable_of('crud_member')
+    @capable_of('invite_resend')
     def put(self, request, pa_id=None, academy_id=None):
         if pa_id is not None:
             profile_academy = ProfileAcademy.objects.filter(id=pa_id).first()
