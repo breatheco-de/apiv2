@@ -134,7 +134,14 @@ class Event(models.Model):
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
     tags = models.CharField(max_length=100, default='', blank=True)
 
-    url = models.URLField(max_length=255)
+    url = models.URLField(
+        max_length=255,
+        null=True,
+        blank=True,
+        default=None,
+        help_text=
+        'URL can be blank if the event will be synched with EventBrite, it will be filled automatically by the API.'
+    )
     banner = models.URLField(max_length=255)
     capacity = models.IntegerField()
 

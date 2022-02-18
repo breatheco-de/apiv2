@@ -36,6 +36,10 @@ CAPABILITIES = [
         'description': 'Read invites from users'
     },
     {
+        'slug': 'invite_resend',
+        'description': 'Resent invites for user academies'
+    },
+    {
         'slug': 'read_assignment',
         'description': 'Read assigment information'
     },
@@ -385,8 +389,10 @@ def extend_roles(roles: list[RoleType]) -> None:
         'name':
         'Admissions Developer',
         'caps':
-        extend(roles, ['staff']) +
-        ['crud_lead', 'crud_student', 'crud_cohort', 'read_cohort', 'read_lead', 'read_activity']
+        extend(roles, ['staff']) + [
+            'crud_lead', 'crud_student', 'crud_cohort', 'read_cohort', 'read_lead', 'read_activity',
+            'invite_resend'
+        ]
     })
     roles.append({
         'slug': 'syllabus_coordinator',
@@ -437,9 +443,21 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Mentor in residence',
         'caps':
         extend(roles, ['teacher']) + [
-            'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
-            'send_reset_password', 'generate_temporal_token', 'crud_certificate', 'crud_review',
-            'crud_mentor', 'read_mentor', 'read_assignment_sensitive_details', 'crud_shortlink'
+            'crud_syllabus',
+            'crud_cohort',
+            'crud_student',
+            'crud_survey',
+            'read_won_lead',
+            'crud_member',
+            'send_reset_password',
+            'generate_temporal_token',
+            'crud_certificate',
+            'crud_review',
+            'crud_mentor',
+            'read_mentor',
+            'read_assignment_sensitive_details',
+            'crud_shortlink',
+            'invite_resend',
         ]
     })
     roles.append({
