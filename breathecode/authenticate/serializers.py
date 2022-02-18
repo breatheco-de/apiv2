@@ -560,7 +560,8 @@ class UserInvitePUTSerializer(serializers.ModelSerializer):
 class UserInviteWaitingListSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserInvite
-        fields = ('id', 'email')  # this serializer just get as input a email
+
+        fields = ('id', 'email', 'first_name', 'last_name', 'phone')
 
     def validate(self, data: dict[str, str]):
         if 'email' not in data:
