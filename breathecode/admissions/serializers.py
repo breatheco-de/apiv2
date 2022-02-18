@@ -10,7 +10,7 @@ from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, localize_query, SerpyExtensions
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, Profile
 from .models import Academy, SpecialtyModeTimeSlot, Cohort, SpecialtyMode, CohortTimeSlot, CohortUser, Syllabus, SyllabusVersion
 
 logger = logging.getLogger(__name__)
@@ -624,7 +624,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
 
         if ('role' in request_item and request_item['role'] != 'STUDENT'
                 and not ProfileAcademy.objects.filter(
-                    user_id=user_id, academy__id=cohort.academy.id).exclude(role__slug='student').exists()):
+                    user_id=user_id, academy__id=cohort.academy.id).exclude(role__slug='STUDENT').exists()):
             raise ValidationException(
                 'The user must be staff member to this academy before it can be a teacher')
 

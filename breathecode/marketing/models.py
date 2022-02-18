@@ -125,6 +125,19 @@ class Tag(models.Model):
     )
     acp_id = models.IntegerField(help_text='The id coming from active campaign')
     subscribers = models.IntegerField()
+
+    # For better maintance the tags can be disputed for deletion
+    disputed_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text=
+        'Disputed tags get deleted after 10 days unless its used in 1+ automations or has 1+ subscriber')
+    disputed_reason = models.TextField(blank=True,
+                                       null=True,
+                                       default=None,
+                                       help_text='Explain why you think the tag should be deleted')
+
     automation = models.ForeignKey(
         Automation,
         on_delete=models.CASCADE,
@@ -486,6 +499,45 @@ class Downloadable(models.Model):
     # Status
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.slug}'
+
+    def save(self, *args, **kwargs):
+        from .signals import downloadable_saved
+        created = not self.id
+
+        if created:
+            super().save(*args, **kwargs)
+
+            downloadable_saved.send(instance=self, sender=self.__class__, created=created)
+
+
+SOURCE = 'SOURCE'
+MEDIUM = 'MEDIUM'
+CONTENT = 'CONTENT'
+CAMPAIGN = 'CAMPAIGN'
+UTM_TYPE = (
+    (CONTENT, 'Source'),
+    (SOURCE, 'Medium'),
+    (MEDIUM, 'Content'),
+    (CAMPAIGN, 'Campaign'),
+)
+
+
+class UTMField(models.Model):
+    slug = models.SlugField(max_length=150, unique=True)
+    name = models.CharField(max_length=100)
+    description = models.TextField(max_length=450)
+
+    # Status
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    utm_type = models.CharField(max_length=15, choices=UTM_TYPE, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

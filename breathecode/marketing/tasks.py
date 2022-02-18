@@ -8,7 +8,7 @@ from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.monitoring.actions import test_link
-from .models import FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag
+from .models import FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag, Downloadable
 from .actions import register_new_lead, save_get_geolocal, acp_ids
 
 logger = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ def async_activecampaign_webhook(self, webhook_id):
             status = 'error'
 
     else:
-        message = f"ActiveCampaign Academy Profile {organization_id} doesn\'t exist"
+        message = f"ActiveCampaign Academy Profile {webhook_id} doesn\'t exist"
 
         webhook.status = 'ERROR'
         webhook.status_text = message
@@ -227,7 +227,105 @@ def add_cohort_slug_as_acp_tag(self, cohort_id: int, academy_id: int) -> None:
         data = client.create_tag(cohort.slug,
                                  description=f'Cohort {cohort.slug} at {ac_academy.academy.slug}')
 
-        tag = Tag(slug=data['tag'], acp_id=data['id'], tag_type='OTHER', ac_academy=ac_academy, subscribers=0)
+        tag = Tag(slug=data['tag'],
+                  acp_id=data['id'],
+                  tag_type='COHORT',
+                  ac_academy=ac_academy,
+                  subscribers=0)
+        tag.save()
+
+    except:
+        pass
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
+    logger.warn('Task add_event_slug_as_acp_tag started')
+
+    if not Academy.objects.filter(id=academy_id).exists():
+        logger.error(f'Academy {academy_id} not found')
+        return
+
+    ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    if ac_academy is None:
+        logger.error(f'ActiveCampaign Academy {academy_id} not found')
+        return
+
+    event = Event.objects.filter(id=event_id).first()
+    if event is None:
+        logger.error(f'Event {event_id} not found')
+        return
+
+    if not event.slug:
+        logger.error(f'Event {event_id} does not have slug')
+        return
+
+    client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+
+    if event.slug.startswith('event-'):
+        new_tag_slug = event.slug
+    else:
+        new_tag_slug = f'event-{event.slug}'
+
+    tag = Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()
+    if tag:
+        logger.error(f'Tag for event `{event.slug}` already exists')
+        return
+
+    try:
+        data = client.create_tag(new_tag_slug, description=f'Event {event.slug} at {ac_academy.academy.slug}')
+        tag = Tag(slug=data['slug'],
+                  acp_id=data['id'],
+                  tag_type='EVENT',
+                  ac_academy=ac_academy,
+                  subscribers=0)
+
+        tag.save()
+
+    except:
+        pass
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int) -> None:
+    logger.warn('Task add_downloadable_slug_as_acp_tag started')
+
+    if not Academy.objects.filter(id=academy_id).exists():
+        logger.error(f'Academy {academy_id} not found')
+        return
+
+    ac_academy = ActiveCampaignAcademy.objects.filter(academy__id=academy_id).first()
+    if ac_academy is None:
+        logger.error(f'ActiveCampaign Academy {academy_id} not found')
+        return
+
+    downloadable = Downloadable.objects.filter(id=downloadable_id).first()
+    if downloadable is None:
+        logger.error(f'Downloadable {downloadable_id} not found')
+        return
+
+    client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+
+    if downloadable.slug.startswith('down-'):
+        new_tag_slug = downloadable.slug
+    else:
+        new_tag_slug = f'down-{downloadable.slug}'
+
+    tag = Tag.objects.filter(slug=new_tag_slug, ac_academy__id=ac_academy.id).first()
+
+    if tag:
+        logger.warn(f'Tag for downloadable `{downloadable.slug}` already exists')
+        return
+
+    try:
+        data = client.create_tag(new_tag_slug,
+                                 description=f'Downloadable {downloadable.slug} at {ac_academy.academy.slug}')
+
+        tag = Tag(slug=data['tag'],
+                  acp_id=data['id'],
+                  tag_type='DOWNLOADABLE',
+                  ac_academy=ac_academy,
+                  subscribers=0)
         tag.save()
 
     except:

@@ -5,6 +5,8 @@ from dateutil.tz import gettz, tzutc
 from dateutil import parser
 import pytz
 
+__all__ = ['DatetimeInteger']
+
 
 class Datetime(datetime):
     def __setattr__(self, key, value):

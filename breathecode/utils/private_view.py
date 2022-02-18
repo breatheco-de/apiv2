@@ -12,6 +12,9 @@ def render_message(r, msg):
     })
 
 
+__all__ = ['private_view']
+
+
 def private_view(func):
     def inner(*args, **kwargs):
         req = args[0]
@@ -23,7 +26,7 @@ def private_view(func):
 
         token = Token.get_valid(token)
         if token is None:
-            return render_error(req, 'Invalid token')
+            return render_message(req, 'You don\'t have access to this view or the token is invalid')
 
         # args = args + (token, )
         kwargs['token'] = token
