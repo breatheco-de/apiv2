@@ -1,6 +1,8 @@
 from django.utils import timezone
 import pytz, os
 
+__all__ = ['TimezoneMiddleware']
+
 ENV = os.getenv('ENV', None)
 
 

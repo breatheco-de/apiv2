@@ -24,11 +24,13 @@ from .serializers import (
     AutomationSmallSerializer,
     DownloadableSerializer,
     ShortLinkSerializer,
+    PUTTagSerializer,
+    UTMSmallSerializer,
 )
 from breathecode.services.activecampaign import ActiveCampaign
 from .actions import sync_tags, sync_automations
 from .tasks import persist_single_lead, update_link_viewcount, async_activecampaign_webhook
-from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp
+from .models import ShortLink, ActiveCampaignAcademy, FormEntry, Tag, Automation, Downloadable, LeadGenerationApp, UTMField
 from breathecode.admissions.models import Academy
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from rest_framework.views import APIView
@@ -356,7 +358,7 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    @capable_of('crud_lead')
+    @capable_of('read_tag')
     def get(self, request, format=None, academy_id=None):
         tags = Tag.objects.filter(ac_academy__academy__id=academy_id)
 
@@ -372,6 +374,24 @@ class AcademyTagView(APIView, GenerateLookupsMixin):
         serializer = TagSmallSerializer(tags, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @capable_of('crud_tag')
+    def put(self, request, tag_slug, academy_id=None):
+
+        tag = Tag.objects.filter(slug=tag_slug, ac_academy__academy__id=academy_id).first()
+        if tag is None:
+            raise ValidationException(f'Tag {tag_slug} not found for this academy', slug='tag-not-found')
+
+        serializer = PUTTagSerializer(tag,
+                                      data=request.data,
+                                      context={
+                                          'request': request,
+                                          'academy': academy_id
+                                      })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class AcademyAutomationView(APIView, GenerateLookupsMixin):
     """
@@ -383,6 +403,28 @@ class AcademyAutomationView(APIView, GenerateLookupsMixin):
         tags = Automation.objects.filter(ac_academy__academy__id=academy_id)
 
         serializer = AutomationSmallSerializer(tags, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class UTMView(APIView, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('read_lead')
+    def get(self, request, format=None, academy_id=None):
+
+        utms = UTMField.objects.filter(academy__id=academy_id)
+
+        like = request.GET.get('like', None)
+        if like is not None:
+            utms = utms.filter(slug__icontains=like)
+
+        types = request.GET.get('type', None)
+        if types is not None:
+            _types = types.split(',')
+            utms = utms.filter(utm_type__in=[x.upper() for x in _types])
+
+        serializer = UTMSmallSerializer(utms, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -578,7 +620,7 @@ class ShortLinkView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                          })
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_shortlink')

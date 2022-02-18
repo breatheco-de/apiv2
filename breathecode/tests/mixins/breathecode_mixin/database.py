@@ -6,8 +6,6 @@ from django.db.models import Model
 from ..generate_models_mixin import GenerateModelsMixin
 from ..models_mixin import ModelsMixin
 
-ModelsMixin
-
 __all__ = ['Database']
 
 
@@ -106,4 +104,4 @@ class Database:
         - authenticate: create a user and use `APITestCase.client.force_authenticate(user=models['user'])` to
         get credentials.
         """
-        return GenerateModelsMixin.generate_models(self._parent, *args, **kwargs)
+        return GenerateModelsMixin.generate_models(self._parent, _new_implementation=True, *args, **kwargs)

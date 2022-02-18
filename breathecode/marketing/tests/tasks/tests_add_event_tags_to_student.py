@@ -40,6 +40,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_optional_arguments(self):
         import logging
         import requests
@@ -62,6 +63,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__user_id_and_email(self):
         import logging
         import requests
@@ -84,6 +86,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_user(self):
         import logging
         import requests
@@ -103,6 +106,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_event__with_user(self):
         import logging
         import requests
@@ -118,7 +122,9 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_event__with_email(self):
         import logging
         import requests
@@ -137,7 +143,9 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.warn', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_academy__with_user(self):
         import logging
         import requests
@@ -157,6 +165,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_academy__with_email(self):
         import logging
         import requests
@@ -180,6 +189,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_active_campaign_academy__with_user(self):
         import logging
         import requests
@@ -199,6 +209,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_active_campaign_academy__with_email(self):
         import logging
         import requests
@@ -222,6 +233,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_tags__with_user(self):
         import logging
         import requests
@@ -243,6 +255,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__without_tags__with_email(self):
         import logging
         import requests
@@ -269,6 +282,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GET_CONTACT_BY_EMAIL_PATH, MagicMock(side_effect=Exception(GET_CONTACT_BY_EMAIL_EXCEPTION)))
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__exception_in_get_contact_by_email__with_user(self):
         import logging
         import requests
@@ -298,6 +312,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GET_CONTACT_BY_EMAIL_PATH, MagicMock(side_effect=Exception(GET_CONTACT_BY_EMAIL_EXCEPTION)))
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__exception_in_get_contact_by_email__with_email(self):
         import logging
         import requests
@@ -330,6 +345,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(ADD_TAG_TO_CONTACT_PATH, MagicMock(side_effect=Exception(ADD_TAG_TO_CONTACT_EXCEPTION)))
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__exception_in_add_tag_to_contact__with_user(self):
         import logging
         import requests
@@ -367,6 +383,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(ADD_TAG_TO_CONTACT_PATH, MagicMock(side_effect=Exception(ADD_TAG_TO_CONTACT_EXCEPTION)))
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__exception_in_add_tag_to_contact__with_email(self):
         import logging
         import requests
@@ -406,6 +423,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_one_tag__with_user(self):
         import logging
         import requests
@@ -449,6 +467,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_one_tag__with_email(self):
         import logging
         import requests
@@ -495,6 +514,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_two_tags__with_user(self):
         import logging
         import requests
@@ -548,6 +568,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_two_tags__with_email(self):
         import logging
         import requests
@@ -604,6 +625,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_two_tags__event_slug_math_with_tag__with_user(self):
         import logging
         import requests
@@ -660,6 +682,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_two_tags__event_slug_math_with_tag__with_email(self):
         import logging
         import requests
@@ -719,6 +742,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_three_tags__event_slug_math_with_tag__with_user(self):
         import logging
         import requests
@@ -786,6 +810,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch('logging.Logger.error', MagicMock())
     @patch('requests.get', apply_requests_get_mock([(200, AC_URL, AC_RESPONSE)]))
     @patch('requests.post', apply_requests_post_mock([(201, AC_POST_URL, AC_POST_RESPONSE)]))
+    @patch('breathecode.events.signals.event_saved', MagicMock())
     def test_add_event_tags_to_student__with_three_tags__event_slug_math_with_tag__with_email(self):
         import logging
         import requests

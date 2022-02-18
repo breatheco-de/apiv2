@@ -5,3 +5,5 @@ declare a new variable here like this:
 from django.dispatch import Signal
 
 invite_accepted = Signal(providing_args=['task_id'])
+
+downloadable_saved = Signal()

@@ -4,6 +4,8 @@ from django.contrib.auth.models import AnonymousUser
 
 logger = logging.getLogger(__name__)
 
+__all__ = ['localize_query']
+
 
 def localize_query(query, request, matcher=None):
 

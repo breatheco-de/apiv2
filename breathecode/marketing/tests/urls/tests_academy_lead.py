@@ -1,20 +1,12 @@
 """
 Test /academy/lead
 """
-from logging import error
 from django.utils import timezone
 from datetime import timedelta
 import string
 from random import choice, choices, randint
-from unittest.mock import patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
 from ..mixins import MarketingTestCase
 
 
@@ -67,9 +59,6 @@ class CohortUserTestSuite(MarketingTestCase):
     """
     🔽🔽🔽 Auth
     """
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__without_auth(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:academy_lead')
@@ -81,9 +70,6 @@ class CohortUserTestSuite(MarketingTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(self.all_form_entry_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__without_academy_header(self):
         """Test /cohort/:id/user without auth"""
         url = reverse_lazy('marketing:academy_lead')
@@ -108,9 +94,6 @@ class CohortUserTestSuite(MarketingTestCase):
     🔽🔽🔽 Without data
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__without_data(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -132,9 +115,6 @@ class CohortUserTestSuite(MarketingTestCase):
     🔽🔽🔽 With data
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -171,6 +151,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_url': model.form_entry.utm_url,
             'ac_expected_cohort': model.form_entry.ac_expected_cohort,
             'user': None,
+            'phone': model.form_entry.phone,
         }]
 
         self.assertEqual(json, expected)
@@ -181,9 +162,6 @@ class CohortUserTestSuite(MarketingTestCase):
     🔽🔽🔽 Storage status in querystring
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_bad_storage_status_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -203,9 +181,6 @@ class CohortUserTestSuite(MarketingTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_storage_status_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -242,6 +217,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_url': model.form_entry.utm_url,
             'ac_expected_cohort': model.form_entry.ac_expected_cohort,
             'user': None,
+            'phone': model.form_entry.phone,
         }]
 
         self.assertEqual(json, expected)
@@ -252,9 +228,6 @@ class CohortUserTestSuite(MarketingTestCase):
     🔽🔽🔽 Course in querystring
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_bad_course_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -274,9 +247,6 @@ class CohortUserTestSuite(MarketingTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_course_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -313,6 +283,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_url': model.form_entry.utm_url,
             'ac_expected_cohort': model.form_entry.ac_expected_cohort,
             'user': None,
+            'phone': model.form_entry.phone,
         }]
 
         self.assertEqual(json, expected)
@@ -323,9 +294,6 @@ class CohortUserTestSuite(MarketingTestCase):
     🔽🔽🔽 Location in querystring
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_bad_location_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -345,9 +313,6 @@ class CohortUserTestSuite(MarketingTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_location_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -384,6 +349,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_url': model.form_entry.utm_url,
             'ac_expected_cohort': model.form_entry.ac_expected_cohort,
             'user': None,
+            'phone': model.form_entry.phone,
         }]
 
         self.assertEqual(json, expected)
@@ -394,9 +360,6 @@ class CohortUserTestSuite(MarketingTestCase):
     🔽🔽🔽 Start in querystring
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_bad_start_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -415,9 +378,6 @@ class CohortUserTestSuite(MarketingTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_start_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -454,6 +414,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_url': model.form_entry.utm_url,
             'ac_expected_cohort': model.form_entry.ac_expected_cohort,
             'user': None,
+            'phone': None,
         }]
 
         self.assertEqual(json, expected)
@@ -464,9 +425,6 @@ class CohortUserTestSuite(MarketingTestCase):
     🔽🔽🔽 End in querystring
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_bad_end_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -485,9 +443,6 @@ class CohortUserTestSuite(MarketingTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_form_entry_dict(), [{**self.model_to_dict(model, 'form_entry')}])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_end_in_querystring(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -524,6 +479,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_url': model.form_entry.utm_url,
             'ac_expected_cohort': model.form_entry.ac_expected_cohort,
             'user': None,
+            'phone': model.form_entry.phone,
         }]
 
         self.assertEqual(json, expected)
@@ -534,9 +490,6 @@ class CohortUserTestSuite(MarketingTestCase):
     🔽🔽🔽 Bulk delete
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__delete__in_bulk_with_one(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -567,9 +520,6 @@ class CohortUserTestSuite(MarketingTestCase):
             self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
             self.assertEqual(self.all_form_entry_dict(), [])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__delete__in_bulk_with_two(self):
         """Test /cohort/:id/user without auth"""
         self.headers(academy=1)
@@ -612,9 +562,6 @@ class CohortUserTestSuite(MarketingTestCase):
     🔽🔽🔽 Check pagination
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_ten_datas_with_location_with_comma_just_get_100(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -649,6 +596,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'ac_expected_cohort': model['form_entry'].ac_expected_cohort,
             'created_at': self.datetime_to_iso(model['form_entry'].created_at),
             'user': None,
+            'phone': None,
         } for model in ordened_models][:100]
 
         self.assertEqual(json, expected)
@@ -657,9 +605,6 @@ class CohortUserTestSuite(MarketingTestCase):
             **self.model_to_dict(model, 'form_entry')
         } for model in models])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_first_five(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -707,6 +652,7 @@ class CohortUserTestSuite(MarketingTestCase):
                 'ac_expected_cohort': model['form_entry'].ac_expected_cohort,
                 'created_at': self.datetime_to_iso(model['form_entry'].created_at),
                 'user': None,
+                'phone': None,
             } for model in ordened_models][:5],
         }
 
@@ -716,9 +662,6 @@ class CohortUserTestSuite(MarketingTestCase):
             **self.model_to_dict(model, 'form_entry')
         } for model in models])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_last_five(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -764,6 +707,7 @@ class CohortUserTestSuite(MarketingTestCase):
                 'ac_expected_cohort': model['form_entry'].ac_expected_cohort,
                 'created_at': self.datetime_to_iso(model['form_entry'].created_at),
                 'user': None,
+                'phone': None,
             } for model in ordened_models][5:],
         }
 
@@ -773,9 +717,6 @@ class CohortUserTestSuite(MarketingTestCase):
             **self.model_to_dict(model, 'form_entry')
         } for model in models])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_ten_datas_with_location_with_comma_pagination_after_last_five(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -809,9 +750,6 @@ class CohortUserTestSuite(MarketingTestCase):
     🔽🔽🔽 With full like in querystring
     """
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_full_name_in_querystring(self):
         """Test /academy/lead """
         self.headers(academy=1)
@@ -860,6 +798,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_url': models[0].form_entry.utm_url,
             'ac_expected_cohort': models[0].form_entry.ac_expected_cohort,
             'user': None,
+            'phone': models[0].form_entry.phone,
         }]
 
         self.assertEqual(json, expected)
@@ -868,9 +807,6 @@ class CohortUserTestSuite(MarketingTestCase):
             **self.model_to_dict(model, 'form_entry')
         } for model in models])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_first_name_in_querystring(self):
         """Test /academy/lead """
         self.headers(academy=1)
@@ -918,6 +854,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_url': models[0].form_entry.utm_url,
             'ac_expected_cohort': models[0].form_entry.ac_expected_cohort,
             'user': None,
+            'phone': models[0].form_entry.phone,
         }]
 
         self.assertEqual(json, expected)
@@ -926,9 +863,6 @@ class CohortUserTestSuite(MarketingTestCase):
             **self.model_to_dict(model, 'form_entry')
         } for model in models])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_last_name_in_querystring(self):
         """Test /academy/lead """
         self.headers(academy=1)
@@ -977,6 +911,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_url': models[0].form_entry.utm_url,
             'ac_expected_cohort': models[0].form_entry.ac_expected_cohort,
             'user': None,
+            'phone': models[0].form_entry.phone,
         }]
 
         self.assertEqual(json, expected)
@@ -985,9 +920,6 @@ class CohortUserTestSuite(MarketingTestCase):
             **self.model_to_dict(model, 'form_entry')
         } for model in models])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_lead__with_email_in_querystring(self):
         """Test /academy/lead """
         self.headers(academy=1)
@@ -1034,6 +966,7 @@ class CohortUserTestSuite(MarketingTestCase):
             'utm_url': models[0].form_entry.utm_url,
             'ac_expected_cohort': models[0].form_entry.ac_expected_cohort,
             'user': None,
+            'phone': models[0].form_entry.phone,
         }]
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

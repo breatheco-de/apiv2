@@ -3,8 +3,8 @@ import re
 import logging
 
 from datetime import datetime, timedelta
-from breathecode.admissions.models import Cohort, CohortTimeSlot
 from django.utils import timezone
+from breathecode.admissions.models import Cohort, CohortTimeSlot
 
 from .models import Organization, Venue, Event, Organizer
 from .utils import Eventbrite
@@ -177,6 +177,8 @@ def sync_org_events(org):
 
 # use for mocking purpose
 def get_current_iso_string():
+    from django.utils import timezone
+
     return str(timezone.now())
 
 
@@ -260,6 +262,37 @@ def update_or_create_event(data, org):
         raise e
 
     return event
+
+
+def publish_event_from_eventbrite(data, org: Organization) -> None:
+    if not data:  #skip if no data
+        logger.log('Ignored event')
+        raise ValueError('data is empty')
+
+    now = get_current_iso_string()
+
+    try:
+        if not Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).count():
+            raise Warning(f'The event with the eventbrite id `{data["id"]}` doesn\'t exist in breathecode '
+                          'yet')
+
+        kwargs = {
+            'status': 'ACTIVE',
+            'eventbrite_status': data['status'],
+            'eventbrite_sync_description': now,
+            'eventbrite_sync_status': 'PERSISTED'
+        }
+
+        Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).update(**kwargs)
+        logger.log(f'The event with the eventbrite id `{data["id"]} was saved`')
+
+    except Warning as e:
+        logger.error(f'{now} => {e}')
+        raise e
+
+    except Exception as e:
+        logger.error(f'{now} => the body is coming from eventbrite has change')
+        raise e
 
 
 def fix_datetime_weekday(current, timeslot, prev=False, next=False):

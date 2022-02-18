@@ -266,7 +266,7 @@ def test_syllabus(syl):
         validate('lessons', day)
         validate('quizzes', day)
         validate('replits', day)
-        validate('assignments', day)
+        validate('projects', day)
 
         if 'teacher_instructions' not in day or day['teacher_instructions'] == '':
             raise ValidationException(f'Empty teacher instructions on module {count}')
