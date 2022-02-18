@@ -36,11 +36,16 @@ class SubscribeTestSuite(AuthTestCase):
     @patch('django.utils.timezone.now', MagicMock(return_value=now))
     def test_task__post__without_user_invite(self):
         url = reverse_lazy('authenticate:subscribe')
-        data = {'email': 'pokemon@potato.io'}
+        data = {
+            'email': 'pokemon@potato.io',
+            'first_name': 'lord',
+            'last_name': 'valdomero',
+            'phone': '+123123123'
+        }
         response = self.client.post(url, data, format='json')
 
         json = response.json()
-        expected = {'id': 1, 'email': 'pokemon@potato.io'}
+        expected = {'id': 1, **data}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -49,16 +54,13 @@ class SubscribeTestSuite(AuthTestCase):
                              'academy_id': None,
                              'author_id': None,
                              'cohort_id': None,
-                             'email': 'pokemon@potato.io',
-                             'first_name': None,
                              'id': 1,
-                             'last_name': None,
-                             'phone': '',
                              'role_id': None,
                              'sent_at': None,
                              'status': 'WAITING_LIST',
                              'token': hashlib.sha1(
                                  (str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                             **data,
                          }])
 
     """
@@ -105,11 +107,16 @@ class SubscribeTestSuite(AuthTestCase):
         model = self.bc.database.create(user_invite=user_invite)
 
         url = reverse_lazy('authenticate:subscribe')
-        data = {'email': 'pokemon@potato.io'}
+        data = {
+            'email': 'pokemon@potato.io',
+            'first_name': 'lord',
+            'last_name': 'valdomero',
+            'phone': '+123123123'
+        }
         response = self.client.post(url, data, format='json')
 
         json = response.json()
-        expected = {'id': 2, 'email': 'pokemon@potato.io'}
+        expected = {'id': 2, **data}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -118,14 +125,11 @@ class SubscribeTestSuite(AuthTestCase):
                 'academy_id': None,
                 'author_id': None,
                 'cohort_id': None,
-                'email': 'pokemon@potato.io',
-                'first_name': None,
                 'id': 2,
-                'last_name': None,
-                'phone': '',
                 'role_id': None,
                 'sent_at': None,
                 'status': 'WAITING_LIST',
                 'token': hashlib.sha1((str(now) + 'pokemon@potato.io').encode('UTF-8')).hexdigest(),
+                **data,
             }
         ])
