@@ -1,4 +1,4 @@
-import serpy, logging, hashlib
+import serpy, logging, hashlib, re
 from django.utils import timezone
 from datetime import timedelta
 from .models import FormEntry, AcademyAlias, ShortLink, Tag
@@ -143,8 +143,13 @@ class ShortLinkSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        print('validating slug', data['slug'])
         if 'slug' in data and data['slug'] is not None:
+
+            if not re.match('^[-\w]+$', data['slug']):
+                raise ValidationException(
+                    f'Invalid link slug {data["slug"]}, should only contain letters, numbers and slash "-"',
+                    slug='invalid-slug-format')
+
             link = ShortLink.objects.filter(slug=data['slug']).first()
             if link is not None and (self.instance is None or self.instance.id != link.id):
                 raise ValidationException(f'Shortlink with slug {data["slug"]} already exists',

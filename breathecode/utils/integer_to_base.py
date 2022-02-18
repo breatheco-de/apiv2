@@ -1,4 +1,4 @@
-BS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+BS = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-'
 
 
 def to_base(n, b=None):
