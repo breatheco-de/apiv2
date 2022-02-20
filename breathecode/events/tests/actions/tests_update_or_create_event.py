@@ -205,7 +205,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'title': event['name']['text'],
             'currency': event['currency'],
             'lang': None,
-            'url': model.event.url,
+            'url': EVENTBRITE_EVENTS['events'][0]['url'],
             'banner': event['logo']['url'],
             'capacity': event['capacity'],
             'tags': '',
