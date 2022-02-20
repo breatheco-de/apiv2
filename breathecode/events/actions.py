@@ -248,8 +248,6 @@ def update_or_create_event(data, org):
         elif org.academy is not None:
             event.academy = org.academy
 
-        event.save()
-
         event.eventbrite_sync_description = now
         event.eventbrite_sync_status = 'PERSISTED'
         event.save()

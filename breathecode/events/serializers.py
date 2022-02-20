@@ -1,3 +1,4 @@
+from typing import Any
 from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.utils.validation_exception import ValidationException
 from .models import Event, Organization, EventbriteWebhook
@@ -145,7 +146,7 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         exclude = ()
 
-    def validate(self, data):
+    def validate(self, data: dict[str, Any]):
 
         academy = self.context.get('academy_id')
 
@@ -159,14 +160,16 @@ class EventSerializer(serializers.ModelSerializer):
 
         validate_marketing_tags(data['tags'], academy, types=['DISCOVERY'])
 
-        if 'slug' not in data or data['slug'] == '' or data['slug'] is None:
-            data['slug'] = slugify(data['title'])
+        if 'title' in data and not data.get('slug'):
+            data['slug'] = slugify(data['title']).lower()
 
-        if not data['slug'].lower().startswith('event-'):
+        if 'slug' in data and not data['slug'].lower().startswith('event-'):
             data['slug'] = f'event-{data["slug"].lower()}'
 
-        previous = Event.objects.filter(slug=data['slug']).first()
-        if previous is not None:
+        elif 'slug' in data:
+            data['slug'] = f'{data["slug"].lower()}'
+
+        if 'slug' in data and Event.objects.filter(slug=data['slug']).exists():
             raise ValidationException(f'Event slug already taken, try a different event title?',
                                       slug='slug-taken')
 
