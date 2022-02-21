@@ -1,3 +1,4 @@
+from typing import Any
 import pytz
 import re
 import logging
@@ -100,6 +101,70 @@ def create_or_update_venue(data, org, force_update=False):
     return venue
 
 
+def export_event_description_to_eventbrite(event: Event) -> None:
+    if not event:
+        logger.error(f'Event is not being provided')
+        return
+
+    if not event.eventbrite_id:
+        logger.error(f'Event {event.id} not have the integration with eventbrite')
+        return
+
+    if not event.organization:
+        logger.error(f'Event {event.id} not have a organization assigned')
+        return
+
+    if not event.description:
+        logger.warning(f'The event {event.id} not have description yet')
+        return
+
+    eventbrite_id = event.eventbrite_id
+    client = Eventbrite(event.organization.eventbrite_key)
+
+    payload = {
+        'modules': [{
+            'type': 'text',
+            'data': {
+                'body': {
+                    'type': 'text',
+                    'text': event.description,
+                    'alignment': 'left',
+                },
+            },
+        }],
+        'publish':
+        True,
+        'purpose':
+        'listing',
+    }
+
+    try:
+        structured_content = client.get_event_description(eventbrite_id)
+        result = client.create_or_update_event_description(eventbrite_id,
+                                                           structured_content['page_version_number'], payload)
+
+        if not result['modules']:
+            error = 'Could not create event description in eventbrite'
+            logger.error(error)
+
+            event.eventbrite_sync_description = error
+            event.eventbrite_sync_status = 'ERROR'
+            event.save()
+
+        else:
+            event.eventbrite_sync_description = timezone.now()
+            event.eventbrite_sync_status = 'SYNCHED'
+            event.save()
+
+    except Exception as e:
+        error = str(e)
+        logger.error(error)
+
+        event.eventbrite_sync_description = error
+        event.eventbrite_sync_status = 'ERROR'
+        event.save()
+
+
 def export_event_to_eventbrite(event: Event, org: Organization):
     if not org.academy:
         logger.error(f'The organization {org} not have a academy assigned')
@@ -135,6 +200,8 @@ def export_event_to_eventbrite(event: Event, org: Organization):
 
         event.eventbrite_sync_description = now
         event.eventbrite_sync_status = 'SYNCHED'
+
+        export_event_description_to_eventbrite(event)
 
     except Exception as e:
         event.eventbrite_sync_description = f'{now} => {e}'
@@ -180,6 +247,36 @@ def get_current_iso_string():
     from django.utils import timezone
 
     return str(timezone.now())
+
+
+def update_event_description_from_eventbrite(event: Event) -> None:
+    if not event:
+        logger.error(f'Event is not being provided')
+        return
+
+    if not event.eventbrite_id:
+        logger.error(f'Event {event.id} not have the integration with eventbrite')
+        return
+
+    if not event.organization:
+        logger.error(f'Event {event.id} not have a organization assigned')
+        return
+
+    eventbrite_id = event.eventbrite_id
+    client = Eventbrite(event.organization.eventbrite_key)
+
+    try:
+        data = client.get_event_description(eventbrite_id)
+        event.description = data['modules'][0]['data']['body']['text']
+        event.eventbrite_sync_description = timezone.now()
+        event.eventbrite_sync_status = 'PERSISTED'
+        event.save()
+
+    except:
+        error = f'The event {eventbrite_id} is coming from eventbrite not have a description'
+        logger.warning(error)
+        event.eventbrite_sync_description = error
+        event.eventbrite_sync_status = 'ERROR'
 
 
 def update_or_create_event(data, org):
@@ -251,6 +348,8 @@ def update_or_create_event(data, org):
         event.eventbrite_sync_description = now
         event.eventbrite_sync_status = 'PERSISTED'
         event.save()
+
+        update_event_description_from_eventbrite(event)
 
     except Exception as e:
         if event is not None:

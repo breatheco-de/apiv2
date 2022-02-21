@@ -73,3 +73,13 @@ class Eventbrite(object):
     def update_organization_event(self, event_id, data):
         data = self.request('PUT', f'/events/{event_id}/', data=data)
         return data
+
+    # https://www.eventbrite.com/platform/api#/reference/event-description/retrieve/retrieve-full-html-description
+    def get_event_description(self, event_id):
+        data = self.request('GET', f'/events/{event_id}/structured_content/')
+        return data
+
+    # https://www.eventbrite.com/platform/api#/reference/event-description/retrieve/retrieve-full-html-description
+    def create_or_update_event_description(self, event_id, version, data):
+        data = self.request('POST', f'/events/{event_id}/structured_content/{version}/', data=data)
+        return data
