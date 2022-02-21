@@ -11,9 +11,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         now = timezone.now()
-        spidrs = Spider.objects.all()
+        spiders = Spider.objects.all()
         count = 0
-        for spi in spidrs:
+        for spi in spiders:
             if spi.job is None or spi.job == '' or spi.zyte_project is None or spi.zyte_project == '' or spi.zyte_spider_number is None or spi.zyte_spider_number == '':
                 spi.sync_status = 'ERROR'
                 spi.sync_desc = 'Missing run_spider key or id'
@@ -26,4 +26,4 @@ class Command(BaseCommand):
                 async_run_spider.delay({'spi_id': spi.id})
                 count = count + 1
 
-        self.stdout.write(self.style.SUCCESS(f'Enqueued {count} of {len(spidrs)} for sync spider'))
+        self.stdout.write(self.style.SUCCESS(f'Enqueued {count} of {len(spiders)} for sync spider'))

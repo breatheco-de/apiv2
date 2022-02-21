@@ -17,9 +17,11 @@ class BaseTaskWithRetry(Task):
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def async_run_spider(self, args):
     logger.error('Starting async_run_spider')
+    print('hola')
     now = timezone.now()
+    print('args: ', args)
     spider = Spider.objects.get(id=args['spi_id'])
-    print('args', args)
+    print('spider: ', spider)
     result = run_spider(spider)
 
     if result.status_code == 200:

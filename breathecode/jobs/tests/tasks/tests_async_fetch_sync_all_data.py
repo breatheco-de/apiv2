@@ -44,15 +44,15 @@ zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
 platform = {'name': 'getonboard'}
 
 
-class RunSpiderTaskTestCase(JobsTestCase):
+class AsyncFetchSyncAllDataTaskTestCase(JobsTestCase):
     """Test /answer"""
     """
     🔽🔽🔽 Without Task
     """
-    @patch('breathecode.jobs.tasks.async_run_spider', MagicMock())
+    @patch('breathecode.jobs.tasks.async_fetch_sync_all_data', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_async_run_spider__without_tasks(self):
+    def test_async_async_fetch_sync_all_data__without_tasks(self):
         from logging import Logger
         from breathecode.jobs.actions import save_data
         model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
@@ -61,7 +61,7 @@ class RunSpiderTaskTestCase(JobsTestCase):
         # result = save_data(model.spider, JOBS)
         # spider = self.bc.database.list_of('jobs.Spider')
         print('id: ', model['spider'].id)
-        async_run_spider.delay(model['spider'].id)
+        async_fetch_sync_all_data.delay(model['spider'].id)
         print(Logger.debug.call_args_list)
 
         print(Logger.error.call_args_list)
