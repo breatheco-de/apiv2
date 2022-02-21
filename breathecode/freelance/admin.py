@@ -23,7 +23,6 @@ def generate_bill(modeladmin, request, queryset):
     freelancers = queryset.all()
     for freelancer in freelancers:
         try:
-            print(f'Genereting bill for {freelancer.user.email}')
             actions.generate_freelancer_bill(freelancer)
         except ValueError as err:
             messages.error(request, err)
@@ -88,7 +87,8 @@ class FreelancerAdmin(admin.ModelAdmin):
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
     search_fields = [
-        'title', 'freelancer__user__email', 'freelancer__user__first_name', 'freelancer__user__last_name'
+        'title', 'freelancer__user__email', 'freelancer__user__first_name', 'freelancer__user__last_name',
+        'github_number'
     ]
     list_display = ('id', 'github_number', 'freelancer', 'title', 'status', 'duration_in_hours', 'bill_id',
                     'github_url')
