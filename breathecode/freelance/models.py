@@ -59,6 +59,13 @@ ISSUE_STATUS = (
 class Issue(models.Model):
     title = models.CharField(max_length=255)
 
+    node_id = models.CharField(
+        max_length=50,
+        default=None,
+        null=True,
+        blank=True,
+        help_text=
+        'This is the only unique identifier we get from github, the issue number its not unique among repos')
     status = models.CharField(max_length=20, choices=ISSUE_STATUS, default=DRAFT)
     github_state = models.CharField(max_length=30, blank=True, null=True, default=None)
     github_number = models.PositiveIntegerField()

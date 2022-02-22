@@ -108,6 +108,10 @@
 		.es-p5l {
 			padding-left: 5px;
 		}
+
+		.pointer {
+			cursor: pointer;
+		}
 	</style>
 
 	<!-- MESSAGE SUBJECT -->
@@ -226,6 +230,13 @@
 		src="{{ TRACKER_URL }}" />
 	{% endif %}
 
+	<script src="https://unpkg.com/popper.js@1"></script>
+	<script src="https://unpkg.com/tippy.js@4"></script>
+	<script>
+		window.onload = function () {
+			tippy('.tooltip')
+		}
+	</script>
 </body>
 
 </html>

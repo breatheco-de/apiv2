@@ -34,6 +34,7 @@ class SmallIssueSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
     status = serpy.Field()
+    node_id = serpy.Field()
     duration_in_minutes = serpy.Field()
     duration_in_hours = serpy.Field()
     url = serpy.Field()
