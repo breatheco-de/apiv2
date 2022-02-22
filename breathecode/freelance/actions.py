@@ -91,6 +91,9 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
         )
         return _issue
 
+    if issue_number is not None:
+        _issue.github_number = issue_number
+
     if issue['title'] is not None:
         _issue.title = issue['title'][:255]
 

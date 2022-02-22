@@ -74,8 +74,8 @@ class Issue(models.Model):
     duration_in_minutes = models.FloatField(default=0)
     duration_in_hours = models.FloatField(default=0)
 
-    url = models.URLField(max_length=255)
-    repository_url = models.URLField(max_length=255, blank=True, default=None, null=True)
+    url = models.URLField()
+    repository_url = models.URLField(blank=True, default=None, null=True)
 
     author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None, blank=True)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)
