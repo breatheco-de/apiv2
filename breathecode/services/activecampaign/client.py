@@ -193,6 +193,26 @@ class ActiveCampaign:
 
             raise Exception(f'Error creating tag `{slug}` with status={str(resp.status_code)}')
 
+    def delete_tag(self, tag_id: str):
+        import requests
+
+        #/api/3/deals/id
+        #Api-Token
+        resp = requests.delete(
+            f'{self.host}/api/3/tags/{tag_id}',
+            headers={'Api-Token': self.token},
+        )
+        logger.debug(f'Deleting tag {str(tag_id)} on active campaign')
+
+        if resp.status_code == 200 or resp.status_code == 404:
+            logger.debug(f'Tag deleted successfully or not existent')
+            return True
+        else:
+            logger.error(f'Error deleting tag `{str(tag_id)}` with status={str(resp.status_code)}')
+            error = resp.json()
+            logger.error(error)
+            raise Exception(f'Error deleting tag `{str(tag_id)}` with status={str(resp.status_code)}')
+
 
 class Contacts(object):
     def __init__(self, client):
