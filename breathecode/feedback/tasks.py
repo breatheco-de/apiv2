@@ -187,6 +187,9 @@ def process_answer_received(self, answer_id):
     the task will reivew the score, if we got less than 7 it will notify
     the school.
     """
+
+    from breathecode.notify.actions import send_email_message
+
     logger.debug('Starting notify_bad_nps_score')
     answer = Answer.objects.filter(id=answer_id).first()
     if answer is None:
@@ -197,18 +200,16 @@ def process_answer_received(self, answer_id):
         logger.error('No survey connected to answer.')
         return
 
-    if answer.survey is not None:
-        survey_score = Answer.objects.filter(survey=answer.survey).aggregate(Avg('score'))
-        answer.survey.avg_score = survey_score['score__avg']
-        answer.survey.save()
+    survey_score = Answer.objects.filter(survey=answer.survey).aggregate(Avg('score'))
+    answer.survey.avg_score = survey_score['score__avg']
 
-        total_responses = Answer.objects.filter(survey=answer.survey).count()
-        answered_responses = Answer.objects.filter(survey=answer.survey, status=ANSWERED).count()
-        response_rate = (answered_responses / total_responses) * 100
-        answer.survey.response_rate = response_rate
-        answer.survey.save()
+    total_responses = Answer.objects.filter(survey=answer.survey).count()
+    answered_responses = Answer.objects.filter(survey=answer.survey, status='ANSWERED').count()
+    response_rate = (answered_responses / total_responses) * 100
+    answer.survey.response_rate = response_rate
+    answer.survey.save()
 
-    if answer.score is not None and answer.score < 8:
+    if answer.user and answer.academy and answer.score is not None and answer.score < 8:
         # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
         send_email_message('negative_answer', [SYSTEM_EMAIL, answer.academy.feedback_email],
                            data={

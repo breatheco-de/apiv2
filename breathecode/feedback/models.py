@@ -138,11 +138,11 @@ class Answer(models.Model):
 
     def save(self, *args, **kwargs):
 
+        super().save(*args, **kwargs)  # Call the "real" save() method.
+
         if self.__old_status != self.status and self.status == 'ANSWERED':
             # signal the updated answer
             survey_answered.send(instance=self, sender=Answer)
-
-        super().save(*args, **kwargs)  # Call the "real" save() method.
 
 
 class ReviewPlatform(models.Model):

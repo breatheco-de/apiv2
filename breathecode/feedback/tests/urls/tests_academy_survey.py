@@ -66,11 +66,8 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # @patch('breathecode.feedback.signals.survey_answered', MagicMock())
     def test_academy_survey__get__with_data(self):
         """Test /academy/survey with data"""
-
-        # from breathecode.feedback.signals import survey_answered
 
         self.headers(academy=1)
         model = self.bc.database.create(
@@ -86,7 +83,6 @@ class SurveyTestSuite(FeedbackTestCase):
         url = reverse_lazy('feedback:academy_survey')
         response = self.client.get(url)
         json = response.json()
-        # self.bc.help('bc.database.create')
         expected = [{
             'id': model['survey'].id,
             'lang': model['survey'].lang,
@@ -106,7 +102,6 @@ class SurveyTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(survey_answered.send.call_args_list, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -213,12 +208,10 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.feedback.tasks.process_answer_received.delay', MagicMock())
     def test_academy_survey__get__with_status_answered_call_task(self):
         """Test /academy/survey with data"""
 
-        # from breathecode.feedback.signals import survey_answered
         from breathecode.feedback.tasks import process_answer_received
 
         self.headers(academy=1)
@@ -255,11 +248,9 @@ class SurveyTestSuite(FeedbackTestCase):
             'public_url': 'https://nps.breatheco.de/survey/1'
         }]
 
-        signal_expected_args_list = [call(instance=model.answer, sender=model.answer.__class__)]
-        task_expected_args_list = [call(None)]
+        task_expected_args_list = [call(1)]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # self.assertEqual(survey_answered.send.call_args_list, signal_expected_args_list)
         self.assertEqual(process_answer_received.delay.call_args_list, task_expected_args_list)
         self.assertEqual(self.all_survey_dict(), [survey_db])
