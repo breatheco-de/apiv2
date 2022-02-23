@@ -79,9 +79,11 @@ class Role(models.Model):
 
 PENDING = 'PENDING'
 ACCEPTED = 'ACCEPTED'
+REJECTED = 'REJECTED'
 WAITING_LIST = 'WAITING_LIST'
 INVITE_STATUS = (
     (PENDING, 'Pending'),
+    (REJECTED, 'Rejected'),
     (ACCEPTED, 'Accepted'),
     (WAITING_LIST, 'Waiting list'),
 )
