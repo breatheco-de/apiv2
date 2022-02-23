@@ -238,22 +238,30 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if request.user is None:
             raise ValidationException('User not found', 404)
 
-        invite = UserInvite.objects.filter(email=request.user.email, status='PENDING').first()
-        if invite is None:
-            raise ValidationException('No pending invite was found', 404)
+        invites = UserInvite.objects.filter(email=request.user.email, status='PENDING')
 
-        serializer = UserInviteSerializer(invite, many=False)
+        status = request.GET.get('status', '')
+        if status != '':
+            invites = invites.filter(status__in=status.split(','))
+
+        serializer = UserInviteSerializer(invites, many=True)
         return Response(serializer.data)
 
-    def put(self, request):
+    def put(self, request, new_status=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
+
+        if new_status is None:
+            raise ValidationException(f'Please specify new status for the invites')
+
+        if new_status.upper() not in ['ACCEPTED', 'REJECTED']:
+            raise ValidationException(f'Invalid invite status {new_status}')
 
         if lookups:
             items = UserInvite.objects.filter(**lookups, email=request.user.email)
 
             for item in items:
 
-                item.status = 'ACCEPTED'
+                item.status = new_status.upper()
                 item.save()
 
                 exists = ProfileAcademy.objects.filter(email=item.email, academy__id=item.academy.id)

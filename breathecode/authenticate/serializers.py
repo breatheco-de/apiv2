@@ -26,6 +26,21 @@ class UserTinySerializer(serpy.Serializer):
     email = serpy.Field()
 
 
+class AcademyTinySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
+class CohortTinySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
 class TokenSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -91,6 +106,9 @@ class UserInviteSerializer(serpy.Serializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     token = serpy.Field()
+    academy = AcademyTinySerializer(required=False)
+    cohort = CohortTinySerializer(required=False)
+    role = RoleSmallSerializer(required=False)
 
     invite_url = serpy.MethodField()
 

@@ -70,6 +70,7 @@ urlpatterns = [
     path('facebook/callback/', save_facebook_token, name='facebook_callback'),
     path('user/me', UserMeView.as_view(), name='user_me'),
     path('user/me/invite', MeInviteView.as_view()),
+    path('user/me/invite/<slug:new_status>', MeInviteView.as_view()),
 
     # google authentication oath2.0
     path('google/<str:token>', get_google_token, name='google_token'),
