@@ -216,7 +216,15 @@ class Cohort(models.Model):
 
     kickoff_date = models.DateTimeField()
     ending_date = models.DateTimeField(blank=True, null=True)
-    current_day = models.IntegerField()
+    current_day = models.IntegerField(
+        help_text='Each day the teacher takes attendancy and increases the day in one')
+    current_module = models.IntegerField(
+        null=True,
+        default=None,
+        blank=True,
+        help_text=
+        'The syllabus is separated by modules, from 1 to N and the teacher decides when to start a new mobule (after a couple of days)'
+    )
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
     private = models.BooleanField(default=False)
     never_ends = models.BooleanField(default=False)
