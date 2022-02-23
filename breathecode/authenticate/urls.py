@@ -45,6 +45,7 @@ urlpatterns = [
     path('academy/student', StudentView.as_view(), name='academy_student'),
     path('academy/student/<str:user_id_or_email>', StudentView.as_view(), name='academy_student_id'),
     path('academy/user/me/invite', MeInviteView.as_view(), name='user_me_invite'),
+    path('academy/user/me/invite/<slug:new_status>', MeInviteView.as_view(), name='user_me_invite_status'),
     path('academy/user/<int:profileacademy_id>/invite', ProfileInviteView.as_view()),
     path('academy/user/invite', ProfileInviteView.as_view(), name='user_invite'),
     # path('group/', get_groups, name="group"),

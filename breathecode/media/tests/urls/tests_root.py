@@ -108,7 +108,12 @@ class MediaTestSuite(MediaTestCase):
             'name': model['media'].name,
             'slug': model['media'].slug,
             'thumbnail': f'{model.media.url}-thumbnail',
-            'url': model['media'].url
+            'url': model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
@@ -151,7 +156,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
@@ -218,7 +228,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
@@ -269,7 +284,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -337,7 +357,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
@@ -383,7 +408,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -451,7 +481,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
@@ -498,7 +533,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -566,7 +606,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
@@ -613,7 +658,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         } for model in ordened_models]
 
         self.assertEqual(json, expected)
@@ -682,7 +732,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
@@ -729,7 +784,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -797,7 +857,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
@@ -879,7 +944,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         } for model in ordened_models])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -949,7 +1019,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
@@ -1018,7 +1093,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
@@ -1063,7 +1143,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            },
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')}])
@@ -1117,7 +1202,12 @@ class MediaTestSuite(MediaTestCase):
             'thumbnail':
             f'{model.media.url}-thumbnail',
             'url':
-            model['media'].url
+            model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         } for model in ordened_models])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
@@ -1257,7 +1347,12 @@ class MediaTestSuite(MediaTestCase):
             'name': model['media'].name,
             'slug': model['media'].slug,
             'thumbnail': f'{model.media.url}-thumbnail',
-            'url': model['media'].url
+            'url': model['media'].url,
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            }
         } for model in ordened_models[:100]]
 
         self.assertEqual(json, expected)
@@ -1299,7 +1394,12 @@ class MediaTestSuite(MediaTestCase):
                 'name': model['media'].name,
                 'slug': model['media'].slug,
                 'thumbnail': f'{model.media.url}-thumbnail',
-                'url': model['media'].url
+                'url': model['media'].url,
+                'academy': {
+                    'id': model['academy'].id,
+                    'slug': model['academy'].slug,
+                    'name': model['academy'].name,
+                }
             } for model in ordened_models[:5]]
         }
 
@@ -1342,7 +1442,12 @@ class MediaTestSuite(MediaTestCase):
                 'name': model['media'].name,
                 'slug': model['media'].slug,
                 'thumbnail': f'{model.media.url}-thumbnail',
-                'url': model['media'].url
+                'url': model['media'].url,
+                'academy': {
+                    'id': model['academy'].id,
+                    'slug': model['academy'].slug,
+                    'name': model['academy'].name,
+                }
             } for model in ordened_models[5:]]
         }
 

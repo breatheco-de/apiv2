@@ -109,6 +109,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             'subscribers': 0,
             'tag_type': 'COHORT',
             'disputed_at': None,
+            'description': None,
             'disputed_reason': None,
         }])
 

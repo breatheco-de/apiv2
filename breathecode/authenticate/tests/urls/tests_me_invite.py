@@ -49,7 +49,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'email': choice(['a@a.com', 'b@b.com', 'c@c.com']),
         }
 
-        slug = 'missing_ids'
+        slug = 'missing-status'
 
         model = self.generate_models(academy=True,
                                      capability='crud_invite',
@@ -62,7 +62,7 @@ class AuthenticateTestSuite(AuthTestCase):
 
         response = self.client.put(url)
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.json()['detail'], slug)
         self.assertEqual(self.all_user_invite_dict(), [])
 
@@ -95,7 +95,8 @@ class AuthenticateTestSuite(AuthTestCase):
                                       user_invite_kwargs=invite_kwargs,
                                       models=base)
 
-        url = reverse_lazy('authenticate:user_me_invite') + '?id=1,2'
+        url = reverse_lazy('authenticate:user_me_invite_status', kwargs={'new_status': 'accepted'
+                                                                         }) + '?id=1,2'
         response = self.client.put(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -109,7 +110,21 @@ class AuthenticateTestSuite(AuthTestCase):
                 'last_name': None,
                 'sent_at': None,
                 'status': 'ACCEPTED',
-                'token': model1['user_invite'].token
+                'token': model1['user_invite'].token,
+                'academy': {
+                    'id': model1['user_invite'].academy.id,
+                    'name': model1['user_invite'].academy.name,
+                    'slug': model1['user_invite'].academy.slug,
+                },
+                'cohort': {
+                    'name': model1['user_invite'].cohort.name,
+                    'slug': model1['user_invite'].cohort.slug,
+                },
+                'role': {
+                    'id': model1['user_invite'].role.slug,
+                    'name': model1['user_invite'].role.name,
+                    'slug': model1['user_invite'].role.slug,
+                }
             }, {
                 'created_at': self.datetime_to_iso(model2['user_invite'].created_at),
                 'email': 'a@a.com',
@@ -119,7 +134,21 @@ class AuthenticateTestSuite(AuthTestCase):
                 'last_name': None,
                 'sent_at': None,
                 'status': 'ACCEPTED',
-                'token': model2['user_invite'].token
+                'token': model2['user_invite'].token,
+                'academy': {
+                    'id': model2['user_invite'].academy.id,
+                    'name': model2['user_invite'].academy.name,
+                    'slug': model2['user_invite'].academy.slug,
+                },
+                'cohort': {
+                    'name': model2['user_invite'].cohort.name,
+                    'slug': model2['user_invite'].cohort.slug,
+                },
+                'role': {
+                    'id': model2['user_invite'].role.slug,
+                    'name': model2['user_invite'].role.name,
+                    'slug': model2['user_invite'].role.slug,
+                }
             }])
         self.assertEqual(self.all_user_invite_dict(), [{
             'academy_id': 1,
@@ -173,8 +202,10 @@ class AuthenticateTestSuite(AuthTestCase):
                                       user_invite_kwargs=invite_kwargs,
                                       models=base)
 
-        url = reverse_lazy('authenticate:user_me_invite') + '?id=1,2'
+        url = reverse_lazy('authenticate:user_me_invite_status', kwargs={'new_status': 'accepted'
+                                                                         }) + '?id=1,2'
         response = self.client.put(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        print('response.json ->', response.json())
         self.assertEqual(response.json(), [])

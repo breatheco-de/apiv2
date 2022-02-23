@@ -251,7 +251,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
         if new_status is None:
-            raise ValidationException(f'Please specify new status for the invites')
+            raise ValidationException(f'Please specify new status for the invites', slug='missing-status')
 
         if new_status.upper() not in ['ACCEPTED', 'REJECTED']:
             raise ValidationException(f'Invalid invite status {new_status}')

@@ -119,7 +119,7 @@ class Tag(models.Model):
         max_length=15,
         choices=TAG_TYPE,
         null=True,
-        default=OTHER,
+        default=None,
         help_text=
         "The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON"
     )

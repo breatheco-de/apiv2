@@ -106,6 +106,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             'acp_id': 1,
             'automation_id': None,
             'disputed_at': None,
+            'description': None,
             'disputed_reason': None,
             'id': 1,
             'slug': 'down-they-killed-kenny',
