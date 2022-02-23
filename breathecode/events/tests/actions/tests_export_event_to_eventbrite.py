@@ -42,6 +42,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warn', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
+    @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch(REQUESTS_PATH['request'],
            apply_requests_request_mock([
                (201, eventbrite_post_url, eventbrite_event),
@@ -58,6 +59,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(logging.Logger.warn.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list,
                          [call('The organization (1) not have a academy assigned')])
+        self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
         self.assertEqual(self.all_event_dict(), [])
@@ -69,6 +71,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warn', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
+    @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch(REQUESTS_PATH['request'],
            apply_requests_request_mock([
                (201, eventbrite_post_url, eventbrite_event),
@@ -89,6 +92,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [call(model.event)])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
         self.assertEqual(self.all_event_dict(),
@@ -105,6 +109,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warn', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
+    @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch.object(Eventbrite, 'request', MagicMock())
     @patch(REQUESTS_PATH['request'],
            apply_requests_request_mock([
@@ -127,6 +132,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [call(model.event)])
         self.assertEqual(
             Eventbrite.request.call_args_list,
             [
@@ -162,6 +168,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'warn', log_mock())
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
+    @patch.object(actions, 'export_event_description_to_eventbrite', MagicMock())
     @patch.object(Eventbrite, 'request', MagicMock())
     @patch(REQUESTS_PATH['request'],
            apply_requests_request_mock([
@@ -184,6 +191,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list, [])
+        self.assertEqual(actions.export_event_description_to_eventbrite.call_args_list, [call(model.event)])
         self.assertEqual(
             Eventbrite.request.call_args_list,
             [
