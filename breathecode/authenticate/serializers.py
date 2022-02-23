@@ -603,6 +603,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
         if UserInvite.objects.filter(email=data['email'], status='WAITING_LIST').exists():
             raise ValidationException('User already exists in the waiting list', slug='user-invite-exists')
 
+        if User.objects.filter(email=data['email']).exists():
+            raise ValidationException('User already exists, go ahead and log in instead.', slug='user-exists')
+
         now = str(timezone.now())
 
         data['status'] = 'WAITING_LIST'
