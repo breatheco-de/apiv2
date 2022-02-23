@@ -44,7 +44,8 @@ from breathecode.utils.find_by_full_name import query_like_by_full_name
 from .serializers import (GetProfileAcademySmallSerializer, UserInviteWaitingListSerializer, UserSerializer,
                           AuthSerializer, UserSmallSerializer, GetProfileAcademySerializer,
                           MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
-                          RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer)
+                          RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer,
+                          RoleBigSerializer)
 
 logger = logging.getLogger(__name__)
 
@@ -507,7 +508,17 @@ def get_user_by_id_or_email(request, id_or_email):
 
 
 @api_view(['GET'])
-def get_roles(request):
+@permission_classes([AllowAny])
+def get_roles(request, role_slug=None):
+
+    if role_slug is not None:
+        role = Role.objects.filter(slug=role_slug).first()
+        if role is None:
+            raise ValidationException('Role not found', code=404)
+
+        serializer = RoleBigSerializer(role)
+        return Response(serializer.data)
+
     queryset = Role.objects.all()
     serializer = RoleSmallSerializer(queryset, many=True)
     return Response(serializer.data)

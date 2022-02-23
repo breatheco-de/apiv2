@@ -235,7 +235,7 @@ def add_cohort_slug_as_acp_tag(self, cohort_id: int, academy_id: int) -> None:
         tag.save()
 
     except:
-        pass
+        logger.exception(f'There was an error creating tag for cohort {cohort.slug}')
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
@@ -283,7 +283,7 @@ def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
         tag.save()
 
     except:
-        pass
+        logger.exception(f'There was an error creating tag for event {event.slug}')
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
@@ -329,4 +329,4 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
         tag.save()
 
     except:
-        pass
+        logger.exception(f'There was an error creating tag for downloadable {downloadable.slug}')
