@@ -44,7 +44,7 @@ def sync_github(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         async_sync_with_github.delay(a.slug, request.user.id)
-        # sync_with_github(a.slug) # uncomment for testing purposes
+        #sync_with_github(a.slug)  # uncomment for testing purposes
 
 
 sync_github.short_description = 'Sync With Github'
