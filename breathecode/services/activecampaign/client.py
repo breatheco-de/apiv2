@@ -205,7 +205,8 @@ class ActiveCampaign:
         logger.debug(f'Deleting tag {str(tag_id)} on active campaign')
 
         if resp.status_code == 200 or resp.status_code == 404:
-            logger.debug(f'Tag deleted successfully or not existent')
+            logger.debug(
+                f'Tag deleted successfully or not existent {str(resp.status_code)} /api/3/tag/{tag_id}')
             return True
         else:
             logger.error(f'Error deleting tag `{str(tag_id)}` with status={str(resp.status_code)}')

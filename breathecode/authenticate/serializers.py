@@ -51,6 +51,21 @@ class RoleSmallSerializer(serpy.Serializer):
         return obj.slug
 
 
+class RoleBigSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    id = serpy.MethodField()
+    slug = serpy.Field()
+    name = serpy.Field()
+    capabilities = serpy.MethodField()
+
+    # this id is needed for zapier.com
+    def get_id(self, obj):
+        return obj.slug
+
+    def get_capabilities(self, obj):
+        return obj.capabilities.all().values_list('slug', flat=True)
+
+
 class GithubSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.

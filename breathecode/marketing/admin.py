@@ -11,6 +11,7 @@ from django.utils.html import format_html
 from django.contrib.admin import SimpleListFilter
 from breathecode.utils import AdminExportCsvMixin
 from breathecode.utils.admin import change_field
+from breathecode.utils.validation_exception import ValidationException
 # Register your models here.
 
 logger = logging.getLogger(__name__)
@@ -164,6 +165,27 @@ def delete_from_everywhere(modeladmin, request, queryset):
             messages.add_message(request, messages.ERROR, f'Error deleding tag {slug}: {str(e)}')
 
 
+def upload_to_active_campaign(modeladmin, request, queryset):
+
+    for t in queryset:
+        slug = t.slug
+        try:
+            ac_academy = t.ac_academy
+            if ac_academy is None:
+                raise ValidationException(f'Invalid ac_academy for this tag {t.slug}',
+                                          code=400,
+                                          slug='invalid-ac_academy')
+
+            client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+            data = client.create_tag(t.slug, description=t.description)
+            t.acp_id = data['id']
+            t.subscribers = 0
+            t.save()
+            messages.add_message(request, messages.INFO, f'Tag {t.slug} successully uploaded')
+        except Exception as e:
+            messages.add_message(request, messages.ERROR, f'Error uploading tag {slug}: {str(e)}')
+
+
 def prepend_tech_on_name(modeladmin, request, queryset):
 
     for t in queryset:
@@ -230,9 +252,11 @@ class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['slug']
     list_display = ('id', 'slug', 'tag_type', 'disputed', 'ac_academy', 'acp_id', 'subscribers')
     list_filter = [DisputedFilter, TagTypeFilter, 'ac_academy__academy__slug']
-    actions = [delete_from_everywhere, 'export_as_csv', add_dispute, remove_dispute, prepend_tech_on_name
-               ] + change_field(['STRONG', 'SOFT', 'DISCOVERY', 'COHORT', 'DOWNLOADABLE', 'EVENT', 'OTHER'],
-                                name='tag_type')
+    actions = [
+        delete_from_everywhere, 'export_as_csv', upload_to_active_campaign, add_dispute, remove_dispute,
+        prepend_tech_on_name
+    ] + change_field(['STRONG', 'SOFT', 'DISCOVERY', 'COHORT', 'DOWNLOADABLE', 'EVENT', 'OTHER'],
+                     name='tag_type')
 
     def disputed(self, obj):
         if obj.disputed_at is not None:

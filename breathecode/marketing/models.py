@@ -137,6 +137,10 @@ class Tag(models.Model):
                                        null=True,
                                        default=None,
                                        help_text='Explain why you think the tag should be deleted')
+    description = models.TextField(blank=True,
+                                   null=True,
+                                   default=None,
+                                   help_text='How is this tag being used? Why is it needed?')
 
     automation = models.ForeignKey(
         Automation,
