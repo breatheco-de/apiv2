@@ -525,9 +525,9 @@ MEDIUM = 'MEDIUM'
 CONTENT = 'CONTENT'
 CAMPAIGN = 'CAMPAIGN'
 UTM_TYPE = (
-    (CONTENT, 'Source'),
-    (SOURCE, 'Medium'),
-    (MEDIUM, 'Content'),
+    (CONTENT, 'Content'),
+    (SOURCE, 'Source'),
+    (MEDIUM, 'Medium'),
     (CAMPAIGN, 'Campaign'),
 )
 
