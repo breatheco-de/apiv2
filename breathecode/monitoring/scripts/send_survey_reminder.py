@@ -39,19 +39,20 @@ not_sent = [
 if len(not_sent) > 0:
     not_sent = ('\n').join(not_sent)
 else:
-    not_sent = 'No surveys have issues'
+    not_sent = 'No other surveys have issues'
 
 for cohort in cohorts:
     lastest_survey = Survey.objects.filter(cohort__id=cohort.id, status='SENT',
                                            sent_at__isnull=False).order_by('sent_at').first()
 
     if lastest_survey is None:
-        cohorts_with_pending_surveys.append(cohort.name)
+        cohorts_with_pending_surveys.append(cohort.name + f': No previous survey was found.')
     else:
         sent_at = lastest_survey.sent_at.date()
         num_weeks = calculate_weeks(sent_at, datetime.now().date())
         if num_weeks > 2:
-            cohorts_with_pending_surveys.append(cohort.name)
+            cohorts_with_pending_surveys.append(cohort.name +
+                                                f': Last survey id was {lastest_survey.id}, {num_weeks} ago')
 
 if len(cohorts_with_pending_surveys) > 0:
     cohort_names = ('\n').join(['- ' + cohort_name for cohort_name in cohorts_with_pending_surveys])
