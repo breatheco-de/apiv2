@@ -122,7 +122,55 @@ def add_academy_to_answer(modeladmin, request, queryset):
 
 
 add_academy_to_answer.short_description = 'Add academy to answer'
-# Register your models here.
+
+
+class AnswerTypeFilter(admin.SimpleListFilter):
+
+    title = 'Answer Type'
+
+    parameter_name = 'answer_type'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('academy', 'Academy'),
+            ('cohort', 'Cohort'),
+            ('mentor', 'Mentor'),
+            ('session', 'Session'),
+            ('event', 'Event'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'mentor':
+            return queryset.filter(event__isnull=True, mentorship_session__isnull=True, mentor__isnull=False)
+
+        if self.value() == 'session':
+            return queryset.filter(mentorship_session__isnull=False)
+
+        if self.value() == 'event':
+            return queryset.filter(event__isnull=False, mentorship_session__isnull=True)
+
+        if self.value() == 'event':
+            return queryset.filter(academy__isnull=True,
+                                   cohort__isnull=True,
+                                   event__isnull=True,
+                                   mentorship_session__isnull=True,
+                                   mentor__isnull=True)
+
+        if self.value() == 'cohort':
+            return queryset.filter(academy__isnull=False,
+                                   cohort__isnull=False,
+                                   event__isnull=True,
+                                   mentorship_session__isnull=True,
+                                   mentor__isnull=True)
+
+        if self.value() == 'academy':
+            return queryset.filter(academy__isnull=False,
+                                   cohort__isnull=True,
+                                   event__isnull=True,
+                                   mentorship_session__isnull=True,
+                                   mentor__isnull=True)
 
 
 @admin.register(Answer)
@@ -130,7 +178,7 @@ class AnswerAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     list_display = ('status', 'user', 'academy', 'cohort', 'mentor', 'score', 'opened_at', 'created_at',
                     'answer_url')
     search_fields = ['user__first_name', 'user__last_name', 'user__email', 'cohort__slug']
-    list_filter = ['status', 'score', 'academy__slug', 'cohort__slug']
+    list_filter = [AnswerTypeFilter, 'status', 'score', 'academy__slug', 'cohort__slug']
     actions = ['export_as_csv', add_academy_to_answer]
     raw_id_fields = ['user', 'cohort', 'mentor']
 
