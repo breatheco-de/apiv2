@@ -3,7 +3,7 @@ import json
 from django.contrib import admin, messages
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
-from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin
+from breathecode.admissions.admin import CohortAdmin, CohortUserAdmin, AcademyAdmin
 from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey, Review, ReviewPlatform
 from .actions import send_question, send_survey_group, create_user_graduation_reviews
 from django.utils.html import format_html
@@ -194,14 +194,21 @@ class SentFilter(admin.SimpleListFilter):
             return queryset.filter(sent_at__isnull=True)
 
 
+def fill_sent_at_with_created_at(modeladmin, request, queryset):
+
+    for s in queryset:
+        s.sent_at = s.created_at
+        s.save()
+
+
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
     list_display = ('cohort', 'status', 'duration', 'created_at', 'sent_at', 'survey_url')
     search_fields = ['cohort__slug', 'cohort__academy__slug', 'cohort__name', 'cohort__academy__name']
     list_filter = [SentFilter, 'status', 'cohort__academy__slug']
     raw_id_fields = ['cohort']
-    actions = [send_big_cohort_bulk_survey] + change_field(['PENDING', 'SENT', 'PARTIAL', 'FATAL'],
-                                                           name='status')
+    actions = [send_big_cohort_bulk_survey, fill_sent_at_with_created_at] + change_field(
+        ['PENDING', 'SENT', 'PARTIAL', 'FATAL'], name='status')
 
     def survey_url(self, obj):
         url = 'https://nps.breatheco.de/survey/' + str(obj.id)

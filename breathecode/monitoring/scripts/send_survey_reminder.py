@@ -15,8 +15,8 @@ def calculate_weeks(date_created, current_date):
     return weeks
 
 
-# ACADEMY_ID = academy.id
-ACADEMY_ID = 4
+ACADEMY_ID = academy.id
+# For testing only: ACADEMY_ID = 4
 TODAY = timezone.now()
 TWO_WEEKS_AGO = TODAY - timedelta(weeks=2)
 cohorts = Cohort.objects.filter(academy__id=ACADEMY_ID)
