@@ -33,7 +33,7 @@ if not cohorts:
 
 not_sent = Survey.objects.filter(cohort__academy__id=ACADEMY_ID, cohort__isnull=False, sent_at__isnull=True)
 not_sent = [
-    f'- <a href="{ADMIN_URL}/v1/feedback/surveys/{sur.cohort.slug}/{sur.id}?location={sur.cohort.academy.slug}">{sur.status}: Survey {sur.id} for cohort {sur.cohort.name}</a>'
+    f'- {sur.status}: Survey {sur.id} for cohort {sur.cohort.name} <a href="{ADMIN_URL}/v1/feedback/surveys/{sur.cohort.slug}/{sur.id}?location={sur.cohort.academy.slug}">view</a>'
     for sur in not_sent
 ]
 if len(not_sent) > 0:
@@ -48,12 +48,9 @@ for cohort in cohorts:
     if lastest_survey is None:
         cohorts_with_pending_surveys.append(cohort.name)
     else:
-        sent_at = cohort.kickoff_date.date()
-        if lastest_survey.sent_at is not None:
-            sent_at = lastest_survey.sent_at.date()
-
+        sent_at = lastest_survey.sent_at.date()
         num_weeks = calculate_weeks(sent_at, datetime.now().date())
-        if num_weeks > 2 and num_weeks < 16:
+        if num_weeks > 2:
             cohorts_with_pending_surveys.append(cohort.name)
 
 if len(cohorts_with_pending_surveys) > 0:
@@ -62,7 +59,7 @@ if len(cohorts_with_pending_surveys) > 0:
     raise ScriptNotification(
         f'There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent on these cohorts: '
         f'\n {cohort_names}'
-        f'\n\n Also, the following surveys have failed to send, you should delete or resolve their issues: \n'
+        f'\n\n Also, the following surveys have no sent date, you should delete or resolve their issues: \n'
         f'\n {not_sent}',
         status='MINOR',
         title=f'There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent',
