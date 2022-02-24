@@ -28,6 +28,11 @@ class ShortlinkSmallSerializer(serpy.Serializer):
     lastclick_at = serpy.Field()
     active = serpy.Field()
 
+    utm_content = serpy.Field()
+    utm_medium = serpy.Field()
+    utm_campaign = serpy.Field()
+    utm_source = serpy.Field()
+
 
 class UserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
