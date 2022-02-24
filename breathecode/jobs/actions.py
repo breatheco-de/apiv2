@@ -106,7 +106,6 @@ def save_data(spider, jobs):
     new_jobs = 0
 
     for j in jobs:
-        j['Location'] = class_scrapper.remove_null(j['Location'])
         locations, remote = class_scrapper.get_location_from_string(j['Location'])
         location_pk = class_scrapper.get_pk_location(locations)
 
@@ -199,8 +198,6 @@ def parse_date(job):
 
     platform = job.platform.name
     class_scrapper = ScraperFactory(platform)
-    loc = class_scrapper.get_location_from_string('Remote (Chile)')
-    # print(loc)
     job.published_date_processed = class_scrapper.get_date_from_string(job.published_date_raw)
     job.save()
 

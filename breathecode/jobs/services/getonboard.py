@@ -1,19 +1,28 @@
+import re
 from breathecode.jobs.services import BaseScrapper
+from breathecode.jobs.services.regex import _cases_location
 
 
 class GetonboardScrapper(BaseScrapper):
     @classmethod
     def get_location_from_string(cls, text: str):
-        location, remote = cls.get_regex_from_string(text)
+        if text is None:
+            text = 'Remote'
 
-        if isinstance(location, list):
-            locations = [cls.save_location(x) for x in location]
+        for regex in _cases_location:
+            findings = re.findall(regex, text)
+            if findings:
+                locations = _cases_location[regex](findings, text)
+                remote = False
 
-        return (locations, remote)
+                if 'Remote' in locations:
+                    remote = True
+                    locations.remove('Remote')
 
-    @classmethod
-    def get_date_from_string(cls, text: str):
-        return cls.get_regex_date_from_string(text)
+                if isinstance(locations, list):
+                    locations = [cls.save_location(x) for x in locations]
+
+                return (locations, remote)
 
     @classmethod
     def get_salary_from_string(cls, salary, tags):

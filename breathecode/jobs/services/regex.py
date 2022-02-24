@@ -23,25 +23,20 @@ def format_correct_to_date(string_date):
 
 
 def location_format(findings, string_loc):
-    #TODO CHANGE FUNTION NAME TO FORMAT LOCATION
-    #TODO VERIFY LINE 40 HAS REDUNDATION
     job_id_fecth = list(findings.pop())
     v = ''.join(job_id_fecth[1])
-    v = v.replace(' o ', ',').replace(';', ',').replace('-', '\', \'').strip()
     result = v.split(',')
     location = [job_id_fecth[0].replace('.', '').strip().capitalize()]
     loc = location
 
     for tag in result:
         loc.append(
-            tag.replace(' o ', ',').replace(';', ',').replace('\'',
-                                                              '').replace('temporarily remote',
-                                                                          'Remote').strip())
+            tag.replace(' o ', ',').replace(';', ',').replace('-', '\', \'').replace('\'', '').replace(
+                'temporarily remote', 'Remote').strip())
     return loc
 
 
-def remote_to_strin(findings, string_loc):
-    #TODO CHANGE NAME REMOTE TO STRING
+def get_remote_from_strin(findings, string_loc):
     if string_loc == '.' or string_loc == ')' or string_loc == '(' or string_loc == '' or string_loc == None:
         string_loc = 'Remote'
 
@@ -95,7 +90,7 @@ _cases_date = {
 
 _cases_location = {
     '(.*\s)?\((.*)\)': location_format,
-    '^\s?(.*)': remote_to_strin,
+    '^\s?(.*)': get_remote_from_strin,
 }
 
 _cases_salary = {
@@ -104,26 +99,3 @@ _cases_salary = {
     '^(.*)\s?-\s(.*)\+? USD/month': salary_month,
     '^(.*)\s?\+? USD/month': salary_month_only_one,
 }
-
-
-#TODO CHANGE NAME
-def get_regex_date_from_string(string_date):
-    for regex in _cases_date:
-        findings = re.findall(regex, string_date)
-        if findings:
-            return _cases_date[regex](findings, string_date)
-
-
-def get_salary_format_from_regex(string_salary):
-    for regex in _cases_salary:
-        findings = re.findall(regex, string_salary)
-        if findings:
-            return _cases_salary[regex](findings, string_salary)
-
-
-def get_regex_location_from_string(string_loc):
-
-    for regex in _cases_location:
-        findings = re.findall(regex, string_loc)
-        if findings:
-            return _cases_location[regex](findings, string_loc)
