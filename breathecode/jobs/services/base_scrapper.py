@@ -1,24 +1,23 @@
 import re
+
 from abc import ABC, abstractmethod
 from ..models import Platform, Spider, Job, Employer, Position, PositionAlias, Tag, Location, LocationAlias, ZyteProject
 from breathecode.utils import ValidationException
 from breathecode.jobs.services.regex import get_regex_location_from_string, get_regex_date_from_string, get_salary_format_from_regex
 
-__all__ = ['BaseScrapper']
-
 
 class BaseScrapper(ABC):
     @abstractmethod
     def get_location_from_string(cls, location: str):
-        ...
+        pass
 
     @abstractmethod
     def get_date_from_string(cls, date: str):
-        ...
+        pass
 
     @abstractmethod
     def get_salary_from_string(cls, salary: str):
-        ...
+        pass
 
     @classmethod
     def get_position_from_string(cls, keyword: str):
@@ -60,15 +59,15 @@ class BaseScrapper(ABC):
 
     @classmethod
     def get_tag_from_string(cls, tag: str):
-        return Tag.objects.filter(slug__iexact=keyword).first()
+        return Tag.objects.filter(slug__iexact=tag).first()
 
     @classmethod
     def job_exist(cls, title: str, employer_name: str):
-        return bool(Job.objects.filter(title__iexact=title, employer__name=employer_name).count())
+        return isinstance(Job.objects.filter(title__iexact=title, employer__name=employer_name).first(), Job)
 
     @classmethod
     def get_regex_from_string(cls, string):
-        #TODO CHANGE NOMBRE (GET LOCATION FROM STRING)
+        #TODO CHANGE NOMBRE (GET LOCATION FROM STRING)  cada hico hace su implementacion
         locations = get_regex_location_from_string(string)
         remote = False
 
@@ -94,10 +93,11 @@ class BaseScrapper(ABC):
     @classmethod
     def get_pk_location(cls, location: list):
         if isinstance(location, list):
+            location_pk = None
+
             if len(location) > 1:
                 location_pk = location[0]
-            else:
-                location_pk = None
+
         return location_pk
 
     @classmethod

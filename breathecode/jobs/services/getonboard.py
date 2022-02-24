@@ -1,9 +1,7 @@
 from breathecode.jobs.services import BaseScrapper
 
-__all__ = ['IndeedScrapper']
 
-
-class IndeedScrapper(BaseScrapper):
+class GetonboardScrapper(BaseScrapper):
     @classmethod
     def get_location_from_string(cls, text: str):
         location, remote = cls.get_regex_from_string(text)
@@ -23,13 +21,12 @@ class IndeedScrapper(BaseScrapper):
         max_salary = 0
         salary_str = 'Not supplied'
 
-        tags = ['web-developer']
-
-        if salary is not None and salary != 'Not supplied':
+        tags = tags
+        if salary is not None and salary != 'Not supplied' and salary != 'Remote':
             salary = cls.get_salary_format_from_string(salary)
             if salary:
-                min_salary = float(salary[0])
-                max_salary = float(salary[1])
+                min_salary = float(salary[0]) * 12
+                max_salary = float(salary[1]) * 12
                 salary_str = f'${min_salary} - ${max_salary} a year.'
 
         return (min_salary, max_salary, salary_str, tags)

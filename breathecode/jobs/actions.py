@@ -5,15 +5,14 @@ import re
 from .models import Platform, Spider, Job, Employer, Position, PositionAlias, Tag, Location, LocationAlias, ZyteProject
 from breathecode.utils import ValidationException
 from datetime import datetime, timedelta
-from breathecode.jobs.services import GetonboardScrapper
-from breathecode.jobs.services import IndeedScrapper
+from breathecode.jobs.services import ScraperFactory
 
 logger = logging.getLogger(__name__)
 
 
 def run_spider(spider):
     platform = spider.zyte_project.platform.name
-    class_scrapper = get_platform(platform)
+    class_scrapper = ScraperFactory(platform)
 
     if spider is None:
         logger.debug(f'First you must specify a spider (run_spider)')
@@ -70,7 +69,7 @@ def fetch_data_to_json(spider, api_fetch):
         raise ValidationException('Is did not receive results from the API', slug='no-return-json-data')
 
     platform = spider.zyte_project.platform.name
-    class_scrapper = get_platform(platform)
+    class_scrapper = ScraperFactory(platform)
     data_project = []
 
     for res_api_jobs in api_fetch['jobs']:
@@ -103,7 +102,7 @@ def fetch_data_to_json(spider, api_fetch):
 
 def save_data(spider, jobs):
     platform = spider.zyte_project.platform.name
-    class_scrapper = get_platform(platform)
+    class_scrapper = ScraperFactory(platform)
     new_jobs = 0
 
     for j in jobs:
@@ -199,19 +198,10 @@ def parse_date(job):
         raise ValidationException('First you must specify a job', slug='data-job-none')
 
     platform = job.platform.name
-    class_scrapper = get_platform(platform)
-
+    class_scrapper = ScraperFactory(platform)
+    loc = class_scrapper.get_location_from_string('Remote (Chile)')
+    # print(loc)
     job.published_date_processed = class_scrapper.get_date_from_string(job.published_date_raw)
     job.save()
 
     return job
-
-
-def get_platform(scrapper: str):
-    if scrapper.capitalize() == 'Indeed':
-        scrap = IndeedScrapper
-
-    if scrapper.capitalize() == 'Getonboard':
-        scrap = GetonboardScrapper
-
-    return scrap
