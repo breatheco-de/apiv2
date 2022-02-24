@@ -46,7 +46,10 @@ for cohort in cohorts:
                                            sent_at__isnull=False).order_by('-sent_at').first()
 
     if lastest_survey is None:
-        cohorts_with_pending_surveys.append(cohort.name + f': No previous survey was found.')
+        sent_at = cohort.kickoff_date.date()
+        num_weeks = calculate_weeks(sent_at, datetime.now().date())
+        if num_weeks > 2:
+            cohorts_with_pending_surveys.append(cohort.name + f': No previous survey was found.')
     else:
         sent_at = lastest_survey.sent_at.date()
         num_weeks = calculate_weeks(sent_at, datetime.now().date())
@@ -63,7 +66,8 @@ if len(cohorts_with_pending_surveys) > 0:
         f'\n\n Also, the following surveys have no sent date, you should delete or resolve their issues: \n'
         f'\n {not_sent}',
         status='MINOR',
-        title=f'There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent {academy.name}',
+        title=
+        f'There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent at {academy.name}',
         slug='cohort-have-pending-surveys')
 
 print('No reminders')
