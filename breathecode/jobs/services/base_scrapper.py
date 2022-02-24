@@ -89,3 +89,17 @@ class BaseScrapper(ABC):
     def get_job_id_from_string(cls, string: str):
         regex = r'^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$'
         return re.findall(regex, string).pop()
+
+    @classmethod
+    def count_jobs_saved(cls, data: list):
+        temp = []
+        items = 0
+        num_job = data[0]['num_job']
+        if isinstance(data, list):
+            for dat in data:
+                if num_job < dat['num_job']:
+                    num_job = dat['num_job']
+
+                items += dat['jobs_saved']
+
+        return (items, num_job)

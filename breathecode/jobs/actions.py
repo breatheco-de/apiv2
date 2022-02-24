@@ -87,14 +87,13 @@ def fetch_data_to_json(spider, api_fetch):
                     f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spider}',
                     slug='bad-resmponse-fetch')
 
-            save_data(spider, response.json())
-
+            new_jobs = save_data(spider, response.json())
             data_project.append({
                 'status': 'ok',
                 'platform_name': spider.zyte_project.platform.name,
                 'num_spider': int(num_spider),
                 'num_job': int(num_job),
-                'jobs': response.json()
+                'jobs_saved': new_jobs
             })
 
     return data_project
@@ -160,12 +159,7 @@ def save_data(spider, jobs):
 
             new_jobs = new_jobs + 1
 
-    spider.status = 'SYNCHED'
-    spider.sync_desc = f"The spider's career ended successfully. Added {new_jobs} new jobs to {spider.name} at " + str(
-        datetime.now())
-    spider.save()
-
-    return jobs
+    return new_jobs
 
 
 def fetch_sync_all_data(spider):
@@ -174,18 +168,21 @@ def fetch_sync_all_data(spider):
         raise ValidationException('First you must specify a spider', slug='without-spider')
 
     res = fetch_to_api(spider)
-    data_jobs = fetch_data_to_json(spider, res)
-    #TODO: Review this code to optimize the count of the saved jobs
-    prub = []
-    if len(data_jobs) > 0:
-        for item_jobs in data_jobs:
-            jobs = item_jobs['jobs']
-            prub.append(item_jobs['num_job'])
 
-        if len(prub) > 0:
-            spider.zyte_job_number = prub[0]
-            spider.zyte_last_fetch_date = datetime.now()
-            spider.save()
+    data_jobs = fetch_data_to_json(spider, res)
+    platform = spider.zyte_project.platform.name
+    class_scrapper = ScraperFactory(platform)
+
+    jobs_info_saverd = class_scrapper.count_jobs_saved(data_jobs)
+    if isinstance(jobs_info_saverd, tuple):
+        job_saved, job_namber = jobs_info_saverd
+        spider.zyte_job_number = job_namber
+        spider.zyte_last_fetch_date = datetime.now()
+        spider.status = 'SYNCHED'
+        spider.sync_status = 'SYNCHED'
+        spider.sync_desc = f"The spider's career ended successfully. Added {job_saved} new jobs to {spider.name} at " + str(
+            datetime.now())
+        spider.save()
 
     return res
 
