@@ -179,7 +179,8 @@ def generate_freelancer_bill(freelancer):
         open_bill = Bill(freelancer=freelancer, )
         open_bill.save()
 
-    done_issues = Issue.objects.filter(status='DONE').filter(Q(bill__isnull=True) | Q(bill__status='DUE'))
+    done_issues = Issue.objects.filter(freelancer__id=freelancer.id,
+                                       status='DONE').filter(Q(bill__isnull=True) | Q(bill__status='DUE'))
     total = {'minutes': 0, 'hours': 0, 'price': 0}
 
     for issue in done_issues:
