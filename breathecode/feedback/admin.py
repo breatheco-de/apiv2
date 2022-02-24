@@ -8,6 +8,7 @@ from .models import Answer, UserProxy, CohortProxy, CohortUserProxy, Survey, Rev
 from .actions import send_question, send_survey_group, create_user_graduation_reviews
 from django.utils.html import format_html
 from breathecode.utils import AdminExportCsvMixin
+from breathecode.utils.admin import change_field
 
 logger = logging.getLogger(__name__)
 
@@ -171,13 +172,36 @@ def send_big_cohort_bulk_survey(modeladmin, request, queryset):
 send_big_cohort_bulk_survey.short_description = 'Send GENERAL BIG Survey to all cohort students'
 
 
+class SentFilter(admin.SimpleListFilter):
+
+    title = 'Sent tag'
+
+    parameter_name = 'is_sent'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('yes', 'Sent'),
+            ('no', 'Not yet sent'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'yes':
+            return queryset.filter(sent_at__isnull=False)
+
+        if self.value() == 'no':
+            return queryset.filter(sent_at__isnull=True)
+
+
 @admin.register(Survey)
 class SurveyAdmin(admin.ModelAdmin):
     list_display = ('cohort', 'status', 'duration', 'sent_at', 'survey_url')
     search_fields = ['cohort__slug', 'cohort__academy__slug', 'cohort__name', 'cohort__academy__name']
-    list_filter = ['status', 'cohort__academy__slug']
+    list_filter = [SentFilter, 'status', 'cohort__academy__slug']
     raw_id_fields = ['cohort']
-    actions = [send_big_cohort_bulk_survey]
+    actions = [send_big_cohort_bulk_survey] + change_field(['PENDING', 'SENT', 'PARTIAL', 'FATAL'],
+                                                           name='status')
 
     def survey_url(self, obj):
         url = 'https://nps.breatheco.de/survey/' + str(obj.id)
