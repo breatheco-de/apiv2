@@ -43,7 +43,7 @@ else:
 
 for cohort in cohorts:
     lastest_survey = Survey.objects.filter(cohort__id=cohort.id, status='SENT',
-                                           sent_at__isnull=False).order_by('sent_at').first()
+                                           sent_at__isnull=False).order_by('-sent_at').first()
 
     if lastest_survey is None:
         cohorts_with_pending_surveys.append(cohort.name + f': No previous survey was found.')
