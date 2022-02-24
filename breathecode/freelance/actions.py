@@ -172,7 +172,8 @@ def change_status(issue, status):
 
 def generate_freelancer_bill(freelancer):
 
-    Issue.objects.filter(status='TODO', bill__isnull=False).update(bill=None)
+    Issue.objects.filter(bill__isnull=False,
+                         freelancer__id=freelancer.id).exclude(status='DONE').update(bill=None)
 
     open_bill = Bill.objects.filter(freelancer__id=freelancer.id, status='DUE').first()
     if open_bill is None:
@@ -199,7 +200,6 @@ def generate_freelancer_bill(freelancer):
         issue.save()
 
     total['price'] = total['hours'] * freelancer.price_per_hour
-    print('issues ', done_issues.count(), total)
 
     open_bill.total_duration_in_hours = total['hours']
     open_bill.total_duration_in_minutes = total['minutes']

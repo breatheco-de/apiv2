@@ -42,6 +42,11 @@ class SmallIssueSerializer(serpy.Serializer):
     github_number = serpy.Field()
     freelancer = SmallFreelancerSerializer()
     author = serpy.Field()
+    included_in_bill = serpy.MethodField()
+
+    def get_included_in_bill(self, obj):
+        return (obj.status_message is None or obj.status_message == '') and (obj.node_id is not None
+                                                                             and obj.node_id != '')
 
 
 class BigBillSerializer(serpy.Serializer):

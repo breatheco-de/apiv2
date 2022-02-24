@@ -205,7 +205,11 @@
                 </td>
 
                 <td>
-                    {{ issue.duration_in_hours }}
+                    {% if issue.included_in_bill or issue.included_in_bil == "True" %}
+                    <span style="color: #608062;">{{ issue.duration_in_hours }}</span>
+                    {% else %}
+                    <span style="color: #BFBFBF;">{{ issue.duration_in_hours }}</span>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
