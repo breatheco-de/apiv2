@@ -63,7 +63,7 @@ if len(cohorts_with_pending_surveys) > 0:
         f'\n\n Also, the following surveys have no sent date, you should delete or resolve their issues: \n'
         f'\n {not_sent}',
         status='MINOR',
-        title=f'There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent',
+        title=f'There are {str(len(cohorts_with_pending_surveys))} surveys pending to be sent {academy.name}',
         slug='cohort-have-pending-surveys')
 
 print('No reminders')
