@@ -170,7 +170,7 @@ class AcademyAnswerView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class SurveyView(APIView, HeaderLimitOffsetPagination):
+class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
@@ -238,7 +238,7 @@ class SurveyView(APIView, HeaderLimitOffsetPagination):
             param = self.request.GET.get('lang')
             lookup['lang'] = param
 
-        items = items.filter(**lookup).order_by('-created_at')
+        items = items.filter(**lookup).order_by('status', '-created_at')
 
         page = self.paginate_queryset(items, request)
         serializer = SurveySmallSerializer(page, many=True)
@@ -247,6 +247,31 @@ class SurveyView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('crud_survey')
+    def delete(self, request, academy_id=None, survey_id=None):
+        lookups = self.generate_lookups(request, many_fields=['id'])
+
+        if lookups and survey_id:
+            raise ValidationException(
+                'survey_id was provided in url '
+                'in bulk mode request, use querystring style instead',
+                code=400)
+
+        if lookups:
+            items = Survey.objects.filter(**lookups, cohort__academy__id=academy_id).exclude(status='SENT')
+
+            for item in items:
+                item.delete()
+
+            return Response(None, status=status.HTTP_204_NO_CONTENT)
+
+        sur = Survey.objects.filter(user=survey_id,
+                                    cohort__academy__id=academy_id).exclude(status='SENT').first()
+        if sur is None:
+            raise ValidationException('Survey not found', 404)
+        sur.delete()
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['GET'])

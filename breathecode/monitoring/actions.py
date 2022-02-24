@@ -254,7 +254,12 @@ def run_script(script):
         local = {'result': {'status': 'OPERATIONAL'}}
         with stdoutIO() as s:
             try:
-                exec(content, {'academy': script.application.academy}, local)
+                exec(
+                    content, {
+                        'academy': script.application.academy,
+                        'ADMIN_URL': os.getenv('ADMIN_URL', ''),
+                        'API_URL': os.getenv('API_URL', ''),
+                    }, local)
                 script.status_code = 0
                 script.status = 'OPERATIONAL'
                 script.special_status_text = 'OK'
