@@ -91,7 +91,7 @@ class BaseScrapper(ABC):
         return re.findall(regex, string).pop()
 
     @classmethod
-    def count_jobs_saved(cls, data: list):
+    def get_info_amount_jobs_saved(cls, data: list):
         temp = []
         items = 0
         num_job = data[0]['num_job']

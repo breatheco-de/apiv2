@@ -173,8 +173,8 @@ def fetch_sync_all_data(spider):
     platform = spider.zyte_project.platform.name
     class_scrapper = ScraperFactory(platform)
 
-    jobs_info_saverd = class_scrapper.count_jobs_saved(data_jobs)
-    if isinstance(jobs_info_saverd, tuple):
+    jobs_info_saved = class_scrapper.get_info_amount_jobs_saved(data_jobs)
+    if isinstance(jobs_info_saved, tuple):
         job_saved, job_namber = jobs_info_saverd
         spider.zyte_job_number = job_namber
         spider.zyte_last_fetch_date = datetime.now()
