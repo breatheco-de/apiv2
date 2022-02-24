@@ -198,11 +198,13 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         if academy is None:
             raise ValidationException(f'Academy {academy_id} not found')
 
-        organization_id = Organization.objects.filter(academy__id=academy_id).values_list('id',
+        organization_id = Organization.objects.filter(
+            Q(academy__id=academy_id) | Q(organizer__academy__id=academy_id)).values_list('id',
                                                                                           flat=True).first()
         if not organization_id:
-            raise ValidationException('Your academy doesn\'t have the integrations with Eventbrite done',
-                                      slug='organization-not-exist')
+            raise ValidationException(
+                f"Academy {academy.name} doesn\'t have the integrations with Eventbrite done",
+                slug='organization-not-exist')
 
         data = {}
         for key in request.data.keys():
@@ -224,11 +226,13 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         if already is None:
             raise ValidationException(f'Event not found for this academy {academy_id}')
 
-        organization_id = Organization.objects.filter(academy__id=academy_id).values_list('id',
+        organization_id = Organization.objects.filter(
+            Q(academy__id=academy_id) | Q(organizer__academy__id=academy_id)).values_list('id',
                                                                                           flat=True).first()
         if not organization_id:
-            raise ValidationException('Your academy doesn\'t have the integrations with Eventbrite done',
-                                      slug='organization-not-exist')
+            raise ValidationException(
+                f"Academy {already.academy.name} doesn\'t have the integrations with Eventbrite done",
+                slug='organization-not-exist')
 
         data = {}
         for key in request.data.keys():
