@@ -5,6 +5,7 @@ import re
 from .models import Platform, Spider, Job, Employer, Position, PositionAlias, Tag, Location, LocationAlias, ZyteProject
 from breathecode.utils import ValidationException
 from datetime import datetime, timedelta
+from django.utils import timezone
 from breathecode.jobs.services import ScraperFactory
 
 logger = logging.getLogger(__name__)
@@ -109,7 +110,6 @@ def save_data(spider, jobs):
         location_pk = class_scrapper.get_pk_location(locations)
 
         employer = class_scrapper.get_employer_from_string(j['Company_name'])
-        #TODO ASK TO ALEJANDRO EMPOLYER WITH MANY TO COMPANY
         if employer is None:
             employer = Employer(name=j['Company_name'], location=location_pk)
             employer.save()
@@ -175,9 +175,9 @@ def fetch_sync_all_data(spider):
 
     jobs_info_saved = class_scrapper.get_info_amount_jobs_saved(data_jobs)
     if isinstance(jobs_info_saved, tuple):
-        job_saved, job_namber = jobs_info_saverd
+        job_saved, job_namber = jobs_info_saved
         spider.zyte_job_number = job_namber
-        spider.zyte_last_fetch_date = datetime.now()
+        spider.zyte_last_fetch_date = timezone.now()
         spider.status = 'SYNCHED'
         spider.sync_status = 'SYNCHED'
         spider.sync_desc = f"The spider's career ended successfully. Added {job_saved} new jobs to {spider.name} at " + str(

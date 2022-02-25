@@ -59,7 +59,7 @@ class Spider(models.Model):
     zyte_spider_number = models.IntegerField(help_text='This number must be copy from ZYTE')
     zyte_job_number = models.IntegerField(help_text='Start at 0 but increase on each fetch')
     zyte_fetch_count = models.IntegerField(help_text='The number of spider job excecutions to fetch')
-    zyte_last_fetch_date = models.DateField(null=True)
+    zyte_last_fetch_date = models.DateTimeField(null=True)
     status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
     sync_status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
     sync_desc = models.CharField(max_length=200, null=True, blank=True)
@@ -144,15 +144,29 @@ JOB_TYPE = (
     (CONTRACT, 'Contract'),
 )
 
+USD = 'USD'  # United States dollar
+CRC = 'CRC'  # Costa Rican colón
+CLP = 'CLP'  # Chilean peso
+EUR = 'EUR'  # Euro
+UYU = 'UYU'  # Uruguayan peso
+CURRENCIES = (
+    (USD, 'USD'),
+    (CRC, 'CRC'),
+    (CLP, 'CLP'),
+    (EUR, 'EUR'),
+    (UYU, 'UYU'),
+)
+
 
 class Job(models.Model):
     """ Create a new platform for Jobs"""
     title = models.CharField(max_length=150)
     platform = models.ForeignKey(Platform, on_delete=models.CASCADE, null=False, blank=False)
     published_date_raw = models.CharField(max_length=50)
-    published_date_processed = models.DateField(null=True)
+    published_date_processed = models.DateTimeField(null=True)
     status = models.CharField(max_length=15, choices=JOB_STATUS, default=OPENED)
     apply_url = models.URLField(max_length=500)
+    currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
     min_salary = models.FloatField(null=True, blank=True)
     max_salary = models.FloatField(null=True, blank=True)
     salary = models.CharField(max_length=253, null=True, blank=True)

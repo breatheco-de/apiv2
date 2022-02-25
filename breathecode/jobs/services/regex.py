@@ -1,25 +1,23 @@
 import re
 from datetime import datetime, timedelta
-
-#TODO IMPORT TIMEZONE AND INCLUDE IN THE FUNCTIONS MODULO DE DJANGO TIMEZONE
+from django.utils import timezone
+from breathecode.utils.datetime_interger import DatetimeInteger
 
 
 def days_ago_to_date(findings, string_date):
     number_of_days = int(findings.pop())
-    return datetime.now() - timedelta(days=number_of_days)
+    return timezone.now() - timedelta(days=number_of_days)
 
 
 def today():
-    return datetime.now()
+    return timezone.now()
 
 
 def change_format_to_date(findings, string_date):
     job_id_fecth = findings
-    return datetime.strptime(job_id_fecth[0], '%B %d, %Y')
+    dtz = datetime.strptime(string_date, '%B %d, %Y')
 
-
-def format_correct_to_date(string_date):
-    return string_date
+    return timezone.make_aware(dtz)
 
 
 def location_format(findings, string_loc):
@@ -44,7 +42,6 @@ def get_remote_from_strin(findings, string_loc):
 
 
 def salary(findings, string_salary):
-    #TODO CONSEGUIR EL TIPO DE MONEDA Y GUARDARLO EN LA TABLA DE DATOS
     salary = findings.pop()
     val = []
 
@@ -81,9 +78,9 @@ def fetch_id_job_string_to_list(findings, string_loc):
 
 _cases_date = {
     '^(?:Active\s)?(\d{1,2})\+? days? ago': days_ago_to_date,
-    '^(\d{1,4}-\d{1,2}-\d{1,2}\s\d{1,2}:\d{1,2}:\d{1,2})$': lambda *args, **kwargs: format_correct_to_date(),
     '(.*\s?\d{1,2}\+?,? \d{1,4})': change_format_to_date,
     '^today': lambda *args, **kwargs: today(),
+    '^Today': lambda *args, **kwargs: today(),
     '^Just posted': lambda *args, **kwargs: today(),
     '^just posted': lambda *args, **kwargs: today(),
 }
