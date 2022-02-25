@@ -95,13 +95,25 @@ class MentorAdmin(admin.ModelAdmin):
 
 @admin.register(MentorshipSession)
 class SessionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'mentor', 'mentee', 'status', 'started_at', 'openurl']
+    list_display = ['id', 'mentor', 'mentee', 'stats', 'started_at', 'openurl']
     raw_id_fields = ['mentor', 'mentee']
     search_fields = [
         'mentee__first_name', 'mentee__last_name', 'mentee__email', 'mentor__user__first_name',
         'mentor__user__last_name', 'mentor__user__email'
     ]
     list_filter = ['mentor__service__academy', 'status', 'mentor__service__slug']
+    actions = change_field(['COMPLETED', 'FAILED', 'STARTED', 'PENDING'], name='status')
+
+    def stats(self, obj):
+
+        colors = {
+            'COMPLETED': 'bg-success',
+            'FAILED': 'bg-error',
+            'STARTED': 'bg-warning',
+            'PENDING': 'bg-secondary',
+        }
+
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
 
     def openurl(self, obj):
         url = obj.online_meeting_url
