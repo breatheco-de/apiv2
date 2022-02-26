@@ -3,6 +3,7 @@ from django.utils import timezone
 from breathecode.admissions.models import Academy, Syllabus
 from django.contrib.auth.models import User
 from django.db import models
+from datetime import timedelta
 from .signals import mentorship_session_status
 from slugify import slugify
 
@@ -19,7 +20,11 @@ MENTORSHIP_STATUS = (
 class MentorshipService(models.Model):
     slug = models.SlugField(max_length=150, unique=True)
     name = models.CharField(max_length=150)
+    logo_url = models.CharField(max_length=150, default=None, blank=True, null=True)
     description = models.TextField(max_length=500, default=None, blank=True, null=True)
+
+    duration = models.DurationField(default=timedelta(hours=1),
+                                    help_text='Default duration for mentorship sessions of this service')
 
     status = models.CharField(max_length=15, choices=MENTORSHIP_STATUS, default=DRAFT)
 
@@ -133,12 +138,18 @@ class MentorshipSession(models.Model):
         super(MentorshipSession, self).__init__(*args, **kwargs)
         self.__old_status = self.status
 
+    name = models.CharField(max_length=255,
+                            help_text='Room name, used on daily.co',
+                            blank=True,
+                            null=True,
+                            default=None)
+
     is_online = models.BooleanField()
     latitude = models.FloatField(blank=True, null=True, default=None)
     longitude = models.FloatField(blank=True, null=True, default=None)
 
     mentor = models.ForeignKey(MentorProfile, on_delete=models.CASCADE)
-    mentee = models.ForeignKey(User, on_delete=models.CASCADE)
+    mentee = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True, default=None)
 
     online_meeting_url = models.URLField(blank=True,
                                          null=True,
@@ -165,7 +176,10 @@ class MentorshipSession(models.Model):
                                help_text='Describe briefly what happened at the mentorship session')
 
     starts_at = models.DateTimeField(blank=True, null=True, default=None, help_text='Scheduled start date')
-    ends_at = models.DateTimeField(blank=True, null=True, default=None, help_text='Scheduled end date')
+    ends_at = models.DateTimeField(blank=True,
+                                   null=True,
+                                   default=None,
+                                   help_text='Scheduled end date, will be used as meeting expiration as well')
 
     started_at = models.DateTimeField(blank=True,
                                       null=True,
@@ -175,6 +189,24 @@ class MentorshipSession(models.Model):
                                     null=True,
                                     default=None,
                                     help_text='Real start date (only if it started)')
+
+    mentor_joined_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text='Exact moment the mentor joined the meeting for the first time')
+
+    mentor_left_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text='Exact moment the mentor left the meeting for the last time')
+
+    mentee_left_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text='Exact moment the mentee left the meeting for the last time')
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

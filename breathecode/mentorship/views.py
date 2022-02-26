@@ -1,7 +1,8 @@
-import os, hashlib
+import os, hashlib, timeago
 from urllib.parse import urlencode, parse_qs, urlsplit, urlunsplit
 from django.shortcuts import render
 from django.utils import timezone
+from datetime import timedelta
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from breathecode.admissions.models import Academy
@@ -9,7 +10,7 @@ from breathecode.authenticate.models import Token
 from breathecode.utils.private_view import private_view, render_message
 from .models import MentorProfile, MentorshipService, MentorshipSession
 from .forms import CloseMentoringSessionForm
-from .actions import close_mentoring_session
+from .actions import close_mentoring_session, get_or_create_sessions, render_session
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -23,6 +24,8 @@ from .serializers import (
     ServiceSerializer,
     GETMentorBigSerializer,
     GETServiceBigSerializer,
+    GETSessionBigSerializer,
+    GETSessionReportSerializer,
 )
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -30,6 +33,8 @@ from rest_framework.views import APIView
 from rest_framework import status
 from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
 from django.db.models import Q
+
+API_URL = os.getenv('API_URL', '')
 
 
 def set_query_parameter(url, param_name, param_value):
@@ -45,13 +50,14 @@ def set_query_parameter(url, param_name, param_value):
 
     query_params[param_name] = [param_value]
     new_query_string = urlencode(query_params, doseq=True)
+    print(new_query_string, 'new_query_string')
 
     return urlunsplit((scheme, netloc, path, new_query_string, fragment))
 
 
 @private_view
 def forward_booking_url(request, mentor_slug, token):
-
+    now = timezone.now()
     if isinstance(token, HttpResponseRedirect):
         return token
 
@@ -76,44 +82,95 @@ def forward_booking_url(request, mentor_slug, token):
 
 @private_view
 def forward_meet_url(request, mentor_slug, token):
-
+    now = timezone.now()
     if isinstance(token, HttpResponseRedirect):
         return token
 
     redirect = request.GET.get('redirect', None)
+    extend = request.GET.get('extend', None)
+    session_id = request.GET.get('session', None)
 
+    session = None
+    mentee = token.user
     mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
     if mentor is None:
         return render_message(request, f'No mentor found with slug {mentor_slug}')
 
     if mentor.status != 'ACTIVE':
-        return render_message(request, f'This mentor is not active')
+        return render_message(request, f'This mentor is not active at the moment')
 
-    session = MentorshipSession.objects.filter(mentor__slug=mentor_slug,
-                                               mentee__id=token.user.id,
-                                               status='PENDING').first()
-    if session is None and redirect is not None:
+    # if the mentor is joining the meeting
+    if mentor.user.id == mentee.id:
+        mentee = None
+        # we don't know the mentee so we seach-for or create the sesison with the mentor only
+
+    if session_id and session_id != 'new':
+        session = MentorshipSession.objects.filter(id=session_id).first()
+        if session is None:
+            return render_message(request, f'Session with id {session_id} not found')
+    elif session_id != 'new':
+        sessions = get_or_create_sessions(mentor, mentee)
+        if sessions.count() == 1:
+            session = sessions.first()
+        else:
+            return render(
+                request, 'pick_session.html', {
+                    'SUBJECT':
+                    'Mentoring Session',
+                    'sessions':
+                    GETSessionReportSerializer(sessions, many=True).data,
+                    'baseUrl':
+                    request.get_full_path(),
+                    'MESSAGE':
+                    f'<h1>Choose a mentoring session</h1> Many mentoring sessions were found, please the one you want to continue:',
+                })
+
+    if mentor.user.id == token.user.id:
+        session.mentor_joined_at = now
+
+    if session.status not in ['PENDING', 'STARTED']:
         return render_message(
-            request, f'No mentoring session found with {mentor.user.first_name} {mentor.user.last_name}')
+            request,
+            f'This mentoring session has ended',
+        )
 
-    if session is None:
-        session = MentorshipSession(mentor=mentor,
-                                    mentee=token.user,
-                                    is_online=True,
-                                    online_meeting_url=mentor.online_meeting_url)
+    if session.ends_at is not None and session.ends_at < now:
+        if session.mentor.user.id != token.user.id:
+            return render_message(
+                request,
+                f'The mentoring session expired {timeago.format(session.ends_at, now)}, ask the mentor to extend the session if you need more time.',
+            )
+        elif extend is None:
+            extend_url = set_query_parameter(request.get_full_path(), 'extend', 'true')
+            return render_message(
+                request,
+                f'The mentoring session expired {timeago.format(session.ends_at, now)}: You can <a href="{extend_url}">extend it for another 30 minutes</a> or end the session right now.',
+                btn_label='End Session',
+                btn_url='/mentor/session/' + str(session.id) + '?token=' + token.key,
+                btn_target='_self')
+        else:
+            session.ends_at = now + timedelta(minutes=30)
+
+    if session.mentee is None:
         session.save()
-    elif redirect is not None:
-        session.started_at = timezone.now()
+        return render_session(request, session, token=token)
+
+    if redirect is not None:
+        session.started_at = now
         session.status = 'STARTED'
         session.save()
-        return HttpResponseRedirect(redirect_to=session.online_meeting_url)
+        return render_session(request, session, token=token)
 
+    if session.mentor.user.first_name is None or session.mentor.user.first_name == '':
+        session.mentor.user.first_name = 'a mentor.'
     return render(
         request, 'message.html', {
             'SUBJECT':
             'Mentoring Session',
             'BUTTON':
             'Start Session',
+            'BUTTON_TARGET':
+            '_self',
             'LINK':
             set_query_parameter('?' + request.GET.urlencode(), 'redirect', 'true'),
             'MESSAGE':
@@ -123,13 +180,13 @@ def forward_meet_url(request, mentor_slug, token):
 
 @private_view
 def end_mentoring_session(request, session_id, token):
-
+    now = timezone.now()
     if request.method == 'POST':
         _dict = request.POST.copy()
         form = CloseMentoringSessionForm(_dict)
 
         token = Token.objects.filter(key=_dict['token']).first()
-        if token is None or token.expires_at < timezone.now():
+        if token is None or (token.expires_at is not None and token.expires_at < now):
             messages.error(request, f'Invalid or expired deliver token {_dict["token"]}')
             return render(request, 'form.html', {'form': form})
 
@@ -151,9 +208,22 @@ def end_mentoring_session(request, session_id, token):
         if session is None:
             return render_message(request, f'Invalid session id {str(session_id)}')
 
+        # this GET request occurs when the mentor leaves the session
+        session.mentor_left_at = now
+        session.save()
+
+        if session.mentee is None:
+            session.status = 'FAILED'
+            session.summary = 'This session expired without assigned mentee, it probably means the mentee never came. It will be marked as failed'
+            session.save()
+            return render_message(
+                request,
+                f'<h1>Mentoring Session Error</h1> This session expired without assigned mentee, it probably means the mentee never came. It will be marked as failed'
+            )
+
         _dict = request.GET.copy()
         _dict['token'] = request.GET.get('token', None)
-        _dict['status'] = session.status
+        _dict['status'] = 'COMPLETED'
         _dict['summary'] = session.summary
         _dict[
             'student_name'] = session.mentee.first_name + ' ' + session.mentee.last_name + ', ' + session.mentee.email

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+@import url("https://fonts.googleapis.com/css?family=Roboto");
+body {
+  font-family: "Roboto", sans-serif;
+  background-color: #f9f9f9;
+  margin: 0;
+  padding: 0;
+}
+a{text-decoration: none;}
+.card {
+  background-color: white;
+  width: auto;
+  box-sizing: content-box;
+  padding: 40px 24px;
+  box-shadow: 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  margin: 50px auto;
+  max-width: 400px;
+}
+.card .card-title {
+  border-left: 8px solid #fd2e76;
+  padding: 16px 30px;
+  margin-left: -24px;
+  font-size: 1.5em;
+  font-weight: 400;
+  margin-bottom: 24px;
+}
+
+.sh-list {
+  min-width: 340px;
+}
+.sh-list .sh-list-item {
+  padding: 16px;
+  cursor: pointer;
+}
+.sh-list .sh-list-item:hover {
+  background-color: #f3f3f3;
+}
+.sh-list .sh-list-item .sh-list-content,
+.sh-list .sh-list-item .sh-list-icon {
+  display: inline-block;
+  vertical-align: middle;
+}
+.sh-list .sh-list-item .sh-list-item-title {
+  color: #2c2d30;
+  padding: 2px 0;
+  font-weight: 600;
+  font-size: 16px;
+}
+.sh-list .sh-list-item .sh-list-item-sub-title {
+  color: #717274;
+  font-weight: 200;
+  font-size: 15px;
+}
+.sh-list .sh-list-item .sh-list-icon {
+  margin-right: 10px;
+  background-color: #d2d2d2;
+  width: 40px;
+  height: 40px;
+  text-align: center;
+  line-height: 42px;
+  font-size: 1.2em;
+  font-weight: 100;
+  color: white;
+  border-radius: 50%;
+}
+.sh-list .sh-list-item .sh-list-icon.add {
+  background-color: #fd2e76;
+}
+.sh-list .sh-list-item .sufix {
+  display: inline-block;
+  font-size: 24px;
+  margin-right: 24px;
+  float: right;
+}
+
+h4 {
+  display: block;
+  box-sizing: border-box;
+  height: 48px;
+  padding: 16px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.54);
+}
+
+</style>
+<div class="content text-center">
+    <tr>
+        <td align="left" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
+			padding-bottom: 5px;">
+            <div style="white-space: nowrap;">{{ message }}</div>
+            <div class=card>
+                <div class="card-title">Choose session</div>
+                <div class="sh-list">
+                  <div class="sh-list-item">
+                    <a href="{{ baseUrl }}&session=new">
+                    <div class="sh-list-icon add"><i class="fa fa-plus"></i></div>
+                    <div class="sh-list-content">
+                      <div class="sh-list-item-title">Create new session</div>
+                      <div class="sh-list-item-sub-title">Make a new session from scratch</div>
+                    </div>
+                    <div class=sufix><i class="fa fa-angle-right"></i></div>
+                    </a>
+                  </div>
+                  <h4>Pick one of your pending or open sessions:</h4>
+                  {% for s in sessions %}
+                  <div class="sh-list-item">
+                    <a href="{{ baseUrl }}&session={{s.id}}">
+                        <div class="sh-list-icon" style="background-url: src('{{s.mentee.profile.avatar_url}}')"><i class="fa fa-group"></i></div>
+                        <div class="sh-list-content">
+                            <div class="sh-list-item-title">{{ s.mentee.first_name }} {{ s.mentee.last_name }}</div>
+                            <div class="sh-list-item-sub-title">{{ s.mentor.service.name }}{{ s.ends_at|timesince }} ago</div>
+                        </div>
+                        <div class=sufix><i class="fa fa-angle-right"></i></div>
+                    </a>
+                </div>
+                  {% endfor %}
+              </div>
+              </div>
+
+
+        </td>
+    </tr>
+</div>
+{% endblock %}

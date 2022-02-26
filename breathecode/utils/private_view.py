@@ -6,9 +6,12 @@ from django.http import HttpResponseRedirect
 API_URL = os.getenv('API_URL', '')
 
 
-def render_message(r, msg):
+def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank'):
     return render(r, 'message.html', {
         'MESSAGE': msg,
+        'BUTTON': btn_label,
+        'BUTTON_TARGET': btn_target,
+        'LINK': btn_url
     })
 
 
@@ -26,7 +29,7 @@ def private_view(func):
 
         token = Token.get_valid(token)
         if token is None:
-            return render_message(req, 'You don\'t have access to this view or the token is invalid')
+            return render_message(req, f'You don\'t have access to this view or the token is invalid {token}')
 
         # args = args + (token, )
         kwargs['token'] = token

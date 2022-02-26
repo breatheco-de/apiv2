@@ -34,6 +34,7 @@ class GetUserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    email = serpy.Field()
     profile = ProfileSerializer(required=False)
 
 
@@ -57,7 +58,7 @@ class GETSessionSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
     mentor = GETMentorSmallSerializer()
-    mentee = GetUserSmallSerializer()
+    mentee = GetUserSmallSerializer(required=False)
 
 
 class GETMentorBigSerializer(serpy.Serializer):
@@ -78,13 +79,19 @@ class GETMentorBigSerializer(serpy.Serializer):
         return map(lambda s: s.slug, obj.syllabus.all())
 
 
+class GETSessionReportSerializer(serpy.Serializer):
+    id = serpy.Field()
+    status = serpy.Field()
+    mentor = GETMentorBigSerializer()
+    mentee = GetUserSmallSerializer(required=False)
+
+
 class GETSessionBigSerializer(serpy.Serializer):
     id = serpy.Field()
-    slug = serpy.Field()
     name = serpy.Field()
     status = serpy.Field()
     mentor = GETMentorSmallSerializer()
-    mentee = GetUserSmallSerializer()
+    mentee = GetUserSmallSerializer(required=False)
     latitude = serpy.Field()
     longitude = serpy.Field()
     is_online = serpy.Field()
