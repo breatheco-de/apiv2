@@ -199,4 +199,5 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(logging.Logger.error.call_args_list, [
             call(f'Error creating tag `{model.event.slug}` with status=404'),
             call(AC_ERROR_RESPONSE),
+            call('exception-creating-tag-in-acp', exc_info=True),
         ])
