@@ -1249,7 +1249,6 @@ def login_html_view(request):
                 set_query_parameter(set_query_parameter(url, 'attempt', '1'), 'token', str(token)))
 
         except Exception as e:
-            raise e
             messages.error(request, e.message if hasattr(e, 'message') else e)
             return render(request, 'login.html', {'form': form})
     else:

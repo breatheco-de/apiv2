@@ -14,8 +14,18 @@
             width: 100vw;
             height: 20px;
             background: black;
-            text-align: center;
             padding: 5px;
+            display: flex;
+        }
+        .navbar > div{
+            display: table-cell;
+            vertical-align: middle;
+            line-height:20px;
+        }
+        .navbar .logo{
+            max-height: 20px;
+            max-width: 20px;
+            margin-right: 10px;
         }
 	</style>
 
@@ -26,7 +36,14 @@
 <body topmargin="0" rightmargin="0" bottommargin="0" leftmargin="0" marginwidth="0" marginheight="0" width="100%" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; width: 100%; height: 100%; -webkit-font-smoothing: antialiased; text-size-adjust: 100%; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; line-height: 100%;
 	background-color: #000000;
 	color: #d3d3d3;" bgcolor="#000000" text="#d3d3d3">
-    <div class="navbar"><img src="{{ service_url }}" /></div>
+    <div class="navbar">
+        <div>
+            <img class="logo" src="{{ session.mentor.service.academy.icon_url|default:"/static/assets/icon.png" }}" />
+        </div>
+        <div>
+            {{ session.mentor.service.academy.name }} {{ session.mentor.service.name }}
+        </div>
+    </div>
 
     <script>
         window.onload = function(){

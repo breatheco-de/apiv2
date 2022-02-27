@@ -7,6 +7,7 @@ from django.shortcuts import render
 from breathecode.services.daily.client import DailyClient
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from .models import MentorshipSession
+from .serializers import GETSessionReportSerializer
 
 logger = logging.getLogger(__name__)
 API_URL = os.getenv('API_URL', '')
@@ -78,14 +79,10 @@ def render_session(request, session, token):
     data = {
         'subject': session.mentor.service.name,
         'room_url': session.online_meeting_url,
+        'session': GETSessionReportSerializer(session, many=False).data,
         'userName': (token.user.first_name + ' ' + token.user.last_name).strip(),
         'backup_room_url': session.mentor.online_meeting_url,
     }
-
-    if session.mentor.service.logo_url is not None:
-        data['service_url'] = session.mentor.service.logo_url
-    elif session.mentor.service.academy.logo_url is not None:
-        data['service_url'] = session.mentor.service.academy.logo_url
 
     if token.user.id == session.mentor.user.id:
         data['leave_url'] = '/mentor/session/' + str(session.id) + '?token=' + token.key
