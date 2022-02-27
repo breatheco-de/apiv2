@@ -41,6 +41,7 @@ from breathecode.notify.models import SlackTeam
 from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
 from breathecode.utils.find_by_full_name import query_like_by_full_name
+from breathecode.utils.views import set_query_parameter
 from .serializers import (GetProfileAcademySmallSerializer, UserInviteWaitingListSerializer, UserSerializer,
                           AuthSerializer, UserSmallSerializer, GetProfileAcademySerializer,
                           MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
@@ -1219,6 +1220,11 @@ def login_html_view(request):
             if url is None or url == '':
                 raise Exception('Invalid redirect url, you must specify a url to redirect to')
 
+            try:
+                url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+            except Exception as e:
+                raise e
+
             email = request.POST.get('email', None)
             password = request.POST.get('password', None)
 
@@ -1239,9 +1245,11 @@ def login_html_view(request):
                 raise Exception(msg, code=403)
 
             token, created = Token.get_or_create(user=user, token_type='login')
-            return HttpResponseRedirect(url + '?token=' + str(token))
+            return HttpResponseRedirect(
+                set_query_parameter(set_query_parameter(url, 'attempt', '1'), 'token', str(token)))
 
         except Exception as e:
+            raise e
             messages.error(request, e.message if hasattr(e, 'message') else e)
             return render(request, 'login.html', {'form': form})
     else:

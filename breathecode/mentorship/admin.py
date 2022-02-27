@@ -39,11 +39,11 @@ def mark_as_active(modeladmin, request, queryset):
                 raise Exception(f'Mentor {entry.name} has no syllabus associated')
             else:
                 response = requests.head(entry.booking_url)
-                if response.status_code > 299:
+                if response.status_code > 399:
                     raise Exception(
                         f'Mentor {entry.name} booking URL is failing with code {str(response.status_code)}')
                 response = requests.head(entry.online_meeting_url)
-                if response.status_code > 299:
+                if response.status_code > 399:
                     raise Exception(
                         f'Mentor {entry.name} meeting URL is failing with code {str(response.status_code)}')
 
@@ -51,10 +51,10 @@ def mark_as_active(modeladmin, request, queryset):
     except requests.exceptions.ConnectionError:
         message = 'Error: Booking or meeting URL for mentor is failing'
         logger.fatal(message)
-        messages.error(request, message=message)
+        messages.add_message(request, messages.Error, message)
     except Exception as e:
         logger.fatal(str(e))
-        messages.error(request, message='Error: ' + str(e))
+        messages.add_message(request, messages.Error, 'Error: ' + str(e))
 
 
 mark_as_active.short_description = 'Mark as ACTIVE'
@@ -95,7 +95,7 @@ class MentorAdmin(admin.ModelAdmin):
 
 @admin.register(MentorshipSession)
 class SessionAdmin(admin.ModelAdmin):
-    list_display = ['id', 'mentor', 'mentee', 'stats', 'started_at', 'openurl']
+    list_display = ['id', 'mentor', 'mentee', 'stats', 'started_at', 'mentor_joined_at', 'openurl']
     raw_id_fields = ['mentor', 'mentee']
     search_fields = [
         'mentee__first_name', 'mentee__last_name', 'mentee__email', 'mentor__user__first_name',
