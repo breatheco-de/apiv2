@@ -1,6 +1,3 @@
-"""
-Tasks tests
-"""
 from unittest.mock import patch, call, MagicMock
 from ...actions import fetch_data_to_json
 from ..mixins import JobsTestCase
@@ -206,10 +203,9 @@ JOBS = [{
     'dict'
 }]
 
-DATA2 = [{'status': 'ok', 'data': [45, 12]}]
-DATA3 = [{'status': 'ok', 'data': [1, 2]}]
-
-DATA4 = [{'status_code': 401}]
+spider = {'name': 'getonboard', 'zyte_spider_number': 3, 'zyte_job_number': 0}
+zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
+platform = {'name': 'getonboard'}
 
 
 class ActionFetchDataToJsonTestCase(JobsTestCase):
@@ -236,7 +232,7 @@ class ActionFetchDataToJsonTestCase(JobsTestCase):
         from logging import Logger
 
         try:
-            model = self.generate_models(spider=True)
+            model = self.bc.database.create(spider=1)
 
             fetch_data_to_json(model.spider, None)
         except Exception as e:
@@ -248,17 +244,13 @@ class ActionFetchDataToJsonTestCase(JobsTestCase):
 
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([
-               (200, 'https://storage.scrapinghub.com/items/570286/3/35?apikey=1234567&format=json', DATA2),
-               (200, 'https://storage.scrapinghub.com/items/570286/3/34?apikey=1234567&format=json', DATA3)
+               (200, 'https://storage.scrapinghub.com/items/570286/3/35?apikey=1234567&format=json', JOBS),
+               (200, 'https://storage.scrapinghub.com/items/570286/3/34?apikey=1234567&format=json', JOBS)
            ]))
-    def test_fetch_data__with_two_spider(self):
+    def test_fetch_data__with_two_num_jobs(self):
         import requests
 
-        spider = {'zyte_spider_number': 3, 'zyte_job_number': 0}
-        zyte_project = {'zyte_api_key': 1234567}
-        platform = {'name': 'getonboard'}
-
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = fetch_data_to_json(model.spider, DATA)
 
@@ -267,15 +259,45 @@ class ActionFetchDataToJsonTestCase(JobsTestCase):
             'platform_name': model.platform.name,
             'num_spider': 3,
             'num_job': 35,
-            'jobs': DATA2
+            'jobs_saved': 6
         }, {
             'status': 'ok',
             'platform_name': model.platform.name,
             'num_spider': 3,
             'num_job': 34,
-            'jobs': DATA3
+            'jobs_saved': 0
         }])
         self.assertEqual(requests.get.call_args_list, [
             call('https://storage.scrapinghub.com/items/570286/3/35?apikey=1234567&format=json'),
             call('https://storage.scrapinghub.com/items/570286/3/34?apikey=1234567&format=json')
         ])
+
+    @patch(REQUESTS_PATH['get'],
+           apply_requests_get_mock([
+               (400, 'https://storage.scrapinghub.com/items/570286/3/35?apikey=1234567&format=json', [{
+                   'status_code':
+                   400,
+                   'data': []
+               }])
+           ]))
+    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
+    @patch('django.contrib.messages.add_message', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    def test_fetch_data__with_bad_request(self):
+        import requests
+        from logging import Logger
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
+        try:
+            result = fetch_data_to_json(model.spider, DATA)
+
+            self.assertEqual(result, [{'status_code': 400, 'data': []}])
+            self.assertEqual(
+                requests.get.call_args_list,
+                [call('https://storage.scrapinghub.com/items/570286/3/35?apikey=1234567&format=json')])
+
+        except Exception as e:
+            self.assertEquals(str(e), ('bad-resmponse-fetch'))
+            self.assertEqual(Logger.error.call_args_list, [
+                call('There was a 400 error fetching spider 3 job 3 (fetch_data_to_json)'),
+                call('Status 400 - bad-resmponse-fetch')
+            ])

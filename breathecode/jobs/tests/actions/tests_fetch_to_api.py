@@ -1,6 +1,3 @@
-"""
-Tasks tests
-"""
 from unittest.mock import patch, call, MagicMock
 from ...actions import fetch_to_api
 from ..mixins import JobsTestCase
@@ -82,9 +79,6 @@ DATA = {
 
 
 class ActionTestfetchToApiTestCase(JobsTestCase):
-    """
-    🔽🔽🔽 without spider fetch to api
-    """
     @patch('logging.Logger.debug', MagicMock())
     def test_fetch_to_api__without_spider(self):
         from logging import Logger
@@ -97,20 +91,15 @@ class ActionTestfetchToApiTestCase(JobsTestCase):
             self.assertEqual(Logger.debug.call_args_list,
                              [call('First you must specify a spider (fetch_to_api)')])
 
-    """
-    🔽🔽🔽 status ok fetch to api
-    """
-
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', {
                'status': 'ok',
                'data': []
            })]))
     def test_status_ok_fetch_to_api(self):
-        """Test /status ok fetch to api"""
         import requests
 
-        model = self.generate_models(spider=True)
+        model = self.bc.database.create(spider=1)
         result = fetch_to_api(model.spider)
 
         self.assertEqual(result, {'status': 'ok', 'data': []})

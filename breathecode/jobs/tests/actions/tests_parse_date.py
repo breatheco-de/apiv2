@@ -1,6 +1,3 @@
-"""
-Tasks tests
-"""
 from unittest.mock import patch, call
 from ...actions import parse_date
 from ..mixins import JobsTestCase
@@ -10,10 +7,13 @@ from breathecode.tests.mocks import (
     apply_requests_post_mock,
 )
 
+spider = {'name': 'indeed', 'zyte_spider_number': 2, 'zyte_job_number': 0}
+zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
+platform = {'name': 'indeed'}
+
 
 class ActionRunSpiderTestCase(JobsTestCase):
     def test_parse_date__without_job(self):
-        """Test /parse_date without spider"""
         try:
             parse_date(None)
             assert False
@@ -21,8 +21,8 @@ class ActionRunSpiderTestCase(JobsTestCase):
             self.assertEquals(str(e), ('data-job-none'))
 
     def test_parse_date__verify_format_published_date(self):
-        """Test /parse_date verify format published date"""
-        model = self.generate_models(job=True, job_kwargs={'published_date_raw': '30+ days ago'})
+        job = {'published_date_raw': '30+ days ago'}
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform, job=job)
 
         result = parse_date(model.job)
         result = result.published_date_processed
@@ -32,7 +32,11 @@ class ActionRunSpiderTestCase(JobsTestCase):
 
         self.assertEquals(result, expected)
 
-        model_1 = self.generate_models(job=True, job_kwargs={'published_date_raw': 'Active 6 days ago'})
+        job_1 = {'published_date_raw': 'Active 6 days ago'}
+        model_1 = self.bc.database.create(spider=spider,
+                                          zyte_project=zyte_project,
+                                          platform=platform,
+                                          job=job_1)
 
         result_1 = parse_date(model_1.job)
         result_1 = result_1.published_date_processed
@@ -42,10 +46,28 @@ class ActionRunSpiderTestCase(JobsTestCase):
 
         self.assertEquals(result_1, expected_1)
 
-        model_2 = self.generate_models(job=True, job_kwargs={'published_date_raw': 'July 17, 1977'})
+        job_2 = {'published_date_raw': 'July 17, 1977'}
+        model_2 = self.bc.database.create(spider=spider,
+                                          zyte_project=zyte_project,
+                                          platform=platform,
+                                          job=job_2)
 
         result_2 = parse_date(model_2.job)
         result_2 = result_2.published_date_processed
         result_2 = f'{result_2.year}-{result_2.month}-{result_2.day}'
 
         self.assertEquals(result_2, '1977-7-17')
+
+        job_3 = {'published_date_raw': 'today'}
+        model_3 = self.bc.database.create(spider=spider,
+                                          zyte_project=zyte_project,
+                                          platform=platform,
+                                          job=job_3)
+
+        result_3 = parse_date(model_3.job)
+        result_3 = result_3.published_date_processed
+        result_3 = f'{result_3.year}-{result_3.month}-{result_3.day}'
+        expected_3 = datetime.now()
+        expected_3 = f'{expected_3.year}-{expected_3.month}-{expected_3.day}'
+
+        self.assertEquals(result_3, expected_3)

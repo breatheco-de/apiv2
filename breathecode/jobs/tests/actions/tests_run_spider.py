@@ -1,7 +1,4 @@
-"""
-Tasks tests
-"""
-from unittest.mock import patch, call
+from unittest.mock import patch, call, MagicMock
 from ...actions import run_spider
 from breathecode.utils import APIException
 from ..mixins import JobsTestCase
@@ -10,10 +7,18 @@ from breathecode.tests.mocks import (
     apply_requests_post_mock,
 )
 
+spider = {'name': 'getonboard', 'zyte_spider_number': 3, 'zyte_job_number': 0}
+zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
+platform = {'name': 'getonboard'}
+
+spider1 = {'name': 'indeed', 'zyte_spider_number': 2, 'zyte_job_number': 0}
+zyte_project1 = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
+platform1 = {'name': 'indeed'}
+
 
 class ActionRunSpiderTestCase(JobsTestCase):
+    @patch('breathecode.jobs.actions.run_spider', MagicMock())
     def test_run_spider__without_spider(self):
-        """Test /run_spider without spider"""
         try:
             run_spider(None)
             assert False
@@ -26,10 +31,10 @@ class ActionRunSpiderTestCase(JobsTestCase):
                'data': []
            })]))
     def test_run_spider__with_one_spider(self):
-        """Test /answer without auth"""
+        from breathecode.jobs.actions import run_spider
         import requests
 
-        model = self.generate_models(spider=True)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = run_spider(model.spider)
         self.assertEqual(result, (True, {'status': 'ok', 'data': []}))
@@ -50,12 +55,11 @@ class ActionRunSpiderTestCase(JobsTestCase):
                'data': []
            })]))
     def test_run_spider__with_two_spiders(self):
-        """Test /answer without auth"""
         from breathecode.jobs.actions import run_spider
         import requests
 
-        model_1 = self.generate_models(spider=True, spider_kwargs={'job': 'python'})
-        model_2 = self.generate_models(spider=True, spider_kwargs={'job': 'go'})
+        model_1 = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
+        model_2 = self.bc.database.create(spider=spider1, zyte_project=zyte_project1, platform=platform1)
 
         result_1 = run_spider(model_1.spider)
         result_2 = run_spider(model_2.spider)

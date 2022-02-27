@@ -12,12 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 def run_spider(spider):
-    platform = spider.zyte_project.platform.name
-    class_scrapper = ScraperFactory(platform)
 
     if spider is None:
         logger.debug(f'First you must specify a spider (run_spider)')
         raise ValidationException('First you must specify a spider', slug='missing-spider')
+
+    platform = spider.zyte_project.platform.name
+    class_scrapper = ScraperFactory(platform)
 
     position = class_scrapper.get_position_from_string(spider.job)
     if position is None:
@@ -56,7 +57,6 @@ def fetch_to_api(spider):
     res = requests.get('https://app.scrapinghub.com/api/jobs/list.json',
                        params=params,
                        auth=(spider.zyte_project.zyte_api_key, '')).json()
-
     return res
 
 
@@ -75,6 +75,7 @@ def fetch_data_to_json(spider, api_fetch):
 
     for res_api_jobs in api_fetch['jobs']:
         deploy, num_spider, num_job = class_scrapper.get_job_id_from_string(res_api_jobs['id'])
+
         if int(num_spider) == int(spider.zyte_spider_number) and int(num_job) >= int(spider.zyte_job_number):
             response = requests.get(
                 f'https://storage.scrapinghub.com/items/{res_api_jobs["id"]}?apikey={spider.zyte_project.zyte_api_key}&format=json'
@@ -168,8 +169,8 @@ def fetch_sync_all_data(spider):
         raise ValidationException('First you must specify a spider', slug='without-spider')
 
     res = fetch_to_api(spider)
-
     data_jobs = fetch_data_to_json(spider, res)
+
     platform = spider.zyte_project.platform.name
     class_scrapper = ScraperFactory(platform)
 

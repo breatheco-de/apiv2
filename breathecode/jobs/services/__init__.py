@@ -1,4 +1,8 @@
+import logging
+from django.contrib import messages
 from .base_scrapper import *
+
+logger = logging.getLogger(__name__)
 
 
 def ScraperFactory(service: str):

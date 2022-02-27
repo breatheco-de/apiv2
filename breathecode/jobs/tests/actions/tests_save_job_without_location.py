@@ -1,6 +1,3 @@
-"""
-Action tests
-"""
 from unittest.mock import patch, call, MagicMock
 from ...actions import save_data
 from ..mixins import JobsTestCase
@@ -57,7 +54,7 @@ platform = {'name': 'getonboard'}
 class ActionSaveJobWithoutLocationTestCase(JobsTestCase):
     @patch('breathecode.jobs.actions.save_data', MagicMock())
     def test_save_one_job_without_location_and_return_remote_true(self):
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = save_data(model.spider, JOBS)
         location = self.bc.database.list_of('jobs.Location')
@@ -68,7 +65,7 @@ class ActionSaveJobWithoutLocationTestCase(JobsTestCase):
 
     @patch('breathecode.jobs.actions.save_data', MagicMock())
     def test_save_two_job_with_location_and_without_location(self):
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = save_data(model.spider, JOBS1)
         location = self.bc.database.list_of('jobs.Location')
@@ -84,6 +81,7 @@ class ActionSaveJobWithoutLocationTestCase(JobsTestCase):
             'published_date_processed': None,
             'status': 'OPENED',
             'apply_url': 'https://www.url.com/1',
+            'currency': 'USD',
             'min_salary': 0.0,
             'max_salary': 0.0,
             'salary': 'Not supplied',
@@ -99,6 +97,7 @@ class ActionSaveJobWithoutLocationTestCase(JobsTestCase):
             'published_date_processed': None,
             'status': 'OPENED',
             'apply_url': 'https://www.url.com/2',
+            'currency': 'USD',
             'min_salary': 0.0,
             'max_salary': 0.0,
             'salary': 'Not supplied',

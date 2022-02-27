@@ -25,15 +25,6 @@ class BaseScrapper(ABC):
         return alias.position
 
     @classmethod
-    def get_location_alias_from_string(cls, keyword: str):
-        locations = LocationAlias.objects.filter(name__iexact=keyword).first()
-
-        if locations is None:
-            return None
-
-        return locations
-
-    @classmethod
     def save_location(cls, keyword: str):
         if keyword != None:
             location = Location.objects.filter(name__iexact=keyword).first()
@@ -87,8 +78,9 @@ class BaseScrapper(ABC):
 
     @classmethod
     def get_job_id_from_string(cls, string: str):
-        regex = r'^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$'
-        return re.findall(regex, string).pop()
+        if string:
+            regex = r'^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$'
+            return re.findall(regex, string).pop()
 
     @classmethod
     def get_info_amount_jobs_saved(cls, data: list):

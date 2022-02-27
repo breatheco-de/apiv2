@@ -72,10 +72,6 @@ def salary_month_only_one(findings, string_salary):
     return val
 
 
-def fetch_id_job_string_to_list(findings, string_loc):
-    return list(findings.pop())
-
-
 _cases_date = {
     '^(?:Active\s)?(\d{1,2})\+? days? ago': days_ago_to_date,
     '(.*\s?\d{1,2}\+?,? \d{1,4})': change_format_to_date,

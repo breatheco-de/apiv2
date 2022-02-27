@@ -1,6 +1,3 @@
-"""
-Action tests
-"""
 from unittest.mock import patch, call, MagicMock
 from ...actions import save_data
 from ..mixins import JobsTestCase
@@ -12,12 +9,12 @@ from breathecode.tests.mocks import (
 JOBS = [{
     'Searched_job': 'junior web developer',
     'Job_title': 'Pentester Cybersecurity',
-    'Location': 'Remote (Chile)',
+    'Location': None,
     'Company_name': 'Employer',
     'Post_date': 'November 05, 2021',
     'Extract_date': '2022-01-30',
     'Job_description': 'Vuln exploitation Security reports',
-    'Salary': 'Not supplied',
+    'Salary': '$1800 - 2000 USD/month',
     'Tags': ['back-end', 'cybersecurity', 'english', 'pentesting', 'python'],
     'Apply_to': 'https://www.url.com/1',
     '_type': 'dict'
@@ -29,7 +26,7 @@ JOBS = [{
     'Post_date': 'today',
     'Extract_date': '2022-01-30',
     'Job_description': 'Other job',
-    'Salary': 'Not supplied',
+    'Salary': '$1800 - 2000 USD/month',
     'Tags': ['back-end'],
     'Apply_to': 'https://www.url.com/2',
     '_type': 'dict'
@@ -81,6 +78,7 @@ JOBS2 = [{
     'Post_date': 'today',
     'Extract_date': '2022-01-30',
     'Job_description': 'Vuln exploitation Security reports',
+    'currency': 'USD',
     'Salary': 'Not supplied',
     'Tags': ['back-end', 'cybersecurity', 'english', 'pentesting', 'python'],
     'Apply_to': 'https://www.url.com/1',
@@ -93,6 +91,7 @@ JOBS2 = [{
     'Post_date': 'November 05, 2021',
     'Extract_date': '2022-01-30',
     'Job_description': 'Vuln exploitation Security reports',
+    'currency': 'USD',
     'Salary': 'Not supplied',
     'Tags': ['back-end', 'cybersecurity', 'english', 'pentesting', 'python'],
     'Apply_to': 'https://www.url.com/2',
@@ -107,6 +106,7 @@ JOBS3 = [{
     'Post_date': 'today',
     'Extract_date': '2022-01-30',
     'Job_description': 'Vuln exploitation Security reports',
+    'currency': 'USD',
     'Salary': 'Not supplied',
     'Tags': ['back-end', 'cybersecurity', 'english', 'pentesting', 'python'],
     'Apply_to': 'https://www.url.com/1',
@@ -119,21 +119,22 @@ JOBS3 = [{
     'Post_date': 'November 05, 2021',
     'Extract_date': '2022-01-30',
     'Job_description': 'Vuln exploitation Security reports',
+    'currency': 'USD',
     'Salary': 'Not supplied',
     'Tags': ['back-end', 'cybersecurity', 'english', 'pentesting', 'python'],
     'Apply_to': 'https://www.url.com/2',
     '_type': 'dict'
 }]
 
-spider = {'name': 'getonboard', 'zyte_spider_number': 3, 'zyte_job_number': 0}
+spider = {'name': 'indeed', 'zyte_spider_number': 2, 'zyte_job_number': 0}
 zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
-platform = {'name': 'getonboard'}
+platform = {'name': 'indeed'}
 
 
 class ActionNotSaveJobRepitedTestCase(JobsTestCase):
     @patch('breathecode.jobs.actions.save_data', MagicMock())
     def test_give_two_jobs_repited_save_one(self):
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = save_data(model.spider, JOBS)
         job = self.bc.database.list_of('jobs.Job')
@@ -146,9 +147,10 @@ class ActionNotSaveJobRepitedTestCase(JobsTestCase):
             'published_date_processed': None,
             'status': 'OPENED',
             'apply_url': 'https://www.url.com/1',
-            'min_salary': 0.0,
-            'max_salary': 0.0,
-            'salary': 'Not supplied',
+            'currency': 'USD',
+            'min_salary': 1800.0,
+            'max_salary': 2000.0,
+            'salary': '$1800.0 - $2000.0 a year.',
             'job_type': 'Full-time',
             'remote': True,
             'employer_id': 1,
@@ -158,7 +160,7 @@ class ActionNotSaveJobRepitedTestCase(JobsTestCase):
 
     @patch('breathecode.jobs.actions.save_data', MagicMock())
     def test_give_two_jobs_repited_and_one_diferen(self):
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = save_data(model.spider, JOBS1)
         job = self.bc.database.list_of('jobs.Job')
@@ -171,6 +173,7 @@ class ActionNotSaveJobRepitedTestCase(JobsTestCase):
             'published_date_processed': None,
             'status': 'OPENED',
             'apply_url': 'https://www.url.com/1',
+            'currency': 'USD',
             'min_salary': 0.0,
             'max_salary': 0.0,
             'salary': 'Not supplied',
@@ -186,6 +189,7 @@ class ActionNotSaveJobRepitedTestCase(JobsTestCase):
             'published_date_processed': None,
             'status': 'OPENED',
             'apply_url': 'https://www.url.com/2',
+            'currency': 'USD',
             'min_salary': 0.0,
             'max_salary': 0.0,
             'salary': 'Not supplied',
@@ -198,7 +202,7 @@ class ActionNotSaveJobRepitedTestCase(JobsTestCase):
 
     @patch('breathecode.jobs.actions.save_data', MagicMock())
     def test_save_jobs_with_same_title_and_diferent_employer(self):
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = save_data(model.spider, JOBS2)
         job = self.bc.database.list_of('jobs.Job')
@@ -211,6 +215,7 @@ class ActionNotSaveJobRepitedTestCase(JobsTestCase):
             'published_date_processed': None,
             'status': 'OPENED',
             'apply_url': 'https://www.url.com/1',
+            'currency': 'USD',
             'min_salary': 0.0,
             'max_salary': 0.0,
             'salary': 'Not supplied',
@@ -226,6 +231,7 @@ class ActionNotSaveJobRepitedTestCase(JobsTestCase):
             'published_date_processed': None,
             'status': 'OPENED',
             'apply_url': 'https://www.url.com/2',
+            'currency': 'USD',
             'min_salary': 0.0,
             'max_salary': 0.0,
             'salary': 'Not supplied',
@@ -238,7 +244,7 @@ class ActionNotSaveJobRepitedTestCase(JobsTestCase):
 
     @patch('breathecode.jobs.actions.save_data', MagicMock())
     def test_save_jobs_with_same_employer_and_diferent_title(self):
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = save_data(model.spider, JOBS3)
         job = self.bc.database.list_of('jobs.Job')
@@ -251,6 +257,7 @@ class ActionNotSaveJobRepitedTestCase(JobsTestCase):
             'published_date_processed': None,
             'status': 'OPENED',
             'apply_url': 'https://www.url.com/1',
+            'currency': 'USD',
             'min_salary': 0.0,
             'max_salary': 0.0,
             'salary': 'Not supplied',
@@ -266,6 +273,7 @@ class ActionNotSaveJobRepitedTestCase(JobsTestCase):
             'published_date_processed': None,
             'status': 'OPENED',
             'apply_url': 'https://www.url.com/2',
+            'currency': 'USD',
             'min_salary': 0.0,
             'max_salary': 0.0,
             'salary': 'Not supplied',

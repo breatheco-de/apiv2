@@ -1,6 +1,3 @@
-"""
-Action tests
-"""
 from unittest.mock import patch, call, MagicMock
 from ...actions import save_data
 from ..mixins import JobsTestCase
@@ -81,7 +78,7 @@ platform = {'name': 'getonboard'}
 class ActionNotSaveLocationAliasRepitedTestCase(JobsTestCase):
     @patch('breathecode.jobs.actions.save_data', MagicMock())
     def test_give_two_location_alias_repited(self):
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = save_data(model.spider, JOBS)
         location = self.bc.database.list_of('jobs.Location')
@@ -94,7 +91,7 @@ class ActionNotSaveLocationAliasRepitedTestCase(JobsTestCase):
 
     @patch('breathecode.jobs.actions.save_data', MagicMock())
     def test_give_two_location_alias_repited_and_one_diferent(self):
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = save_data(model.spider, JOBS1)
         location = self.bc.database.list_of('jobs.Location')

@@ -1,6 +1,3 @@
-"""
-Action tests
-"""
 from unittest.mock import patch, call, MagicMock
 from ...actions import save_data
 from ..mixins import JobsTestCase
@@ -62,7 +59,7 @@ JOBS1 = [{
 }, {
     'Searched_job': 'junior web developer',
     'Job_title': 'Pentester Cybersecurity',
-    'Location': 'Remote (Peru)',
+    'Location': 'Remote (Peru, Colombia)',
     'Company_name': 'Other Employer',
     'Post_date': 'November 05, 2021',
     'Extract_date': '2022-01-30',
@@ -81,7 +78,7 @@ platform = {'name': 'getonboard'}
 class ActionNotSaveEmployerRepitedTestCase(JobsTestCase):
     @patch('breathecode.jobs.actions.save_data', MagicMock())
     def test_give_two_employer_repited(self):
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = save_data(model.spider, JOBS)
         employer = self.bc.database.list_of('jobs.Employer')
@@ -91,11 +88,10 @@ class ActionNotSaveEmployerRepitedTestCase(JobsTestCase):
 
     @patch('breathecode.jobs.actions.save_data', MagicMock())
     def test_give_two_employer_repited_and_one_diferent(self):
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = save_data(model.spider, JOBS1)
         employer = self.bc.database.list_of('jobs.Employer')
-
         self.assertEqual(employer, [{
             'id': 1,
             'name': 'Repite Employer',

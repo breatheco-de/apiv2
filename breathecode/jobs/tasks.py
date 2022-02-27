@@ -17,11 +17,8 @@ class BaseTaskWithRetry(Task):
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def async_run_spider(self, args):
     logger.error('Starting async_run_spider')
-    print('hola')
     now = timezone.now()
-    print('args: ', args)
     spider = Spider.objects.get(id=args['spi_id'])
-    print('spider: ', spider)
     result = run_spider(spider)
 
     if result.status_code == 200:
@@ -46,10 +43,10 @@ def async_fetch_sync_all_data(self, args):
     result = fetch_sync_all_data(spider)
 
     if result:
-        logger.error(f'Starting async_fetch_sync_all_data in spider name {spider.name}')
+        logger.error(f'Starting in async_fetch_sync_all_data in spider name {spider.name}')
         spider.sync_status = 'SYNCHED'
-
         spider.save()
+
     else:
         message = '400 Bad Request command at ' + str(now)
         logger.error(message)

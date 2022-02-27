@@ -1,6 +1,3 @@
-"""
-Tasks tests
-"""
 from unittest.mock import patch, call, MagicMock
 from ...actions import save_data
 from ..mixins import JobsTestCase
@@ -90,20 +87,20 @@ JOBS = [{
     'Post_date': 'November 05, 2021',
     'Extract_date': '2022-01-30',
     'Job_description': 'Vuln exploitation Security reports',
-    'Salary': 'Not supplied',
+    'Salary': '$1800 - 2000 a year',
     'Tags': ['back-end', 'cybersecurity', 'english', 'pentesting', 'python'],
     'Apply_to': 'https://www.getonbrd.com/jobs/cybersecurity/security-engineer-rule-1-ventures-remote',
     '_type': 'dict'
 }, {
     'Searched_job': 'junior web developer',
     'Job_title': 'Front-end Developer',
-    'Location': 'Lima',
+    'Location': '.',
     'Company_name': 'ID Business Intelligence',
     'Post_date': 'January 24, 2022',
     'Extract_date': '2022-01-30',
     'Job_description':
     'Manejo de Git Flow. (~°-°)~ Dominar a profundidad CSS y JS (mínimo 1 año) Experiencia con React Experiencia consumiendo Web Service (Rest) Preocuparse por entregar productos de calidad.',
-    'Salary': 'Not supplied',
+    'Salary': '$1800 - k2000 per year',
     'Tags': ['api', 'css', 'front-end', 'git', 'javascript', 'react'],
     'Apply_to': 'https://www.getonbrd.com/jobs/programming/fronted-developer-id-business-intelligence-remote',
     '_type': 'dict'
@@ -123,7 +120,7 @@ JOBS = [{
     'Job_description':
     '',
     'Salary':
-    'Not supplied',
+    '18000 USD/month',
     'Tags': [
         'angularjs', 'api', 'back-end', 'ci/cd', 'css', 'docker', 'front-end', 'html5', 'javascript', 'json',
         'mongodb', 'node.js', 'nosql', 'postgresql', 'react', 'responsive', 'ui design', 'virtualization'
@@ -142,10 +139,8 @@ platform = {'name': 'getonboard'}
 class ActionSaveDataTestCase(JobsTestCase):
     @patch('breathecode.jobs.actions.save_data', MagicMock())
     def test_save_data__without_spider(self):
-        """Test /save_data with spider"""
 
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = save_data(model.spider, JOBS)
-        print('result', result)
-        self.assertEqual(result, JOBS)
+        self.assertEqual(result, 6)

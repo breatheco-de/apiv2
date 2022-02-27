@@ -7,10 +7,6 @@ from django.http.request import HttpRequest
 
 
 class RunSpiderAdminTestSuite(JobsTestCase):
-    """Test /RunSpiderAdmin/"""
-    """
-    🔽🔽🔽 With zero Spider
-    """
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('django.contrib.messages.add_message', MagicMock())
     @patch('logging.Logger.error', MagicMock())
@@ -19,7 +15,7 @@ class RunSpiderAdminTestSuite(JobsTestCase):
         from breathecode.jobs.actions import run_spider
         from logging import Logger
 
-        model = self.generate_models(spider=True)
+        model = self.bc.database.create(spider=1)
         request = HttpRequest()
         queryset = Spider.objects.all()
 
@@ -39,17 +35,13 @@ class RunSpiderAdminTestSuite(JobsTestCase):
 
         self.assertEqual(run_spider.call_args_list, [])
 
-    """
-    🔽🔽🔽 With one Spider
-    """
-
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('breathecode.jobs.actions.run_spider', MagicMock())
     def test_run_spider_admin__with_one_spider(self):
         from breathecode.jobs.actions import run_spider
         from django.contrib import messages
 
-        model = self.generate_models(spider=True)
+        model = self.bc.database.create(spider=1)
 
         request = HttpRequest()
         queryset = Spider.objects.all()
@@ -58,18 +50,14 @@ class RunSpiderAdminTestSuite(JobsTestCase):
 
         self.assertEqual(run_spider.call_args_list, [call(model.spider)])
 
-    """
-    🔽🔽🔽 With two Spider
-    """
-
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('breathecode.jobs.actions.run_spider', MagicMock())
     def test_run_spider_admin__with_two_spiders(self):
         from breathecode.jobs.actions import run_spider
         from django.contrib import messages
 
-        model_1 = self.generate_models(spider=True)
-        model_2 = self.generate_models(spider=True)
+        model_1 = self.bc.database.create(spider=1)
+        model_2 = self.bc.database.create(spider=1)
 
         request = HttpRequest()
         queryset = Spider.objects.all()
