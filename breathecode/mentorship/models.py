@@ -7,6 +7,18 @@ from datetime import timedelta
 from .signals import mentorship_session_status
 from slugify import slugify
 
+# settings customizable for each academy
+# class MentorshipAcademy(models.Model):
+#     ac_key = models.CharField(max_length=150)
+#     ac_url = models.URLField()
+#     event_attendancy_automation = models.ForeignKey('Automation',
+#                                                     on_delete=models.CASCADE,
+#                                                     blank=True,
+#                                                     null=True,
+#                                                     default=None)
+
+#     academy = models.OneToOneField(Academy, on_delete=models.CASCADE)
+
 DRAFT = 'DRAFT'
 ACTIVE = 'ACTIVE'
 INNACTIVE = 'INNACTIVE'
@@ -29,6 +41,11 @@ class MentorshipService(models.Model):
     status = models.CharField(max_length=15, choices=MENTORSHIP_STATUS, default=DRAFT)
 
     language = models.CharField(max_length=2, default='en')
+
+    allow_mentee_to_extend = models.BooleanField(
+        default=True, help_text='If true, mentees will be able to extend mentorship session')
+    allow_mentors_to_extend = models.BooleanField(
+        default=True, help_text='If true, mentors will be able to extend mentorship session')
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 

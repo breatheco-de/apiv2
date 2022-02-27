@@ -80,7 +80,7 @@
         }
     </style>
     <header>
-        <img class="img-responsive" src="{{ API_URL }}/static/assets/logo.png" />
+        <img class="img-responsive" src="{{ LOGO|default:"/static/assets/logo.png" }}" />
     </header>
     {% block content %}
     {% endblock %}
