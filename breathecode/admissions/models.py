@@ -55,6 +55,9 @@ class Academy(models.Model):
     slug = models.SlugField(max_length=100, unique=True)
     name = models.CharField(max_length=150)
     logo_url = models.CharField(max_length=255)
+    icon_url = models.CharField(max_length=255,
+                                help_text='It has to be a square',
+                                default='/static/icons/picture.png')
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)

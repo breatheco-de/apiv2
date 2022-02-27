@@ -14,6 +14,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (
+    GetAcademySmallSerializer,
     GETServiceSmallSerializer,
     GETSessionSmallSerializer,
     GETMentorSmallSerializer,
@@ -43,6 +44,9 @@ def forward_booking_url(request, mentor_slug, token):
     mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
     if mentor is None:
         return render_message(request, f'No mentor found with slug {mentor_slug}')
+
+    # add academy to session, will be available on html templates
+    request.session['academy'] = GetAcademySmallSerializer(mentor.service.academy).data
 
     if mentor.status != 'ACTIVE':
         return render_message(request, f'This mentor is not active')
@@ -74,6 +78,9 @@ def forward_meet_url(request, mentor_slug, token):
     mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
     if mentor is None:
         return render_message(request, f'No mentor found with slug {mentor_slug}')
+
+    # add academy to session, will be available on html templates
+    request.session['academy'] = GetAcademySmallSerializer(mentor.service.academy).data
 
     if mentor.status != 'ACTIVE':
         return render_message(request, f'This mentor is not active at the moment')
@@ -211,6 +218,9 @@ def end_mentoring_session(request, session_id, token):
         session = MentorshipSession.objects.filter(id=session_id).first()
         if session is None:
             return render_message(request, f'Invalid session id {str(session_id)}')
+
+        # add academy to session, will be available on html templates
+        request.session['academy'] = GetAcademySmallSerializer(session.mentor.service.academy).data
 
         # this GET request occurs when the mentor leaves the session
         session.mentor_left_at = now

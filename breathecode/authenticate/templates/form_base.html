@@ -80,7 +80,7 @@
         }
     </style>
     <header>
-        <img class="img-responsive" src="{{ LOGO|default:"/static/assets/logo.png" }}" />
+        <img class="img-responsive" src="{{ request.session.academy.icon_url|default:"/static/assets/logo.png" }}" />
     </header>
     {% block content %}
     {% endblock %}

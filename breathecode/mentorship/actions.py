@@ -94,7 +94,7 @@ def render_session(request, session, token):
 
 
 def close_mentoring_session(session, data):
-    logger.debug(f'Ending mentoring {session.id} session with status {data["status"]}')
+
     session.summary = data['summary']
     session.status = data['status'].upper()
     session.ended_at = timezone.now()

@@ -12,6 +12,7 @@ class GetAcademySmallSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     logo_url = serpy.Field()
+    icon_url = serpy.Field()
 
 
 class ProfileSerializer(serpy.Serializer):

@@ -289,9 +289,6 @@ CORS_ALLOW_HEADERS = [
     'http-access-control-request-method',
 ]
 
-TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
-    'breathecode.utils.views.context_processor', )
-
 REDIS_URL = os.getenv('REDIS_URL', '')
 
 
