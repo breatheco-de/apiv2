@@ -5,6 +5,9 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0;">
 	<meta name="format-detection" content="telephone=no" />
 	<style>
+        body{
+            overflow: hidden;
+        }
 		iframe{
             border: 0px;
         }
@@ -49,6 +52,7 @@
         window.onload = function(){
             callFrame = window.DailyIframe.createFrame({
                 showLeaveButton: true,
+                showFullscreenButton: true,
                 {% if userName and userName != "" %}
                 userName: '{{ userName }}',
                 {% endif %}
