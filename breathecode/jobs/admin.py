@@ -57,7 +57,6 @@ run_spider_admin.short_description = 'Run spider.'
 parse_date_admin.short_description = 'Parse date.'
 
 
-# Register your models here.
 @admin.register(Spider)
 class SpiderAdmin(admin.ModelAdmin):
     list_display = ('name', 'status', 'sync_desc', 'zyte_last_fetch_date')

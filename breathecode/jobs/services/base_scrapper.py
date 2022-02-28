@@ -86,6 +86,7 @@ class BaseScrapper(ABC):
     def get_info_amount_jobs_saved(cls, data: list):
         temp = []
         items = 0
+
         num_job = data[0]['num_job']
         if isinstance(data, list):
             for dat in data:

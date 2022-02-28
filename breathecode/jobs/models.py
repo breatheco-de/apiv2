@@ -1,10 +1,7 @@
 from django.db import models
 
-# Create your models here.
-
 
 class Platform(models.Model):
-    """ Create a new platform for Jobs"""
     name = models.CharField(max_length=150)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -15,7 +12,6 @@ class Platform(models.Model):
 
 
 class Position(models.Model):
-    """ something """
     name = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -25,7 +21,6 @@ class Position(models.Model):
 
 
 class ZyteProject(models.Model):
-    """ Create a new platform for Jobs"""
     zyte_api_key = models.CharField(max_length=150)
     zyte_api_deploy = models.CharField(max_length=50)
 
@@ -50,7 +45,6 @@ SPIDER_STATUS = (
 
 
 class Spider(models.Model):
-    """ Create a new platform for Jobs"""
     name = models.CharField(max_length=150)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
     job = models.CharField(max_length=150)
@@ -72,7 +66,6 @@ class Spider(models.Model):
 
 
 class PositionAlias(models.Model):
-    """ something """
     name = models.CharField(max_length=100)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -83,7 +76,6 @@ class PositionAlias(models.Model):
 
 
 class Tag(models.Model):
-    """ something """
     slug = models.SlugField(max_length=200, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -93,7 +85,6 @@ class Tag(models.Model):
 
 
 class Location(models.Model):
-    """ something """
     name = models.CharField(max_length=100, unique=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -103,7 +94,6 @@ class Location(models.Model):
 
 
 class LocationAlias(models.Model):
-    """ something """
     name = models.CharField(max_length=100)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -114,7 +104,6 @@ class LocationAlias(models.Model):
 
 
 class Employer(models.Model):
-    """ something """
     name = models.CharField(max_length=100)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -159,7 +148,6 @@ CURRENCIES = (
 
 
 class Job(models.Model):
-    """ Create a new platform for Jobs"""
     title = models.CharField(max_length=150)
     platform = models.ForeignKey(Platform, on_delete=models.CASCADE, null=False, blank=False)
     published_date_raw = models.CharField(max_length=50)

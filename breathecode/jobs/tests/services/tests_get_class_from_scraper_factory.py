@@ -11,8 +11,9 @@ class ServicesGetClassScraperFactoryTestCase(JobsTestCase):
     def test_return_false(self):
 
         from logging import Logger
-        try:
-            ScraperFactory('torta')
-            assert False
-        except Exception as e:
-            print(str(e))
+
+        ScraperFactory('motor')
+        self.assertEqual(Logger.error.call_args_list, [
+            call('There was an error import the library - No '
+                 "module named 'breathecode.jobs.services.motor'")
+        ])

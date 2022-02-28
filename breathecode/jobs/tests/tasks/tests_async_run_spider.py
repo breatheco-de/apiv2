@@ -36,30 +36,21 @@ JOBS = [{
 }]
 
 spider = {'name': 'getonboard', 'zyte_spider_number': 3, 'zyte_job_number': 0}
-zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
+zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 223344}
 platform = {'name': 'getonboard'}
 
 
 class RunSpiderTaskTestCase(JobsTestCase):
-    """Test /answer"""
-    """
-    🔽🔽🔽 Without Task
-    """
-    @patch('breathecode.jobs.tasks.async_run_spider', MagicMock())
+    @patch('breathecode.jobs.actions.run_spider', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_async_run_spider__without_tasks(self):
         from logging import Logger
-        from breathecode.jobs.actions import save_data
-        model = self.generate_models(spider=spider, zyte_project=zyte_project, platform=platform)
 
-        async_run_spider.delay(model['spider'].id)
-        self.assertEqual(self.bc.database.list_of('jobs.Spider'), [self.bc.format.to_dict(model.spider)])
-        self.assertEqual(Logger.error.call_args_list, [
-            call('Starting async_run_spider'),
-            call('Starting async_run_spider'),
-            call('Starting async_run_spider'),
-            call('Starting async_run_spider'),
-            call('Starting async_run_spider'),
-            call('Starting async_run_spider')
-        ])
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
+
+        async_run_spider.delay({'spi_id': model['spider'].id})
+        self.assertEqual(
+            Logger.error.call_args_list,
+            [call('Starting async_run_spider'),
+             call('Starting async_run_spider in spider name getonboard')])

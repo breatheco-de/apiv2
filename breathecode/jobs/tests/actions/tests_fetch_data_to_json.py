@@ -296,8 +296,8 @@ class ActionFetchDataToJsonTestCase(JobsTestCase):
                 [call('https://storage.scrapinghub.com/items/570286/3/35?apikey=1234567&format=json')])
 
         except Exception as e:
-            self.assertEquals(str(e), ('bad-resmponse-fetch'))
+            self.assertEquals(str(e), ('bad-response-fetch'))
             self.assertEqual(Logger.error.call_args_list, [
                 call('There was a 400 error fetching spider 3 job 3 (fetch_data_to_json)'),
-                call('Status 400 - bad-resmponse-fetch')
+                call('Status 400 - bad-response-fetch')
             ])

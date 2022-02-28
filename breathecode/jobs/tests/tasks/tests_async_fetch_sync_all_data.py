@@ -1,7 +1,3 @@
-"""
-Test /answer
-"""
-
 from django.utils import timezone
 from datetime import timedelta
 from unittest.mock import MagicMock, call, patch
@@ -13,31 +9,22 @@ from breathecode.tests.mocks import (
 
 from ...tasks import async_fetch_sync_all_data
 
-spider = {'name': 'getonboard', 'zyte_spider_number': 3, 'zyte_job_number': 0}
-zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
+spider = {'name': 'getonboard', 'zyte_spider_number': 4, 'zyte_job_number': 0}
+zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 223344}
 platform = {'name': 'getonboard'}
 
 
 class AsyncFetchSyncAllDataTaskTestCase(JobsTestCase):
-    """Test /answer"""
-    """
-    🔽🔽🔽 Without Task
-    """
-    @patch('breathecode.jobs.tasks.async_fetch_sync_all_data', MagicMock())
+    @patch('breathecode.jobs.actions.fetch_sync_all_data', MagicMock())
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_async_async_fetch_sync_all_data__without_tasks(self):
+    def test_async_async_fetch_sync_all_data__with_spider(self):
         from logging import Logger
-        from breathecode.jobs.actions import save_data
+
         model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
-        async_fetch_sync_all_data.delay(model.spider.id)
-        self.assertEqual(self.bc.database.list_of('jobs.Spider'), [self.bc.format.to_dict(model.spider)])
+        async_fetch_sync_all_data.delay({'spi_id': model['spider'].id})
         self.assertEqual(Logger.error.call_args_list, [
             call('Starting async_fetch_sync_all_data'),
-            call('Starting async_fetch_sync_all_data'),
-            call('Starting async_fetch_sync_all_data'),
-            call('Starting async_fetch_sync_all_data'),
-            call('Starting async_fetch_sync_all_data'),
-            call('Starting async_fetch_sync_all_data')
+            call('Starting async_fetch_sync_all_data in spider name getonboard')
         ])

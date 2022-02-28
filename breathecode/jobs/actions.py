@@ -87,7 +87,7 @@ def fetch_data_to_json(spider, api_fetch):
                 )
                 raise ValidationException(
                     f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spider}',
-                    slug='bad-resmponse-fetch')
+                    slug='bad-response-fetch')
 
             new_jobs = save_data(spider, response.json())
             data_project.append({

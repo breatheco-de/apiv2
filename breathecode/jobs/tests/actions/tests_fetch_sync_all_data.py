@@ -28,7 +28,57 @@ DATA = {
         'close_reason': 'finished',
         'elapsed': 609370879,
         'logs': 74,
-        'id': '570286/2/72',
+        'id': '223344/2/72',
+        'started_time': '2022-01-02T22:56:02',
+        'updated_time': '2022-01-02T23:53:52',
+        'items_scraped': 227,
+        'errors_count': 0,
+        'responses_received': 555
+    }, {
+        'priority': 2,
+        'tags': [],
+        'version': '2f9f2a5-master',
+        'state': 'finished',
+        'spider_type': 'manual',
+        'spider': 'indeed',
+        'spider_args': {
+            'job': 'front end',
+            'loc': 'remote'
+        },
+        'close_reason': 'finished',
+        'elapsed': 609370879,
+        'logs': 75,
+        'id': '223344/2/75',
+        'started_time': '2022-01-02T22:56:02',
+        'updated_time': '2022-01-02T23:53:52',
+        'items_scraped': 227,
+        'errors_count': 0,
+        'responses_received': 555
+    }]
+}
+
+DATA1 = {
+    'status':
+    'ok',
+    'count':
+    1,
+    'total':
+    1,
+    'jobs': [{
+        'priority': 2,
+        'tags': [],
+        'version': '2f9f2a5-master',
+        'state': 'finished',
+        'spider_type': 'manual',
+        'spider': 'indeed',
+        'spider_args': {
+            'job': 'front end',
+            'loc': 'remote'
+        },
+        'close_reason': 'finished',
+        'elapsed': 609370879,
+        'logs': 74,
+        'id': '223344/2/72',
         'started_time': '2022-01-02T22:56:02',
         'updated_time': '2022-01-02T23:53:52',
         'items_scraped': 227,
@@ -38,107 +88,66 @@ DATA = {
 }
 
 JOBS = [{
-    'status':
-    'ok',
-    'platform_name':
-    'indeed',
-    'num_spider':
-    '2',
-    'num_job':
-    '72',
-    'jobs': [{
-        'Searched_job': 'junior web developer',
-        'Job_title': 'Desarrollador Full-Stack',
-        'Location': 'Santiago (temporarily remote)',
-        'Company_name': 'Centry',
-        'Post_date': 'January 19, 2022',
-        'Extract_date': '2022-01-30',
-        'Job_description': '',
-        'Salary': '$1800 - 2100 USD/month',
-        'Tags': ['api', 'back-end', 'full-stack', 'git', 'java', 'mvc', 'python', 'ruby'],
-        'Apply_to':
-        'https://www.getonbrd.com/jobs/programming/desarrollador-full-stack-developer-centry-santiago',
-        '_type': 'dict'
-    }, {
-        'Searched_job':
-        'junior web developer',
-        'Job_title':
-        'Desarrollador Full-Stack Python/React',
-        'Location':
-        'Remote',
-        'Company_name':
-        'Alluxi',
-        'Post_date':
-        'January 14, 2022',
-        'Extract_date':
-        '2022-01-30',
-        'Job_description':
-        'Al menos 1 año de experiencia trabajando con Python y Django Al menos 1 año de experiencia trabajando con React.js Experiencia desarrollando APIs REST Ingles Conversacional Buscamos un desarrollador responsable, autodidacta, proactivo, eficiente y organizado.',
-        'Salary':
-        '$1800 - 2000 USD/month',
-        'Tags':
-        ['api', 'back-end', 'django', 'english', 'front-end', 'full-stack', 'javascript', 'python', 'react'],
-        'Apply_to':
-        'https://www.getonbrd.com/jobs/programming/desarrollodor-fullstack-python-react-alluxi-remote',
-        '_type':
-        'dict'
-    }, {
-        'Searched_job':
-        'junior web developer',
-        'Job_title':
-        'Full-Stack Developer',
-        'Location':
-        'Santiago',
-        'Company_name':
-        'AAXIS Commerce',
-        'Post_date':
-        'January 17, 2022',
-        'Extract_date':
-        '2022-01-30',
-        'Job_description':
-        'Four-year degree in any computer science-related field or equivalent experience. At least 3-year solid front-end developer as well as back-end full stack developer. Relevant experience working with PHP/Symfony (if it is in Magento or Oro Commerce, even better). Familiar with responsive/adaptive design and mobile development best practices. Web and mobile development, familiar with front+back end developing and data interaction.  Experience with Express, Redis. and Node.js, mainframe (React, Angular, Knockout) preferred for React.',
-        'Salary':
-        'Not supplied',
-        'Tags': [
-            'angularjs', 'back-end', 'express', 'front-end', 'full-stack', 'javascript', 'magento',
-            'mobile development', 'node.js', 'php', 'react', 'redis', 'responsive', 'symfony', 'ui design'
-        ],
-        'Apply_to':
-        'https://www.getonbrd.com/jobs/programming/full-stack-developer-aaxis-commerce-santiago-3c8e',
-        '_type':
-        'dict'
-    }, {
-        'Searched_job':
-        'junior web developer',
-        'Job_title':
-        'Junior Web Developer',
-        'Location':
-        'Remote',
-        'Company_name':
-        'Reign',
-        'Post_date':
-        'January 29, 2022',
-        'Extract_date':
-        '2022-01-30',
-        'Job_description':
-        '',
-        'Salary':
-        'Not supplied',
-        'Tags': [
-            'angularjs', 'api', 'back-end', 'ci/cd', 'css', 'docker', 'front-end', 'html5', 'javascript',
-            'json', 'mongodb', 'node.js', 'nosql', 'postgresql', 'react', 'responsive', 'ui design',
-            'virtualization'
-        ],
-        'Apply_to':
-        'https://www.getonbrd.com/jobs/programming/junior-web-developer-reign-remote',
-        '_type':
-        'dict'
-    }]
+    'Searched_job': 'ruby',
+    'Job_title': '.Net Core Developer',
+    'Location': 'New Orleans, LA',
+    'Company_name': 'Revelry Labs',
+    'Post_date': '8 days ago',
+    'Extract_date': '2022-02-17',
+    'Job_description':
+    'Net Core Developer who has experience with .net Core, C#, and SQL Server Database experience.',
+    'Salary': '',
+    'Tags': [],
+    'Apply_to':
+    'https://www.indeed.com/company/Revelry/jobs/Net-Core-Developer-a8e4e600cb716fb7?fccid=89b6cc7775dbcb2b&vjs=3',
+    '_type': 'dict'
+}, {
+    'Searched_job': 'ruby',
+    'Job_title': 'Junior DevOps Engineer',
+    'Location': 'Remote',
+    'Company_name': 'Clear Labs',
+    'Post_date': '2 days ago',
+    'Extract_date': '2022-02-17',
+    'Job_description': 'We are looking for a qualified engineer for a full time Junior DevOps Role.',
+    'Salary': '',
+    'Tags': [],
+    'Apply_to':
+    'https://www.indeed.com/company/Clear-Labs/jobs/Junior-Devop-Engineer-71a0689ea2bd8cb1?fccid=250710b384a27cb1&vjs=3',
+    '_type': 'dict'
 }]
 
-spider = {'name': 'getonboard', 'zyte_spider_number': 3, 'zyte_job_number': 0}
-zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
-platform = {'name': 'getonboard'}
+JOBS2 = [{
+    'Searched_job': 'ruby',
+    'Job_title': '.Net Core Developer',
+    'Location': 'New Orleans, LA',
+    'Company_name': 'Revelry Labs',
+    'Post_date': '8 days ago',
+    'Extract_date': '2022-02-17',
+    'Job_description':
+    'Net Core Developer who has experience with .net Core, C#, and SQL Server Database experience.',
+    'Salary': '',
+    'Tags': [],
+    'Apply_to':
+    'https://www.indeed.com/company/Revelry/jobs/Net-Core-Developer-a8e4e600cb716fb7?fccid=89b6cc7775dbcb2b&vjs=3',
+    '_type': 'dict'
+}, {
+    'Searched_job': 'ruby',
+    'Job_title': 'Junior DevOps Engineer',
+    'Location': 'Remote',
+    'Company_name': 'Clear Labs',
+    'Post_date': '2 days ago',
+    'Extract_date': '2022-02-17',
+    'Job_description': 'We are looking for a qualified engineer for a full time Junior DevOps Role.',
+    'Salary': '',
+    'Tags': [],
+    'Apply_to':
+    'https://www.indeed.com/company/Clear-Labs/jobs/Junior-Devop-Engineer-71a0689ea2bd8cb1?fccid=250710b384a27cb1&vjs=3',
+    '_type': 'dict'
+}]
+
+spider = {'name': 'indeed', 'zyte_spider_number': 2, 'zyte_job_number': 0}
+zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 223344}
+platform = {'name': 'indeed'}
 
 
 class ActionTestFetchSyncAllDataAdminTestCase(JobsTestCase):
@@ -156,69 +165,45 @@ class ActionTestFetchSyncAllDataAdminTestCase(JobsTestCase):
 
     @patch('breathecode.jobs.actions.fetch_sync_all_data', MagicMock())
     @patch(REQUESTS_PATH['get'],
-           apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA)]),
-           (200, 'https://storage.scrapinghub.com/items/570286/2/71?apikey=1234567&format=json', JOBS))
-    def test_fetch_funtion__with_one_spider(self):
+           apply_requests_get_mock([
+               (200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA),
+               (200, 'https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json', JOBS),
+               (200, 'https://storage.scrapinghub.com/items/223344/2/75?apikey=1234567&format=json', JOBS2)
+           ]))
+    def test_fetch_funtion__with_one_spider_two_requests(self):
         import requests
 
         model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
+
         result = fetch_sync_all_data(model.spider)
-        # self.assertEqual(result, DATA)
-        # self.assertEqual(requests.get.call_args_list, [
-        #     call('https://app.scrapinghub.com/api/jobs/list.json',
-        #          params=(
-        #              ('project', model.zyte_project.zyte_api_deploy),
-        #              ('spider', model.zyte_project.platform.name),
-        #              ('state', 'finished'),
-        #          ),
-        #          auth=(model.zyte_project.zyte_api_key, ''))
-        # ])
 
-    """
-    🔽🔽🔽 With two Spiders
-    """
+        self.assertEqual(result, DATA)
+        self.assertEqual(requests.get.call_args_list, [
+            call('https://app.scrapinghub.com/api/jobs/list.json',
+                 params=(('project', '223344'), ('spider', 'indeed'), ('state', 'finished')),
+                 auth=('1234567', '')),
+            call('https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json'),
+            call('https://storage.scrapinghub.com/items/223344/2/75?apikey=1234567&format=json')
+        ])
 
-    # @patch(REQUESTS_PATH['get'],
-    #        apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA)]))
-    # def test_fetch_funtion__with_two_spiders(self):
-    #     """Test /answer With two Spiders"""
-    #     import requests
+    @patch('breathecode.jobs.actions.fetch_sync_all_data', MagicMock())
+    @patch(REQUESTS_PATH['get'],
+           apply_requests_get_mock([
+               (200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA1),
+               (200, 'https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json', JOBS)
+           ]))
+    def test_verify_fetch_funtions_was_calletd(self):
+        import requests
 
-    #     model_1 = self.generate_models(spider=True)
-    #     model_2 = self.generate_models(spider=True)
-    #     result_1 = fetch_sync_all_data(model_1.spider)
-    #     result_2 = fetch_sync_all_data(model_2.spider)
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
-    #     self.assertEqual(result_1, DATA)
-    #     self.assertEqual(result_2, DATA)
-    #     self.assertEqual(requests.get.call_args_list, [
-    #         call('https://app.scrapinghub.com/api/jobs/list.json',
-    #              params=(
-    #                  ('project', model_1.zyte_project.zyte_api_deploy),
-    #                  ('spider', model_1.zyte_project.platform.name),
-    #                  ('state', 'finished'),
-    #              ),
-    #              auth=(model_1.zyte_project.zyte_api_key, '')),
-    #         call('https://app.scrapinghub.com/api/jobs/list.json',
-    #              params=(
-    #                  ('project', model_2.zyte_project.zyte_api_deploy),
-    #                  ('spider', model_2.zyte_project.platform.name),
-    #                  ('state', 'finished'),
-    #              ),
-    #              auth=(model_2.zyte_project.zyte_api_key, ''))
-    #     ])
+        result = fetch_sync_all_data(model.spider)
 
-    # """
-    # 🔽🔽🔽 Verify fetch function was calletd with one Spider
-    # """
-
-    # @patch(REQUESTS_PATH['get'],
-    #        apply_requests_get_mock([(200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA)]))
-    # def test_verify_fetch_funtions_was_calletd(self):
-    #     """Test /Verify fetch function was calletd with one Spider"""
-    #     import requests
-
-    #     model = self.generate_models(spider=True)
-    #     result = fetch_sync_all_data(model.spider)
-    #     requests.get.assert_called()
-    #     self.assertEqual(result, DATA)
+        requests.get.assert_called()
+        self.assertEqual(result, DATA1)
+        self.assertEqual(requests.get.call_args_list, [
+            call('https://app.scrapinghub.com/api/jobs/list.json',
+                 params=(('project', '223344'), ('spider', 'indeed'), ('state', 'finished')),
+                 auth=('1234567', '')),
+            call('https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json')
+        ])
