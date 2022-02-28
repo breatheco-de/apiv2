@@ -15,11 +15,15 @@ API_URL = os.getenv('API_URL', '')
 
 def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
 
+    # default duration can be ovveriden by service
+    duration = timedelta(seconds=3600)
+    if mentor.service.duration is not None:
+        duration = mentor.service.duration
+
     if mentee is not None and force_create == False:
         unfinished_with_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
                                                                   mentee__id=mentee.id,
                                                                   status__in=['PENDING', 'STARTED'])
-        print('unfinished_with_mentee_sessions', unfinished_with_mentee.count())
         if unfinished_with_mentee.count() > 0:
             return unfinished_with_mentee
 
@@ -30,7 +34,12 @@ def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
                                                                      status__in=['PENDING', 'STARTED'])
         # delete the pendings ones, its worth creating a new meeting
         if unfinished_without_mentee.count() > 0:
-            unfinished_without_mentee.delete()
+            session = unfinished_without_mentee.first()
+            session.ends_at = timezone.now() + duration
+            session.mentee = mentee
+            session.save()
+            unfinished_without_mentee.exclude(id=session.id).delete()
+            return MentorshipSession.objects.filter(id=session.id)
 
     # if its a mentor, I will force him to close pending sessions
     if mentor.user.id == token.user.id and not force_create:
@@ -43,11 +52,6 @@ def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
 
     # if force_create == True we will try getting from the available unnused sessions
     # if I'm here its because there was no previous pending sessions so we will create one
-
-    # default duration can be ovveriden by service
-    duration = timedelta(seconds=3600)
-    if mentor.service.duration is not None:
-        duration = mentor.service.duration
 
     session = MentorshipSession(mentor=mentor,
                                 mentee=mentee,

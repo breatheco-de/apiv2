@@ -585,6 +585,13 @@ def save_github_token(request):
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationException('No callback URL specified', slug='no-callback-url')
+
+    # the url may or may not be encoded
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     code = request.query_params.get('code', None)
     if code == None:
         raise ValidationException('No github code specified', slug='no-code')
@@ -712,6 +719,12 @@ def get_slack_token(request):
     if url is None:
         raise ValidationError('No callback URL specified')
 
+    # the url may or may not be encoded
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     user_id = request.query_params.get('user', None)
     if user_id is None:
         raise ValidationError('No user specified on the URL')
@@ -720,7 +733,6 @@ def get_slack_token(request):
     if academy is None:
         raise ValidationError('No academy specified on the URL')
 
-    url = base64.b64decode(url).decode('utf-8')
     # Missing scopes!! admin.invites:write, identify
     scopes = ('app_mentions:read', 'channels:history', 'channels:join', 'channels:read', 'chat:write',
               'chat:write.customize', 'commands', 'files:read', 'files:write', 'groups:history',
@@ -849,6 +861,12 @@ def get_facebook_token(request):
     if url is None:
         raise ValidationError('No callback URL specified')
 
+    # the url may or may not be encoded
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     user_id = request.query_params.get('user', None)
     if user_id is None:
         raise ValidationError('No user specified on the URL')
@@ -857,7 +875,6 @@ def get_facebook_token(request):
     if academy is None:
         raise ValidationError('No academy specified on the URL')
 
-    url = base64.b64decode(url).decode('utf-8')
     # Missing scopes!! admin.invites:write, identify
     scopes = (
         'email',
@@ -1220,10 +1237,11 @@ def login_html_view(request):
             if url is None or url == '':
                 raise Exception('Invalid redirect url, you must specify a url to redirect to')
 
+            # the url may or may not be encoded
             try:
                 url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
             except Exception as e:
-                raise e
+                pass
 
             email = request.POST.get('email', None)
             password = request.POST.get('password', None)
@@ -1270,6 +1288,11 @@ def get_google_token(request, token=None):
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationException('No callback URL specified', slug='no-callback-url')
+
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
 
     token = Token.get_valid(
         token)  # IMPORTANT!! you can only connect to google with temporal short lasting tokens
