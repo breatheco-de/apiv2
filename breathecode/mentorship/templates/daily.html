@@ -61,7 +61,9 @@
             callFrame.join({ url: '{{ room_url }}' });
             callFrame.on('left-meeting', (event) => {
                 console.log('left meeting event', event);
-                {% if leave_url and leave_url is not None and leave_url != "" %}
+                {% if leave_url == "close" %}
+                window.close();
+                {% elif leave_url and leave_url is not None and leave_url != "" %}
                 window.location.href = '{{ leave_url }}';
                 {% endif %}
                 // callFrame.iframe().style.visibility = 'visible';

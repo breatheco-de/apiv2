@@ -90,6 +90,8 @@ def render_session(request, session, token):
 
     if token.user.id == session.mentor.user.id:
         data['leave_url'] = '/mentor/session/' + str(session.id) + '?token=' + token.key
+    else:
+        data['leave_url'] = 'close'
 
     return render(request, 'daily.html', data)
 
