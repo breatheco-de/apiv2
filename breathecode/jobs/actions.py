@@ -107,7 +107,6 @@ def save_data(spider, jobs):
     new_jobs = 0
 
     for j in jobs:
-        print('title', j['Job_title'])
         locations, remote = class_scrapper.get_location_from_string(j['Location'])
         location_pk = class_scrapper.get_pk_location(locations)
 

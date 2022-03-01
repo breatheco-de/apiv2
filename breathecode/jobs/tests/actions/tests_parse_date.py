@@ -29,7 +29,7 @@ class ActionRunSpiderTestCase(JobsTestCase):
     def test_parse_date__verify_format_published_date(self):
         job = {'published_date_raw': '30+ days ago'}
         model = self.bc.database.create(platform=platform, zyte_project=zyte_project, spider=spider, job=job)
-        print(model.job.spider.zyte_project.platform.name)
+
         result = parse_date(model.job)
         result = result.published_date_processed
         result = f'{result.year}-{result.month}-{result.day}'
