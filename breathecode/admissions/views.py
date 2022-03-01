@@ -1080,7 +1080,7 @@ class SyllabusVersionView(APIView):
                     Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
                 ).order_by('-version').first()
 
-            if syllabus_version is None and version:
+            if syllabus_version is None and version is not None and version != 'latest':
                 syllabus_version = SyllabusVersion.objects.filter(
                     Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
                     Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
