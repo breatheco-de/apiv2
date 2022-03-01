@@ -142,10 +142,9 @@ def forward_meet_url(request, mentor_slug, token):
                 request,
                 f'The mentoring session expired {timeago.format(session.ends_at, now)}: You can <a href="{extend_url}">extend it for another 30 minutes</a> or end the session right now.',
                 btn_label='End Session',
-                academy=session.academy,
                 btn_url=f'/mentor/session/{str(session.id)}?token={token.key}',
                 btn_target='_self',
-                data={'LOGO': service.logo_url if service.logo_url is not None else service.academy.logo_url})
+            )
         else:
             return render_message(
                 request,
