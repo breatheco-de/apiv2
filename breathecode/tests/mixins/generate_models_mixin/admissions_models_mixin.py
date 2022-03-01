@@ -42,11 +42,10 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    syllabus=False,
                                    academy_specialty_mode=False,
                                    cohort_time_slot=False,
-                                   time_slot=False,
                                    syllabus_version=False,
                                    specialty_mode_time_slot=False,
+                                   monitor_script=False,
                                    country_kwargs={},
-                                   time_slot_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
                                    academy_kwargs={},
@@ -78,7 +77,8 @@ class AdmissionsModelsMixin(ModelsMixin):
             models['city'] = create_models(city, 'admissions.City', **{**kargs, **city_kwargs})
 
         if not 'academy' in models and (is_valid(academy) or is_valid(profile_academy) or is_valid(syllabus)
-                                        or is_valid(academy_specialty_mode) or is_valid(cohort)):
+                                        or is_valid(academy_specialty_mode) or is_valid(cohort)
+                                        or is_valid(monitor_script)):
             kargs = {}
 
             if 'country' in models:

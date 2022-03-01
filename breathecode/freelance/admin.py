@@ -23,7 +23,6 @@ def generate_bill(modeladmin, request, queryset):
     freelancers = queryset.all()
     for freelancer in freelancers:
         try:
-            print(f'Genereting bill for {freelancer.user.email}')
             actions.generate_freelancer_bill(freelancer)
         except ValueError as err:
             messages.error(request, err)
@@ -74,7 +73,7 @@ mask_as_ignored.short_description = 'Mark as IGNORED'
 
 @admin.register(Freelancer)
 class FreelancerAdmin(admin.ModelAdmin):
-    list_display = ['user_id', 'full_name', 'email']
+    list_display = ['user_id', 'full_name', 'email', 'github', 'price_per_hour']
     raw_id_fields = ['user', 'github_user']
     actions = [sync_issues, generate_bill]
 
@@ -84,11 +83,21 @@ class FreelancerAdmin(admin.ModelAdmin):
     def email(self, obj):
         return obj.user.email
 
+    def github(self, obj):
+        if obj.github_user is None:
+            return format_html(f"<span class='badge bg-error'> Missing github connection</span>")
+
+        if obj.price_per_hour == 0 or obj.price_per_hour is None:
+            return format_html(f"<span class='badge bg-error'> Missing rate per hour</span>")
+
+        return format_html(f"<span class='badge bg-success'>Connected to Github</span>")
+
 
 @admin.register(Issue)
 class IssueAdmin(admin.ModelAdmin):
     search_fields = [
-        'title', 'freelancer__user__email', 'freelancer__user__first_name', 'freelancer__user__last_name'
+        'title', 'freelancer__user__email', 'freelancer__user__first_name', 'freelancer__user__last_name',
+        'github_number'
     ]
     list_display = ('id', 'github_number', 'freelancer', 'title', 'status', 'duration_in_hours', 'bill_id',
                     'github_url')

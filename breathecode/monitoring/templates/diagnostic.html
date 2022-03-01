@@ -3,7 +3,7 @@
 <h2>{{ subject }}</h2>
 <table cellpadding="15" cellspacing="0" border="0" align="center" bgcolor="{{ style__secondary }}">
     <tr><td>
-        <pre>{{ details }}</pre>
+        <div style="white-space: pre-wrap;">{{ details|safe }}</div>
     </tr></td>
 </table>
 {% endblock %}

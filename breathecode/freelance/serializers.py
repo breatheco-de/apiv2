@@ -34,12 +34,19 @@ class SmallIssueSerializer(serpy.Serializer):
     id = serpy.Field()
     title = serpy.Field()
     status = serpy.Field()
+    status_message = serpy.Field()
+    node_id = serpy.Field()
     duration_in_minutes = serpy.Field()
     duration_in_hours = serpy.Field()
     url = serpy.Field()
     github_number = serpy.Field()
     freelancer = SmallFreelancerSerializer()
     author = serpy.Field()
+    included_in_bill = serpy.MethodField()
+
+    def get_included_in_bill(self, obj):
+        return (obj.status_message is None or obj.status_message == '') and (obj.node_id is not None
+                                                                             and obj.node_id != '')
 
 
 class BigBillSerializer(serpy.Serializer):

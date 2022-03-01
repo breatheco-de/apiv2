@@ -198,11 +198,13 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         if academy is None:
             raise ValidationException(f'Academy {academy_id} not found')
 
-        organization_id = Organization.objects.filter(academy__id=academy_id).values_list('id',
+        organization_id = Organization.objects.filter(
+            Q(academy__id=academy_id) | Q(organizer__academy__id=academy_id)).values_list('id',
                                                                                           flat=True).first()
         if not organization_id:
-            raise ValidationException('Your academy doesn\'t have the integrations with Eventbrite done',
-                                      slug='organization-not-exist')
+            raise ValidationException(
+                f"Academy {academy.name} doesn\'t have the integrations with Eventbrite done",
+                slug='organization-not-exist')
 
         data = {}
         for key in request.data.keys():
@@ -224,11 +226,13 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination):
         if already is None:
             raise ValidationException(f'Event not found for this academy {academy_id}')
 
-        organization_id = Organization.objects.filter(academy__id=academy_id).values_list('id',
+        organization_id = Organization.objects.filter(
+            Q(academy__id=academy_id) | Q(organizer__academy__id=academy_id)).values_list('id',
                                                                                           flat=True).first()
         if not organization_id:
-            raise ValidationException('Your academy doesn\'t have the integrations with Eventbrite done',
-                                      slug='organization-not-exist')
+            raise ValidationException(
+                f"Academy {already.academy.name} doesn\'t have the integrations with Eventbrite done",
+                slug='organization-not-exist')
 
         data = {}
         for key in request.data.keys():
@@ -433,12 +437,11 @@ class OrganizationWebhookView(APIView, HeaderLimitOffsetPagination):
     @capable_of('read_organization')
     def get(self, request, academy_id=None):
 
-        # webhooks = EventbriteWebhook.objects.filter(organization_id=organization_id)
         org = Organization.objects.filter(academy__id=academy_id).first()
         if not org:
             raise ValidationException(f'Academy has no organization', code=400, slug='organization-no-found')
 
-        webhooks = EventbriteWebhook.objects.filter(organization_id=org.id)
+        webhooks = EventbriteWebhook.objects.filter(organization_id=org.id).order_by('-updated_at')
         page = self.paginate_queryset(webhooks, request)
         serializer = EventbriteWebhookSerializer(page, many=True)
         if self.is_paginate(request):

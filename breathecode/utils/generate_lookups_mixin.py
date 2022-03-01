@@ -1,5 +1,7 @@
 from rest_framework.exceptions import APIException
 
+__all__ = ['GenerateLookupsMixin']
+
 
 class GenerateLookupsMixin(APIException):
     def __field_exists__(self, request, field: str):

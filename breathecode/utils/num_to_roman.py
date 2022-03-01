@@ -14,6 +14,8 @@ ROMAN = [
     (1, 'I'),
 ]
 
+__all__ = ['num_to_roman']
+
 
 def num_to_roman(number, lower=False):
     result = []

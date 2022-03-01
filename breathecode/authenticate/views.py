@@ -41,10 +41,12 @@ from breathecode.notify.models import SlackTeam
 from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
 from breathecode.utils.find_by_full_name import query_like_by_full_name
+from breathecode.utils.views import set_query_parameter
 from .serializers import (GetProfileAcademySmallSerializer, UserInviteWaitingListSerializer, UserSerializer,
                           AuthSerializer, UserSmallSerializer, GetProfileAcademySerializer,
                           MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
-                          RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer)
+                          RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer,
+                          RoleBigSerializer)
 
 logger = logging.getLogger(__name__)
 
@@ -237,22 +239,30 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if request.user is None:
             raise ValidationException('User not found', 404)
 
-        invite = UserInvite.objects.filter(email=request.user.email, status='PENDING').first()
-        if invite is None:
-            raise ValidationException('No pending invite was found', 404)
+        invites = UserInvite.objects.filter(email=request.user.email, status='PENDING')
 
-        serializer = UserInviteSerializer(invite, many=False)
+        status = request.GET.get('status', '')
+        if status != '':
+            invites = invites.filter(status__in=status.split(','))
+
+        serializer = UserInviteSerializer(invites, many=True)
         return Response(serializer.data)
 
-    def put(self, request):
+    def put(self, request, new_status=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
+
+        if new_status is None:
+            raise ValidationException(f'Please specify new status for the invites', slug='missing-status')
+
+        if new_status.upper() not in ['ACCEPTED', 'REJECTED']:
+            raise ValidationException(f'Invalid invite status {new_status}')
 
         if lookups:
             items = UserInvite.objects.filter(**lookups, email=request.user.email)
 
             for item in items:
 
-                item.status = 'ACCEPTED'
+                item.status = new_status.upper()
                 item.save()
 
                 exists = ProfileAcademy.objects.filter(email=item.email, academy__id=item.academy.id)
@@ -507,7 +517,17 @@ def get_user_by_id_or_email(request, id_or_email):
 
 
 @api_view(['GET'])
-def get_roles(request):
+@permission_classes([AllowAny])
+def get_roles(request, role_slug=None):
+
+    if role_slug is not None:
+        role = Role.objects.filter(slug=role_slug).first()
+        if role is None:
+            raise ValidationException('Role not found', code=404)
+
+        serializer = RoleBigSerializer(role)
+        return Response(serializer.data)
+
     queryset = Role.objects.all()
     serializer = RoleSmallSerializer(queryset, many=True)
     return Response(serializer.data)
@@ -565,6 +585,13 @@ def save_github_token(request):
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationException('No callback URL specified', slug='no-callback-url')
+
+    # the url may or may not be encoded
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     code = request.query_params.get('code', None)
     if code == None:
         raise ValidationException('No github code specified', slug='no-code')
@@ -692,6 +719,12 @@ def get_slack_token(request):
     if url is None:
         raise ValidationError('No callback URL specified')
 
+    # the url may or may not be encoded
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     user_id = request.query_params.get('user', None)
     if user_id is None:
         raise ValidationError('No user specified on the URL')
@@ -700,7 +733,6 @@ def get_slack_token(request):
     if academy is None:
         raise ValidationError('No academy specified on the URL')
 
-    url = base64.b64decode(url).decode('utf-8')
     # Missing scopes!! admin.invites:write, identify
     scopes = ('app_mentions:read', 'channels:history', 'channels:join', 'channels:read', 'chat:write',
               'chat:write.customize', 'commands', 'files:read', 'files:write', 'groups:history',
@@ -829,6 +861,12 @@ def get_facebook_token(request):
     if url is None:
         raise ValidationError('No callback URL specified')
 
+    # the url may or may not be encoded
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     user_id = request.query_params.get('user', None)
     if user_id is None:
         raise ValidationError('No user specified on the URL')
@@ -837,7 +875,6 @@ def get_facebook_token(request):
     if academy is None:
         raise ValidationError('No academy specified on the URL')
 
-    url = base64.b64decode(url).decode('utf-8')
     # Missing scopes!! admin.invites:write, identify
     scopes = (
         'email',
@@ -1071,7 +1108,7 @@ class PasswordResetView(APIView):
 
 
 class AcademyInviteView(APIView):
-    @capable_of('crud_member')
+    @capable_of('invite_resend')
     def put(self, request, pa_id=None, academy_id=None):
         if pa_id is not None:
             profile_academy = ProfileAcademy.objects.filter(id=pa_id).first()
@@ -1200,6 +1237,12 @@ def login_html_view(request):
             if url is None or url == '':
                 raise Exception('Invalid redirect url, you must specify a url to redirect to')
 
+            # the url may or may not be encoded
+            try:
+                url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+            except Exception as e:
+                pass
+
             email = request.POST.get('email', None)
             password = request.POST.get('password', None)
 
@@ -1220,7 +1263,8 @@ def login_html_view(request):
                 raise Exception(msg, code=403)
 
             token, created = Token.get_or_create(user=user, token_type='login')
-            return HttpResponseRedirect(url + '?token=' + str(token))
+            return HttpResponseRedirect(
+                set_query_parameter(set_query_parameter(url, 'attempt', '1'), 'token', str(token)))
 
         except Exception as e:
             messages.error(request, e.message if hasattr(e, 'message') else e)
@@ -1244,6 +1288,11 @@ def get_google_token(request, token=None):
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationException('No callback URL specified', slug='no-callback-url')
+
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
 
     token = Token.get_valid(
         token)  # IMPORTANT!! you can only connect to google with temporal short lasting tokens

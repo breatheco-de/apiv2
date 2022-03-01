@@ -1,4 +1,4 @@
-import logging, json, os
+import logging, json, os, base64, re
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models import Q
 from urllib.parse import urlparse
@@ -168,7 +168,12 @@ def sync_github_lesson(github, asset):
     file_name = os.path.basename(asset.readme_url)
     logger.debug(f'Fetching markdown readme: src/content/lesson/{file_name}')
     readme_file = repo.get_contents('src/content/lesson/' + file_name)
-    asset.readme = str(readme_file.content)
+
+    decoded = base64.b64decode(readme_file.content.encode('utf-8')).decode('utf-8')
+    base_url = os.path.dirname(asset.readme_url)
+    replaced = re.sub(r'(["\'(])\.\.\/\.\.\/assets\/images\/([_\w\-\.]+)(["\')])',
+                      r'\1' + base_url + r'/../../assets/images/\2?raw=true\3', decoded)
+    asset.readme = str(base64.b64encode(replaced.encode('utf-8')).decode('utf-8'))
 
     return asset
 

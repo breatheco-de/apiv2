@@ -1,8 +1,12 @@
+from typing import Any
 from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.utils.validation_exception import ValidationException
 from .models import Event, Organization, EventbriteWebhook
+from slugify import slugify
 from rest_framework import serializers
-import serpy
+import serpy, logging
+
+logger = logging.getLogger(__name__)
 
 
 class CitySerializer(serpy.Serializer):
@@ -142,6 +146,35 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         exclude = ()
 
+    def validate(self, data: dict[str, Any]):
+
+        academy = self.context.get('academy_id')
+
+        if ('sync_with_eventbrite' not in data or data['sync_with_eventbrite']
+                == False) and ('url' not in data or data['url'] is None or data['url'] == ''):
+            raise ValidationException(
+                f'Event URL must not be empty unless it will be synched with Eventbrite', slug='empty-url')
+
+        if 'tags' not in data or data['tags'] == '':
+            raise ValidationException(f'Event must have at least one tag', slug='empty-tags')
+
+        validate_marketing_tags(data['tags'], academy, types=['DISCOVERY'])
+
+        if 'title' in data and not data.get('slug'):
+            data['slug'] = slugify(data['title']).lower()
+
+        if 'slug' in data and not data['slug'].lower().startswith('event-'):
+            data['slug'] = f'event-{data["slug"].lower()}'
+
+        elif 'slug' in data:
+            data['slug'] = f'{data["slug"].lower()}'
+
+        if 'slug' in data and Event.objects.filter(slug=data['slug']).exists():
+            raise ValidationException(f'Event slug already taken, try a different event title?',
+                                      slug='slug-taken')
+
+        return data
+
     def create(self, validated_data):
         # hard-code the organizer to the academy organizer
         try:
@@ -160,17 +193,6 @@ class EventSerializer(serializers.ModelSerializer):
             pass
 
         return super().update(instance, validated_data)
-
-    def validate_tags(self, value: str):
-        academy = self.context.get('academy_id')
-        validate_marketing_tags(value, academy, types=['DISCOVERY'])
-        return value
-
-    def validate_slug(self, value: str):
-        if value and not value.startswith('event-') and not value.startswith('EVENT-'):
-            value = f'event-{value}'
-
-        return value.lower()
 
 
 class OrganizationSerializer(serializers.ModelSerializer):

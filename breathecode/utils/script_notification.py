@@ -1,3 +1,6 @@
+__all__ = ['ScriptNotification']
+
+
 class ScriptNotification(Exception):
     def __init__(self, details, slug=None, status=None, title=None):
         self.status_code = 1

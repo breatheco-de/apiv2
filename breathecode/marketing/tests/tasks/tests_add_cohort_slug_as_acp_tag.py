@@ -109,6 +109,7 @@ class AnswerIdTestSuite(MarketingTestCase):
             'subscribers': 0,
             'tag_type': 'COHORT',
             'disputed_at': None,
+            'description': None,
             'disputed_reason': None,
         }])
 
@@ -132,7 +133,6 @@ class AnswerIdTestSuite(MarketingTestCase):
                                      active_campaign_academy_kwargs=active_campaign_academy_kwargs)
 
         add_cohort_slug_as_acp_tag.delay(1, 1)
-        print(self.all_tag_dict())
         self.assertEqual(self.all_tag_dict()[0]['tag_type'], 'COHORT')
 
         self.assertEqual(logging.Logger.warn.call_args_list, [
@@ -201,4 +201,5 @@ class AnswerIdTestSuite(MarketingTestCase):
         self.assertEqual(logging.Logger.error.call_args_list, [
             call(f'Error creating tag `{model.cohort.slug}` with status=404'),
             call(AC_ERROR_RESPONSE),
+            call('exception-creating-tag-in-acp', exc_info=True),
         ])

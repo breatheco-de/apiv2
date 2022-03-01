@@ -38,17 +38,13 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_resend_invite_no_capability(self):
         """Test """
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     syllabus=True)
+        model = self.generate_models(authenticate=True, profile_academy=True, syllabus=True)
         url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'pa_id': 1})
 
         response = self.client.put(url)
         json = response.json()
         expected = {
-            'detail': "You (user: 1) don't have this capability: crud_member for "
+            'detail': "You (user: 1) don't have this capability: invite_resend for "
             'academy 1',
             'status_code': 403
         }
@@ -63,7 +59,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
-                                     capability='crud_member',
+                                     capability='invite_resend',
                                      role='potato',
                                      syllabus=True)
 
@@ -83,7 +79,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
-                                     capability='crud_member',
+                                     capability='invite_resend',
                                      role='potato',
                                      syllabus=True)
         url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'pa_id': 1})
@@ -108,7 +104,7 @@ class AuthenticateTestSuite(AuthTestCase):
         user_invite_kwargs = {'email': 'email@dotdotdotdot.dot'}
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
-                                     capability='crud_member',
+                                     capability='invite_resend',
                                      role='potato',
                                      syllabus=True,
                                      user_invite=True,
@@ -125,12 +121,22 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertToken(json['token'])
         del json['token']
         del json['invite_url']
+        del json['role']
         expected = {
             'id': 1,
             'status': 'PENDING',
             'email': 'email@dotdotdotdot.dot',
             'first_name': None,
-            'last_name': None
+            'last_name': None,
+            'academy': {
+                'id': json['academy']['id'],
+                'slug': json['academy']['slug'],
+                'name': json['academy']['name'],
+            },
+            'cohort': {
+                'slug': json['cohort']['slug'],
+                'name': json['cohort']['name'],
+            },
         }
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
@@ -158,7 +164,7 @@ class AuthenticateTestSuite(AuthTestCase):
         past_time = timezone.now() - timedelta(seconds=100)
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
-                                     capability='crud_member',
+                                     capability='invite_resend',
                                      role='potato',
                                      syllabus=True,
                                      user_invite=True,

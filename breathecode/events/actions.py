@@ -1,10 +1,11 @@
+from typing import Any
 import pytz
 import re
 import logging
 
 from datetime import datetime, timedelta
-from breathecode.admissions.models import Cohort, CohortTimeSlot
 from django.utils import timezone
+from breathecode.admissions.models import Cohort, CohortTimeSlot
 
 from .models import Organization, Venue, Event, Organizer
 from .utils import Eventbrite
@@ -100,6 +101,70 @@ def create_or_update_venue(data, org, force_update=False):
     return venue
 
 
+def export_event_description_to_eventbrite(event: Event) -> None:
+    if not event:
+        logger.error(f'Event is not being provided')
+        return
+
+    if not event.eventbrite_id:
+        logger.error(f'Event {event.id} not have the integration with eventbrite')
+        return
+
+    if not event.organization:
+        logger.error(f'Event {event.id} not have a organization assigned')
+        return
+
+    if not event.description:
+        logger.warning(f'The event {event.id} not have description yet')
+        return
+
+    eventbrite_id = event.eventbrite_id
+    client = Eventbrite(event.organization.eventbrite_key)
+
+    payload = {
+        'modules': [{
+            'type': 'text',
+            'data': {
+                'body': {
+                    'type': 'text',
+                    'text': event.description,
+                    'alignment': 'left',
+                },
+            },
+        }],
+        'publish':
+        True,
+        'purpose':
+        'listing',
+    }
+
+    try:
+        structured_content = client.get_event_description(eventbrite_id)
+        result = client.create_or_update_event_description(eventbrite_id,
+                                                           structured_content['page_version_number'], payload)
+
+        if not result['modules']:
+            error = 'Could not create event description in eventbrite'
+            logger.error(error)
+
+            event.eventbrite_sync_description = error
+            event.eventbrite_sync_status = 'ERROR'
+            event.save()
+
+        else:
+            event.eventbrite_sync_description = timezone.now()
+            event.eventbrite_sync_status = 'SYNCHED'
+            event.save()
+
+    except Exception as e:
+        error = str(e)
+        logger.error(error)
+
+        event.eventbrite_sync_description = error
+        event.eventbrite_sync_status = 'ERROR'
+        event.save()
+
+
 def export_event_to_eventbrite(event: Event, org: Organization):
     if not org.academy:
         logger.error(f'The organization {org} not have a academy assigned')
@@ -135,6 +200,8 @@ def export_event_to_eventbrite(event: Event, org: Organization):
 
         event.eventbrite_sync_description = now
         event.eventbrite_sync_status = 'SYNCHED'
+
+        export_event_description_to_eventbrite(event)
 
     except Exception as e:
         event.eventbrite_sync_description = f'{now} => {e}'
@@ -177,7 +244,39 @@ def sync_org_events(org):
 
 # use for mocking purpose
 def get_current_iso_string():
+    from django.utils import timezone
+
     return str(timezone.now())
+
+
+def update_event_description_from_eventbrite(event: Event) -> None:
+    if not event:
+        logger.error(f'Event is not being provided')
+        return
+
+    if not event.eventbrite_id:
+        logger.error(f'Event {event.id} not have the integration with eventbrite')
+        return
+
+    if not event.organization:
+        logger.error(f'Event {event.id} not have a organization assigned')
+        return
+
+    eventbrite_id = event.eventbrite_id
+    client = Eventbrite(event.organization.eventbrite_key)
+
+    try:
+        data = client.get_event_description(eventbrite_id)
+        event.description = data['modules'][0]['data']['body']['text']
+        event.eventbrite_sync_description = timezone.now()
+        event.eventbrite_sync_status = 'PERSISTED'
+        event.save()
+
+    except:
+        error = f'The event {eventbrite_id} is coming from eventbrite not have a description'
+        logger.warning(error)
+        event.eventbrite_sync_description = error
+        event.eventbrite_sync_status = 'ERROR'
 
 
 def update_or_create_event(data, org):
@@ -246,11 +345,11 @@ def update_or_create_event(data, org):
         elif org.academy is not None:
             event.academy = org.academy
 
-        event.save()
-
         event.eventbrite_sync_description = now
         event.eventbrite_sync_status = 'PERSISTED'
         event.save()
+
+        update_event_description_from_eventbrite(event)
 
     except Exception as e:
         if event is not None:
@@ -260,6 +359,37 @@ def update_or_create_event(data, org):
         raise e
 
     return event
+
+
+def publish_event_from_eventbrite(data, org: Organization) -> None:
+    if not data:  #skip if no data
+        logger.log('Ignored event')
+        raise ValueError('data is empty')
+
+    now = get_current_iso_string()
+
+    try:
+        if not Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).count():
+            raise Warning(f'The event with the eventbrite id `{data["id"]}` doesn\'t exist in breathecode '
+                          'yet')
+
+        kwargs = {
+            'status': 'ACTIVE',
+            'eventbrite_status': data['status'],
+            'eventbrite_sync_description': now,
+            'eventbrite_sync_status': 'PERSISTED'
+        }
+
+        Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).update(**kwargs)
+        logger.log(f'The event with the eventbrite id `{data["id"]} was saved`')
+
+    except Warning as e:
+        logger.error(f'{now} => {e}')
+        raise e
+
+    except Exception as e:
+        logger.error(f'{now} => the body is coming from eventbrite has change')
+        raise e
 
 
 def fix_datetime_weekday(current, timeslot, prev=False, next=False):

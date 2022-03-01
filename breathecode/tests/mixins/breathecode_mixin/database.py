@@ -6,8 +6,6 @@ from django.db.models import Model
 from ..generate_models_mixin import GenerateModelsMixin
 from ..models_mixin import ModelsMixin
 
-ModelsMixin
-
 __all__ = ['Database']
 
 
@@ -68,7 +66,7 @@ class Database:
         result = model.objects.filter(pk=pk).first()
 
         if dict:
-            result = [ModelsMixin.remove_dinamics_fields(self, data.__dict__.copy()) for data in result]
+            result = ModelsMixin.remove_dinamics_fields(self, result.__dict__.copy())
 
         return result
 

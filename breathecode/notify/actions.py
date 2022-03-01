@@ -184,9 +184,10 @@ def get_template_content(slug, data={}, formats=None):
     #d = Context({ 'username': username })
     con = {
         'API_URL': os.environ.get('API_URL'),
-        'COMPANY_NAME': 'BreatheCode',
-        'COMPANY_LEGAL_NAME': 'BreatheCode LLC',
-        'COMPANY_ADDRESS': '1801 SW 3rd Ave, Ste 100, Miami',
+        'COMPANY_NAME': os.environ.get('COMPANY_NAME', ''),
+        'COMPANY_CONTACT_URL': os.environ.get('COMPANY_CONTACT_URL', ''),
+        'COMPANY_LEGAL_NAME': os.environ.get('COMPANY_LEGAL_NAME', ''),
+        'COMPANY_ADDRESS': os.environ.get('COMPANY_ADDRESS', ''),
         'style__success': '#99ccff',
         'style__danger': '#ffcccc',
         'style__secondary': '#ededed',
