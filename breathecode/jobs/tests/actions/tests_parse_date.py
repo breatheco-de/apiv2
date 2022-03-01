@@ -1,4 +1,4 @@
-from unittest.mock import patch, call
+from unittest.mock import patch, call, MagicMock
 from ...actions import parse_date
 from ..mixins import JobsTestCase
 from datetime import datetime, timedelta, date
@@ -8,7 +8,12 @@ from breathecode.tests.mocks import (
 )
 
 spider = {'name': 'indeed', 'zyte_spider_number': 2, 'zyte_job_number': 0}
-zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
+zyte_project = {
+    'zyte_api_key': 1234567,
+    'zyte_api_deploy': 11223344,
+    'zyte_api_spider_number': 2,
+    'zyte_api_last_job_number': 0
+}
 platform = {'name': 'indeed'}
 
 
@@ -20,10 +25,11 @@ class ActionRunSpiderTestCase(JobsTestCase):
         except Exception as e:
             self.assertEquals(str(e), ('data-job-none'))
 
+    # @patch('breathecode.jobs.actions.parse_date', MagicMock())
     def test_parse_date__verify_format_published_date(self):
         job = {'published_date_raw': '30+ days ago'}
-        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform, job=job)
-
+        model = self.bc.database.create(platform=platform, zyte_project=zyte_project, spider=spider, job=job)
+        print(model.job.spider.zyte_project.platform.name)
         result = parse_date(model.job)
         result = result.published_date_processed
         result = f'{result.year}-{result.month}-{result.day}'

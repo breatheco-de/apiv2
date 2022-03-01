@@ -23,6 +23,15 @@ class Position(models.Model):
 class ZyteProject(models.Model):
     zyte_api_key = models.CharField(max_length=150)
     zyte_api_deploy = models.CharField(max_length=50)
+    zyte_api_spider_number = models.IntegerField(
+        null=False,
+        blank=False,
+        help_text='This number is the one that corresponds when the ZYTE spider was created.')
+    zyte_api_last_job_number = models.IntegerField(
+        default=0,
+        null=True,
+        blank=True,
+        help_text='(Optional field) Start at 0 but increase with each search.')
 
     platform = models.ForeignKey(Platform, on_delete=models.CASCADE, null=False, blank=False)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
@@ -45,21 +54,38 @@ SPIDER_STATUS = (
 
 
 class Spider(models.Model):
+
+    # num_spider = self.zyte_project.objects.filter(id=zyte_project)
+
     name = models.CharField(max_length=150)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
-    job = models.CharField(max_length=150)
-    loc = models.CharField(max_length=150)
+    job_search = models.CharField(max_length=150)
+    loc_search = models.CharField(max_length=150,
+                                  null=True,
+                                  blank=True,
+                                  help_text='This field may be optional on some platforms.')
     zyte_project = models.ForeignKey(ZyteProject, on_delete=models.CASCADE, null=False, blank=False)
-    zyte_spider_number = models.IntegerField(help_text='This number must be copy from ZYTE')
-    zyte_job_number = models.IntegerField(help_text='Start at 0 but increase on each fetch')
-    zyte_fetch_count = models.IntegerField(help_text='The number of spider job excecutions to fetch')
-    zyte_last_fetch_date = models.DateTimeField(null=True)
+    zyte_spider_number = models.IntegerField(default=0,
+                                             null=True,
+                                             blank=True,
+                                             help_text='This number must be copy from ZYTE')
+    zyte_job_number = models.IntegerField(default=0,
+                                          null=True,
+                                          blank=True,
+                                          help_text='Start at 0 but increase on each fetch')
+    zyte_fetch_count = models.IntegerField(default=0,
+                                           help_text='The number of spider job excecutions to fetch')
+    zyte_last_fetch_date = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
     sync_status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
     sync_desc = models.CharField(max_length=200, null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def clean(self):
+        self.zyte_spider_number = self.zyte_project.zyte_api_spider_number
+        self.zyte_job_number = self.zyte_project.zyte_api_last_job_number
 
     def __str__(self):
         return f'{self.name} ({self.id})'
@@ -149,9 +175,9 @@ CURRENCIES = (
 
 class Job(models.Model):
     title = models.CharField(max_length=150)
-    platform = models.ForeignKey(Platform, on_delete=models.CASCADE, null=False, blank=False)
+    spider = models.ForeignKey(Spider, on_delete=models.CASCADE, null=False, blank=False)
     published_date_raw = models.CharField(max_length=50)
-    published_date_processed = models.DateTimeField(null=True)
+    published_date_processed = models.DateTimeField(default=None, null=True, blank=True)
     status = models.CharField(max_length=15, choices=JOB_STATUS, default=OPENED)
     apply_url = models.URLField(max_length=500)
     currency = models.CharField(max_length=3, choices=CURRENCIES, default=USD, blank=True)
@@ -162,8 +188,8 @@ class Job(models.Model):
     remote = models.BooleanField(default=False, verbose_name='Remote')
     employer = models.ForeignKey(Employer, on_delete=models.CASCADE, null=True, blank=True)
     position = models.ForeignKey(Position, on_delete=models.CASCADE, null=False, blank=False)
-    tags = models.ManyToManyField(Tag)
-    locations = models.ManyToManyField(Location)
+    tags = models.ManyToManyField(Tag, null=True, blank=True)
+    locations = models.ManyToManyField(Location, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 

@@ -108,8 +108,8 @@ class JobsModelsMixin(ModelsMixin):
         if not 'job' in models and (is_valid(job) or is_valid(employer)):
             kargs = {}
 
-            if 'platform' in models:
-                kargs['platform'] = just_one(models['platform'])
+            if 'spider' in models:
+                kargs['spider'] = just_one(models['spider'])
 
             if 'employer' in models:
                 kargs['employer'] = just_one(models['employer'])

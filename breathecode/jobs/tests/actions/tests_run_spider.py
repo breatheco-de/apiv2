@@ -43,8 +43,8 @@ class ActionRunSpiderTestCase(JobsTestCase):
                  data={
                      'project': model.zyte_project.zyte_api_deploy,
                      'spider': model.zyte_project.platform.name,
-                     'job': model.spider.job,
-                     'loc': model.spider.loc
+                     'job': model.spider.job_search,
+                     'loc': model.spider.loc_search
                  },
                  auth=(model.zyte_project.zyte_api_key, ''))
         ])
@@ -72,16 +72,16 @@ class ActionRunSpiderTestCase(JobsTestCase):
                  data={
                      'project': model_1.zyte_project.zyte_api_deploy,
                      'spider': model_1.zyte_project.platform.name,
-                     'job': model_1.spider.job,
-                     'loc': model_1.spider.loc
+                     'job': model_1.spider.job_search,
+                     'loc': model_1.spider.loc_search
                  },
                  auth=(model_1.zyte_project.zyte_api_key, '')),
             call('https://app.scrapinghub.com/api/run.json',
                  data={
                      'project': model_2.zyte_project.zyte_api_deploy,
                      'spider': model_2.zyte_project.platform.name,
-                     'job': model_2.spider.job,
-                     'loc': model_2.spider.loc
+                     'job': model_2.spider.job_search,
+                     'loc': model_2.spider.loc_search
                  },
                  auth=(model_2.zyte_project.zyte_api_key, ''))
         ])

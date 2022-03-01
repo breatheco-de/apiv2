@@ -20,20 +20,20 @@ def run_spider(spider):
     platform = spider.zyte_project.platform.name
     class_scrapper = ScraperFactory(platform)
 
-    position = class_scrapper.get_position_from_string(spider.job)
+    position = class_scrapper.get_position_from_string(spider.job_search)
     if position is None:
         positionAlias = PositionAlias()
-        positionAlias.name = spider.job
+        positionAlias.name = spider.job_search
         positionAlias.position = spider.position
         positionAlias.save()
 
     data = {
         'project': spider.zyte_project.zyte_api_deploy,
         'spider': spider.zyte_project.platform.name,
-        'job': spider.job,
+        'job': spider.job_search,
     }
 
-    data['loc'] = spider.loc
+    data['loc'] = spider.loc_search
     response = requests.post('https://app.scrapinghub.com/api/run.json',
                              data=data,
                              auth=(spider.zyte_project.zyte_api_key, ''))
@@ -107,6 +107,7 @@ def save_data(spider, jobs):
     new_jobs = 0
 
     for j in jobs:
+        print('title', j['Job_title'])
         locations, remote = class_scrapper.get_location_from_string(j['Location'])
         location_pk = class_scrapper.get_pk_location(locations)
 
@@ -136,7 +137,7 @@ def save_data(spider, jobs):
         if validate is False:
             job = Job(
                 title=j['Job_title'],
-                platform=spider.zyte_project.platform,
+                spider=spider,
                 published_date_raw=j['Post_date'],
                 apply_url=j['Apply_to'],
                 salary=salary_str,
@@ -185,6 +186,8 @@ def fetch_sync_all_data(spider):
             datetime.now())
         spider.save()
 
+        ZyteProject.objects.filter(id=spider.zyte_project.id).update(zyte_api_last_job_number=job_namber)
+
     return res
 
 
@@ -194,7 +197,7 @@ def parse_date(job):
         logger.debug(f'First you must specify a job (parse_date)')
         raise ValidationException('First you must specify a job', slug='data-job-none')
 
-    platform = job.platform.name
+    platform = job.spider.zyte_project.platform.name
     class_scrapper = ScraperFactory(platform)
     job.published_date_processed = class_scrapper.get_date_from_string(job.published_date_raw)
     job.save()

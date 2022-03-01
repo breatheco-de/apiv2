@@ -76,7 +76,6 @@ class ActionSaveJobWithoutLocationTestCase(JobsTestCase):
         self.assertEqual(job, [{
             'id': 1,
             'title': 'Pentester Cybersecurity',
-            'platform_id': 1,
             'published_date_raw': 'November 05, 2021',
             'published_date_processed': None,
             'status': 'OPENED',
@@ -85,6 +84,7 @@ class ActionSaveJobWithoutLocationTestCase(JobsTestCase):
             'min_salary': 0.0,
             'max_salary': 0.0,
             'salary': 'Not supplied',
+            'spider_id': 1,
             'job_type': 'Full-time',
             'remote': True,
             'employer_id': 1,
@@ -92,7 +92,6 @@ class ActionSaveJobWithoutLocationTestCase(JobsTestCase):
         }, {
             'id': 2,
             'title': 'Pentester Cybersecurity',
-            'platform_id': 1,
             'published_date_raw': 'November 05, 2021',
             'published_date_processed': None,
             'status': 'OPENED',
@@ -101,6 +100,7 @@ class ActionSaveJobWithoutLocationTestCase(JobsTestCase):
             'min_salary': 0.0,
             'max_salary': 0.0,
             'salary': 'Not supplied',
+            'spider_id': 1,
             'job_type': 'Full-time',
             'remote': False,
             'employer_id': 2,
