@@ -3,6 +3,7 @@ from typing import Any
 from django.contrib.auth.models import User, Group, Permission
 from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
+from django.db.models import Q
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
@@ -332,7 +333,8 @@ class Token(rest_framework.authtoken.models.Token):
         cls.delete_expired_tokens(utc_now)
 
         # find among any non-expired token
-        return Token.objects.filter(key=token, expires_at__gt=utc_now).first()
+        return Token.objects.filter(key=token).filter(Q(expires_at__gt=utc_now)
+                                                      | Q(expires_at__isnull=True)).first()
 
     @classmethod
     def validate_and_destroy(cls, user: User, hash: str) -> None:

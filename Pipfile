@@ -56,6 +56,7 @@ google-cloud-ndb = "*"
 whitenoise = {extras = ["brotli"], version = "*"}
 channels = "*"
 channels-redis = "*"
+timeago = "*"
 
 [scripts]
 update_sql_keywords="python -m scripts.update_sql_keywords_json"

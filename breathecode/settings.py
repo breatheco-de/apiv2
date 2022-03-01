@@ -14,6 +14,7 @@ import django_heroku
 import dj_database_url
 import json
 import logging
+from django.conf import settings as global_settings
 from django.contrib.messages import constants as messages
 from django.utils.log import DEFAULT_LOGGING
 

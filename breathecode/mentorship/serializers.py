@@ -12,6 +12,7 @@ class GetAcademySmallSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     logo_url = serpy.Field()
+    icon_url = serpy.Field()
 
 
 class ProfileSerializer(serpy.Serializer):
@@ -34,6 +35,7 @@ class GetUserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    email = serpy.Field()
     profile = ProfileSerializer(required=False)
 
 
@@ -57,14 +59,22 @@ class GETSessionSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
     mentor = GETMentorSmallSerializer()
-    mentee = GetUserSmallSerializer()
+    mentee = GetUserSmallSerializer(required=False)
+
+
+class GETServiceBigSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    status = serpy.Field()
+    academy = GetAcademySmallSerializer()
 
 
 class GETMentorBigSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     user = GetUserSmallSerializer()
-    service = GETServiceSmallSerializer()
+    service = GETServiceBigSerializer()
     status = serpy.Field()
     price_per_hour = serpy.Field()
     booking_url = serpy.Field()
@@ -78,13 +88,26 @@ class GETMentorBigSerializer(serpy.Serializer):
         return map(lambda s: s.slug, obj.syllabus.all())
 
 
+class GETSessionReportSerializer(serpy.Serializer):
+    id = serpy.Field()
+    status = serpy.Field()
+    started_at = serpy.Field()
+    ended_at = serpy.Field()
+    starts_at = serpy.Field()
+    ends_at = serpy.Field()
+    mentor_joined_at = serpy.Field()
+    mentor_left_at = serpy.Field()
+    mentee_left_at = serpy.Field()
+    mentor = GETMentorBigSerializer()
+    mentee = GetUserSmallSerializer(required=False)
+
+
 class GETSessionBigSerializer(serpy.Serializer):
     id = serpy.Field()
-    slug = serpy.Field()
     name = serpy.Field()
     status = serpy.Field()
     mentor = GETMentorSmallSerializer()
-    mentee = GetUserSmallSerializer()
+    mentee = GetUserSmallSerializer(required=False)
     latitude = serpy.Field()
     longitude = serpy.Field()
     is_online = serpy.Field()
@@ -95,14 +118,6 @@ class GETSessionBigSerializer(serpy.Serializer):
     started_at = serpy.Field()
     ended_at = serpy.Field()
     created_at = serpy.Field()
-
-
-class GETServiceBigSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    name = serpy.Field()
-    status = serpy.Field()
-    academy = GetAcademySmallSerializer()
 
 
 class ServiceSerializer(serializers.ModelSerializer):
