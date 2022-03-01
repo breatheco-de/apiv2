@@ -22,6 +22,10 @@ def capable_of(capability=None):
                 elif hasattr(args[0], 'user') and hasattr(args[0].user, 'has_perm'):
                     request = args[0]
 
+                # websocket support
+                elif hasattr(args[0], 'ws_request'):
+                    request = args[0]
+
                 else:
                     raise IndexError()
 
@@ -29,8 +33,8 @@ def capable_of(capability=None):
                 raise ProgramingError('Missing request information, use this decorator with DRF View')
 
             academy_id = None
-            if 'academy_id' not in kwargs and ('Academy' not in request.headers
-                                               or 'academy' not in request.headers):
+            if ('academy_id' not in kwargs and 'Academy' not in request.headers
+                    and 'academy' not in request.headers):
                 raise PermissionDenied(
                     "Missing academy_id parameter expected for the endpoint url or 'Academy' header")
 

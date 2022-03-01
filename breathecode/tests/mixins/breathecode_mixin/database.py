@@ -2,6 +2,7 @@ import re
 from importlib import import_module
 from typing import Any
 from rest_framework.test import APITestCase
+from channels.db import database_sync_to_async
 from django.db.models import Model
 from ..generate_models_mixin import GenerateModelsMixin
 from ..models_mixin import ModelsMixin
@@ -52,6 +53,19 @@ class Database:
 
         return result
 
+    @database_sync_to_async
+    def async_list_of(self, path: str, dict: bool = True) -> list[Model | dict[str, Any]]:
+        """
+        This is a wrapper for `Model.objects.filter()`, get a list of values of models as `list[dict]` if
+        `dict=True` else get a list of `Model` instances.
+
+        Keywords arguments:
+        - path(`str`): path to a model, for example `admissions.CohortUser`.
+        - dict(`bool`): if true return dict of values of model else return model instance.
+        """
+
+        return self.list_of(path, dict)
+
     def get(self, path: str, pk: int or str, dict: bool = True) -> Model | dict[str, Any]:
         """
         This is a wrapper for `Model.objects.filter(pk=pk).first()`, get the values of model as `dict` if
@@ -62,6 +76,7 @@ class Database:
         - pk(`str | int`): primary key of model.
         - dict(`bool`): if true return dict of values of model else return model instance.
         """
+
         model = Database._get_model(path)
         result = model.objects.filter(pk=pk).first()
 
@@ -70,6 +85,20 @@ class Database:
 
         return result
 
+    @database_sync_to_async
+    def async_get(self, path: str, pk: int or str, dict: bool = True) -> Model | dict[str, Any]:
+        """
+        This is a wrapper for `Model.objects.filter(pk=pk).first()`, get the values of model as `dict` if
+        `dict=True` else get the `Model` instance.
+
+        Keywords arguments:
+        - path(`str`): path to a model, for example `admissions.CohortUser`.
+        - pk(`str | int`): primary key of model.
+        - dict(`bool`): if true return dict of values of model else return model instance.
+        """
+
+        return self.get(path, pk, dict)
+
     def count(self, path: str) -> int:
         """
         This is a wrapper for `Model.objects.count()`, get how many instances of this `Model` are saved.
@@ -77,8 +106,20 @@ class Database:
         Keywords arguments:
         - path(`str`): path to a model, for example `admissions.CohortUser`.
         """
+
         model = Database._get_model(path)
         return model.objects.count()
+
+    @database_sync_to_async
+    def async_count(self, path: str) -> int:
+        """
+        This is a wrapper for `Model.objects.count()`, get how many instances of this `Model` are saved.
+
+        Keywords arguments:
+        - path(`str`): path to a model, for example `admissions.CohortUser`.
+        """
+
+        return self.count(path)
 
     def create(self, *args, **kwargs) -> dict[str, Model | list[Model]]:
         """
@@ -104,4 +145,16 @@ class Database:
         - authenticate: create a user and use `APITestCase.client.force_authenticate(user=models['user'])` to
         get credentials.
         """
+
         return GenerateModelsMixin.generate_models(self._parent, _new_implementation=True, *args, **kwargs)
+
+    @database_sync_to_async
+    def async_create(self, *args, **kwargs) -> dict[str, Model | list[Model]]:
+        """
+        This is a wrapper for `Model.objects.count()`, get how many instances of this `Model` are saved.
+
+        Keywords arguments:
+        - path(`str`): path to a model, for example `admissions.CohortUser`.
+        """
+
+        return self.create(*args, **kwargs)

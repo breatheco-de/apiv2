@@ -19,7 +19,7 @@ lxml = "*"
 pytest-xdist = "*"
 
 [packages]
-django = "*"
+django = "~=3.2.12"
 djangorestframework = "~=3.11.1"
 serpy = "*"
 gunicorn = "*"
@@ -54,6 +54,8 @@ psycopg2-binary = "*"
 django-sql-explorer = {extras = ["xls"], version = "*"}
 google-cloud-ndb = "*"
 whitenoise = {extras = ["brotli"], version = "*"}
+channels = "*"
+channels-redis = "*"
 
 [scripts]
 update_sql_keywords="python -m scripts.update_sql_keywords_json"
