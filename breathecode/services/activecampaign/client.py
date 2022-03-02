@@ -176,7 +176,6 @@ class ActiveCampaign:
         if resp.status_code == 201:
             logger.warn(f'Tag created successfully')
             body = resp.json()
-            print(body, 'in client')
 
             if 'tag' in body:
                 return body['tag']
