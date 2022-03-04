@@ -23,6 +23,16 @@ class CountrySerializer(serpy.Serializer):
     name = serpy.Field()
 
 
+class GetSyllabusSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    slug = serpy.Field()
+    name = serpy.Field()
+    duration_in_hours = serpy.Field()
+    duration_in_days = serpy.Field()
+    logo = serpy.Field()
+
+
 class CitySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.

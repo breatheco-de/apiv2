@@ -17,7 +17,8 @@ from .serializers import (AcademySerializer, GetSyllabusSerializer, SpecialtyMod
                           CohortUserSerializer, GetCohortUserSerializer, CohortUserPUTSerializer,
                           CohortPUTSerializer, UserDJangoRestSerializer, UserMeSerializer,
                           GetSpecialtyModeSerializer, GetSyllabusVersionSerializer, SyllabusVersionSerializer,
-                          GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer)
+                          GetBigAcademySerializer, AcademyReportSerializer, PublicCohortSerializer,
+                          GetSyllabusSmallSerializer)
 from .models import (Academy, SpecialtyModeTimeSlot, CohortTimeSlot, CohortUser, SpecialtyMode, Cohort,
                      STUDENT, DELETED, Syllabus, SyllabusVersion)
 from breathecode.authenticate.models import ProfileAcademy
@@ -44,6 +45,23 @@ def get_timezones(request, id=None):
 def get_all_academies(request, id=None):
     items = Academy.objects.all()
     serializer = AcademySerializer(items, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_public_syllabus(request, id=None):
+    items = Syllabus.objects.filter(private=False)
+
+    slug = request.GET.get('slug', None)
+    if slug is not None:
+        items = items.filter(slug__in=slug.split(','))
+
+    like = request.GET.get('like', None)
+    if like is not None:
+        items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+
+    serializer = GetSyllabusSmallSerializer(items, many=True)
     return Response(serializer.data)
 
 

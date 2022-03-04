@@ -3,10 +3,11 @@ from .views import (AcademyView, CohortUserView, AcademyCohortView, SyllabusVers
                     get_timezones, UserView, UserMeView, AcademyCohortUserView, get_schedule,
                     AcademySpecialtyModeView, SpecialtyModeView, get_all_academies, get_cohorts,
                     AcademyCohortTimeSlotView, AcademySpecialtyModeTimeSlotView,
-                    AcademySyncCohortTimeSlotView, AcademyReportView)
+                    AcademySyncCohortTimeSlotView, AcademyReportView, get_public_syllabus)
 
 app_name = 'admissions'
 urlpatterns = [
+    path('public/syllabus', get_public_syllabus),
     # depcrecated methods, soon to be deleted
     path('cohort/all', get_cohorts, name='cohort_all'),
     path('cohort/user', CohortUserView.as_view(), name='cohort_user'),
