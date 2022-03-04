@@ -19,8 +19,8 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_survey_without_auth(self):
-        """Test /academy/survey without auth"""
+    def test_academy_survey__get__without_auth(self):
+        """Test /academy/survey without authorization"""
         url = reverse_lazy('feedback:academy_survey')
         response = self.client.get(url)
         json = response.json()
@@ -31,7 +31,7 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_survey_without_academy(self):
+    def test_academy_survey__get__without_academy(self):
         """Test /academy/survey without academy"""
         self.bc.database.create(authenticate=True)
         url = reverse_lazy('feedback:academy_survey')
@@ -48,8 +48,8 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_survey_without_data(self):
-        """Test /academy/survey without data"""
+    def test_academy_survey__get__without_role(self):
+        """Test /academy/survey without role"""
         self.headers(academy=1)
         url = reverse_lazy('feedback:academy_survey')
         self.bc.database.create(authenticate=True)
@@ -62,6 +62,28 @@ class SurveyTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__get__without_data(self):
+        """Test /academy/survey without data"""
+
+        self.headers(academy=1)
+        model = self.bc.database.create(
+            authenticate=True,
+            academy=True,
+            profile_academy=True,
+            role='read_survey',
+            capability='read_survey',
+        )
+
+        url = reverse_lazy('feedback:academy_survey')
+        response = self.client.get(url)
+        json = response.json()
+
+        self.assertEqual(json, [])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -79,7 +101,6 @@ class SurveyTestSuite(FeedbackTestCase):
             capability='read_survey',
         )
 
-        db = self.model_to_dict(model, 'survey')
         url = reverse_lazy('feedback:academy_survey')
         response = self.client.get(url)
         json = response.json()
@@ -106,77 +127,44 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
-    def test_academy_survey__get__with_status_answered(self):
-        """Test /academy/survey with status answered"""
-
-        from breathecode.feedback.signals import survey_answered
+    def test_academy_survey__get__with_sent_status_query(self):
+        """Test /academy/survey with sent status query"""
 
         self.headers(academy=1)
-        survey = {'status': 'SENT'}
-        answer = {'status': 'ANSWERED'}
         model = self.bc.database.create(
             authenticate=True,
             academy=True,
             profile_academy=True,
             role='read_survey',
-            survey=survey,
-            answer=answer,
+            survey=True,
             capability='read_survey',
         )
 
-        db = self.model_to_dict(model, 'survey')
-        url = reverse_lazy('feedback:academy_survey')
+        url = reverse_lazy('feedback:academy_survey') + '?status=SENT'
         response = self.client.get(url)
         json = response.json()
-        expected = [{
-            'id': model['survey'].id,
-            'lang': model['survey'].lang,
-            'cohort': {
-                'id': model['cohort'].id,
-                'slug': model['cohort'].slug,
-                'name': model['cohort'].name
-            },
-            'avg_score': model['survey'].avg_score,
-            'response_rate': model['survey'].response_rate,
-            'status': model['survey'].status,
-            'duration': '86400.0',
-            'created_at': self.bc.datetime.to_iso_string(model['survey'].created_at),
-            'sent_at': None,
-            'public_url': 'https://nps.breatheco.de/survey/1'
-        }]
-        expected_args_list = [call(instance=model.answer, sender=model.answer.__class__)]
+        expected = []
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(survey_answered.send.call_args_list, expected_args_list)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
-    @patch('breathecode.feedback.tasks.process_answer_received.delay', MagicMock())
-    def test_academy_survey__get__with_status_answered_call_signal(self):
-        """Test /academy/survey with data"""
-
-        from breathecode.feedback.signals import survey_answered
-        from breathecode.feedback.tasks import process_answer_received
+    def test_academy_survey__get__with_pending_status_query(self):
+        """Test /academy/survey with pending status query"""
 
         self.headers(academy=1)
-        survey = {'status': 'SENT'}
-        answer = {'status': 'ANSWERED'}
         model = self.bc.database.create(
             authenticate=True,
             academy=True,
             profile_academy=True,
             role='read_survey',
-            survey=survey,
-            answer=answer,
+            survey=True,
             capability='read_survey',
         )
 
-        survey_db = self.model_to_dict(model, 'survey')
-        url = reverse_lazy('feedback:academy_survey')
+        url = reverse_lazy('feedback:academy_survey') + '?status=PENDING'
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -196,39 +184,50 @@ class SurveyTestSuite(FeedbackTestCase):
             'public_url': 'https://nps.breatheco.de/survey/1'
         }]
 
-        signal_expected_args_list = [call(instance=model.answer, sender=model.answer.__class__)]
-        task_expected_args_list = []
-
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(survey_answered.send.call_args_list, signal_expected_args_list)
-        self.assertEqual(process_answer_received.delay.call_args_list, task_expected_args_list)
-        self.assertEqual(self.all_survey_dict(), [survey_db])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    @patch('breathecode.feedback.tasks.process_answer_received.delay', MagicMock())
-    def test_academy_survey__get__with_status_answered_call_task(self):
-        """Test /academy/survey with data"""
-
-        from breathecode.feedback.tasks import process_answer_received
+    def test_academy_survey__get__with_different_lang_query(self):
+        """Test /academy/survey with different lang status query"""
 
         self.headers(academy=1)
-        survey = {'status': 'SENT'}
-        answer = {'status': 'ANSWERED'}
         model = self.bc.database.create(
             authenticate=True,
             academy=True,
             profile_academy=True,
             role='read_survey',
-            survey=survey,
-            answer=answer,
+            survey=True,
             capability='read_survey',
         )
 
-        survey_db = self.model_to_dict(model, 'survey')
-        url = reverse_lazy('feedback:academy_survey')
+        url = reverse_lazy('feedback:academy_survey') + '?lang=esp'
+        response = self.client.get(url)
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__get__with_same_lang_query(self):
+        """Test /academy/survey with same lang status query"""
+
+        self.headers(academy=1)
+        model = self.bc.database.create(
+            authenticate=True,
+            academy=True,
+            profile_academy=True,
+            role='read_survey',
+            survey=True,
+            capability='read_survey',
+        )
+
+        url = reverse_lazy('feedback:academy_survey') + '?lang=en'
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -248,9 +247,85 @@ class SurveyTestSuite(FeedbackTestCase):
             'public_url': 'https://nps.breatheco.de/survey/1'
         }]
 
-        task_expected_args_list = [call(1)]
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__get__with_different_cohort_slug_cohort_query(self):
+        """Test /academy/survey with different cohort slug than what in the cohort query"""
+
+        self.headers(academy=1)
+        model = self.bc.database.create(
+            authenticate=True,
+            academy=True,
+            profile_academy=True,
+            role='read_survey',
+            survey=True,
+            capability='read_survey',
+            cohort=True,
+        )
+
+        url = reverse_lazy('feedback:academy_survey') + f'?cohort=testing-cohort'
+        response = self.client.get(url)
+        json = response.json()
+        expected = []
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(process_answer_received.delay.call_args_list, task_expected_args_list)
-        self.assertEqual(self.all_survey_dict(), [survey_db])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__get__with_same_cohort_slug_cohort_query(self):
+        """Test /academy/survey with same chort slug that is in the model"""
+
+        self.headers(academy=1)
+        cohort_kwargs = {'slug': 'testing-cohort'}
+        model = self.bc.database.create(
+            authenticate=True,
+            academy=True,
+            profile_academy=True,
+            role='read_survey',
+            survey=True,
+            capability='read_survey',
+            cohort=cohort_kwargs,
+        )
+
+        url = reverse_lazy('feedback:academy_survey') + f'?cohort=testing-cohort'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'id': model['survey'].id,
+            'lang': model['survey'].lang,
+            'cohort': {
+                'id': model['cohort'].id,
+                'slug': model['cohort'].slug,
+                'name': model['cohort'].name
+            },
+            'avg_score': model['survey'].avg_score,
+            'response_rate': model['survey'].response_rate,
+            'status': model['survey'].status,
+            'duration': '86400.0',
+            'created_at': self.bc.datetime.to_iso_string(model['survey'].created_at),
+            'sent_at': None,
+            'public_url': 'https://nps.breatheco.de/survey/1'
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    # def test_academy_survey__post__without_auth(self):
+    #     """Test /academy/survey without authorization"""
+    #     url = reverse_lazy('feedback:academy_survey')
+    #     data = {}
+    #     response = self.client.get(url, {})
+    #     json = response.json()
+    #     expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
+    #     self.assertEqual(json, expected)
+    #     self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    #     assert False
