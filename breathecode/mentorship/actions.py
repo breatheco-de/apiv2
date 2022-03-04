@@ -27,10 +27,10 @@ def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
         if unfinished_with_mentee.count() > 0:
             return unfinished_with_mentee
 
-    # any pending session with or without mentee
     if force_create == False:
+        # session without mentee
         unfinished_without_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
-                                                                     mentee__isnull=True,
+                                                                     started_at__isnull=True,
                                                                      status__in=['PENDING', 'STARTED'])
         # delete the pendings ones, its worth creating a new meeting
         if unfinished_without_mentee.count() > 0:
@@ -46,7 +46,7 @@ def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
         unfinished_with_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
                                                                   status__in=['PENDING', 'STARTED'])
 
-        # if it has inishined meetings with mentee's its probably one of those
+        # if it has unishined meetings with already started
         if unfinished_with_mentee.count() > 0:
             return unfinished_with_mentee
 
@@ -107,7 +107,7 @@ def close_mentoring_session(session, data):
     MentorshipSession.objects.filter(mentor__id=session.mentor.id,
                                      status__in=['PENDING', 'STARTED'],
                                      ended_at__lte=timezone.now(),
-                                     mentee__isnull=True).update(
+                                     started_at__isnull=True).update(
                                          status='FAILED',
                                          summary='Meeting automatically closed, mentee never joined.')
 

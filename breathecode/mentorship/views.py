@@ -130,7 +130,7 @@ def forward_meet_url(request, mentor_slug, token):
         if (now - session.ends_at).total_seconds() > (session.mentor.service.duration.seconds / 2):
             return HttpResponseRedirect(
                 redirect_to=
-                f'/mentor/session/{str(session.id)}?token={token.key}&message=This session expired {timeago.format(session.ends_at, now)}. Only sessions with less than {round(((session.mentor.service.duration.total_seconds() / 3600) * 60)/2)}min from expiration can be extended (if allowed by the academy)'
+                f'/mentor/session/{str(session.id)}?token={token.key}&message=Your have a session that expired {timeago.format(session.ends_at, now)}. Only sessions with less than {round(((session.mentor.service.duration.total_seconds() / 3600) * 60)/2)}min from expiration can be extended (if allowed by the academy)'
             )
 
         if ((session.mentor.user.id == token.user.id and service.allow_mentors_to_extend)
@@ -204,7 +204,7 @@ def end_mentoring_session(request, session_id, token):
                     request, 'close_session.html', {
                         'token': token.key,
                         'message':
-                        'The mentoring session was closed successfully, you can close this window.',
+                        f'The mentoring session was closed successfully, you can close this window or <a href="/mentor/meet/{session.mentor.slug}?token={token.key}">go back to your meeting room</a>',
                         'mentor': GETMentorBigSerializer(session.mentor, many=False).data,
                         'SUBJECT': 'Close Mentoring Session',
                         'sessions': GETSessionReportSerializer(pending_sessions, many=True).data,

@@ -25,7 +25,7 @@ def set_query_parameter(url, param_name, param_value=''):
     return urlunsplit((scheme, netloc, path, new_query_string, fragment))
 
 
-def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', data=None):
+def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', data={}):
     _data = {'MESSAGE': msg, 'BUTTON': btn_label, 'BUTTON_TARGET': btn_target, 'LINK': btn_url}
 
     return render(r, 'message.html', {**_data, **data})
