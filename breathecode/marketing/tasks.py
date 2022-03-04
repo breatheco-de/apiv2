@@ -274,11 +274,8 @@ def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
 
     try:
         data = client.create_tag(new_tag_slug, description=f'Event {event.slug} at {ac_academy.academy.slug}')
-        tag = Tag(slug=data['slug'],
-                  acp_id=data['id'],
-                  tag_type='EVENT',
-                  ac_academy=ac_academy,
-                  subscribers=0)
+
+        tag = Tag(slug=data['tag'], acp_id=data['id'], tag_type='EVENT', ac_academy=ac_academy, subscribers=0)
 
         tag.save()
 
