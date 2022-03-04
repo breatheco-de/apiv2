@@ -1,7 +1,16 @@
 import csv
-from django.http import HttpResponse
+from django.http import StreamingHttpResponse
 
 __all__ = ['AdminExportCsvMixin']
+
+
+class Echo:
+    """An object that implements just the write method of the file-like
+    interface.
+    """
+    def write(self, value):
+        """Write the value by returning it, instead of storing in a buffer."""
+        return value
 
 
 class AdminExportCsvMixin:
@@ -10,14 +19,14 @@ class AdminExportCsvMixin:
         meta = self.model._meta
         field_names = [field.name for field in meta.fields]
 
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename={}.csv'.format(meta)
-        writer = csv.writer(response)
+        pseudo_buffer = Echo()
+        writer = csv.writer(pseudo_buffer)
 
         writer.writerow(field_names)
-        for obj in queryset:
-            row = writer.writerow([getattr(obj, field) for field in field_names])
-
-        return response
+        return StreamingHttpResponse(
+            (writer.writerow((getattr(obj, field) for field in field_names)) for obj in queryset),
+            content_type='text/csv',
+            headers={'Content-Disposition': 'attachment; filename={}.csv'.format(meta)},
+        )
 
     export_as_csv.short_description = 'Export Selected as CSV'
