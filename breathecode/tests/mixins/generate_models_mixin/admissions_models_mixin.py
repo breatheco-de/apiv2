@@ -30,7 +30,6 @@ class AdmissionsModelsMixin(ModelsMixin):
         return cohort.stage
 
     def generate_admissions_models(self,
-                                   schedule=False,
                                    academy=False,
                                    cohort=False,
                                    profile_academy=False,
