@@ -121,4 +121,5 @@ class SessionAdmin(admin.ModelAdmin):
             url = obj.mentor.online_meeting_url
 
         return format_html(
-            f"<a rel='noopener noreferrer' target='_blank' href='/mentor/meet/{obj.mentor.slug}?session={str(obj.id)}'>open</a>")
+            f"<a rel='noopener noreferrer' target='_blank' href='/mentor/meet/{obj.mentor.slug}?session={str(obj.id)}'>open</a>"
+        )
