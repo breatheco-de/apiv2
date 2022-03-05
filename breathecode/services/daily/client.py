@@ -63,7 +63,7 @@ class DailyClient:
         else:
             payload = {'properties': {'exp': f'{str(exp_in_epoch)}'}}
 
-        if name is not '':
+        if name != '':
             payload['properties']['name'] = name
 
         data = self.request('POST', f'/v1/rooms', data=payload)

@@ -10,7 +10,6 @@ from .models import MentorshipSession
 from .serializers import GETSessionReportSerializer
 
 logger = logging.getLogger(__name__)
-API_URL = os.getenv('API_URL', '')
 
 
 def get_or_create_sessions(token, mentor, mentee=None, force_create=False):

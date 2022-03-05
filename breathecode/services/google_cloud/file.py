@@ -1,4 +1,5 @@
 import logging
+from io import StringIO
 from google.cloud.storage import Bucket, Blob
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,7 @@ class File:
         """Upload Blob from Bucker"""
         self.blob = self.bucket.blob(self.file_name)
 
-        if type(content) == 'string' or isinstance(content, bytes):
+        if isinstance(content, str) or isinstance(content, bytes):
             self.blob.upload_from_string(content, content_type=content_type)
 
         else:
@@ -45,3 +46,24 @@ class File:
         """Delete Blob from Bucker"""
         if self.blob:
             return self.blob.download_as_string()
+
+    def stream_download(self) -> str:
+        """Delete Blob from Bucker"""
+        class Echo:
+            """An object that implements just the write method of the file-like
+            interface.
+            """
+            def __init__(self):
+                self.pieces = []
+
+            def write(self, value):
+                """Write the value by returning it, instead of storing in a buffer."""
+                self.pieces.append(value.decode('UTF-8'))
+
+            def all(self):
+                return self.pieces
+
+        streamer = Echo()
+        blob = self.bucket.blob(self.file_name)
+        blob.download_to_file(streamer)
+        return streamer

@@ -1,5 +1,7 @@
 import csv
 from django.http import StreamingHttpResponse
+from django.contrib import admin, messages
+from django.utils.safestring import mark_safe
 
 __all__ = ['AdminExportCsvMixin']
 
@@ -29,4 +31,13 @@ class AdminExportCsvMixin:
             headers={'Content-Disposition': 'attachment; filename={}.csv'.format(meta)},
         )
 
-    export_as_csv.short_description = 'Export Selected as CSV'
+    def async_export_as_csv(self, request, queryset):
+        from breathecode.monitoring.tasks import async_download_csv
+        meta = self.model._meta
+        ids = list(queryset.values_list('pk', flat=True))
+        async_download_csv.delay(self.model.__module__, meta.object_name, ids)
+        messages.add_message(
+            request, messages.INFO,
+            mark_safe(
+                f'Data is being downloaded, <a href="/admin/monitoring/csvdownload/">you can check your download here.</a>'
+            ))
