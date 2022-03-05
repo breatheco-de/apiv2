@@ -73,7 +73,7 @@ class CertificateTestSuite(CertificateTestCase):
                              role='STUDENT',
                              cohort_user=True,
                              syllabus=True,
-                             specialty_mode=True,
+                             syllabus_schedule=True,
                              specialty=True,
                              layout_design=True,
                              cohort_kwargs=cohort_kwargs)
@@ -103,7 +103,7 @@ class CertificateTestSuite(CertificateTestCase):
                              cohort_user=True,
                              syllabus=True,
                              syllabus_version=True,
-                             specialty_mode=True,
+                             syllabus_schedule=True,
                              specialty=True,
                              layout_design=True,
                              cohort_kwargs=cohort_kwargs)
@@ -143,7 +143,7 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_everything_but_specialty_mode(self):
+    def test_generate_certificate_with_everything_but_schedule(self):
         """ Should be ok because cohorts dont need specialy mode to generate certificates """
         self.headers(academy=1)
         cohort_kwargs = {'stage': 'ENDED'}
@@ -218,7 +218,7 @@ class CertificateTestSuite(CertificateTestCase):
                              syllabus=True,
                              syllabus_version=True,
                              specialty=True,
-                             specialty_mode=True,
+                             syllabus_schedule=True,
                              cohort_kwargs=cohort_kwargs)
 
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
@@ -272,7 +272,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      syllabus=True,
                                      syllabus_version=True,
                                      specialty=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      user_specialty=True,
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs)
@@ -308,10 +308,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
-                'specialty_mode': {
-                    'id': model['specialty_mode'].id,
-                    'name': model['specialty_mode'].name,
-                    'syllabus': model['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': model['syllabus_schedule'].id,
+                    'name': model['syllabus_schedule'].name,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': model['syllabus_version'].version,
@@ -391,7 +391,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      syllabus=True,
                                      syllabus_version=True,
                                      specialty=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      user_specialty=True,
                                      layout_design=True,
                                      cohort_user_kwargs=cohort_user_kwargs,
@@ -428,10 +428,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
-                'specialty_mode': {
-                    'id': model['specialty_mode'].id,
-                    'name': model['specialty_mode'].name,
-                    'syllabus': model['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': model['syllabus_schedule'].id,
+                    'name': model['syllabus_schedule'].name,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': model['syllabus_version'].version,
@@ -511,7 +511,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      capability='crud_certificate',
                                      role='STUDENT',
                                      specialty=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      user_specialty=True,
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs,
@@ -548,10 +548,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
-                'specialty_mode': {
-                    'id': model['specialty_mode'].id,
-                    'name': model['specialty_mode'].name,
-                    'syllabus': model['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': model['syllabus_schedule'].id,
+                    'name': model['syllabus_schedule'].name,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': model['syllabus_version'].version,
@@ -634,7 +634,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      role='STUDENT',
                                      cohort_user=True,
                                      specialty=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      user_specialty=True,
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs,
@@ -680,10 +680,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
-                'specialty_mode': {
-                    'id': model['specialty_mode'].id,
-                    'name': model['specialty_mode'].name,
-                    'syllabus': model['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': model['syllabus_schedule'].id,
+                    'name': model['syllabus_schedule'].name,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': model['syllabus_version'].version,

@@ -181,7 +181,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'syllabus_version': model['cohort'].syllabus_version,
-            'specialty_mode': model['cohort'].specialty_mode,
+            'schedule': model['cohort'].schedule,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
@@ -306,7 +306,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus_version=True,
                                      syllabus=True,
                                      syllabus_kwargs=syllabus_kwargs)
@@ -351,7 +351,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus=True,
                                      syllabus_kwargs=syllabus_kwargs,
                                      cohort_kwargs=cohort_kwargs)
@@ -398,21 +398,21 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      cohort_kwargs=cohort_kwargs,
-                                     specialty_mode_time_slot=True,
+                                     syllabus_schedule_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        model2 = self.generate_models(specialty_mode=True, syllabus=model.syllabus)
+        model2 = self.generate_models(syllabus_schedule=True, syllabus=model.syllabus)
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
-            'specialty_mode': 2,
+            'schedule': 2,
             'current_day': model['cohort'].current_day + 1,
             'language': 'es',
         }
@@ -434,10 +434,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model2.specialty_mode.id,
-                'name': model2.specialty_mode.name,
-                'syllabus': model2.specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model2.syllabus_schedule.id,
+                'name': model2.syllabus_schedule.name,
+                'syllabus': model2.syllabus_schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -484,7 +484,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': data['slug'],
             'stage': model['cohort'].stage,
             'syllabus_version_id': model['cohort'].syllabus_version.id,
-            'specialty_mode_id': model2.specialty_mode.id,
+            'schedule_id': model2.syllabus_schedule.id,
             'timezone': None,
         }])
         self.assertEqual(cohort_saved.send.call_args_list,
@@ -505,7 +505,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='read_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus=True,
                                      syllabus_version=True)
 
@@ -531,10 +531,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -611,7 +611,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='read_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus=True,
                                      syllabus_version=True)
 
@@ -637,10 +637,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
