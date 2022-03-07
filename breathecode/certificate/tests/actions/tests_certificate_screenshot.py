@@ -46,7 +46,7 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
                                      layout_design=True,
                                      teacher=True,
                                      stage=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      user_specialty=True)
         url = self.generate_screenshotmachine_url(model['user_specialty'])
 

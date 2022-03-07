@@ -3,7 +3,7 @@ import os
 import json
 from django.core.management.base import BaseCommand
 from pathlib import Path
-from breathecode.admissions.models import Academy, Cohort, SpecialtyMode, Syllabus, SyllabusVersion
+from breathecode.admissions.models import Academy, Cohort, SyllabusSchedule, Syllabus, SyllabusVersion
 import breathecode.certificate.actions as actions
 
 

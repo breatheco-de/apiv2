@@ -11,7 +11,7 @@ from breathecode.utils import ValidationException, localize_query, SerpyExtensio
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, Profile
-from .models import Academy, SpecialtyModeTimeSlot, Cohort, SpecialtyMode, CohortTimeSlot, CohortUser, Syllabus, SyllabusVersion
+from .models import Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser, Syllabus, SyllabusVersion
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +93,7 @@ class UserSerializer(serpy.Serializer):
     profile = ProfileSerializer(required=False)
 
 
-class GetSpecialtyModeSerializer(serpy.Serializer):
+class GetSyllabusScheduleSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     description = serpy.Field()
@@ -103,7 +103,7 @@ class GetSpecialtyModeSerializer(serpy.Serializer):
         return obj.syllabus.id if obj.syllabus else None
 
 
-class GetSmallSpecialtyModeSerializer(serpy.Serializer):
+class GetSmallSyllabusScheduleSerializer(serpy.Serializer):
     id = serpy.Field()
     name = serpy.Field()
     syllabus = serpy.MethodField()
@@ -268,7 +268,7 @@ class GetCohortSerializer(serpy.Serializer):
     stage = serpy.Field()
     online_meeting_url = serpy.Field()
     timezone = serpy.Field()
-    specialty_mode = GetSmallSpecialtyModeSerializer(required=False)
+    schedule = GetSmallSyllabusScheduleSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
     timeslots = serpy.MethodField()
@@ -290,7 +290,7 @@ class PublicCohortSerializer(serpy.Serializer):
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
     remote_available = serpy.Field()
-    specialty_mode = GetSmallSpecialtyModeSerializer(required=False)
+    schedule = GetSmallSyllabusScheduleSerializer(required=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
     academy = GetAcademySerializer()
 
@@ -352,11 +352,10 @@ class GETCohortTimeSlotSerializer(serpy.Serializer):
         return obj.cohort.id
 
 
-class GETSpecialtyModeTimeSlotSerializer(serpy.Serializer):
+class GETSyllabusScheduleTimeSlotSerializer(serpy.Serializer):
     """The serializer schema definition."""
     id = serpy.Field()
-    academy = serpy.MethodField()
-    specialty_mode = serpy.MethodField()
+    schedule = serpy.MethodField()
     starting_at = SerpyExtensions.DatetimeIntegerField()
     ending_at = SerpyExtensions.DatetimeIntegerField()
     recurrent = serpy.Field()
@@ -364,11 +363,8 @@ class GETSpecialtyModeTimeSlotSerializer(serpy.Serializer):
     created_at = serpy.Field()
     updated_at = serpy.Field()
 
-    def get_academy(self, obj):
-        return obj.academy.id
-
-    def get_specialty_mode(self, obj):
-        return obj.specialty_mode.id if obj.specialty_mode else None
+    def get_schedule(self, obj):
+        return obj.schedule.id if obj.schedule else None
 
 
 class GETCohortUserSmallSerializer(serpy.Serializer):
@@ -518,9 +514,9 @@ class CohortSerializer(CohortSerializerMixin):
 
     class Meta:
         model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus',
-                  'specialty_mode', 'syllabus_version', 'ending_date', 'stage', 'language', 'created_at',
-                  'updated_at', 'never_ends', 'online_meeting_url', 'timezone')
+        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus', 'schedule',
+                  'syllabus_version', 'ending_date', 'stage', 'language', 'created_at', 'updated_at',
+                  'never_ends', 'online_meeting_url', 'timezone')
 
     def create(self, validated_data):
         del self.context['request']
@@ -543,8 +539,8 @@ class CohortPUTSerializer(CohortSerializerMixin):
     class Meta:
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
-                  'syllabus', 'syllabus_version', 'specialty_mode', 'never_ends', 'private',
-                  'online_meeting_url', 'timezone')
+                  'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private', 'online_meeting_url',
+                  'timezone')
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
@@ -570,7 +566,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
         return CohortUser.objects.filter(Q(educational_status='ACTIVE') | Q(educational_status__isnull=True),
                                          user_id=user_id,
                                          role='STUDENT',
-                                         cohort__specialty_mode=cohort.specialty_mode).count()
+                                         cohort__schedule=cohort.schedule).count()
 
     def validate_just_one(self):
         pass
@@ -640,8 +636,7 @@ class CohortUserSerializerMixin(serializers.ModelSerializer):
             raise ValidationException(
                 'The user must be staff member to this academy before it can be a teacher')
 
-        if (is_post_method and cohort.specialty_mode
-                and self.count_certificates_by_cohort(cohort, user_id) > 0):
+        if (is_post_method and cohort.schedule and self.count_certificates_by_cohort(cohort, user_id) > 0):
             raise ValidationException(
                 'This student is already in another cohort for the same certificate, please mark him/her hi '
                 'educational status on this prior cohort different than ACTIVE before cotinuing')
@@ -736,13 +731,13 @@ class CohortTimeSlotSerializer(serializers.ModelSerializer):
         fields = ['id', 'cohort', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type', 'timezone']
 
 
-class SpecialtyModeSerializer(serializers.ModelSerializer):
+class SyllabusScheduleSerializer(serializers.ModelSerializer):
     class Meta:
-        model = SpecialtyMode
+        model = SyllabusSchedule
         exclude = ()
 
 
-class SpecialtyModePUTSerializer(serializers.ModelSerializer):
+class SyllabusSchedulePUTSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(required=False)
     name = serializers.CharField(required=False)
     schedule_type = serializers.CharField(required=False)
@@ -750,20 +745,19 @@ class SpecialtyModePUTSerializer(serializers.ModelSerializer):
     syllabus = serializers.IntegerField(required=False)
 
     class Meta:
-        model = SpecialtyMode
+        model = SyllabusSchedule
         exclude = ()
 
 
-class SpecialtyModeTimeSlotSerializer(serializers.ModelSerializer):
+class SyllabusScheduleTimeSlotSerializer(serializers.ModelSerializer):
     starting_at = serializers.IntegerField(write_only=True)
     ending_at = serializers.IntegerField(write_only=True)
 
     class Meta:
-        model = SpecialtyModeTimeSlot
+        model = SyllabusScheduleTimeSlot
         fields = [
             'id',
-            'academy',
-            'specialty_mode',
+            'schedule',
             'starting_at',
             'ending_at',
             'recurrent',
