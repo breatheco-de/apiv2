@@ -239,11 +239,13 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if request.user is None:
             raise ValidationException('User not found', 404)
 
-        invites = UserInvite.objects.filter(email=request.user.email, status='PENDING')
+        invites = UserInvite.objects.filter(email=request.user.email)
 
         status = request.GET.get('status', '')
         if status != '':
             invites = invites.filter(status__in=status.split(','))
+        else:
+            invites = invites.filter(status='PENDING')
 
         serializer = UserInviteSerializer(invites, many=True)
         return Response(serializer.data)
