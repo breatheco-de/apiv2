@@ -58,7 +58,7 @@ class File:
 
             def write(self, value):
                 """Write the value by returning it, instead of storing in a buffer."""
-                self.pieces.append(value.decode('UTF-8'))
+                self.pieces.append(value.decode('latin1'))
 
             def all(self):
                 return self.pieces
