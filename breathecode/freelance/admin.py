@@ -73,7 +73,7 @@ mask_as_ignored.short_description = 'Mark as IGNORED'
 
 @admin.register(Freelancer)
 class FreelancerAdmin(admin.ModelAdmin):
-    list_display = ['user_id', 'full_name', 'email']
+    list_display = ['user_id', 'full_name', 'email', 'github', 'price_per_hour']
     raw_id_fields = ['user', 'github_user']
     actions = [sync_issues, generate_bill]
 
@@ -82,6 +82,15 @@ class FreelancerAdmin(admin.ModelAdmin):
 
     def email(self, obj):
         return obj.user.email
+
+    def github(self, obj):
+        if obj.github_user is None:
+            return format_html(f"<span class='badge bg-error'> Missing github connection</span>")
+
+        if obj.price_per_hour == 0 or obj.price_per_hour is None:
+            return format_html(f"<span class='badge bg-error'> Missing rate per hour</span>")
+
+        return format_html(f"<span class='badge bg-success'>Connected to Github</span>")
 
 
 @admin.register(Issue)

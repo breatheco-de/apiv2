@@ -1,5 +1,6 @@
 import os, re, json, logging
 from itertools import chain
+from django.db.models import Q
 from .models import Freelancer, Issue, Bill, RepositoryIssueWebhook
 from breathecode.authenticate.models import CredentialsGithub
 from schema import Schema, And, Use, Optional, SchemaError
@@ -171,25 +172,33 @@ def change_status(issue, status):
 
 def generate_freelancer_bill(freelancer):
 
-    Issue.objects.filter(status='TODO', bill__isnull=False).update(bill=None)
+    Issue.objects.filter(bill__isnull=False,
+                         freelancer__id=freelancer.id).exclude(status='DONE').update(bill=None)
 
     open_bill = Bill.objects.filter(freelancer__id=freelancer.id, status='DUE').first()
     if open_bill is None:
         open_bill = Bill(freelancer=freelancer, )
         open_bill.save()
 
-    done_issues = Issue.objects.filter(status='DONE', node_id__isnull=False, bill__isnull=True)
-    total = {
-        'minutes': open_bill.total_duration_in_minutes,
-        'hours': open_bill.total_duration_in_hours,
-        'price': open_bill.total_price
-    }
+    done_issues = Issue.objects.filter(freelancer__id=freelancer.id,
+                                       status='DONE').filter(Q(bill__isnull=True) | Q(bill__status='DUE'))
+    total = {'minutes': 0, 'hours': 0, 'price': 0}
 
     for issue in done_issues:
         issue.bill = open_bill
+        issue.status_message = ''
+
+        if issue.status != 'DONE':
+            issue.status_message += 'Issue is still ' + issue.status
+        if issue.node_id is None or issue.node_id == '':
+            issue.status_message += 'Github node id not found'
+
+        if issue.status_message == '':
+            total['hours'] = total['hours'] + issue.duration_in_hours
+            total['minutes'] = total['minutes'] + issue.duration_in_minutes
+
         issue.save()
-        total['hours'] = total['hours'] + issue.duration_in_hours
-        total['minutes'] = total['minutes'] + issue.duration_in_minutes
+
     total['price'] = total['hours'] * freelancer.price_per_hour
 
     open_bill.total_duration_in_hours = total['hours']

@@ -145,6 +145,7 @@ class ReviewSmallSerializer(serpy.Serializer):
     cohort = GetCohortSerializer()
     author = UserSmallSerializer()
     platform = ReviewPlatformSerializer()
+    updated_at = serpy.Field()
 
 
 class AnswerPUTSerializer(serializers.ModelSerializer):

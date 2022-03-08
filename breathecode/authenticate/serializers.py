@@ -26,6 +26,21 @@ class UserTinySerializer(serpy.Serializer):
     email = serpy.Field()
 
 
+class AcademyTinySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
+class CohortTinySerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
 class TokenSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -49,6 +64,21 @@ class RoleSmallSerializer(serpy.Serializer):
 
     def get_id(self, obj):
         return obj.slug
+
+
+class RoleBigSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    id = serpy.MethodField()
+    slug = serpy.Field()
+    name = serpy.Field()
+    capabilities = serpy.MethodField()
+
+    # this id is needed for zapier.com
+    def get_id(self, obj):
+        return obj.slug
+
+    def get_capabilities(self, obj):
+        return obj.capabilities.all().values_list('slug', flat=True)
 
 
 class GithubSmallSerializer(serpy.Serializer):
@@ -76,6 +106,9 @@ class UserInviteSerializer(serpy.Serializer):
     first_name = serpy.Field()
     last_name = serpy.Field()
     token = serpy.Field()
+    academy = AcademyTinySerializer(required=False)
+    cohort = CohortTinySerializer(required=False)
+    role = RoleSmallSerializer(required=False)
 
     invite_url = serpy.MethodField()
 
@@ -569,6 +602,9 @@ class UserInviteWaitingListSerializer(serializers.ModelSerializer):
 
         if UserInvite.objects.filter(email=data['email'], status='WAITING_LIST').exists():
             raise ValidationException('User already exists in the waiting list', slug='user-invite-exists')
+
+        if User.objects.filter(email=data['email']).exists():
+            raise ValidationException('User already exists, go ahead and log in instead.', slug='user-exists')
 
         now = str(timezone.now())
 

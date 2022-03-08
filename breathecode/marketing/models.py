@@ -119,7 +119,7 @@ class Tag(models.Model):
         max_length=15,
         choices=TAG_TYPE,
         null=True,
-        default=OTHER,
+        default=None,
         help_text=
         "The STRONG tags in a lead will determine to witch automation it does unless there is an 'automation' property on the lead JSON"
     )
@@ -137,6 +137,10 @@ class Tag(models.Model):
                                        null=True,
                                        default=None,
                                        help_text='Explain why you think the tag should be deleted')
+    description = models.TextField(blank=True,
+                                   null=True,
+                                   default=None,
+                                   help_text='How is this tag being used? Why is it needed?')
 
     automation = models.ForeignKey(
         Automation,
@@ -521,9 +525,9 @@ MEDIUM = 'MEDIUM'
 CONTENT = 'CONTENT'
 CAMPAIGN = 'CAMPAIGN'
 UTM_TYPE = (
-    (CONTENT, 'Source'),
-    (SOURCE, 'Medium'),
-    (MEDIUM, 'Content'),
+    (CONTENT, 'Content'),
+    (SOURCE, 'Source'),
+    (MEDIUM, 'Medium'),
     (CAMPAIGN, 'Campaign'),
 )
 

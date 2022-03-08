@@ -13,36 +13,47 @@ logger = logging.getLogger(__name__)
 
 
 def send_survey_group(survey=None, cohort=None):
+
     if survey is None and cohort is None:
         raise ValidationException('Missing survey or cohort')
 
     if survey is None:
         survey = Survey(cohort=cohort, lang=cohort.language)
-    elif cohort is not None:
-        if survey.cohort.id != cohort.id:
-            raise ValidationException('The survey does not match the cohort id')
 
-    if cohort is None:
-        cohort = survey.cohort
+    try:
 
-    cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort, role='TEACHER')
-    if cohort_teacher.count() == 0:
-        raise ValidationException('This cohort must have a teacher assigned to be able to survey it', 400)
+        if cohort is not None:
+            if survey.cohort.id != cohort.id:
+                raise ValidationException('The survey does not match the cohort id')
 
-    ucs = CohortUser.objects.filter(cohort=cohort, role='STUDENT').filter()
-    result = {'success': [], 'error': []}
-    for uc in ucs:
-        if uc.educational_status in ['ACTIVE', 'GRADUATED']:
-            send_cohort_survey.delay(uc.user.id, survey.id)
-            logger.debug(f'Survey scheduled to send for {uc.user.email}')
-            result['success'].append(f'Survey scheduled to send for {uc.user.email}')
-        else:
-            logger.debug(
-                f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
-            result['error'].append(
-                f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
-    survey.sent_at = timezone.now()
-    survey.save()
+        if cohort is None:
+            cohort = survey.cohort
+
+        cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort, role='TEACHER')
+        if cohort_teacher.count() == 0:
+            raise ValidationException('This cohort must have a teacher assigned to be able to survey it', 400)
+
+        ucs = CohortUser.objects.filter(cohort=cohort, role='STUDENT').filter()
+        result = {'success': [], 'error': []}
+        for uc in ucs:
+            if uc.educational_status in ['ACTIVE', 'GRADUATED']:
+                send_cohort_survey.delay(uc.user.id, survey.id)
+                logger.debug(f'Survey scheduled to send for {uc.user.email}')
+                result['success'].append(f'Survey scheduled to send for {uc.user.email}')
+            else:
+                logger.debug(
+                    f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
+                result['error'].append(
+                    f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
+        survey.sent_at = timezone.now()
+        survey.save()
+
+    except Exception as e:
+        survey.status = 'FATAL'
+        result['error'].append(f'Error sending survey to group: ' + str(e))
+        survey.status_json = json.dumps(result)
+        survey.save()
+        raise e
 
     return result
 
@@ -77,8 +88,9 @@ def send_question(user, cohort=None):
         raise ValidationException('Cohort not have one SyllabusVersion',
                                   slug='cohort-without-syllabus-version')
 
-    if not answer.cohort.specialty_mode:
-        raise ValidationException('Cohort not have one SpecialtyMode', slug='cohort-without-specialty-mode')
+    if not answer.cohort.schedule:
+        raise ValidationException('Cohort not have one SyllabusSchedule',
+                                  slug='cohort-without-specialty-mode')
 
     question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user,
                                                          status='SENT').count()

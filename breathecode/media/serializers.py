@@ -5,6 +5,12 @@ from rest_framework import serializers
 import serpy
 
 
+class GetAcademySerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+
+
 class GetUserSerializer(serpy.Serializer):
     id = serpy.Field()
     first_name = serpy.Field()
@@ -32,7 +38,7 @@ class GetMediaSerializer(serpy.Serializer):
     hash = serpy.Field()
     hits = serpy.Field()
     categories = serpy.MethodField()
-    owner = GetUserSerializer(required=False)
+    academy = GetAcademySerializer(required=False)
 
     def get_thumbnail(self, obj):
         return obj.url + '-thumbnail'

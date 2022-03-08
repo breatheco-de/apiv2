@@ -9,7 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from .serializers import FormEntrySerializer
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import CredentialsFacebook
-from breathecode.services.activecampaign import AC_Old_Client
+from breathecode.services.activecampaign import AC_Old_Client, ActiveCampaign
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.marketing.models import Tag
 
@@ -481,3 +481,26 @@ def validate_marketing_tags(tags: str, academy_id: int, types: Optional[list] = 
         f'Following tags not found with types {",".join(types)}: {",".join(not_founds)}',
         code=400,
         slug='tag-not-exist')
+
+
+def delete_tag(tag, include_other_academies=False):
+
+    ac_academy = tag.ac_academy
+    if ac_academy is None:
+        raise ValidationException(f'Invalid ac_academy for this tag {tag.slug}',
+                                  code=400,
+                                  slug='invalid-ac_academy')
+
+    client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+    try:
+        if client.delete_tag(tag.id):
+            if include_other_academies:
+                Tag.objects.filter(slug=tag.slug).delete()
+            else:
+                tag.delete()
+
+            return True
+
+    except:
+        logger.exception(f'There was an error deleting tag for {tag.slug}')
+        return False

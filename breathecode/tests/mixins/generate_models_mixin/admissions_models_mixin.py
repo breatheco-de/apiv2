@@ -30,31 +30,28 @@ class AdmissionsModelsMixin(ModelsMixin):
         return cohort.stage
 
     def generate_admissions_models(self,
-                                   specialty_mode=False,
                                    academy=False,
                                    cohort=False,
                                    profile_academy=False,
                                    cohort_user=False,
                                    city=False,
-                                   user_specialty=False,
+                                   syllabus_schedule=False,
                                    country=False,
                                    skip_cohort=False,
                                    syllabus=False,
-                                   academy_specialty_mode=False,
                                    cohort_time_slot=False,
                                    syllabus_version=False,
-                                   specialty_mode_time_slot=False,
+                                   syllabus_schedule_time_slot=False,
                                    monitor_script=False,
                                    country_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
                                    academy_kwargs={},
-                                   specialty_mode_kwargs={},
-                                   academy_specialty_mode_kwargs={},
+                                   syllabus_schedule_kwargs={},
                                    syllabus_kwargs={},
                                    cohort_kwargs={},
                                    cohort_user_kwargs={},
-                                   specialty_mode_time_slot_kwargs={},
+                                   syllabus_schedule_time_slot_kwargs={},
                                    syllabus_version_kwargs={},
                                    models={},
                                    **kwargs):
@@ -63,10 +60,7 @@ class AdmissionsModelsMixin(ModelsMixin):
         if not 'country' in models and is_valid(country):
             kargs = {}
 
-            models['country'] = create_models(specialty_mode, 'admissions.Country', **{
-                **kargs,
-                **country_kwargs
-            })
+            models['country'] = create_models(country, 'admissions.Country', **{**kargs, **country_kwargs})
 
         if not 'city' in models and (is_valid(city) or is_valid(country)):
             kargs = {}
@@ -77,8 +71,8 @@ class AdmissionsModelsMixin(ModelsMixin):
             models['city'] = create_models(city, 'admissions.City', **{**kargs, **city_kwargs})
 
         if not 'academy' in models and (is_valid(academy) or is_valid(profile_academy) or is_valid(syllabus)
-                                        or is_valid(academy_specialty_mode) or is_valid(cohort)
-                                        or is_valid(monitor_script)):
+                                        or is_valid(cohort) or is_valid(monitor_script)
+                                        or is_valid(syllabus_schedule)):
             kargs = {}
 
             if 'country' in models:
@@ -111,31 +105,20 @@ class AdmissionsModelsMixin(ModelsMixin):
                 **syllabus_version_kwargs
             })
 
-        if not 'specialty_mode' in models and is_valid(specialty_mode):
+        if not 'syllabus_schedule' in models and (is_valid(syllabus_schedule)
+                                                  or is_valid(syllabus_schedule_time_slot)):
             kargs = {}
 
             if 'syllabus' in models:
                 kargs['syllabus'] = just_one(models['syllabus'])
 
-            models['specialty_mode'] = create_models(specialty_mode, 'admissions.SpecialtyMode', **{
-                **kargs,
-                **specialty_mode_kwargs
-            })
-
-        if not 'academy_specialty_mode' in models and is_valid(academy_specialty_mode):
-            kargs = {}
-
-            if 'specialty_mode' in models:
-                kargs['specialty_mode'] = just_one(models['specialty_mode'])
-
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
 
-            models['academy_specialty_mode'] = create_models(academy_specialty_mode,
-                                                             'admissions.AcademySpecialtyMode', **{
-                                                                 **kargs,
-                                                                 **academy_specialty_mode_kwargs
-                                                             })
+            models['syllabus_schedule'] = create_models(syllabus_schedule, 'admissions.SyllabusSchedule', **{
+                **kargs,
+                **syllabus_schedule_kwargs
+            })
 
         if not 'cohort' in models and not skip_cohort and (is_valid(cohort) or is_valid(profile_academy)
                                                            or is_valid(cohort_user) or is_valid(academy)):
@@ -147,8 +130,8 @@ class AdmissionsModelsMixin(ModelsMixin):
             if 'syllabus_version' in models or syllabus_version:
                 kargs['syllabus_version'] = just_one(models['syllabus_version'])
 
-            if 'specialty_mode' in models or specialty_mode:
-                kargs['specialty_mode'] = just_one(models['specialty_mode'])
+            if 'syllabus_schedule' in models or syllabus_schedule:
+                kargs['schedule'] = just_one(models['syllabus_schedule'])
 
             if 'academy' in models:
                 kargs['academy'] = just_one(models['academy'])
@@ -169,24 +152,21 @@ class AdmissionsModelsMixin(ModelsMixin):
                 **cohort_user_kwargs
             })
 
-        if not 'specialty_mode_time_slot' in models and is_valid(specialty_mode_time_slot):
+        if not 'syllabus_schedule_time_slot' in models and is_valid(syllabus_schedule_time_slot):
             kargs = {
                 'starting_at': random_datetime_interger(),
                 'ending_at': random_datetime_interger(),
                 'timezone': choice(TIMEZONES),
             }
 
-            if 'academy' in models:
-                kargs['academy'] = just_one(models['academy'])
+            if 'syllabus_schedule' in models:
+                kargs['schedule'] = just_one(models['syllabus_schedule'])
 
-            if 'specialty_mode' in models:
-                kargs['specialty_mode'] = just_one(models['specialty_mode'])
-
-            models['specialty_mode_time_slot'] = create_models(specialty_mode_time_slot,
-                                                               'admissions.SpecialtyModeTimeSlot', **{
-                                                                   **kargs,
-                                                                   **specialty_mode_time_slot_kwargs
-                                                               })
+            models['syllabus_schedule_time_slot'] = create_models(
+                syllabus_schedule_time_slot, 'admissions.SyllabusScheduleTimeSlot', **{
+                    **kargs,
+                    **syllabus_schedule_time_slot_kwargs
+                })
 
         if not 'cohort_time_slot' in models and is_valid(cohort_time_slot):
             kargs = {

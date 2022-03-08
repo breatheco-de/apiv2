@@ -30,6 +30,7 @@ urlpatterns = [
     path('user/me', UserMeView.as_view(), name='user_me'),
     path('user/<str:id_or_email>', get_user_by_id_or_email),
     path('role', get_roles, name='role'),
+    path('role/<str:role_slug>', get_roles, name='role_slug'),
     path('member/invite/resend/<int:pa_id>', AcademyInviteView.as_view(), name='academy_resent_invite'),
     path('member/invite/<str:token>', render_invite, name='academy_invite'),
     path('member/<int:profile_academy_id>/token',
@@ -44,6 +45,7 @@ urlpatterns = [
     path('academy/student', StudentView.as_view(), name='academy_student'),
     path('academy/student/<str:user_id_or_email>', StudentView.as_view(), name='academy_student_id'),
     path('academy/user/me/invite', MeInviteView.as_view(), name='user_me_invite'),
+    path('academy/user/me/invite/<slug:new_status>', MeInviteView.as_view(), name='user_me_invite_status'),
     path('academy/user/<int:profileacademy_id>/invite', ProfileInviteView.as_view()),
     path('academy/user/invite', ProfileInviteView.as_view(), name='user_invite'),
     # path('group/', get_groups, name="group"),
@@ -69,6 +71,7 @@ urlpatterns = [
     path('facebook/callback/', save_facebook_token, name='facebook_callback'),
     path('user/me', UserMeView.as_view(), name='user_me'),
     path('user/me/invite', MeInviteView.as_view()),
+    path('user/me/invite/<slug:new_status>', MeInviteView.as_view()),
 
     # google authentication oath2.0
     path('google/<str:token>', get_google_token, name='google_token'),

@@ -1,7 +1,7 @@
 from django.utils import timezone
 from celery import shared_task, Task
-from .actions import run_app_diagnostic, run_script, run_endpoint_diagnostic
-from .models import Application, MonitorScript, Endpoint
+from .actions import run_app_diagnostic, run_script, run_endpoint_diagnostic, download_csv
+from .models import Application, MonitorScript, Endpoint, CSVDownload
 from breathecode.notify.actions import send_email_message, send_slack_raw
 import logging
 
@@ -100,3 +100,9 @@ def execute_scripts(self, script_id):
         return False
 
     return True
+
+
+@shared_task(bind=True, base=BaseTaskWithRetry)
+def async_download_csv(self, module, model_name, ids_to_download):
+    logger.debug('Starting to download csv for ')
+    return download_csv(module, model_name, ids_to_download)

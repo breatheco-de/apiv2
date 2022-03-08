@@ -53,6 +53,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
+    @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
     def test_update_or_create_event__data_is_none(self):
         import logging
         import breathecode.events.actions as actions
@@ -67,6 +68,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(actions.create_or_update_venue.call_args_list, [])
         self.assertEqual(actions.create_or_update_organizer.call_args_list, [])
+        self.assertEqual(actions.update_event_description_from_eventbrite.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
         self.assertEqual(self.all_event_dict(), [])
@@ -79,6 +81,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(logging.Logger, 'error', log_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
+    @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
     def test_update_or_create_event__without_academy(self):
         import logging
         import breathecode.events.actions as actions
@@ -94,6 +97,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(actions.create_or_update_venue.call_args_list, [])
         self.assertEqual(actions.create_or_update_organizer.call_args_list, [])
+        self.assertEqual(actions.update_event_description_from_eventbrite.call_args_list, [])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
         self.assertEqual(self.all_event_dict(), [])
@@ -107,6 +111,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
+    @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
     def test_update_or_create_event__with_academy(self):
         import logging
         import breathecode.events.actions as actions
@@ -125,6 +130,9 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         self.assertEqual(actions.create_or_update_organizer.call_args_list,
                          [call(event['organizer'], model.organization, force_update=True)])
 
+        self.assertEqual(actions.update_event_description_from_eventbrite.call_args_list, [
+            call(self.bc.database.get('events.Event', 1, dict=False)),
+        ])
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
 
         event = EVENTBRITE_EVENTS['events'][0]
@@ -172,6 +180,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
     @patch.object(actions, 'get_current_iso_string', get_current_iso_string_mock())
     @patch.object(actions, 'create_or_update_venue', create_or_update_venue_mock())
     @patch.object(actions, 'create_or_update_organizer', create_or_update_organizer_mock())
+    @patch.object(actions, 'update_event_description_from_eventbrite', MagicMock())
     def test_update_or_create_event__with_event(self):
         import logging
         import breathecode.events.actions as actions
@@ -194,6 +203,10 @@ class SyncOrgVenuesTestSuite(EventTestCase):
                          [call(event['venue'], model.organization)])
         self.assertEqual(actions.create_or_update_organizer.call_args_list,
                          [call(event['organizer'], model.organization, force_update=True)])
+
+        self.assertEqual(actions.update_event_description_from_eventbrite.call_args_list, [
+            call(model.event),
+        ])
 
         self.assertEqual(self.all_organization_dict(), [self.model_to_dict(model, 'organization')])
 

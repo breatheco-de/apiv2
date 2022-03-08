@@ -25,31 +25,31 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_certificate_without_data(self):
         """Test /certificate without auth"""
         url = reverse_lazy('admissions:schedule')
-        self.generate_models(authenticate=True)
+        self.bc.database.create(authenticate=True)
         response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.count_specialty_mode(), 0)
+        self.assertEqual(self.count_syllabus_schedule(), 0)
 
     def test_certificate_with_data(self):
         """Test /certificate without auth"""
-        model = self.generate_models(authenticate=True, syllabus=True, specialty_mode=True)
+        model = self.bc.database.create(authenticate=True, syllabus=True, syllabus_schedule=True)
         url = reverse_lazy('admissions:schedule')
         response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(json, [{
-            'id': model['specialty_mode'].id,
-            'name': model['specialty_mode'].name,
-            'description': model['specialty_mode'].description,
-            'syllabus': model['specialty_mode'].syllabus.id,
+            'id': model['syllabus_schedule'].id,
+            'name': model['syllabus_schedule'].name,
+            'description': model['syllabus_schedule'].description,
+            'syllabus': model['syllabus_schedule'].syllabus.id,
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.all_specialty_mode_dict(), [{
-            **self.model_to_dict(model, 'specialty_mode'),
+        self.assertEqual(self.all_syllabus_schedule_dict(), [{
+            **self.model_to_dict(model, 'syllabus_schedule'),
         }])
 
     """
@@ -59,12 +59,12 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_academy_schedule__syllabus_id_in_querystring__bad_id(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
-                                     profile_academy=True,
-                                     capability='read_certificate',
-                                     role='potato',
-                                     syllabus=True)
+        model = self.bc.database.create(authenticate=True,
+                                        syllabus_schedule=True,
+                                        profile_academy=True,
+                                        capability='read_certificate',
+                                        role='potato',
+                                        syllabus=True)
         url = reverse_lazy('admissions:schedule') + '?syllabus_id=9999'
         response = self.client.get(url)
         json = response.json()
@@ -77,20 +77,20 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_academy_schedule__syllabus_id_in_querystring(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
-                                     profile_academy=True,
-                                     capability='read_certificate',
-                                     role='potato',
-                                     syllabus=True)
+        model = self.bc.database.create(authenticate=True,
+                                        syllabus_schedule=True,
+                                        profile_academy=True,
+                                        capability='read_certificate',
+                                        role='potato',
+                                        syllabus=True)
         url = reverse_lazy('admissions:schedule') + '?syllabus_id=1'
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': model.specialty_mode.id,
-            'name': model.specialty_mode.name,
-            'description': model.specialty_mode.description,
-            'syllabus': model.specialty_mode.syllabus.id,
+            'id': model.syllabus_schedule.id,
+            'name': model.syllabus_schedule.name,
+            'description': model.syllabus_schedule.description,
+            'syllabus': model.syllabus_schedule.syllabus.id,
         }]
 
         self.assertEqual(json, expected)
@@ -104,12 +104,12 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_academy_schedule__syllabus_slug_in_querystring__bad_id(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
-                                     profile_academy=True,
-                                     capability='read_certificate',
-                                     role='potato',
-                                     syllabus=True)
+        model = self.bc.database.create(authenticate=True,
+                                        syllabus_schedule=True,
+                                        profile_academy=True,
+                                        capability='read_certificate',
+                                        role='potato',
+                                        syllabus=True)
         url = reverse_lazy('admissions:schedule') + '?syllabus_slug=they-killed-kenny'
         response = self.client.get(url)
         json = response.json()
@@ -124,21 +124,21 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
 
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
-        model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
-                                     profile_academy=True,
-                                     capability='read_certificate',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_kwargs=syllabus_kwargs)
+        model = self.bc.database.create(authenticate=True,
+                                        syllabus_schedule=True,
+                                        profile_academy=True,
+                                        capability='read_certificate',
+                                        role='potato',
+                                        syllabus=True,
+                                        syllabus_kwargs=syllabus_kwargs)
         url = reverse_lazy('admissions:schedule') + '?syllabus_slug=they-killed-kenny'
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            'id': model.specialty_mode.id,
-            'name': model.specialty_mode.name,
-            'description': model.specialty_mode.description,
-            'syllabus': model.specialty_mode.syllabus.id,
+            'id': model.syllabus_schedule.id,
+            'name': model.syllabus_schedule.name,
+            'description': model.syllabus_schedule.description,
+            'syllabus': model.syllabus_schedule.syllabus.id,
         }]
 
         self.assertEqual(json, expected)
@@ -151,30 +151,33 @@ class CertificateTestSuite(AdmissionsTestCase):
 
     def test_certificate_with_data_without_pagination_get_just_100(self):
         """Test /certificate without auth"""
-        base = self.generate_models(authenticate=True)
+        base = self.bc.database.create(authenticate=True)
         models = [
-            self.generate_models(specialty_mode=True, syllabus=True, models=base) for _ in range(0, 105)
+            self.bc.database.create(syllabus_schedule=True, syllabus=True, models=base)
+            for _ in range(0, 105)
         ]
         url = reverse_lazy('admissions:schedule')
         response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(json, [{
-            'id': model['specialty_mode'].id,
-            'name': model['specialty_mode'].name,
-            'description': model['specialty_mode'].description,
-            'syllabus': model['specialty_mode'].syllabus.id,
-        } for model in models if model['specialty_mode'].id <= 100])
+            'id': model['syllabus_schedule'].id,
+            'name': model['syllabus_schedule'].name,
+            'description': model['syllabus_schedule'].description,
+            'syllabus': model['syllabus_schedule'].syllabus.id,
+        } for model in models if model['syllabus_schedule'].id <= 100])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.all_specialty_mode_dict(), [{
-            **self.model_to_dict(model, 'specialty_mode'),
+        self.assertEqual(self.all_syllabus_schedule_dict(), [{
+            **self.model_to_dict(model, 'syllabus_schedule'),
         } for model in models])
 
     def test_certificate_with_data_with_pagination_first_five(self):
         """Test /certificate without auth"""
-        base = self.generate_models(authenticate=True)
-        models = [self.generate_models(specialty_mode=True, syllabus=True, models=base) for _ in range(0, 10)]
+        base = self.bc.database.create(authenticate=True)
+        models = [
+            self.bc.database.create(syllabus_schedule=True, syllabus=True, models=base) for _ in range(0, 10)
+        ]
         url = reverse_lazy('admissions:schedule') + '?limit=5&offset=0'
         response = self.client.get(url)
         json = response.json()
@@ -192,22 +195,24 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'previous':
                 None,
                 'results': [{
-                    'id': model['specialty_mode'].id,
-                    'name': model['specialty_mode'].name,
-                    'description': model['specialty_mode'].description,
-                    'syllabus': model['specialty_mode'].syllabus.id,
-                } for model in models if model['specialty_mode'].id <= 5]
+                    'id': model['syllabus_schedule'].id,
+                    'name': model['syllabus_schedule'].name,
+                    'description': model['syllabus_schedule'].description,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
+                } for model in models if model['syllabus_schedule'].id <= 5]
             })
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_specialty_mode_dict(), [{
-            **self.model_to_dict(model, 'specialty_mode'),
+        self.assertEqual(self.all_syllabus_schedule_dict(), [{
+            **self.model_to_dict(model, 'syllabus_schedule'),
         } for model in models])
 
     def test_certificate_with_data_with_pagination_last_five(self):
         """Test /certificate without auth"""
-        base = self.generate_models(authenticate=True)
-        models = [self.generate_models(specialty_mode=True, syllabus=True, models=base) for _ in range(0, 10)]
+        base = self.bc.database.create(authenticate=True)
+        models = [
+            self.bc.database.create(syllabus_schedule=True, syllabus=True, models=base) for _ in range(0, 10)
+        ]
         url = reverse_lazy('admissions:schedule') + '?limit=5&offset=5'
         response = self.client.get(url)
         json = response.json()
@@ -225,22 +230,22 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'previous':
                 'http://testserver/v1/admissions/schedule?limit=5',
                 'results': [{
-                    'id': model['specialty_mode'].id,
-                    'name': model['specialty_mode'].name,
-                    'description': model['specialty_mode'].description,
-                    'syllabus': model['specialty_mode'].syllabus.id,
-                } for model in models if model['specialty_mode'].id > 5],
+                    'id': model['syllabus_schedule'].id,
+                    'name': model['syllabus_schedule'].name,
+                    'description': model['syllabus_schedule'].description,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
+                } for model in models if model['syllabus_schedule'].id > 5],
             })
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_specialty_mode_dict(), [{
-            **self.model_to_dict(model, 'specialty_mode'),
+        self.assertEqual(self.all_syllabus_schedule_dict(), [{
+            **self.model_to_dict(model, 'syllabus_schedule'),
         } for model in models])
 
     def test_certificate_with_data_with_pagination_after_last_five(self):
         """Test /certificate without auth"""
-        base = self.generate_models(authenticate=True)
-        models = [self.generate_models(specialty_mode=True, models=base) for _ in range(0, 10)]
+        base = self.bc.database.create(authenticate=True)
+        models = [self.bc.database.create(syllabus_schedule=True, models=base) for _ in range(0, 10)]
         url = reverse_lazy('admissions:schedule') + '?limit=5&offset=10'
         response = self.client.get(url)
         json = response.json()
@@ -256,6 +261,6 @@ class CertificateTestSuite(AdmissionsTestCase):
             })
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_specialty_mode_dict(), [{
-            **self.model_to_dict(model, 'specialty_mode'),
+        self.assertEqual(self.all_syllabus_schedule_dict(), [{
+            **self.model_to_dict(model, 'syllabus_schedule'),
         } for model in models])

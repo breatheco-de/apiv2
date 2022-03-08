@@ -67,6 +67,13 @@ class Issue(models.Model):
         help_text=
         'This is the only unique identifier we get from github, the issue number its not unique among repos')
     status = models.CharField(max_length=20, choices=ISSUE_STATUS, default=DRAFT)
+    status_message = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text='Important message like reasong why not included on bill, etc.')
+
     github_state = models.CharField(max_length=30, blank=True, null=True, default=None)
     github_number = models.PositiveIntegerField()
     body = models.TextField(max_length=500)

@@ -195,15 +195,21 @@
             {% for issue in issues %}
             <tr class="item">
                 <td>
-                    {% if issue.node_id is None or issue.node_id == "" %}
+                    {% if issue.status_message is not None and issue.status_message != "" %}
+                    <span class="text-danger tooltip pointer" data-tippy-content="{{issue.status_message}}">⚠️</span>
+                    {% elif issue.node_id is None or issue.node_id == "" %}
                     <span class="text-danger tooltip pointer"
-                        data-tippy-content="Out of sync, will not be included on bill">⚠️</span>
+                        data-tippy-content="Out of sync, will not be included on the bill">⚠️</span>
                     {% endif %}
                     <a href="{{ issue.url }}" target="_blank" rel="noopener noreferrer">{{ issue.title }}</a>
                 </td>
 
                 <td>
-                    {{ issue.duration_in_hours }}
+                    {% if issue.included_in_bill or issue.included_in_bil == "True" %}
+                    <span style="color: #608062;">{{ issue.duration_in_hours }}</span>
+                    {% else %}
+                    <span style="color: #BFBFBF;">{{ issue.duration_in_hours }}</span>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}

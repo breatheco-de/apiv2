@@ -265,6 +265,8 @@ def send_mentorship_session_survey(self, session_id):
         answer.user = session.mentee
         answer.status = 'SENT'
         answer.save()
+    elif answer.status == 'ANSWERED':
+        return False
 
     has_slackuser = hasattr(session.mentee, 'slackuser')
     if not session.mentee.email:

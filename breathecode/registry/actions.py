@@ -1,4 +1,4 @@
-import logging, json, os
+import logging, json, os, base64, re
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models import Q
 from urllib.parse import urlparse
@@ -166,9 +166,24 @@ def sync_github_lesson(github, asset):
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
     file_name = os.path.basename(asset.readme_url)
-    logger.debug(f'Fetching markdown readme: src/content/lesson/{file_name}')
-    readme_file = repo.get_contents('src/content/lesson/' + file_name)
-    asset.readme = str(readme_file.content)
+
+    result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
+    if result is None:
+        raise Exception('Invalid Github URL for asset ' + asset.slug + '.')
+
+    branch, file_path = result.groups()
+    logger.debug(f'Fetching markdown readme: {file_path}')
+    readme_file = repo.get_contents(file_path)
+
+    decoded = base64.b64decode(readme_file.content.encode('utf-8')).decode('utf-8')
+    if org_name == 'breatheco-de' and repo_name == 'content':
+        logger.debug(f'Markdown is coming from breathecode/content, replacing images')
+        base_url = os.path.dirname(asset.readme_url)
+        replaced = re.sub(r'(["\'(])\.\.\/\.\.\/assets\/images\/([_\w\-\.]+)(["\')])',
+                          r'\1' + base_url + r'/../../assets/images/\2?raw=true\3', decoded)
+        asset.readme = str(base64.b64encode(replaced.encode('utf-8')).decode('utf-8'))
+    else:
+        asset.readme = readme_file.content
 
     return asset
 
