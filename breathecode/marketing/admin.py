@@ -141,7 +141,7 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app',
         'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium', 'country'
     ]
-    actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'export_as_csv']
+    actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv']
 
 
 def add_dispute(modeladmin, request, queryset):
