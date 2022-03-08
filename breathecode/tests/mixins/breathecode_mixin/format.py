@@ -64,6 +64,7 @@ class Format:
         # This make sure the element are being printed and prevent `describe_models` are pushed to dev branch
         assert False
 
+    #TODO: this method is buggy in the line `if not hasattr(model, key)`
     def _describe_model(self, model: Model):
         pk_name = self._get_pk_name(model)
         attrs = dir(model)
@@ -117,7 +118,6 @@ class Format:
     def _get_pk_name(self, model: Model):
         from django.db.models.fields import Field, SlugField
 
-        # print(dir(model))
         attrs = [
             x for x in dir(model)
             if hasattr(model.__class__, x) and (isinstance(getattr(model.__class__, x), SlugField)

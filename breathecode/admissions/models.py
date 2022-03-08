@@ -235,7 +235,7 @@ class Cohort(models.Model):
 
     syllabus_version = models.ForeignKey(SyllabusVersion, on_delete=models.CASCADE, default=None, null=True)
 
-    schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.CASCADE, default=None, null=True)
+    schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.SET_NULL, default=None, null=True)
 
     language = models.CharField(max_length=2, default='en')
 

@@ -71,8 +71,7 @@ class AdmissionsModelsMixin(ModelsMixin):
             models['city'] = create_models(city, 'admissions.City', **{**kargs, **city_kwargs})
 
         if not 'academy' in models and (is_valid(academy) or is_valid(profile_academy) or is_valid(syllabus)
-                                        or is_valid(cohort) or is_valid(monitor_script)
-                                        or is_valid(syllabus_schedule)):
+                                        or is_valid(cohort) or is_valid(monitor_script)):
             kargs = {}
 
             if 'country' in models:
