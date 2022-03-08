@@ -316,16 +316,140 @@ class SurveyTestSuite(FeedbackTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    # @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    # @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    # def test_academy_survey__post__without_auth(self):
-    #     """Test /academy/survey without authorization"""
-    #     url = reverse_lazy('feedback:academy_survey')
-    #     data = {}
-    #     response = self.client.get(url, {})
-    #     json = response.json()
-    #     expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-    #     assert False
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__post__without_auth(self):
+        """Test /academy/survey without authorization"""
+        url = reverse_lazy('feedback:academy_survey')
+        response = self.client.post(url, {})
+        json = response.json()
+        expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__post__without_academy(self):
+        """Test /academy/survey without authorization"""
+        self.bc.database.create(authenticate=True)
+        url = reverse_lazy('feedback:academy_survey')
+        response = self.client.post(url, {})
+        json = response.json()
+        expected = {
+            'detail': "Missing academy_id parameter expected for the endpoint url or 'Academy' header",
+            'status_code': 403
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__post__without_role(self):
+        """Test /academy/survey without authorization"""
+        self.headers(academy=1)
+        url = reverse_lazy('feedback:academy_survey')
+        self.bc.database.create(authenticate=True)
+        response = self.client.post(url, {})
+        json = response.json()
+        expected = {
+            'detail': "You (user: 1) don't have this capability: crud_survey for academy 1",
+            'status_code': 403
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__post__without_cohort(self):
+        """Test /academy/survey post without data"""
+
+        self.headers(academy=1)
+        model = self.bc.database.create(
+            authenticate=True,
+            academy=True,
+            profile_academy=True,
+            role='crud_survey',
+            capability='crud_survey',
+        )
+
+        url = reverse_lazy('feedback:academy_survey')
+        response = self.client.post(url)
+        json = response.json()
+        expected = {'cohort': ['This field is required.']}
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__post__without_teacher_assigned(self):
+        """Test /academy/survey post without data"""
+
+        self.headers(academy=1)
+        model = self.bc.database.create(
+            authenticate=True,
+            academy=True,
+            profile_academy=True,
+            role='crud_survey',
+            capability='crud_survey',
+            cohort=True,
+            cohort_user=True,
+        )
+
+        url = reverse_lazy('feedback:academy_survey')
+        response = self.client.post(url, {'cohort': 1})
+        json = response.json()
+        expected = {
+            'detail': 'This cohort must have a teacher assigned to be able to survey it',
+            'status_code': 400
+        }
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__post__with_teacher_assigned(self):
+        """Test /academy/survey post without data"""
+
+        self.headers(academy=1)
+        cohort_user_kwargs = {'role': 'TEACHER'}
+        model = self.bc.database.create(
+            authenticate=True,
+            academy=True,
+            profile_academy=True,
+            role='TEACHER',
+            capability='crud_survey',
+            cohort=True,
+            cohort_user=cohort_user_kwargs,
+        )
+
+        url = reverse_lazy('feedback:academy_survey')
+        response = self.client.post(url, {'cohort': 1})
+        json = response.json()
+
+        del json['created_at']
+        del json['updated_at']
+
+        expected = {
+            'id': model['cohort'].id,
+            'status': True,
+            'public_url': 'https://nps.breatheco.de/survey/1',
+            'lang': 'en',
+            'max_assistants_to_ask': 2,
+            'max_teachers_to_ask': 1,
+            'duration': '1 00:00:00',
+            # 'created_at': self.bc.datetime.to_iso_string(model['cohort'].created_at),
+            # 'updated_at': self.bc.datetime.to_iso_string(model['cohort'].updated_at),
+            'sent_at': None,
+            'cohort': model['cohort_user'].cohort.id,
+        }
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assert False

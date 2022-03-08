@@ -1,6 +1,7 @@
 import logging, os
 from breathecode.authenticate.models import Token
-from breathecode.utils import ValidationException
+from breathecode.utils import validation_exception
+from breathecode.utils import getLogger
 from django.db.models import Avg
 from celery import shared_task, Task
 from django.utils import timezone
@@ -13,7 +14,8 @@ from breathecode.mentorship.models import MentorshipSession
 from django.utils import timezone
 
 # Get an instance of a logger
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 ADMIN_URL = os.getenv('ADMIN_URL', '')
 SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', '')
@@ -210,8 +212,25 @@ def process_answer_received(self, answer_id):
     answer.survey.save()
 
     if answer.user and answer.academy and answer.score is not None and answer.score < 8:
+
+        list_of_emails = []
+
+        if SYSTEM_EMAIL is not None:
+            list_of_emails.append(SYSTEM_EMAIL)
+        else:
+            logger.exception('No system email found.', slug='system-email-notfound')
+            return
+
+        if answer.academy.feedback_email is not None:
+            list_of_emails.append(answer.academy.feedback_email)
+
+        else:
+            logger.exception('No academy feedback email found.', slug='academy-feedback-email-not-found')
+            return
+
         # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
-        send_email_message('negative_answer', [SYSTEM_EMAIL, answer.academy.feedback_email],
+        send_email_message('negative_answer',
+                           list_of_emails,
                            data={
                                'SUBJECT': f'A student answered with a bad NPS score at {answer.academy.name}',
                                'FULL_NAME': answer.user.first_name + ' ' + answer.user.last_name,
