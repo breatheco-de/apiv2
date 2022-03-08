@@ -372,3 +372,125 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(OutputWrapper.write.call_args_list, [
             call('Done!'),
         ])
+
+    @patch('django.core.management.base.OutputWrapper.write', MagicMock())
+    def test_migrate_or_delete_syllabus_schedule__two_schedule_related_to_the_first__two_academy__cohort_with_timezone(
+            self):
+        from django.core.management.base import OutputWrapper
+
+        cohorts = [
+            {
+                'schedule_id': 1,
+                'academy_id': 1,
+                'timezone': 'Europe/Madrid',
+            },
+            {
+                'schedule_id': 2,
+                'academy_id': 1,
+                'timezone': 'America/Caracas',
+            },
+            {
+                'schedule_id': 1,
+                'academy_id': 2,
+                'timezone': 'America/Bogota',
+            },
+            {
+                'schedule_id': 2,
+                'academy_id': 2,
+                'timezone': 'America/Santiago',
+            },
+        ]
+        syllabus_schedule = {'academy': None}
+        academies = [{'timezone': 'America/New_York'}, {'timezone': 'Pacific/Pago_Pago'}]
+        syllabus_schedule_time_slots = [
+            {
+                'schedule_id': 1
+            },
+            {
+                'schedule_id': 2
+            },
+            {
+                'schedule_id': 3
+            },
+            {
+                'schedule_id': 4
+            },
+        ]
+        model = self.bc.database.create(syllabus_schedule=(4, syllabus_schedule),
+                                        academy=academies,
+                                        cohort=cohorts,
+                                        syllabus_schedule_time_slot=syllabus_schedule_time_slots)
+        command = Command()
+
+        result = command.handle()
+
+        self.assertEqual(result, None)
+
+        self.assertEqual(
+            self.bc.database.list_of('admissions.SyllabusSchedule'),
+            [
+                {
+                    **self.bc.format.to_dict(model.syllabus_schedule[0]),
+                    'academy_id': 1,
+                },
+                {
+                    **self.bc.format.to_dict(model.syllabus_schedule[1]),
+                    'academy_id': 1,
+                },
+                {
+                    **self.bc.format.to_dict(model.syllabus_schedule[0]),
+                    'id': 5,
+                    'academy_id': 2,
+                },
+                {
+                    **self.bc.format.to_dict(model.syllabus_schedule[1]),
+                    'id': 6,
+                    'academy_id': 2,
+                },
+            ],
+        )
+
+        self.assertEqual(self.bc.database.list_of('admissions.SyllabusScheduleTimeSlot'), [
+            {
+                **self.bc.format.to_dict(model.syllabus_schedule_time_slot[0]),
+                'schedule_id': 1,
+                'timezone': model.cohort[0].timezone,
+            },
+            {
+                **self.bc.format.to_dict(model.syllabus_schedule_time_slot[1]),
+                'schedule_id': 2,
+                'timezone': model.cohort[1].timezone,
+            },
+            {
+                **self.bc.format.to_dict(model.syllabus_schedule_time_slot[0]),
+                'id': 5,
+                'schedule_id': 5,
+                'timezone': model.cohort[2].timezone,
+            },
+            {
+                **self.bc.format.to_dict(model.syllabus_schedule_time_slot[1]),
+                'id': 6,
+                'schedule_id': 6,
+                'timezone': model.cohort[3].timezone,
+            },
+        ])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
+            {
+                **self.bc.format.to_dict(model.cohort[0]),
+            },
+            {
+                **self.bc.format.to_dict(model.cohort[1]),
+            },
+            {
+                **self.bc.format.to_dict(model.cohort[2]),
+                'schedule_id': 5,
+            },
+            {
+                **self.bc.format.to_dict(model.cohort[3]),
+                'schedule_id': 6,
+            },
+        ])
+
+        self.assertEqual(OutputWrapper.write.call_args_list, [
+            call('Done!'),
+        ])
