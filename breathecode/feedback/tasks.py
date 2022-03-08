@@ -18,7 +18,6 @@ from django.utils import timezone
 logger = getLogger(__name__)
 
 ADMIN_URL = os.getenv('ADMIN_URL', '')
-SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', '')
 API_URL = os.getenv('API_URL', '')
 
 
@@ -58,6 +57,11 @@ def build_question(answer):
         question['highest'] = strings[answer.lang]['academy']['highest']
 
     return question
+
+
+def get_system_email():
+    system_email = os.getenv('SYSTEM_EMAIL')
+    return system_email
 
 
 def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
@@ -212,35 +216,42 @@ def process_answer_received(self, answer_id):
     answer.survey.save()
 
     if answer.user and answer.academy and answer.score is not None and answer.score < 8:
-
+        system_email = get_system_email()
         list_of_emails = []
+        print('system email: ', system_email)
+        print(answer.academy.feedback_email)
 
-        if SYSTEM_EMAIL is not None:
-            list_of_emails.append(SYSTEM_EMAIL)
+        if system_email is not None:
+            list_of_emails.append(system_email)
         else:
-            logger.exception('No system email found.', slug='system-email-notfound')
-            return
+            logger.error('No system email found.', slug='system-email-not-found')
 
         if answer.academy.feedback_email is not None:
             list_of_emails.append(answer.academy.feedback_email)
 
         else:
-            logger.exception('No academy feedback email found.', slug='academy-feedback-email-not-found')
-            return
+            logger.error('No academy feedback email found.', slug='academy-feedback-email-not-found')
 
         # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
-        send_email_message('negative_answer',
-                           list_of_emails,
-                           data={
-                               'SUBJECT': f'A student answered with a bad NPS score at {answer.academy.name}',
-                               'FULL_NAME': answer.user.first_name + ' ' + answer.user.last_name,
-                               'QUESTION': answer.title,
-                               'SCORE': answer.score,
-                               'COMMENTS': answer.comment,
-                               'ACADEMY': answer.academy.name,
-                               'LINK':
-                               f'{ADMIN_URL}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
-                           })
+        if list_of_emails:
+            send_email_message('negative_answer',
+                               list_of_emails,
+                               data={
+                                   'SUBJECT':
+                                   f'A student answered with a bad NPS score at {answer.academy.name}',
+                                   'FULL_NAME':
+                                   answer.user.first_name + ' ' + answer.user.last_name,
+                                   'QUESTION':
+                                   answer.title,
+                                   'SCORE':
+                                   answer.score,
+                                   'COMMENTS':
+                                   answer.comment,
+                                   'ACADEMY':
+                                   answer.academy.name,
+                                   'LINK':
+                                   f'{ADMIN_URL}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
+                               })
 
     return True
 

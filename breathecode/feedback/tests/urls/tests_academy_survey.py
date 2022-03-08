@@ -127,6 +127,45 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__get__with_response_rate(self):
+        """Test /academy/survey with data"""
+
+        self.headers(academy=1)
+        survey_kwargs = {'response_rate': 7.5}
+        model = self.bc.database.create(
+            authenticate=True,
+            academy=True,
+            profile_academy=True,
+            role='read_survey',
+            survey=survey_kwargs,
+            capability='read_survey',
+        )
+
+        url = reverse_lazy('feedback:academy_survey')
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'id': model['survey'].id,
+            'lang': model['survey'].lang,
+            'cohort': {
+                'id': model['cohort'].id,
+                'slug': model['cohort'].slug,
+                'name': model['cohort'].name
+            },
+            'avg_score': model['survey'].avg_score,
+            'response_rate': model['survey'].response_rate,
+            'status': model['survey'].status,
+            'duration': '86400.0',
+            'created_at': self.bc.datetime.to_iso_string(model['survey'].created_at),
+            'sent_at': None,
+            'public_url': 'https://nps.breatheco.de/survey/1'
+        }]
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__with_sent_status_query(self):
         """Test /academy/survey with sent status query"""
 
@@ -419,12 +458,12 @@ class SurveyTestSuite(FeedbackTestCase):
         """Test /academy/survey post without data"""
 
         self.headers(academy=1)
-        cohort_user_kwargs = {'role': 'TEACHER'}
+        cohort_user_kwargs = [{'role': 'STUDENT'}, {'role': 'TEACHER'}]
         model = self.bc.database.create(
             authenticate=True,
             academy=True,
             profile_academy=True,
-            role='TEACHER',
+            role='STUDENT',
             capability='crud_survey',
             cohort=True,
             cohort_user=cohort_user_kwargs,
@@ -433,7 +472,6 @@ class SurveyTestSuite(FeedbackTestCase):
         url = reverse_lazy('feedback:academy_survey')
         response = self.client.post(url, {'cohort': 1})
         json = response.json()
-
         del json['created_at']
         del json['updated_at']
 
@@ -445,11 +483,8 @@ class SurveyTestSuite(FeedbackTestCase):
             'max_assistants_to_ask': 2,
             'max_teachers_to_ask': 1,
             'duration': '1 00:00:00',
-            # 'created_at': self.bc.datetime.to_iso_string(model['cohort'].created_at),
-            # 'updated_at': self.bc.datetime.to_iso_string(model['cohort'].updated_at),
             'sent_at': None,
-            'cohort': model['cohort_user'].cohort.id,
+            'cohort': model['cohort_user'][0].cohort.id,
         }
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        assert False
