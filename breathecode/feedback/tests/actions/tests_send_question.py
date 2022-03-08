@@ -137,7 +137,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
         mock_slack.call_args_list = []
 
     """
-    🔽🔽🔽 Cohort without SpecialtyMode
+    🔽🔽🔽 Cohort without SyllabusSchedule
     """
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -145,7 +145,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     @patch(MAILGUN_PATH['post'], apply_mailgun_requests_post_mock())
     @patch(SLACK_PATH['request'], apply_slack_requests_request_mock())
-    def test_send_question__cohort_without_specialty_mode(self):
+    def test_send_question__cohort_without_syllabus_schedule(self):
         mock_mailgun = MAILGUN_INSTANCES['post']
         mock_mailgun.call_args_list = []
 
@@ -205,7 +205,10 @@ class SendSurveyTestSuite(FeedbackTestCase):
         mock_slack = SLACK_INSTANCES['request']
         mock_slack.call_args_list = []
 
-        model = self.generate_models(user=True, cohort_user=True, syllabus_version=True, specialty_mode=True)
+        model = self.generate_models(user=True,
+                                     cohort_user=True,
+                                     syllabus_version=True,
+                                     syllabus_schedule=True)
 
         certificate = model.syllabus.name
         send_question(model['user'])
@@ -264,7 +267,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      credentials_slack=True,
                                      academy=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      cohort_kwargs=cohort_kwargs)
 
         certificate = model.syllabus.name
@@ -322,7 +325,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      academy=True,
                                      slack_team_owner=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      cohort_kwargs=cohort_kwargs)
 
         certificate = model.syllabus.name
@@ -380,7 +383,7 @@ class SendSurveyTestSuite(FeedbackTestCase):
                                      academy=True,
                                      slack_team_owner=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      cohort_kwargs=cohort_kwargs)
 
         certificate = model.syllabus.name

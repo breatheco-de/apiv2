@@ -37,7 +37,7 @@ class CertificateTestSuite(CertificateTestCase):
             cohort=True,
             user=True,
             cohort_user=True,
-            specialty_mode=True,
+            syllabus_schedule=True,
             syllabus=True,
             syllabus_version=True,
             specialty=True,
@@ -110,7 +110,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      cohort_user=True,
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      specialty=True,
                                      user_specialty=True,
                                      layout_design=True,
@@ -157,10 +157,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
-                'specialty_mode': {
+                'schedule': {
                     'id': 1,
-                    'name': model['specialty_mode'].name,
-                    'syllabus': model['specialty_mode'].syllabus.id,
+                    'name': model['syllabus_schedule'].name,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': model['syllabus_version'].version,

@@ -94,11 +94,11 @@ def append_cohort_id_if_not_exist(cohort_timeslot):
 
 
 def sync_cohort_timeslots(cohort_id):
-    from breathecode.admissions.models import SpecialtyModeTimeSlot, CohortTimeSlot, Cohort
+    from breathecode.admissions.models import SyllabusScheduleTimeSlot, CohortTimeSlot, Cohort
     CohortTimeSlot.objects.filter(cohort__id=cohort_id).delete()
 
     cohort_values = Cohort.objects.filter(id=cohort_id).values('academy__id', 'academy__timezone',
-                                                               'specialty_mode__id', 'slug').first()
+                                                               'schedule__id', 'slug').first()
 
     timezone = cohort_values['academy__timezone']
     if not timezone:
@@ -106,8 +106,8 @@ def sync_cohort_timeslots(cohort_id):
         logger.warning(f'Cohort `{slug}` was skipped because not have a timezone')
         return
 
-    certificate_timeslots = SpecialtyModeTimeSlot.objects.filter(
-        academy__id=cohort_values['academy__id'], specialty_mode__id=cohort_values['specialty_mode__id'])
+    certificate_timeslots = SyllabusScheduleTimeSlot.objects.filter(
+        schedule__academy__id=cohort_values['academy__id'], schedule__id=cohort_values['schedule__id'])
 
     timeslots = CohortTimeSlot.objects.bulk_create([
         fill_cohort_timeslot(certificate_timeslot, cohort_id, timezone)
