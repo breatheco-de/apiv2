@@ -200,15 +200,9 @@ def send_big_cohort_bulk_survey(modeladmin, request, queryset):
 
         try:
             result = send_survey_group(survey=s)
-            s.status_json = json.dumps(result)
-            if len(result['success']) == 0:
-                s.status = 'FATAL'
-            elif len(result['error']) > 0:
-                s.status = 'PARTIAL'
-            else:
-                s.status = 'SENT'
         except Exception as e:
             s.status = 'FATAL'
+            s.status_json = json.dumps({'errors': [str(e)]})
             logger.fatal(str(e))
     if s.status != 'SENT':
         messages.error(request, message='Some surveys have not been sent')
@@ -217,7 +211,7 @@ def send_big_cohort_bulk_survey(modeladmin, request, queryset):
     logger.info(f'All surveys scheduled to send for cohorts')
 
 
-send_big_cohort_bulk_survey.short_description = 'Send GENERAL BIG Survey to all cohort students'
+send_big_cohort_bulk_survey.short_description = 'Send survey to all cohort students'
 
 
 class SentFilter(admin.SimpleListFilter):

@@ -42,7 +42,8 @@ else:
     not_sent = 'No other surveys have issues'
 
 for cohort in cohorts:
-    lastest_survey = Survey.objects.filter(cohort__id=cohort.id, status='SENT',
+    lastest_survey = Survey.objects.filter(cohort__id=cohort.id,
+                                           status__in=['SENT', 'PARTIAL'],
                                            sent_at__isnull=False).order_by('-sent_at').first()
 
     if lastest_survey is None:
@@ -56,7 +57,7 @@ for cohort in cohorts:
         if num_weeks > 2:
             cohorts_with_pending_surveys.append(
                 cohort.name +
-                f': Last survey was <a href="{ADMIN_URL}/feedback/surveys/{cohort.slug}/{lastest_survey.id}?location={academy.slug}">{num_weeks} wee ago</a>'
+                f': Last survey was <a href="{ADMIN_URL}/feedback/surveys/{cohort.slug}/{lastest_survey.id}?location={academy.slug}">{num_weeks} weeks ago</a>'
             )
 
 if len(cohorts_with_pending_surveys) > 0:
