@@ -18,12 +18,15 @@ from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
+STUDENT_URL = os.getenv('STUDENT_URL', '')
+
 
 class UserTinySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
     email = serpy.Field()
+    first_name = serpy.Field()
 
 
 class AcademyTinySerializer(serpy.Serializer):
@@ -130,8 +133,10 @@ class AcademySerializer(serpy.Serializer):
 class ProfileAcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
     academy = AcademySerializer()
     role = serpy.MethodField()
+    created_at = serpy.Field()
 
     def get_role(self, obj):
         return obj.role.slug
@@ -465,6 +470,12 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
         if role is None:
             raise ValidationException('Role student not found')
 
+        cohort = None
+        if 'cohort' in validated_data:
+            cohort = Cohort.objects.filter(id=validated_data.pop('cohort')).first()
+            if cohort is None:
+                raise ValidationException('Cohort not found')
+
         user = None
         email = None
         status = 'INVITED'
@@ -473,20 +484,37 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             if user is None:
                 raise ValidationException('User not found')
             email = user.email
-            status = 'ACTIVE'
+
+            token, created = Token.get_or_create(user, token_type='temporal')
+            querystr = urllib.parse.urlencode({'callback': STUDENT_URL, 'token': token})
+            url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
+
+            profile_academy = super().create({
+                **validated_data, 'email': email,
+                'user': user,
+                'academy': academy,
+                'role': role,
+                'status': status
+            })
+
+            send_email_message(
+                'academy_invite', email, {
+                    'subject': f'Invitation to study at {academy.name}',
+                    'invites': [ProfileAcademySmallSerializer(profile_academy).data],
+                    'user': UserSmallSerializer(user).data,
+                    'LINK': url,
+                })
+
+            return profile_academy
 
         if 'user' not in validated_data:
             validated_data.pop('invite')
             email = validated_data['email']
-            cohort = None
-            if 'cohort' in validated_data:
-                cohort = Cohort.objects.filter(id=validated_data.pop('cohort')).first()
-
             invite = UserInvite.objects.filter(email=validated_data['email'],
                                                author=self.context.get('request').user).first()
+            invite = invite.first()
             if invite is not None:
-                raise ValidationException(
-                    'You already invited this user, check for previous invites and resend')
+                raise ValidationException('You already invited this user')
 
             invite = UserInvite(email=validated_data['email'],
                                 first_name=validated_data['first_name'],
@@ -500,27 +528,25 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
             logger.debug('Sending invite email to ' + email)
 
-            params = {'callback': 'https://learn.breatheco.de'}
-
-            querystr = urllib.parse.urlencode(params)
+            querystr = urllib.parse.urlencode({'callback': STUDENT_URL})
             url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
                 str(invite.token) + '?' + querystr
 
             send_email_message(
-                'welcome_academy', email, {
+                'welcome', email, {
                     'email': email,
-                    'subject': 'Welcome to Breathecode',
+                    'subject': 'Welcome to 4Geeks.com',
                     'LINK': url,
                     'FIST_NAME': validated_data['first_name']
                 })
 
-        return super().create({
-            **validated_data, 'email': email,
-            'user': user,
-            'academy': academy,
-            'role': role,
-            'status': status
-        })
+            return super().create({
+                **validated_data, 'email': email,
+                'user': user,
+                'academy': academy,
+                'role': role,
+                'status': status
+            })
 
 
 class MemberPUTSerializer(serializers.ModelSerializer):

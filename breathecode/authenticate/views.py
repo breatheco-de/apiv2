@@ -1,4 +1,5 @@
 import os, requests, base64, logging
+import urllib.parse
 from datetime import timezone, timedelta
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
@@ -40,15 +41,17 @@ from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
 from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
+from breathecode.utils.views import private_view, render_message, set_query_parameter
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import set_query_parameter
 from .serializers import (GetProfileAcademySmallSerializer, UserInviteWaitingListSerializer, UserSerializer,
                           AuthSerializer, UserSmallSerializer, GetProfileAcademySerializer,
                           MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
                           RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer,
-                          RoleBigSerializer)
+                          RoleBigSerializer, ProfileAcademySmallSerializer, UserTinySerializer)
 
 logger = logging.getLogger(__name__)
+STUDENT_URL = os.getenv('STUDENT_URL', '')
 
 
 class TemporalTokenView(ObtainAuthToken):
@@ -1142,7 +1145,7 @@ def render_invite(request, token, member_id=None):
     if request.method == 'GET':
 
         invite = UserInvite.objects.filter(token=token, status='PENDING').first()
-        if invite is None:
+        if invite is not None:
             return render(request, 'message.html',
                           {'message': 'Invitation noot found with this token or it was already accepted'})
         form = InviteForm({
@@ -1222,6 +1225,35 @@ def render_invite(request, token, member_id=None):
         else:
             return render(request, 'message.html',
                           {'MESSAGE': 'Welcome to BreatheCode, you can go ahead an log in'})
+
+
+@private_view
+def render_academy_invite(request, token):
+    callback_url = request.GET.get('callback', '')
+    accepting = request.GET.get('accepting', '')
+    rejecting = request.GET.get('rejecting', '')
+    if accepting.strip() != '':
+        ProfileAcademy.objects.filter(id__in=accepting.split(','), user__id=token.user.id,
+                                      status='INVITED').update(status='ACTIVE')
+    if rejecting.strip() != '':
+        ProfileAcademy.objects.filter(id__in=rejecting.split(','), user__id=token.user.id).delete()
+
+    pending_invites = ProfileAcademy.objects.filter(user__id=token.user.id, status='INVITED')
+    if pending_invites.count() == 0:
+        return render_message(request,
+                              f'You don\'t have any pending invites',
+                              btn_label='Continue to 4Geeks',
+                              btn_url=STUDENT_URL)
+
+    querystr = urllib.parse.urlencode({'callback': STUDENT_URL, 'token': token.key})
+    url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
+    return render(
+        request, 'academy_invite.html', {
+            'subject': f'Invitation to study at 4Geeks.com',
+            'invites': ProfileAcademySmallSerializer(pending_invites, many=True).data,
+            'LINK': url,
+            'user': UserTinySerializer(token.user, many=False).data
+        })
 
 
 def login_html_view(request):

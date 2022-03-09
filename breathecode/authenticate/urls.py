@@ -21,7 +21,8 @@ from .views import (TokenTemporalView, WaitingListView, get_users, get_user_by_i
                     get_slack_token, save_slack_token, pick_password, get_token_info, get_facebook_token,
                     save_facebook_token, MemberView, reset_password_view, login_html_view, StudentView,
                     get_roles, render_invite, AcademyInviteView, ProfileInviteView, MeInviteView,
-                    AcademyTokenView, PasswordResetView, get_google_token, save_google_token)
+                    AcademyTokenView, PasswordResetView, get_google_token, save_google_token,
+                    render_academy_invite)
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -48,6 +49,7 @@ urlpatterns = [
     path('academy/user/me/invite/<slug:new_status>', MeInviteView.as_view(), name='user_me_invite_status'),
     path('academy/user/<int:profileacademy_id>/invite', ProfileInviteView.as_view()),
     path('academy/user/invite', ProfileInviteView.as_view(), name='user_invite'),
+    path('academy/html/invite', render_academy_invite),
     # path('group/', get_groups, name="group"),
     path('view/login', login_html_view, name='login_view'),  # html login form
     # get token from email and password
