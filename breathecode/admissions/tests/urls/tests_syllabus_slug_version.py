@@ -55,7 +55,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato')
@@ -77,7 +77,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato',
@@ -120,7 +120,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         """Test /certificate without auth"""
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
@@ -146,7 +146,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
@@ -173,7 +173,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
@@ -209,7 +209,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',

@@ -161,13 +161,14 @@ class SyllabusVersion(models.Model):
         return f'{self.syllabus.slug}.v{self.version}'
 
 
-class SpecialtyMode(models.Model):
+class SyllabusSchedule(models.Model):
     name = models.CharField(max_length=150)
 
     schedule_type = models.CharField(max_length=15, choices=SCHEDULE_TYPE, default='PART-TIME')
     description = models.TextField(max_length=450)
 
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, default=None, null=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, default=None, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -187,14 +188,6 @@ class SpecialtyMode(models.Model):
     #             self.logo = obj.public_url
 
     #     super().save(*args, **kwargs)  # Call the "real" save() method.
-
-
-class AcademySpecialtyMode(models.Model):
-    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE)
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
 INACTIVE = 'INACTIVE'
@@ -242,7 +235,7 @@ class Cohort(models.Model):
 
     syllabus_version = models.ForeignKey(SyllabusVersion, on_delete=models.CASCADE, default=None, null=True)
 
-    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE, default=None, null=True)
+    schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.CASCADE, default=None, null=True)
 
     language = models.CharField(max_length=2, default='en')
 
@@ -362,9 +355,8 @@ class TimeSlot(models.Model):
         abstract = True
 
 
-class SpecialtyModeTimeSlot(TimeSlot):
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE)
+class SyllabusScheduleTimeSlot(TimeSlot):
+    schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.CASCADE)
 
 
 class CohortTimeSlot(TimeSlot):

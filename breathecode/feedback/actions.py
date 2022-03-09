@@ -96,8 +96,9 @@ def send_question(user, cohort=None):
         raise ValidationException('Cohort not have one SyllabusVersion',
                                   slug='cohort-without-syllabus-version')
 
-    if not answer.cohort.specialty_mode:
-        raise ValidationException('Cohort not have one SpecialtyMode', slug='cohort-without-specialty-mode')
+    if not answer.cohort.schedule:
+        raise ValidationException('Cohort not have one SyllabusSchedule',
+                                  slug='cohort-without-specialty-mode')
 
     question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user,
                                                          status='SENT').count()
