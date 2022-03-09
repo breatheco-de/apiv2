@@ -45,11 +45,13 @@ class CertificateTestSuite(AdmissionsTestCase):
     🔽🔽🔽 Without data
     """
 
-    def test_academy_schedule__without_schedule(self):
+    def test_academy_schedule__with_schedule_of_other_academy(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
+        syllabus_schedule = {'academy_id': 2}
         model = self.generate_models(authenticate=True,
-                                     syllabus_schedule=True,
+                                     syllabus_schedule=syllabus_schedule,
+                                     academy=2,
                                      profile_academy=True,
                                      capability='read_certificate',
                                      role='potato')
