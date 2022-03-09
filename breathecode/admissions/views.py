@@ -595,8 +595,7 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
                                       400,
                                       slug='certificate-in-body')
 
-        certificate = SyllabusSchedule.objects.filter(id=certificate_id,
-                                                      syllabus__academy_owner__id=academy_id).first()
+        certificate = SyllabusSchedule.objects.filter(id=certificate_id, academy__id=academy_id).first()
 
         if certificate_id and not certificate:
             raise ValidationException('Schedule not found', 404, slug='certificate-not-found')
@@ -910,7 +909,7 @@ class SyllabusScheduleView(APIView, HeaderLimitOffsetPagination):
 class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('read_certificate')
     def get(self, request, academy_id=None):
-        items = SyllabusSchedule.objects.filter(syllabus__academy_owner__id=academy_id)
+        items = SyllabusSchedule.objects.filter(academy__id=academy_id)
 
         syllabus_id = request.GET.get('syllabus_id')
         if syllabus_id:
@@ -978,8 +977,7 @@ class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, Generate
         if not lookups:
             raise ValidationException('Missing parameters in the querystring', code=400)
 
-        ids = SyllabusSchedule.objects.filter(syllabus__academy_owner__id=academy_id).values_list('id',
-                                                                                                  flat=True)
+        ids = SyllabusSchedule.objects.filter(academy__id=academy_id).values_list('id', flat=True)
 
         items = SyllabusSchedule.objects.filter(**lookups).filter(id__in=ids)
 
