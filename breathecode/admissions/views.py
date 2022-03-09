@@ -897,6 +897,14 @@ class SyllabusScheduleView(APIView, HeaderLimitOffsetPagination):
         if syllabus_slug:
             items = items.filter(syllabus__slug__in=syllabus_slug.split(','))
 
+        academy_id = request.GET.get('academy_id')
+        if academy_id:
+            items = items.filter(academy__id__in=academy_id.split(','))
+
+        academy_slug = request.GET.get('academy_slug')
+        if academy_slug:
+            items = items.filter(academy__slug__in=academy_slug.split(','))
+
         page = self.paginate_queryset(items, request)
         serializer = GetSyllabusScheduleSerializer(page, many=True)
 

@@ -146,6 +146,99 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
 
     """
+    🔽🔽🔽 Academy id in querystring
+    """
+
+    def test_academy_schedule__academy_id_in_querystring__bad_id(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.bc.database.create(authenticate=True,
+                                        syllabus_schedule=True,
+                                        profile_academy=True,
+                                        capability='read_certificate',
+                                        role='potato',
+                                        syllabus=True)
+        url = reverse_lazy('admissions:schedule') + '?academy_id=9999'
+        response = self.client.get(url)
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
+
+    def test_academy_schedule__academy_id_in_querystring(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.bc.database.create(authenticate=True,
+                                        syllabus_schedule=True,
+                                        profile_academy=True,
+                                        capability='read_certificate',
+                                        role='potato',
+                                        syllabus=True)
+        url = reverse_lazy('admissions:schedule') + '?academy_id=1'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'id': model.syllabus_schedule.id,
+            'name': model.syllabus_schedule.name,
+            'description': model.syllabus_schedule.description,
+            'syllabus': model.syllabus_schedule.syllabus.id,
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
+
+    """
+    🔽🔽🔽 Academy slug in querystring
+    """
+
+    def test_academy_schedule__academy_slug_in_querystring__bad_id(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.bc.database.create(authenticate=True,
+                                        syllabus_schedule=True,
+                                        profile_academy=True,
+                                        capability='read_certificate',
+                                        role='potato',
+                                        syllabus=True)
+        url = reverse_lazy('admissions:schedule') + '?academy_slug=they-killed-kenny'
+        response = self.client.get(url)
+        json = response.json()
+        expected = []
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
+
+    def test_academy_schedule__academy_slug_in_querystring(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+
+        academy = {'slug': 'they-killed-kenny'}
+        model = self.bc.database.create(authenticate=True,
+                                        syllabus_schedule=True,
+                                        profile_academy=True,
+                                        capability='read_certificate',
+                                        role='potato',
+                                        syllabus=True,
+                                        academy=academy)
+        url = reverse_lazy('admissions:schedule') + '?academy_slug=they-killed-kenny'
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'id': model.syllabus_schedule.id,
+            'name': model.syllabus_schedule.name,
+            'description': model.syllabus_schedule.description,
+            'syllabus': model.syllabus_schedule.syllabus.id,
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.all_syllabus_dict(), [{**self.model_to_dict(model, 'syllabus')}])
+
+    """
     🔽🔽🔽 Pagination
     """
 
