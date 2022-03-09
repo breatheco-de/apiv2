@@ -87,8 +87,18 @@ class AcademyAliasAdmin(admin.ModelAdmin):
 
 def send_to_ac(modeladmin, request, queryset):
     entries = queryset.all()
-    for entry in entries:
-        register_new_lead(entry.toFormData())
+    total = 0
+    try:
+        for entry in entries:
+            register_new_lead(entry.toFormData())
+            total += 1
+
+        messages.add_message(request, messages.SUCCESS, f'{total} entries were successfully added')
+    except Exception as e:
+        messages.add_message(
+            request, messages.ERROR,
+            f'{total} entries were successfully added but an error was found on entry {entry.id}: \n ' +
+            str(e))
 
 
 send_to_ac.short_description = '⨁ Add lead to automations in AC'
