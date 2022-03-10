@@ -1,6 +1,7 @@
 import os, hashlib, timeago
 from django.shortcuts import render
 from django.utils import timezone
+from django.db.models import Q
 from datetime import timedelta
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
@@ -432,31 +433,6 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # """
-    # List all snippets, or create a new snippet.
-    # """
-
-    # @capable_of('crud_service')
-    # def put(self, request, survey_id=None, academy_id=None):
-    #     if survey_id is None:
-    #         raise ValidationException('Missing survey_id')
-
-    #     survey = MentorService.objects.filter(id=survey_id).first()
-    #     if survey is None:
-    #         raise NotFound('This survey does not exist')
-
-    #     serializer = SurveyPUTSerializer(survey,
-    #                                      data=request.data,
-    #                                      context={
-    #                                          'request': request,
-    #                                          'survey': survey_id,
-    #                                          'academy_id': academy_id
-    #                                      })
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
     @capable_of('read_mentorship_session')
     def get(self, request, session_id=None, academy_id=None):
 
@@ -472,9 +448,19 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
         items = MentorshipSession.objects.filter(mentor__service__academy__id=academy_id)
         lookup = {}
 
-        if 'status' in self.request.GET:
-            param = self.request.GET.get('status')
-            lookup['status'] = param
+        _status = request.GET.get('status', '')
+        if _status != '':
+            _status = [s.strip().upper() for s in _status.split(',')]
+            _status = list(filter(lambda s: s != '', _status))
+            items = items.filter(status__in=_status)
+
+        started_after = request.GET.get('started_after', '')
+        if started_after != '':
+            items = items.filter(Q(started_at__gte=started_after) | Q(started_at__isnull=True))
+
+        ended_before = request.GET.get('ended_before', '')
+        if ended_before != '':
+            items = items.filter(Q(ended_at__lte=ended_before) | Q(ended_at__isnull=True))
 
         mentor = request.GET.get('mentor', None)
         if mentor is not None:
