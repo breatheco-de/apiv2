@@ -493,13 +493,14 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             querystr = urllib.parse.urlencode({'callback': STUDENT_URL, 'token': token})
             url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
 
-            profile_academy = ProfileAcademy.objects.create({
-                **validated_data, 'email': email,
-                'user': user,
-                'academy': academy,
-                'role': role,
-                'status': status
-            })
+            profile_academy = ProfileAcademy.objects.create(
+                **{
+                    **validated_data, 'email': email,
+                    'user': user,
+                    'academy': academy,
+                    'role': role,
+                    'status': status
+                })
             profile_academy.save()
 
             send_email_message(
@@ -544,13 +545,14 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                     'FIST_NAME': validated_data['first_name']
                 })
 
-            return ProfileAcademy.objects.create({
-                **validated_data, 'email': email,
-                'user': user,
-                'academy': academy,
-                'role': role,
-                'status': status
-            })
+            return ProfileAcademy.objects.create(
+                **{
+                    **validated_data, 'email': email,
+                    'user': user,
+                    'academy': academy,
+                    'role': role,
+                    'status': status
+                })
 
 
 class MemberPUTSerializer(serializers.ModelSerializer):
