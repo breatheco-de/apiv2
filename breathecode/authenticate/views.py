@@ -1261,7 +1261,7 @@ def render_academy_invite(request, token):
     pending_invites = ProfileAcademy.objects.filter(user__id=token.user.id, status='INVITED')
     if pending_invites.count() == 0:
         return render_message(request,
-                              f'You don\'t have any pending invites',
+                              f'You don\'t have any more pending invites',
                               btn_label='Continue to 4Geeks',
                               btn_url=STUDENT_URL)
 
