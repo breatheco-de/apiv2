@@ -53,7 +53,7 @@ def get_lead_tags(ac_academy, form_entry):
     if 'tags' not in form_entry or form_entry['tags'] == '':
         raise Exception('You need to specify tags for this entry')
     else:
-        _tags = form_entry['tags'].split(',')
+        _tags = [t.strip() for t in form_entry['tags'].split(',')]
         if len(_tags) == 0 or _tags[0] == '':
             raise Exception('The contact tags are empty', 400)
 
@@ -63,10 +63,11 @@ def get_lead_tags(ac_academy, form_entry):
     other_tags = Tag.objects.filter(slug__in=_tags, tag_type='OTHER', ac_academy=ac_academy)
 
     tags = list(chain(strong_tags, soft_tags, dicovery_tags, other_tags))
-    if len(tags) == 0:
-        logger.error('Tag applied to the contact not found or has tag_type assigned')
-        logger.error(_tags)
-        raise Exception('Tag applied to the contact not found or has not tag_type assigned')
+    if len(tags) != len(_tags):
+        message = 'Some tag applied to the contact not found or have tag_type different than [STRONG, SOFT, DISCOVER, OTHER]: '
+        message += f'Check for the follow tags:  {",".join(_tags)}'
+        logger.error(message)
+        raise Exception(message)
 
     return tags
 
