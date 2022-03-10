@@ -39,6 +39,7 @@ from .models import (
 from .actions import reset_password, resend_invite, generate_academy_token
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
+from breathecode.notify.actions import send_email_message
 from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
 from breathecode.utils.views import private_view, render_message, set_query_parameter
@@ -1127,6 +1128,17 @@ class AcademyInviteView(APIView):
             if profile_academy is None:
                 raise ValidationException('Member not found', 400)
             invite = UserInvite.objects.filter(academy__id=academy_id, email=profile_academy.email).first()
+
+            if invite is None and profile_academy.status == 'INVITED':
+                send_email_message(
+                    'academy_invite', profile_academy.user.email, {
+                        'subject': f'Invitation to study at {profile_academy.academy.name}',
+                        'invites': [ProfileAcademySmallSerializer(profile_academy).data],
+                        'user': UserSmallSerializer(profile_academy.user).data,
+                        'LINK': os.getenv('API_URL') + '/v1/auth/academy/html/invite',
+                    })
+                serializer = GetProfileAcademySerializer(profile_academy)
+                return Response(serializer.data)
 
             if invite is None:
                 raise ValidationException('Invite not found', 400)
