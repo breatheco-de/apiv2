@@ -21,11 +21,12 @@ from .serializers import (
     MentorSerializer,
     MentorUpdateSerializer,
     SessionSerializer,
-    ServiceSerializer,
+    ServicePOSTSerializer,
     GETMentorBigSerializer,
     GETServiceBigSerializer,
     GETSessionBigSerializer,
     GETSessionReportSerializer,
+    ServicePUTSerializer,
 )
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -267,46 +268,39 @@ def end_mentoring_session(request, session_id, token):
 
 
 class ServiceView(APIView, HeaderLimitOffsetPagination):
-    # """
-    # List all snippets, or create a new snippet.
-    # """
-    # @capable_of('crud_service')
-    # def post(self, request, academy_id=None):
+    @capable_of('crud_mentorship_service')
+    def post(self, request, academy_id=None):
 
-    #     serializer = SurveySerializer(data=request.data,
-    #                                   context={
-    #                                       'request': request,
-    #                                       'academy_id': academy_id
-    #                                   })
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ServicePOSTSerializer(data=request.data,
+                                           context={
+                                               'request': request,
+                                               'academy_id': academy_id
+                                           })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # """
-    # List all snippets, or create a new snippet.
-    # """
+    @capable_of('crud_mentorship_service')
+    def put(self, request, service_id=None, academy_id=None):
+        if service_id is None:
+            raise ValidationException('Missing service_id')
 
-    # @capable_of('crud_service')
-    # def put(self, request, survey_id=None, academy_id=None):
-    #     if survey_id is None:
-    #         raise ValidationException('Missing survey_id')
+        service = MentorshipService.objects.filter(id=service_id, academy__id=academy_id).first()
+        if service is None:
+            raise NotFound('This service does not exist')
 
-    #     survey = MentorService.objects.filter(id=survey_id).first()
-    #     if survey is None:
-    #         raise NotFound('This survey does not exist')
-
-    #     serializer = SurveyPUTSerializer(survey,
-    #                                      data=request.data,
-    #                                      context={
-    #                                          'request': request,
-    #                                          'survey': survey_id,
-    #                                          'academy_id': academy_id
-    #                                      })
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ServicePUTSerializer(service,
+                                          data=request.data,
+                                          context={
+                                              'request': request,
+                                              'academy_id': academy_id
+                                          })
+        if serializer.is_valid():
+            serializer.save()
+            serializer = GETServiceBigSerializer(service, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('read_mentorship_service')
     def get(self, request, service_id=None, academy_id=None):
@@ -428,7 +422,7 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
     @capable_of('crud_mentorship_session')
     def post(self, request, academy_id=None):
 
-        serializer = ServiceSerializer(data=request.data,
+        serializer = SessionSerializer(data=request.data,
                                        context={
                                            'request': request,
                                            'academy_id': academy_id

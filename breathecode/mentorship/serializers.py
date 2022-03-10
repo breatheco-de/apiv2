@@ -60,6 +60,12 @@ class GETSessionSmallSerializer(serpy.Serializer):
     status = serpy.Field()
     mentor = GETMentorSmallSerializer()
     mentee = GetUserSmallSerializer(required=False)
+    started_at = serpy.Field()
+    ended_at = serpy.Field()
+    mentor_joined_at = serpy.Field()
+    mentor_left_at = serpy.Field()
+    mentee_left_at = serpy.Field()
+    summary = serpy.Field()
 
 
 class GETServiceBigSerializer(serpy.Serializer):
@@ -68,6 +74,14 @@ class GETServiceBigSerializer(serpy.Serializer):
     name = serpy.Field()
     status = serpy.Field()
     academy = GetAcademySmallSerializer()
+    logo_url = serpy.Field()
+    description = serpy.Field()
+    duration = serpy.Field()
+    language = serpy.Field()
+    allow_mentee_to_extend = serpy.Field()
+    allow_mentors_to_extend = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
 
 
 class GETMentorBigSerializer(serpy.Serializer):
@@ -120,7 +134,7 @@ class GETSessionBigSerializer(serpy.Serializer):
     created_at = serpy.Field()
 
 
-class ServiceSerializer(serializers.ModelSerializer):
+class ServicePOSTSerializer(serializers.ModelSerializer):
     class Meta:
         model = MentorshipService
         exclude = ('created_at', 'updated_at', 'academy')
@@ -131,6 +145,24 @@ class ServiceSerializer(serializers.ModelSerializer):
         if academy is None:
             raise ValidationException(f'Academy {self.context["academy"]} not found',
                                       slug='academy-not-found')
+
+        return {**data, 'academy': academy}
+
+
+class ServicePUTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MentorshipService
+        exclude = ('created_at', 'updated_at', 'academy', 'slug')
+
+    def validate(self, data):
+
+        academy = Academy.objects.filter(id=self.context['academy_id']).first()
+        if academy is None:
+            raise ValidationException(f'Academy {self.context["academy"]} not found',
+                                      slug='academy-not-found')
+
+        if 'slug' in data:
+            raise ValidationException('The service slug cannot be updated', slug='service-cannot-be-updated')
 
         return {**data, 'academy': academy}
 
