@@ -140,7 +140,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at BreatheCode',
+                    'SUBJECT': 'You asked to reset your password at 4Geeks',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])
@@ -166,7 +166,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at BreatheCode',
+                    'SUBJECT': 'You asked to reset your password at 4Geeks',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])
@@ -210,7 +210,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at BreatheCode',
+                    'SUBJECT': 'You asked to reset your password at 4Geeks',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])
@@ -236,7 +236,7 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(mock.call_args_list, [
             call(
                 'pick_password', model['user'].email, {
-                    'SUBJECT': 'You asked to reset your password at BreatheCode',
+                    'SUBJECT': 'You asked to reset your password at 4Geeks',
                     'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
                 })
         ])

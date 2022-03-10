@@ -80,7 +80,7 @@ class AuthenticateTestSuite(AuthTestCase):
                            })
         response = self.client.get(url)
         json = response.json()
-
+        del json['invite_url']  # removing this because i will not hardcode it on the test
         profile_academy = self.get_profile_academy(1)
 
         self.assertEqual(
@@ -146,7 +146,7 @@ class AuthenticateTestSuite(AuthTestCase):
                            })
         response = self.client.get(url)
         json = response.json()
-
+        del json['invite_url']  # removing this because i will not hardcode it on the test
         profile_academy = self.get_profile_academy(1)
 
         self.assertEqual(
@@ -213,7 +213,7 @@ class AuthenticateTestSuite(AuthTestCase):
                            })
         response = self.client.get(url)
         json = response.json()
-
+        del json['invite_url']  # removing this because i will not hardcode it on the test
         profile_academy = self.get_profile_academy(1)
 
         self.assertEqual(

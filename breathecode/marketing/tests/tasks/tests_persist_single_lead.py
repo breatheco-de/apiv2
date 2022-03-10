@@ -154,6 +154,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_persist_single_lead_with_bad_tags(self):
+        # TODO: this test should be reimplemented without depending on the message
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True, active_campaign_academy=True)
         try:

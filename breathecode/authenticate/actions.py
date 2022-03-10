@@ -48,7 +48,7 @@ def reset_password(users=None):
         # returns true or false if the email was send
         return send_email_message(
             'pick_password', user.email, {
-                'SUBJECT': 'You asked to reset your password at BreatheCode',
+                'SUBJECT': 'You asked to reset your password at 4Geeks',
                 'LINK': os.getenv('API_URL', '') + f'/v1/auth/password/{token}'
             })
 
@@ -59,9 +59,9 @@ def resend_invite(token=None, email=None, first_name=None):
     params = {'callback': 'https://admin.breatheco.de'}
     querystr = urllib.parse.urlencode(params)
     url = os.getenv('API_URL', '') + '/v1/auth/member/invite/' + str(token) + '?' + querystr
-    send_email_message('welcome_academy', email, {
+    send_email_message('welcome', email, {
         'email': email,
-        'subject': 'Invitation',
+        'subject': 'Invitation to join 4Geeks',
         'LINK': url,
         'FIST_NAME': first_name
     })

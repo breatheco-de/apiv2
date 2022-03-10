@@ -51,7 +51,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '2'})
         response = self.client.get(url)
         json = response.json()
-
+        del json['invite_url']  # removing this because i will not hardcode it on the test
         profile_academy = self.get_profile_academy(1)
 
         self.assertEqual(
@@ -114,7 +114,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '2'})
         response = self.client.get(url)
         json = response.json()
-
+        del json['invite_url']  # removing this because i will not hardcode it on the test
         profile_academy = self.get_profile_academy(1)
 
         self.assertEqual(
@@ -178,6 +178,8 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '2'})
         response = self.client.get(url)
         json = response.json()
+
+        del json['invite_url']  # removing this because i will not hardcode it on the test
 
         profile_academy = self.get_profile_academy(1)
 

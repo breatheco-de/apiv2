@@ -299,11 +299,17 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         invite = UserInvite.objects.filter(academy__id=academy_id, email=profile.email,
                                            status='PENDING').first()
 
-        if invite is None:
-            raise ValidationException('No pending invite was found', 404)
+        if invite is None and profile.status != 'INVITED':
+            raise ValidationException('No pending invite was found for this user and academy', 404)
 
-        serializer = UserInviteSerializer(invite, many=False)
-        return Response(serializer.data)
+        # IMPORTANTE: both serializers need to include "invite_url" property to have a consistent response
+        if invite is not None:
+            serializer = UserInviteSerializer(invite, many=False)
+            return Response(serializer.data)
+
+        if profile.status == 'INVITED':
+            serializer = GetProfileAcademySerializer(profile, many=False)
+            return Response(serializer.data)
 
     @capable_of('crud_invite')
     def delete(self, request, academy_id=None):
@@ -1147,9 +1153,9 @@ def render_invite(request, token, member_id=None):
     if request.method == 'GET':
 
         invite = UserInvite.objects.filter(token=token, status='PENDING').first()
-        if invite is not None:
-            return render(request, 'message.html',
-                          {'message': 'Invitation noot found with this token or it was already accepted'})
+        if invite is None:
+            return render_message(request, 'Invitation not found with this token or it was already accepted')
+
         form = InviteForm({
             **_dict, 'first_name': invite.first_name,
             'last_name': invite.last_name,
@@ -1226,7 +1232,7 @@ def render_invite(request, token, member_id=None):
             return HttpResponseRedirect(redirect_to=callback[2:-2])
         else:
             return render(request, 'message.html',
-                          {'MESSAGE': 'Welcome to BreatheCode, you can go ahead an log in'})
+                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in'})
 
 
 @private_view

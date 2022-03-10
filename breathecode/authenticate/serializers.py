@@ -6,7 +6,7 @@ import os
 import urllib.parse
 from django.utils import timezone
 from django.contrib.auth.models import User, Group
-from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile
+from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.notify.actions import send_email_message
@@ -205,6 +205,10 @@ class GetProfileAcademySerializer(serpy.Serializer):
     status = serpy.Field()
     first_name = serpy.Field()
     last_name = serpy.Field()
+    invite_url = serpy.MethodField()
+
+    def get_invite_url(self, _invite):
+        return os.getenv('API_URL') + '/v1/auth/academy/html/invite'
 
 
 class GetProfileAcademySmallSerializer(serpy.Serializer):
@@ -409,7 +413,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             send_email_message(
                 'welcome_academy', email, {
                     'email': email,
-                    'subject': 'Welcome to Breathecode',
+                    'subject': 'Welcome to 4Geeks',
                     'LINK': url,
                     'FIST_NAME': validated_data['first_name']
                 })
@@ -512,7 +516,6 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             email = validated_data['email']
             invite = UserInvite.objects.filter(email=validated_data['email'],
                                                author=self.context.get('request').user).first()
-            invite = invite.first()
             if invite is not None:
                 raise ValidationException('You already invited this user')
 
