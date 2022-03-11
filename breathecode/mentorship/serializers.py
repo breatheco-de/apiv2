@@ -82,6 +82,7 @@ class GETSessionSmallSerializer(serpy.Serializer):
     mentor_joined_at = serpy.Field()
     mentor_left_at = serpy.Field()
     mentee_left_at = serpy.Field()
+    allow_billing = serpy.Field()
     accounted_duration = serpy.Field()
     summary = serpy.Field()
 
@@ -207,6 +208,7 @@ class GETSessionReportSerializer(serpy.Serializer):
     mentor_joined_at = serpy.Field()
     mentor_left_at = serpy.Field()
     mentee_left_at = serpy.Field()
+    allow_billing = serpy.Field()
     accounted_duration = serpy.Field()
     mentor = GETMentorBigSerializer()
     mentee = GetUserSmallSerializer(required=False)
@@ -221,6 +223,7 @@ class GETSessionBigSerializer(serpy.Serializer):
     latitude = serpy.Field()
     longitude = serpy.Field()
     is_online = serpy.Field()
+    allow_billing = serpy.Field()
     online_meeting_url = serpy.Field()
     online_recording_url = serpy.Field()
     agenda = serpy.Field()

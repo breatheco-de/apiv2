@@ -42,7 +42,8 @@ from breathecode.utils import capable_of, ValidationException, HeaderLimitOffset
 from django.db.models import Q
 
 
-@private_view(permission='view_mentorshipbill')
+# TODO: Use decorator with permissions @private_view(permission='view_mentorshipbill')
+@private_view()
 def render_html_bill(request, token, id=None):
     item = MentorshipBill.objects.filter(id=id).first()
     if item is None:

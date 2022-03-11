@@ -5,6 +5,7 @@ from .models import MentorProfile, MentorshipService, MentorshipSession, Mentors
 from .actions import generate_mentor_bill
 from django.utils.html import format_html
 from breathecode.utils.admin import change_field
+from django.contrib.admin import SimpleListFilter
 
 timezones = [(x, x) for x in pytz.common_timezones]
 logger = logging.getLogger(__name__)
@@ -100,6 +101,31 @@ class MentorAdmin(admin.ModelAdmin):
             f"<a rel='noopener noreferrer' target='_blank' href='/mentor/meet/{obj.slug}'>meet</a>")
 
 
+def avoid_billing_this_session(modeladmin, request, queryset):
+    sessions = queryset.update(allow_billing=False)
+
+
+def allow_billing_this_session(modeladmin, request, queryset):
+    sessions = queryset.update(allow_billing=True)
+
+
+class BilledFilter(SimpleListFilter):
+    title = 'billed'
+    parameter_name = 'billed'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('false', 'Not yet billed'),
+            ('true', 'Already billed'),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'false':
+            return queryset.filter(bill__isnull=True)
+        if self.value():
+            return queryset.filter(bill__isnull=False)
+
+
 @admin.register(MentorshipSession)
 class SessionAdmin(admin.ModelAdmin):
     list_display = ['id', 'mentor', 'mentee', 'stats', 'started_at', 'mentor_joined_at', 'openurl']
@@ -108,8 +134,11 @@ class SessionAdmin(admin.ModelAdmin):
         'mentee__first_name', 'mentee__last_name', 'mentee__email', 'mentor__user__first_name',
         'mentor__user__last_name', 'mentor__user__email'
     ]
-    list_filter = ['mentor__service__academy', 'status', 'mentor__service__slug']
-    actions = change_field(['COMPLETED', 'FAILED', 'STARTED', 'PENDING'], name='status')
+    list_filter = [
+        BilledFilter, 'allow_billing', 'status', 'mentor__service__academy', 'mentor__service__slug'
+    ]
+    actions = [avoid_billing_this_session, allow_billing_this_session] + change_field(
+        ['COMPLETED', 'FAILED', 'STARTED', 'PENDING'], name='status')
 
     def stats(self, obj):
 

@@ -214,11 +214,12 @@ def generate_mentor_bill(mentor, reset=False):
         open_bill.save()
 
     unpaid_sessions = MentorshipSession.objects.filter(
-        mentor__id=mentor.id, status__in=[
+        allow_billing=True, mentor__id=mentor.id, status__in=[
             'COMPLETED', 'FAILED'
         ]).filter(Q(bill__isnull=True) | Q(bill__status='DUE', bill__academy=mentor.service.academy))
     total = {'minutes': 0, 'overtime_minutes': 0}
 
+    print('sessions found', unpaid_sessions.count())
     for session in unpaid_sessions:
         session.bill = open_bill
 

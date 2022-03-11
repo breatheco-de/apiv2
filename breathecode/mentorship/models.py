@@ -230,7 +230,8 @@ class MentorshipSession(models.Model):
         f'Options are: {", ".join([key for key,label in MENTORSHIP_STATUS])}. Ignored sessions will not be billed.'
     )
     status_message = models.TextField(default=None, null=True, blank=True)
-
+    allow_billing = models.BooleanField(
+        default=True, help_text='If false it will not be included when generating mentorship bills')
     bill = models.ForeignKey(MentorshipBill,
                              on_delete=models.SET_NULL,
                              null=True,
