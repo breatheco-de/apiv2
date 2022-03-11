@@ -169,8 +169,15 @@ class EventSerializer(serializers.ModelSerializer):
         elif 'slug' in data:
             data['slug'] = f'{data["slug"].lower()}'
 
-        if 'slug' in data and Event.objects.filter(slug=data['slug']).exists():
-            raise ValidationException(f'Event slug already taken, try a different event title?',
+        existing_event = Event.objects.filter(slug=data['slug'])
+        if existing_event.count() > 1:
+            raise ValidationException(f'Event slug already taken, try a different event slug?',
+                                      slug='slug-taken')
+
+        existing_event = existing_event.first()
+        if existing_event is not None and (
+            (self.instance is not None and existing_event.id != self.instance.id) or (self.instance is None)):
+            raise ValidationException(f'Event slug already taken, try a different event slug?',
                                       slug='slug-taken')
 
         return data
