@@ -295,7 +295,7 @@ class BillSessionSmallSerializer(serpy.Serializer):
 
     def get_extra_time(self, obj):
 
-        if obj.started_at is None:
+        if obj.started_at is None or obj.ended_at is None:
             return None
 
         if (obj.ended_at - obj.started_at).days > 1:
@@ -309,7 +309,7 @@ class BillSessionSmallSerializer(serpy.Serializer):
 
     def get_mentor_late(self, obj):
 
-        if obj.started_at is None:
+        if obj.started_at is None or obj.mentor_joined_at is None:
             return None
 
         if obj.started_at > obj.mentor_joined_at and (obj.started_at - obj.mentor_joined_at).seconds > (60 *

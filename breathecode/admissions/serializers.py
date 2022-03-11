@@ -533,6 +533,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
     kickoff_date = serializers.DateTimeField(required=False)
     ending_date = serializers.DateTimeField(required=False, allow_null=True)
     current_day = serializers.IntegerField(required=False)
+    current_module = serializers.IntegerField(required=False)
     stage = serializers.CharField(required=False)
     language = serializers.CharField(required=False)
 
@@ -540,7 +541,7 @@ class CohortPUTSerializer(CohortSerializerMixin):
         model = Cohort
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
                   'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private', 'online_meeting_url',
-                  'timezone')
+                  'timezone', 'current_module')
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
