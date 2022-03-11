@@ -16,6 +16,16 @@ class GetAcademySmallSerializer(serpy.Serializer):
     icon_url = serpy.Field()
 
 
+class AnswerSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    title = serpy.Field()
+    lowest = serpy.Field()
+    highest = serpy.Field()
+    comment = serpy.Field()
+    score = serpy.Field()
+    status = serpy.Field()
+
+
 class ProfileSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
@@ -241,6 +251,7 @@ class BillSessionSmallSerializer(serpy.Serializer):
     extra_time = serpy.MethodField()
     mentor_late = serpy.MethodField()
     mente_joined = serpy.MethodField()
+    rating = serpy.MethodField()
 
     def get_tooltip(self, obj):
 
@@ -324,6 +335,14 @@ class BillSessionSmallSerializer(serpy.Serializer):
             return 'Session did not start because mentee never joined'
         else:
             return None
+
+    def get_rating(self, obj):
+
+        answer = obj.answer_set.first()
+        if answer is None:
+            return None
+        else:
+            return AnswerSmallSerializer(answer).data
 
 
 class ServicePOSTSerializer(serializers.ModelSerializer):

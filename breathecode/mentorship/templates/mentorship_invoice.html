@@ -217,6 +217,11 @@
                     {% if session.mente_joined is not None %}
                     <span class="text-danger tooltip pointer" data-tippy-content="{{session.mente_joined}}"><i class="fas fa-user-graduate"></i></span>
                     {% endif %}
+                    {% if session.rating is not None and session.rating.score > 7 %}
+                    <span class="text-success tooltip pointer" data-tippy-content="Score: {{session.rating.score}} <br /> {{session.rating.comment}}"><i class="fas fa-smile"></i></span>
+                    {% elif session.rating is not None and session.rating.score <= 7 %}
+                    <span class="text-danger tooltip pointer" data-tippy-content="Score: {{session.rating.score}} <br /> {{session.rating.comment}}"><i class="fas fa-frown"></i></span>
+                    {% endif %}
                 </td>
 
                 <td align="right">

@@ -26,7 +26,7 @@ def duration_to_str(duration):
     elif min > 0:
         msg = f'{min} min'
         if sec_value > 0:
-            msg += f'and {sec_value} sec'
+            msg += f' and {sec_value} sec'
         return msg
     elif sec_value > 0:
         return f'{sec_value} sec'

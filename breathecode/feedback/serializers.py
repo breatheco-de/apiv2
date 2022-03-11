@@ -85,7 +85,6 @@ class AnswerSerializer(serpy.Serializer):
     created_at = serpy.Field()
     user = UserSerializer(required=False)
 
-    score = serpy.Field()
     academy = GetAcademySerializer(required=False)
     cohort = GetCohortSerializer(required=False)
     mentor = UserSerializer(required=False)
