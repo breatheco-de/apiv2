@@ -1,7 +1,8 @@
 import json, pytz, logging, requests
 from django.contrib import admin, messages
 from django import forms
-from .models import MentorProfile, MentorshipService, MentorshipSession
+from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
+from .actions import generate_mentor_bill
 from django.utils.html import format_html
 from breathecode.utils.admin import change_field
 
@@ -25,6 +26,12 @@ class MentorForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(MentorForm, self).__init__(*args, **kwargs)
         self.fields['timezone'] = forms.ChoiceField(choices=timezones)
+
+
+def generate_bill(modeladmin, request, queryset):
+    mentors = queryset.all()
+    for m in mentors:
+        generate_mentor_bill(m, reset=True)
 
 
 def mark_as_active(modeladmin, request, queryset):
@@ -68,7 +75,7 @@ class MentorAdmin(admin.ModelAdmin):
     search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email']
     list_filter = ['service__academy__slug', 'status', 'service__slug']
     readonly_fields = ('token', )
-    actions = [mark_as_active] + change_field(['INNACTIVE', 'INVITED'], name='status')
+    actions = [generate_bill, mark_as_active] + change_field(['INNACTIVE', 'INVITED'], name='status')
 
     def current_status(self, obj):
         colors = {
@@ -123,3 +130,30 @@ class SessionAdmin(admin.ModelAdmin):
         return format_html(
             f"<a rel='noopener noreferrer' target='_blank' href='/mentor/meet/{obj.mentor.slug}?session={str(obj.id)}'>open</a>"
         )
+
+
+def release_sessions_from_bill(modeladmin, request, queryset):
+    bills = queryset.all()
+    for b in bills:
+        b.total_price = 0
+        b.total_duration_in_hours = 0
+        b.total_duration_in_minutes = 0
+        b.overtime_minutes = 0
+        for session in b.mentorshipsession_set.all():
+            session.bill = None
+            session.accounted_duration = None
+            session.save()
+        b.save()
+
+
+@admin.register(MentorshipBill)
+class MentorshipBillAdmin(admin.ModelAdmin):
+    list_display = ('id', 'mentor', 'status', 'total_duration_in_hours', 'total_price', 'paid_at',
+                    'invoice_url')
+    list_filter = ['status']
+    actions = [release_sessions_from_bill] + change_field(['DUE', 'APPROVED', 'PAID'], name='status')
+
+    def invoice_url(self, obj):
+        return format_html(
+            "<a rel='noopener noreferrer' target='_blank' href='/v1/mentorship/academy/bill/{id}/html'>open</a>",
+            id=obj.id)

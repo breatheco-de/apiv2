@@ -5,7 +5,33 @@ from dateutil.tz import gettz, tzutc
 from dateutil import parser
 import pytz
 
-__all__ = ['DatetimeInteger']
+__all__ = ['DatetimeInteger', 'duration_to_str']
+
+
+def duration_to_str(duration):
+    total_seconds = duration.seconds
+    sec_value = total_seconds % (24 * 3600)
+    hour_value = sec_value // 3600
+    sec_value %= 3600
+    min = sec_value // 60
+    sec_value %= 60
+
+    if hour_value > 0:
+        msg = f'{hour_value} hr'
+        if min > 0:
+            msg += f', {min} min'
+        if sec_value > 0:
+            msg += f' and {sec_value} sec'
+        return msg
+    elif min > 0:
+        msg = f'{min} min'
+        if sec_value > 0:
+            msg += f'and {sec_value} sec'
+        return msg
+    elif sec_value > 0:
+        return f'{sec_value} sec'
+    else:
+        return 'none'
 
 
 class Datetime(datetime):

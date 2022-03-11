@@ -1,10 +1,11 @@
+import serpy, re, math
 from breathecode.utils import ValidationException
-from .models import MentorshipSession, MentorshipService, MentorProfile
+from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-import serpy, re
 from django.utils import timezone
+from breathecode.utils.datetime_interger import duration_to_str
 
 
 class GetAcademySmallSerializer(serpy.Serializer):
@@ -46,7 +47,13 @@ class GETServiceSmallSerializer(serpy.Serializer):
     status = serpy.Field()
 
 
-class GETMentorSmallSerializer(serpy.Serializer):
+class GETMentorTinyerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    user = GetUserSmallSerializer()
+
+
+class GETMentorTinySerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     user = GetUserSmallSerializer()
@@ -58,13 +65,14 @@ class GETMentorSmallSerializer(serpy.Serializer):
 class GETSessionSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
-    mentor = GETMentorSmallSerializer()
+    mentor = GETMentorTinySerializer()
     mentee = GetUserSmallSerializer(required=False)
     started_at = serpy.Field()
     ended_at = serpy.Field()
     mentor_joined_at = serpy.Field()
     mentor_left_at = serpy.Field()
     mentee_left_at = serpy.Field()
+    accounted_duration = serpy.Field()
     summary = serpy.Field()
 
 
@@ -82,6 +90,83 @@ class GETServiceBigSerializer(serpy.Serializer):
     allow_mentors_to_extend = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+
+class GETServiceSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    name = serpy.Field()
+    status = serpy.Field()
+    academy = GetAcademySmallSerializer()
+    logo_url = serpy.Field()
+    description = serpy.Field()
+    duration = serpy.Field()
+    language = serpy.Field()
+    allow_mentee_to_extend = serpy.Field()
+    allow_mentors_to_extend = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
+class GETMentorSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    user = GetUserSmallSerializer()
+    service = GETServiceSmallSerializer()
+    status = serpy.Field()
+    price_per_hour = serpy.Field()
+    booking_url = serpy.Field()
+    timezone = serpy.Field()
+    email = serpy.Field()
+    created_at = serpy.Field()
+    updated_at = serpy.Field()
+
+
+class GETBillSmallSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    status = serpy.Field()
+    total_duration_in_minutes = serpy.Field()
+    total_duration_in_hours = serpy.Field()
+    total_price = serpy.Field()
+    overtime_minutes = serpy.Field()
+    paid_at = serpy.Field()
+    created_at = serpy.Field()
+
+    mentor = GETMentorTinyerializer()
+    reviewer = GetUserSmallSerializer(required=False)
+
+
+class BigBillSerializer(serpy.Serializer):
+    """The serializer schema definition."""
+    # Use a Field subclass like IntField if you need more validation.
+    id = serpy.Field()
+    status = serpy.Field()
+    total_duration_in_minutes = serpy.Field()
+    total_duration_in_hours = serpy.Field()
+    total_price = serpy.Field()
+    overtime_minutes = serpy.Field()
+    overtime_hours = serpy.MethodField()
+    paid_at = serpy.Field()
+    sessions = serpy.MethodField()
+    public_url = serpy.MethodField()
+    created_at = serpy.Field()
+    academy = GetAcademySmallSerializer(required=False)
+
+    mentor = GETMentorSmallSerializer()
+    reviewer = GetUserSmallSerializer(required=False)
+
+    def get_overtime_hours(self, obj):
+        return round(obj.overtime_minutes / 60, 2)
+
+    def get_sessions(self, obj):
+        _sessions = obj.mentorshipsession_set.order_by('created_at').all()
+        print('session', _sessions)
+        return BillSessionSmallSerializer(_sessions, many=True).data
+
+    def get_public_url(self, obj):
+        return '/v1/mentorship/academy/bill/1/html'
 
 
 class GETMentorBigSerializer(serpy.Serializer):
@@ -112,6 +197,7 @@ class GETSessionReportSerializer(serpy.Serializer):
     mentor_joined_at = serpy.Field()
     mentor_left_at = serpy.Field()
     mentee_left_at = serpy.Field()
+    accounted_duration = serpy.Field()
     mentor = GETMentorBigSerializer()
     mentee = GetUserSmallSerializer(required=False)
 
@@ -130,8 +216,104 @@ class GETSessionBigSerializer(serpy.Serializer):
     agenda = serpy.Field()
     summary = serpy.Field()
     started_at = serpy.Field()
+    accounted_duration = serpy.Field()
     ended_at = serpy.Field()
     created_at = serpy.Field()
+
+
+class BillSessionSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    status = serpy.Field()
+    status_message = serpy.Field()
+    mentor = GETMentorSmallSerializer()
+    mentee = GetUserSmallSerializer(required=False)
+    started_at = serpy.Field()
+    ended_at = serpy.Field()
+    mentor_joined_at = serpy.Field()
+    mentor_left_at = serpy.Field()
+    mentee_left_at = serpy.Field()
+    summary = serpy.Field()
+    accounted_duration = serpy.Field()
+
+    tooltip = serpy.MethodField()
+    duration_string = serpy.MethodField()
+    billed_str = serpy.MethodField()
+    extra_time = serpy.MethodField()
+    mentor_late = serpy.MethodField()
+    mente_joined = serpy.MethodField()
+
+    def get_tooltip(self, obj):
+
+        message = f'This mentorship should last no longer than {int(obj.mentor.service.duration.seconds/60)} min. <br />'
+        if obj.started_at is None:
+            message += 'The mentee never joined the session. <br />'
+        else:
+            message += f'Started on {obj.started_at.strftime("%m/%d/%Y at %H:%M:%S")}. <br />'
+            if obj.mentor_joined_at is None:
+                message += f'The mentor never joined'
+            elif obj.mentor_joined_at > obj.started_at:
+                message += f'The mentor joined {duration_to_str(obj.mentor_joined_at - obj.started_at)} before. <br />'
+            elif obj.started_at > obj.mentor_joined_at:
+                message += f'The mentor joined {duration_to_str(obj.started_at - obj.mentor_joined_at)} after. <br />'
+
+            message += f'The mentorship lasted {duration_to_str(obj.ended_at - obj.started_at)}. <br />'
+
+            if (obj.ended_at - obj.started_at) > obj.mentor.service.duration:
+                extra_time = (obj.ended_at - obj.started_at) - obj.mentor.service.duration
+                message += f'With extra time of {duration_to_str(extra_time)}. <br />'
+            else:
+                message += f'No extra time detected <br />'
+        return message
+
+    def get_duration_string(self, obj):
+
+        if obj.started_at is None:
+            return 'Never started'
+
+        if obj.started_at > obj.ended_at:
+            return 'Ended before it started'
+        if (obj.ended_at - obj.started_at).days > 1:
+            return f'Many days'
+
+        return duration_to_str(obj.ended_at - obj.started_at)
+
+    def get_billed_str(self, obj):
+        return duration_to_str(obj.accounted_duration)
+
+    def get_accounted_duration_string(self, obj):
+        return duration_to_str(obj.accounted_duration)
+
+    def get_extra_time(self, obj):
+
+        if obj.started_at is None:
+            return None
+
+        if (obj.ended_at - obj.started_at).days > 1:
+            return f'Many days of extra time, probably it was never closed'
+
+        if (obj.ended_at - obj.started_at) > obj.mentor.service.duration:
+            extra_time = (obj.ended_at - obj.started_at) - obj.mentor.service.duration
+            return f'Extra time of {duration_to_str(extra_time)}, the expected duration was {duration_to_str(obj.mentor.service.duration)}'
+        else:
+            return None
+
+    def get_mentor_late(self, obj):
+
+        if obj.started_at is None:
+            return None
+
+        if obj.started_at > obj.mentor_joined_at and (obj.started_at - obj.mentor_joined_at).seconds > (60 *
+                                                                                                        4):
+            return f'The mentor joined {duration_to_str(obj.started_at - obj.mentor_joined_at)} after. <br />'
+        else:
+            return None
+
+    def get_mente_joined(self, obj):
+
+        if obj.started_at is None:
+            return 'Session did not start because mentee never joined'
+        else:
+            return None
 
 
 class ServicePOSTSerializer(serializers.ModelSerializer):
@@ -197,11 +379,18 @@ class SessionSerializer(serializers.ModelSerializer):
         model = MentorshipSession
         exclude = ('created_at', 'updated_at')
 
-    # def validate(self, data):
 
-    #     academy = Academy.objects.filter(id=self.context['academy']).first()
-    #     if academy is None:
-    #         raise ValidationException(f'Academy {self.context["academy"]} not found',
-    #                                   slug='academy-not-found')
+class MentorshipBillPUTSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MentorshipBill
+        exclude = ('created_at', 'updated_at', 'academy', 'mentor', 'reviewer', 'total_duration_in_minutes',
+                   'total_duration_in_hours', 'total_price', 'overtime_minutes')
 
-    #     return {**data, 'academy': academy}
+    def validate(self, data):
+
+        academy = Academy.objects.filter(id=self.context['academy_id']).first()
+        if academy is None:
+            raise ValidationException(f'Academy {self.context["academy_id"]} not found',
+                                      slug='academy-not-found')
+
+        return {**data, 'academy': academy}

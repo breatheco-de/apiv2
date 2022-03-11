@@ -2,6 +2,9 @@ import os, base64
 from breathecode.authenticate.models import Token
 from urllib.parse import urlencode, parse_qs, urlsplit, urlunsplit
 from django.shortcuts import render
+from django.contrib import messages
+from rest_framework.exceptions import PermissionDenied
+from ..decorators import validate_permission
 from django.http import HttpResponseRedirect
 
 __all__ = ['private_view', 'set_query_parameter', 'render_message']
@@ -31,24 +34,38 @@ def render_message(r, msg, btn_label=None, btn_url=None, btn_target='_blank', da
     return render(r, 'message.html', {**_data, **data})
 
 
-def private_view(func):
-    def inner(*args, **kwargs):
-        req = args[0]
+def private_view(permission=None):
+    def decorator(func):
+        def inner(*args, **kwargs):
+            req = args[0]
 
-        url = req.get_full_path()
-        token = req.GET.get('token', None)
-        valid_token = Token.get_valid(token)
-        attempt = req.GET.get('attempt', False)
-        if token is None or (valid_token is None and attempt == False):
-            return HttpResponseRedirect(redirect_to=f'/v1/auth/view/login?attempt=1&url=' +
-                                        str(base64.b64encode(url.encode('utf-8')), 'utf-8'))
+            url = req.get_full_path()
+            token = req.GET.get('token', None)
+            attempt = req.GET.get('attempt', False)
 
-        if valid_token is None:
-            return render_message(req, f'You don\'t have access to this view or the token is invalid {token}')
+            valid_token = Token.get_valid(token)
+            if valid_token is None and 'token' in req.session:
+                valid_token = Token.get_valid(req.session['token'])
 
-        print('token', valid_token)
+            try:
 
-        kwargs['token'] = valid_token
-        return func(*args, **kwargs)
+                if token is None and valid_token is None:
+                    raise PermissionDenied(f'Please login before you can access this view')
+                elif valid_token is None:
+                    raise PermissionDenied(f'You don\'t have access to this view')
 
-    return inner
+                if permission is not None:
+                    if not validate_permission(valid_token.user, permission):
+                        raise PermissionDenied(f'You don\'t have permission {permission} to access this view')
+
+            except Exception as e:
+                messages.add_message(req, messages.ERROR, str(e))
+                return HttpResponseRedirect(redirect_to=f'/v1/auth/view/login?attempt=1&url=' +
+                                            str(base64.b64encode(url.encode('utf-8')), 'utf-8'))
+
+            kwargs['token'] = valid_token
+            return func(*args, **kwargs)
+
+        return inner
+
+    return decorator

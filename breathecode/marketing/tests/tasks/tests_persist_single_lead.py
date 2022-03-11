@@ -162,7 +162,10 @@ class AnswerIdTestSuite(MarketingTestCase):
             assert False
         except Exception as e:
             message = str(e)
-            self.assertEqual(message, 'Tag applied to the contact not found or has not tag_type assigned')
+            self.assertEqual(
+                message,
+                'Some tag applied to the contact not found or have tag_type different than [STRONG, SOFT, DISCOVER, OTHER]: Check for the follow tags:  they-killed-kenny'
+            )
 
         self.assertEqual(self.count_form_entry(), 0)
 

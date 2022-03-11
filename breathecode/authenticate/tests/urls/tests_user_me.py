@@ -107,7 +107,7 @@ class AuthenticateTestSuite(AuthTestCase):
                         'slug': model.academy.slug,
                         'timezone': model.academy.timezone,
                     },
-                    'created_at': pytz.utc.localize(model.profile_academy.created_at),
+                    'created_at': model.profile_academy.created_at,
                     'id': model.profile_academy.id,
                     'role': model.profile_academy.role.slug,
                 },

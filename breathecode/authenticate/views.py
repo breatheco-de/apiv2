@@ -1247,7 +1247,7 @@ def render_invite(request, token, member_id=None):
                           {'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in'})
 
 
-@private_view
+@private_view()
 def render_academy_invite(request, token):
     callback_url = request.GET.get('callback', '')
     accepting = request.GET.get('accepting', '')
@@ -1315,6 +1315,8 @@ def login_html_view(request):
                 raise Exception(msg, code=403)
 
             token, created = Token.get_or_create(user=user, token_type='login')
+
+            request.session['token'] = token.key
             return HttpResponseRedirect(
                 set_query_parameter(set_query_parameter(url, 'attempt', '1'), 'token', str(token)))
 

@@ -1,4 +1,4 @@
-import re, hashlib
+import re, hashlib, datetime
 from django.utils import timezone
 from breathecode.admissions.models import Academy, Syllabus
 from django.contrib.auth.models import User
@@ -37,6 +37,14 @@ class MentorshipService(models.Model):
 
     duration = models.DurationField(default=timedelta(hours=1),
                                     help_text='Default duration for mentorship sessions of this service')
+
+    max_duration = models.DurationField(
+        default=timedelta(hours=2),
+        help_text='Maximum allowed duration or extra time, make it 0 for unlimited meetings')
+
+    missed_meeting_duration = models.DurationField(
+        default=timedelta(minutes=10),
+        help_text='Duration that will be paid when the mentee doesn\'t come to the session')
 
     status = models.CharField(max_length=15, choices=MENTORSHIP_STATUS, default=DRAFT)
 
@@ -138,15 +146,51 @@ class MentorProfile(models.Model):
         return f'{name} ({self.id}) from {self.service.name}, {self.service.academy.name}'
 
 
+DUE = 'DUE'
+APPROVED = 'APPROVED'
+PAID = 'PAID'
+BILL_STATUS = (
+    (DUE, 'Due'),
+    (APPROVED, 'Approved'),
+    (PAID, 'Paid'),
+)
+
+
+class MentorshipBill(models.Model):
+
+    status = models.CharField(max_length=20, choices=BILL_STATUS, default=DUE)
+    status_mesage = models.TextField(blank=True,
+                                     null=True,
+                                     default=None,
+                                     help_text='Any important information about the bill')
+
+    total_duration_in_minutes = models.FloatField(default=0)
+    total_duration_in_hours = models.FloatField(default=0)
+    total_price = models.FloatField(default=0)
+    overtime_minutes = models.FloatField(
+        default=0, help_text='Additional time mentorships took based on the expected default duration')
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
+
+    reviewer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
+    mentor = models.ForeignKey(MentorProfile, on_delete=models.CASCADE)
+    paid_at = models.DateTimeField(null=True, default=None, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+
 PENDING = 'PENDING'
 STARTED = 'STARTED'
 COMPLETED = 'COMPLETED'
 FAILED = 'FAILED'
+IGNORED = 'IGNORED'
 MENTORSHIP_STATUS = (
     (PENDING, 'Pending'),
     (STARTED, 'Started'),
     (COMPLETED, 'Completed'),
     (FAILED, 'Failed'),
+    (IGNORED, 'Ignored'),  # will not be included on the bills
 )
 
 
@@ -178,10 +222,27 @@ class MentorshipSession(models.Model):
         default=None,
         help_text='We encourace the mentors to record the session and share them with the students')
 
-    status = models.CharField(max_length=15,
-                              choices=MENTORSHIP_STATUS,
-                              default=PENDING,
-                              help_text=f'Options are: {", ".join([key for key,label in MENTORSHIP_STATUS])}')
+    status = models.CharField(
+        max_length=15,
+        choices=MENTORSHIP_STATUS,
+        default=PENDING,
+        help_text=
+        f'Options are: {", ".join([key for key,label in MENTORSHIP_STATUS])}. Ignored sessions will not be billed.'
+    )
+    status_message = models.TextField(default=None, null=True, blank=True)
+
+    bill = models.ForeignKey(MentorshipBill,
+                             on_delete=models.SET_NULL,
+                             null=True,
+                             default=None,
+                             blank=True,
+                             help_text='If null, it has not been billed by the mentor yet')
+
+    accounted_duration = models.DurationField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text='The duration that will be paid to the mentor for this session')
 
     agenda = models.TextField(blank=True,
                               null=True,
