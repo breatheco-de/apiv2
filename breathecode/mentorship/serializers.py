@@ -256,13 +256,18 @@ class BillSessionSmallSerializer(serpy.Serializer):
             elif obj.started_at > obj.mentor_joined_at:
                 message += f'The mentor joined {duration_to_str(obj.started_at - obj.mentor_joined_at)} after. <br />'
 
-            message += f'The mentorship lasted {duration_to_str(obj.ended_at - obj.started_at)}. <br />'
-
-            if (obj.ended_at - obj.started_at) > obj.mentor.service.duration:
-                extra_time = (obj.ended_at - obj.started_at) - obj.mentor.service.duration
-                message += f'With extra time of {duration_to_str(extra_time)}. <br />'
+            if obj.ended_at is not None:
+                message += f'The mentorship lasted {duration_to_str(obj.ended_at - obj.started_at)}. <br />'
+                if (obj.ended_at - obj.started_at) > obj.mentor.service.duration:
+                    extra_time = (obj.ended_at - obj.started_at) - obj.mentor.service.duration
+                    message += f'With extra time of {duration_to_str(extra_time)}. <br />'
+                else:
+                    message += f'No extra time detected <br />'
             else:
-                message += f'No extra time detected <br />'
+                message += f'The mentorship has not ended yet. <br />'
+                if obj.ending_at is not None:
+                    message += f'But it was supposed to end after {duration_to_str(obj.ending_at - obj.started_at)} <br />'
+
         return message
 
     def get_duration_string(self, obj):
