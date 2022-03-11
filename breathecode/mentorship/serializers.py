@@ -265,8 +265,8 @@ class BillSessionSmallSerializer(serpy.Serializer):
                     message += f'No extra time detected <br />'
             else:
                 message += f'The mentorship has not ended yet. <br />'
-                if obj.ending_at is not None:
-                    message += f'But it was supposed to end after {duration_to_str(obj.ending_at - obj.started_at)} <br />'
+                if obj.ends_at is not None:
+                    message += f'But it was supposed to end after {duration_to_str(obj.ends_at - obj.started_at)} <br />'
 
         return message
 
