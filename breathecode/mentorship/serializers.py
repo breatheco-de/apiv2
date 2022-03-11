@@ -275,9 +275,14 @@ class BillSessionSmallSerializer(serpy.Serializer):
         if obj.started_at is None:
             return 'Never started'
 
-        if obj.started_at > obj.ended_at:
+        end_date = obj.ended_at
+        if end_date is None:
+            return 'Never ended'
+
+        if obj.started_at > end_date:
             return 'Ended before it started'
-        if (obj.ended_at - obj.started_at).days > 1:
+
+        if (end_date - obj.started_at).days > 1:
             return f'Many days'
 
         return duration_to_str(obj.ended_at - obj.started_at)

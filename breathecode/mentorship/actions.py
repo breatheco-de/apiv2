@@ -141,15 +141,19 @@ def add_accounted_time(session, reset=False):
         if session.ended_at is None:
             if obj.ends_at is not None and session.ends_at > session.started_at:
                 session.accounted_duration = session.ends_at - session.started_at
-                session.status_message = f'The session never ended, accounting for the expected meeting duration that was {duration_to_str(session.accounted_duration)}'
+                session.status_message = f'The session never ended, accounting for the expected meeting duration that was {duration_to_str(session.accounted_duration)}.'
                 return session
             elif session.mentee_left_at is not None:
                 session.accounted_duration = session.mentee_left_at - session.started_at
-                session.status_message = f'The session never ended, accounting duration based on the time where the mentee left the meeting {duration_to_str(session.accounted_duration)}'
+                session.status_message = f'The session never ended, accounting duration based on the time where the mentee left the meeting {duration_to_str(session.accounted_duration)}.'
+                return session
+            elif session.mentor_left_at is not None:
+                session.accounted_duration = session.mentor_left_at - session.started_at
+                session.status_message = f'The session never ended, accounting duration based on the time where the mentor left the meeting {duration_to_str(session.accounted_duration)}.'
                 return session
             else:
-                session.accounted_duration = session.ends_at - session.started_at
-                session.status_message = f'The session never ended, accounting for the standard duration {duration_to_str(session.mentor.service.duration)}'
+                session.accounted_duration = session.mentor.service.duration
+                session.status_message = f'The session never ended, accounting for the standard duration {duration_to_str(session.accounted_duration)}.'
                 return session
 
         if session.started_at > session.ended_at:
@@ -160,22 +164,22 @@ def add_accounted_time(session, reset=False):
         if (session.ended_at - session.started_at).days > 1:
             if session.mentee_left_at is not None:
                 session.accounted_duration = session.mentee_left_at - session.started_at
-                session.status_message = f'The lasted way more than it should, accounting duration based on the time where the mentee left the meeting {duration_to_str(session.accounted_duration)}'
+                session.status_message = f'The lasted way more than it should, accounting duration based on the time where the mentee left the meeting {duration_to_str(session.accounted_duration)}.'
                 return session
             else:
                 session.accounted_duration = session.mentor.service.duration
-                session.status_message = f'This session lasted more than a day, no one ever left, was probably never closed, accounting for standard duration {duration_to_str(session.accounted_duration)}'
+                session.status_message = f'This session lasted more than a day, no one ever left, was probably never closed, accounting for standard duration {duration_to_str(session.accounted_duration)}.'
                 return session
 
         session.accounted_duration = session.ended_at - session.started_at
         if session.accounted_duration > session.mentor.service.max_duration:
             if session.mentor.service.max_duration.seconds == 0:
                 session.accounted_duration = session.mentor.service.duration
-                session.status_message = f'No extra time is allowed for session, accounting for stantard duration of {duration_to_str(session.accounted_duration)}'
+                session.status_message = f'No extra time is allowed for session, accounting for stantard duration of {duration_to_str(session.accounted_duration)}.'
                 return session
             else:
                 session.accounted_duration = session.mentor.service.max_duration
-                session.status_message = f'The duration of the session is bigger than the maximun allowed, accounting for max duration of {duration_to_str(session.accounted_duration)}'
+                session.status_message = f'The duration of the session is bigger than the maximun allowed, accounting for max duration of {duration_to_str(session.accounted_duration)}.'
                 return session
         else:
             # everything perfect, we account for the expected
@@ -183,7 +187,7 @@ def add_accounted_time(session, reset=False):
 
     else:
         session.accounted_duration = timedelta(seconds=0)
-        session.status_message = f'No one joined this session, nothing will be accounted for'
+        session.status_message = f'No one joined this session, nothing will be accounted for.'
         return session
 
 
@@ -209,6 +213,10 @@ def generate_mentor_bill(mentor, reset=False):
         session = add_accounted_time(session, reset)
 
         extra_minutes = 0
+        if session.accounted_duration > session.mentor.service.max_duration:
+            session.accounted_duration = session.mentor.service.max_duration
+            session.status_message += f' The session accounted duration was limited to the maximum allowed {duration_to_str(session.accounted_duration)}'
+
         if session.accounted_duration > session.mentor.service.duration:
             extra_minutes = (session.accounted_duration - session.mentor.service.duration).seconds / 60
 
