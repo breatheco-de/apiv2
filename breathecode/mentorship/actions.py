@@ -35,9 +35,13 @@ def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
         # delete the pendings ones, its worth creating a new meeting
         if unfinished_without_mentee.count() > 0:
             session = unfinished_without_mentee.first()
-            session.ends_at = timezone.now() + duration
             session.mentee = mentee
             session.save()
+
+            # extend the session now that the mentee has joined
+            exp_in_epoch = time.mktime((timezone.now() + duration).timetuple())
+            extend_session(session, exp_in_epoch=exp_in_epoch)
+
             unfinished_without_mentee.exclude(id=session.id).delete()
             return MentorshipSession.objects.filter(id=session.id)
 
@@ -67,13 +71,22 @@ def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
     return MentorshipSession.objects.filter(id=session.id)
 
 
-def extend_session(session, duration_in_minutes=30):
+def extend_session(session, duration_in_minutes=None, exp_in_epoch=None):
+
+    # make 30min default for both
+    if duration_in_minutes is None and exp_in_epoch is None:
+        duration_in_minutes = 30
 
     # default duration can be ovveriden by service
     daily = DailyClient()
-    room = daily.extend_room(name=session.name, exp_in_seconds=duration_in_minutes * 3600)
 
-    session.ends_at = session.ends_at + timedelta(minutes=duration_in_minutes)
+    if duration_in_minutes is not None:
+        room = daily.extend_room(name=session.name, exp_in_seconds=duration_in_minutes * 3600)
+        session.ends_at = session.ends_at + timedelta(minutes=duration_in_minutes)
+    elif exp_in_epoch is not None:
+        room = daily.extend_room(name=session.name, exp_in_epoch=exp_in_epoch)
+        session.ends_at = datetime.datetime.fromtimestamp(exp_in_epoch)
+
     session.save()
     return MentorshipSession.objects.filter(id=session.id)
 
