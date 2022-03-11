@@ -152,7 +152,7 @@ def add_accounted_time(session, reset=False):
             return session
 
         if session.ended_at is None:
-            if obj.ends_at is not None and session.ends_at > session.started_at:
+            if session.ends_at is not None and session.ends_at > session.started_at:
                 session.accounted_duration = session.ends_at - session.started_at
                 session.status_message = f'The session never ended, accounting for the expected meeting duration that was {duration_to_str(session.accounted_duration)}.'
                 return session
