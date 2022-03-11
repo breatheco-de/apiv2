@@ -127,14 +127,14 @@ def add_accounted_time(session, reset=False):
             session.accounted_duration = session.mentor.service.missed_meeting_duration
             session.status_message += f'{duration_to_str(session.accounted_duration)} will be accounted for the bill.'
         else:
-            session.accounted_duration = 0
+            session.accounted_duration = timedelta(seconds=0)
             session.status_message += f'No time will be included on the bill.'
         return session
 
     elif session.started_at is not None:
 
         if session.mentor_joined_at is None:
-            session.accounted_duration = 0
+            session.accounted_duration = timedelta(seconds=0)
             session.status_message = 'The mentor never joined the meeting, no time will be accounted for.'
             return session
 
@@ -153,7 +153,7 @@ def add_accounted_time(session, reset=False):
                 return session
 
         if session.started_at > session.ended_at:
-            session.accounted_duration = 0
+            session.accounted_duration = timedelta(seconds=0)
             session.status_message = 'Meeting started before it ended? No duration will be accounted for.'
             return session
 
@@ -182,7 +182,7 @@ def add_accounted_time(session, reset=False):
             return session
 
     else:
-        session.accounted_duration = 0
+        session.accounted_duration = timedelta(seconds=0)
         session.status_message = f'No one joined this session, nothing will be accounted for'
         return session
 
