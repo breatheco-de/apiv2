@@ -177,8 +177,9 @@ class EventSerializer(serializers.ModelSerializer):
         existing_event = existing_event.first()
         if existing_event is not None and (
             (self.instance is not None and existing_event.id != self.instance.id) or (self.instance is None)):
-            raise ValidationException(f'Event slug already taken, try a different event slug?',
-                                      slug='slug-taken')
+            raise ValidationException(
+                f'Event slug {existing_event.slug} already taken, try a different event slug?',
+                slug='slug-taken')
 
         return data
 
