@@ -3,7 +3,7 @@ Test cases for
 """
 import os
 import re
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins.new_auth_test_case import AuthTestCase
@@ -74,6 +74,7 @@ class AuthenticateTestSuite(AuthTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_resend_invite_no_invitation(self):
         """Test """
         self.headers(academy=1)
@@ -86,9 +87,43 @@ class AuthenticateTestSuite(AuthTestCase):
 
         response = self.client.put(url)
         json = response.json()
-        expected = {'detail': 'Invite not found', 'status_code': 400}
+        created = json['created_at']
+        del json['created_at']
+
+        expected = {
+            'id': 1,
+            'status': 'INVITED',
+            'address': None,
+            'email': None,
+            'email': None,
+            'first_name': None,
+            'last_name': None,
+            'phone': '',
+            'invite_url': 'http://localhost:8000/v1/auth/academy/html/invite',
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            },
+            'role': {
+                'id': 'potato',
+                'name': 'potato',
+                'slug': 'potato'
+            },
+            'user': {
+                'email': model['user'].email,
+                'first_name': model['user'].first_name,
+                'github': None,
+                'id': model['user'].id,
+                'last_name': model['user'].last_name,
+                'profile': None
+            },
+        }
+
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 200)
+        all_user_invite = [x for x in self.all_user_invite_dict() if x.pop('sent_at')]
+        self.assertEqual(all_user_invite, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -113,31 +148,35 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'pa_id': 1})
         response = self.client.put(url)
         json = response.json()
-        token = json['token']
         created = json['created_at']
         sent = json['sent_at']
         del json['sent_at']
         del json['created_at']
-        self.assertToken(json['token'])
-        del json['token']
-        del json['invite_url']
-        del json['role']
+
         expected = {
             'id': 1,
             'status': 'PENDING',
             'email': 'email@dotdotdotdot.dot',
             'first_name': None,
             'last_name': None,
+            'token': model.user_invite.token,
+            'invite_url': f'http://localhost:8000/v1/auth/member/invite/{model.user_invite.token}',
             'academy': {
-                'id': json['academy']['id'],
-                'slug': json['academy']['slug'],
-                'name': json['academy']['name'],
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            },
+            'role': {
+                'id': 'potato',
+                'name': 'potato',
+                'slug': 'potato'
             },
             'cohort': {
-                'slug': json['cohort']['slug'],
-                'name': json['cohort']['name'],
+                'slug': model['cohort'].slug,
+                'name': model['cohort'].name,
             },
         }
+
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
         all_user_invite = [x for x in self.all_user_invite_dict() if x.pop('sent_at')]
@@ -149,7 +188,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'role_id': model['user_invite'].role_id,
             'first_name': model['user_invite'].first_name,
             'last_name': model['user_invite'].last_name,
-            'token': token,
+            'token': model['user_invite'].token,
             'author_id': model['user_invite'].author_id,
             'status': model['user_invite'].status,
             'phone': model['user_invite'].phone,

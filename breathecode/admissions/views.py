@@ -887,7 +887,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
 class SyllabusScheduleView(APIView, HeaderLimitOffsetPagination):
     def get(self, request):
-        items = SyllabusSchedule.objects.filter()
+        items = SyllabusSchedule.objects.filter(academy__isnull=False)
 
         syllabus_id = request.GET.get('syllabus_id')
         if syllabus_id:
@@ -963,6 +963,11 @@ class AcademySyllabusScheduleView(APIView, HeaderLimitOffsetPagination, Generate
         schedule = SyllabusSchedule.objects.filter(id=certificate_id).first()
         if not schedule:
             raise ValidationException(f'Schedule not found', code=404, slug='specialty-mode-not-found')
+
+        if schedule.academy.id != int(academy_id):
+            raise ValidationException(f'You can\'t edit a schedule of other academy',
+                                      code=404,
+                                      slug='syllabus-schedule-of-other-academy')
 
         if 'syllabus' in request.data and not Syllabus.objects.filter(
                 Q(academy_owner__id=academy_id) | Q(private=False),

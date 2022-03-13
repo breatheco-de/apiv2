@@ -43,6 +43,7 @@ class Datetime(datetime):
 
 
 class DatetimeInteger:
+    """This type of date pretend resolve the problems related to summer schedule"""
     def __init__(self, year, month, day, hour, minute):
         self.year = str(year)
         self.month = str(month)
