@@ -100,10 +100,12 @@ h4 {
     <tr>
         <td align="left" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
 			padding-bottom: 5px;">
-            <div style="white-space: nowrap;">{{ message }}</div>
             <div class=card>
                 <div class="card-title">Choose session</div>
                 <div class="sh-list">
+                  <div class="sh-list-item">
+                    Many started or pending mentoring sessions were found, please the one you want to continue:
+                  </div>
                   {% if sessions|length == 0 %}
                   <div class="sh-list-item">
                     {% url '/mentor/meet/' session_id as session_id %}

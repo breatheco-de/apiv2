@@ -68,6 +68,20 @@ def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
     session.mentee = mentee
 
     session.save()
+
+    # just in case, if there is any other session with the same mentee and mentor it will be closed
+    if session.mentee is not None:
+        open_sessions = MentorshipSession.objects.filter(mentor=session.mentor,
+                                                         mentee=session.mentee,
+                                                         status__in=['PENDING', 'STARTED'])
+        for s in open_sessions:
+            close_mentoring_session(
+                s, {
+                    'summary':
+                    'This session was automatically closed because a new session with the same mentor and mentee is being created, it will be marked as failed',
+                    'status': 'FAILED'
+                })
+
     return MentorshipSession.objects.filter(id=session.id)
 
 

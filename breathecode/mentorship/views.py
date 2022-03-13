@@ -2,6 +2,7 @@ import os, hashlib, timeago
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
+from django.contrib.auth.models import User
 from datetime import timedelta
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
@@ -91,6 +92,12 @@ def forward_booking_url(request, mentor_slug, token):
 
 @private_view()
 def forward_meet_url(request, mentor_slug, token):
+    # If the ? is added at the end, everyone can asume the querystring already started
+    # and its a lot easier to append variables to it
+    baseUrl = request.get_full_path()
+    if '?' not in baseUrl:
+        baseUrl += '?'
+
     now = timezone.now()
     if isinstance(token, HttpResponseRedirect):
         return token
@@ -98,6 +105,7 @@ def forward_meet_url(request, mentor_slug, token):
     redirect = request.GET.get('redirect', None)
     extend = request.GET.get('extend', None)
     session_id = request.GET.get('session', None)
+    mentee_id = request.GET.get('mentee', None)
 
     session = None
     mentee = None
@@ -127,18 +135,34 @@ def forward_meet_url(request, mentor_slug, token):
     else:
         return render(
             request, 'pick_session.html', {
-                'token':
-                token.key,
-                'mentor':
-                GETMentorBigSerializer(mentor, many=False).data,
-                'SUBJECT':
-                'Mentoring Session',
-                'sessions':
-                GETSessionReportSerializer(session, many=True).data,
-                'baseUrl':
-                request.get_full_path(),
-                'MESSAGE':
-                f'<h1>Choose a mentoring session</h1> Many mentoring sessions were found, please the one you want to continue:',
+                'token': token.key,
+                'mentor': GETMentorBigSerializer(mentor, many=False).data,
+                'SUBJECT': 'Mentoring Session',
+                'sessions': GETSessionReportSerializer(session, many=True).data,
+                'baseUrl': baseUrl,
+            })
+    """
+    From this line on, we know exactly what session is the user opening
+    """
+
+    if session.mentee is None and mentee_id is not None and mentee_id != 'undefined':
+        session.mentee = User.objects.filter(id=mentee_id).first()
+        if session.mentee is None:
+            return render_message(
+                request,
+                f'Mentee with user id {mentee_id} was not found, <a href="{baseUrl}&mentee=undefined">click here to start the session anyway.</a>'
+            )
+
+        session.save()
+
+    if session.mentee is None and mentee_id is None:
+        return render(
+            request, 'pick_mentee.html', {
+                'token': token.key,
+                'mentor': GETMentorBigSerializer(mentor, many=False).data,
+                'SUBJECT': 'Mentoring Session',
+                'sessions': GETSessionReportSerializer(session, many=False).data,
+                'baseUrl': baseUrl,
             })
 
     service = session.mentor.service
