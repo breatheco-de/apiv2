@@ -1,3 +1,4 @@
+from unittest.mock import MagicMock, patch
 from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
 from ..mixins.new_events_tests_case import EventTestCase
@@ -493,6 +494,7 @@ class AcademyEventTestSuite(EventTestCase):
     🔽🔽🔽 Post bad slug
     """
 
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
     def test_all_academy_events__post__bad_slug(self):
         self.headers(academy=1)
 
@@ -552,7 +554,6 @@ class AcademyEventTestSuite(EventTestCase):
             'sync_with_eventbrite': False,
             'currency': 'USD',
             **data,
-            'slug': 'event-they-killed-kenny',
         }
 
         self.assertEqual(json, expected)
@@ -571,7 +572,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_url': None,
             'excerpt': None,
             'tags': '',
-            'slug': 'event-they-killed-kenny',
+            'slug': 'they-killed-kenny',
             'host': None,
             'id': 1,
             'lang': None,
