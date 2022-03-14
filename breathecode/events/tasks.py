@@ -72,9 +72,4 @@ def async_export_event_to_eventbrite(self, event_id: int):
     try:
         export_event_to_eventbrite(event, event.organization)
     except Exception as e:
-        import traceback
-
-        traceback.print_exc()
-
-        logger.error(f'The {event_id} export was failed')
-        logger.error(str(e))
+        logger.exception(f'The {event_id} export was failed')
