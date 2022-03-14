@@ -73,7 +73,6 @@ class ActionRunSpiderTestCase(JobsTestCase):
     def test_run_spider__with_one_spider(self):
         from breathecode.jobs.actions import run_spider
         import requests
-
         model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         result = run_spider(model.spider)
