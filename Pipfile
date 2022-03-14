@@ -55,6 +55,8 @@ django-sql-explorer = {extras = ["xls"], version = "*"}
 google-cloud-ndb = "*"
 whitenoise = {extras = ["brotli"], version = "*"}
 timeago = "*"
+markdown = "*"
+python-frontmatter = "*"
 
 [scripts]
 update_sql_keywords="python -m scripts.update_sql_keywords_json"

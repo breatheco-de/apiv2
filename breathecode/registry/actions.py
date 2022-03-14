@@ -1,4 +1,4 @@
-import logging, json, os, base64, re
+import logging, json, os, re
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models import Q
 from urllib.parse import urlparse
@@ -173,17 +173,15 @@ def sync_github_lesson(github, asset):
 
     branch, file_path = result.groups()
     logger.debug(f'Fetching markdown readme: {file_path}')
-    readme_file = repo.get_contents(file_path)
+    asset.readme = repo.get_contents(file_path).content
 
-    decoded = base64.b64decode(readme_file.content.encode('utf-8')).decode('utf-8')
     if org_name == 'breatheco-de' and repo_name == 'content':
+        readme = asset.get_readme()
         logger.debug(f'Markdown is coming from breathecode/content, replacing images')
         base_url = os.path.dirname(asset.readme_url)
         replaced = re.sub(r'(["\'(])\.\.\/\.\.\/assets\/images\/([_\w\-\.]+)(["\')])',
-                          r'\1' + base_url + r'/../../assets/images/\2?raw=true\3', decoded)
-        asset.readme = str(base64.b64encode(replaced.encode('utf-8')).decode('utf-8'))
-    else:
-        asset.readme = readme_file.content
+                          r'\1' + base_url + r'/../../assets/images/\2?raw=true\3', readme['decoded'])
+        asset.set_readme(replaced)
 
     return asset
 
@@ -260,6 +258,39 @@ def sync_learnpack_asset(github, asset):
                     technology.save()
                 asset.technologies.add(technology)
     return asset
+
+
+def test_asset(asset):
+    if asset.asset_type == 'LESSON':
+        test_lesson(asset)
+
+    # TODO: add more tests for other types of assets
+    return True
+
+
+def test_lesson(lesson):
+    from bs4 import BeautifulSoup
+    import requests
+
+    def test_url(url):
+        response = requests.head(url, allow_redirects=False)
+        if response.status_code not in [200, 302]:
+            raise Exception('Invalid URL: ' + url)
+
+    RELATIVE_IMAGES = r'(["\'(])\.\.\/\.\.\/assets\/images\/([_\w\-\.]+)(["\')])'
+    readme = lesson.get_readme(parse=True)
+    found_relative_images = re.match(RELATIVE_IMAGES, readme['decoded'])
+    if found_relative_images:
+        raise Exception(f'Found {len(found_relative_images)} relative images')
+
+    soup = BeautifulSoup(readme['html'], features='lxml')
+    anchors = soup.findAll('a')
+    images = soup.findAll('img')
+    for a in anchors:
+        test_url(a.get('href'))
+    for img in images:
+        test_url(img.get('src'))
+    return True
 
 
 def test_syllabus(syl):

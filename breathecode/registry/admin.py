@@ -7,7 +7,7 @@ from breathecode.admissions.admin import CohortAdmin
 from breathecode.utils.admin import change_field
 from .models import Asset, AssetTranslation, AssetTechnology, AssetAlias
 from .tasks import async_sync_with_github
-from .actions import sync_with_github, get_user_from_github_username
+from .actions import sync_with_github, get_user_from_github_username, test_asset
 
 logger = logging.getLogger(__name__)
 
@@ -40,27 +40,21 @@ def make_internal(modeladmin, request, queryset):
 make_internal.short_description = 'Make it an INTERNAL resource (same window)'
 
 
-def sync_github(modeladmin, request, queryset):
+def pull_from_github(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
-        async_sync_with_github.delay(a.slug, request.user.id)
-        # sync_with_github(a.slug)  # uncomment for testing purposes
+        # async_sync_with_github.delay(a.slug, request.user.id)
+        sync_with_github(a.slug)  # uncomment for testing purposes
 
 
-sync_github.short_description = 'Sync With Github'
-
-
-def author_lesson(modeladmin, request, queryset):
+def make_me_author(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         a.author = request.user
         a.save()
 
 
-author_lesson.short_description = 'Make myself the author of these assets'
-
-
-def process_github_authors(modeladmin, request, queryset):
+def get_author_grom_github_usernames(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         authors = get_user_from_github_username(a.authors_username)
@@ -69,17 +63,30 @@ def process_github_authors(modeladmin, request, queryset):
             a.save()
 
 
-process_github_authors.short_description = 'Get author from github usernames'
-
-
-def own_lesson(modeladmin, request, queryset):
+def make_me_owner(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         a.owner = request.user
         a.save()
 
 
-own_lesson.short_description = 'Make myself the owner of these assets (github access)'
+def test_asset_integrity(modeladmin, request, queryset):
+    assets = queryset.all()
+    errors = {}
+    for a in assets:
+        try:
+            test_asset(a)
+        except Exception as e:
+            raise e
+            errors[a.slug] = str(e)
+
+    if len(errors.keys()) == 0:
+        messages.add_message(request, messages.SUCCESS, 'No errors found on assets')
+        return True
+
+    for key in errors:
+        messages.add_message(request, messages.ERROR, key + ': ' + str(errors[key]))
+    return False
 
 
 # Register your models here.
@@ -89,11 +96,21 @@ class AssetAdmin(admin.ModelAdmin):
     list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'techs', 'url_path')
     list_filter = ['asset_type', 'status', 'lang']
     raw_id_fields = ['author', 'owner']
-    actions = [add_gitpod, remove_gitpod, sync_github, author_lesson, own_lesson, process_github_authors
-               ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status')
+    actions = [
+        test_asset_integrity,
+        add_gitpod,
+        remove_gitpod,
+        pull_from_github,
+        make_me_author,
+        make_me_owner,
+        get_author_grom_github_usernames,
+    ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status')
 
     def url_path(self, obj):
-        return format_html(f"<a rel='noopener noreferrer' target='_blank' href='{obj.url}'>open</a>")
+        return format_html(f"""
+            <a rel='noopener noreferrer' target='_blank' href='{obj.url}'>github</a> |
+            <a rel='noopener noreferrer' target='_blank' href='/v1/registry/asset/preview/{obj.slug}'>preview</a>
+        """)
 
     def current_status(self, obj):
         colors = {

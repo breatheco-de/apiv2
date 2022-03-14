@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.1.0/github-markdown.min.css" integrity="sha512-KUoB3bZ1XRBYj1QcH4BHCQjurAZnCO3WdrswyLDtp7BMwCw7dPZngSLqILf68SGgvnWHTD5pPaYrXi6wiRJ65g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <style>
+        body{
+            margin: 0;
+            padding: 0;
+            font-family: "Helvetica Neue",Helvetica;
+        }
+        .topbar{
+            position: fixed;
+            width: 100%;
+            top: 0;
+            padding: 10px;
+            background: black;
+            color: white;
+        }
+        .topbar a, .topbar a:visited{
+            color: white;
+            text-decoration: none;
+        }
+        .container{
+            max-width: 800px;
+            margin: auto;
+        }
+        .frontmatter{
+            margin: auto;
+            max-width: 800px;
+            margin-top: 60px;
+            border-spacing: 4px 8px;
+            border: 1px solid black;
+        }
+        .frontmatter tr:hover {
+            background: #BDBDBD;
+
+        }
+    </style>
+    <div class="topbar"><a href="{{ readme_url }}">Open in Github</a></div>
+    <table class="frontmatter">
+    {% for property, value in frontmatter %}
+        <tr>
+            <td>{{ property }}</td>
+            <td>{{ value }}</td>
+        </tr>
+    {% endfor %}
+    </table>
+    <div class="container">
+        {{ html|safe }}
+    </div>
+</body>
+</html>

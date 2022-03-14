@@ -31,7 +31,6 @@ from .serializers import (
     GETSessionReportSerializer,
     ServicePUTSerializer,
     BigBillSerializer,
-    BillSessionSmallSerializer,
     GETBillSmallSerializer,
     MentorshipBillPUTSerializer,
 )
@@ -254,7 +253,7 @@ def end_mentoring_session(request, session_id, token):
                     request, 'close_session.html', {
                         'token': token.key,
                         'message':
-                        f'The mentoring session was closed successfully, you can close this window or <a href="/mentor/meet/{session.mentor.slug}?token={token.key}">go back to your meeting room</a>',
+                        f'The mentoring session was closed successfully, you can close this window or <a href="/mentor/meet/{session.mentor.slug}?token={token.key}">go back to your meeting room.</a>',
                         'mentor': GETMentorBigSerializer(session.mentor, many=False).data,
                         'SUBJECT': 'Close Mentoring Session',
                         'sessions': GETSessionReportSerializer(pending_sessions, many=True).data,

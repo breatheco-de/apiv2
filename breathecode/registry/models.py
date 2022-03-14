@@ -1,3 +1,4 @@
+import base64, frontmatter, markdown
 from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
@@ -144,6 +145,20 @@ class Asset(models.Model):
 
         else:
             super().save(*args, **kwargs)
+
+    def get_readme(self, parse=False):
+        readme = {
+            'raw': self.readme,
+            'decoded': base64.b64decode(self.readme.encode('utf-8')).decode('utf-8')
+        }
+        if parse:
+            _data = frontmatter.loads(readme['decoded'])
+            readme['frontmatter'] = _data.metadata
+            readme['html'] = markdown.markdown(_data.content)
+        return readme
+
+    def set_readme(self, content):
+        return str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
 
 
 class AssetAlias(models.Model):

@@ -55,12 +55,12 @@ class GETServiceSmallSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     status = serpy.Field()
-
-
-class GETMentorTinyerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    user = GetUserSmallSerializer()
+    duration = serpy.Field()
+    max_duration = serpy.Field()
+    missed_meeting_duration = serpy.Field()
+    language = serpy.Field()
+    allow_mentee_to_extend = serpy.Field()
+    allow_mentors_to_extend = serpy.Field()
 
 
 class GETMentorTinySerializer(serpy.Serializer):
@@ -87,22 +87,6 @@ class GETSessionSmallSerializer(serpy.Serializer):
     summary = serpy.Field()
 
 
-class GETServiceBigSerializer(serpy.Serializer):
-    id = serpy.Field()
-    slug = serpy.Field()
-    name = serpy.Field()
-    status = serpy.Field()
-    academy = GetAcademySmallSerializer()
-    logo_url = serpy.Field()
-    description = serpy.Field()
-    duration = serpy.Field()
-    language = serpy.Field()
-    allow_mentee_to_extend = serpy.Field()
-    allow_mentors_to_extend = serpy.Field()
-    created_at = serpy.Field()
-    updated_at = serpy.Field()
-
-
 class GETServiceSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
@@ -110,13 +94,18 @@ class GETServiceSmallSerializer(serpy.Serializer):
     status = serpy.Field()
     academy = GetAcademySmallSerializer()
     logo_url = serpy.Field()
-    description = serpy.Field()
     duration = serpy.Field()
     language = serpy.Field()
     allow_mentee_to_extend = serpy.Field()
     allow_mentors_to_extend = serpy.Field()
+    max_duration = serpy.Field()
+    missed_meeting_duration = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+
+
+class GETServiceBigSerializer(GETServiceSmallSerializer):
+    description = serpy.Field()
 
 
 class GETMentorSmallSerializer(serpy.Serializer):
@@ -141,32 +130,25 @@ class GETBillSmallSerializer(serpy.Serializer):
     total_duration_in_minutes = serpy.Field()
     total_duration_in_hours = serpy.Field()
     total_price = serpy.Field()
+    started_at = serpy.Field()
+    ended_at = serpy.Field()
     overtime_minutes = serpy.Field()
     paid_at = serpy.Field()
     created_at = serpy.Field()
 
-    mentor = GETMentorTinyerializer()
+    mentor = GETMentorTinySerializer()
     reviewer = GetUserSmallSerializer(required=False)
 
 
-class BigBillSerializer(serpy.Serializer):
+class BigBillSerializer(GETBillSmallSerializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
-    id = serpy.Field()
-    status = serpy.Field()
-    total_duration_in_minutes = serpy.Field()
-    total_duration_in_hours = serpy.Field()
-    total_price = serpy.Field()
-    overtime_minutes = serpy.Field()
     overtime_hours = serpy.MethodField()
-    paid_at = serpy.Field()
     sessions = serpy.MethodField()
+    unfinished_sessions = serpy.MethodField()
     public_url = serpy.MethodField()
-    created_at = serpy.Field()
     academy = GetAcademySmallSerializer(required=False)
-
     mentor = GETMentorSmallSerializer()
-    reviewer = GetUserSmallSerializer(required=False)
 
     def get_overtime_hours(self, obj):
         return round(obj.overtime_minutes / 60, 2)
@@ -174,7 +156,15 @@ class BigBillSerializer(serpy.Serializer):
     def get_sessions(self, obj):
         _sessions = obj.mentorshipsession_set.order_by('created_at').all()
         print('session', _sessions)
-        return BillSessionSmallSerializer(_sessions, many=True).data
+        return BillSessionSerializer(_sessions, many=True).data
+
+    def get_unfinished_sessions(self, obj):
+        _sessions = MentorshipSession.objects.filter(
+            mentor=obj.mentor,
+            bill__isnull=True,
+            allow_billing=True,
+            bill__academy=obj.mentor.service.academy).exclude(status__in=['COMPLETED', 'FAILED'])
+        return BillSessionSerializer(_sessions, many=True).data
 
     def get_public_url(self, obj):
         return '/v1/mentorship/academy/bill/1/html'
@@ -210,6 +200,7 @@ class GETSessionReportSerializer(serpy.Serializer):
     mentee_left_at = serpy.Field()
     allow_billing = serpy.Field()
     accounted_duration = serpy.Field()
+    suggested_accounted_duration = serpy.Field()
     mentor = GETMentorBigSerializer()
     mentee = GetUserSmallSerializer(required=False)
 
@@ -230,11 +221,12 @@ class GETSessionBigSerializer(serpy.Serializer):
     summary = serpy.Field()
     started_at = serpy.Field()
     accounted_duration = serpy.Field()
+    suggested_accounted_duration = serpy.Field()
     ended_at = serpy.Field()
     created_at = serpy.Field()
 
 
-class BillSessionSmallSerializer(serpy.Serializer):
+class BillSessionSerializer(serpy.Serializer):
     id = serpy.Field()
     status = serpy.Field()
     status_message = serpy.Field()
@@ -247,6 +239,7 @@ class BillSessionSmallSerializer(serpy.Serializer):
     mentee_left_at = serpy.Field()
     summary = serpy.Field()
     accounted_duration = serpy.Field()
+    suggested_accounted_duration = serpy.Field()
 
     tooltip = serpy.MethodField()
     duration_string = serpy.MethodField()
@@ -409,7 +402,30 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
 class SessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = MentorshipSession
-        exclude = ('created_at', 'updated_at')
+        exclude = (
+            'created_at',
+            'updated_at',
+            'suggested_accounted_duration',
+            'status_message',
+        )
+
+    def validate(self, data):
+        #is_online
+        if 'is_online' in data and data['is_online'] == True:
+            online_read_only = [
+                'mentor_joined_at',
+                'mentor_left_at',
+                'mentee_left_at',
+                'started_at',
+                'ended_at',
+            ]
+            for field in online_read_only:
+                if field in data:
+                    raise ValidationException(
+                        f'The field {field} is automatically set by the system during online mentorships',
+                        slug='read-only-field-online')
+
+        return supper().validate(data)
 
 
 class MentorshipBillPUTSerializer(serializers.ModelSerializer):

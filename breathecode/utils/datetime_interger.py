@@ -9,6 +9,9 @@ __all__ = ['DatetimeInteger', 'duration_to_str']
 
 
 def duration_to_str(duration):
+    if duration is None:
+        return 'none'
+
     total_seconds = duration.seconds
     sec_value = total_seconds % (24 * 3600)
     hour_value = sec_value // 3600
