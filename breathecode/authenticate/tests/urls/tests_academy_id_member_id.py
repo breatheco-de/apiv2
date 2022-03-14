@@ -1,6 +1,7 @@
 """
 Test cases for /academy/:id/member/:id
 """
+from unittest.mock import MagicMock, patch
 from breathecode.services import datetime_to_iso_format
 from django.urls.base import reverse_lazy
 from rest_framework import status
@@ -9,6 +10,7 @@ from ..mixins import AuthTestCase
 
 class AuthenticateTestSuite(AuthTestCase):
     """Authentication test suite"""
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_id_member_id_without_auth(self):
         """Test /academy/:id/member/:id without auth"""
         url = reverse_lazy('authenticate:academy_id_member_id',
@@ -27,6 +29,7 @@ class AuthenticateTestSuite(AuthTestCase):
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_id_member_id_without_capability(self):
         """Test /academy/:id/member/:id"""
         self.generate_models(authenticate=True)
@@ -46,6 +49,7 @@ class AuthenticateTestSuite(AuthTestCase):
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_id_member_id_without_academy(self):
         """Test /academy/:id/member/:id"""
         role = 'konan'
@@ -66,6 +70,7 @@ class AuthenticateTestSuite(AuthTestCase):
             })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_id_member_id(self):
         """Test /academy/:id/member/:id"""
         role = 'konan'
@@ -130,6 +135,7 @@ class AuthenticateTestSuite(AuthTestCase):
     🔽🔽🔽 With profile ans github
     """
 
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_id_member_id__with_profile__with_github(self):
         """Test /academy/:id/member/:id"""
         role = 'konan'
@@ -198,6 +204,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'user_id': 2,
         }])
 
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
     def test_academy_id_member_id_with_github(self):
         """Test /academy/:id/member/:id"""
         role = 'konan'
