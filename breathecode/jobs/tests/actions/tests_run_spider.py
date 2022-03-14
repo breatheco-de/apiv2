@@ -41,7 +41,6 @@ class ActionRunSpiderTestCase(JobsTestCase):
         model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
         try:
             result = run_spider(model.spider)
-
             self.assertEqual(result, (False, {
                 'spider': ['Invalid pk "indeed5" - object does not exist.'],
                 'status': 'error',
