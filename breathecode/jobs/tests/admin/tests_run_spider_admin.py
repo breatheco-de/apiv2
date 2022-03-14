@@ -21,19 +21,24 @@ class RunSpiderAdminTestSuite(JobsTestCase):
 
         run_spider_admin(None, request, queryset)
         self.assertEqual(Logger.error.call_args_list,
-                         [call('There was an error retriving the jobs They killed kenny')])
+                         [call('There was an error retriving the spider They killed kenny')])
 
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('django.contrib.messages.add_message', MagicMock())
-    @patch('breathecode.jobs.actions.run_spider', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    @patch('breathecode.jobs.actions.run_spider', MagicMock(side_effect=Exception('They killed kenny')))
     def test_run_spider_admin__with_zero_spider(self):
         from breathecode.jobs.actions import run_spider
+        from logging import Logger
+        model = self.bc.database.create(spider=1)
         request = HttpRequest()
         queryset = Spider.objects.all()
 
         run_spider_admin(None, request, queryset)
 
-        self.assertEqual(run_spider.call_args_list, [])
+        self.assertEqual(Logger.error.call_args_list,
+                         [call('There was an error retriving the spider They killed kenny')])
+        self.assertEqual(run_spider.call_args_list, [call(model.spider)])
 
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('breathecode.jobs.actions.run_spider', MagicMock())

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def run_spider(spider):
 
     if spider is None:
-        logger.debug(f'First you must specify a spider (run_spider)')
+        logger.error(f'First you must specify a spider (run_spider)')
         raise ValidationException('First you must specify a spider', slug='missing-spider')
 
     platform = spider.zyte_project.platform.name
@@ -37,8 +37,23 @@ def run_spider(spider):
     response = requests.post('https://app.scrapinghub.com/api/run.json',
                              data=data,
                              auth=(spider.zyte_project.zyte_api_key, ''))
-
     result = response.json()
+    print(result)
+    print(response.status_code)
+
+    if result['status'] == 'error':
+        print('errrrrorrr')
+        print(result['message'])
+        spider.spider_last_run_status = 'ERROR'
+        spider.spider_last_run_desc = f"The spider career ended error. ({result['message']} at " + str(
+            datetime.now()) + ')'
+        spider.save()
+        logger.error(f'The spider ended error. Type error {result["message"]}')
+    else:
+        spider.spider_last_run_status = 'SYNCHED'
+        spider.spider_last_run_desc = f'The execution of the spider was successful to {spider.name} at ' + str(
+            datetime.now())
+        spider.save()
 
     return (response.status_code == 200 and 'status' in result and result['status'] == 'ok', result)
 
@@ -60,13 +75,13 @@ def fetch_to_api(spider):
     return res
 
 
-def fetch_data_to_json(spider, api_fetch):
+def get_scraped_data_of_platform(spider, api_fetch):
     if spider is None:
-        logger.error(f'First you must specify a spider (fetch_data_to_json)')
+        logger.error(f'First you must specify a spider (get_scraped_data_of_platform)')
         raise ValidationException('First you must specify a spider', slug='without-spider')
 
     if api_fetch is None:
-        logger.error(f'I did not receive results from the API (fetch_data_to_json)')
+        logger.error(f'I did not receive results from the API (get_scraped_data_of_platform)')
         raise ValidationException('Is did not receive results from the API', slug='no-return-json-data')
 
     platform = spider.zyte_project.platform.name
@@ -76,14 +91,19 @@ def fetch_data_to_json(spider, api_fetch):
     for res_api_jobs in api_fetch['jobs']:
         deploy, num_spider, num_job = class_scrapper.get_job_id_from_string(res_api_jobs['id'])
 
-        if int(num_spider) == int(spider.zyte_spider_number) and int(num_job) >= int(spider.zyte_job_number):
+        if num_spider == spider.zyte_spider_number and num_job >= spider.zyte_job_number:
             response = requests.get(
                 f'https://storage.scrapinghub.com/items/{res_api_jobs["id"]}?apikey={spider.zyte_project.zyte_api_key}&format=json'
             )
 
             if response.status_code != 200:
+                spider.sync_status = 'ERROR'
+                spider.sync_desc = f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spider} (get_scraped_data_of_platform)' + str(
+                    datetime.now())
+                spider.save()
+
                 logger.error(
-                    f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spider} (fetch_data_to_json)'
+                    f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spider} (get_scraped_data_of_platform)'
                 )
                 raise ValidationException(
                     f'There was a {response.status_code} error fetching spider {spider.zyte_spider_number} job {num_spider}',
@@ -123,14 +143,9 @@ def save_data(spider, jobs):
             positionAlias = PositionAlias(name=j['Searched_job'], position=position)
             positionAlias.save()
 
-        (min_salary, max_salary, salary_str,
-         tags) = class_scrapper.get_salary_from_string(j['Salary'], j['Tags'])
-        if tags is not None:
-            for tag in tags:
-                t = tag.replace(' ', '-').lower()
-                tagsave = class_scrapper.get_tag_from_string(t)
-                if tagsave is None:
-                    Tag.objects.create(slug=t)
+        (min_salary, max_salary, salary_str) = class_scrapper.get_salary_from_string(j['Salary'])
+
+        save_tags = class_scrapper.get_tag_from_string(j['Tags'])
 
         validate = class_scrapper.job_exist(j['Job_title'], j['Company_name'])
         if validate is False:
@@ -152,11 +167,9 @@ def save_data(spider, jobs):
                 for location in locations:
                     job.locations.add(location)
 
-            if tags is not None:
-                for tag in tags:
-                    _tag = class_scrapper.get_tag_from_string(tag)
-                    if _tag is not None:
-                        job.tags.add(_tag)
+            if save_tags is not None:
+                for tag in save_tags:
+                    job.tags.add(tag)
 
             new_jobs = new_jobs + 1
 
@@ -169,31 +182,30 @@ def fetch_sync_all_data(spider):
         raise ValidationException('First you must specify a spider', slug='without-spider')
 
     res = fetch_to_api(spider)
-    data_jobs = fetch_data_to_json(spider, res)
+    data_jobs = get_scraped_data_of_platform(spider, res)
 
     platform = spider.zyte_project.platform.name
     class_scrapper = ScraperFactory(platform)
 
     jobs_info_saved = class_scrapper.get_info_amount_jobs_saved(data_jobs)
     if isinstance(jobs_info_saved, tuple):
-        job_saved, job_namber = jobs_info_saved
-        spider.zyte_job_number = job_namber
+        job_saved, job_number = jobs_info_saved
+        spider.zyte_job_number = job_number
         spider.zyte_last_fetch_date = timezone.now()
-        spider.status = 'SYNCHED'
         spider.sync_status = 'SYNCHED'
         spider.sync_desc = f"The spider's career ended successfully. Added {job_saved} new jobs to {spider.name} at " + str(
             datetime.now())
         spider.save()
 
-        ZyteProject.objects.filter(id=spider.zyte_project.id).update(zyte_api_last_job_number=job_namber)
+        ZyteProject.objects.filter(id=spider.zyte_project.id).update(zyte_api_last_job_number=job_number)
 
     return res
 
 
-def parse_date(job):
+def get_was_publiched_date_from_string(job):
 
     if job is None:
-        logger.debug(f'First you must specify a job (parse_date)')
+        logger.error(f'First you must specify a job (get_was_publiched_date_from_string)')
         raise ValidationException('First you must specify a job', slug='data-job-none')
 
     platform = job.spider.zyte_project.platform.name

@@ -19,11 +19,13 @@ class AsyncFetchSyncAllDataTaskTestCase(JobsTestCase):
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_async_async_fetch_sync_all_data__with_spider(self):
+        from breathecode.jobs.actions import fetch_sync_all_data
         from logging import Logger
 
         model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         async_fetch_sync_all_data.delay({'spi_id': model['spider'].id})
+        self.assertEqual(fetch_sync_all_data.call_args_list, [call(model.spider)])
         self.assertEqual(Logger.error.call_args_list, [
             call('Starting async_fetch_sync_all_data'),
             call('Starting async_fetch_sync_all_data in spider name getonboard')

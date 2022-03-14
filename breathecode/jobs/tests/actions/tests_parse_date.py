@@ -1,5 +1,6 @@
 from unittest.mock import patch, call, MagicMock
-from ...actions import parse_date
+from breathecode.tests.mocks.django_contrib import DJANGO_CONTRIB_PATH, apply_django_contrib_messages_mock
+from ...actions import get_was_publiched_date_from_string
 from ..mixins import JobsTestCase
 from datetime import datetime, timedelta, date
 from breathecode.tests.mocks import (
@@ -18,19 +19,26 @@ platform = {'name': 'indeed'}
 
 
 class ActionRunSpiderTestCase(JobsTestCase):
-    def test_parse_date__without_job(self):
+    @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
+    @patch('django.contrib.messages.add_message', MagicMock())
+    @patch('logging.Logger.error', MagicMock())
+    def test_get_was_publiched_date_from_string__without_job(self):
+        from logging import Logger
         try:
-            parse_date(None)
+            get_was_publiched_date_from_string(None)
             assert False
         except Exception as e:
             self.assertEquals(str(e), ('data-job-none'))
+            self.assertEqual(Logger.error.call_args_list, [
+                call('First you must specify a job (get_was_publiched_date_from_string)'),
+                call('Status 400 - data-job-none')
+            ])
 
-    # @patch('breathecode.jobs.actions.parse_date', MagicMock())
-    def test_parse_date__verify_format_published_date(self):
+    def test_get_was_publiched_date_from_string__whith_x_days_ago(self):
         job = {'published_date_raw': '30+ days ago'}
         model = self.bc.database.create(platform=platform, zyte_project=zyte_project, spider=spider, job=job)
 
-        result = parse_date(model.job)
+        result = get_was_publiched_date_from_string(model.job)
         result = result.published_date_processed
         result = f'{result.year}-{result.month}-{result.day}'
         expected = datetime.now() - timedelta(days=30)
@@ -38,42 +46,36 @@ class ActionRunSpiderTestCase(JobsTestCase):
 
         self.assertEquals(result, expected)
 
-        job_1 = {'published_date_raw': 'Active 6 days ago'}
-        model_1 = self.bc.database.create(spider=spider,
-                                          zyte_project=zyte_project,
-                                          platform=platform,
-                                          job=job_1)
+    def test_get_was_publiched_date_from_string__whith_active_x_days_ago(self):
+        job = {'published_date_raw': 'Active 6 days ago'}
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform, job=job)
 
-        result_1 = parse_date(model_1.job)
-        result_1 = result_1.published_date_processed
-        result_1 = f'{result_1.year}-{result_1.month}-{result_1.day}'
-        expected_1 = datetime.now() - timedelta(days=6)
-        expected_1 = f'{expected_1.year}-{expected_1.month}-{expected_1.day}'
+        result = get_was_publiched_date_from_string(model.job)
+        result = result.published_date_processed
+        result = f'{result.year}-{result.month}-{result.day}'
+        expected = datetime.now() - timedelta(days=6)
+        expected = f'{expected.year}-{expected.month}-{expected.day}'
 
-        self.assertEquals(result_1, expected_1)
+        self.assertEquals(result, expected)
 
-        job_2 = {'published_date_raw': 'July 17, 1977'}
-        model_2 = self.bc.database.create(spider=spider,
-                                          zyte_project=zyte_project,
-                                          platform=platform,
-                                          job=job_2)
+    def test_get_was_publiched_date_from_string__whith_month_day_year(self):
+        job = {'published_date_raw': 'July 17, 1977'}
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform, job=job)
 
-        result_2 = parse_date(model_2.job)
-        result_2 = result_2.published_date_processed
-        result_2 = f'{result_2.year}-{result_2.month}-{result_2.day}'
+        result = get_was_publiched_date_from_string(model.job)
+        result = result.published_date_processed
+        result = f'{result.year}-{result.month}-{result.day}'
 
-        self.assertEquals(result_2, '1977-7-17')
+        self.assertEquals(result, '1977-7-17')
 
-        job_3 = {'published_date_raw': 'today'}
-        model_3 = self.bc.database.create(spider=spider,
-                                          zyte_project=zyte_project,
-                                          platform=platform,
-                                          job=job_3)
+    def test_get_was_publiched_date_from_string__whith_today(self):
+        job = {'published_date_raw': 'today'}
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform, job=job)
 
-        result_3 = parse_date(model_3.job)
-        result_3 = result_3.published_date_processed
-        result_3 = f'{result_3.year}-{result_3.month}-{result_3.day}'
-        expected_3 = datetime.now()
-        expected_3 = f'{expected_3.year}-{expected_3.month}-{expected_3.day}'
+        result = get_was_publiched_date_from_string(model.job)
+        result = result.published_date_processed
+        result = f'{result.year}-{result.month}-{result.day}'
+        expected = datetime.now()
+        expected = f'{expected.year}-{expected.month}-{expected.day}'
 
-        self.assertEquals(result_3, expected_3)
+        self.assertEquals(result, expected)

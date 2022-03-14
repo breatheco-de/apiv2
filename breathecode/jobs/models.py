@@ -76,7 +76,8 @@ class Spider(models.Model):
     zyte_fetch_count = models.IntegerField(default=0,
                                            help_text='The number of spider job excecutions to fetch')
     zyte_last_fetch_date = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
+    spider_last_run_status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
+    spider_last_run_desc = models.CharField(max_length=200, null=True, blank=True)
     sync_status = models.CharField(max_length=15, choices=SPIDER_STATUS, default=PENDING)
     sync_desc = models.CharField(max_length=200, null=True, blank=True)
 

@@ -17,3 +17,15 @@ class ServicesGetClassScraperFactoryTestCase(JobsTestCase):
             call('There was an error import the library - No '
                  "module named 'breathecode.jobs.services.motor'")
         ])
+
+    def test_get_class_correctly(self):
+        from logging import Logger
+        SPIDER = {'name': 'getonboard', 'zyte_spider_number': 1, 'zyte_job_number': 0}
+        ZYTE_PROJECT = {'zyte_api_key': 1234567, 'zyte_api_deploy': 223344}
+        PLATFORM = {'name': 'getonboard'}
+
+        model = self.bc.database.create(spider=SPIDER, zyte_project=ZYTE_PROJECT, platform=PLATFORM)
+
+        result = ScraperFactory('getonboard')
+        self.assertEqual(result.__module__, 'breathecode.jobs.services.getonboard')
+        self.assertEqual(result.__qualname__, 'GetonboardScraper')

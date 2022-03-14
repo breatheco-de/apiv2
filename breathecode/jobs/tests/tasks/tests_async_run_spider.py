@@ -45,11 +45,14 @@ class RunSpiderTaskTestCase(JobsTestCase):
     @patch('logging.Logger.debug', MagicMock())
     @patch('logging.Logger.error', MagicMock())
     def test_async_run_spider__without_tasks(self):
+        from breathecode.jobs.actions import run_spider
         from logging import Logger
 
         model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
         async_run_spider.delay({'spi_id': model['spider'].id})
+
+        self.assertEqual(run_spider.call_args_list, [call(model.spider)])
         self.assertEqual(
             Logger.error.call_args_list,
             [call('Starting async_run_spider'),

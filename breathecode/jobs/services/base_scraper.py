@@ -6,7 +6,7 @@ from breathecode.utils import ValidationException
 from breathecode.jobs.services.regex import _cases_salary, _cases_date
 
 
-class BaseScrapper(ABC):
+class BaseScraper(ABC):
     @abstractmethod
     def get_location_from_string(cls, location: str):
         pass
@@ -45,8 +45,15 @@ class BaseScrapper(ABC):
         return Employer.objects.filter(name__iexact=keyword).first()
 
     @classmethod
-    def get_tag_from_string(cls, tag: str):
-        return Tag.objects.filter(slug__iexact=tag).first()
+    def save_tag(cls, keyword: str):
+        tag_slug = keyword.replace(' ', '-').replace('.', '-').lower()
+        tag = Tag.objects.filter(slug__iexact=tag_slug).first()
+
+        if tag is None:
+            tag = Tag(slug=tag_slug)
+            tag.save()
+
+        return tag
 
     @classmethod
     def job_exist(cls, title: str, employer_name: str):
@@ -80,7 +87,9 @@ class BaseScrapper(ABC):
     def get_job_id_from_string(cls, string: str):
         if string:
             regex = r'^(\d{1,9})\/(\d{1,3})\/(\d{1,3})$'
-            return re.findall(regex, string).pop()
+            result = re.findall(regex, string).pop()
+            deploy, num_spider, num_job = result
+            return (int(deploy), int(num_spider), int(num_job))
 
     @classmethod
     def get_info_amount_jobs_saved(cls, data: list):

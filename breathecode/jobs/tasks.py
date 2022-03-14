@@ -20,13 +20,13 @@ def async_run_spider(self, args):
 
     logger.error('Starting async_run_spider')
     now = timezone.now()
-    spider = Spider.objects.get(id=args['spi_id'])
+    spider = Spider.objects.filter(id=args['spi_id']).first()
     result = run_spider(spider)
 
     if result:
         logger.error(f'Starting async_run_spider in spider name {spider.name}')
-        spider.sync_status = 'SYNCHED'
-        spider.sync_desc = 'The run of the spider ended successfully command at ' + str(now)
+        spider.spider_last_run_status = 'SYNCHED'
+        spider.spider_last_run_desc = 'The run of the spider ended successfully command at ' + str(now)
         spider.save()
 
 
@@ -40,6 +40,8 @@ def async_fetch_sync_all_data(self, args):
     result = fetch_sync_all_data(spider)
 
     if result:
-        logger.error(f'Starting async_fetch_sync_all_data in spider name {spider.name}')
+        message = f'Starting async_fetch_sync_all_data in spider name {spider.name}'
+        logger.error(message)
         spider.sync_status = 'SYNCHED'
+        spider.sync_desc = message + str(now)
         spider.save()

@@ -7,23 +7,64 @@ from breathecode.tests.mocks import (
     apply_requests_post_mock,
 )
 
+RESULT = {
+    'spider': ['Invalid pk "indeed5" - object does not exist.'],
+    'status': 'error',
+    'message': 'spider: Invalid pk "indeed5" - object does not exist.'
+}
+
 spider = {'name': 'getonboard', 'zyte_spider_number': 3, 'zyte_job_number': 0}
-zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
+zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 223344}
 platform = {'name': 'getonboard'}
 
 spider1 = {'name': 'indeed', 'zyte_spider_number': 2, 'zyte_job_number': 0}
-zyte_project1 = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
+zyte_project1 = {'zyte_api_key': 1234567, 'zyte_api_deploy': 223344}
 platform1 = {'name': 'indeed'}
 
 
 class ActionRunSpiderTestCase(JobsTestCase):
-    @patch('breathecode.jobs.actions.run_spider', MagicMock())
     def test_run_spider__without_spider(self):
         try:
             run_spider(None)
             assert False
         except Exception as e:
             self.assertEqual(str(e), 'missing-spider')
+
+    @patch(REQUESTS_PATH['post'],
+           apply_requests_post_mock([(400, 'https://app.scrapinghub.com/api/run.json', RESULT)]))
+    @patch('logging.Logger.error', MagicMock())
+    def test_run_spider__with_status_code_error(self):
+        from breathecode.jobs.actions import run_spider
+        from logging import Logger
+        import requests
+
+        model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
+        try:
+            result = run_spider(model.spider)
+
+            self.assertEqual(result, (False, {
+                'spider': ['Invalid pk "indeed5" - object does not exist.'],
+                'status': 'error',
+                'message': 'spider: Invalid pk "indeed5" - object does not exist.'
+            }))
+            self.assertEqual(requests.post.call_args_list, [
+                call('https://app.scrapinghub.com/api/run.json',
+                     data={
+                         'project': model.zyte_project.zyte_api_deploy,
+                         'spider': model.zyte_project.platform.name,
+                         'job': model.spider.job_search,
+                         'loc': model.spider.loc_search
+                     },
+                     auth=(model.zyte_project.zyte_api_key, ''))
+            ])
+        except Exception as e:
+            self.assertEquals(str(e), ('bad-request'))
+            self.assertEqual(Logger.error.call_args_list, [
+                call(
+                    'The spider ended error. Type error [\'Invalid pk "indeed5" - object does not exist.\'] to getonboard'
+                ),
+                call('Status 400 - bad-request')
+            ])
 
     @patch(REQUESTS_PATH['post'],
            apply_requests_post_mock([(200, 'https://app.scrapinghub.com/api/run.json', {

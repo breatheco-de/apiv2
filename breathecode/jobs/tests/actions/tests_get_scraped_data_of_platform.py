@@ -1,5 +1,5 @@
 from unittest.mock import patch, call, MagicMock
-from ...actions import fetch_data_to_json
+from ...actions import get_scraped_data_of_platform
 from ..mixins import JobsTestCase
 from breathecode.tests.mocks.django_contrib import DJANGO_CONTRIB_PATH, apply_django_contrib_messages_mock
 from breathecode.tests.mocks import (
@@ -29,7 +29,7 @@ DATA = {
         'close_reason': 'finished',
         'elapsed': 609370879,
         'logs': 74,
-        'id': '570286/2/72',
+        'id': '223344/2/72',
         'started_time': '2022-01-02T22:56:02',
         'updated_time': '2022-01-02T23:53:52',
         'items_scraped': 227,
@@ -49,7 +49,7 @@ DATA = {
         'close_reason': 'finished',
         'elapsed': 646146617,
         'logs': 18,
-        'id': '570286/3/35',
+        'id': '223344/3/35',
         'started_time': '2022-01-02T13:40:20',
         'updated_time': '2022-01-02T13:40:57',
         'items_scraped': 6,
@@ -69,7 +69,7 @@ DATA = {
         'close_reason': 'finished',
         'elapsed': 647281256,
         'logs': 25,
-        'id': '570286/3/34',
+        'id': '223344/3/34',
         'started_time': '2022-01-02T13:15:17',
         'updated_time': '2022-01-02T13:22:03',
         'items_scraped': 3,
@@ -204,55 +204,53 @@ JOBS = [{
 }]
 
 spider = {'name': 'getonboard', 'zyte_spider_number': 3, 'zyte_job_number': 0}
-zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 11223344}
+zyte_project = {'zyte_api_key': 1234567, 'zyte_api_deploy': 223344}
 platform = {'name': 'getonboard'}
 
 
-class ActionFetchDataToJsonTestCase(JobsTestCase):
+class ActionGetScrapedDataOfPlatformTestCase(JobsTestCase):
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('django.contrib.messages.add_message', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_fetch_data_to_json__without_spider(self):
-        from breathecode.jobs.actions import fetch_data_to_json
+    def test_get_scraped_data_of_platform__without_spider(self):
+        from breathecode.jobs.actions import get_scraped_data_of_platform
         from logging import Logger
         try:
-            fetch_data_to_json(None, DATA)
+            get_scraped_data_of_platform(None, DATA)
         except Exception as e:
             self.assertEquals(str(e), ('without-spider'))
             self.assertEqual(Logger.error.call_args_list, [
-                call('First you must specify a spider (fetch_data_to_json)'),
+                call('First you must specify a spider (get_scraped_data_of_platform)'),
                 call('Status 400 - without-spider')
             ])
 
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
     @patch('django.contrib.messages.add_message', MagicMock())
     @patch('logging.Logger.error', MagicMock())
-    def test_fetch_data_to_json__without_data(self):
-        from breathecode.jobs.actions import fetch_data_to_json
+    def test_get_scraped_data_of_platform__without_data(self):
+        from breathecode.jobs.actions import get_scraped_data_of_platform
         from logging import Logger
-
+        model = self.bc.database.create(spider=1)
         try:
-            model = self.bc.database.create(spider=1)
-
-            fetch_data_to_json(model.spider, None)
+            get_scraped_data_of_platform(model.spider, None)
         except Exception as e:
             self.assertEquals(str(e), ('no-return-json-data'))
             self.assertEqual(Logger.error.call_args_list, [
-                call('I did not receive results from the API (fetch_data_to_json)'),
+                call('I did not receive results from the API (get_scraped_data_of_platform)'),
                 call('Status 400 - no-return-json-data')
             ])
 
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([
-               (200, 'https://storage.scrapinghub.com/items/570286/3/35?apikey=1234567&format=json', JOBS),
-               (200, 'https://storage.scrapinghub.com/items/570286/3/34?apikey=1234567&format=json', JOBS)
+               (200, 'https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json', JOBS),
+               (200, 'https://storage.scrapinghub.com/items/223344/3/34?apikey=1234567&format=json', JOBS)
            ]))
     def test_fetch_data__with_two_num_jobs(self):
         import requests
 
         model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
 
-        result = fetch_data_to_json(model.spider, DATA)
+        result = get_scraped_data_of_platform(model.spider, DATA)
 
         self.assertEqual(result, [{
             'status': 'ok',
@@ -268,13 +266,13 @@ class ActionFetchDataToJsonTestCase(JobsTestCase):
             'jobs_saved': 0
         }])
         self.assertEqual(requests.get.call_args_list, [
-            call('https://storage.scrapinghub.com/items/570286/3/35?apikey=1234567&format=json'),
-            call('https://storage.scrapinghub.com/items/570286/3/34?apikey=1234567&format=json')
+            call('https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json'),
+            call('https://storage.scrapinghub.com/items/223344/3/34?apikey=1234567&format=json')
         ])
 
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([
-               (400, 'https://storage.scrapinghub.com/items/570286/3/35?apikey=1234567&format=json', [{
+               (400, 'https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json', [{
                    'status_code':
                    400,
                    'data': []
@@ -288,16 +286,16 @@ class ActionFetchDataToJsonTestCase(JobsTestCase):
         from logging import Logger
         model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
         try:
-            result = fetch_data_to_json(model.spider, DATA)
+            result = get_scraped_data_of_platform(model.spider, DATA)
 
             self.assertEqual(result, [{'status_code': 400, 'data': []}])
             self.assertEqual(
                 requests.get.call_args_list,
-                [call('https://storage.scrapinghub.com/items/570286/3/35?apikey=1234567&format=json')])
+                [call('https://storage.scrapinghub.com/items/223344/3/35?apikey=1234567&format=json')])
 
         except Exception as e:
             self.assertEquals(str(e), ('bad-response-fetch'))
             self.assertEqual(Logger.error.call_args_list, [
-                call('There was a 400 error fetching spider 3 job 3 (fetch_data_to_json)'),
+                call('There was a 400 error fetching spider 3 job 3 (get_scraped_data_of_platform)'),
                 call('Status 400 - bad-response-fetch')
             ])

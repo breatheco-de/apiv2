@@ -1,5 +1,5 @@
 from unittest.mock import patch, call, MagicMock
-from ...actions import fetch_sync_all_data, fetch_to_api, fetch_data_to_json
+from ...actions import fetch_sync_all_data, fetch_to_api, get_scraped_data_of_platform
 from ..mixins import JobsTestCase
 from breathecode.tests.mocks import (
     REQUESTS_PATH,
@@ -163,7 +163,6 @@ class ActionTestFetchSyncAllDataAdminTestCase(JobsTestCase):
                              [call('First you must specify a spider (fetch_sync_all_data)')])
             self.assertEqual(str(e), 'without-spider')
 
-    @patch('breathecode.jobs.actions.fetch_sync_all_data', MagicMock())
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([
                (200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA),
@@ -186,13 +185,12 @@ class ActionTestFetchSyncAllDataAdminTestCase(JobsTestCase):
             call('https://storage.scrapinghub.com/items/223344/2/75?apikey=1234567&format=json')
         ])
 
-    @patch('breathecode.jobs.actions.fetch_sync_all_data', MagicMock())
     @patch(REQUESTS_PATH['get'],
            apply_requests_get_mock([
                (200, 'https://app.scrapinghub.com/api/jobs/list.json', DATA1),
                (200, 'https://storage.scrapinghub.com/items/223344/2/72?apikey=1234567&format=json', JOBS)
            ]))
-    def test_verify_fetch_funtions_was_calletd(self):
+    def test_verify_fetch_funtions_was_called(self):
         import requests
 
         model = self.bc.database.create(spider=spider, zyte_project=zyte_project, platform=platform)
