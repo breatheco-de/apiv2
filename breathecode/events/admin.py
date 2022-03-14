@@ -89,7 +89,7 @@ class EventCheckinAdmin(admin.ModelAdmin):
 class EventbriteWebhookAdmin(admin.ModelAdmin):
     list_display = ('api_url', 'user_id', 'action', 'webhook_id', 'organization', 'endpoint_url', 'status',
                     'status_text', 'created_at')
-    list_filter = ['organization_id', 'status']
+    list_filter = ['organization_id', 'status', 'action']
     search_fields = ['organization_id', 'status']
 
     def organization(self, obj):
