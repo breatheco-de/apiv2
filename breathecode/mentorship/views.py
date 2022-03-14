@@ -1,16 +1,19 @@
 import os, hashlib, timeago
 from django.shortcuts import render
 from django.utils import timezone
+from django.db.models import Q
+from django.contrib.auth.models import User
 from datetime import timedelta
 from django.contrib import messages
 from django.http import HttpResponse, HttpResponseRedirect
 from breathecode.admissions.models import Academy
 from breathecode.authenticate.models import Token
 from breathecode.utils.views import private_view, render_message, set_query_parameter
-from .models import MentorProfile, MentorshipService, MentorshipSession
+from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
 from .forms import CloseMentoringSessionForm
 from .actions import close_mentoring_session, get_or_create_sessions, render_session
 from rest_framework import serializers
+from breathecode.notify.actions import get_template_content
 from rest_framework.exceptions import ValidationError, NotFound
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (
@@ -21,11 +24,16 @@ from .serializers import (
     MentorSerializer,
     MentorUpdateSerializer,
     SessionSerializer,
-    ServiceSerializer,
+    ServicePOSTSerializer,
     GETMentorBigSerializer,
     GETServiceBigSerializer,
     GETSessionBigSerializer,
     GETSessionReportSerializer,
+    ServicePUTSerializer,
+    BigBillSerializer,
+    BillSessionSmallSerializer,
+    GETBillSmallSerializer,
+    MentorshipBillPUTSerializer,
 )
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -35,7 +43,26 @@ from breathecode.utils import capable_of, ValidationException, HeaderLimitOffset
 from django.db.models import Q
 
 
-@private_view
+# TODO: Use decorator with permissions @private_view(permission='view_mentorshipbill')
+@private_view()
+def render_html_bill(request, token, id=None):
+    item = MentorshipBill.objects.filter(id=id).first()
+    if item is None:
+        return render_message(request, 'Bill not found')
+    else:
+        serializer = BigBillSerializer(item, many=False)
+        status_map = {'DUE': 'UNDER_REVIEW', 'APPROVED': 'READY_TO_PAY', 'PAID': 'ALREADY PAID'}
+        data = {
+            **serializer.data, 'status':
+            status_map[serializer.data['status']],
+            'title':
+            f'Mentor { serializer.data["mentor"]["user"]["first_name"] } { serializer.data["mentor"]["user"]["last_name"] } - Invoice { item.id }'
+        }
+        template = get_template_content('mentorship_invoice', data)
+        return HttpResponse(template['html'])
+
+
+@private_view()
 def forward_booking_url(request, mentor_slug, token):
     now = timezone.now()
     if isinstance(token, HttpResponseRedirect):
@@ -63,8 +90,14 @@ def forward_booking_url(request, mentor_slug, token):
     })
 
 
-@private_view
+@private_view()
 def forward_meet_url(request, mentor_slug, token):
+    # If the ? is added at the end, everyone can asume the querystring already started
+    # and its a lot easier to append variables to it
+    baseUrl = request.get_full_path()
+    if '?' not in baseUrl:
+        baseUrl += '?'
+
     now = timezone.now()
     if isinstance(token, HttpResponseRedirect):
         return token
@@ -72,6 +105,7 @@ def forward_meet_url(request, mentor_slug, token):
     redirect = request.GET.get('redirect', None)
     extend = request.GET.get('extend', None)
     session_id = request.GET.get('session', None)
+    mentee_id = request.GET.get('mentee', None)
 
     session = None
     mentee = None
@@ -101,18 +135,34 @@ def forward_meet_url(request, mentor_slug, token):
     else:
         return render(
             request, 'pick_session.html', {
-                'token':
-                token.key,
-                'mentor':
-                GETMentorBigSerializer(mentor, many=False).data,
-                'SUBJECT':
-                'Mentoring Session',
-                'sessions':
-                GETSessionReportSerializer(session, many=True).data,
-                'baseUrl':
-                request.get_full_path(),
-                'MESSAGE':
-                f'<h1>Choose a mentoring session</h1> Many mentoring sessions were found, please the one you want to continue:',
+                'token': token.key,
+                'mentor': GETMentorBigSerializer(mentor, many=False).data,
+                'SUBJECT': 'Mentoring Session',
+                'sessions': GETSessionReportSerializer(session, many=True).data,
+                'baseUrl': baseUrl,
+            })
+    """
+    From this line on, we know exactly what session is the user opening
+    """
+
+    if session.mentee is None and mentee_id is not None and mentee_id != 'undefined':
+        session.mentee = User.objects.filter(id=mentee_id).first()
+        if session.mentee is None:
+            return render_message(
+                request,
+                f'Mentee with user id {mentee_id} was not found, <a href="{baseUrl}&mentee=undefined">click here to start the session anyway.</a>'
+            )
+
+        session.save()
+
+    if session.mentee is None and mentee_id is None:
+        return render(
+            request, 'pick_mentee.html', {
+                'token': token.key,
+                'mentor': GETMentorBigSerializer(mentor, many=False).data,
+                'SUBJECT': 'Mentoring Session',
+                'sessions': GETSessionReportSerializer(session, many=False).data,
+                'baseUrl': baseUrl,
             })
 
     service = session.mentor.service
@@ -130,7 +180,7 @@ def forward_meet_url(request, mentor_slug, token):
         if (now - session.ends_at).total_seconds() > (session.mentor.service.duration.seconds / 2):
             return HttpResponseRedirect(
                 redirect_to=
-                f'/mentor/session/{str(session.id)}?token={token.key}&message=This session expired {timeago.format(session.ends_at, now)}. Only sessions with less than {round(((session.mentor.service.duration.total_seconds() / 3600) * 60)/2)}min from expiration can be extended (if allowed by the academy)'
+                f'/mentor/session/{str(session.id)}?token={token.key}&message=Your have a session that expired {timeago.format(session.ends_at, now)}. Only sessions with less than {round(((session.mentor.service.duration.total_seconds() / 3600) * 60)/2)}min from expiration can be extended (if allowed by the academy)'
             )
 
         if ((session.mentor.user.id == token.user.id and service.allow_mentors_to_extend)
@@ -179,7 +229,7 @@ def forward_meet_url(request, mentor_slug, token):
         })
 
 
-@private_view
+@private_view()
 def end_mentoring_session(request, session_id, token):
     now = timezone.now()
     if request.method == 'POST':
@@ -204,7 +254,7 @@ def end_mentoring_session(request, session_id, token):
                     request, 'close_session.html', {
                         'token': token.key,
                         'message':
-                        'The mentoring session was closed successfully, you can close this window.',
+                        f'The mentoring session was closed successfully, you can close this window or <a href="/mentor/meet/{session.mentor.slug}?token={token.key}">go back to your meeting room</a>',
                         'mentor': GETMentorBigSerializer(session.mentor, many=False).data,
                         'SUBJECT': 'Close Mentoring Session',
                         'sessions': GETSessionReportSerializer(pending_sessions, many=True).data,
@@ -267,46 +317,39 @@ def end_mentoring_session(request, session_id, token):
 
 
 class ServiceView(APIView, HeaderLimitOffsetPagination):
-    # """
-    # List all snippets, or create a new snippet.
-    # """
-    # @capable_of('crud_service')
-    # def post(self, request, academy_id=None):
+    @capable_of('crud_mentorship_service')
+    def post(self, request, academy_id=None):
 
-    #     serializer = SurveySerializer(data=request.data,
-    #                                   context={
-    #                                       'request': request,
-    #                                       'academy_id': academy_id
-    #                                   })
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ServicePOSTSerializer(data=request.data,
+                                           context={
+                                               'request': request,
+                                               'academy_id': academy_id
+                                           })
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    # """
-    # List all snippets, or create a new snippet.
-    # """
+    @capable_of('crud_mentorship_service')
+    def put(self, request, service_id=None, academy_id=None):
+        if service_id is None:
+            raise ValidationException('Missing service_id')
 
-    # @capable_of('crud_service')
-    # def put(self, request, survey_id=None, academy_id=None):
-    #     if survey_id is None:
-    #         raise ValidationException('Missing survey_id')
+        service = MentorshipService.objects.filter(id=service_id, academy__id=academy_id).first()
+        if service is None:
+            raise NotFound('This service does not exist')
 
-    #     survey = MentorService.objects.filter(id=survey_id).first()
-    #     if survey is None:
-    #         raise NotFound('This survey does not exist')
-
-    #     serializer = SurveyPUTSerializer(survey,
-    #                                      data=request.data,
-    #                                      context={
-    #                                          'request': request,
-    #                                          'survey': survey_id,
-    #                                          'academy_id': academy_id
-    #                                      })
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ServicePUTSerializer(service,
+                                          data=request.data,
+                                          context={
+                                              'request': request,
+                                              'academy_id': academy_id
+                                          })
+        if serializer.is_valid():
+            serializer.save()
+            serializer = GETServiceBigSerializer(service, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('read_mentorship_service')
     def get(self, request, service_id=None, academy_id=None):
@@ -361,10 +404,6 @@ class MentorView(APIView, HeaderLimitOffsetPagination):
             _serializer = GETMentorBigSerializer(mentor, many=False)
             return Response(_serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    # """
-    # List all snippets, or create a new snippet.
-    # """
 
     @capable_of('crud_mentor')
     def put(self, request, mentor_id=None, academy_id=None):
@@ -428,7 +467,7 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
     @capable_of('crud_mentorship_session')
     def post(self, request, academy_id=None):
 
-        serializer = ServiceSerializer(data=request.data,
+        serializer = SessionSerializer(data=request.data,
                                        context={
                                            'request': request,
                                            'academy_id': academy_id
@@ -437,31 +476,6 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    # """
-    # List all snippets, or create a new snippet.
-    # """
-
-    # @capable_of('crud_service')
-    # def put(self, request, survey_id=None, academy_id=None):
-    #     if survey_id is None:
-    #         raise ValidationException('Missing survey_id')
-
-    #     survey = MentorService.objects.filter(id=survey_id).first()
-    #     if survey is None:
-    #         raise NotFound('This survey does not exist')
-
-    #     serializer = SurveyPUTSerializer(survey,
-    #                                      data=request.data,
-    #                                      context={
-    #                                          'request': request,
-    #                                          'survey': survey_id,
-    #                                          'academy_id': academy_id
-    #                                      })
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_200_OK)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('read_mentorship_session')
     def get(self, request, session_id=None, academy_id=None):
@@ -478,9 +492,25 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
         items = MentorshipSession.objects.filter(mentor__service__academy__id=academy_id)
         lookup = {}
 
-        if 'status' in self.request.GET:
-            param = self.request.GET.get('status')
-            lookup['status'] = param
+        _status = request.GET.get('status', '')
+        if _status != '':
+            _status = [s.strip().upper() for s in _status.split(',')]
+            _status = list(filter(lambda s: s != '', _status))
+            items = items.filter(status__in=_status)
+
+        billed = request.GET.get('billed', '')
+        if billed == 'true':
+            items = items.filter(bill__isnull=False)
+        elif billed == 'false':
+            items = items.filter(bill__isnull=True)
+
+        started_after = request.GET.get('started_after', '')
+        if started_after != '':
+            items = items.filter(Q(started_at__gte=started_after) | Q(started_at__isnull=True))
+
+        ended_before = request.GET.get('ended_before', '')
+        if ended_before != '':
+            items = items.filter(Q(ended_at__lte=ended_before) | Q(ended_at__isnull=True))
 
         mentor = request.GET.get('mentor', None)
         if mentor is not None:
@@ -495,3 +525,68 @@ class SessionView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class BillView(APIView, HeaderLimitOffsetPagination):
+    @capable_of('read_mentorship_bills')
+    def get(self, request, bill_id=None, academy_id=None):
+
+        if bill_id is not None:
+            bill = MentorshipBill.objects.filter(id=bill_id, academy__id=academy_id).first()
+            if bill is None:
+                raise ValidationException('This mentorhip bill does not exist on this academy', code=404)
+
+            serializer = BigBillSerializer(bill)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        items = MentorshipBill.objects.filter(academy__id=academy_id)
+        lookup = {}
+
+        _status = request.GET.get('status', '')
+        if _status != '':
+            _status = [s.strip().upper() for s in _status.split(',')]
+            _status = list(filter(lambda s: s != '', _status))
+            items = items.filter(status__in=_status)
+
+        after = request.GET.get('after', '')
+        if after != '':
+            items = items.filter(created_at__gte=after)
+
+        before = request.GET.get('before', '')
+        if before != '':
+            items = items.filter(created_at__lte=before)
+
+        mentor = request.GET.get('mentor', None)
+        if mentor is not None:
+            lookup['mentor__id__in'] = mentor.split(',')
+
+        items = items.filter(**lookup).order_by('-created_at')
+        page = self.paginate_queryset(items, request)
+        serializer = GETBillSmallSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @capable_of('crud_mentorship_bills')
+    def put(self, request, bill_id=None, academy_id=None):
+
+        if bill_id is None:
+            raise ValidationException('Missing bill ID on the URL', 404)
+
+        bill = MentorshipBill.objects.filter(id=bill_id, academy__id=academy_id).first()
+        if bill is None:
+            raise ValidationException('This bill does not exist for this academy', 404)
+
+        serializer = MentorshipBillPUTSerializer(bill,
+                                                 data=request.data,
+                                                 context={
+                                                     'request': request,
+                                                     'academy_id': academy_id
+                                                 })
+        if serializer.is_valid():
+            mentor = serializer.save()
+            _serializer = GETBillSmallSerializer(bill)
+            return Response(_serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

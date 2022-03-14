@@ -145,7 +145,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      specialty=True,
                                      layout_design=True,
                                      user_specialty=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      cohort_kwargs=cohort_kwargs,
                                      cohort_user_kwargs=cohort_user_kwargs,
                                      syllabus_kwargs=syllabus_kwargs)
@@ -186,10 +186,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
-                'specialty_mode': {
-                    'id': model['specialty_mode'].id,
-                    'name': model['specialty_mode'].name,
-                    'syllabus': model['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': model['syllabus_schedule'].id,
+                    'name': model['syllabus_schedule'].name,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': model['syllabus_version'].version,
@@ -278,7 +278,7 @@ class CertificateTestSuite(CertificateTestCase):
                                     syllabus=True,
                                     syllabus_version=True,
                                     specialty=True,
-                                    specialty_mode=True,
+                                    syllabus_schedule=True,
                                     layout_design=True,
                                     syllabus_kwargs=syllabus_kwargs,
                                     cohort_kwargs=cohort_kwargs)
@@ -345,10 +345,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
-                'specialty_mode': {
-                    'id': models[0]['specialty_mode'].id,
-                    'name': models[0]['specialty_mode'].name,
-                    'syllabus': models[0]['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': models[0]['syllabus_schedule'].id,
+                    'name': models[0]['syllabus_schedule'].name,
+                    'syllabus': models[0]['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': models[0]['syllabus_version'].version,
@@ -401,10 +401,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': models[1].cohort.name,
                 'slug': models[1].cohort.slug,
-                'specialty_mode': {
-                    'id': models[0]['specialty_mode'].id,
-                    'name': models[0]['specialty_mode'].name,
-                    'syllabus': models[0]['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': models[0]['syllabus_schedule'].id,
+                    'name': models[0]['syllabus_schedule'].name,
+                    'syllabus': models[0]['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': models[0]['syllabus_version'].version,
@@ -493,7 +493,7 @@ class CertificateTestSuite(CertificateTestCase):
         """Test /root """
         self.headers(academy=1)
 
-        specialty_mode_kwargs = {'duration_in_days': 543665478761}
+        schedule_kwargs = {'duration_in_days': 543665478761}
         cohort_kwargs = {
             'current_day': 543665478761,
             'stage': 'ENDED',
@@ -505,8 +505,8 @@ class CertificateTestSuite(CertificateTestCase):
                                     academy=True,
                                     profile_academy=True,
                                     specialty=True,
-                                    specialty_mode=True,
-                                    specialty_mode_kwargs=specialty_mode_kwargs,
+                                    syllabus_schedule=True,
+                                    syllabus_schedule_kwargs=schedule_kwargs,
                                     syllabus=True,
                                     cohort_kwargs=cohort_kwargs)
 
@@ -559,10 +559,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
-                'specialty_mode': {
-                    'id': models[0]['specialty_mode'].id,
-                    'name': models[0]['specialty_mode'].name,
-                    'syllabus': models[0]['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': models[0]['syllabus_schedule'].id,
+                    'name': models[0]['syllabus_schedule'].name,
+                    'syllabus': models[0]['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': None,
             },
@@ -605,7 +605,7 @@ class CertificateTestSuite(CertificateTestCase):
     def test_certificate__with_first_name_in_querystring(self):
         """Test /root """
         self.headers(academy=1)
-        specialty_mode_kwargs = {'duration_in_days': 543665478761}
+        schedule_kwargs = {'duration_in_days': 543665478761}
         cohort_kwargs = {
             'current_day': 543665478761,
             'stage': 'ENDED',
@@ -617,8 +617,8 @@ class CertificateTestSuite(CertificateTestCase):
                                     academy=True,
                                     profile_academy=True,
                                     specialty=True,
-                                    specialty_mode=True,
-                                    specialty_mode_kwargs=specialty_mode_kwargs,
+                                    syllabus_schedule=True,
+                                    syllabus_schedule_kwargs=schedule_kwargs,
                                     syllabus=True,
                                     cohort_kwargs=cohort_kwargs)
 
@@ -671,10 +671,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
-                'specialty_mode': {
-                    'id': models[0]['specialty_mode'].id,
-                    'name': models[0]['specialty_mode'].name,
-                    'syllabus': models[0]['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': models[0]['syllabus_schedule'].id,
+                    'name': models[0]['syllabus_schedule'].name,
+                    'syllabus': models[0]['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': None,
             },
@@ -713,7 +713,7 @@ class CertificateTestSuite(CertificateTestCase):
     def test_certificate__with_last_name_in_querystring(self):
         """Test /root """
         self.headers(academy=1)
-        specialty_mode_kwargs = {'duration_in_days': 543665478761}
+        schedule_kwargs = {'duration_in_days': 543665478761}
         cohort_kwargs = {
             'current_day': 543665478761,
             'stage': 'ENDED',
@@ -725,8 +725,8 @@ class CertificateTestSuite(CertificateTestCase):
                                     academy=True,
                                     profile_academy=True,
                                     specialty=True,
-                                    specialty_mode=True,
-                                    specialty_mode_kwargs=specialty_mode_kwargs,
+                                    syllabus_schedule=True,
+                                    syllabus_schedule_kwargs=schedule_kwargs,
                                     syllabus=True,
                                     cohort_kwargs=cohort_kwargs)
 
@@ -779,10 +779,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
-                'specialty_mode': {
-                    'id': models[0]['specialty_mode'].id,
-                    'name': models[0]['specialty_mode'].name,
-                    'syllabus': models[0]['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': models[0]['syllabus_schedule'].id,
+                    'name': models[0]['syllabus_schedule'].name,
+                    'syllabus': models[0]['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': None,
             },
@@ -821,7 +821,7 @@ class CertificateTestSuite(CertificateTestCase):
     def test_certificate__with_email_in_querystring(self):
         """Test /root """
         self.headers(academy=1)
-        specialty_mode_kwargs = {'duration_in_days': 543665478761}
+        schedule_kwargs = {'duration_in_days': 543665478761}
         cohort_kwargs = {
             'current_day': 543665478761,
             'stage': 'ENDED',
@@ -834,8 +834,8 @@ class CertificateTestSuite(CertificateTestCase):
                                     academy=True,
                                     profile_academy=True,
                                     specialty=True,
-                                    specialty_mode=True,
-                                    specialty_mode_kwargs=specialty_mode_kwargs,
+                                    syllabus_schedule=True,
+                                    syllabus_schedule_kwargs=schedule_kwargs,
                                     syllabus=True,
                                     cohort_kwargs=cohort_kwargs)
 
@@ -888,10 +888,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
-                'specialty_mode': {
-                    'id': models[0]['specialty_mode'].id,
-                    'name': models[0]['specialty_mode'].name,
-                    'syllabus': models[0]['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': models[0]['syllabus_schedule'].id,
+                    'name': models[0]['syllabus_schedule'].name,
+                    'syllabus': models[0]['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': None,
             },

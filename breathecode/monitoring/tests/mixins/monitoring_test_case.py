@@ -74,7 +74,7 @@ class MonitoringTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 '\n'
                 '\n'
                 '\n'
-                'The BreatheCode Team'
+                'The 4Geeks Team'
             })
         self.assertToken(token)
         self.assertTrue(link in html)

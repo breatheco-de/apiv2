@@ -212,6 +212,10 @@ CAPABILITIES = [
         'description': 'Get all mentorship services from one academy'
     },
     {
+        'slug': 'crud_mentorship_service',
+        'description': 'Create, delete or update all mentorship services from one academy'
+    },
+    {
         'slug': 'read_mentorship_mentor',
         'description': 'Get all mentorship mentors from one academy'
     },
@@ -221,7 +225,15 @@ CAPABILITIES = [
     },
     {
         'slug': 'crud_mentorship_session',
-        'description': 'Get all session from one academy'
+        'description': 'Create, delete or update all session from one academy'
+    },
+    {
+        'slug': 'crud_mentorship_bills',
+        'description': 'Create, delete or update all mentroship bills from one academy'
+    },
+    {
+        'slug': 'read_mentorship_bills',
+        'description': 'Read all mentroship bills from one academy'
     },
     {
         'slug': 'read_mentor',
@@ -458,6 +470,10 @@ def extend_roles(roles: list[RoleType]) -> None:
             'read_assignment_sensitive_details',
             'crud_shortlink',
             'invite_resend',
+            'read_mentorship_service',
+            'crud_mentorship_service',
+            'crud_mentorship_bill',
+            'read_mentorship_bill',
         ]
     })
     roles.append({
@@ -467,9 +483,16 @@ def extend_roles(roles: list[RoleType]) -> None:
         'Country Manager',
         'caps':
         extend(roles, [
-            'academy_coordinator', 'student', 'career_support', 'growth_manager', 'admissions_developer',
-            'syllabus_coordinator', 'read_organization', 'crud_organization'
-        ]) + ['crud_my_academy', 'generate_academy_token', 'send_reset_password', 'generate_temporal_token']
+            'academy_coordinator',
+            'student',
+            'career_support',
+            'growth_manager',
+            'admissions_developer',
+            'syllabus_coordinator',
+        ]) + [
+            'crud_my_academy', 'crud_organization', 'generate_academy_token', 'send_reset_password',
+            'generate_temporal_token', 'read_organization'
+        ]
     })
 
 

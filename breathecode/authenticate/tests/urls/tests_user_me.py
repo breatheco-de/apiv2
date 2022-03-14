@@ -1,6 +1,7 @@
 """
 Test cases for /user
 """
+import pytz, datetime
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from ..mixins.new_auth_test_case import AuthTestCase
@@ -106,6 +107,8 @@ class AuthenticateTestSuite(AuthTestCase):
                         'slug': model.academy.slug,
                         'timezone': model.academy.timezone,
                     },
+                    'created_at': model.profile_academy.created_at,
+                    'id': model.profile_academy.id,
                     'role': model.profile_academy.role.slug,
                 },
             ],

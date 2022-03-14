@@ -44,8 +44,8 @@ class OrganizerAdmin(admin.ModelAdmin):
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['title']
-    list_display = ('eventbrite_sync_status', 'title', 'eventbrite_status', 'starting_at', 'ending_at',
-                    'eventbrite_sync_description', 'sync_with_eventbrite')
+    list_display = ('slug', 'eventbrite_sync_status', 'title', 'eventbrite_status', 'starting_at',
+                    'ending_at', 'eventbrite_sync_description', 'sync_with_eventbrite')
     list_filter = ['eventbrite_status', 'eventbrite_sync_status', 'sync_with_eventbrite']
     actions = ['export_as_csv']
 

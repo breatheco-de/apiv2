@@ -126,3 +126,25 @@ class MonitorScript(models.Model):
     def __str__(self):
         slug = 'unknow' if not self.script_slug else self.script_slug
         return f'{slug}({self.id})'
+
+
+LOADING = 'LOADING'
+ERROR = 'ERROR'
+DONE = 'DONE'
+DOWNLOAD_STATUS = (
+    (LOADING, 'Loading'),
+    (ERROR, 'Error'),
+    (DONE, 'Done'),
+)
+
+
+class CSVDownload(models.Model):
+    name = models.CharField(max_length=255)
+    url = models.URLField()
+    status = models.CharField(max_length=20, choices=DOWNLOAD_STATUS, default=LOADING)
+    status_message = models.TextField(null=True, blank=True, default=None)
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, blank=True, default=None)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    finished_at = models.DateTimeField(auto_now=True, editable=False)

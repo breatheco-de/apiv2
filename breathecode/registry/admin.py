@@ -44,7 +44,7 @@ def sync_github(modeladmin, request, queryset):
     assets = queryset.all()
     for a in assets:
         async_sync_with_github.delay(a.slug, request.user.id)
-        #sync_with_github(a.slug)  # uncomment for testing purposes
+        # sync_with_github(a.slug)  # uncomment for testing purposes
 
 
 sync_github.short_description = 'Sync With Github'
@@ -88,6 +88,7 @@ class AssetAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug', 'author__email', 'url']
     list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'techs', 'url_path')
     list_filter = ['asset_type', 'status', 'lang']
+    raw_id_fields = ['author', 'owner']
     actions = [add_gitpod, remove_gitpod, sync_github, author_lesson, own_lesson, process_github_authors
                ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status')
 

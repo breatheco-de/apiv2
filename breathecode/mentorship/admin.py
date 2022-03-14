@@ -1,9 +1,11 @@
 import json, pytz, logging, requests
 from django.contrib import admin, messages
 from django import forms
-from .models import MentorProfile, MentorshipService, MentorshipSession
+from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
+from .actions import generate_mentor_bill
 from django.utils.html import format_html
 from breathecode.utils.admin import change_field
+from django.contrib.admin import SimpleListFilter
 
 timezones = [(x, x) for x in pytz.common_timezones]
 logger = logging.getLogger(__name__)
@@ -25,6 +27,12 @@ class MentorForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(MentorForm, self).__init__(*args, **kwargs)
         self.fields['timezone'] = forms.ChoiceField(choices=timezones)
+
+
+def generate_bill(modeladmin, request, queryset):
+    mentors = queryset.all()
+    for m in mentors:
+        generate_mentor_bill(m, reset=True)
 
 
 def mark_as_active(modeladmin, request, queryset):
@@ -68,7 +76,7 @@ class MentorAdmin(admin.ModelAdmin):
     search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email']
     list_filter = ['service__academy__slug', 'status', 'service__slug']
     readonly_fields = ('token', )
-    actions = [mark_as_active] + change_field(['INNACTIVE', 'INVITED'], name='status')
+    actions = [generate_bill, mark_as_active] + change_field(['INNACTIVE', 'INVITED'], name='status')
 
     def current_status(self, obj):
         colors = {
@@ -93,6 +101,31 @@ class MentorAdmin(admin.ModelAdmin):
             f"<a rel='noopener noreferrer' target='_blank' href='/mentor/meet/{obj.slug}'>meet</a>")
 
 
+def avoid_billing_this_session(modeladmin, request, queryset):
+    sessions = queryset.update(allow_billing=False)
+
+
+def allow_billing_this_session(modeladmin, request, queryset):
+    sessions = queryset.update(allow_billing=True)
+
+
+class BilledFilter(SimpleListFilter):
+    title = 'billed'
+    parameter_name = 'billed'
+
+    def lookups(self, request, model_admin):
+        return [
+            ('false', 'Not yet billed'),
+            ('true', 'Already billed'),
+        ]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'false':
+            return queryset.filter(bill__isnull=True)
+        if self.value():
+            return queryset.filter(bill__isnull=False)
+
+
 @admin.register(MentorshipSession)
 class SessionAdmin(admin.ModelAdmin):
     list_display = ['id', 'mentor', 'mentee', 'stats', 'started_at', 'mentor_joined_at', 'openurl']
@@ -101,8 +134,11 @@ class SessionAdmin(admin.ModelAdmin):
         'mentee__first_name', 'mentee__last_name', 'mentee__email', 'mentor__user__first_name',
         'mentor__user__last_name', 'mentor__user__email'
     ]
-    list_filter = ['mentor__service__academy', 'status', 'mentor__service__slug']
-    actions = change_field(['COMPLETED', 'FAILED', 'STARTED', 'PENDING'], name='status')
+    list_filter = [
+        BilledFilter, 'allow_billing', 'status', 'mentor__service__academy', 'mentor__service__slug'
+    ]
+    actions = [avoid_billing_this_session, allow_billing_this_session] + change_field(
+        ['COMPLETED', 'FAILED', 'STARTED', 'PENDING'], name='status')
 
     def stats(self, obj):
 
@@ -123,3 +159,30 @@ class SessionAdmin(admin.ModelAdmin):
         return format_html(
             f"<a rel='noopener noreferrer' target='_blank' href='/mentor/meet/{obj.mentor.slug}?session={str(obj.id)}'>open</a>"
         )
+
+
+def release_sessions_from_bill(modeladmin, request, queryset):
+    bills = queryset.all()
+    for b in bills:
+        b.total_price = 0
+        b.total_duration_in_hours = 0
+        b.total_duration_in_minutes = 0
+        b.overtime_minutes = 0
+        for session in b.mentorshipsession_set.all():
+            session.bill = None
+            session.accounted_duration = None
+            session.save()
+        b.save()
+
+
+@admin.register(MentorshipBill)
+class MentorshipBillAdmin(admin.ModelAdmin):
+    list_display = ('id', 'mentor', 'status', 'total_duration_in_hours', 'total_price', 'paid_at',
+                    'invoice_url')
+    list_filter = ['status']
+    actions = [release_sessions_from_bill] + change_field(['DUE', 'APPROVED', 'PAID'], name='status')
+
+    def invoice_url(self, obj):
+        return format_html(
+            "<a rel='noopener noreferrer' target='_blank' href='/v1/mentorship/academy/bill/{id}/html'>open</a>",
+            id=obj.id)

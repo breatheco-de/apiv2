@@ -14,7 +14,7 @@ AC_RESPONSE = {
     'tag': {
         'id': 1,
         'tag_type': 'EVENT',
-        'slug': 'event-they-killed-kenny',
+        'tag': 'event-they-killed-kenny',
     },
 }
 AC_ERROR_RESPONSE = {

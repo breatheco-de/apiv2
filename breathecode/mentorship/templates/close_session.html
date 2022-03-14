@@ -108,7 +108,7 @@ h4 {
                 <div class="card-title">Close session</div>
                 <div class="sh-list">
                   <div class="sh-list-item">
-                  {{ message }}
+                  {{ message|safe }}
                   </div>
                   {% if sessions|length > 0 %}
                   <div class="sh-list-item">

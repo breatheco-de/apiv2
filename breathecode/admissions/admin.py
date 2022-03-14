@@ -1,7 +1,6 @@
 import os
 import pytz
 import json
-import logging
 import re
 import requests
 import base64
@@ -9,16 +8,18 @@ from django.contrib import admin
 from django import forms
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
+from breathecode.utils import getLogger
+from django.db.models import QuerySet
 
 from breathecode.marketing.tasks import add_cohort_slug_as_acp_tag, add_cohort_task_to_student
-from .models import (Academy, SpecialtyMode, AcademySpecialtyMode, Cohort, CohortUser, Country, City,
-                     SyllabusVersion, UserAdmissions, Syllabus, CohortTimeSlot, SpecialtyModeTimeSlot)
+from .models import (Academy, SyllabusSchedule, Cohort, CohortUser, Country, City, SyllabusVersion,
+                     UserAdmissions, Syllabus, CohortTimeSlot, SyllabusScheduleTimeSlot)
 from .actions import sync_cohort_timeslots
 from breathecode.assignments.actions import sync_student_tasks
 from random import choice
 from django.db.models import Q
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 # Register your models here.
 admin.site.site_header = 'BreatheCode'
@@ -45,12 +46,6 @@ class AcademyAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'city')
 
 
-@admin.register(AcademySpecialtyMode)
-class AcademySpecialtyMode(admin.ModelAdmin):
-    list_display = ('specialty_mode', 'academy')
-    list_filter = ['specialty_mode__name', 'academy__slug']
-
-
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):
     list_display = ('code', 'name')
@@ -59,11 +54,6 @@ class CountryAdmin(admin.ModelAdmin):
 @admin.register(City)
 class CityAdmin(admin.ModelAdmin):
     list_display = ('name', 'country')
-
-
-@admin.register(SpecialtyMode)
-class SpecialtyModeAdmin(admin.ModelAdmin):
-    list_display = ('name', )
 
 
 def make_assistant(modeladmin, request, queryset):
@@ -211,7 +201,7 @@ if os.getenv('ENVIRONMENT') == 'DEVELOPMENT':
 
 def link_randomly_relations_to_cohorts(modeladmin, request, queryset):
     academies_instances = {}
-    specialty_modes_instances = {}
+    schedules_instances = {}
     cohorts = queryset.all()
 
     if not cohorts:
@@ -239,19 +229,19 @@ def link_randomly_relations_to_cohorts(modeladmin, request, queryset):
         else:
             syllabus_version = cohort.syllabus_version
 
-        if not cohort.specialty_mode:
-            if syllabus_version.syllabus.id in specialty_modes_instances:
-                specialty_modes = specialty_modes_instances[syllabus_version.syllabus.id]
+        if not cohort.schedule:
+            if syllabus_version.syllabus.id in schedules_instances:
+                schedules = schedules_instances[syllabus_version.syllabus.id]
             else:
-                specialty_modes = SpecialtyMode.objects.filter(syllabus=syllabus_version.syllabus)
+                schedules = SyllabusSchedule.objects.filter(syllabus=syllabus_version.syllabus)
 
-            if not specialty_modes:
+            if not schedules:
                 continue
 
-            specialty_mode = choice(list(specialty_modes))
+            schedule = choice(list(schedules))
 
             x = Cohort.objects.filter(id=cohort.id).first()
-            x.specialty_mode = specialty_mode
+            x.schedule = schedule
             x.save()
 
 
@@ -262,8 +252,8 @@ link_randomly_relations_to_cohorts.short_description = 'Link randomly relations 
 class CohortAdmin(admin.ModelAdmin):
     form = CohortForm
     search_fields = ['slug', 'name', 'academy__city__name']
-    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'specialty_mode')
-    list_filter = ['stage', 'academy__slug', 'specialty_mode__name', 'syllabus_version__version']
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
+    list_filter = ['stage', 'academy__slug', 'schedule__name', 'syllabus_version__version']
 
     if os.getenv('ENV') == 'development':
         actions = cohort_actions + [link_randomly_relations_to_cohorts]
@@ -342,59 +332,87 @@ class CohortTimeSlotAdmin(admin.ModelAdmin):
     search_fields = ['cohort__slug', 'timezone', 'cohort__name', 'cohort__academy__city__name']
 
 
-def replicate_in_all(modeladmin, request, queryset):
+def replicate_in_all(modeladmin, request, queryset: QuerySet[SyllabusSchedule]):
     from django.contrib import messages
 
-    slugs = []
-    cert_timeslot = queryset.all()
+    without_timezone_slugs = []
+    already_exist_schedule_name = []
+    syllabus_schedules = queryset.all()
     academies = Academy.objects.all()
 
-    for academy in academies:
-        if not academy.timezone:
-            slugs.append(academy.slug)
-            continue
+    for syllabus_schedule in syllabus_schedules:
+        academy_id = syllabus_schedule.academy.id
 
-        to_filter = {}
+        for academy in academies:
+            if academy.id == academy_id:
+                continue
 
-        for c in cert_timeslot:
-            key = c.specialty_mode.id
+            if not academy.timezone:
+                without_timezone_slugs.append(academy.slug)
+                continue
 
-            # delete all timeslots for that academy and specialty mode ONLY the first time
-            if key not in to_filter:
-                SpecialtyModeTimeSlot.objects.filter(specialty_mode=c.specialty_mode,
-                                                     academy=academy).delete()
+            schedule_kwargs = {
+                'academy': academy,
+                'name': syllabus_schedule.name,
+                'schedule_type': syllabus_schedule.schedule_type,
+                'description': syllabus_schedule.description,
+                'syllabus': syllabus_schedule.syllabus,
+            }
 
-                to_filter[key] = True
+            if SyllabusSchedule.objects.filter(**schedule_kwargs).first():
+                already_exist_schedule_name.append(f'{academy.slug}/{syllabus_schedule.name}')
+                continue
 
-            # and then re add the timeslots one by one
-            new_timeslot = SpecialtyModeTimeSlot(recurrent=c.recurrent,
-                                                 starting_at=c.starting_at,
-                                                 ending_at=c.ending_at,
-                                                 specialty_mode=c.specialty_mode,
-                                                 academy=academy,
-                                                 timezone=academy.timezone)
+            replica_of_schedule = SyllabusSchedule(**schedule_kwargs)
+            replica_of_schedule.save(force_insert=True)
 
-            new_timeslot.save()
+            timeslots = SyllabusScheduleTimeSlot.objects.filter(schedule=syllabus_schedule)
 
-    if slugs:
+            for timeslot in timeslots:
+                replica_of_timeslot = SyllabusScheduleTimeSlot(recurrent=timeslot.recurrent,
+                                                               starting_at=timeslot.starting_at,
+                                                               ending_at=timeslot.ending_at,
+                                                               schedule=replica_of_schedule,
+                                                               timezone=academy.timezone)
+
+                replica_of_timeslot.save(force_insert=True)
+
+    if without_timezone_slugs and already_exist_schedule_name:
         messages.add_message(
             request, messages.ERROR,
-            f'The following academies ({", ".join(slugs)}) was skipped because it doesn\'t have a timezone '
-            'assigned')
+            f'The following academies ({", ".join(without_timezone_slugs)}) was skipped because it doesn\'t '
+            'have a timezone assigned and the following syllabus schedules '
+            f'({", ".join(already_exist_schedule_name)}) was skipped because it already exists')
+
+    elif without_timezone_slugs:
+        messages.add_message(
+            request, messages.ERROR,
+            f'The following academies ({", ".join(without_timezone_slugs)}) was skipped because it doesn\'t '
+            'have a timezone assigned')
+
+    elif already_exist_schedule_name:
+        messages.add_message(
+            request, messages.ERROR,
+            f'The following syllabus schedules ({", ".join(already_exist_schedule_name)}) was skipped '
+            'because it already exists')
 
     else:
-        messages.add_message(request, messages.INFO, f'All academies in sync with those timeslots')
+        messages.add_message(request, messages.INFO, f'All academies in sync with those syllabus schedules')
 
 
 replicate_in_all.short_description = 'Replicate same timeslots in all academies'
 
 
-@admin.register(SpecialtyModeTimeSlot)
-class SpecialtyModeTimeSlotAdmin(admin.ModelAdmin):
-    list_display = ('id', 'specialty_mode', 'timezone', 'starting_at', 'ending_at', 'academy', 'recurrent',
-                    'recurrency_type')
-    list_filter = ['specialty_mode__name', 'timezone', 'academy__slug', 'recurrent', 'recurrency_type']
-    search_fields = [
-        'specialty_mode__name', 'timezone', 'specialty_mode__name', 'academy__slug', 'academy__name'
-    ]
+@admin.register(SyllabusSchedule)
+class SyllabusScheduleAdmin(admin.ModelAdmin):
+    list_display = ('name', 'academy')
+    list_filter = ['name', 'academy__slug', 'schedule_type']
+    search_fields = ['name', 'academy__slug', 'schedule_type']
     actions = [replicate_in_all]
+
+
+@admin.register(SyllabusScheduleTimeSlot)
+class SyllabusScheduleTimeSlotAdmin(admin.ModelAdmin):
+    list_display = ('id', 'schedule', 'timezone', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type')
+    list_filter = ['schedule__name', 'timezone', 'recurrent', 'recurrency_type']
+    search_fields = ['schedule__name', 'timezone', 'schedule__name']
