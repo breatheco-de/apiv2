@@ -366,7 +366,7 @@ class AcademyEventIdTestSuite(EventTestCase):
     🔽🔽🔽 Put, bad slug
     """
 
-    def test_academy_cohort_id__put__bad_slug(self):
+    def test_academy_cohort_id__put(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
 
@@ -414,7 +414,6 @@ class AcademyEventIdTestSuite(EventTestCase):
             'host': model['event'].host,
             'id': 2,
             'lang': None,
-            'slug': 'event-they-killed-kenny',
             'online_event': False,
             'organization': 1,
             'published_at': None,
@@ -428,7 +427,6 @@ class AcademyEventIdTestSuite(EventTestCase):
             'currency': 'USD',
             'tags': '',
             **data,
-            'slug': 'event-they-killed-kenny',
         }
 
         self.assertEqual(json, expected)
@@ -439,7 +437,6 @@ class AcademyEventIdTestSuite(EventTestCase):
             'organization_id': 1,
             'starting_at': current_date,
             'ending_at': current_date,
-            'slug': 'event-they-killed-kenny',
         }])
 
     """

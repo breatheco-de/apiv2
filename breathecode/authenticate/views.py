@@ -1122,11 +1122,14 @@ class PasswordResetView(APIView):
 class AcademyInviteView(APIView):
     @capable_of('invite_resend')
     def put(self, request, pa_id=None, academy_id=None):
+        from breathecode.notify.actions import send_email_message
+
         if pa_id is not None:
             profile_academy = ProfileAcademy.objects.filter(id=pa_id).first()
 
             if profile_academy is None:
                 raise ValidationException('Member not found', 400)
+
             invite = UserInvite.objects.filter(academy__id=academy_id, email=profile_academy.email).first()
 
             if invite is None and profile_academy.status == 'INVITED':

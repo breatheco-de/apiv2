@@ -163,9 +163,6 @@ class EventSerializer(serializers.ModelSerializer):
         if 'title' in data and not data.get('slug'):
             data['slug'] = slugify(data['title']).lower()
 
-        if 'slug' in data and not data['slug'].lower().startswith('event-'):
-            data['slug'] = f'event-{data["slug"].lower()}'
-
         elif 'slug' in data:
             data['slug'] = f'{data["slug"].lower()}'
 
