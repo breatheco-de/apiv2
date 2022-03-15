@@ -13,6 +13,6 @@ def event_updated(self, webhook, payload: dict):
 
     # prevent receive a event.created and event.updated in the same time and try to create the same event
     # two times
-    time.sleep(2)
+    time.sleep(6)
 
     update_or_create_event(payload, org)
