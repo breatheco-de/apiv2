@@ -14,7 +14,6 @@ pre-commit = "*"
 mkdocs = "*"
 mkdocs-material = "*"
 mkdocstrings = "*"
-lxml = "*"
 pytest-xdist = "*"
 
 [packages]
@@ -57,6 +56,7 @@ timeago = "*"
 markdown = "*"
 python-frontmatter = "*"
 beautifulsoup4 = "*"
+lxml = "*"
 
 [scripts]
 update_sql_keywords="python -m scripts.update_sql_keywords_json"
