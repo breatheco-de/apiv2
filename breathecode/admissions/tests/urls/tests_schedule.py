@@ -338,7 +338,7 @@ class CertificateTestSuite(AdmissionsTestCase):
     def test_certificate_with_data_with_pagination_after_last_five(self):
         """Test /certificate without auth"""
         base = self.bc.database.create(authenticate=True)
-        models = [self.bc.database.create(syllabus_schedule=True, models=base) for _ in range(0, 10)]
+        models = [self.bc.database.create(syllabus_schedule=1, academy=1, models=base) for _ in range(0, 10)]
         url = reverse_lazy('admissions:schedule') + '?limit=5&offset=10'
         response = self.client.get(url)
         json = response.json()

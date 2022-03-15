@@ -93,7 +93,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('The organization (1) not have a academy assigned')])
+                         [call('The organization Nameless not have a academy assigned')])
 
         self.assertEqual(actions.create_or_update_venue.call_args_list, [])
         self.assertEqual(actions.create_or_update_organizer.call_args_list, [])
@@ -163,7 +163,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
             'eventbrite_status': event['status'],
             # organizer: organizer,
             'published_at': self.iso_to_datetime(event['published']),
-            'sync_with_eventbrite': False,
+            'sync_with_eventbrite': True,
             'eventbrite_sync_status': 'PERSISTED',
             'eventbrite_organizer_id': None,
             'eventbrite_sync_description': '2021-11-23 09:10:58.295264+00:00',
