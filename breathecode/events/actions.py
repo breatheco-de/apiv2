@@ -327,6 +327,7 @@ def update_or_create_event(data, org):
 
         if event is None:
             event = Event(**kwargs)
+            event.sync_with_eventbrite = True
 
         else:
             for attr in kwargs:
