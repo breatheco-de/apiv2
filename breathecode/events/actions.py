@@ -186,6 +186,9 @@ def export_event_to_eventbrite(event: Event, org: Organization):
         'event.currency': event.currency,
     }
 
+    if event.eventbrite_organizer_id:
+        data['event.organizer.id'] = event.eventbrite_organizer_id
+
     if timezone:
         data['event.start.timezone'] = timezone
         data['event.end.timezone'] = timezone
