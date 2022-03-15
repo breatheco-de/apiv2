@@ -99,14 +99,16 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_event_checkin_dict(), [])
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+
+        db = self.bc.database.list_of('events.EventbriteWebhook')
+        self.assertRegex(db[0]['status_text'], r'Exception: Organization not have one Academy\n')
+        self.bc.check.imperfect_equality(db, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
             'organization_id': '1',
             'status': 'ERROR',
-            'status_text': 'Organization not have one Academy',
             'user_id': '123456789012',
             'webhook_id': '1234567'
         }])
@@ -132,16 +134,18 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_event_checkin_dict(), [])
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+
+        db = self.bc.database.list_of('events.EventbriteWebhook')
+        self.assertRegex(db[0]['status_text'], r'Exception: event doesn\'t exist\n')
+        self.bc.check.imperfect_equality(db, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
             'organization_id': '1',
             'status': 'ERROR',
-            'status_text': 'event doesn\'t exist',
             'user_id': '123456789012',
-            'webhook_id': '1234567'
+            'webhook_id': '1234567',
         }])
         self.check_old_breathecode_calls(model, [])
         self.assertEqual(add_event_tags_to_student.delay.call_args_list, [])
@@ -165,14 +169,16 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_event_checkin_dict(), [])
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+
+        db = self.bc.database.list_of('events.EventbriteWebhook')
+        self.assertRegex(db[0]['status_text'], r'Exception: event doesn\'t exist\n')
+        self.bc.check.imperfect_equality(db, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
             'organization_id': '1',
             'status': 'ERROR',
-            'status_text': 'event doesn\'t exist',
             'user_id': '123456789012',
             'webhook_id': '1234567'
         }])
@@ -202,14 +208,16 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+        db = self.bc.database.list_of('events.EventbriteWebhook')
+        self.assertRegex(db[0]['status_text'], r'Exception: ActiveCampaignAcademy doesn\'t exist\n')
+
+        self.bc.check.imperfect_equality(db, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
             'organization_id': '1',
             'status': 'ERROR',
-            'status_text': 'ActiveCampaignAcademy doesn\'t exist',
             'user_id': '123456789012',
             'webhook_id': '1234567'
         }])
@@ -248,14 +256,16 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
         self.assertEqual(content, b'ok')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+
+        db = self.bc.database.list_of('events.EventbriteWebhook')
+        self.assertRegex(db[0]['status_text'], r'Exception: Automation for order_placed doesn\'t exist\n')
+        self.bc.check.imperfect_equality(db, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
             'organization_id': '1',
             'status': 'ERROR',
-            'status_text': 'Automation for order_placed doesn\'t exist',
             'user_id': '123456789012',
             'webhook_id': '1234567'
         }])
@@ -416,14 +426,16 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(actions.update_or_create_event.call_args_list,
                          [call(EVENTBRITE_EVENT, model.organization)])
 
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+        db = self.bc.database.list_of('events.EventbriteWebhook')
+        self.assertRegex(db[0]['status_text'], r'Exception: Random error in creating\n')
+
+        self.bc.check.imperfect_equality(db, [{
             'action': 'event.created',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
             'organization_id': '1',
             'status': 'ERROR',
-            'status_text': 'Random error in creating',
             'user_id': '123456789012',
             'webhook_id': '1234567'
         }])
@@ -484,14 +496,16 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(actions.update_or_create_event.call_args_list,
                          [call(EVENTBRITE_EVENT, model.organization)])
 
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+        db = self.bc.database.list_of('events.EventbriteWebhook')
+        self.assertRegex(db[0]['status_text'], r'Exception: Random error in creating\n')
+
+        self.bc.check.imperfect_equality(db, [{
             'action': 'event.updated',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
             'organization_id': '1',
             'status': 'ERROR',
-            'status_text': 'Random error in creating',
             'user_id': '123456789012',
             'webhook_id': '1234567'
         }])
@@ -554,14 +568,16 @@ class EventbriteWebhookTestSuite(EventTestCase):
         self.assertEqual(publish_event_from_eventbrite.call_args_list,
                          [call(EVENTBRITE_EVENT, model.organization)])
 
-        self.assertEqual(self.all_eventbrite_webhook_dict(), [{
+        db = self.bc.database.list_of('events.EventbriteWebhook')
+        self.assertRegex(db[0]['status_text'], r'Exception: Random error\n')
+
+        self.bc.check.imperfect_equality(db, [{
             'action': 'event.published',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
             'id': 1,
             'organization_id': '1',
             'status': 'ERROR',
-            'status_text': 'Random error',
             'user_id': '123456789012',
             'webhook_id': '1234567'
         }])
