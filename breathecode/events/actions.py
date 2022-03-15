@@ -363,7 +363,7 @@ def update_or_create_event(data, org):
 
 def publish_event_from_eventbrite(data, org: Organization) -> None:
     if not data:  #skip if no data
-        logger.log('Ignored event')
+        logger.debug('Ignored event')
         raise ValueError('data is empty')
 
     now = get_current_iso_string()
@@ -381,14 +381,14 @@ def publish_event_from_eventbrite(data, org: Organization) -> None:
         }
 
         Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).update(**kwargs)
-        logger.log(f'The event with the eventbrite id `{data["id"]} was saved`')
+        logger.debug(f'The event with the eventbrite id `{data["id"]}` was saved')
 
     except Warning as e:
         logger.error(f'{now} => {e}')
         raise e
 
     except Exception as e:
-        logger.error(f'{now} => the body is coming from eventbrite has change')
+        logger.exception(f'{now} => the body is coming from eventbrite has change')
         raise e
 
 

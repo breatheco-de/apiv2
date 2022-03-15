@@ -36,7 +36,7 @@ class Organization(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.name} ({self.id})' if self.name else f'({self.id})'
+        return self.name or 'Nameless'
 
 
 class Organizer(models.Model):
@@ -87,10 +87,7 @@ class Venue(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        if self.title is not None:
-            return self.title + '(' + str(self.id) + ')'
-        else:
-            return 'Venue ' + str(self.id)
+        return self.title or 'No title'
 
 
 class EventType(models.Model):
@@ -102,7 +99,7 @@ class EventType(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return self.name + '(' + str(self.id) + ')'
+        return self.name or 'Nameless'
 
 
 EVENT_STATUS = (
@@ -182,10 +179,7 @@ class Event(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        if self.title is not None:
-            return self.title + '(' + str(self.id) + ')'
-        else:
-            return 'Event ' + str(self.id)
+        return self.title or 'No title'
 
     def save(self, *args, **kwargs):
         from .signals import event_saved

@@ -93,7 +93,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(logging.Logger.warn.call_args_list, [])
         self.assertEqual(logging.Logger.error.call_args_list,
-                         [call('The organization (1) not have a academy assigned')])
+                         [call('The organization Nameless not have a academy assigned')])
 
         self.assertEqual(actions.create_or_update_venue.call_args_list, [])
         self.assertEqual(actions.create_or_update_organizer.call_args_list, [])

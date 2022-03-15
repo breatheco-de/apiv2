@@ -64,12 +64,42 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
+    def test_academy_schedule_id__schedule_of_other_academy(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+
+        syllabus_schedule = {'academy_id': 2}
+        model = self.generate_models(authenticate=1,
+                                     syllabus_schedule=syllabus_schedule,
+                                     academy=2,
+                                     profile_academy=1,
+                                     capability='crud_certificate',
+                                     role='potato')
+
+        url = reverse_lazy('admissions:academy_schedule_id', kwargs={'certificate_id': 1})
+        data = {
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'description': 'Oh my god!',
+            'syllabus': 2,
+        }
+        response = self.client.put(url, data)
+        json = response.json()
+        expected = {'detail': 'syllabus-schedule-of-other-academy', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.all_syllabus_schedule_dict(), [{
+            **self.model_to_dict(model, 'syllabus_schedule'),
+        }])
+
     def test_academy_schedule_id__bad_syllabus(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     syllabus_schedule=True,
-                                     profile_academy=True,
+        model = self.generate_models(authenticate=1,
+                                     syllabus_schedule=1,
+                                     academy=1,
+                                     profile_academy=1,
                                      capability='crud_certificate',
                                      role='potato')
         url = reverse_lazy('admissions:academy_schedule_id', kwargs={'certificate_id': 1})
