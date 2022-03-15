@@ -388,7 +388,7 @@ def publish_event_from_eventbrite(data, org: Organization) -> None:
         raise e
 
     except Exception as e:
-        logger.error(f'{now} => the body is coming from eventbrite has change')
+        logger.exception(f'{now} => the body is coming from eventbrite has change')
         raise e
 
 
