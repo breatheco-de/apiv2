@@ -268,7 +268,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
                         'event.online_event': model.event.online_event,
                         'event.url': model.event.eventbrite_url,
                         'event.currency': model.event.currency,
-                        'event.organizer.id': '1',
+                        'event.organizer_id': '1',
                     },
                 ),
             ])
