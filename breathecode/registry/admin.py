@@ -72,7 +72,7 @@ def make_me_owner(modeladmin, request, queryset):
 
 
 def test_asset_integrity(modeladmin, request, queryset):
-    queryset.update(sync_status='PENDING')
+    queryset.update(test_status='PENDING')
     assets = queryset.all()
     for a in assets:
         async_test_asset.delay(a.slug)
@@ -107,6 +107,7 @@ class AssetAdmin(admin.ModelAdmin):
             'OK': 'bg-success',
             'ERROR': 'bg-error',
             'WARNING': 'bg-warning',
+            None: 'bg-warning',
             'DRAFT': 'bg-error',
             'PENDING_TRANSLATION': 'bg-error',
             'PENDING': 'bg-warning',
@@ -114,10 +115,12 @@ class AssetAdmin(admin.ModelAdmin):
             'UNASSIGNED': 'bg-error',
             'UNLISTED': 'bg-warning',
         }
-        return format_html(f"""
-        <p style="margin:0; padding:0;">Publish: <span class='badge {colors[obj.status]}'>{obj.status}</span></p>
-        <p style="margin:0; padding:0;">Sync&Test: <span class='badge {colors[obj.sync_status]}'>{obj.sync_status}</span></p>
-        """)
+        return format_html(
+            f"""<table><tr><td style='font-size: 10px !important;'>Publish</td><td style='font-size: 10px !important;'>Synch</td><td style='font-size: 10px !important;'>Test</td></tr>
+        <td><span class='badge {colors[obj.status]}'>{obj.status}</span></td>
+        <td><span class='badge {colors[obj.sync_status]}'>{obj.sync_status}</span></td>
+        <td><span class='badge {colors[obj.test_status]}'>{obj.test_status}</span></td>
+        </table>""")
 
     def techs(self, obj):
         return ', '.join([t.slug for t in obj.technologies.all()])

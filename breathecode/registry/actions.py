@@ -268,13 +268,13 @@ def test_asset(asset):
             test_lesson(asset)
         # TODO: add more tests for other types of assets
         asset.status_text = 'Test Successfull'
-        asset.sync_status = 'OK'
+        asset.test_status = 'OK'
         asset.last_test_at = timezone.now()
         asset.save()
         return True
     except Exception as e:
         asset.status_text = str(e)
-        asset.sync_status = 'ERROR'
+        asset.test_status = 'ERROR'
         asset.save()
         raise e
 
