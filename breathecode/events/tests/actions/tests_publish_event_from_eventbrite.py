@@ -58,7 +58,7 @@ class SyncOrgVenuesTestSuite(EventTestCase):
 
         self.assertEqual(Logger.log.call_args_list, [])
         self.assertEqual(Logger.error.call_args_list, [
-            call(f'{now} => the body is coming from eventbrite has change'),
+            call(f'{now} => the body is coming from eventbrite has change', exc_info=True),
         ])
 
         self.assertEqual(self.bc.database.list_of('events.Organization'), [
