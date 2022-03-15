@@ -272,24 +272,27 @@ def test_lesson(lesson):
     from bs4 import BeautifulSoup
     import requests
 
-    def test_url(url):
+    def test_url(url, allow_relative=False):
+        print('Testing url: ', url, url[0:2])
+
+        if not allow_relative and '../' == url[0:3] or './' == url[0:2]:
+            raise Exception(f'Relative url: ' + url)
+
         response = requests.head(url, allow_redirects=False)
-        if response.status_code not in [200, 302]:
-            raise Exception('Invalid URL: ' + url)
+        if response.status_code not in [200, 302, 301]:
+            raise Exception(f'Invalid URL with code {response.status_code}: ' + url)
 
-    RELATIVE_IMAGES = r'(["\'(])\.\.\/\.\.\/assets\/images\/([_\w\-\.]+)(["\')])'
+    if lesson.readme is None or lesson.readme == '':
+        raise Exception('Empty readme')
+
     readme = lesson.get_readme(parse=True)
-    found_relative_images = re.match(RELATIVE_IMAGES, readme['decoded'])
-    if found_relative_images:
-        raise Exception(f'Found {len(found_relative_images)} relative images')
-
     soup = BeautifulSoup(readme['html'], features='lxml')
     anchors = soup.findAll('a')
     images = soup.findAll('img')
     for a in anchors:
-        test_url(a.get('href'))
+        test_url(a.get('href'), allow_relative=False)
     for img in images:
-        test_url(img.get('src'))
+        test_url(img.get('src'), allow_relative=False)
     return True
 
 

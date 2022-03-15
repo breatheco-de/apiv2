@@ -77,7 +77,6 @@ def test_asset_integrity(modeladmin, request, queryset):
         try:
             test_asset(a)
         except Exception as e:
-            raise e
             errors[a.slug] = str(e)
 
     if len(errors.keys()) == 0:

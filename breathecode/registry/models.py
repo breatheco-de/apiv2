@@ -158,7 +158,7 @@ class Asset(models.Model):
         return readme
 
     def set_readme(self, content):
-        return str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
+        self.readme = str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
 
 
 class AssetAlias(models.Model):
