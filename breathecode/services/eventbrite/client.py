@@ -3,6 +3,7 @@ import logging
 import os
 import urllib
 import breathecode.services.eventbrite.actions as actions
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -128,15 +129,10 @@ class Eventbrite:
                 webhook.save()
 
             except Exception as e:
-                logger.debug('Mark action with error')
-
-                # stack trace
-                # import traceback
-                # print(traceback.print_exc())
-                # print(e)
+                logger.error('Mark action with error')
 
                 webhook.status = 'ERROR'
-                webhook.status_text = str(e)
+                webhook.status_text = ''.join(traceback.format_exception(None, e, e.__traceback__))
                 webhook.save()
 
         else:
