@@ -156,7 +156,6 @@ class SyncOrgVenuesTestSuite(EventTestCase):
         model = self.bc.database.create(organization=organization, event=event)
 
         publish_event_from_eventbrite({'id': '1', 'status': 'they-killed-kenny'}, model.organization)
-        print(Logger.debug.call_args_list)
         self.assertEqual(Logger.debug.call_args_list,
                          [call('The event with the eventbrite id `1` was saved')])
         self.assertEqual(Logger.error.call_args_list, [])
