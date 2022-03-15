@@ -1,6 +1,7 @@
 import logging, json, os, re
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models import Q
+from django.utils import timezone
 from urllib.parse import urlparse
 from slugify import slugify
 from breathecode.utils import APIException
@@ -140,16 +141,17 @@ def sync_with_github(asset_slug, author_id=None):
             asset = sync_learnpack_asset(g, asset)
 
         asset.status_text = 'Successfully Synched'
-        asset.status = 'OK'
+        asset.sync_status = 'OK'
+        asset.last_synch_at = timezone.now()
         asset.save()
         logger.debug(f'Successfully re-synched asset {asset_slug} with github')
     except Exception as e:
         asset.status_text = str(e)
-        asset.status = 'ERROR'
+        asset.sync_status = 'ERROR'
         asset.save()
         logger.error(f'Error updating {asset.url} from github: ' + str(e))
 
-    return asset.status
+    return asset.sync_status
 
 
 def get_url_info(url: str):
@@ -261,11 +263,20 @@ def sync_learnpack_asset(github, asset):
 
 
 def test_asset(asset):
-    if asset.asset_type == 'LESSON':
-        test_lesson(asset)
-
-    # TODO: add more tests for other types of assets
-    return True
+    try:
+        if asset.asset_type == 'LESSON':
+            test_lesson(asset)
+        # TODO: add more tests for other types of assets
+        asset.status_text = 'Test Successfull'
+        asset.sync_status = 'OK'
+        asset.last_test_at = timezone.now()
+        asset.save()
+        return True
+    except Exception as e:
+        asset.status_text = str(e)
+        asset.sync_status = 'ERROR'
+        asset.save()
+        raise e
 
 
 def test_lesson(lesson):

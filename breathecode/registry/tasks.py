@@ -1,5 +1,6 @@
 import logging
 from celery import shared_task, Task
+from .models import Asset
 from .actions import sync_with_github, test_asset
 
 logger = logging.getLogger(__name__)
@@ -8,7 +9,7 @@ logger = logging.getLogger(__name__)
 class BaseTaskWithRetry(Task):
     autoretry_for = (Exception, )
     #                                           seconds
-    retry_kwargs = {'max_retries': 5, 'countdown': 60 * 5}
+    retry_kwargs = {'max_retries': 2, 'countdown': 60 * 10}
     retry_backoff = True
 
 
@@ -20,8 +21,14 @@ def async_sync_with_github(asset_slug, user_id=None):
 
 @shared_task
 def async_test_asset(asset_slug):
-    asset = Asset.objects.filter(slug=asset_slug).first()
-    if asset is None:
+    a = Asset.objects.filter(slug=asset_slug).first()
+    if a is None:
         logger.debug(f'Error: Error testing asset with slug {asset_slug}, does not exist.')
 
-    return test_asset(asset)
+    try:
+        if test_asset(a):
+            return True
+    except Exception as e:
+        logger.exception(f'Error testing asset {a.slug}')
+
+    return False

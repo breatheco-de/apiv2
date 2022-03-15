@@ -6,7 +6,7 @@ from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
 from breathecode.utils.admin import change_field
 from .models import Asset, AssetTranslation, AssetTechnology, AssetAlias
-from .tasks import async_sync_with_github
+from .tasks import async_sync_with_github, async_test_asset
 from .actions import sync_with_github, get_user_from_github_username, test_asset
 
 logger = logging.getLogger(__name__)
@@ -41,10 +41,11 @@ make_internal.short_description = 'Make it an INTERNAL resource (same window)'
 
 
 def pull_from_github(modeladmin, request, queryset):
+    queryset.update(sync_status='PENDING')
     assets = queryset.all()
     for a in assets:
-        # async_sync_with_github.delay(a.slug, request.user.id)
-        sync_with_github(a.slug)  # uncomment for testing purposes
+        async_sync_with_github.delay(a.slug, request.user.id)
+        # sync_with_github(a.slug)  # uncomment for testing purposes
 
 
 def make_me_author(modeladmin, request, queryset):
@@ -71,21 +72,10 @@ def make_me_owner(modeladmin, request, queryset):
 
 
 def test_asset_integrity(modeladmin, request, queryset):
+    queryset.update(sync_status='PENDING')
     assets = queryset.all()
-    errors = {}
     for a in assets:
-        try:
-            test_asset(a)
-        except Exception as e:
-            errors[a.slug] = str(e)
-
-    if len(errors.keys()) == 0:
-        messages.add_message(request, messages.SUCCESS, 'No errors found on assets')
-        return True
-
-    for key in errors:
-        messages.add_message(request, messages.ERROR, key + ': ' + str(errors[key]))
-    return False
+        async_test_asset.delay(a.slug)
 
 
 # Register your models here.
@@ -119,10 +109,15 @@ class AssetAdmin(admin.ModelAdmin):
             'WARNING': 'bg-warning',
             'DRAFT': 'bg-error',
             'PENDING_TRANSLATION': 'bg-error',
+            'PENDING': 'bg-warning',
+            'WARNING': 'bg-warning',
             'UNASSIGNED': 'bg-error',
             'UNLISTED': 'bg-warning',
         }
-        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+        return format_html(f"""
+        <p style="margin:0; padding:0;">Publish: <span class='badge {colors[obj.status]}'>{obj.status}</span></p>
+        <p style="margin:0; padding:0;">Sync&Test: <span class='badge {colors[obj.sync_status]}'>{obj.sync_status}</span></p>
+        """)
 
     def techs(self, obj):
         return ', '.join([t.slug for t in obj.technologies.all()])
