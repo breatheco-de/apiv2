@@ -177,7 +177,7 @@ class Asset(models.Model):
         if parse:
             _data = frontmatter.loads(readme['decoded'])
             readme['frontmatter'] = _data.metadata
-            readme['html'] = markdown.markdown(_data.content)
+            readme['html'] = markdown.markdown(_data.content, extensions=['markdown.extensions.fenced_code'])
         return readme
 
     def set_readme(self, content):
