@@ -172,6 +172,15 @@ class MentorshipBill(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE, null=True, default=None)
 
+    started_at = models.DateTimeField(blank=True,
+                                      null=True,
+                                      default=None,
+                                      help_text='The bill includes all sessions from started_at to ended_at')
+    ended_at = models.DateTimeField(blank=True,
+                                    null=True,
+                                    default=None,
+                                    help_text='The bill includes all sessions from started_at to ended_at')
+
     reviewer = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
     mentor = models.ForeignKey(MentorProfile, on_delete=models.CASCADE)
     paid_at = models.DateTimeField(null=True, default=None, blank=True)
@@ -230,13 +239,20 @@ class MentorshipSession(models.Model):
         f'Options are: {", ".join([key for key,label in MENTORSHIP_STATUS])}. Ignored sessions will not be billed.'
     )
     status_message = models.TextField(default=None, null=True, blank=True)
-
+    allow_billing = models.BooleanField(
+        default=True, help_text='If false it will not be included when generating mentorship bills')
     bill = models.ForeignKey(MentorshipBill,
                              on_delete=models.SET_NULL,
                              null=True,
                              default=None,
                              blank=True,
                              help_text='If null, it has not been billed by the mentor yet')
+
+    suggested_accounted_duration = models.DurationField(
+        blank=True,
+        null=True,
+        default=None,
+        help_text='The automatic suggested duration to be paid to the mentor for this session')
 
     accounted_duration = models.DurationField(
         blank=True,

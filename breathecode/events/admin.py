@@ -43,8 +43,8 @@ class OrganizerAdmin(admin.ModelAdmin):
 # Register your models here.
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin, AdminExportCsvMixin):
-    list_display = ('slug', 'title', 'organizer', 'eventbrite_sync_status', 'eventbrite_status',
-                    'eventbrite_sync_description', 'sync_with_eventbrite')
+    list_display = ('slug', 'eventbrite_sync_status', 'title', 'eventbrite_status', 'starting_at',
+                    'ending_at', 'eventbrite_sync_description', 'sync_with_eventbrite')
     list_filter = [
         'eventbrite_status', 'eventbrite_sync_status', 'sync_with_eventbrite', 'currency', 'lang', 'academy',
         'organization', 'online_event', 'event_type', 'status'

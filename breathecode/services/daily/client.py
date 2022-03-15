@@ -79,3 +79,14 @@ class DailyClient:
 
         data = self.request('POST', f'/v1/rooms/' + name, data=payload)
         return data
+
+    def get_room(self, name=''):
+        epoc_now = time.mktime(timezone.now().timetuple())
+        data = self.request('GET', f'/v1/rooms/' + name)
+
+        if epoc_now > data['config']['exp']:
+            data['expired'] = True
+        else:
+            data['expired'] = False
+
+        return data

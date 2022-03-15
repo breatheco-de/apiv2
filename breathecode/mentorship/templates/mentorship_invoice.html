@@ -124,7 +124,11 @@
     }
 
     .text-danger {
-        color: rgb(92, 0, 0);
+        color: rgb(134, 0, 0);
+    }
+
+    .text-success {
+        color: rgb(13, 128, 0);
     }
 </style>
 </head>
@@ -191,7 +195,20 @@
                     Billed
                 </td>
             </tr>
-
+            {% if status == "UNDER_REVIEW" and unfinished_sessions|length > 0 %}
+            <tr class="item">
+                <td align="left" colspan="3" style="color: rgb(171, 158, 45);">
+                    The mentor has {{ unfinished_sessions|length }} unfinished sessions that are to included in this bill
+                </td>
+            </tr>
+            {% endif %}
+            {% if sessions|length == 0 %}
+            <tr class="item">
+                <td align="left" colspan="3">
+                    No mentoring sessions were found
+                </td>
+            </tr>
+            {% endif %}
             {% for session in sessions %}
             <tr class="item">
                 <td align="left">
@@ -206,7 +223,10 @@
 
                 <td align="right">
                     {% if session.status_message is not None and session.status_message != "" %}
-                    <span class="text-danger tooltip pointer" data-tippy-content="{{session.status_message}}"><i class="far fa-comment-alt"></i></span>
+                    <span class="tooltip pointer" data-tippy-content="{{session.status_message}}"><i class="fas fa-comment-dollar"></i></span>
+                    {% endif %}
+                    {% if session.summary is not None and session.summary != "" %}
+                    <span class="tooltip pointer" data-tippy-content="{{session.summary}}"><i class="fas fa-user-graduate"></i></span>
                     {% endif %}
                     {% if session.extra_time is not None %}
                     <span class="text-danger tooltip pointer" data-tippy-content="{{session.extra_time}}"><i class="far fa-clock"></i></span>
@@ -215,7 +235,7 @@
                     <span class="text-danger tooltip pointer" data-tippy-content="{{session.mentor_late}}"><i class="fas fa-running"></i></span>
                     {% endif %}
                     {% if session.mente_joined is not None %}
-                    <span class="text-danger tooltip pointer" data-tippy-content="{{session.mente_joined}}"><i class="fas fa-user-graduate"></i></span>
+                    <span class="tooltip pointer" data-tippy-content="{{session.mente_joined}}"><i class="fas fa-ghost"></i></span>
                     {% endif %}
                     {% if session.rating is not None and session.rating.score > 7 %}
                     <span class="text-success tooltip pointer" data-tippy-content="Score: {{session.rating.score}} <br /> {{session.rating.comment}}"><i class="fas fa-smile"></i></span>
