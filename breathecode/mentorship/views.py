@@ -101,7 +101,7 @@ def forward_meet_url(request, mentor_slug, token):
     if isinstance(token, HttpResponseRedirect):
         return token
 
-    redirect = request.GET.get('redirect', None)
+    mentee_hit_start = request.GET.get('redirect', None)
     extend = request.GET.get('extend', None)
     session_id = request.GET.get('session', None)
     mentee_id = request.GET.get('mentee', None)
@@ -126,12 +126,12 @@ def forward_meet_url(request, mentor_slug, token):
     if session_id and session_id != 'new':
         session = MentorshipSession.objects.filter(id=session_id)
 
-    if session is None:
+    if session is None or session.count() == 0:
         session = get_or_create_sessions(token, mentor, mentee, force_create=(session_id == 'new'))
 
-    if session.count() == 1:
+    if session.count() == 1 and (session_id is not None and session_id == session.first().id):
         session = session.first()
-    else:
+    else:  # could be many sessions or no session at all
         return render(
             request, 'pick_session.html', {
                 'token': token.key,
@@ -164,19 +164,27 @@ def forward_meet_url(request, mentor_slug, token):
                 'baseUrl': baseUrl,
             })
 
-    service = session.mentor.service
-    if mentor.user.id == token.user.id:
-        session.mentor_joined_at = now
-
     if session.status not in ['PENDING', 'STARTED']:
         return render_message(
             request,
             f'This mentoring session has ended',
         )
 
+    # Who is joining? Set meeting joinin dates
+    if mentor.user.id == token.user.id:
+        # only reset the joined_at it has ben more than 5min and the session has not started yey
+        if session.mentor_joined_at is None or (session.started_at is None and
+                                                ((now - session.mentor_joined_at).seconds > 300)):
+            session.mentor_joined_at = now
+    elif mentee_hit_start is not None and session.mentee.id == token.user.id:
+        if session.started_at is None:
+            session.started_at = now
+            session.status = 'STARTED'
+
     # if it expired already you could extend it
+    service = session.mentor.service
     if session.ends_at is not None and session.ends_at < now:
-        if (now - session.ends_at).total_seconds() > (session.mentor.service.duration.seconds / 2):
+        if (now - session.ends_at).total_seconds() > (service.duration.seconds / 2):
             return HttpResponseRedirect(
                 redirect_to=
                 f'/mentor/session/{str(session.id)}?token={token.key}&message=Your have a session that expired {timeago.format(session.ends_at, now)}. Only sessions with less than {round(((session.mentor.service.duration.total_seconds() / 3600) * 60)/2)}min from expiration can be extended (if allowed by the academy)'
@@ -200,14 +208,13 @@ def forward_meet_url(request, mentor_slug, token):
                 f'The mentoring session expired {timeago.format(session.ends_at, now)} and it cannot be extended',
             )
 
+    # save progress so far, we are about to render the session below
+    session.save()
+
     if session.mentee is None:
-        session.save()
         return render_session(request, session, token=token)
 
-    if redirect is not None or mentor.user.id == token.user.id:
-        session.started_at = now
-        session.status = 'STARTED'
-        session.save()
+    if mentee_hit_start is not None or token.user.id == session.mentor.id:
         return render_session(request, session, token=token)
 
     if session.mentor.user.first_name is None or session.mentor.user.first_name == '':

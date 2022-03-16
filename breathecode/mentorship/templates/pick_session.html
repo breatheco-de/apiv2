@@ -103,17 +103,20 @@ h4 {
             <div class=card>
                 <div class="card-title">Choose session</div>
                 <div class="sh-list">
+                  {% url '/mentor/meet/' session_id as session_id %}
+                  {% if session_id is not None %}
                   <div class="sh-list-item">
-                    Many started or pending mentoring sessions were found, please the one you want to continue:
+                    Session with id {{ session_id }} was not found.
                   </div>
+                  {% endif %}
                   {% if sessions|length == 0 %}
                   <div class="sh-list-item">
-                    {% url '/mentor/meet/' session_id as session_id %}
-                    {% if session_id is not None %}
-                    Session with id session_id was not found, try looking for <a href="./{{ mentor.slug }}?token={{ token }}">all the pending or started sessions</a>.
-                    {% else %}
-                    No pending or stared sessions were found
-                    {% endif %}
+                    No pending or stared sessions were found.
+                  </div>
+                  {% endif %}
+                  {% if sessions|length > 0 %}
+                  <div class="sh-list-item">
+                    Some started or pending mentoring sessions were found, please the one you want to continue or create a new one:
                   </div>
                   {% endif %}
                   {% for s in sessions %}
