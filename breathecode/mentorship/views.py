@@ -129,7 +129,7 @@ def forward_meet_url(request, mentor_slug, token):
     if session is None or session.count() == 0:
         session = get_or_create_sessions(token, mentor, mentee, force_create=(session_id == 'new'))
 
-    if session.count() == 1 and (session_id is not None and session_id == session.first().id):
+    if session.count() == 1 and (session_id is not None and int(session_id) == session.first().id):
         session = session.first()
     else:  # could be many sessions or no session at all
         return render(
