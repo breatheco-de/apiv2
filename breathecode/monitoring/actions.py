@@ -253,6 +253,8 @@ def run_script(script):
         local = {'result': {'status': 'OPERATIONAL'}}
         with stdoutIO() as s:
             try:
+                if script.application is None:
+                    raise Exception(f'Script {script.script_slug} does not belong to any application')
                 exec(
                     content, {
                         'academy': script.application.academy,
@@ -270,6 +272,13 @@ def run_script(script):
                 script.response_text = str(e)
                 if e.title is not None:
                     script.special_status_text = e.title
+
+                if e.btn_url is not None:
+                    results['btn'] = {'url': e.btn_url, 'label': 'More details'}
+                    if e.btn_label is not None:
+                        results['btn']['label'] = e.btn_label
+                else:
+                    results['btn'] = None
 
                 if e.status is not None:
                     script.status = e.status

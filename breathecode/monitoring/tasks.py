@@ -79,12 +79,14 @@ def execute_scripts(self, script_id):
         if script.notify_email:
             send_email_message('diagnostic', script.notify_email, {
                 'subject': subject,
-                'details': result['text']
+                'details': result['text'],
+                'button': result['btn']
             })
         elif app.notify_email:
             send_email_message('diagnostic', app.notify_email, {
                 'subject': subject,
-                'details': result['text']
+                'details': result['text'],
+                'button': result['btn']
             })
 
         if (app.notify_slack_channel and app.academy and hasattr(app.academy, 'slackteam')
