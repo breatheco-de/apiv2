@@ -130,9 +130,8 @@ def forward_meet_url(request, mentor_slug, token):
     else:
         sessions = get_pending_sessions_or_create(token, mentor, mentee)
 
-    print(f'found {sessions.count()} sessions')
     if mentor.id == token.user.id:
-        if sessions.count() > 0 and str(sessions.first().id) != session_id:
+        if sessions.count() > 0 and (session_id is not None and str(sessions.first().id) != session_id):
             return render(
                 request, 'pick_session.html', {
                     'token': token.key,
@@ -161,7 +160,7 @@ def forward_meet_url(request, mentor_slug, token):
                     f'Mentee with user id {mentee_id} was not found, <a href="{baseUrl}&mentee=undefined">click here to start the session anyway.</a>'
                 )
 
-        if session.mentee is None:
+        elif mentee_id != 'undefined' and session.mentee is None:
             return render(
                 request, 'pick_mentee.html', {
                     'token': token.key,
@@ -174,7 +173,7 @@ def forward_meet_url(request, mentor_slug, token):
     if session.status not in ['PENDING', 'STARTED']:
         return render_message(
             request,
-            f'This mentoring session has ended',
+            f'This mentoring session has ended ({session.status}), would you like <a href="/mentor/meet/{mentor.slug}">to start a new one?</a>.',
         )
 
     # Who is joining? Set meeting joinin dates

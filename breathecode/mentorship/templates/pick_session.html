@@ -74,11 +74,16 @@ a{text-decoration: none;}
 .sh-list .sh-list-item .sh-list-icon.add {
   background-color: #00aeef;
 }
+.sh-list .sh-list-item > a {
+  display: block;
+  position: relative;
+}
 .sh-list .sh-list-item .sufix {
   display: inline-block;
   font-size: 24px;
-  margin-right: 24px;
-  float: right;
+  position: absolute;
+  right: 20;
+  top: 0;
 }
 .sh-list .sh-list-item .sufix i {
   margin-top: 10px;
@@ -98,7 +103,7 @@ h4 {
 </style>
 <div class="content text-center">
     <tr>
-        <td align="left" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
+        <td align="left" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; width: 87.5%;
 			padding-bottom: 5px;">
             <div class=card>
                 <div class="card-title">Choose session</div>
@@ -121,7 +126,7 @@ h4 {
                   {% endif %}
                   {% for s in sessions %}
                   <div class="sh-list-item">
-                    <a href="{{ baseUrl }}&session={{s.id}}">
+                    <a href="{{ baseUrl }}&session={{s.id}}" style="display: block;">
                         <div class="sh-list-icon" style="background-image: url('{{ s.mentee.user.profile.avatar_url }}')">
                           {% if not s.mentee.user.profile.avatar_url or s.mentee.user.profile.avatar_url != '' %}
                           <i class="fas fa-user-friends"></i>
@@ -132,11 +137,11 @@ h4 {
                           {% if s.mentee %}
                             <div class="sh-list-item-title">{{ s.mentee.first_name }} {{ s.mentee.last_name }} joined {{ s.started_at|timesince }} ago</div>
                           {% else %}
-                            <div class="sh-list-item-title">No student has joined</div>
+                            <div class="sh-list-item-title">New empty session</div>
                           {% endif %}
                           <div class="sh-list-item-sub-title">{{ s.mentor.service.name }}</div>
                         </div>
-                        <div class=sufix><i class="fas fa-angle-right"></i></div>
+                        <div class="sufix"><i class="fas fa-angle-right"></i></div>
                     </a>
                   </div>
                   {% endfor %}
