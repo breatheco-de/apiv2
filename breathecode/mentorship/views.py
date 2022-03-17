@@ -136,7 +136,8 @@ def forward_meet_url(request, mentor_slug, token):
     if mentor.id == token.user.id:
         if sessions.count() > 0 and (session_id is None or str(sessions.first().id) != session_id):
             logger.debug(
-                f'Skipping the pick_session.html with {session.count()} sessions and session_id {session_id}')
+                f'Skipping the pick_session.html with {sessions.count()} sessions and session_id {session_id}'
+            )
             return render(
                 request, 'pick_session.html', {
                     'token': token.key,
