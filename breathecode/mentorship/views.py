@@ -133,11 +133,10 @@ def forward_meet_url(request, mentor_slug, token):
         sessions = get_pending_sessions_or_create(token, mentor, mentee)
         logger.debug(f'Found {sessions.count()} sessions to close or create')
 
+    logger.debug(f'Mentor: {mentor.id}, Session user:{token.user.id}, Mentee: {str(mentee)}')
     if mentor.id == token.user.id:
+        logger.debug(f'With {sessions.count()} sessions and session_id {session_id}')
         if sessions.count() > 0 and (session_id is None or str(sessions.first().id) != session_id):
-            logger.debug(
-                f'Skipping the pick_session.html with {sessions.count()} sessions and session_id {session_id}'
-            )
             return render(
                 request, 'pick_session.html', {
                     'token': token.key,
@@ -150,7 +149,7 @@ def forward_meet_url(request, mentor_slug, token):
     From this line on, we know exactly what session is about to be opened,
     if the mentee is None it probably is a new session
     """
-
+    logger.debug(f'Ready to render session')
     session = None
     if session_id is not None:
         session = sessions.filter(id=session_id).first()
