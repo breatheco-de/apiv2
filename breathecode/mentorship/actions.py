@@ -44,7 +44,6 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
             pending_sessions += unfinished_sessions.values_list('pk', flat=True)
 
     # return all the collected pending sessions
-    print(f'pending_sessions', pending_sessions)
     if len(pending_sessions) > 0:
         return MentorshipSession.objects.filter(id__in=pending_sessions)
 

@@ -1,4 +1,4 @@
-import os, hashlib, timeago
+import os, hashlib, timeago, logging
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
@@ -40,6 +40,8 @@ from rest_framework.views import APIView
 from rest_framework import status
 from breathecode.utils import capable_of, ValidationException, HeaderLimitOffsetPagination, GenerateLookupsMixin
 from django.db.models import Q
+
+logger = logging.getLogger(__name__)
 
 
 # TODO: Use decorator with permissions @private_view(permission='view_mentorshipbill')
@@ -129,10 +131,12 @@ def forward_meet_url(request, mentor_slug, token):
             return render_message(request, f'Session with id {session_id} not found')
     else:
         sessions = get_pending_sessions_or_create(token, mentor, mentee)
+        logger.debug(f'Found {sessions.count()} sessions to close or create')
+
     if mentor.id == token.user.id:
         if sessions.count() > 0 and (session_id is None or str(sessions.first().id) != session_id):
-            print(f'Found {sessions.count()} sessions', sessions, [s.status for s in sessions])
-            # return render_message(request, "asdasd")
+            logger.debug(
+                f'Skipping the pick_session.html with {session.count()} sessions and session_id {session_id}')
             return render(
                 request, 'pick_session.html', {
                     'token': token.key,
@@ -146,12 +150,14 @@ def forward_meet_url(request, mentor_slug, token):
     if the mentee is None it probably is a new session
     """
 
-    print('ppppp')
     session = None
     if session_id is not None:
         session = sessions.filter(id=session_id).first()
     else:
         session = sessions.filter(mentee=mentee).first()
+
+    if session is None:
+        return render_message(request, 'Impossible to create or retrive mentoring session')
 
     if session.mentee is None:
         if mentee_id is not None and mentee_id != 'undefined':
