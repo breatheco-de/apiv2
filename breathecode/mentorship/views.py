@@ -133,8 +133,8 @@ def forward_meet_url(request, mentor_slug, token):
         sessions = get_pending_sessions_or_create(token, mentor, mentee)
         logger.debug(f'Found {sessions.count()} sessions to close or create')
 
-    logger.debug(f'Mentor: {mentor.id}, Session user:{token.user.id}, Mentee: {str(mentee)}')
-    if mentor.id == token.user.id:
+    logger.debug(f'Mentor: {mentor.user.id}, Session user:{token.user.id}, Mentee: {str(mentee)}')
+    if mentor.user.id == token.user.id:
         logger.debug(f'With {sessions.count()} sessions and session_id {session_id}')
         if sessions.count() > 0 and (session_id is None or str(sessions.first().id) != session_id):
             return render(
@@ -227,7 +227,7 @@ def forward_meet_url(request, mentor_slug, token):
     if session.mentee is None:
         return render_session(request, session, token=token)
 
-    if mentee_hit_start is not None or token.user.id == session.mentor.id:
+    if mentee_hit_start is not None or token.user.id == session.mentor.user.id:
         return render_session(request, session, token=token)
 
     if session.mentor.user.first_name is None or session.mentor.user.first_name == '':
