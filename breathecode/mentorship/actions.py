@@ -37,13 +37,14 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
 
     # if its a mentor, I will force him to close pending sessions
     if mentor.user.id == token.user.id:
-        unfinished_with_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
-                                                                  status__in=['PENDING', 'STARTED'])
+        unfinished_sessions = MentorshipSession.objects.filter(mentor__id=mentor.id,
+                                                               status__in=['PENDING', 'STARTED'])
         # if it has unishined meetings with already started
-        if unfinished_with_mentee.count() > 0:
-            pending_sessions += unfinished_with_mentee.values_list('pk', flat=True)
+        if unfinished_sessions.count() > 0:
+            pending_sessions += unfinished_sessions.values_list('pk', flat=True)
 
     # return all the collected pending sessions
+    print(f'pending_sessions', pending_sessions)
     if len(pending_sessions) > 0:
         return MentorshipSession.objects.filter(id__in=pending_sessions)
 
@@ -80,7 +81,6 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
                     'status': 'FAILED'
                 })
 
-    print(f'returing session {session.status}', session)
     return MentorshipSession.objects.filter(id=session.id)
 
 
@@ -126,7 +126,7 @@ def close_mentoring_session(session, data):
 
     sessions_to_close = session
     if isinstance(session, MentorshipSession):
-        sessions_to_close = MentorshipSession.objects.get(id=session.id)
+        sessions_to_close = MentorshipSession.objects.filter(id=session.id)
 
     sessions_to_close.update(summary=data['summary'], status=data['status'].upper(), ended_at=timezone.now())
 

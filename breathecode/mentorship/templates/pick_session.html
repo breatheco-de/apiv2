@@ -127,7 +127,12 @@ h4 {
                   {% for s in sessions %}
                   <div class="sh-list-item">
                     <a href="{{ baseUrl }}&session={{s.id}}" style="display: block;">
+                        {% if s.mentee is not None %}
                         <div class="sh-list-icon" style="background-image: url('{{ s.mentee.user.profile.avatar_url }}')">
+                        {% else %}
+                        <div class="sh-list-icon">
+                        {% endif %}
+
                           {% if not s.mentee.user.profile.avatar_url or s.mentee.user.profile.avatar_url != '' %}
                           <i class="fas fa-user-friends"></i>
                           {% endif %}

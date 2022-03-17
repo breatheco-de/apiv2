@@ -126,12 +126,13 @@ def forward_meet_url(request, mentor_slug, token):
     if session_id is not None:
         sessions = MentorshipSession.objects.filter(id=session_id)
         if sessions.count() == 0:
-            render_message(request, 'Session with id {session_id} not found')
+            return render_message(request, f'Session with id {session_id} not found')
     else:
         sessions = get_pending_sessions_or_create(token, mentor, mentee)
-
     if mentor.id == token.user.id:
-        if sessions.count() > 0 and (session_id is not None and str(sessions.first().id) != session_id):
+        if sessions.count() > 0 and (session_id is None or str(sessions.first().id) != session_id):
+            print(f'Found {sessions.count()} sessions', sessions, [s.status for s in sessions])
+            # return render_message(request, "asdasd")
             return render(
                 request, 'pick_session.html', {
                     'token': token.key,
@@ -145,6 +146,7 @@ def forward_meet_url(request, mentor_slug, token):
     if the mentee is None it probably is a new session
     """
 
+    print('ppppp')
     session = None
     if session_id is not None:
         session = sessions.filter(id=session_id).first()
@@ -175,7 +177,6 @@ def forward_meet_url(request, mentor_slug, token):
             request,
             f'This mentoring session has ended ({session.status}), would you like <a href="/mentor/meet/{mentor.slug}">to start a new one?</a>.',
         )
-
     # Who is joining? Set meeting joinin dates
     if mentor.user.id == token.user.id:
         # only reset the joined_at it has ben more than 5min and the session has not started yey
