@@ -13,45 +13,37 @@ from breathecode.utils.datetime_interger import duration_to_str
 logger = logging.getLogger(__name__)
 
 
-def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
+def get_pending_sessions_or_create(token, mentor, mentee=None):
 
-    # default duration can be ovveriden by service
+    # sessions that have not started are automatically closed
+    MentorshipSession.objects\
+        .filter(mentor__id=mentor.id, started_at__isnull=True, status__in=['PENDING','STARTED'])\
+        .update(status='FAILED', summary='Session automatically closed because it never started')
+
+    # default duration can be overriden by service
     duration = timedelta(seconds=3600)
     if mentor.service.duration is not None:
         duration = mentor.service.duration
 
-    if mentee is not None and force_create == False:
+    pending_sessions = []
+    if mentee is not None:
         unfinished_with_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
                                                                   mentee__id=mentee.id,
                                                                   status__in=['PENDING', 'STARTED'])
         if unfinished_with_mentee.count() > 0:
-            return unfinished_with_mentee
-
-    if force_create == False:
-        # sessions that have not started
-        unstarted_sessions = MentorshipSession.objects.filter(mentor__id=mentor.id,
-                                                              started_at__isnull=True,
-                                                              status__in=['PENDING', 'STARTED'])
-        # delete the previous ones, its worth creating a new session but reusing the last session
-        if unstarted_sessions.count() > 0:
-            session = unstarted_sessions.first()
-            session.mentee = mentee
-            session.save()
-
-            # extend the session now that the mentee has joined
-            exp_in_epoch = time.mktime((timezone.now() + duration).timetuple())
-            extend_session(session, exp_in_epoch=exp_in_epoch)
-
-            unstarted_sessions.exclude(id=session.id).delete()
-            return MentorshipSession.objects.filter(id=session.id)
+            pending_sessions += pending_sessions.values_list('pk', flat=True)
 
     # if its a mentor, I will force him to close pending sessions
-    if mentor.user.id == token.user.id and not force_create:
+    if mentor.user.id == token.user.id:
         unfinished_with_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
                                                                   status__in=['PENDING', 'STARTED'])
         # if it has unishined meetings with already started
         if unfinished_with_mentee.count() > 0:
-            return unfinished_with_mentee
+            pending_sessions += unfinished_with_mentee.values_list('pk', flat=True)
+
+    # return all the collected pending sessions
+    if len(pending_sessions) > 0:
+        return MentorshipSession.objects.filter(id__in=pending_sessions)
 
     # if force_create == True we will try getting from the available unnused sessions
     # if I'm here its because there was no previous pending sessions so we will create one

@@ -11,7 +11,7 @@ from breathecode.authenticate.models import Token
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
 from .forms import CloseMentoringSessionForm
-from .actions import close_mentoring_session, get_or_create_sessions, render_session
+from .actions import close_mentoring_session, get_pending_sessions_or_create, render_session
 from rest_framework import serializers
 from breathecode.notify.actions import get_template_content
 from rest_framework.exceptions import ValidationError, NotFound
@@ -106,7 +106,7 @@ def forward_meet_url(request, mentor_slug, token):
     session_id = request.GET.get('session', None)
     mentee_id = request.GET.get('mentee', None)
 
-    session = None
+    sessions = None
     mentee = None
     mentor = MentorProfile.objects.filter(slug=mentor_slug).first()
     if mentor is None:
@@ -123,46 +123,53 @@ def forward_meet_url(request, mentor_slug, token):
         mentee = token.user
 
     # if specific sessions is being loaded
-    if session_id and session_id != 'new':
-        session = MentorshipSession.objects.filter(id=session_id)
+    if session_id is not None:
+        sessions = MentorshipSession.objects.filter(id=session_id)
+        if sessions.count() == 0:
+            render_message(request, 'Session with id {session_id} not found')
+    else:
+        sessions = get_pending_sessions_or_create(token, mentor, mentee)
 
-    if session is None or session.count() == 0:
-        session = get_or_create_sessions(token, mentor, mentee, force_create=(session_id == 'new'))
-
-    if session.count() == 1 and (session_id is not None and int(session_id) == session.first().id):
-        session = session.first()
-    else:  # could be many sessions or no session at all
-        return render(
-            request, 'pick_session.html', {
-                'token': token.key,
-                'mentor': GETMentorBigSerializer(mentor, many=False).data,
-                'SUBJECT': 'Mentoring Session',
-                'sessions': GETSessionReportSerializer(session, many=True).data,
-                'baseUrl': baseUrl,
-            })
+    print(f'found {sessions.count()} sessions')
+    if mentor.id == token.user.id:
+        if sessions.count() > 0 and str(sessions.first().id) != session_id:
+            return render(
+                request, 'pick_session.html', {
+                    'token': token.key,
+                    'mentor': GETMentorBigSerializer(mentor, many=False).data,
+                    'SUBJECT': 'Mentoring Session',
+                    'sessions': GETSessionReportSerializer(sessions, many=True).data,
+                    'baseUrl': baseUrl,
+                })
     """
-    From this line on, we know exactly what session is the user opening
+    From this line on, we know exactly what session is about to be opened,
+    if the mentee is None it probably is a new session
     """
 
-    if session.mentee is None and mentee_id is not None and mentee_id != 'undefined':
-        session.mentee = User.objects.filter(id=mentee_id).first()
+    session = None
+    if session_id is not None:
+        session = sessions.filter(id=session_id).first()
+    else:
+        session = sessions.filter(mentee=mentee).first()
+
+    if session.mentee is None:
+        if mentee_id is not None and mentee_id != 'undefined':
+            session.mentee = User.objects.filter(id=mentee_id).first()
+            if session.mentee is None:
+                return render_message(
+                    request,
+                    f'Mentee with user id {mentee_id} was not found, <a href="{baseUrl}&mentee=undefined">click here to start the session anyway.</a>'
+                )
+
         if session.mentee is None:
-            return render_message(
-                request,
-                f'Mentee with user id {mentee_id} was not found, <a href="{baseUrl}&mentee=undefined">click here to start the session anyway.</a>'
-            )
-
-        session.save()
-
-    if session.mentee is None and mentee_id is None:
-        return render(
-            request, 'pick_mentee.html', {
-                'token': token.key,
-                'mentor': GETMentorBigSerializer(mentor, many=False).data,
-                'SUBJECT': 'Mentoring Session',
-                'sessions': GETSessionReportSerializer(session, many=False).data,
-                'baseUrl': baseUrl,
-            })
+            return render(
+                request, 'pick_mentee.html', {
+                    'token': token.key,
+                    'mentor': GETMentorBigSerializer(mentor, many=False).data,
+                    'SUBJECT': 'Mentoring Session',
+                    'sessions': GETSessionReportSerializer(session, many=False).data,
+                    'baseUrl': baseUrl,
+                })
 
     if session.status not in ['PENDING', 'STARTED']:
         return render_message(
@@ -231,7 +238,7 @@ def forward_meet_url(request, mentor_slug, token):
             'LINK':
             set_query_parameter('?' + request.GET.urlencode(), 'redirect', 'true'),
             'MESSAGE':
-            f'Hello {session.mentee.first_name }, you are about to start a {session.mentor.service.name} with: {session.mentor.user.first_name} {session.mentor.user.last_name}',
+            f'Hello {session.mentee.first_name }, you are about to start a {session.mentor.service.name} with {session.mentor.user.first_name} {session.mentor.user.last_name}',
         })
 
 
