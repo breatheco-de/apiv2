@@ -295,6 +295,7 @@ def run_script(script):
                 script.status_code = 1
                 script.status = 'CRITICAL'
                 results['error_slug'] = 'unknown'
+                results['btn'] = None
                 results['severity_level'] = 100
 
         script.last_run = timezone.now()

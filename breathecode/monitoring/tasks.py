@@ -61,29 +61,35 @@ def monitor_app(self, app_id):
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
 def execute_scripts(self, script_id):
-    logger.debug('Starting execute_scripts')
     script = MonitorScript.objects.get(id=script_id)
+    logger.debug(f'Starting execute_scripts for {script.script_slug}')
     app = script.application
 
     now = timezone.now()
     if script.paused_until is not None and script.paused_until > now:
-        logger.debug('Ignoring script ex because its paused')
+        logger.debug('Ignoring script exec because its paused')
         return True
 
     result = run_script(script)
     if result['status'] != 'OPERATIONAL':
+        logger.debug('Errors found, sending script report to ')
         subject = f'Errors have been found on {app.title} script {script.id} (slug: {script.script_slug})'
         if 'title' in result and result['title'] is not None and result['title'] != '':
             subject = result['title']
 
-        if script.notify_email:
-            send_email_message('diagnostic', script.notify_email, {
-                'subject': subject,
-                'details': result['text'],
-                'button': result['btn']
-            })
-        elif app.notify_email:
-            send_email_message('diagnostic', app.notify_email, {
+        email = None
+        if script.notify_email is not None:
+            email = script.notify_email
+        elif app.notify_email is not None:
+            email = app.notify_email
+
+        if email is None:
+            logger.debug(
+                f'No email set for monitoring app or script, skiping email notification for {script.script_slug}'
+            )
+        else:
+            logger.debug(f'Sending script notification report to {email}')
+            send_email_message('diagnostic', email, {
                 'subject': subject,
                 'details': result['text'],
                 'button': result['btn']
