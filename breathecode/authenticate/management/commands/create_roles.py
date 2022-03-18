@@ -228,11 +228,11 @@ CAPABILITIES = [
         'description': 'Create, delete or update all session from one academy'
     },
     {
-        'slug': 'crud_mentorship_bills',
+        'slug': 'crud_mentorship_bill',
         'description': 'Create, delete or update all mentroship bills from one academy'
     },
     {
-        'slug': 'read_mentorship_bills',
+        'slug': 'read_mentorship_bill',
         'description': 'Read all mentroship bills from one academy'
     },
     {
@@ -465,13 +465,15 @@ def extend_roles(roles: list[RoleType]) -> None:
             'generate_temporal_token',
             'crud_certificate',
             'crud_review',
-            'crud_mentor',
-            'read_mentor',
             'read_assignment_sensitive_details',
             'crud_shortlink',
             'invite_resend',
+            'crud_mentor',
+            'read_mentor',
             'read_mentorship_service',
             'crud_mentorship_service',
+            'read_mentorship_session',
+            'crud_mentorship_session',
             'crud_mentorship_bill',
             'read_mentorship_bill',
         ]
