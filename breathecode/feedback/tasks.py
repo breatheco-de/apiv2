@@ -1,6 +1,6 @@
 import logging, os
 from breathecode.authenticate.models import Token
-from breathecode.utils import validation_exception
+from breathecode.utils import ValidationException
 from breathecode.utils import getLogger
 from django.db.models import Avg
 from celery import shared_task, Task
@@ -14,7 +14,6 @@ from breathecode.mentorship.models import MentorshipSession
 from django.utils import timezone
 
 # Get an instance of a logger
-# logger = logging.getLogger(__name__)
 logger = getLogger(__name__)
 
 ADMIN_URL = os.getenv('ADMIN_URL', '')
@@ -218,8 +217,6 @@ def process_answer_received(self, answer_id):
     if answer.user and answer.academy and answer.score is not None and answer.score < 8:
         system_email = get_system_email()
         list_of_emails = []
-        print('system email: ', system_email)
-        print(answer.academy.feedback_email)
 
         if system_email is not None:
             list_of_emails.append(system_email)

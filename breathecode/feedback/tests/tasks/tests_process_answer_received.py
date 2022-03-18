@@ -167,6 +167,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         self.assertEqual(logging.Logger.error.call_args_list, [call('system-email-not-found')])
         self.assertEqual(os.getenv.call_args_list, [call('ENV', ''), call('SYSTEM_EMAIL')])
+        print(send_email_message.call_args_list)
         self.assertEqual(send_email_message.call_args_list, [
             call('negative_answer', [f'{model.academy.feedback_email}'],
                  data={
@@ -204,6 +205,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         self.assertEqual(logging.Logger.error.call_args_list, [call('academy-feedback-email-not-found')])
         self.assertEqual(os.getenv.call_args_list, [call('ENV', ''), call('SYSTEM_EMAIL')])
+        print(send_email_message.call_args_list)
         self.assertEqual(send_email_message.call_args_list, [
             call('negative_answer', ['test@email.com'],
                  data={
@@ -242,6 +244,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
 
         self.assertEqual(logging.Logger.error.call_args_list, [])
         self.assertEqual(os.getenv.call_args_list, [call('ENV', ''), call('SYSTEM_EMAIL')])
+        print(send_email_message.call_args_list)
         self.assertEqual(send_email_message.call_args_list, [
             call('negative_answer', ['test@email.com', model.academy.feedback_email],
                  data={
