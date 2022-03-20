@@ -150,7 +150,7 @@ def generate_certificate(user, cohort=None, layout=None):
 def certificate_screenshot(certificate_id: int):
 
     certificate = UserSpecialty.objects.get(id=certificate_id)
-    if certificate.preview_url is None or certificate.preview_url == '':
+    if not certificate.preview_url:
         file_name = f'{certificate.token}'
 
         storage = Storage()
@@ -174,12 +174,12 @@ def certificate_screenshot(certificate_id: int):
         # after created, lets save the URL
         if file.blob is not None:
             certificate.preview_url = file.url()
-            certificate.save()
+            certificate.save(prevent_signal=True)
 
 
 def remove_certificate_screenshot(certificate_id):
     certificate = UserSpecialty.objects.get(id=certificate_id)
-    if certificate.preview_url is None or certificate.preview_url == '':
+    if not certificate.preview_url:
         return False
 
     file_name = certificate.token
@@ -188,6 +188,6 @@ def remove_certificate_screenshot(certificate_id):
     file.delete()
 
     certificate.preview_url = ''
-    certificate.save()
+    certificate.save(prevent_signal=True)
 
     return True

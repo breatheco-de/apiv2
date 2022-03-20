@@ -37,3 +37,8 @@ class CertificateTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMix
             if 'is_cleaned' in item:
                 del item['is_cleaned']
         return items
+
+    def remove_is_clean_for_one_item(self, item):
+        if 'is_cleaned' in item:
+            del item['is_cleaned']
+        return item
