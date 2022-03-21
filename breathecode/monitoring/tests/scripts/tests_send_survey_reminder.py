@@ -171,6 +171,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         del script['title']
 
         expected = {
+            'btn': None,
             'severity_level': 5,
             'error_slug': 'cohort-have-pending-surveys',
             'status': 'MINOR',
@@ -217,6 +218,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         del script['title']
 
         expected = {
+            'btn': None,
             'severity_level': 5,
             'error_slug': 'cohort-have-pending-surveys',
             'status': 'MINOR',

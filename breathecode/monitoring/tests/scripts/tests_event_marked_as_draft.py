@@ -159,17 +159,21 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         del script['text']
 
         expected = {
-            'severity_level': 5,
-            'status': 'MINOR',
-            'error_slug': 'pending-events',
-            'title': None,
+            'btn': {
+                'label': 'More details',
+                'url': f'/events/list?location={model.academy.slug}'
+            },
+            'severity_level': 100,
+            'status': 'CRITICAL',
+            'error_slug': 'draft-events',
+            'title': f'There are 1 draft events to published or deleted in {model.academy.name}',
         }
 
         self.assertEqual(script, expected)
         self.assertEqual(self.bc.database.list_of('monitoring.MonitorScript'), [
             {
                 **self.bc.format.to_dict(model.monitor_script),
-                'status': 'MINOR',
+                'status': 'CRITICAL',
                 'status_text': None,
             },
         ])
@@ -209,17 +213,21 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         del script['text']
 
         expected = {
-            'severity_level': 5,
-            'status': 'MINOR',
-            'error_slug': 'pending-events',
-            'title': None,
+            'btn': {
+                'label': 'More details',
+                'url': f'/events/list?location={model.academy.slug}'
+            },
+            'severity_level': 100,
+            'status': 'CRITICAL',
+            'error_slug': 'draft-events',
+            'title': f'There are 2 draft events to published or deleted in {model.academy.name}',
         }
 
         self.assertEqual(script, expected)
         self.assertEqual(self.bc.database.list_of('monitoring.MonitorScript'), [
             {
                 **self.bc.format.to_dict(model.monitor_script),
-                'status': 'MINOR',
+                'status': 'CRITICAL',
                 'status_text': None,
             },
         ])
