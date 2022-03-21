@@ -97,6 +97,7 @@ class AcademyCohortTestSuite(MonitoringTestCase):
         del script['title']
 
         expected = {
+            'btn': None,
             'severity_level': 5,
             'status': 'MINOR',
             'error_slug': None,

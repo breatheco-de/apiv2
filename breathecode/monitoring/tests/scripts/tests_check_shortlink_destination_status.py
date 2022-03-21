@@ -81,6 +81,8 @@ class ShortLinkTestSuite(MonitoringTestCase):
         del script['slack_payload']
 
         expected = {
+            'btn':
+            None,
             'severity_level':
             5,
             'title':
@@ -129,6 +131,8 @@ class ShortLinkTestSuite(MonitoringTestCase):
         del script['slack_payload']
 
         expected = {
+            'btn':
+            None,
             'severity_level':
             5,
             'title':
@@ -179,6 +183,8 @@ class ShortLinkTestSuite(MonitoringTestCase):
         del script['slack_payload']
 
         expected = {
+            'btn':
+            None,
             'severity_level':
             5,
             'title':
@@ -233,6 +239,8 @@ class ShortLinkTestSuite(MonitoringTestCase):
         del script['slack_payload']
 
         expected = {
+            'btn':
+            None,
             'severity_level':
             5,
             'title':
