@@ -15,17 +15,6 @@ logger = logging.getLogger(__name__)
 
 def get_pending_sessions_or_create(token, mentor, mentee=None):
 
-    # sessions that have not started are automatically closed and also without mentee are deleleted
-    MentorshipSession.objects.filter(mentor__id=mentor.id, mentee__isnull=True,
-                                     started_at__isnull=True).delete()
-    to_close = MentorshipSession.objects.filter(mentor__id=mentor.id,
-                                                started_at__isnull=True,
-                                                status__in=['PENDING', 'STARTED'])
-    close_mentoring_session(to_close, {
-        'summary': 'Session automatically closed because it never started',
-        'status': 'FAILED'
-    })
-
     # starting to pick pending sessions
     pending_sessions = []
     if mentee is not None:
@@ -38,7 +27,8 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
     # if its a mentor, I will force him to close pending sessions
     if mentor.user.id == token.user.id:
         unfinished_sessions = MentorshipSession.objects.filter(mentor__id=mentor.id,
-                                                               status__in=['PENDING', 'STARTED'])
+                                                               status__in=['PENDING', 'STARTED'
+                                                                           ]).exclude(id__in=pending_sessions)
         # if it has unishined meetings with already started
         if unfinished_sessions.count() > 0:
             pending_sessions += unfinished_sessions.values_list('pk', flat=True)
