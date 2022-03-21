@@ -5,7 +5,7 @@ __all__ = ['Datetime']
 
 
 class Datetime:
-    """Wrapper of last implementation of datetime mixin for testing purposes"""
+    """Mixin with the purpose of cover all the related with datetime"""
 
     to_iso_string = DatetimeMixin.datetime_to_iso
     from_iso_string = DatetimeMixin.iso_to_datetime

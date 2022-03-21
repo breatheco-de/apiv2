@@ -4,6 +4,43 @@ site_url: https://breathecode.herokuapp.com/
 theme:
   name: "material"
 
+# this define the order of menu
+nav:
+  - 'index.md'
+  - Installation:
+      - 'installation/configuring-the-github-secrets.md'
+      - 'installation/editor-configs.md'
+      - 'installation/fixtures.md'
+  - Apps:
+    - Monitoring:
+      - 'apps/monitoring/introduction.md'
+      - 'apps/monitoring/scripts.md'
+    - 'apps/activities.md'
+    - 'apps/admissions.md'
+  - Security:
+    - 'security/capabilities.md'
+  - Services:
+    - Google Cloud:
+      - 'services/google_cloud/google-cloud-functions.md'
+      - 'services/google_cloud/storage.md'
+    - Slack:
+      - 'services/slack integration/icons.md'
+  - Signals:
+    - 'signals/quickstart.md'
+  - Testing:
+    - 'testing/runing-tests.md'
+    - Mixins:
+      - 'bc': 'testing/mixins/bc.md'
+      - 'bc.request': 'testing/mixins/bc-request.md'
+      - 'bc.database': 'testing/mixins/bc-database.md'
+      - 'bc.datetime': 'testing/mixins/bc-datetime.md'
+      - 'bc.format': 'testing/mixins/bc-format.md'
+      - 'bc.check': 'testing/mixins/bc-check.md'
+      - 'bc.cache': 'testing/mixins/bc-cache.md'
+    - Mocks:
+      - 'testing/mocks/using-mocks.md'
+      - 'testing/mocks/mock-requests.md'
+
 plugins:
   - search
   - mkdocstrings:
@@ -14,3 +51,10 @@ plugins:
             - import django
             - os.environ.setdefault("DJANGO_SETTINGS_MODULE", "breathecode.settings")
             - django.setup()
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences

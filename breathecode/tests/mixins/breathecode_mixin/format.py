@@ -8,7 +8,7 @@ __all__ = ['Format']
 
 
 class Format:
-    """Wrapper of last implementation for request for testing purposes"""
+    """Mixin with the purpose of cover all the related with format or parse something"""
 
     _parent: APITestCase
 
@@ -16,7 +16,24 @@ class Format:
         self._parent = parent
 
     def to_dict(self, arg: Any) -> dict[str, Any] | list[dict[str, Any]]:
-        """Parse the object to a `dict` or `list[dict]`"""
+        """
+        Parse the object to a `dict` or `list[dict]`.
+
+        Usage:
+
+        ```py
+        # setup the database, model.user is instance of dict and model.cohort
+        # is instance list of dicts
+        model = self.bc.database.create(user=1, cohort=2)
+
+        # Parsing one model to a dict
+        self.bc.format.to_dict(model.user)  # = {...}
+
+        # Parsing many models to a list of dict (infered from the type of
+        # argument)
+        self.bc.format.to_dict(model.cohort)  # = [{...}, {...}]
+        ```
+        """
 
         if isinstance(arg, list):
             return [self._one_to_dict(x) for x in arg]
@@ -35,7 +52,19 @@ class Format:
         raise NotImplementedError(f'{arg.__name__} is not implemented yet')
 
     def describe_models(self, models: dict[str, Model]) -> str:
-        """Describe the models"""
+        """
+        Describe the models.
+
+        Usage:
+
+        ```py
+        # setup the database
+        model = self.bc.database.create(user=1, cohort=1)
+
+        # print the docstring to the corresponding test
+        self.bc.format.describe_models(model)
+        ```
+        """
 
         title_spaces = ' ' * 8
         model_spaces = ' ' * 10

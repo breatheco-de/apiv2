@@ -102,7 +102,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
         db = self.bc.database.list_of('events.EventbriteWebhook')
         self.assertRegex(db[0]['status_text'], r'Exception: Organization not have one Academy\n')
-        self.bc.check.imperfect_equality(db, [{
+        self.bc.check.partial_equality(db, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
@@ -137,7 +137,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
         db = self.bc.database.list_of('events.EventbriteWebhook')
         self.assertRegex(db[0]['status_text'], r'Exception: event doesn\'t exist\n')
-        self.bc.check.imperfect_equality(db, [{
+        self.bc.check.partial_equality(db, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
@@ -172,7 +172,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
         db = self.bc.database.list_of('events.EventbriteWebhook')
         self.assertRegex(db[0]['status_text'], r'Exception: event doesn\'t exist\n')
-        self.bc.check.imperfect_equality(db, [{
+        self.bc.check.partial_equality(db, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
@@ -211,7 +211,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         db = self.bc.database.list_of('events.EventbriteWebhook')
         self.assertRegex(db[0]['status_text'], r'Exception: ActiveCampaignAcademy doesn\'t exist\n')
 
-        self.bc.check.imperfect_equality(db, [{
+        self.bc.check.partial_equality(db, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
@@ -259,7 +259,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
 
         db = self.bc.database.list_of('events.EventbriteWebhook')
         self.assertRegex(db[0]['status_text'], r'Exception: Automation for order_placed doesn\'t exist\n')
-        self.bc.check.imperfect_equality(db, [{
+        self.bc.check.partial_equality(db, [{
             'action': 'order.placed',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/orders/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
@@ -429,7 +429,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         db = self.bc.database.list_of('events.EventbriteWebhook')
         self.assertRegex(db[0]['status_text'], r'Exception: Random error in creating\n')
 
-        self.bc.check.imperfect_equality(db, [{
+        self.bc.check.partial_equality(db, [{
             'action': 'event.created',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
@@ -499,7 +499,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         db = self.bc.database.list_of('events.EventbriteWebhook')
         self.assertRegex(db[0]['status_text'], r'Exception: Random error in creating\n')
 
-        self.bc.check.imperfect_equality(db, [{
+        self.bc.check.partial_equality(db, [{
             'action': 'event.updated',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',
@@ -571,7 +571,7 @@ class EventbriteWebhookTestSuite(EventTestCase):
         db = self.bc.database.list_of('events.EventbriteWebhook')
         self.assertRegex(db[0]['status_text'], r'Exception: Random error\n')
 
-        self.bc.check.imperfect_equality(db, [{
+        self.bc.check.partial_equality(db, [{
             'action': 'event.published',
             'api_url': 'https://www.eventbriteapi.com/v3/events/1/',
             'endpoint_url': 'https://something.io/eventbrite/webhook',

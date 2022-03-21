@@ -22,7 +22,7 @@ def print_arguments(func: callable) -> str:
 
 
 class Breathecode:
-    """Collection of wrappers of last implementation mixin for testing purposes"""
+    """Collection of mixins for testing purposes"""
 
     cache: Cache
     datetime: Datetime
@@ -43,7 +43,19 @@ class Breathecode:
         self.format = Format(parent)
 
     def help(self, *args) -> None:
-        """Print a list of mixin with a tree style (command of Linux)"""
+        """
+        Print a list of mixin with a tree style (command of Linux).
+
+        Usage:
+
+        ```py
+        # this print a tree with all the mixins
+        self.bc.help()
+
+        # this print just the docs of corresponding method
+        self.bc.help('bc.datetime.now')
+        ```
+        """
 
         if args:
             for arg in args:
