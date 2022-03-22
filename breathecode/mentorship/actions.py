@@ -13,49 +13,47 @@ from breathecode.utils.datetime_interger import duration_to_str
 logger = logging.getLogger(__name__)
 
 
-def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
+def get_pending_sessions_or_create(token, mentor, mentee=None):
 
-    # default duration can be ovveriden by service
-    duration = timedelta(seconds=3600)
-    if mentor.service.duration is not None:
-        duration = mentor.service.duration
+    # sessions that have not started are automatically closed and also without mentee are deleleted
+    MentorshipSession.objects.filter(mentor__id=mentor.id, mentee__isnull=True,
+                                     started_at__isnull=True).delete()
+    to_close = MentorshipSession.objects.filter(mentor__id=mentor.id,
+                                                started_at__isnull=True,
+                                                status__in=['PENDING', 'STARTED'])
+    close_mentoring_session(to_close, {
+        'summary': 'Session automatically closed because it never started',
+        'status': 'FAILED'
+    })
 
-    if mentee is not None and force_create == False:
+    # starting to pick pending sessions
+    pending_sessions = []
+    if mentee is not None:
         unfinished_with_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
                                                                   mentee__id=mentee.id,
                                                                   status__in=['PENDING', 'STARTED'])
         if unfinished_with_mentee.count() > 0:
-            return unfinished_with_mentee
-
-    if force_create == False:
-        # session without mentee
-        unfinished_without_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
-                                                                     started_at__isnull=True,
-                                                                     status__in=['PENDING', 'STARTED'])
-        # delete the pendings ones, its worth creating a new meeting
-        if unfinished_without_mentee.count() > 0:
-            session = unfinished_without_mentee.first()
-            session.mentee = mentee
-            session.save()
-
-            # extend the session now that the mentee has joined
-            exp_in_epoch = time.mktime((timezone.now() + duration).timetuple())
-            extend_session(session, exp_in_epoch=exp_in_epoch)
-
-            unfinished_without_mentee.exclude(id=session.id).delete()
-            return MentorshipSession.objects.filter(id=session.id)
+            pending_sessions += pending_sessions.values_list('pk', flat=True)
 
     # if its a mentor, I will force him to close pending sessions
-    if mentor.user.id == token.user.id and not force_create:
-        unfinished_with_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
-                                                                  status__in=['PENDING', 'STARTED'])
-
+    if mentor.user.id == token.user.id:
+        unfinished_sessions = MentorshipSession.objects.filter(mentor__id=mentor.id,
+                                                               status__in=['PENDING', 'STARTED'])
         # if it has unishined meetings with already started
-        if unfinished_with_mentee.count() > 0:
-            return unfinished_with_mentee
+        if unfinished_sessions.count() > 0:
+            pending_sessions += unfinished_sessions.values_list('pk', flat=True)
+
+    # return all the collected pending sessions
+    if len(pending_sessions) > 0:
+        return MentorshipSession.objects.filter(id__in=pending_sessions)
 
     # if force_create == True we will try getting from the available unnused sessions
     # if I'm here its because there was no previous pending sessions so we will create one
+
+    # default duration can be overriden by service
+    duration = timedelta(seconds=3600)
+    if mentor.service.duration is not None:
+        duration = mentor.service.duration
 
     session = MentorshipSession(mentor=mentor,
                                 mentee=mentee,
@@ -66,14 +64,14 @@ def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
     session.online_meeting_url = room['url']
     session.name = room['name']
     session.mentee = mentee
-
     session.save()
 
     # just in case, if there is any other session with the same mentee and mentor it will be closed
     if session.mentee is not None:
         open_sessions = MentorshipSession.objects.filter(mentor=session.mentor,
                                                          mentee=session.mentee,
-                                                         status__in=['PENDING', 'STARTED'])
+                                                         status__in=['PENDING',
+                                                                     'STARTED']).exclude(id=session.id)
         for s in open_sessions:
             close_mentoring_session(
                 s, {
@@ -125,97 +123,104 @@ def render_session(request, session, token):
 
 def close_mentoring_session(session, data):
 
-    session.summary = data['summary']
-    session.status = data['status'].upper()
-    session.ended_at = timezone.now()
-    session.save()
+    sessions_to_close = session
+    if isinstance(session, MentorshipSession):
+        sessions_to_close = MentorshipSession.objects.filter(id=session.id)
 
-    # Close sessions from the same mentor that expired and the mentee never joined
-    MentorshipSession.objects.filter(mentor__id=session.mentor.id,
-                                     status__in=['PENDING', 'STARTED'],
-                                     ended_at__lte=timezone.now(),
-                                     started_at__isnull=True).update(
-                                         status='FAILED',
-                                         summary='Meeting automatically closed, mentee never joined.')
+    sessions_to_close.update(summary=data['summary'], status=data['status'].upper(), ended_at=timezone.now())
 
-    return session
+    return sessions_to_close
 
 
-def add_accounted_time(session, reset=False):
+def get_accounted_time(_session):
+    def get_duration(session):
+        response = {'accounted_duration': 0, 'status_message': ''}
+        if session.started_at is None and session.mentor_joined_at is not None:
+            response['status_message'] = 'Mentor joined but mentee never did, '
+            if session.mentor.service.missed_meeting_duration.seconds > 0:
+                response['accounted_duration'] = session.mentor.service.missed_meeting_duration
+                response[
+                    'status_message'] += f'{duration_to_str(response["accounted_duration"])} will be accounted for the bill.'
+            else:
+                response['accounted_duration'] = timedelta(seconds=0)
+                response['status_message'] += f'No time will be included on the bill.'
+            return response
 
-    # only calculate accounted duration if its null
-    if session.accounted_duration is not None and reset == False:
-        return session
+        elif session.started_at is not None:
 
-    session.status_message = ''
-    if session.started_at is None and session.mentor_joined_at is not None:
-        session.status_message = 'Mentor joined but mentee never did, '
-        if session.mentor.service.missed_meeting_duration.seconds > 0:
-            session.accounted_duration = session.mentor.service.missed_meeting_duration
-            session.status_message += f'{duration_to_str(session.accounted_duration)} will be accounted for the bill.'
+            if session.mentor_joined_at is None:
+                response['accounted_duration'] = timedelta(seconds=0)
+                response[
+                    'status_message'] = 'The mentor never joined the meeting, no time will be accounted for.'
+                return response
+
+            if session.ended_at is None:
+                if session.ends_at is not None and session.ends_at > session.started_at:
+                    response['accounted_duration'] = session.ends_at - session.started_at
+                    response[
+                        'status_message'] = f'The session never ended, accounting for the expected meeting duration that was {duration_to_str(response["accounted_duration"])}.'
+                    return response
+                elif session.mentee_left_at is not None:
+                    response['accounted_duration'] = session.mentee_left_at - session.started_at
+                    response[
+                        'status_message'] = f'The session never ended, accounting duration based on the time where the mentee left the meeting {duration_to_str(response["accounted_duration"])}.'
+                    return response
+                elif session.mentor_left_at is not None:
+                    response['accounted_duration'] = session.mentor_left_at - session.started_at
+                    response[
+                        'status_message'] = f'The session never ended, accounting duration based on the time where the mentor left the meeting {duration_to_str(response["accounted_duration"])}.'
+                    return response
+                else:
+                    response['accounted_duration'] = session.mentor.service.duration
+                    response[
+                        'status_message'] = f'The session never ended, accounting for the standard duration {duration_to_str(response["accounted_duration"])}.'
+                    return response
+
+            if session.started_at > session.ended_at:
+                response['accounted_duration'] = timedelta(seconds=0)
+                response[
+                    'status_message'] = 'Meeting started before it ended? No duration will be accounted for.'
+                return response
+
+            if (session.ended_at - session.started_at).days > 1:
+                if session.mentee_left_at is not None:
+                    response['accounted_duration'] = session.mentee_left_at - session.started_at
+                    response[
+                        'status_message'] = f'The lasted way more than it should, accounting duration based on the time where the mentee left the meeting {duration_to_str(response["accounted_duration"])}.'
+                    return response
+                else:
+                    response['accounted_duration'] = session.mentor.service.duration
+                    response[
+                        'status_message'] = f'This session lasted more than a day, no one ever left, was probably never closed, accounting for standard duration {duration_to_str(response["accounted_duration"])}.'
+                    return response
+
+            response['accounted_duration'] = session.ended_at - session.started_at
+            if response['accounted_duration'] > session.mentor.service.max_duration:
+                if session.mentor.service.max_duration.seconds == 0:
+                    response['accounted_duration'] = session.mentor.service.duration
+                    response[
+                        'status_message'] = f'No extra time is allowed for session, accounting for stantard duration of {duration_to_str(response["accounted_duration"])}.'
+                    return response
+                else:
+                    response['accounted_duration'] = session.mentor.service.max_duration
+                    response[
+                        'status_message'] = f'The duration of the session is bigger than the maximun allowed, accounting for max duration of {duration_to_str(response["accounted_duration"])}.'
+                    return response
+            else:
+                # everything perfect, we account for the expected
+                return response
+
         else:
-            session.accounted_duration = timedelta(seconds=0)
-            session.status_message += f'No time will be included on the bill.'
-        return session
+            response['accounted_duration'] = timedelta(seconds=0)
+            response['status_message'] = f'No one joined this session, nothing will be accounted for.'
+            return response
 
-    elif session.started_at is not None:
-
-        if session.mentor_joined_at is None:
-            session.accounted_duration = timedelta(seconds=0)
-            session.status_message = 'The mentor never joined the meeting, no time will be accounted for.'
-            return session
-
-        if session.ended_at is None:
-            if session.ends_at is not None and session.ends_at > session.started_at:
-                session.accounted_duration = session.ends_at - session.started_at
-                session.status_message = f'The session never ended, accounting for the expected meeting duration that was {duration_to_str(session.accounted_duration)}.'
-                return session
-            elif session.mentee_left_at is not None:
-                session.accounted_duration = session.mentee_left_at - session.started_at
-                session.status_message = f'The session never ended, accounting duration based on the time where the mentee left the meeting {duration_to_str(session.accounted_duration)}.'
-                return session
-            elif session.mentor_left_at is not None:
-                session.accounted_duration = session.mentor_left_at - session.started_at
-                session.status_message = f'The session never ended, accounting duration based on the time where the mentor left the meeting {duration_to_str(session.accounted_duration)}.'
-                return session
-            else:
-                session.accounted_duration = session.mentor.service.duration
-                session.status_message = f'The session never ended, accounting for the standard duration {duration_to_str(session.accounted_duration)}.'
-                return session
-
-        if session.started_at > session.ended_at:
-            session.accounted_duration = timedelta(seconds=0)
-            session.status_message = 'Meeting started before it ended? No duration will be accounted for.'
-            return session
-
-        if (session.ended_at - session.started_at).days > 1:
-            if session.mentee_left_at is not None:
-                session.accounted_duration = session.mentee_left_at - session.started_at
-                session.status_message = f'The lasted way more than it should, accounting duration based on the time where the mentee left the meeting {duration_to_str(session.accounted_duration)}.'
-                return session
-            else:
-                session.accounted_duration = session.mentor.service.duration
-                session.status_message = f'This session lasted more than a day, no one ever left, was probably never closed, accounting for standard duration {duration_to_str(session.accounted_duration)}.'
-                return session
-
-        session.accounted_duration = session.ended_at - session.started_at
-        if session.accounted_duration > session.mentor.service.max_duration:
-            if session.mentor.service.max_duration.seconds == 0:
-                session.accounted_duration = session.mentor.service.duration
-                session.status_message = f'No extra time is allowed for session, accounting for stantard duration of {duration_to_str(session.accounted_duration)}.'
-                return session
-            else:
-                session.accounted_duration = session.mentor.service.max_duration
-                session.status_message = f'The duration of the session is bigger than the maximun allowed, accounting for max duration of {duration_to_str(session.accounted_duration)}.'
-                return session
-        else:
-            # everything perfect, we account for the expected
-            return session
-
-    else:
-        session.accounted_duration = timedelta(seconds=0)
-        session.status_message = f'No one joined this session, nothing will be accounted for.'
-        return session
+    _duration = get_duration(_session)
+    if _duration['accounted_duration'] > _session.mentor.service.max_duration:
+        _duration['accounted_duration'] = session.mentor.service.max_duration
+        _duration[
+            'status_message'] += f' The session accounted duration was limited to the maximum allowed {duration_to_str(_duration["accounted_duration"])}'
+    return _duration
 
 
 def generate_mentor_bill(mentor, reset=False):
@@ -233,18 +238,17 @@ def generate_mentor_bill(mentor, reset=False):
         ]).filter(Q(bill__isnull=True) | Q(bill__status='DUE', bill__academy=mentor.service.academy))
     total = {'minutes': 0, 'overtime_minutes': 0}
 
-    print('sessions found', unpaid_sessions.count())
     for session in unpaid_sessions:
         session.bill = open_bill
 
-        # if reset=true all the sessions durations will be recalculated
-        session = add_accounted_time(session, reset)
+        _result = get_accounted_time(session)
+        session.suggested_accounted_duration = _result['accounted_duration']
+        session.status_message = _result['status_message']
+        # if is null and reset=true all the sessions durations will be rest to the suggested one
+        if session.accounted_duration is None or reset == True:
+            session.accounted_duration = _result['accounted_duration']
 
         extra_minutes = 0
-        if session.accounted_duration > session.mentor.service.max_duration:
-            session.accounted_duration = session.mentor.service.max_duration
-            session.status_message += f' The session accounted duration was limited to the maximum allowed {duration_to_str(session.accounted_duration)}'
-
         if session.accounted_duration > session.mentor.service.duration:
             extra_minutes = (session.accounted_duration - session.mentor.service.duration).seconds / 60
 

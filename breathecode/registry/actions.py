@@ -1,6 +1,7 @@
-import logging, json, os, base64, re
+import logging, json, os, re
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models import Q
+from django.utils import timezone
 from urllib.parse import urlparse
 from slugify import slugify
 from breathecode.utils import APIException
@@ -140,16 +141,17 @@ def sync_with_github(asset_slug, author_id=None):
             asset = sync_learnpack_asset(g, asset)
 
         asset.status_text = 'Successfully Synched'
-        asset.status = 'OK'
+        asset.sync_status = 'OK'
+        asset.last_synch_at = timezone.now()
         asset.save()
         logger.debug(f'Successfully re-synched asset {asset_slug} with github')
     except Exception as e:
         asset.status_text = str(e)
-        asset.status = 'ERROR'
+        asset.sync_status = 'ERROR'
         asset.save()
         logger.error(f'Error updating {asset.url} from github: ' + str(e))
 
-    return asset.status
+    return asset.sync_status
 
 
 def get_url_info(url: str):
@@ -173,17 +175,15 @@ def sync_github_lesson(github, asset):
 
     branch, file_path = result.groups()
     logger.debug(f'Fetching markdown readme: {file_path}')
-    readme_file = repo.get_contents(file_path)
+    asset.readme = repo.get_contents(file_path).content
 
-    decoded = base64.b64decode(readme_file.content.encode('utf-8')).decode('utf-8')
     if org_name == 'breatheco-de' and repo_name == 'content':
+        readme = asset.get_readme()
         logger.debug(f'Markdown is coming from breathecode/content, replacing images')
         base_url = os.path.dirname(asset.readme_url)
         replaced = re.sub(r'(["\'(])\.\.\/\.\.\/assets\/images\/([_\w\-\.]+)(["\')])',
-                          r'\1' + base_url + r'/../../assets/images/\2?raw=true\3', decoded)
-        asset.readme = str(base64.b64encode(replaced.encode('utf-8')).decode('utf-8'))
-    else:
-        asset.readme = readme_file.content
+                          r'\1' + base_url + r'/../../assets/images/\2?raw=true\3', readme['decoded'])
+        asset.set_readme(replaced)
 
     return asset
 
@@ -260,6 +260,51 @@ def sync_learnpack_asset(github, asset):
                     technology.save()
                 asset.technologies.add(technology)
     return asset
+
+
+def test_asset(asset):
+    try:
+        if asset.asset_type == 'LESSON':
+            test_lesson(asset)
+        # TODO: add more tests for other types of assets
+        asset.status_text = 'Test Successfull'
+        asset.test_status = 'OK'
+        asset.last_test_at = timezone.now()
+        asset.save()
+        return True
+    except Exception as e:
+        asset.status_text = str(e)
+        asset.test_status = 'ERROR'
+        asset.save()
+        raise e
+
+
+def test_lesson(lesson):
+    from bs4 import BeautifulSoup
+    import requests
+
+    def test_url(url, allow_relative=False):
+        print('Testing url: ', url, url[0:2])
+
+        if not allow_relative and '../' == url[0:3] or './' == url[0:2]:
+            raise Exception(f'Relative url: ' + url)
+
+        response = requests.head(url, allow_redirects=False)
+        if response.status_code not in [200, 302, 301]:
+            raise Exception(f'Invalid URL with code {response.status_code}: ' + url)
+
+    if lesson.readme is None or lesson.readme == '':
+        raise Exception('Empty readme')
+
+    readme = lesson.get_readme(parse=True)
+    soup = BeautifulSoup(readme['html'], features='lxml')
+    anchors = soup.findAll('a')
+    images = soup.findAll('img')
+    for a in anchors:
+        test_url(a.get('href'), allow_relative=False)
+    for img in images:
+        test_url(img.get('src'), allow_relative=False)
+    return True
 
 
 def test_syllabus(syl):

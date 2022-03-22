@@ -31,7 +31,7 @@ ENVIRONMENT = os.environ.get('ENV')
 SECRET_KEY = '5ar3h@ha%y*dc72z=8-ju7@4xqm0o59*@k*c2i=xacmy2r=%4a'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = (ENVIRONMENT == 'development')
+DEBUG = (ENVIRONMENT == 'development' or ENVIRONMENT == 'test')
 
 ALLOWED_HOSTS = []
 

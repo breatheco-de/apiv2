@@ -195,7 +195,20 @@
                     Billed
                 </td>
             </tr>
-
+            {% if status == "UNDER_REVIEW" and unfinished_sessions|length > 0 %}
+            <tr class="item">
+                <td align="left" colspan="3" style="color: rgb(171, 158, 45);">
+                    The mentor has {{ unfinished_sessions|length }} unfinished sessions that are to included in this bill
+                </td>
+            </tr>
+            {% endif %}
+            {% if sessions|length == 0 %}
+            <tr class="item">
+                <td align="left" colspan="3">
+                    No mentoring sessions were found
+                </td>
+            </tr>
+            {% endif %}
             {% for session in sessions %}
             <tr class="item">
                 <td align="left">

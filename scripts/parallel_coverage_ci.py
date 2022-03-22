@@ -2,9 +2,7 @@
 
 import os
 import sys
-import webbrowser
 from pathlib import Path
-from .utils.environment import test_environment, reset_environment
 
 
 def python_module_to_dir(module: str) -> str:
@@ -33,8 +31,6 @@ if __name__ == '__main__':
 
     dir = python_module_to_dir(module)
 
-    reset_environment()
-    test_environment()
     xml_path = os.path.join(os.getcwd(), 'coverage.xml')
 
     if os.path.exists(xml_path):

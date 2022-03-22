@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.db.models import Q
 from django.http import HttpResponse
 from .models import Asset, AssetAlias, AssetTechnology, AssetTranslation
-from .actions import test_syllabus
+from .actions import test_syllabus, test_asset
 from breathecode.notify.actions import send_email_message
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -19,6 +19,20 @@ from rest_framework import status
 from django.http import HttpResponseRedirect
 
 logger = logging.getLogger(__name__)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def render_preview_html(request, asset_slug):
+    asset = Asset.objects.filter(slug=asset_slug).first()
+    if asset is None:
+        return render_message(request, 'Asset not found')
+
+    readme = asset.get_readme(parse=True)
+    return render(request, 'markdown.html', {
+        **AssetBigSerializer(asset).data, 'html': readme['html'],
+        'frontmatter': readme['frontmatter'].items()
+    })
 
 
 @api_view(['GET'])
@@ -55,7 +69,14 @@ def get_translations(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def handle_test_syllabus(request):
-    syl = test_syllabus(request.data)
+    report = test_syllabus(request.data)
+    return Response({'status': 'ok'})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def handle_test_asset(request):
+    report = test_asset(request.data)
     return Response({'status': 'ok'})
 
 

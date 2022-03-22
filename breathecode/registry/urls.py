@@ -8,6 +8,8 @@ from .views import (
     get_config,
     get_translations,
     handle_test_syllabus,
+    render_preview_html,
+    handle_test_asset,
 )
 
 app_name = 'feedback'
@@ -16,8 +18,10 @@ urlpatterns = [
     path('technology', get_technologies),
     path('translation', get_translations),
     path('syllabus/test', handle_test_syllabus),
+    path('asset/test', handle_test_asset),
     path('asset/<str:asset_slug>', AssetView.as_view()),
     path('asset/gitpod/<str:asset_slug>', redirect_gitpod),
     path('asset/readme/<str:asset_slug>', get_readme),
+    path('asset/preview/<str:asset_slug>', render_preview_html),
     path('asset/<str:asset_slug>/github/config', get_config),
 ]
