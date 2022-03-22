@@ -63,6 +63,11 @@ def get_system_email():
     return system_email
 
 
+def get_admin_url():
+    admin_url = os.getenv('ADMIN_URL')
+    return admin_url
+
+
 def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
 
     cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort, role='TEACHER')
@@ -216,6 +221,9 @@ def process_answer_received(self, answer_id):
 
     if answer.user and answer.academy and answer.score is not None and answer.score < 8:
         system_email = get_system_email()
+        admin_url = get_admin_url()
+        print(system_email)
+        print(admin_url)
         list_of_emails = []
 
         if system_email is not None:
@@ -247,7 +255,7 @@ def process_answer_received(self, answer_id):
                                    'ACADEMY':
                                    answer.academy.name,
                                    'LINK':
-                                   f'{ADMIN_URL}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
+                                   f'{admin_url}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
                                })
 
     return True

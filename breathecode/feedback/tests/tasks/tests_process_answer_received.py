@@ -15,6 +15,13 @@ from ..mixins import FeedbackTestCase
 from breathecode.feedback.tasks import process_answer_received
 
 
+def apply_get_env(configuration={}):
+    def get_env(key, value=None):
+        return configuration.get(key, value)
+
+    return get_env
+
+
 class SurveyAnsweredTestSuite(FeedbackTestCase):
     """Test /academy/survey"""
     @patch('logging.Logger.warn', MagicMock())
@@ -22,7 +29,6 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     def test_survey_answered_task_without_answer(self):
 
-        from breathecode.feedback.signals import survey_answered
         import logging
 
         model = self.generate_models()
@@ -38,7 +44,6 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     def test_survey_answered_task_without_survey(self):
 
-        from breathecode.feedback.signals import survey_answered
         import logging
 
         model = self.generate_models(answer=1)
@@ -54,7 +59,6 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     def test_survey_answered_task_with_survey(self):
 
-        from breathecode.feedback.signals import survey_answered
         import logging
 
         model = self.generate_models(answer=1, survey=1)
@@ -75,7 +79,6 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_survey_answered_task_with_survey_score_seven(self):
 
-        from breathecode.feedback.signals import survey_answered
         from breathecode.notify.actions import send_email_message
         import logging
 
@@ -100,7 +103,6 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_survey_answered_task_with_survey_score_seven__with_academy(self):
 
-        from breathecode.feedback.signals import survey_answered
         from breathecode.notify.actions import send_email_message
         import logging
 
@@ -126,7 +128,6 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     def test_survey_answered_task_with_survey_score_seven__with_academy__with_user__without_system_email__without_feedback_email(
             self):
 
-        from breathecode.feedback.signals import survey_answered
         from breathecode.notify.actions import send_email_message
         import logging, os
 
@@ -139,7 +140,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         self.assertEqual(logging.Logger.error.call_args_list,
                          [call('system-email-not-found'),
                           call('academy-feedback-email-not-found')])
-        self.assertEqual(os.getenv.call_args_list, [call('ENV', ''), call('SYSTEM_EMAIL')])
+        self.assertEqual(os.getenv.call_args_list, [call('ENV', ''), call('SYSTEM_EMAIL'), call('ADMIN_URL')])
         self.assertEqual(send_email_message.call_args_list, [])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [{
             **survey_db,
@@ -148,15 +149,18 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         }])
 
     @patch('logging.Logger.error', MagicMock())
-    @patch('os.getenv', MagicMock(return_value=None))
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'SYSTEM_EMAIL': None,
+               'ADMIN_URL': 'https://www.whatever.com'
+           })))
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_survey_answered_task_with_survey_score_seven__with_academy__with_user__without_system_email__with_feedback_email(
             self):
 
-        from breathecode.feedback.signals import survey_answered
         from breathecode.notify.actions import send_email_message
-        import logging, os
+        import logging
 
         answer_kwargs = {'score': 7}
         academy_kwargs = {'feedback_email': 'someone@email.com'}
@@ -166,8 +170,6 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         process_answer_received.delay(1)
 
         self.assertEqual(logging.Logger.error.call_args_list, [call('system-email-not-found')])
-        self.assertEqual(os.getenv.call_args_list, [call('ENV', ''), call('SYSTEM_EMAIL')])
-        print(send_email_message.call_args_list)
         self.assertEqual(send_email_message.call_args_list, [
             call('negative_answer', [f'{model.academy.feedback_email}'],
                  data={
@@ -177,7 +179,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                      'SCORE': model.answer.score,
                      'COMMENTS': model.answer.comment,
                      'ACADEMY': model.answer.academy.name,
-                     'LINK': f'https://admin.breatheco.de/feedback/surveys/{model.answer.academy.slug}/1'
+                     'LINK': f'https://www.whatever.com/feedback/surveys/{model.answer.academy.slug}/1'
                  })
         ])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [{
@@ -187,13 +189,16 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         }])
 
     @patch('logging.Logger.error', MagicMock())
-    @patch('os.getenv', MagicMock(return_value='test@email.com'))
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'SYSTEM_EMAIL': 'test@email.com',
+               'ADMIN_URL': 'https://www.whatever.com'
+           })))
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_survey_answered_task_with_survey_score_seven__with_academy__with_user__with_system_email__without_feedback_email(
             self):
 
-        from breathecode.feedback.signals import survey_answered
         from breathecode.notify.actions import send_email_message
         import logging, os
 
@@ -204,8 +209,6 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         process_answer_received.delay(1)
 
         self.assertEqual(logging.Logger.error.call_args_list, [call('academy-feedback-email-not-found')])
-        self.assertEqual(os.getenv.call_args_list, [call('ENV', ''), call('SYSTEM_EMAIL')])
-        print(send_email_message.call_args_list)
         self.assertEqual(send_email_message.call_args_list, [
             call('negative_answer', ['test@email.com'],
                  data={
@@ -215,7 +218,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                      'SCORE': model.answer.score,
                      'COMMENTS': model.answer.comment,
                      'ACADEMY': model.answer.academy.name,
-                     'LINK': f'https://admin.breatheco.de/feedback/surveys/{model.answer.academy.slug}/1'
+                     'LINK': f'https://www.whatever.com/feedback/surveys/{model.answer.academy.slug}/1'
                  })
         ])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [{
@@ -225,13 +228,16 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         }])
 
     @patch('logging.Logger.error', MagicMock())
-    @patch('os.getenv', MagicMock(return_value='test@email.com'))
+    @patch('os.getenv',
+           MagicMock(side_effect=apply_get_env({
+               'SYSTEM_EMAIL': 'test@email.com',
+               'ADMIN_URL': 'https://www.whatever.com'
+           })))
     @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_survey_answered_task_with_survey_score_seven__with_academy__with_user__with_system_email__with_feedback_email(
             self):
 
-        from breathecode.feedback.signals import survey_answered
         from breathecode.notify.actions import send_email_message
         import logging, os
 
@@ -243,8 +249,6 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
         process_answer_received.delay(1)
 
         self.assertEqual(logging.Logger.error.call_args_list, [])
-        self.assertEqual(os.getenv.call_args_list, [call('ENV', ''), call('SYSTEM_EMAIL')])
-        print(send_email_message.call_args_list)
         self.assertEqual(send_email_message.call_args_list, [
             call('negative_answer', ['test@email.com', model.academy.feedback_email],
                  data={
@@ -254,7 +258,7 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
                      'SCORE': model.answer.score,
                      'COMMENTS': model.answer.comment,
                      'ACADEMY': model.answer.academy.name,
-                     'LINK': f'https://admin.breatheco.de/feedback/surveys/{model.answer.academy.slug}/1'
+                     'LINK': f'https://www.whatever.com/feedback/surveys/{model.answer.academy.slug}/1'
                  })
         ])
         self.assertEqual(self.bc.database.list_of('feedback.Survey'), [{
@@ -269,7 +273,6 @@ class SurveyAnsweredTestSuite(FeedbackTestCase):
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_survey_answered_task_with_survey_score_ten__with_academy__with_user(self):
 
-        from breathecode.feedback.signals import survey_answered
         from breathecode.notify.actions import send_email_message
         import logging
 

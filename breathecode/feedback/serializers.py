@@ -196,20 +196,23 @@ class SurveySerializer(serializers.ModelSerializer):
 
     def validate(self, data):
 
-        if not 'cohort' in data:
-            raise ValidationException('No cohort has been specified for this survey')
-
         if data['cohort'].academy.id != int(self.context['academy_id']):
             raise ValidationException(
-                f'You don\'t have rights for this cohort academy {self.context["academy_id"]}')
+                f'You don\'t have rights for this cohort academy {self.context["academy_id"]}.',
+                code=400,
+                slug='cohort-academy-needs-rights')
 
         reg = re.compile('^[0-9]{0,3}\s[0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}$')
         if 'duration' in data and data['duration'] < timezone.timedelta(hours=1):
-            raise ValidationException(f'Minimum duration for surveys is one hour')
+            raise ValidationException(f'Minimum duration for surveys is one hour.',
+                                      code=400,
+                                      slug='minimum-survey-duration-1h')
 
         cohort_teacher = CohortUser.objects.filter(cohort=data['cohort'], role='TEACHER')
         if cohort_teacher.count() == 0:
-            raise ValidationException('This cohort must have a teacher assigned to be able to survey it', 400)
+            raise ValidationException('This cohort must have a teacher assigned to be able to survey it',
+                                      code=400,
+                                      slug='cohort-needs-teacher-assigned')
 
         return data
 

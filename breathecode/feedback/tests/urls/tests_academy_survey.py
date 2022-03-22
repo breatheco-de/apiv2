@@ -427,7 +427,54 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_survey__post__without_teacher_assigned(self):
+    def test_academy_survey__post__with_cohort_needs_rights(self):
+        """Test /academy/survey post without data"""
+
+        self.headers(academy=2)
+        profile_academy_kwargs = {'academy_id': 2}
+        model = self.bc.database.create(
+            authenticate=True,
+            academy=2,
+            profile_academy=profile_academy_kwargs,
+            role='crud_survey',
+            capability='crud_survey',
+            cohort=True,
+        )
+
+        url = reverse_lazy('feedback:academy_survey')
+        response = self.client.post(url, {'cohort': 1})
+        json = response.json()
+        expected = {'detail': 'cohort-academy-needs-rights', 'status_code': 400}
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__post__with_cohort_shorter_than_hour(self):
+        """Test /academy/survey post without data"""
+
+        self.headers(academy=1)
+        model = self.bc.database.create(
+            authenticate=True,
+            academy=True,
+            profile_academy=True,
+            role='crud_survey',
+            capability='crud_survey',
+            cohort=True,
+        )
+
+        url = reverse_lazy('feedback:academy_survey')
+        response = self.client.post(url, {'cohort': 1, 'duration': '3599'})
+        json = response.json()
+        expected = {'detail': 'minimum-survey-duration-1h', 'status_code': 400}
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__post__without_cohort_teacher_assigned(self):
         """Test /academy/survey post without data"""
 
         self.headers(academy=1)
@@ -444,17 +491,14 @@ class SurveyTestSuite(FeedbackTestCase):
         url = reverse_lazy('feedback:academy_survey')
         response = self.client.post(url, {'cohort': 1})
         json = response.json()
-        expected = {
-            'detail': 'This cohort must have a teacher assigned to be able to survey it',
-            'status_code': 400
-        }
+        expected = {'detail': 'cohort-needs-teacher-assigned', 'status_code': 400}
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_academy_survey__post__with_teacher_assigned(self):
+    def test_academy_survey__post__with_cohort_teacher_assigned(self):
         """Test /academy/survey post without data"""
 
         self.headers(academy=1)
@@ -483,6 +527,44 @@ class SurveyTestSuite(FeedbackTestCase):
             'max_assistants_to_ask': 2,
             'max_teachers_to_ask': 1,
             'duration': '1 00:00:00',
+            'sent_at': None,
+            'cohort': model['cohort_user'][0].cohort.id,
+        }
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    def test_academy_survey__post__with_cohort_teacher_assigned_with_longer_than_hour(self):
+        """Test /academy/survey post without data"""
+
+        self.headers(academy=1)
+        cohort_user_kwargs = [{'role': 'STUDENT'}, {'role': 'TEACHER'}]
+        model = self.bc.database.create(
+            authenticate=True,
+            academy=True,
+            profile_academy=True,
+            role='STUDENT',
+            capability='crud_survey',
+            cohort=True,
+            cohort_user=cohort_user_kwargs,
+        )
+
+        url = reverse_lazy('feedback:academy_survey')
+        response = self.client.post(url, {'cohort': 1, 'duration': '3601'})
+        json = response.json()
+        del json['created_at']
+        del json['updated_at']
+
+        expected = {
+            'id': model['cohort'].id,
+            'status': True,
+            'public_url': 'https://nps.breatheco.de/survey/1',
+            'lang': 'en',
+            'max_assistants_to_ask': 2,
+            'max_teachers_to_ask': 1,
+            'duration': '01:00:01',
             'sent_at': None,
             'cohort': model['cohort_user'][0].cohort.id,
         }
