@@ -52,3 +52,8 @@ class Command(BaseCommand):
         print('Details: ', result)
         print('\nStdout: ')
         print(stdout)
+
+        if 'btn' in result and result['btn'] is not None:
+            self.stdout.write(
+                self.style.SUCCESS('The script has this call to action, ' + result['btn']['label'] + ': ' +
+                                   result['btn']['url']))

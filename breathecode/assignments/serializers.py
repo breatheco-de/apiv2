@@ -23,6 +23,7 @@ class TaskGETSerializer(serpy.Serializer):
     title = serpy.Field()
     task_status = serpy.Field()
     associated_slug = serpy.Field()
+    description = serpy.Field()
     revision_status = serpy.Field()
     github_url = serpy.Field()
     live_url = serpy.Field()

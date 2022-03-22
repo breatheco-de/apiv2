@@ -14,7 +14,7 @@ MAX_INT = 1000000000000
 # @ws_capable_of('read_student')
 # @ws_has_permission('delete_assetalias')
 @ws_can_auth
-class OnlineFromCohortConsumer(AsyncJsonWebsocketConsumer):
+class OnlineCohortConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         if 'user' not in self.scope:
             self.scope['user'] = AnonymousUser()

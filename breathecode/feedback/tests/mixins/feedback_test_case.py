@@ -82,7 +82,7 @@ class FeedbackTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin,
                 '\n'
                 '\n'
                 '\n'
-                'The BreatheCode Team'
+                'The 4Geeks Team'
                 '\n'
             })
         self.assertToken(token)

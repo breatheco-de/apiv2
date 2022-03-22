@@ -1,3 +1,4 @@
+import base64, frontmatter, markdown
 from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
@@ -54,14 +55,17 @@ DIFFICULTY = (
 DRAFT = 'DRAFT'
 UNNASIGNED = 'UNNASIGNED'
 OK = 'OK'
-WARNING = 'WARNING'
-ERROR = 'ERROR'
 ASSET_STATUS = (
     (UNNASIGNED, 'Unnasigned'),
     (DRAFT, 'Draft'),
     (OK, 'Ok'),
-    (WARNING, 'Warning'),
-    (ERROR, 'Error'),
+)
+
+ASSET_SYNC_STATUS = (
+    ('PENDING', 'Pending'),
+    ('ERROR', 'Error'),
+    ('OK', 'Ok'),
+    ('WARNING', 'Warning'),
 )
 
 
@@ -104,8 +108,28 @@ class Asset(models.Model):
     visibility = models.CharField(max_length=20, choices=VISIBILITY, default=PUBLIC)
     asset_type = models.CharField(max_length=20, choices=TYPE)
 
-    status = models.CharField(max_length=20, choices=ASSET_STATUS, default=DRAFT)
-    status_text = models.TextField(null=True, default=None, blank=True)
+    status = models.CharField(max_length=20,
+                              choices=ASSET_STATUS,
+                              default=DRAFT,
+                              help_text='Related to the publishing of the asset')
+    sync_status = models.CharField(max_length=20,
+                                   choices=ASSET_SYNC_STATUS,
+                                   default=None,
+                                   null=True,
+                                   blank=True,
+                                   help_text='Internal state automatically set by the system based on sync')
+    test_status = models.CharField(max_length=20,
+                                   choices=ASSET_SYNC_STATUS,
+                                   default=None,
+                                   null=True,
+                                   blank=True,
+                                   help_text='Internal state automatically set by the system based on test')
+    last_synch_at = models.DateTimeField(null=True, blank=True, default=None)
+    last_test_at = models.DateTimeField(null=True, blank=True, default=None)
+    status_text = models.TextField(null=True,
+                                   default=None,
+                                   blank=True,
+                                   help_text='Used by the sych status to provide feedback')
 
     authors_username = models.CharField(max_length=80,
                                         null=True,
@@ -144,6 +168,20 @@ class Asset(models.Model):
 
         else:
             super().save(*args, **kwargs)
+
+    def get_readme(self, parse=False):
+        readme = {
+            'raw': self.readme,
+            'decoded': base64.b64decode(self.readme.encode('utf-8')).decode('utf-8')
+        }
+        if parse:
+            _data = frontmatter.loads(readme['decoded'])
+            readme['frontmatter'] = _data.metadata
+            readme['html'] = markdown.markdown(_data.content, extensions=['markdown.extensions.fenced_code'])
+        return readme
+
+    def set_readme(self, content):
+        self.readme = str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
 
 
 class AssetAlias(models.Model):

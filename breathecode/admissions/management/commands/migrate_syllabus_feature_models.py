@@ -3,7 +3,7 @@ import os
 import json
 from django.core.management.base import BaseCommand
 from pathlib import Path
-from breathecode.admissions.models import Academy, Cohort, SpecialtyMode, Syllabus, SyllabusVersion
+from breathecode.admissions.models import Academy, Cohort, SyllabusSchedule, Syllabus, SyllabusVersion
 
 
 def db_backup_bucket():
@@ -130,7 +130,7 @@ class Command(BaseCommand):
         self.specialty_instances = specialty_instances
 
     def fix_certificates(self):
-        SpecialtyMode.objects.all().delete()
+        SyllabusSchedule.objects.all().delete()
         Syllabus.objects.all().delete()
 
         syllabus_instances = {}
@@ -166,7 +166,7 @@ class Command(BaseCommand):
         self.syllabus_instances = syllabus_instances
 
     def fix_syllabus(self):
-        SpecialtyMode.objects.all().delete()
+        SyllabusSchedule.objects.all().delete()
         SyllabusVersion.objects.all().delete()
 
         syllabus_version_instances = {}

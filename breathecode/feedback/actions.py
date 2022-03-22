@@ -1,5 +1,5 @@
 from breathecode.notify.actions import send_email_message, send_slack
-import logging, random
+import logging, random, json
 from django.utils import timezone
 from django.db.models import Avg
 from breathecode.utils import ValidationException
@@ -46,6 +46,14 @@ def send_survey_group(survey=None, cohort=None):
                 result['error'].append(
                     f"Survey NOT sent to {uc.user.email} because it's not an active or graduated student")
         survey.sent_at = timezone.now()
+        if len(result['error']) == 0:
+            survey.status = 'SENT'
+        elif len(result['success']) > 0 and len(result['error']) > 0:
+            survey.status = 'PARTIAL'
+        else:
+            survey.status = 'FATAL'
+
+        survey.status_json = json.dumps(result)
         survey.save()
 
     except Exception as e:
@@ -88,8 +96,9 @@ def send_question(user, cohort=None):
         raise ValidationException('Cohort not have one SyllabusVersion',
                                   slug='cohort-without-syllabus-version')
 
-    if not answer.cohort.specialty_mode:
-        raise ValidationException('Cohort not have one SpecialtyMode', slug='cohort-without-specialty-mode')
+    if not answer.cohort.schedule:
+        raise ValidationException('Cohort not have one SyllabusSchedule',
+                                  slug='cohort-without-specialty-mode')
 
     question_was_sent_previously = Answer.objects.filter(cohort=answer.cohort, user=user,
                                                          status='SENT').count()

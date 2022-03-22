@@ -87,8 +87,18 @@ class AcademyAliasAdmin(admin.ModelAdmin):
 
 def send_to_ac(modeladmin, request, queryset):
     entries = queryset.all()
-    for entry in entries:
-        register_new_lead(entry.toFormData())
+    total = 0
+    try:
+        for entry in entries:
+            register_new_lead(entry.toFormData())
+            total += 1
+
+        messages.add_message(request, messages.SUCCESS, f'{total} entries were successfully added')
+    except Exception as e:
+        messages.add_message(
+            request, messages.ERROR,
+            f'{total} entries were successfully added but an error was found on entry {entry.id}: \n ' +
+            str(e))
 
 
 send_to_ac.short_description = '⨁ Add lead to automations in AC'
@@ -141,7 +151,7 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app',
         'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium', 'country'
     ]
-    actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'export_as_csv']
+    actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv']
 
 
 def add_dispute(modeladmin, request, queryset):

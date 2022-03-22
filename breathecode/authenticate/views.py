@@ -1,4 +1,5 @@
 import os, requests, base64, logging
+import urllib.parse
 from datetime import timezone, timedelta
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
@@ -38,17 +39,20 @@ from .models import (
 from .actions import reset_password, resend_invite, generate_academy_token
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
+from breathecode.notify.actions import send_email_message
 from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
+from breathecode.utils.views import private_view, render_message, set_query_parameter
 from breathecode.utils.find_by_full_name import query_like_by_full_name
 from breathecode.utils.views import set_query_parameter
 from .serializers import (GetProfileAcademySmallSerializer, UserInviteWaitingListSerializer, UserSerializer,
                           AuthSerializer, UserSmallSerializer, GetProfileAcademySerializer,
                           MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
                           RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer,
-                          RoleBigSerializer)
+                          RoleBigSerializer, ProfileAcademySmallSerializer, UserTinySerializer)
 
 logger = logging.getLogger(__name__)
+STUDENT_URL = os.getenv('STUDENT_URL', '')
 
 
 class TemporalTokenView(ObtainAuthToken):
@@ -239,11 +243,13 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if request.user is None:
             raise ValidationException('User not found', 404)
 
-        invites = UserInvite.objects.filter(email=request.user.email, status='PENDING')
+        invites = UserInvite.objects.filter(email=request.user.email)
 
         status = request.GET.get('status', '')
         if status != '':
             invites = invites.filter(status__in=status.split(','))
+        else:
+            invites = invites.filter(status='PENDING')
 
         serializer = UserInviteSerializer(invites, many=True)
         return Response(serializer.data)
@@ -294,11 +300,17 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         invite = UserInvite.objects.filter(academy__id=academy_id, email=profile.email,
                                            status='PENDING').first()
 
-        if invite is None:
-            raise ValidationException('No pending invite was found', 404)
+        if invite is None and profile.status != 'INVITED':
+            raise ValidationException('No pending invite was found for this user and academy', 404)
 
-        serializer = UserInviteSerializer(invite, many=False)
-        return Response(serializer.data)
+        # IMPORTANTE: both serializers need to include "invite_url" property to have a consistent response
+        if invite is not None:
+            serializer = UserInviteSerializer(invite, many=False)
+            return Response(serializer.data)
+
+        if profile.status == 'INVITED':
+            serializer = GetProfileAcademySerializer(profile, many=False)
+            return Response(serializer.data)
 
     @capable_of('crud_invite')
     def delete(self, request, academy_id=None):
@@ -1110,12 +1122,26 @@ class PasswordResetView(APIView):
 class AcademyInviteView(APIView):
     @capable_of('invite_resend')
     def put(self, request, pa_id=None, academy_id=None):
+        from breathecode.notify.actions import send_email_message
+
         if pa_id is not None:
             profile_academy = ProfileAcademy.objects.filter(id=pa_id).first()
 
             if profile_academy is None:
                 raise ValidationException('Member not found', 400)
+
             invite = UserInvite.objects.filter(academy__id=academy_id, email=profile_academy.email).first()
+
+            if invite is None and profile_academy.status == 'INVITED':
+                send_email_message(
+                    'academy_invite', profile_academy.user.email, {
+                        'subject': f'Invitation to study at {profile_academy.academy.name}',
+                        'invites': [ProfileAcademySmallSerializer(profile_academy).data],
+                        'user': UserSmallSerializer(profile_academy.user).data,
+                        'LINK': os.getenv('API_URL') + '/v1/auth/academy/html/invite',
+                    })
+                serializer = GetProfileAcademySerializer(profile_academy)
+                return Response(serializer.data)
 
             if invite is None:
                 raise ValidationException('Invite not found', 400)
@@ -1143,8 +1169,8 @@ def render_invite(request, token, member_id=None):
 
         invite = UserInvite.objects.filter(token=token, status='PENDING').first()
         if invite is None:
-            return render(request, 'message.html',
-                          {'message': 'Invitation noot found with this token or it was already accepted'})
+            return render_message(request, 'Invitation not found with this token or it was already accepted')
+
         form = InviteForm({
             **_dict, 'first_name': invite.first_name,
             'last_name': invite.last_name,
@@ -1221,7 +1247,36 @@ def render_invite(request, token, member_id=None):
             return HttpResponseRedirect(redirect_to=callback[2:-2])
         else:
             return render(request, 'message.html',
-                          {'MESSAGE': 'Welcome to BreatheCode, you can go ahead an log in'})
+                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in'})
+
+
+@private_view()
+def render_academy_invite(request, token):
+    callback_url = request.GET.get('callback', '')
+    accepting = request.GET.get('accepting', '')
+    rejecting = request.GET.get('rejecting', '')
+    if accepting.strip() != '':
+        ProfileAcademy.objects.filter(id__in=accepting.split(','), user__id=token.user.id,
+                                      status='INVITED').update(status='ACTIVE')
+    if rejecting.strip() != '':
+        ProfileAcademy.objects.filter(id__in=rejecting.split(','), user__id=token.user.id).delete()
+
+    pending_invites = ProfileAcademy.objects.filter(user__id=token.user.id, status='INVITED')
+    if pending_invites.count() == 0:
+        return render_message(request,
+                              f'You don\'t have any more pending invites',
+                              btn_label='Continue to 4Geeks',
+                              btn_url=STUDENT_URL)
+
+    querystr = urllib.parse.urlencode({'callback': STUDENT_URL, 'token': token.key})
+    url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
+    return render(
+        request, 'academy_invite.html', {
+            'subject': f'Invitation to study at 4Geeks.com',
+            'invites': ProfileAcademySmallSerializer(pending_invites, many=True).data,
+            'LINK': url,
+            'user': UserTinySerializer(token.user, many=False).data
+        })
 
 
 def login_html_view(request):
@@ -1263,6 +1318,8 @@ def login_html_view(request):
                 raise Exception(msg, code=403)
 
             token, created = Token.get_or_create(user=user, token_type='login')
+
+            request.session['token'] = token.key
             return HttpResponseRedirect(
                 set_query_parameter(set_query_parameter(url, 'attempt', '1'), 'token', str(token)))
 

@@ -154,6 +154,7 @@ class AnswerIdTestSuite(MarketingTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_persist_single_lead_with_bad_tags(self):
+        # TODO: this test should be reimplemented without depending on the message
         """Test /answer/:id without auth"""
         model = self.generate_models(academy=True, active_campaign_academy=True)
         try:
@@ -161,7 +162,10 @@ class AnswerIdTestSuite(MarketingTestCase):
             assert False
         except Exception as e:
             message = str(e)
-            self.assertEqual(message, 'Tag applied to the contact not found or has not tag_type assigned')
+            self.assertEqual(
+                message,
+                'Some tag applied to the contact not found or have tag_type different than [STRONG, SOFT, DISCOVER, OTHER]: Check for the follow tags:  they-killed-kenny'
+            )
 
         self.assertEqual(self.count_form_entry(), 0)
 

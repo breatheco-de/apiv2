@@ -163,17 +163,19 @@ class EventSerializer(serializers.ModelSerializer):
         if 'title' in data and not data.get('slug'):
             data['slug'] = slugify(data['title']).lower()
 
-        if 'slug' in data and not data['slug'].lower().startswith('event-'):
-            data['slug'] = f'event-{data["slug"].lower()}'
-
         elif 'slug' in data:
             data['slug'] = f'{data["slug"].lower()}'
 
-        if 'slug' in data and Event.objects.filter(slug=data['slug']).exists():
-            raise ValidationException(f'Event slug already taken, try a different event title?',
+        return data
+
+    def validate_slug(self, value):
+        existing_events = Event.objects.filter(slug=value)
+        if ((self.instance and existing_events.exclude(id=self.instance.id).exists())
+                or existing_events.exists()):
+            raise ValidationException(f'Event slug {value} already taken, try a different event slug?',
                                       slug='slug-taken')
 
-        return data
+        return value
 
     def create(self, validated_data):
         # hard-code the organizer to the academy organizer

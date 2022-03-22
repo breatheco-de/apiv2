@@ -96,7 +96,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         } for model in ordened_models]
 
         self.assertEqual(json, expected)
@@ -164,7 +164,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         }]
 
         self.assertEqual(json, expected)
@@ -230,7 +230,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         }]
 
         self.assertEqual(json, expected)
@@ -283,7 +283,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         }]
 
         self.assertEqual(json, expected)
@@ -336,7 +336,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         }]
 
         self.assertEqual(json, expected)
@@ -404,7 +404,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         }]
 
         self.assertEqual(json, expected)
@@ -456,7 +456,7 @@ class CohortAllTestSuite(AdmissionsTestCase):
                 },
                 'logo_url': model.cohort.academy.logo_url,
             },
-            'specialty_mode': None,
+            'schedule': None,
         }]
 
         self.assertEqual(json, expected)

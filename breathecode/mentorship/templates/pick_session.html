@@ -74,11 +74,16 @@ a{text-decoration: none;}
 .sh-list .sh-list-item .sh-list-icon.add {
   background-color: #00aeef;
 }
+.sh-list .sh-list-item > a {
+  display: block;
+  position: relative;
+}
 .sh-list .sh-list-item .sufix {
   display: inline-block;
   font-size: 24px;
-  margin-right: 24px;
-  float: right;
+  position: absolute;
+  right: 20;
+  top: 0;
 }
 .sh-list .sh-list-item .sufix i {
   margin-top: 10px;
@@ -98,26 +103,36 @@ h4 {
 </style>
 <div class="content text-center">
     <tr>
-        <td align="left" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; padding-left: 6.25%; padding-right: 6.25%; width: 87.5%;
+        <td align="left" valign="top" style="border-collapse: collapse; border-spacing: 0; margin: 0; padding: 0; width: 87.5%;
 			padding-bottom: 5px;">
-            <div style="white-space: nowrap;">{{ message }}</div>
             <div class=card>
                 <div class="card-title">Choose session</div>
                 <div class="sh-list">
+                  {% url '/mentor/meet/' session_id as session_id %}
+                  {% if session_id is not None and session_id != "" %}
+                  <div class="sh-list-item">
+                    Session with id {{ session_id }} was not found.
+                  </div>
+                  {% endif %}
                   {% if sessions|length == 0 %}
                   <div class="sh-list-item">
-                    {% url '/mentor/meet/' session_id as session_id %}
-                    {% if session_id is not None %}
-                    Session with id session_id was not found, try looking for <a href="./{{ mentor.slug }}?token={{ token }}">all the pending or started sessions</a>.
-                    {% else %}
-                    No pending or stared sessions were found
-                    {% endif %}
+                    No pending or stared sessions were found.
+                  </div>
+                  {% endif %}
+                  {% if sessions|length > 0 %}
+                  <div class="sh-list-item">
+                    A previous mentoring session was found, please join and/or close it before you can create a new one:
                   </div>
                   {% endif %}
                   {% for s in sessions %}
                   <div class="sh-list-item">
-                    <a href="{{ baseUrl }}&session={{s.id}}">
+                    <a href="{{ baseUrl }}&session={{s.id}}" style="display: block;">
+                        {% if s.mentee is not None %}
                         <div class="sh-list-icon" style="background-image: url('{{ s.mentee.user.profile.avatar_url }}')">
+                        {% else %}
+                        <div class="sh-list-icon">
+                        {% endif %}
+
                           {% if not s.mentee.user.profile.avatar_url or s.mentee.user.profile.avatar_url != '' %}
                           <i class="fas fa-user-friends"></i>
                           {% endif %}
@@ -127,24 +142,14 @@ h4 {
                           {% if s.mentee %}
                             <div class="sh-list-item-title">{{ s.mentee.first_name }} {{ s.mentee.last_name }} joined {{ s.started_at|timesince }} ago</div>
                           {% else %}
-                            <div class="sh-list-item-title">No student has joined</div>
+                            <div class="sh-list-item-title">New empty session</div>
                           {% endif %}
                           <div class="sh-list-item-sub-title">{{ s.mentor.service.name }}</div>
                         </div>
-                        <div class=sufix><i class="fas fa-angle-right"></i></div>
+                        <div class="sufix"><i class="fas fa-angle-right"></i></div>
                     </a>
                   </div>
                   {% endfor %}
-                  <div class="sh-list-item">
-                    <a href="{{ baseUrl }}&session=new">
-                    <div class="sh-list-icon add"><i class="fas fa-plus"></i></div>
-                    <div class="whitespace"></div>
-                    <div class="sh-list-content">
-                      <div class="sh-list-item-title">Create new session</div>
-                      <div class="sh-list-item-sub-title">Make a new session from scratch</div>
-                    </div>
-                    </a>
-                  </div>
               </div>
               </div>
 

@@ -5,10 +5,10 @@ from ..validation_exception import ValidationException
 from ..exceptions import ProgramingError
 from breathecode.authenticate.models import Permission, User
 
-__all__ = ['has_permission']
+__all__ = ['has_permission', 'validate_permission']
 
 
-def has_perm(user: User, permission: str) -> bool:
+def validate_permission(user: User, permission: str) -> bool:
     found = Permission.objects.filter(codename=permission).first()
     if not found:
         return False
@@ -36,7 +36,7 @@ def has_permission(permission: str):
             except IndexError:
                 raise ProgramingError('Missing request information, use this decorator with DRF View')
 
-            if has_perm(request.user, permission):
+            if validate_permission(request.user, permission):
                 return function(*args, **kwargs)
 
             elif isinstance(request.user, AnonymousUser):

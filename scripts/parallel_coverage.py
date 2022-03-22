@@ -5,7 +5,6 @@ import sys
 import shutil
 import webbrowser
 from pathlib import Path
-from .utils.environment import test_environment, reset_environment
 
 
 def python_module_to_dir(module: str) -> str:
@@ -34,8 +33,6 @@ if __name__ == '__main__':
 
     dir = python_module_to_dir(module)
 
-    reset_environment()
-    test_environment()
     htmlcov_path = os.path.join(os.getcwd(), 'htmlcov')
 
     if os.path.exists(htmlcov_path):

@@ -1,7 +1,7 @@
 import os, requests, sys, pytz
 from datetime import datetime
 from django.core.management.base import BaseCommand, CommandError
-from ...models import Academy, SpecialtyMode, Cohort, User, CohortUser, Syllabus
+from ...models import Academy, SyllabusSchedule, Cohort, User, CohortUser, Syllabus
 from breathecode.authenticate.models import Profile
 
 HOST_ASSETS = 'https://assets.breatheco.de/apis'
@@ -61,7 +61,7 @@ class Command(BaseCommand):
 
         for syl in syllabus:
             certificate_slug, version = syl['slug'].split('.')
-            cert = SpecialtyMode.objects.filter(slug=certificate_slug).first()
+            cert = SyllabusSchedule.objects.filter(slug=certificate_slug).first()
             if cert is None:
                 self.stdout.write(
                     self.style.NOTICE(
@@ -97,9 +97,9 @@ class Command(BaseCommand):
         profiles = response.json()
 
         for pro in profiles['data']:
-            cert = SpecialtyMode.objects.filter(slug=pro['slug']).first()
+            cert = SyllabusSchedule.objects.filter(slug=pro['slug']).first()
             if cert is None:
-                cert = SpecialtyMode(
+                cert = SyllabusSchedule(
                     slug=pro['slug'],
                     name=pro['name'],
                     description=pro['description'],
@@ -120,7 +120,7 @@ class Command(BaseCommand):
 
         for syl in syllabus:
             certificate_slug, version = syl['slug'].split('.')
-            cert = SpecialtyMode.objects.filter(slug=certificate_slug).first()
+            cert = SyllabusSchedule.objects.filter(slug=certificate_slug).first()
             if cert is None:
                 self.stdout.write(
                     self.style.NOTICE(

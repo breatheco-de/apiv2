@@ -89,6 +89,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -121,6 +122,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -167,6 +169,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -195,6 +198,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -223,6 +227,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -251,6 +256,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -297,6 +303,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -325,6 +332,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -354,6 +362,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user[task.id - 1].first_name,
                 'id': model.user[task.id - 1].id,
@@ -414,6 +423,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -442,6 +452,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -470,6 +481,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -498,6 +510,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -527,6 +540,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -556,6 +570,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -616,6 +631,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -644,6 +660,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -672,6 +689,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -700,6 +718,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -734,6 +753,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user[task.id - 1].first_name,
                 'id': model.user[task.id - 1].id,
@@ -768,6 +788,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user[task.id - 1].first_name,
                 'id': model.user[task.id - 1].id,
@@ -815,6 +836,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -844,6 +866,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -887,6 +910,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user[task.id - 1].first_name,
                 'id': model.user[task.id - 1].id,
@@ -945,6 +969,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -1000,6 +1025,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -1048,6 +1074,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -1078,6 +1105,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -1107,6 +1135,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -1155,6 +1184,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -1184,6 +1214,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -1213,6 +1244,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -1261,6 +1293,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -1290,6 +1323,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,
@@ -1319,6 +1353,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': task.task_status,
             'task_type': task.task_type,
             'title': task.title,
+            'description': task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,

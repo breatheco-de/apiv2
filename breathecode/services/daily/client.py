@@ -63,7 +63,7 @@ class DailyClient:
         else:
             payload = {'properties': {'exp': f'{str(exp_in_epoch)}'}}
 
-        if name is not '':
+        if name != '':
             payload['properties']['name'] = name
 
         data = self.request('POST', f'/v1/rooms', data=payload)
@@ -78,4 +78,15 @@ class DailyClient:
             payload = {'properties': {'exp': f'{str(exp_in_epoch)}'}}
 
         data = self.request('POST', f'/v1/rooms/' + name, data=payload)
+        return data
+
+    def get_room(self, name=''):
+        epoc_now = time.mktime(timezone.now().timetuple())
+        data = self.request('GET', f'/v1/rooms/' + name)
+
+        if epoc_now > data['config']['exp']:
+            data['expired'] = True
+        else:
+            data['expired'] = False
+
         return data
