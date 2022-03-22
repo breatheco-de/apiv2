@@ -22,7 +22,7 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
                                                                   mentee__id=mentee.id,
                                                                   status__in=['PENDING', 'STARTED'])
         if unfinished_with_mentee.count() > 0:
-            pending_sessions += pending_sessions.values_list('pk', flat=True)
+            pending_sessions += unfinished_with_mentee.values_list('pk', flat=True)
 
     # if its a mentor, I will force him to close pending sessions
     if mentor.user.id == token.user.id:
@@ -32,6 +32,25 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
         # if it has unishined meetings with already started
         if unfinished_sessions.count() > 0:
             pending_sessions += unfinished_sessions.values_list('pk', flat=True)
+
+    # if its a mentee, and there are pending sessions without mentee assigned
+    elif mentee is not None and mentee.id == token.user.id:
+        unfinished_sessions = MentorshipSession.objects.filter(mentor__id=mentor.id,
+                                                               mentee__isnull=True,
+                                                               status__in=['PENDING'
+                                                                           ]).order_by('-mentor_joined_at')
+
+        if unfinished_sessions.count() > 0:
+            # grab the last one the mentor joined
+            last_one = unfinished_sessions.first()
+            pending_sessions += [last_one.id]
+            # close the rest
+            close_mentoring_session(
+                unfinished_sessions.exclude(id=last_one.id), {
+                    'summary':
+                    'Automatically closed, not enough information on the meeting the mentor forgot to specify the mentee and the mentee never joined',
+                    'status': 'FAILED'
+                })
 
     # return all the collected pending sessions
     if len(pending_sessions) > 0:
@@ -55,20 +74,6 @@ def get_pending_sessions_or_create(token, mentor, mentee=None):
     session.name = room['name']
     session.mentee = mentee
     session.save()
-
-    # just in case, if there is any other session with the same mentee and mentor it will be closed
-    if session.mentee is not None:
-        open_sessions = MentorshipSession.objects.filter(mentor=session.mentor,
-                                                         mentee=session.mentee,
-                                                         status__in=['PENDING',
-                                                                     'STARTED']).exclude(id=session.id)
-        for s in open_sessions:
-            close_mentoring_session(
-                s, {
-                    'summary':
-                    'This session was automatically closed because a new session with the same mentor and mentee is being created, it will be marked as failed',
-                    'status': 'FAILED'
-                })
 
     return MentorshipSession.objects.filter(id=session.id)
 

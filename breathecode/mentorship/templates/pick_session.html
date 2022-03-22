@@ -140,7 +140,14 @@ h4 {
                         <div class="whitespace"></div>
                         <div class="sh-list-content">
                           {% if s.mentee %}
-                            <div class="sh-list-item-title">{{ s.mentee.first_name }} {{ s.mentee.last_name }} joined {{ s.started_at|timesince }} ago</div>
+                            <div class="sh-list-item-title">
+                              {{ s.mentee.first_name }} {{ s.mentee.last_name }}
+                              {% if s.started_at %}
+                               joined {{ s.started_at|timesince }} ago
+                               {% else %}
+                               has not joined yet
+                               {% endif %}
+                            </div>
                           {% else %}
                             <div class="sh-list-item-title">New empty session</div>
                           {% endif %}
