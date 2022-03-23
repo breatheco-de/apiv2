@@ -79,6 +79,9 @@ def create_asset(data, asset_type, force=False):
     if 'video-solutions' in data:
         a.with_solutions = data['video-solutions']
 
+    if 'config' in data:
+        a.config = data['config']
+
     if 'authors_username' in data:
         authors = get_user_from_github_username(data['authors_username'])
         if len(authors) > 0:

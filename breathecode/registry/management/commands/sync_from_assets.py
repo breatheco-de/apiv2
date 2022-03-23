@@ -106,7 +106,7 @@ class Command(BaseCommand):
                 'description': quiz['info']['main'],
                 'lang': quiz['info']['lang'],
                 'translations': quiz['info']['translations'],
-                'config': quiz,
+                'config': quiz['questions'],
                 'external': True,
                 'interactive': True,
                 'with_solutions': True,
