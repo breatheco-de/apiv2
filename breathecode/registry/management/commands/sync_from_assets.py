@@ -47,6 +47,16 @@ class Command(BaseCommand):
             if 'grading' in data:
                 data['graded'] = data['grading']
 
+            if 'tags' not in data:
+                data['tags'] = []
+
+            if 'language' in data:
+                data['tags'].append(data.pop('language'))
+            elif 'lang' in data:
+                data['tags'].append(data.pop('language'))
+
+            data['language'] = 'en'
+
             create_asset(data, asset_type='EXERCISE', force=(options['override'] == True))
 
     def projects(self, options):
@@ -64,6 +74,8 @@ class Command(BaseCommand):
                         data['technologies'].append(lang)
                 elif lang:
                     data['technologies'] = [lang]
+
+            data['language'] = 'en'
 
             create_asset(data, asset_type='PROJECT')
 

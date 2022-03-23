@@ -46,16 +46,10 @@ def create_asset(data, asset_type, force=False):
     if 'intro' in data:
         a.intro_video_url = data['intro']
 
-    if a.asset_type != 'EXERCISE':
-        if 'language' in data:
-            a.lang = data['language']
-        elif 'lang' in data:
-            a.lang = data['lang']
-    else:
-        if 'language' in data:
-            data['tags'].append(data['language'])
-        elif 'lang' in data:
-            data['tags'].append(data['lang'])
+    if 'language' in data:
+        a.lang = data['language']
+    elif 'lang' in data:
+        a.lang = data['lang']
 
     if 'technologies' in data:
         data['tags'] += data['technologies']
