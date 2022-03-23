@@ -51,6 +51,9 @@ def create_asset(data, asset_type, force=False):
     elif 'lang' in data:
         a.lang = data['lang']
 
+    if a.lang == 'en':
+        a.lang = 'us'  # english is really USA
+
     if 'technologies' in data:
         data['tags'] += data['technologies']
 

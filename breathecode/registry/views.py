@@ -169,6 +169,8 @@ class AssetView(APIView):
 
         if 'language' in self.request.GET:
             param = self.request.GET.get('language')
+            if param == 'en':
+                param = 'us'
             lookup['lang'] = param
 
         if 'visibility' in self.request.GET:
