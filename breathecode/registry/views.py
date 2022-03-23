@@ -3,14 +3,14 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
 from django.http import HttpResponse
-from .models import Asset, AssetAlias, AssetTechnology, AssetTranslation
+from .models import Asset, AssetAlias, AssetTechnology
 from .actions import test_syllabus, test_asset
 from breathecode.notify.actions import send_email_message
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
-                          PostAssetSerializer, AssetTranslationSerializer)
+                          PostAssetSerializer)
 from breathecode.utils import ValidationException, capable_of
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -60,10 +60,10 @@ def get_technologies(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_translations(request):
-    langs = AssetTranslation.objects.all()
+    langs = Asset.objects.all().values_list('lang', flat=True)
+    langs = set(langs)
 
-    serializer = AssetTranslationSerializer(langs, many=True)
-    return Response(serializer.data)
+    return Response([{'slug': l, 'title': l} for l in langs])
 
 
 @api_view(['POST'])

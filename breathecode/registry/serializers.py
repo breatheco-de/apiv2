@@ -35,8 +35,10 @@ class AssetSerializer(serpy.Serializer):
     technologies = serpy.MethodField()
 
     def get_translations(self, obj):
-        _s = map(lambda t: t.slug, obj.translations.all())
-        return _s
+        result = {}
+        for t in obj.other_translations.all():
+            result[t.lang] = t.slug
+        return result
 
     def get_technologies(self, obj):
         _s = map(lambda t: t.slug, obj.technologies.all())
@@ -66,11 +68,6 @@ class AssetBigSerializer(AssetMidSerializer):
 
 
 class AssetTechnologySerializer(serpy.Serializer):
-    slug = serpy.Field()
-    title = serpy.Field()
-
-
-class AssetTranslationSerializer(serpy.Serializer):
     slug = serpy.Field()
     title = serpy.Field()
 

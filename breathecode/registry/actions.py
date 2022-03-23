@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 from slugify import slugify
 from breathecode.utils import APIException
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetTranslation, AssetTechnology, AssetAlias
+from .models import Asset, AssetTechnology, AssetAlias
 from github import Github
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ def create_asset(data, asset_type, force=False):
 
     aa = AssetAlias.objects.filter(slug=slug).first()
     if aa is not None and not force:
-        raise APIException('Asset with this alias ' + slug + ' alrady exists')
+        raise APIException(f'Asset {asset_type} with this alias ' + slug + ' alrady exists')
     elif aa is not None and asset_type != aa.asset.asset_type:
         raise APIException(
             f'Cannot override asset {slug} because it already exists as a different type {aa.asset.asset_type}'
@@ -28,11 +28,14 @@ def create_asset(data, asset_type, force=False):
     if a is None:
         a = Asset(slug=slug, asset_type=asset_type)
         created = True
-        logger.debug(f'Adding asset project {a.slug}')
+        logger.debug(f'Adding asset {asset_type} {a.slug}')
     else:
-        logger.debug(f'Updating asset project {slug}')
+        logger.debug(f'Updating asset {asset_type} {slug}')
 
     a.title = data['title']
+
+    if 'tags' not in data:
+        data['tags'] = []
 
     if 'repository' in data:
         a.url = data['repository']
@@ -43,10 +46,19 @@ def create_asset(data, asset_type, force=False):
     if 'intro' in data:
         a.intro_video_url = data['intro']
 
-    if 'language' in data:
-        a.lang = data['language']
-    elif 'lang' in data:
-        a.lang = data['lang']
+    if a.asset_type != 'EXERCISE':
+        if 'language' in data:
+            a.lang = data['language']
+        elif 'lang' in data:
+            a.lang = data['lang']
+    else:
+        if 'language' in data:
+            data['tags'].append(data['language'])
+        elif 'lang' in data:
+            data['tags'].append(data['lang'])
+
+    if 'technologies' in data:
+        data['tags'] += data['technologies']
 
     if 'description' in data:
         a.description = data['description']
@@ -82,12 +94,14 @@ def create_asset(data, asset_type, force=False):
         for lan in data['translations']:
             if lan == 'en':
                 lan = 'us'  # english is really USA
-            l = AssetTranslation.objects.filter(slug=lan).first()
-            if l is not None:
-                if a.translations.filter(slug=lan).first() is None:
-                    a.translations.add(l)
-            else:
-                logger.debug(f'Ignoring language {lan} because its not added as a possible AssetTranslation')
+
+            is_translation = len(a.slug.split('.')) > 1
+            original = Asset.objects.filter(slug=a.slug.split('.')[0]).first()
+            if original is not None:
+                if original.other_translations.filter(slug=lan).first() is None:
+                    a.other_translations.add(original)
+                else:
+                    logger.debug(f'Ignoring language {lan} because the lesson already have a translation')
 
     if 'tags' in data:
         for tech in data['tags']:
@@ -240,16 +254,6 @@ def sync_learnpack_asset(github, asset):
             asset.lang = config['language']
         elif 'syntax' in config:
             asset.lang = config['syntax']
-
-        if 'translations' in config:
-            for lang in config['translations']:
-                if lang == 'en':
-                    lang = 'us'
-
-                language = AssetTranslation.objects.filter(slug__iexact=lang).first()
-                if language is None:
-                    raise Exception(f"Language '{lang}' not found")
-                asset.translations.add(language)
 
         if 'technologies' in config:
             for tech_slug in config['technologies']:

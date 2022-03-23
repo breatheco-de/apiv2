@@ -4,15 +4,7 @@ from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 
-__all__ = ['AssetTranslation', 'AssetTechnology', 'Asset', 'AssetAlias']
-
-
-class AssetTranslation(models.Model):
-    slug = models.SlugField(max_length=2, primary_key=True)
-    title = models.CharField(max_length=200, blank=True)
-
-    def __str__(self):
-        return self.title
+__all__ = ['AssetTechnology', 'Asset', 'AssetAlias']
 
 
 class AssetTechnology(models.Model):
@@ -72,9 +64,9 @@ ASSET_SYNC_STATUS = (
 class Asset(models.Model):
     slug = models.SlugField(max_length=200, primary_key=True)
     title = models.CharField(max_length=200, blank=True)
-    lang = models.CharField(max_length=50, blank=True, null=True, default=None)
+    lang = models.CharField(max_length=2, blank=True, null=True, default=None, help_text='E.g: en, es, it')
 
-    translations = models.ManyToManyField(AssetTranslation)
+    other_translations = models.ManyToManyField('self')
     technologies = models.ManyToManyField(AssetTechnology)
 
     url = models.URLField()

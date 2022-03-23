@@ -34,15 +34,14 @@ class Command(BaseCommand):
         func(options)
 
     def _exists(self, slug):
-        aa = AssetAlias.objects.filter(Q(slug=slug) | Q(asset__slug=slug)).first()
-        return aa is not None
+        return AssetAlias.objects.filter(Q(slug=slug) | Q(asset__slug=slug)).first()
 
     def exercises(self, options):
         response = requests.get(f'{HOST_ASSETS}/registry/all')
         items = response.json()
         for slug in items:
             if self._exists(slug) and options['override'] == False:
-                print('Skipping: Asset with this alias ' + slug + ' already exists, use the')
+                print('Skipping: Asset exercise with this alias ' + slug + ' already exists, use the')
                 continue
             data = items[slug]
             if 'grading' in data:
@@ -55,7 +54,7 @@ class Command(BaseCommand):
         items = response.json()
         for slug in items:
             if self._exists(slug):
-                print('Skipping: Asset with this alias ' + slug + ' already exists')
+                print('Skipping: Asset project with this alias ' + slug + ' already exists')
                 continue
             data = items[slug]
             create_asset(data, asset_type='PROJECT')
@@ -65,15 +64,28 @@ class Command(BaseCommand):
         items = response.json()
         for quiz in items:
             slug = quiz['info']['slug']
-            if self._exists(slug):
-                print('Skipping: Asset with this alias ' + slug + ' already exists')
-                continue
+            lang = quiz['info']['lang']
+            a = self._exists(slug)
+            if a is not None:
+                if lang not in ['en', 'us'] and a.slug == slug:
+                    print(f'Fixing slug to {slug}-{lang} because {a.slug} == {slug}')
+                    quiz['info']['translations'] = [lang, a.asset.lang]
+                    slug += '-' + lang
+                    quiz['info']['slug'] = slug
+
+                if self._exists(slug) is not None:
+                    print('Skipping: Asset quiz with this alias ' + slug + ' in ' + lang + ' already exists')
+                    continue
+            else:
+                quiz['info']['translations'] = [lang]
+
             data = {
                 'slug': quiz['info']['slug'],
                 'title': quiz['info']['name'],
                 'status': quiz['info']['status'].upper() if 'status' in quiz['info'] else 'DRAFT',
                 'description': quiz['info']['main'],
                 'lang': quiz['info']['lang'],
+                'translations': quiz['info']['translations'],
                 'config': quiz,
                 'external': True,
                 'interactive': True,

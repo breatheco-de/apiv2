@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
 from breathecode.utils.admin import change_field
-from .models import Asset, AssetTranslation, AssetTechnology, AssetAlias
+from .models import Asset, AssetTechnology, AssetAlias
 from .tasks import async_sync_with_github, async_test_asset
 from .actions import sync_with_github, get_user_from_github_username, test_asset
 
@@ -124,13 +124,6 @@ class AssetAdmin(admin.ModelAdmin):
 
     def techs(self, obj):
         return ', '.join([t.slug for t in obj.technologies.all()])
-
-
-# Register your models here.
-@admin.register(AssetTranslation)
-class AssetTranslationsAdmin(admin.ModelAdmin):
-    search_fields = ['title', 'slug']
-    list_display = ('slug', 'title')
 
 
 def merge_technologies(modeladmin, request, queryset):
