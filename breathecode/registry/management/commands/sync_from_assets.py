@@ -57,6 +57,14 @@ class Command(BaseCommand):
                 print('Skipping: Asset project with this alias ' + slug + ' already exists')
                 continue
             data = items[slug]
+            if 'language' in data:
+                lang = data.pop('language', False)
+                if 'technologies' in data:
+                    if lang not in data['technologies'] and lang:
+                        data['technologies'].append(lang)
+                elif lang:
+                    data['technologies'] = [lang]
+
             create_asset(data, asset_type='PROJECT')
 
     def quiz(self, options):
