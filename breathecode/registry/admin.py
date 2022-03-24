@@ -2,6 +2,7 @@ import logging
 from django.contrib import admin, messages
 from django.utils.html import format_html
 from django.contrib.auth.models import User
+from django import forms
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
 from breathecode.utils.admin import change_field
@@ -100,9 +101,21 @@ class AssessmentFilter(admin.SimpleListFilter):
             return queryset.filter(assessment__isnull=True)
 
 
+class AssetForm(forms.ModelForm):
+    class Meta:
+        model = Asset
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super(AssetForm, self).__init__(*args, **kwargs)
+        self.fields['other_translations'].queryset = Asset.objects.filter(
+            asset_type=self.instance.asset_type)  # or something else
+
+
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
+    form = AssetForm
     search_fields = ['title', 'slug', 'author__email', 'url']
     list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'techs', 'url_path')
     list_filter = ['asset_type', 'status', 'lang', AssessmentFilter]
