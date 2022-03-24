@@ -78,12 +78,34 @@ def test_asset_integrity(modeladmin, request, queryset):
         async_test_asset.delay(a.slug)
 
 
+class AssessmentFilter(admin.SimpleListFilter):
+
+    title = 'Associated Assessment'
+
+    parameter_name = 'has_assessment'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('yes', 'Has assessment'),
+            ('no', 'No assessment'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'yes':
+            return queryset.filter(assessment__isnull=False)
+
+        if self.value() == 'no':
+            return queryset.filter(assessment__isnull=True)
+
+
 # Register your models here.
 @admin.register(Asset)
 class AssetAdmin(admin.ModelAdmin):
     search_fields = ['title', 'slug', 'author__email', 'url']
     list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'techs', 'url_path')
-    list_filter = ['asset_type', 'status', 'lang']
+    list_filter = ['asset_type', 'status', 'lang', AssessmentFilter]
     raw_id_fields = ['author', 'owner']
     actions = [
         test_asset_integrity,

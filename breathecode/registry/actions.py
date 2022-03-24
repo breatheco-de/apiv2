@@ -5,6 +5,8 @@ from django.utils import timezone
 from urllib.parse import urlparse
 from slugify import slugify
 from breathecode.utils import APIException
+from breathecode.assessment.models import Assessment
+from breathecode.assessment.actions import create_from_json
 from breathecode.authenticate.models import CredentialsGithub
 from .models import Asset, AssetTechnology, AssetAlias
 from github import Github
@@ -53,6 +55,7 @@ def create_asset(data, asset_type, force=False):
 
     if a.lang == 'en':
         a.lang = 'us'  # english is really USA
+    logger.debug(f'in language: {a.lang}')
 
     if 'technologies' in data:
         data['tags'] += data['technologies']
@@ -86,7 +89,19 @@ def create_asset(data, asset_type, force=False):
         authors = get_user_from_github_username(data['authors_username'])
         if len(authors) > 0:
             a.author = authors.pop()
-            a.save()
+
+    _assessment = None
+    if a.asset_type == 'QUIZ':
+        _assessment = Assessment.objects.filter(slug=a.slug).first()
+        if _assessment is None:
+            _assessment = create_from_json(a.config)
+
+        if _assessment.lang != a.lang:
+            raise ValueError(
+                f'Assessment found and quiz "{a.slug}" language don\'t share the same language {_assessment.lang} vs {a.lang}'
+            )
+        a.assessment = _assessment
+        print(f'Assigned assessment {_assessment.slug} to asset {a.slug}')
 
     a.save()
 
@@ -97,7 +112,11 @@ def create_asset(data, asset_type, force=False):
 
             is_translation = len(a.slug.split('.')) > 1
             original = Asset.objects.filter(slug=a.slug.split('.')[0]).first()
-            if original is not None:
+
+            # there is an original asset, it means "a" is a translation
+            if original is not None and original.slug != a.slug:
+                _assessment.original = original.assessment
+                _assessment.save()
                 if original.other_translations.filter(slug=lan).first() is None:
                     a.other_translations.add(original)
                 else:

@@ -3,6 +3,8 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from ...actions import create_asset
 from ...models import AssetAlias
+from slugify import slugify
+from breathecode.assessment.models import Assessment
 
 logger = logging.getLogger(__name__)
 
@@ -82,20 +84,30 @@ class Command(BaseCommand):
     def quiz(self, options):
         response = requests.get(f'{HOST_ASSETS}/quiz/all')
         items = response.json()
+        items.sort(key=lambda x: x['info']['lang'] == 'es')
         for quiz in items:
+            quiz['info']['slug'] = slugify(quiz['info']['slug']).lower()
             slug = quiz['info']['slug']
+
+            if slug == 'new':
+                print(f'Skipping quiz slug {slug}')
+                continue
+
             lang = quiz['info']['lang']
             a = self._exists(slug)
             if a is not None:
                 if lang not in ['en', 'us'] and a.slug == slug:
-                    print(f'Fixing slug to {slug}-{lang} because {a.slug} == {slug}')
+                    print(f'Fixing slug to {slug}.{lang} because {a.slug} == {slug}')
                     quiz['info']['translations'] = [lang, a.asset.lang]
-                    slug += '-' + lang
+                    slug += '.' + lang
                     quiz['info']['slug'] = slug
 
                 if self._exists(slug) is not None:
                     print('Skipping: Asset quiz with this alias ' + slug + ' in ' + lang + ' already exists')
                     continue
+                else:
+                    print('Added lang to quiz slug: ' + slug)
+
             else:
                 quiz['info']['translations'] = [lang]
 
@@ -106,7 +118,7 @@ class Command(BaseCommand):
                 'description': quiz['info']['main'],
                 'lang': quiz['info']['lang'],
                 'translations': quiz['info']['translations'],
-                'config': quiz['questions'],
+                'config': quiz,
                 'external': True,
                 'interactive': True,
                 'with_solutions': True,

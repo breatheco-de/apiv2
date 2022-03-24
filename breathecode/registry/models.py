@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
+from breathecode.assessment.models import Assessment
 
 __all__ = ['AssetTechnology', 'Asset', 'AssetAlias']
 
@@ -128,6 +129,12 @@ class Asset(models.Model):
                                         default=None,
                                         blank=True,
                                         help_text='Github usernames separated by comma')
+    assessment = models.ForeignKey(Assessment,
+                                   on_delete=models.SET_NULL,
+                                   default=None,
+                                   blank=True,
+                                   null=True,
+                                   help_text='Connection with the assessment breathecode app')
     author = models.ForeignKey(User,
                                on_delete=models.SET_NULL,
                                default=None,
