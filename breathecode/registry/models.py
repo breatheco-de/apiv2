@@ -69,7 +69,7 @@ class Asset(models.Model):
     title = models.CharField(max_length=200, blank=True)
     lang = models.CharField(max_length=2, blank=True, null=True, default=None, help_text='E.g: en, es, it')
 
-    other_translations = models.ManyToManyField('self')
+    other_translations = models.ManyToManyField('self', blank=True)
     technologies = models.ManyToManyField(AssetTechnology)
 
     url = models.URLField()
