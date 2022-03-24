@@ -115,8 +115,11 @@ def create_asset(data, asset_type, force=False):
 
             # there is an original asset, it means "a" is a translation
             if original is not None and original.slug != a.slug:
-                _assessment.original = original.assessment
-                _assessment.save()
+
+                if _assessment is not None:
+                    _assessment.original = original.assessment
+                    _assessment.save()
+
                 if original.other_translations.filter(slug=lan).first() is None:
                     a.other_translations.add(original)
                 else:
