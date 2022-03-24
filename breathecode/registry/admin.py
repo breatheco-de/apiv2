@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
 from breathecode.utils.admin import change_field
-from .models import Asset, AssetTechnology, AssetAlias
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
 from .tasks import async_sync_with_github, async_test_asset
 from .actions import sync_with_github, get_user_from_github_username, test_asset
 
@@ -170,9 +170,54 @@ class AssetTechnologyAdmin(admin.ModelAdmin):
     actions = (merge_technologies, )
 
 
-# Register your models here.
 @admin.register(AssetAlias)
 class AssetAliasAdmin(admin.ModelAdmin):
     search_fields = ['slug']
     list_display = ('slug', 'asset', 'created_at')
     raw_id_fields = ['asset']
+
+
+def make_alias(modeladmin, request, queryset):
+    errors = queryset.all()
+    for e in errors:
+        if e.status_code != 404:
+            messages.error(
+                request,
+                f'Error: You can only make alias for 404 errors and {e.slug} error was {e.status_code}')
+
+        if e.asset is None:
+            messages.error(
+                request,
+                f'Error: Cannot make alias to fix error {e.slug} ({e.id}), please assign asset before trying to fix it'
+            )
+
+        else:
+            alias = AssetAlias.objects.filter(slug=e.slug).first()
+            if alias is None:
+                alias = AssetAlias(slug=e.slug, asset=e.asset)
+                alias.save()
+                e.status = 'FIXED'
+                e.save()
+                continue
+
+            if alias.asset.id != e.asset.id:
+                messages.error(request,
+                               f'Slug {slug} already exists for a different asset {alias.asset.asset_type}')
+
+
+@admin.register(AssetErrorLog)
+class AssetErrorLogAdmin(admin.ModelAdmin):
+    search_fields = ['slug', 'user__email', 'user_first_name', 'user_last_name']
+    list_display = ('slug', 'current_status', 'user', 'created_at', 'asset')
+    raw_id_fields = ['user', 'asset']
+    actions = [make_alias]
+
+    def current_status(self, obj):
+        colors = {
+            'FIXED': 'bg-success',
+            'ERROR': 'bg-error',
+            'IGNORED': '',
+            None: 'bg-warning',
+        }
+        return format_html(
+            f'<span class="badge d-block {colors[obj.status]}">{obj.status} {obj.status_code}</span>')

@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
+from django.db.models import Q
 from breathecode.assessment.models import Assessment
 
 __all__ = ['AssetTechnology', 'Asset', 'AssetAlias']
@@ -153,7 +154,7 @@ class Asset(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'{self.title} ({self.slug})'
+        return f'{self.slug}'
 
     def save(self, *args, **kwargs):
 
@@ -169,6 +170,14 @@ class Asset(models.Model):
             super().save(*args, **kwargs)
 
     def get_readme(self, parse=False):
+        if self.readme is None:
+            return {
+                'raw': '',
+                'decoded': f'This asset {self.slug} has not readme file',
+                'frontmatter': {},
+                'html': f'This {self.asset_type} ({self.slug}) has not readme file'
+            }
+
         readme = {
             'raw': self.readme,
             'decoded': base64.b64decode(self.readme.encode('utf-8')).decode('utf-8')
@@ -182,6 +191,20 @@ class Asset(models.Model):
     def set_readme(self, content):
         self.readme = str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
 
+    @staticmethod
+    def get_by_slug(asset_slug, request=None):
+        user = None
+        if request is not None:
+            user = request.user
+
+        alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
+        if alias is None:
+            error = AssetErrorLog(status_code=404, slug=asset_slug, user=user)
+            error.save()
+            return None
+        else:
+            return alias.asset
+
 
 class AssetAlias(models.Model):
     slug = models.SlugField(max_length=200, primary_key=True)
@@ -191,3 +214,42 @@ class AssetAlias(models.Model):
 
     def __str__(self):
         return self.slug
+
+
+ERROR = 'ERROR'
+FIXED = 'FIXED'
+IGNORED = 'IGNORED'
+ERROR_STATUS = (
+    (ERROR, 'Error'),
+    (FIXED, 'Fixed'),
+    (IGNORED, 'Ignored'),
+)
+
+
+class AssetErrorLog(models.Model):
+    slug = models.SlugField(max_length=200)
+    status = models.CharField(max_length=20, choices=ERROR_STATUS, default=ERROR)
+    status_code = models.IntegerField()
+    status_text = models.TextField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text='Status details, it may be set automatically if enough error information')
+    user = models.ForeignKey(User,
+                             on_delete=models.SET_NULL,
+                             default=None,
+                             null=True,
+                             help_text='The user how asked for the asset and got the error')
+    asset = models.ForeignKey(
+        Asset,
+        on_delete=models.SET_NULL,
+        default=None,
+        null=True,
+        help_text=
+        'Assign an asset to this error and you will be able to create an alias for it from the django admin bulk actions "create alias"'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+
+    def __str__(self):
+        return f'Error {self.status} with {self.slug}'

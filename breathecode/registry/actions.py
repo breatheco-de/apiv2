@@ -8,7 +8,7 @@ from breathecode.utils import APIException
 from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_json
 from breathecode.authenticate.models import CredentialsGithub
-from .models import Asset, AssetTechnology, AssetAlias
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
 from github import Github
 
 logger = logging.getLogger(__name__)

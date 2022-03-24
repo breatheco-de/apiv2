@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
 from django.http import HttpResponse
-from .models import Asset, AssetAlias, AssetTechnology
+from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog
 from .actions import test_syllabus, test_asset
 from breathecode.notify.actions import send_email_message
 from rest_framework import serializers
@@ -23,29 +23,29 @@ logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def render_preview_html(request, asset_slug):
-    asset = Asset.objects.filter(slug=asset_slug).first()
+def forward_asset_url(request, asset_slug=None):
+    asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:
-        return render_message(request, 'Asset not found')
+        return render_message(request, f'Asset with slug {asset_slug} not found')
+
+    if asset.gitpod:
+        return HttpResponseRedirect(redirect_to='https://gitpod.io#' + asset.url)
+    else:
+        return HttpResponseRedirect(redirect_to=asset.url)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def render_preview_html(request, asset_slug):
+    asset = Asset.get_by_slug(asset_slug, request)
+    if asset is None:
+        return render_message(request, f'Asset with slug {asset_slug} not found')
 
     readme = asset.get_readme(parse=True)
     return render(request, 'markdown.html', {
         **AssetBigSerializer(asset).data, 'html': readme['html'],
         'frontmatter': readme['frontmatter'].items()
     })
-
-
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def redirect_gitpod(request, asset_slug):
-    alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
-    if alias is None:
-        raise ValidationException('Asset alias not found', status.HTTP_404_NOT_FOUND)
-
-    if alias.asset.gitpod:
-        return HttpResponseRedirect(redirect_to='https://gitpod.io#' + alias.asset.url)
-    else:
-        return HttpResponseRedirect(redirect_to=alias.asset.url)
 
 
 @api_view(['GET'])
@@ -82,22 +82,21 @@ def handle_test_asset(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def get_readme(request, asset_slug):
-    alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
-    if alias is None:
-        raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
+def render_readme(request, asset_slug):
+    asset = Asset.get_by_slug(asset_slug, request)
+    if asset is None:
+        raise ValidationException('Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
-    return Response(alias.asset.readme)
+    return Response(asset.readme)
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_config(request, asset_slug):
-    alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
-    if alias is None:
-        raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
+    asset = Asset.get_by_slug(asset_slug, request)
+    if asset is None:
+        raise ValidationException(f'Asset not {asset_slug} found', status.HTTP_404_NOT_FOUND)
 
-    asset = alias.asset
     main_branch = 'master'
     response = requests.head(f'{asset.url}/tree/{main_branch}', allow_redirects=False)
     if response.status_code == 302:
@@ -139,11 +138,11 @@ class AssetView(APIView):
     def get(self, request, asset_slug=None):
 
         if asset_slug is not None:
-            alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
-            if alias is None:
-                raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
+            asset = Asset.get_by_slug(asset_slug, request)
+            if asset is None:
+                raise ValidationException(f'Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
-            serializer = AssetBigSerializer(alias.asset)
+            serializer = AssetBigSerializer(asset)
             return Response(serializer.data)
 
         items = Asset.objects.all()
