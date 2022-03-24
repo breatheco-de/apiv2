@@ -210,7 +210,7 @@ class AssetErrorLogAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'user__email', 'user_first_name', 'user_last_name']
     list_display = ('slug', 'current_status', 'user', 'created_at', 'asset')
     raw_id_fields = ['user', 'asset']
-    actions = [make_alias]
+    actions = [make_alias] + change_field(['ERROR', 'IGNORED', 'FIXED'], name='status')
 
     def current_status(self, obj):
         colors = {
