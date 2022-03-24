@@ -3,6 +3,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
 from django.http import HttpResponse
+from django.core.validators import URLValidator
 from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog
 from .actions import test_syllabus, test_asset
 from breathecode.notify.actions import send_email_message
@@ -12,6 +13,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
                           PostAssetSerializer)
 from breathecode.utils import ValidationException, capable_of
+from breathecode.utils.views import private_view, render_message, set_query_parameter
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
@@ -28,10 +30,18 @@ def forward_asset_url(request, asset_slug=None):
     if asset is None:
         return render_message(request, f'Asset with slug {asset_slug} not found')
 
-    if asset.gitpod:
-        return HttpResponseRedirect(redirect_to='https://gitpod.io#' + asset.url)
-    else:
-        return HttpResponseRedirect(redirect_to=asset.url)
+    validator = URLValidator()
+    try:
+        validator(asset.url)
+        if asset.gitpod:
+            return HttpResponseRedirect(redirect_to='https://gitpod.io#' + asset.url)
+        else:
+            return HttpResponseRedirect(redirect_to=asset.url)
+    except Exception as e:
+        msg = f'The url for the {asset.asset_type.lower()} your are trying to open ({asset_slug}) was not found, this error has been reported and will be fixed soon.'
+        error = AssetErrorLog(status_code=400, slug=asset_slug, status_text=msg)
+        error.save()
+        return render_message(request, msg)
 
 
 @api_view(['GET'])
