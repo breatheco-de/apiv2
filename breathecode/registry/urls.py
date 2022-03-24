@@ -9,6 +9,7 @@ from .views import (
     handle_test_syllabus,
     render_preview_html,
     handle_test_asset,
+    forward_asset_url,
 )
 
 app_name = 'feedback'
@@ -21,5 +22,6 @@ urlpatterns = [
     path('asset/<str:asset_slug>', AssetView.as_view()),
     path('asset/readme/<str:asset_slug>', render_readme),
     path('asset/preview/<str:asset_slug>', render_preview_html),
+    path('asset/gitpod/<str:asset_slug>', forward_asset_url),
     path('asset/<str:asset_slug>/github/config', get_config),
 ]
