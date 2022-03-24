@@ -1,6 +1,7 @@
 import base64, frontmatter, markdown
 from django.db import models
 from django.contrib.auth.models import User
+from django.contrib.auth.models import AnonymousUser
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 from django.db.models import Q
@@ -194,7 +195,7 @@ class Asset(models.Model):
     @staticmethod
     def get_by_slug(asset_slug, request=None):
         user = None
-        if request is not None:
+        if request is not None and not isinstance(request.user, AnonymousUser):
             user = request.user
 
         alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
