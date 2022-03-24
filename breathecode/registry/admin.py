@@ -110,6 +110,7 @@ class AssetForm(forms.ModelForm):
         super(AssetForm, self).__init__(*args, **kwargs)
         self.fields['other_translations'].queryset = Asset.objects.filter(
             asset_type=self.instance.asset_type)  # or something else
+        self.fields['technologies'].queryset = Asset.objects.all().order_by('slug')  # or something else
 
 
 # Register your models here.
