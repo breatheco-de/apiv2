@@ -174,6 +174,7 @@ class AssetView(APIView):
 
         if 'slug' in self.request.GET:
             param = self.request.GET.get('slug')
+            asset = Asset.get_by_slug(param, request)
             lookup['slug'] = param
 
         if 'language' in self.request.GET:
