@@ -76,6 +76,10 @@ class AssetValidator():
         if self.asset.technologies.count() == 0:
             raise Exception('No technologies')
 
+
+class WithDifficulty(object):
+    def warning(self):
+
         if self.asset.difficulty is None:
             raise Exception('No difficulty')
 
@@ -101,17 +105,17 @@ class LessonValidator(AssetValidator, WithReadme):
         super().fatal()
 
 
-class ExerciseValidator(AssetValidator, WithPreview, WithReadme):
+class ExerciseValidator(AssetValidator, WithPreview, WithReadme, WithDifficulty):
     def fatal(self):
         super().fatal()
 
 
-class ProjectValidator(ExerciseValidator, WithPreview, WithReadme):
+class ProjectValidator(ExerciseValidator, WithPreview, WithReadme, WithDifficulty):
     def fatal(self):
         super().fatal()
 
 
-class QuizValidator(AssetValidator, WithPreview):
+class QuizValidator(AssetValidator, WithPreview, WithDifficulty):
     def fatal(self):
         super().fatal()
 
