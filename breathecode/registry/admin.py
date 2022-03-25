@@ -168,12 +168,19 @@ class AssetAdmin(admin.ModelAdmin):
             'WARNING': 'bg-warning',
             'UNASSIGNED': 'bg-error',
             'UNLISTED': 'bg-warning',
+            '"message"': '',
         }
+
+        def from_status(s):
+            if s in colors:
+                return colors[s]
+            return ''
+
         return format_html(
             f"""<table><tr><td style='font-size: 10px !important;'>Publish</td><td style='font-size: 10px !important;'>Synch</td><td style='font-size: 10px !important;'>Test</td></tr>
-        <td><span class='badge {colors[obj.status]}'>{obj.status}</span></td>
-        <td><span class='badge {colors[obj.sync_status]}'>{obj.sync_status}</span></td>
-        <td><span class='badge {colors[obj.test_status]}'>{obj.test_status}</span></td>
+        <td><span class='badge {from_status(obj.status)}'>{obj.status}</span></td>
+        <td><span class='badge {from_status(obj.sync_status)}'>{obj.sync_status}</span></td>
+        <td><span class='badge {from_status(obj.test_status)}'>{obj.test_status}</span></td>
         <tr><td colspan='3'>{obj.status_text}</td></tr>
         </table>""")
 
