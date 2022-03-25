@@ -75,8 +75,13 @@ def make_me_owner(modeladmin, request, queryset):
 def test_asset_integrity(modeladmin, request, queryset):
     queryset.update(test_status='PENDING')
     assets = queryset.all()
+
     for a in assets:
-        async_test_asset.delay(a.slug)
+        try:
+            # async_test_asset.delay(a.slug)
+            test_asset(a)
+        except Exception as e:
+            messages.error(request, a.slug + ': ' + str(e))
 
 
 class AssessmentFilter(admin.SimpleListFilter):
@@ -119,7 +124,7 @@ class AssetForm(forms.ModelForm):
 class AssetAdmin(admin.ModelAdmin):
     form = AssetForm
     search_fields = ['title', 'slug', 'author__email', 'url']
-    list_display = ('slug', 'title', 'current_status', 'lang', 'asset_type', 'techs', 'url_path')
+    list_display = ('main', 'current_status', 'asset_type', 'techs', 'url_path')
     list_filter = ['asset_type', 'status', 'lang', AssessmentFilter]
     raw_id_fields = ['author', 'owner']
     actions = [
@@ -130,13 +135,25 @@ class AssetAdmin(admin.ModelAdmin):
         make_me_author,
         make_me_owner,
         get_author_grom_github_usernames,
-    ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status')
+    ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status') + change_field(['en', 'es'], name='lang')
 
     def url_path(self, obj):
         return format_html(f"""
             <a rel='noopener noreferrer' target='_blank' href='{obj.url}'>github</a> |
             <a rel='noopener noreferrer' target='_blank' href='/v1/registry/asset/preview/{obj.slug}'>preview</a>
         """)
+
+    def main(self, obj):
+        langs = {
+            'en': '🇺🇸',
+            'us': '🇺🇸',
+            'es': '🇪🇸',
+            'it': '🇮🇹',
+            None: '',
+        }
+        return format_html(
+            f'<p style="margin: 0; padding: 0;">{langs[obj.lang]} {obj.slug}</p><small style="color: white;">{obj.title}</small>'
+        )
 
     def current_status(self, obj):
         colors = {
@@ -157,6 +174,7 @@ class AssetAdmin(admin.ModelAdmin):
         <td><span class='badge {colors[obj.status]}'>{obj.status}</span></td>
         <td><span class='badge {colors[obj.sync_status]}'>{obj.sync_status}</span></td>
         <td><span class='badge {colors[obj.test_status]}'>{obj.test_status}</span></td>
+        <tr><td colspan='3'>{obj.status_text}</td></tr>
         </table>""")
 
     def techs(self, obj):

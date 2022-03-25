@@ -9,6 +9,7 @@ from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_json
 from breathecode.authenticate.models import CredentialsGithub
 from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
+from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException
 from github import Github
 
 logger = logging.getLogger(__name__)
@@ -290,47 +291,33 @@ def sync_learnpack_asset(github, asset):
 
 def test_asset(asset):
     try:
+        validator = None
         if asset.asset_type == 'LESSON':
-            test_lesson(asset)
+            validator = LessonValidator(asset)
+        elif asset.asset_type == 'EXERCISE':
+            validator = ExerciseValidator(asset)
+        elif asset.asset_type == 'PROJECT':
+            validator = ProjectValidator(asset)
+        elif asset.asset_type == 'QUIZ':
+            validator = QuizValidator(asset)
+
+        validator.validate()
         # TODO: add more tests for other types of assets
         asset.status_text = 'Test Successfull'
         asset.test_status = 'OK'
         asset.last_test_at = timezone.now()
         asset.save()
         return True
+    except AssetException as e:
+        asset.status_text = str(e)
+        asset.test_status = e.severity
+        asset.save()
+        raise e
     except Exception as e:
         asset.status_text = str(e)
         asset.test_status = 'ERROR'
         asset.save()
         raise e
-
-
-def test_lesson(lesson):
-    from bs4 import BeautifulSoup
-    import requests
-
-    def test_url(url, allow_relative=False):
-        print('Testing url: ', url, url[0:2])
-
-        if not allow_relative and '../' == url[0:3] or './' == url[0:2]:
-            raise Exception(f'Relative url: ' + url)
-
-        response = requests.head(url, allow_redirects=False)
-        if response.status_code not in [200, 302, 301]:
-            raise Exception(f'Invalid URL with code {response.status_code}: ' + url)
-
-    if lesson.readme is None or lesson.readme == '':
-        raise Exception('Empty readme')
-
-    readme = lesson.get_readme(parse=True)
-    soup = BeautifulSoup(readme['html'], features='lxml')
-    anchors = soup.findAll('a')
-    images = soup.findAll('img')
-    for a in anchors:
-        test_url(a.get('href'), allow_relative=False)
-    for img in images:
-        test_url(img.get('src'), allow_relative=False)
-    return True
 
 
 def test_syllabus(syl):
