@@ -45,79 +45,87 @@ class AssetException(Exception):
 
 
 class AssetValidator():
+    base_warns = ['translations', 'technologies']
+    base_errors = ['lang', 'urls']
+    warns = []
+    errors = []
+
     def __init__(self, _asset):
         self.asset = _asset
+        self.warns = self.base_warns + self.warns
+        self.errors = self.base_errors + self.errors
 
     def validate(self):
         try:
-            self.fatal()
+            for validation in self.errors:
+                if hasattr(self, validation):
+                    print('validating error ' + validation)
+                    getattr(self, validation)()
+                else:
+                    raise Exception('Invalid asset error validation ' + validation)
         except Exception as e:
             raise AssetException(str(e), severity='ERROR')
         try:
-            self.warning()
+            for validation in self.warns:
+                if hasattr(self, validation):
+                    print('validating warning ' + validation)
+                    getattr(self, validation)()
+                else:
+                    raise Exception('Invalid asset warning validation ' + validation)
         except Exception as e:
             raise AssetException(str(e), severity='WARNING')
 
-    def fatal(self):
-
-        if self.asset.lang is None or self.asset.lang == '':
-            raise Exception('Empty default language')
+    def urls(self):
 
         readme = self.asset.get_readme(parse=True)
         urls = get_urls_from_html(readme['html'])
         for url in urls:
             test_url(url, allow_relative=False)
 
-    def warning(self):
+    def lang(self):
 
+        if self.asset.lang is None or self.asset.lang == '':
+            raise Exception('Empty default language')
+
+    def translations(self):
         if self.asset.all_translations.count() == 0:
             raise Exception('No translations')
 
+    def technologies(self):
         if self.asset.technologies.count() == 0:
             raise Exception('No technologies')
 
-
-class WithDifficulty(object):
-    def warning(self):
-
+    def difficulty(self):
         if self.asset.difficulty is None:
             raise Exception('No difficulty')
 
-
-class WithPreview():
-    def fatal(self):
+    def preview(self):
 
         if self.asset.preview is None:
-            raise AssetException('Missing preview url')
+            raise Exception('Missing preview url')
         else:
             test_url(self.asset.preview, allow_relative=False, allow_hash=False)
 
-
-class WithReadme():
-    def fatal(self):
-
+    def readme(self):
         if self.asset.readme is None or self.asset.readme == '':
             raise Exception('Empty readme')
 
 
-class LessonValidator(AssetValidator, WithReadme):
-    def fatal(self):
-        super().fatal()
+class LessonValidator(AssetValidator):
+    warns = []
+    errors = ['readme']
 
 
-class ExerciseValidator(AssetValidator, WithPreview, WithReadme, WithDifficulty):
-    def fatal(self):
-        super().fatal()
+class ExerciseValidator(AssetValidator):
+    warns = ['difficulty']
+    errors = ['readme', 'preview']
 
 
-class ProjectValidator(ExerciseValidator, WithPreview, WithReadme, WithDifficulty):
-    def fatal(self):
-        super().fatal()
+class ProjectValidator(ExerciseValidator):
+    warns = ['difficulty']
+    errors = ['readme', 'preview']
 
 
-class QuizValidator(AssetValidator, WithPreview, WithDifficulty):
-    def fatal(self):
-        super().fatal()
-
-        if self.asset.assessment is None:
-            raise AssetException('Missing connected assessment')
+class QuizValidator(AssetValidator):
+    warns = ['difficulty']
+    errors = ['preview']

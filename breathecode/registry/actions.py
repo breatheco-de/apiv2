@@ -332,7 +332,7 @@ def sync_learnpack_asset(github, asset):
         if 'duration' in config:
             asset.duration = config['duration']
         if 'difficulty' in config:
-            asset.difficulty = config['difficulty']
+            asset.difficulty = config['difficulty'].upper()
         if 'solution' in config:
             asset.solution = config['solution']
             asset.with_solutions = True
