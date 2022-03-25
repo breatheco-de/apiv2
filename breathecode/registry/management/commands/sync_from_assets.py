@@ -31,9 +31,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
             func = getattr(self, options['entity'], 'entity_not_found')
+            func(options)
         except TypeError:
             print(f'Sync method for {options["entity"]} no Found!')
-        func(options)
 
     def _exists(self, slug):
         return AssetAlias.objects.filter(Q(slug=slug) | Q(asset__slug=slug)).first()

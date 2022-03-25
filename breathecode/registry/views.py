@@ -39,8 +39,8 @@ def forward_asset_url(request, asset_slug=None):
             return HttpResponseRedirect(redirect_to=asset.url)
     except Exception as e:
         msg = f'The url for the {asset.asset_type.lower()} your are trying to open ({asset_slug}) was not found, this error has been reported and will be fixed soon.'
-        error = AssetErrorLog(status_code=400, slug=asset_slug, status_text=msg)
-        error.save()
+        AssetErrorLog(slug=AssetErrorLog.INVALID_URL, path=asset_slug, asset_type=asset_type,
+                      status_text=msg).save()
         return render_message(request, msg)
 
 
@@ -173,8 +173,9 @@ class AssetView(APIView):
             lookup['asset_type__iexact'] = param
 
         if 'slug' in self.request.GET:
+            asset_type = self.request.GET.get('type', None)
             param = self.request.GET.get('slug')
-            asset = Asset.get_by_slug(param, request)
+            asset = Asset.get_by_slug(param, request, asset_type=asset_type)
             lookup['slug'] = param
 
         if 'language' in self.request.GET:

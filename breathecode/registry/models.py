@@ -2,6 +2,7 @@ import base64, frontmatter, markdown
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AnonymousUser
+from django.template.loader import get_template
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 from django.db.models import Q
@@ -11,7 +12,7 @@ __all__ = ['AssetTechnology', 'Asset', 'AssetAlias']
 
 
 class AssetTechnology(models.Model):
-    slug = models.SlugField(max_length=200, primary_key=True)
+    slug = models.SlugField(max_length=200, unique=True)
     title = models.CharField(max_length=200, blank=True)
 
     def __str__(self):
@@ -69,11 +70,11 @@ class Asset(models.Model):
         super(Asset, self).__init__(*args, **kwargs)
         self.__old_slug = self.slug
 
-    slug = models.SlugField(max_length=200, primary_key=True)
+    slug = models.SlugField(max_length=200, unique=True)
     title = models.CharField(max_length=200, blank=True)
     lang = models.CharField(max_length=2, blank=True, null=True, default=None, help_text='E.g: en, es, it')
 
-    other_translations = models.ManyToManyField('self', blank=True)
+    all_translations = models.ManyToManyField('self', blank=True)
     technologies = models.ManyToManyField(AssetTechnology)
 
     url = models.URLField()
@@ -164,25 +165,31 @@ class Asset(models.Model):
     def save(self, *args, **kwargs):
 
         # only validate this on creation
-        if self.created_at is None or self.slug != self.__old_slug:
+        if self.pk is None or self.__old_slug != self.slug:
             alias = AssetAlias.objects.filter(slug=self.slug).first()
             if alias is not None:
                 raise Exception('Slug is already taken by alias')
             super().save(*args, **kwargs)
             AssetAlias.objects.create(slug=self.slug, asset=self)
-            Asset.objects.filter(slug=self.__old_slug).delete()
 
         else:
             super().save(*args, **kwargs)
 
-    def get_readme(self, parse=False):
+    def get_readme(self, parse=False, raw=False):
         if self.readme is None:
-            return {
-                'raw': '',
-                'decoded': f'This asset {self.slug} has not readme file',
-                'frontmatter': {},
-                'html': f'This {self.asset_type} ({self.slug}) has not readme file'
-            }
+            AssetErrorLog(slug=AssetErrorLog.EMPTY_README,
+                          path=self.slug,
+                          asset_type=self.asset_type,
+                          status_text='Readme file was not found').save()
+            self.set_readme(
+                get_template('default_readme.md').render({
+                    'title': self.title,
+                    'lang': self.lang,
+                    'asset_type': self.asset_type,
+                }))
+
+        if raw:
+            return self.readme
 
         readme = {
             'raw': self.readme,
@@ -196,18 +203,26 @@ class Asset(models.Model):
 
     def set_readme(self, content):
         self.readme = str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
+        return self
 
     @staticmethod
-    def get_by_slug(asset_slug, request=None):
+    def get_by_slug(asset_slug, request=None, asset_type=None):
         user = None
         if request is not None and not isinstance(request.user, AnonymousUser):
             user = request.user
 
         alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
         if alias is None:
-            error = AssetErrorLog(status_code=404, slug=asset_slug, user=user)
-            error.save()
+            AssetErrorLog(slug=AssetErrorLog.SLUG_NOT_FOUND,
+                          path=asset_slug,
+                          asset_type=asset_type,
+                          user=user).save()
             return None
+        elif asset_type is not None and alias.asset.asset_type.lower() == asset_type.lower():
+            AssetErrorLog(slug=AssetErrorLog.DIFFERENT_TYPE,
+                          path=asset_slug,
+                          asset_type=asset_type,
+                          user=user).save()
         else:
             return alias.asset
 
@@ -233,9 +248,15 @@ ERROR_STATUS = (
 
 
 class AssetErrorLog(models.Model):
+    SLUG_NOT_FOUND = 'slug-not-found'
+    DIFFERENT_TYPE = 'different-type'
+    EMPTY_README = 'empty-readme'
+    INVALID_URL = 'invalid-url'
+
+    asset_type = models.CharField(max_length=20, choices=TYPE, default=None, null=True, blank=True)
     slug = models.SlugField(max_length=200)
     status = models.CharField(max_length=20, choices=ERROR_STATUS, default=ERROR)
-    status_code = models.IntegerField()
+    path = models.CharField(max_length=200)
     status_text = models.TextField(
         null=True,
         blank=True,

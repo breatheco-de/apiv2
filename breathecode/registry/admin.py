@@ -1,4 +1,4 @@
-import logging
+import logging, re
 from django.contrib import admin, messages
 from django.utils.html import format_html
 from django.contrib.auth.models import User
@@ -15,6 +15,13 @@ from .tasks import async_sync_with_github, async_test_asset
 from .actions import sync_with_github, get_user_from_github_username, test_asset
 
 logger = logging.getLogger(__name__)
+lang_flags = {
+    'en': '🇺🇸',
+    'us': '🇺🇸',
+    'es': '🇪🇸',
+    'it': '🇮🇹',
+    None: '',
+}
 
 
 def add_gitpod(modeladmin, request, queryset):
@@ -79,29 +86,34 @@ def make_me_owner(modeladmin, request, queryset):
 def generate_spanish_translation(modeladmin, request, queryset):
     assets = queryset.all()
     for old in assets:
+        old_id = old.id
         if old.lang not in ['us', 'en']:
             messages.error(request,
                            f'Error in {old.slug}: Can only generate trasnlations for english lessons')
             continue
 
-        if old.other_translations.filter(Q(lang='es') | Q(slug=old.slug + '-es')).first() is not None:
-            messages.error(request, f'Skipping {old.slug} because translation already exists')
-            continue
+        new_asset = old.all_translations.filter(
+            Q(lang='es') | Q(slug=old.slug + '-es')
+            | Q(slug=old.slug + '.es')).first()
+        if new_asset is not None:
+            messages.error(request, f'Translation to {old.slug} already exists with {new_asset.slug}')
+            if '.es' in new_asset.slug:
+                new_asset.slug = new_asset.slug.split('.')[0] + '-es'
+                new_asset.save()
 
-        kwargs = model_to_dict(old, exclude=['slug', 'other_translations', 'technologies'])
-        kwargs['lang'] = 'es'
-        kwargs['slug'] = old.slug + '-es'
-        new_asset = Asset.objects.create(**kwargs)
-        new_asset.save()
+        else:
+            new_asset = old
+            new_asset.pk = None
+            new_asset.lang = 'es'
+            new_asset.slug = old.slug + '-es'
+            new_asset.save()
 
-        old.other_translations.add(new_asset)
-
-        for t in old.other_translations.all():
-            new_asset.other_translations.add(t)
+        old = Asset.objects.get(id=old_id)
+        old.all_translations.add(new_asset)
+        for t in old.all_translations.all():
+            new_asset.all_translations.add(t)
         for t in old.technologies.all():
             new_asset.technologies.add(t)
-
-        messages.error(request, f'Generated es translation for {old.slug} with new slug: {new_asset.slug}')
 
 
 def test_asset_integrity(modeladmin, request, queryset):
@@ -165,7 +177,7 @@ class AssetForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(AssetForm, self).__init__(*args, **kwargs)
-        self.fields['other_translations'].queryset = Asset.objects.filter(
+        self.fields['all_translations'].queryset = Asset.objects.filter(
             asset_type=self.instance.asset_type).order_by('slug')  # or something else
         self.fields['technologies'].queryset = AssetTechnology.objects.all().order_by(
             'slug')  # or something else
@@ -176,7 +188,7 @@ class AssetForm(forms.ModelForm):
 class AssetAdmin(admin.ModelAdmin):
     form = AssetForm
     search_fields = ['title', 'slug', 'author__email', 'url']
-    list_display = ('main', 'current_status', 'asset_type', 'techs', 'url_path')
+    list_display = ('main', 'current_status', 'alias', 'techs', 'url_path')
     list_filter = ['asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter]
     raw_id_fields = ['author', 'owner']
     actions = [
@@ -198,16 +210,12 @@ class AssetAdmin(admin.ModelAdmin):
         """)
 
     def main(self, obj):
-        langs = {
-            'en': '🇺🇸',
-            'us': '🇺🇸',
-            'es': '🇪🇸',
-            'it': '🇮🇹',
-            None: '',
-        }
-        return format_html(
-            f'<p style="margin: 0; padding: 0;">{langs[obj.lang]} {obj.slug}</p><small style="color: white;">{obj.title}</small>'
-        )
+
+        return format_html(f'''
+                <p style="border: 1px solid #BDBDBD; border-radius: 3px; font-size: 10px; padding: 3px;margin: 0;">{lang_flags[obj.lang]} {obj.asset_type}</p>
+                <p style="margin: 0; padding: 0;">{obj.slug}</p>
+                <p style="color: white; font-size: 10px;margin: 0; padding: 0;">{obj.title}</p>
+            ''')
 
     def current_status(self, obj):
         colors = {
@@ -229,17 +237,26 @@ class AssetAdmin(admin.ModelAdmin):
                 return colors[s]
             return ''
 
-        print(f'printing asset {obj.slug}')
+        status = 'No status'
+        if obj.status_text is not None:
+            status = re.sub(r'[^\w\._\-]', ' ', obj.status_text)
         return format_html(
-            f"""<table><tr><td style='font-size: 10px !important;'>Publish</td><td style='font-size: 10px !important;'>Synch</td><td style='font-size: 10px !important;'>Test</td></tr>
+            f"""<table style='max-width: 200px;'><tr><td style='font-size: 10px !important;'>Publish</td><td style='font-size: 10px !important;'>Synch</td><td style='font-size: 10px !important;'>Test</td></tr>
         <td><span class='badge {from_status(obj.status)}'>{obj.status}</span></td>
         <td><span class='badge {from_status(obj.sync_status)}'>{obj.sync_status}</span></td>
         <td><span class='badge {from_status(obj.test_status)}'>{obj.test_status}</span></td>
-        <tr><td colspan='3'>{obj.status_text}</td></tr>
+        <tr><td colspan='3'>{status}</td></tr>
         </table>""")
 
     def techs(self, obj):
         return ', '.join([t.slug for t in obj.technologies.all()])
+
+    def alias(self, obj):
+        aliases = AssetAlias.objects.filter(asset__all_translations__slug=obj.slug)
+        return format_html(''.join([
+            f'<span style="display: inline-block; background: #2d302d; padding: 2px; border-radius: 3px; margin: 2px;">{lang_flags[a.asset.lang]}{a.slug}</span>'
+            for a in aliases
+        ]))
 
 
 def merge_technologies(modeladmin, request, queryset):
@@ -274,10 +291,11 @@ class AssetAliasAdmin(admin.ModelAdmin):
 def make_alias(modeladmin, request, queryset):
     errors = queryset.all()
     for e in errors:
-        if e.status_code != 404:
+        if e.slug != AssetErrorLog.SLUG_NOT_FOUND:
             messages.error(
                 request,
-                f'Error: You can only make alias for 404 errors and {e.slug} error was {e.status_code}')
+                f'Error: You can only make alias for {AssetErrorLog.SLUG_NOT_FOUND} errors and it was {e.slug}'
+            )
 
         if e.asset is None:
             messages.error(
@@ -302,8 +320,9 @@ def make_alias(modeladmin, request, queryset):
 @admin.register(AssetErrorLog)
 class AssetErrorLogAdmin(admin.ModelAdmin):
     search_fields = ['slug', 'user__email', 'user_first_name', 'user_last_name']
-    list_display = ('slug', 'current_status', 'user', 'created_at', 'asset')
+    list_display = ('slug', 'path', 'current_status', 'user', 'created_at', 'asset')
     raw_id_fields = ['user', 'asset']
+    list_filter = ['status', 'slug']
     actions = [make_alias] + change_field(['ERROR', 'IGNORED', 'FIXED'], name='status')
 
     def current_status(self, obj):
@@ -313,5 +332,4 @@ class AssetErrorLogAdmin(admin.ModelAdmin):
             'IGNORED': '',
             None: 'bg-warning',
         }
-        return format_html(
-            f'<span class="badge d-block {colors[obj.status]}">{obj.status} {obj.status_code}</span>')
+        return format_html(f'<span class="badge d-block {colors[obj.status]}">{obj.slug}</span>')

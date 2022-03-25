@@ -1,6 +1,7 @@
 import logging, json, os, re
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models import Q
+from django.contrib.auth.models import User
 from django.utils import timezone
 from django.template.loader import get_template
 from urllib.parse import urlparse
@@ -49,6 +50,11 @@ def create_asset(data, asset_type, force=False):
         logger.debug(f'Updating asset {asset_type} {slug}')
 
     a.title = data['title']
+    a.owner = User.objects.get(id=1)
+    if a.asset_type in ['QUIZ', 'EXERCISE']:
+        a.interactive = True
+    if a.asset_type == 'EXERCISE':
+        a.gitpod = True
 
     if 'tags' not in data:
         data['tags'] = []
@@ -119,6 +125,7 @@ def create_asset(data, asset_type, force=False):
 
     a.save()
 
+    a.all_translations.add(a)  # add youself as a translation
     if 'translations' in data:
         for lan in data['translations']:
             if lan == 'en':
@@ -134,10 +141,15 @@ def create_asset(data, asset_type, force=False):
                     _assessment.original = original.assessment
                     _assessment.save()
 
-                if original.other_translations.filter(slug=lan).first() is None:
-                    a.other_translations.add(original)
+                if original.all_translations.filter(slug=lan).first() is None:
+                    logger.debug(
+                        f'Adding translation {a.slug} for {lan} on previous original {original.slug}')
+                    a.all_translations.add(original)
                 else:
                     logger.debug(f'Ignoring language {lan} because the lesson already have a translation')
+
+                a.slug.replace('.es', '-es')
+                a.save()
 
     if 'tags' in data:
         for tech in data['tags']:
@@ -211,10 +223,15 @@ def sync_with_github(asset_slug, author_id=None):
         asset.save()
         logger.debug(f'Successfully re-synched asset {asset_slug} with github')
     except Exception as e:
-        asset.status_text = str(e)
+        message = ''
+        if hasattr(e, 'data'):
+            message = e.data['message']
+        else:
+            message = str(e).replace('"', '\'')
+        asset.status_text = str(message)
         asset.sync_status = 'ERROR'
         asset.save()
-        logger.error(f'Error updating {asset.url} from github: ' + str(e))
+        logger.error(f'Error updating {asset.url} from github: ' + str(message))
 
     return asset.sync_status
 
@@ -243,12 +260,17 @@ def sync_github_lesson(github, asset):
     asset.readme = repo.get_contents(file_path).content
 
     if org_name == 'breatheco-de' and repo_name == 'content':
-        readme = asset.get_readme()
+        readme = asset.get_readme(parse=True)
         logger.debug(f'Markdown is coming from breathecode/content, replacing images')
         base_url = os.path.dirname(asset.readme_url)
         replaced = re.sub(r'(["\'(])\.\.\/\.\.\/assets\/images\/([_\w\-\.]+)(["\')])',
                           r'\1' + base_url + r'/../../assets/images/\2?raw=true\3', readme['decoded'])
         asset.set_readme(replaced)
+
+        fm = dict(readme['frontmatter'].items())
+        if 'slug' in fm and fm['slug'] != asset.slug:
+            logger.debug(f'New slug {fm["slug"]} found for lesson {asset.slug}')
+            asset.slug = fm['slug']
 
     return asset
 
@@ -266,7 +288,12 @@ def sync_learnpack_asset(github, asset):
     else:
         lang = '.' + lang
 
-    readme_file = repo.get_contents(f'README{lang}.md')
+    readme_file = None
+    try:
+        readme_file = repo.get_contents(f'README{lang}.md')
+    except:
+        raise Exception(f'Translation on README{lang}.md not found')
+
     learn_file = None
     try:
         learn_file = repo.get_contents('learn.json')
@@ -334,7 +361,6 @@ def test_asset(asset):
             validator = QuizValidator(asset)
 
         validator.validate()
-        # TODO: add more tests for other types of assets
         asset.status_text = 'Test Successfull'
         asset.test_status = 'OK'
         asset.last_test_at = timezone.now()

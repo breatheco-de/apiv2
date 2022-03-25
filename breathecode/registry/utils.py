@@ -70,7 +70,7 @@ class AssetValidator():
 
     def warning(self):
 
-        if self.asset.other_translations.count() == 0:
+        if self.asset.all_translations.count() == 0:
             raise Exception('No translations')
 
         if self.asset.technologies.count() == 0:
