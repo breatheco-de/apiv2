@@ -6,6 +6,7 @@ from django import forms
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
 from breathecode.assessment.models import Assessment
+from breathecode.assessment.actions import create_from_json
 from breathecode.utils.admin import change_field
 from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
 from .tasks import async_sync_with_github, async_test_asset
