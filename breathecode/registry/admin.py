@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django import forms
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
+from breathecode.assessment.models import Assessment
 from breathecode.utils.admin import change_field
 from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
 from .tasks import async_sync_with_github, async_test_asset
@@ -84,6 +85,23 @@ def test_asset_integrity(modeladmin, request, queryset):
             messages.error(request, a.slug + ': ' + str(e))
 
 
+def create_assessment_from_asset(modeladmin, request, queryset):
+    queryset.update(test_status='PENDING')
+    assets = queryset.all()
+
+    for a in assets:
+        try:
+            if a.asset_type != 'QUIZ':
+                raise Exception(f'Can\'t create assessment from {a.asset_type.lower()}, only quiz.')
+            ass = Assessment.objects.filter(slug=a.slug).first()
+            if ass is not None:
+                raise Exception(f'Assessment with slug {a.slug} already exists, try a different slug?')
+
+            create_from_json(a.config)
+        except Exception as e:
+            messages.error(request, a.slug + ': ' + str(e))
+
+
 class AssessmentFilter(admin.SimpleListFilter):
 
     title = 'Associated Assessment'
@@ -134,8 +152,9 @@ class AssetAdmin(admin.ModelAdmin):
         pull_from_github,
         make_me_author,
         make_me_owner,
+        create_assignment_from_asset,
         get_author_grom_github_usernames,
-    ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status') + change_field(['en', 'es'], name='lang')
+    ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status') + change_field(['us', 'es'], name='lang')
 
     def url_path(self, obj):
         return format_html(f"""
