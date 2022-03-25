@@ -136,7 +136,7 @@ class AssetForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(AssetForm, self).__init__(*args, **kwargs)
         self.fields['other_translations'].queryset = Asset.objects.filter(
-            asset_type=self.instance.asset_type)  # or something else
+            asset_type=self.instance.asset_type).order_by('slug')  # or something else
         self.fields['technologies'].queryset = AssetTechnology.objects.all().order_by(
             'slug')  # or something else
 
@@ -147,7 +147,7 @@ class AssetAdmin(admin.ModelAdmin):
     form = AssetForm
     search_fields = ['title', 'slug', 'author__email', 'url']
     list_display = ('main', 'current_status', 'asset_type', 'techs', 'url_path')
-    list_filter = ['asset_type', 'status', 'sync_status', 'test_status', 'lang', AssessmentFilter]
+    list_filter = ['asset_type', 'status', 'sync_status', 'test_status', 'lang', 'external', AssessmentFilter]
     raw_id_fields = ['author', 'owner']
     actions = [
         test_asset_integrity,

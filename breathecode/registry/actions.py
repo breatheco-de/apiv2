@@ -2,6 +2,7 @@ import logging, json, os, re
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models import Q
 from django.utils import timezone
+from django.template.loader import get_template
 from urllib.parse import urlparse
 from slugify import slugify
 from breathecode.utils import APIException
@@ -9,10 +10,22 @@ from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_json
 from breathecode.authenticate.models import CredentialsGithub
 from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
+from .serializers import AssetSerializer
 from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException
 from github import Github
 
 logger = logging.getLogger(__name__)
+
+
+def generate_external_readme(a):
+
+    if not a.external:
+        return False
+
+    readme = get_template('new_window.md')
+    a.set_readme(readme.render(AssetSerializer(a).data))
+    a.save()
+    return True
 
 
 def create_asset(data, asset_type, force=False):
@@ -157,6 +170,13 @@ def sync_with_github(asset_slug, author_id=None):
         asset = Asset.objects.filter(slug=asset_slug).first()
         if asset is None:
             raise Exception(f'Asset with slug {asset_slug} not found when attempting to sync with github')
+
+        if generate_external_readme(asset):
+            asset.status_text = 'Readme file for external asset generated, not github sync'
+            asset.sync_status = 'OK'
+            asset.last_synch_at = None
+            asset.save()
+            return asset.sync_status
 
         if asset.owner is not None:
             author_id = asset.owner.id
