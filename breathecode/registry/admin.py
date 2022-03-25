@@ -2,6 +2,8 @@ import logging
 from django.contrib import admin, messages
 from django.utils.html import format_html
 from django.contrib.auth.models import User
+from django.db.models import Q
+from django.forms import model_to_dict
 from django import forms
 from django.contrib.auth.admin import UserAdmin
 from breathecode.admissions.admin import CohortAdmin
@@ -72,6 +74,34 @@ def make_me_owner(modeladmin, request, queryset):
     for a in assets:
         a.owner = request.user
         a.save()
+
+
+def generate_spanish_translation(modeladmin, request, queryset):
+    assets = queryset.all()
+    for old in assets:
+        if old.lang not in ['us', 'en']:
+            messages.error(request,
+                           f'Error in {old.slug}: Can only generate trasnlations for english lessons')
+            continue
+
+        if old.other_translations.filter(Q(lang='es') | Q(slug=old.slug + '-es')).first() is not None:
+            messages.error(request, f'Skipping {old.slug} because translation already exists')
+            continue
+
+        kwargs = model_to_dict(old, exclude=['slug', 'other_translations', 'technologies'])
+        kwargs['lang'] = 'es'
+        kwargs['slug'] = old.slug + '-es'
+        new_asset = Asset.objects.create(**kwargs)
+        new_asset.save()
+
+        old.other_translations.add(new_asset)
+
+        for t in old.other_translations.all():
+            new_asset.other_translations.add(t)
+        for t in old.technologies.all():
+            new_asset.technologies.add(t)
+
+        messages.error(request, f'Generated es translation for {old.slug} with new slug: {new_asset.slug}')
 
 
 def test_asset_integrity(modeladmin, request, queryset):
@@ -158,6 +188,7 @@ class AssetAdmin(admin.ModelAdmin):
         make_me_owner,
         create_assessment_from_asset,
         get_author_grom_github_usernames,
+        generate_spanish_translation,
     ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status') + change_field(['us', 'es'], name='lang')
 
     def url_path(self, obj):

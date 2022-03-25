@@ -258,7 +258,15 @@ def sync_learnpack_asset(github, asset):
     org_name, repo_name = get_url_info(asset.url)
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
-    readme_file = repo.get_contents('README.md')
+    lang = asset.lang
+    if lang is None or lang == '':
+        raise Exception('Language for this asset is not defined, imposible to retrieve readme')
+    elif lang in ['us', 'en']:
+        lang = ''
+    else:
+        lang = '.' + lang
+
+    readme_file = repo.get_contents(f'README{lang}.md')
     learn_file = None
     try:
         learn_file = repo.get_contents('learn.json')
