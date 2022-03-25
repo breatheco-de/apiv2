@@ -98,11 +98,12 @@ def create_assessment_from_asset(modeladmin, request, queryset):
             if ass is not None:
                 raise Exception(f'Assessment with slug {a.slug} already exists, try a different slug?')
 
-            if ass.config is None or ass.config == '':
+            if a.config is None or a.config == '':
                 raise Exception(f'Assessment with slug {a.slug} has no config')
 
             create_from_json(a.config, slug=a.slug)
         except Exception as e:
+            raise e
             messages.error(request, a.slug + ': ' + str(e))
 
 

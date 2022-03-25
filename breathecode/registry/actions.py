@@ -255,6 +255,7 @@ def sync_learnpack_asset(github, asset):
     if learn_file is not None:
         config = json.loads(learn_file.decoded_content.decode('utf-8'))
         asset.config = config
+
         if 'title' in config:
             asset.title = config['title']
         if 'description' in config:
