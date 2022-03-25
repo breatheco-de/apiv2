@@ -5,7 +5,7 @@ __all__ = ['Cache']
 
 
 class Cache:
-    """Wrapper of last implementation of cache mixin for testing purposes"""
+    """Mixin with the purpose of cover all the related with cache"""
 
     clear = CacheMixin.clear_cache
     _parent: APITestCase

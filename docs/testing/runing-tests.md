@@ -1,4 +1,4 @@
-# Testing
+# Runing tests
 
 ## Run tests
 

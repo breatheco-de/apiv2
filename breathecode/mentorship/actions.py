@@ -13,49 +13,56 @@ from breathecode.utils.datetime_interger import duration_to_str
 logger = logging.getLogger(__name__)
 
 
-def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
+def get_pending_sessions_or_create(token, mentor, mentee=None):
 
-    # default duration can be ovveriden by service
-    duration = timedelta(seconds=3600)
-    if mentor.service.duration is not None:
-        duration = mentor.service.duration
-
-    if mentee is not None and force_create == False:
+    # starting to pick pending sessions
+    pending_sessions = []
+    if mentee is not None:
         unfinished_with_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
                                                                   mentee__id=mentee.id,
                                                                   status__in=['PENDING', 'STARTED'])
         if unfinished_with_mentee.count() > 0:
-            return unfinished_with_mentee
-
-    if force_create == False:
-        # session without mentee
-        unfinished_without_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
-                                                                     started_at__isnull=True,
-                                                                     status__in=['PENDING', 'STARTED'])
-        # delete the pendings ones, its worth creating a new meeting
-        if unfinished_without_mentee.count() > 0:
-            session = unfinished_without_mentee.first()
-            session.mentee = mentee
-            session.save()
-
-            # extend the session now that the mentee has joined
-            exp_in_epoch = time.mktime((timezone.now() + duration).timetuple())
-            extend_session(session, exp_in_epoch=exp_in_epoch)
-
-            unfinished_without_mentee.exclude(id=session.id).delete()
-            return MentorshipSession.objects.filter(id=session.id)
+            pending_sessions += unfinished_with_mentee.values_list('pk', flat=True)
 
     # if its a mentor, I will force him to close pending sessions
-    if mentor.user.id == token.user.id and not force_create:
-        unfinished_with_mentee = MentorshipSession.objects.filter(mentor__id=mentor.id,
-                                                                  status__in=['PENDING', 'STARTED'])
-
+    if mentor.user.id == token.user.id:
+        unfinished_sessions = MentorshipSession.objects.filter(mentor__id=mentor.id,
+                                                               status__in=['PENDING', 'STARTED'
+                                                                           ]).exclude(id__in=pending_sessions)
         # if it has unishined meetings with already started
-        if unfinished_with_mentee.count() > 0:
-            return unfinished_with_mentee
+        if unfinished_sessions.count() > 0:
+            pending_sessions += unfinished_sessions.values_list('pk', flat=True)
+
+    # if its a mentee, and there are pending sessions without mentee assigned
+    elif mentee is not None and mentee.id == token.user.id:
+        unfinished_sessions = MentorshipSession.objects.filter(mentor__id=mentor.id,
+                                                               mentee__isnull=True,
+                                                               status__in=['PENDING'
+                                                                           ]).order_by('-mentor_joined_at')
+
+        if unfinished_sessions.count() > 0:
+            # grab the last one the mentor joined
+            last_one = unfinished_sessions.first()
+            pending_sessions += [last_one.id]
+            # close the rest
+            close_mentoring_session(
+                unfinished_sessions.exclude(id=last_one.id), {
+                    'summary':
+                    'Automatically closed, not enough information on the meeting the mentor forgot to specify the mentee and the mentee never joined',
+                    'status': 'FAILED'
+                })
+
+    # return all the collected pending sessions
+    if len(pending_sessions) > 0:
+        return MentorshipSession.objects.filter(id__in=pending_sessions)
 
     # if force_create == True we will try getting from the available unnused sessions
     # if I'm here its because there was no previous pending sessions so we will create one
+
+    # default duration can be overriden by service
+    duration = timedelta(seconds=3600)
+    if mentor.service.duration is not None:
+        duration = mentor.service.duration
 
     session = MentorshipSession(mentor=mentor,
                                 mentee=mentee,
@@ -66,21 +73,7 @@ def get_or_create_sessions(token, mentor, mentee=None, force_create=False):
     session.online_meeting_url = room['url']
     session.name = room['name']
     session.mentee = mentee
-
     session.save()
-
-    # just in case, if there is any other session with the same mentee and mentor it will be closed
-    if session.mentee is not None:
-        open_sessions = MentorshipSession.objects.filter(mentor=session.mentor,
-                                                         mentee=session.mentee,
-                                                         status__in=['PENDING', 'STARTED'])
-        for s in open_sessions:
-            close_mentoring_session(
-                s, {
-                    'summary':
-                    'This session was automatically closed because a new session with the same mentor and mentee is being created, it will be marked as failed',
-                    'status': 'FAILED'
-                })
 
     return MentorshipSession.objects.filter(id=session.id)
 
@@ -125,20 +118,13 @@ def render_session(request, session, token):
 
 def close_mentoring_session(session, data):
 
-    session.summary = data['summary']
-    session.status = data['status'].upper()
-    session.ended_at = timezone.now()
-    session.save()
+    sessions_to_close = session
+    if isinstance(session, MentorshipSession):
+        sessions_to_close = MentorshipSession.objects.filter(id=session.id)
 
-    # Close sessions from the same mentor that expired and the mentee never joined
-    MentorshipSession.objects.filter(mentor__id=session.mentor.id,
-                                     status__in=['PENDING', 'STARTED'],
-                                     ended_at__lte=timezone.now(),
-                                     started_at__isnull=True).update(
-                                         status='FAILED',
-                                         summary='Meeting automatically closed, mentee never joined.')
+    sessions_to_close.update(summary=data['summary'], status=data['status'].upper(), ended_at=timezone.now())
 
-    return session
+    return sessions_to_close
 
 
 def get_accounted_time(_session):

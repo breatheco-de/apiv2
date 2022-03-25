@@ -10,7 +10,7 @@ __all__ = ['Database']
 
 
 class Database:
-    """Wrapper of last implementation for generate_queries for testing purposes"""
+    """Mixin with the purpose of cover all the related with the database"""
 
     _cache: dict[str, Model] = {}
     _parent: APITestCase
@@ -39,6 +39,16 @@ class Database:
         This is a wrapper for `Model.objects.filter()`, get a list of values of models as `list[dict]` if
         `dict=True` else get a list of `Model` instances.
 
+        Usage:
+
+        ```py
+        # get all the Cohort as list of dict
+        self.bc.database.get('admissions.Cohort')
+
+        # get all the Cohort as list of instances of model
+        self.bc.database.get('admissions.Cohort', dict=False)
+        ```
+
         Keywords arguments:
         - path(`str`): path to a model, for example `admissions.CohortUser`.
         - dict(`bool`): if true return dict of values of model else return model instance.
@@ -57,6 +67,16 @@ class Database:
         This is a wrapper for `Model.objects.filter(pk=pk).first()`, get the values of model as `dict` if
         `dict=True` else get the `Model` instance.
 
+        Usage:
+
+        ```py
+        # get the Cohort with the pk 1 as dict
+        self.bc.database.get('admissions.Cohort', 1)
+
+        # get the Cohort with the pk 1 as instance of model
+        self.bc.database.get('admissions.Cohort', 1, dict=False)
+        ```
+
         Keywords arguments:
         - path(`str`): path to a model, for example `admissions.CohortUser`.
         - pk(`str | int`): primary key of model.
@@ -74,6 +94,12 @@ class Database:
         """
         This is a wrapper for `Model.objects.count()`, get how many instances of this `Model` are saved.
 
+        Usage:
+
+        ```py
+        self.bc.database.count('admissions.Cohort')
+        ```
+
         Keywords arguments:
         - path(`str`): path to a model, for example `admissions.CohortUser`.
         """
@@ -84,10 +110,37 @@ class Database:
         """
         Create one o many instances of models and return it like a dict of models.
 
+        Usage:
+
+        ```py
+        # create three users
+        self.bc.database.create(user=3)
+
+        # create one user with a specific first name
+        user = {'first_name': 'Lacey'}
+        self.bc.database.create(user=user)
+
+        # create two users with a specific first name and last name
+        users = [
+            {'first_name': 'Lacey', 'last_name': 'Sturm'},
+            {'first_name': 'The', 'last_name': 'Warning'},
+        ]
+        self.bc.database.create(user=users)
+
+        # create two users with the same first name
+        user = {'first_name': 'Lacey'}
+        self.bc.database.create(user=(2, user))
+
+        # setting up manually the relationships
+        cohort_user = {'cohort_id': 2}
+        self.bc.database.create(cohort=2, cohort_user=cohort_user)
+        ```
+
         It get the model name as snake case, you can pass a `bool`, `int`, `dict`, `tuple`, `list[dict]` or
         `list[tuple]`.
 
         Behavior for type of argument:
+
         - `bool`: if it is true generate a instance of a model.
         - `int`: generate a instance of a model n times, if `n` > 1 this is a list.
         - `dict`: generate a instance of a model, this pass to mixer.blend custom values to the model.

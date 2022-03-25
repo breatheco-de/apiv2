@@ -1,18 +1,21 @@
+import yaml
 import os
+from yaml.loader import FullLoader
+
+CONFIGURATION_FILE = os.path.join(os.getcwd(), '.breathecode.yml')
+NEW_ENVS = []
 
 
 def reset_environment():
-    breathcode_dinamics_envs = [
-        'LOG_LEVEL', 'CACHE_MIDDLEWARE_MINUTES', 'OLD_BREATHECODE_API', 'CELERY_TASK_SERIALIZER',
-        'EMAIL_NOTIFICATIONS_ENABLED', 'GITHUB_CLIENT_ID', 'GITHUB_SECRET', 'GITHUB_REDIRECT_URL',
-        'SLACK_CLIENT_ID', 'SLACK_REDIRECT_URL', 'MAILGUN_API_KEY', 'MAILGUN_FROM',
-        'GOOGLE_APPLICATION_CREDENTIALS', 'ACTIVE_CAMPAIGN_KEY', 'ACTIVE_CAMPAIGN_URL', 'EVENTBRITE_KEY',
-        'GOOGLE_SERVICE_KEY', 'GOOGLE_CLOUD_KEY', 'ROLLBAR_ACCESS_TOKEN', 'SAVE_LEADS', 'API_URL', 'ENV',
-        'FACEBOOK_VERIFY_TOKEN', 'FACEBOOK_CLIENT_ID', 'FACEBOOK_SECRET', 'FACEBOOK_REDIRECT_URL',
-        'DATABASE_URL', 'REDIS_URL', 'MEDIA_GALLERY_BUCKET'
-    ]
+    system_environment = set(os.environ)
 
-    for env in breathcode_dinamics_envs:
+    with open(CONFIGURATION_FILE, 'r') as file:
+        configuration = yaml.load(file, Loader=FullLoader)
+        whitelist_environment = set(configuration['tests']['environments']['whitelist'])
+
+    blacklist_environment = system_environment.difference(whitelist_environment)
+
+    for env in blacklist_environment:
         if env in os.environ:
             del os.environ[env]
 

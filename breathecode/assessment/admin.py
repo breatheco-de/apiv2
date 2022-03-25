@@ -34,7 +34,7 @@ class UserAdmin(UserAdmin):
 @admin.register(Assessment)
 class AssessmentAdmin(admin.ModelAdmin):
     search_fields = ['title', 'user__first_name', 'user__last_name', 'user__email', 'academy__slug']
-    list_display = ('title', 'academy', 'comment', 'created_at')
+    list_display = ('slug', 'lang', 'title', 'academy', 'created_at')
     list_filter = ['private', 'academy__slug']
     # def entity(self, object):
     #     return f"{object.entity_slug} (id:{str(object.entity_id)})"

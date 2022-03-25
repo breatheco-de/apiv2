@@ -1,4 +1,4 @@
-# Mocking
+# Using mocks
 
 ## Mock object
 

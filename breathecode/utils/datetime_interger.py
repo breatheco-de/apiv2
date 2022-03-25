@@ -1,14 +1,15 @@
 import re
 
 from datetime import datetime
+from django.utils import timezone
 from dateutil.tz import gettz, tzutc
 from dateutil import parser
 import pytz
 
-__all__ = ['DatetimeInteger', 'duration_to_str']
+__all__ = ['DatetimeInteger', 'duration_to_str', 'from_now']
 
 
-def duration_to_str(duration):
+def duration_to_str(duration, include_seconds=False):
     if duration is None:
         return 'none'
 
@@ -23,18 +24,22 @@ def duration_to_str(duration):
         msg = f'{hour_value} hr'
         if min > 0:
             msg += f', {min} min'
-        if sec_value > 0:
+        if sec_value > 0 and include_seconds:
             msg += f' and {sec_value} sec'
         return msg
     elif min > 0:
         msg = f'{min} min'
-        if sec_value > 0:
+        if sec_value > 0 and include_seconds:
             msg += f' and {sec_value} sec'
         return msg
-    elif sec_value > 0:
+    elif sec_value > 0 and include_seconds:
         return f'{sec_value} sec'
     else:
         return 'none'
+
+
+def from_now(_date, include_seconds=False):
+    return duration_to_str(timezone.now() - _date, include_seconds)
 
 
 class Datetime(datetime):
