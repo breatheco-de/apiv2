@@ -60,9 +60,6 @@ class AssetValidator():
 
     def fatal(self):
 
-        if self.asset.readme is None or self.asset.readme == '':
-            raise Exception('Empty readme')
-
         if self.asset.lang is None or self.asset.lang == '':
             raise Exception('Empty default language')
 
@@ -92,17 +89,24 @@ class WithPreview():
             test_url(self.asset.preview, allow_relative=False, allow_hash=False)
 
 
-class LessonValidator(AssetValidator):
+class WithReadme():
+    def fatal(self):
+
+        if self.asset.readme is None or self.asset.readme == '':
+            raise Exception('Empty readme')
+
+
+class LessonValidator(AssetValidator, WithReadme):
     def fatal(self):
         super().fatal()
 
 
-class ExerciseValidator(AssetValidator, WithPreview):
+class ExerciseValidator(AssetValidator, WithPreview, WithReadme):
     def fatal(self):
         super().fatal()
 
 
-class ProjectValidator(ExerciseValidator, WithPreview):
+class ProjectValidator(ExerciseValidator, WithPreview, WithReadme):
     def fatal(self):
         super().fatal()
 

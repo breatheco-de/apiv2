@@ -166,6 +166,9 @@ def sync_with_github(asset_slug, author_id=None):
                 f'System does not know what github credentials to use to retrive asset info for: {asset_slug}'
             )
 
+        if asset.url is None or 'github.com' not in asset.url:
+            raise Exception(f'Missing or invalid URL on {asset_slug}, it does not belong to github.com')
+
         credentials = CredentialsGithub.objects.filter(user__id=author_id).first()
         if credentials is None:
             raise Exception(
@@ -183,6 +186,7 @@ def sync_with_github(asset_slug, author_id=None):
         asset.save()
         logger.debug(f'Successfully re-synched asset {asset_slug} with github')
     except Exception as e:
+        raise e
         asset.status_text = str(e)
         asset.sync_status = 'ERROR'
         asset.save()
