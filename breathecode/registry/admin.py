@@ -101,8 +101,7 @@ def create_assessment_from_asset(modeladmin, request, queryset):
             if ass.config is None or ass.config == '':
                 raise Exception(f'Assessment with slug {a.slug} has no config')
 
-            a.config['info']['slug'] = a.slug
-            create_from_json(a.config)
+            create_from_json(a.config, slug=a.slug)
         except Exception as e:
             messages.error(request, a.slug + ': ' + str(e))
 

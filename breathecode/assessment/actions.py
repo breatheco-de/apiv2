@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def create_from_json(payload: str):
+def create_from_json(payload: str, slug=None):
     quiz = payload
 
     if quiz['info']['lang'] == 'en':
@@ -15,6 +15,9 @@ def create_from_json(payload: str):
     if 'slug' not in quiz['info']:
         logger.log(f'Ignoring quiz because it does not have a slug')
         return None
+
+    if slug is not None:
+        quiz['info']['slug'] = slug
 
     name = 'No name yet'
     if 'name' not in quiz['info']:
