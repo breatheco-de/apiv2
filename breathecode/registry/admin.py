@@ -168,7 +168,6 @@ class AssetAdmin(admin.ModelAdmin):
             'WARNING': 'bg-warning',
             'UNASSIGNED': 'bg-error',
             'UNLISTED': 'bg-warning',
-            '"message"': '',
         }
 
         def from_status(s):
@@ -176,6 +175,7 @@ class AssetAdmin(admin.ModelAdmin):
                 return colors[s]
             return ''
 
+        print(f'printing asset {obj.slug}')
         return format_html(
             f"""<table><tr><td style='font-size: 10px !important;'>Publish</td><td style='font-size: 10px !important;'>Synch</td><td style='font-size: 10px !important;'>Test</td></tr>
         <td><span class='badge {from_status(obj.status)}'>{obj.status}</span></td>
