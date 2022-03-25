@@ -103,7 +103,6 @@ def create_assessment_from_asset(modeladmin, request, queryset):
 
             create_from_json(a.config, slug=a.slug)
         except Exception as e:
-            raise e
             messages.error(request, a.slug + ': ' + str(e))
 
 
