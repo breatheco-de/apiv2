@@ -10,7 +10,7 @@ from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_json
 from breathecode.authenticate.models import CredentialsGithub
 from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
-from .serializers import AssetSerializer
+from .serializers import AssetBigSerializer
 from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException
 from github import Github
 
@@ -23,7 +23,7 @@ def generate_external_readme(a):
         return False
 
     readme = get_template('new_window.md')
-    a.set_readme(readme.render(AssetSerializer(a).data))
+    a.set_readme(readme.render(AssetBigSerializer(a).data))
     a.save()
     return True
 
