@@ -144,7 +144,7 @@ class AssetAdmin(admin.ModelAdmin):
     form = AssetForm
     search_fields = ['title', 'slug', 'author__email', 'url']
     list_display = ('main', 'current_status', 'asset_type', 'techs', 'url_path')
-    list_filter = ['asset_type', 'status', 'lang', AssessmentFilter]
+    list_filter = ['asset_type', 'status', 'sync_status', 'test_status', 'lang', AssessmentFilter]
     raw_id_fields = ['author', 'owner']
     actions = [
         test_asset_integrity,
