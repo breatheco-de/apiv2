@@ -152,7 +152,7 @@ class AssetAdmin(admin.ModelAdmin):
         pull_from_github,
         make_me_author,
         make_me_owner,
-        create_assignment_from_asset,
+        create_assessment_from_asset,
         get_author_grom_github_usernames,
     ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status') + change_field(['us', 'es'], name='lang')
 
