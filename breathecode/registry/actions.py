@@ -11,7 +11,7 @@ from breathecode.assessment.actions import create_from_json
 from breathecode.authenticate.models import CredentialsGithub
 from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
 from .serializers import AssetBigSerializer
-from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException
+from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator
 from github import Github
 
 logger = logging.getLogger(__name__)
@@ -165,11 +165,16 @@ def get_user_from_github_username(username):
 def sync_with_github(asset_slug, author_id=None):
 
     logger.debug(f'Sync with github asset {asset_slug}')
+
     try:
 
         asset = Asset.objects.filter(slug=asset_slug).first()
         if asset is None:
             raise Exception(f'Asset with slug {asset_slug} not found when attempting to sync with github')
+
+        asset.status_text = 'Starting to sync...'
+        asset.sync_status = 'PENDING'
+        asset.save()
 
         if generate_external_readme(asset):
             asset.status_text = 'Readme file for external asset generated, not github sync'

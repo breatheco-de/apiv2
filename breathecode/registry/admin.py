@@ -44,7 +44,7 @@ make_internal.short_description = 'Make it an INTERNAL resource (same window)'
 
 
 def pull_from_github(modeladmin, request, queryset):
-    queryset.update(sync_status='PENDING')
+    queryset.update(sync_status='PENDING', status_text='Starting to sync...')
     assets = queryset.all()
     for a in assets:
         async_sync_with_github.delay(a.slug, request.user.id)
