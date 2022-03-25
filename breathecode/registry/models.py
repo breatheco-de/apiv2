@@ -180,6 +180,7 @@ class Asset(models.Model):
             AssetErrorLog(slug=AssetErrorLog.EMPTY_README,
                           path=self.slug,
                           asset_type=self.asset_type,
+                          asset=self,
                           status_text='Readme file was not found').save()
             self.set_readme(
                 get_template('default_readme.md').render({
@@ -221,6 +222,7 @@ class Asset(models.Model):
         elif asset_type is not None and alias.asset.asset_type.lower() == asset_type.lower():
             AssetErrorLog(slug=AssetErrorLog.DIFFERENT_TYPE,
                           path=asset_slug,
+                          asset=alias.asset,
                           asset_type=asset_type,
                           user=user).save()
         else:

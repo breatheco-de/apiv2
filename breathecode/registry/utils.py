@@ -107,7 +107,7 @@ class AssetValidator():
             test_url(self.asset.preview, allow_relative=False, allow_hash=False)
 
     def readme(self):
-        if self.asset.readme is None or self.asset.readme == '':
+        if self.asset.readme is None or self.asset.readme == '' and not self.asset.external:
             raise Exception('Empty readme')
 
 
