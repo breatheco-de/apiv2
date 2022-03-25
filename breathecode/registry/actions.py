@@ -278,11 +278,6 @@ def sync_learnpack_asset(github, asset):
             asset.solution = config['solution']
             asset.with_solutions = True
 
-        if 'language' in config:
-            asset.lang = config['language']
-        elif 'syntax' in config:
-            asset.lang = config['syntax']
-
         if 'technologies' in config:
             for tech_slug in config['technologies']:
                 _slug = slugify(tech_slug)
