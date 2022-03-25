@@ -11,6 +11,10 @@ class UserProxy(User):
 
 
 class Assessment(models.Model):
+    def __init__(self, *args, **kwargs):
+        super(Assessment, self).__init__(*args, **kwargs)
+        self.__old_slug = self.slug
+
     slug = models.SlugField(max_length=200, primary_key=True)
     title = models.CharField(max_length=255, blank=True)
     lang = models.CharField(max_length=3, blank=True, default='en')
@@ -47,6 +51,13 @@ class Assessment(models.Model):
 
     def __str__(self):
         return f'{self.slug} ({self.lang})'
+
+    def save(self, *args, **kwargs):
+
+        # only validate this on creation
+        super().save(*args, **kwargs)
+        if self.slug != self.__old_slug:
+            Assessment.objects.filter(slug=self.__old_slug).delete()
 
 
 TEXT = 'TEXT'

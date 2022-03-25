@@ -65,6 +65,10 @@ ASSET_SYNC_STATUS = (
 
 
 class Asset(models.Model):
+    def __init__(self, *args, **kwargs):
+        super(Asset, self).__init__(*args, **kwargs)
+        self.__old_slug = self.slug
+
     slug = models.SlugField(max_length=200, primary_key=True)
     title = models.CharField(max_length=200, blank=True)
     lang = models.CharField(max_length=2, blank=True, null=True, default=None, help_text='E.g: en, es, it')
@@ -160,12 +164,13 @@ class Asset(models.Model):
     def save(self, *args, **kwargs):
 
         # only validate this on creation
-        if self.created_at is None:
+        if self.created_at is None or self.slug != self.__old_slug:
             alias = AssetAlias.objects.filter(slug=self.slug).first()
             if alias is not None:
                 raise Exception('Slug is already taken by alias')
             super().save(*args, **kwargs)
             AssetAlias.objects.create(slug=self.slug, asset=self)
+            Asset.objects.filter(slug=self.__old_slug).delete()
 
         else:
             super().save(*args, **kwargs)
