@@ -308,13 +308,37 @@ def make_alias(modeladmin, request, queryset):
             if alias is None:
                 alias = AssetAlias(slug=e.path, asset=e.asset)
                 alias.save()
-                e.status = 'FIXED'
-                e.save()
+                AssetErrorLog.objects.filter(slug=e.slug,
+                                             asset_type=e.asset_type,
+                                             status='ERROR',
+                                             path=e.path,
+                                             asset=e.asset).update(status='FIXED')
                 continue
 
             if alias.asset.id != e.asset.id:
                 messages.error(
                     request, f'Slug {e.path} already exists for a different asset {alias.asset.asset_type}')
+
+
+def change_status_FIXED_including_similar(modeladmin, request, queryset):
+    errors = queryset.all()
+    for e in errors:
+        AssetErrorLog.objects.filter(slug=e.slug, asset_type=e.asset_type, path=e.path,
+                                     asset=e.asset).update(status='FIXED')
+
+
+def change_status_ERROR_including_similar(modeladmin, request, queryset):
+    errors = queryset.all()
+    for e in errors:
+        AssetErrorLog.objects.filter(slug=e.slug, asset_type=e.asset_type, path=e.path,
+                                     asset=e.asset).update(status='ERROR')
+
+
+def change_status_IGNORED_including_similar(modeladmin, request, queryset):
+    errors = queryset.all()
+    for e in errors:
+        AssetErrorLog.objects.filter(slug=e.slug, asset_type=e.asset_type, path=e.path,
+                                     asset=e.asset).update(status='IGNORED')
 
 
 @admin.register(AssetErrorLog)
@@ -323,7 +347,10 @@ class AssetErrorLogAdmin(admin.ModelAdmin):
     list_display = ('slug', 'path', 'current_status', 'user', 'created_at', 'asset')
     raw_id_fields = ['user', 'asset']
     list_filter = ['status', 'slug']
-    actions = [make_alias] + change_field(['ERROR', 'IGNORED', 'FIXED'], name='status')
+    actions = [
+        make_alias, change_status_FIXED_including_similar, change_status_ERROR_including_similar,
+        change_status_IGNORED_including_similar
+    ]
 
     def current_status(self, obj):
         colors = {
