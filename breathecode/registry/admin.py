@@ -304,17 +304,17 @@ def make_alias(modeladmin, request, queryset):
             )
 
         else:
-            alias = AssetAlias.objects.filter(slug=e.slug).first()
+            alias = AssetAlias.objects.filter(slug=e.path).first()
             if alias is None:
-                alias = AssetAlias(slug=e.slug, asset=e.asset)
+                alias = AssetAlias(slug=e.path, asset=e.asset)
                 alias.save()
                 e.status = 'FIXED'
                 e.save()
                 continue
 
             if alias.asset.id != e.asset.id:
-                messages.error(request,
-                               f'Slug {slug} already exists for a different asset {alias.asset.asset_type}')
+                messages.error(
+                    request, f'Slug {e.path} already exists for a different asset {alias.asset.asset_type}')
 
 
 @admin.register(AssetErrorLog)
