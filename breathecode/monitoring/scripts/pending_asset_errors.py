@@ -17,7 +17,7 @@ if total_errors == 0:
 else:
     content = ''
     for e in errors:
-        content += f'- {e.slug} with path {str(e.path)} since {from_now(e.created_at)} ago'
+        content += f'- {e.slug} with path {str(e.path)} since {from_now(e.created_at)} ago \n'
 
     raise ScriptNotification(f'There are {str(total_errors)} erros on the asset log: \n\n'
                              f'{content}',

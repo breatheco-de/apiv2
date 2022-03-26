@@ -115,3 +115,36 @@ def sync_cohort_timeslots(cohort_id):
     ])
 
     return [append_cohort_id_if_not_exist(x) for x in timeslots]
+
+
+def update_asset_on_json(from_slug, to_slug, asset_type, test=False):
+
+    syllabus_list = SyllabusVersion.objects.all()
+
+    findings = []
+    for s in syllabus_list:
+        json = s.json
+        moduleIndex = 0
+        for day in json.days:
+            target_assets = []
+            if asset_type == 'LESSON':
+                target_assets = day.lessons
+            elif asset_type == 'QUIZ':
+                target_assets = day.quizzes
+            elif asset_type == 'EXERCISE':
+                target_assets = day.replits
+            elif asset_type == 'PROJECT':
+                target_assets = day.assignments
+
+            for a in target_assets:
+                if a.slug == from_slug:
+                    findings.append({
+                        'module': moduleIndex,
+                        'version': s.version,
+                        'syllabus': s.syllabus.slug
+                    })
+                    if not test:
+                        a.slug = to_slug
+        s.save()
+
+    return findings
