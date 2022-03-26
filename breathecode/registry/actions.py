@@ -23,7 +23,7 @@ def generate_external_readme(a):
     if not a.external:
         return False
 
-    readme = get_template('new_window.md')
+    readme = get_template('external.md')
     a.set_readme(readme.render(AssetBigSerializer(a).data))
     a.save()
     return True
@@ -223,6 +223,7 @@ def sync_with_github(asset_slug, author_id=None):
         asset.save()
         logger.debug(f'Successfully re-synched asset {asset_slug} with github')
     except Exception as e:
+        raise e
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
@@ -275,6 +276,34 @@ def sync_github_lesson(github, asset):
     return asset
 
 
+def clean_asset_readme(asset):
+    logger.debug(f'Clearning readme for asset {asset.slug}')
+    readme = asset.get_readme()
+    regex = r'<!--\s+(:?end)?hide\s+-->'
+
+    content = readme['decoded']
+    findings = list(re.finditer(regex, content))
+
+    if len(findings) % 2 != 0:
+        asset.log_error(AssetErrorLog.README_SYNTAX, 'Readme with to many <!-- hide -> comments')
+        raise Exception('Readme with to many <!-- hide -> comments')
+
+    replaced = ''
+    startIndex = 0
+    while len(findings) > 1:
+        opening_comment = findings.pop(0)
+        endIndex = opening_comment.start()
+
+        replaced += content[startIndex:endIndex]
+
+        closing_comment = findings.pop(0)
+        startIndex = closing_comment.end()
+
+    replaced += content[startIndex:]
+    asset.set_readme(replaced)
+    return asset
+
+
 def sync_learnpack_asset(github, asset):
 
     org_name, repo_name = get_url_info(asset.url)
@@ -310,6 +339,7 @@ def sync_learnpack_asset(github, asset):
                     raise Exception('No configuration learn.json or bc.json file was found')
 
     asset.readme = str(readme_file.content)
+    asset = clean_asset_readme(asset)
 
     if learn_file is not None:
         config = json.loads(learn_file.decoded_content.decode('utf-8'))

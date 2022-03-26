@@ -183,7 +183,7 @@ class Asset(models.Model):
                           asset=self,
                           status_text='Readme file was not found').save()
             self.set_readme(
-                get_template('default_readme.md').render({
+                get_template('empty.md').render({
                     'title': self.title,
                     'lang': self.lang,
                     'asset_type': self.asset_type,
@@ -205,6 +205,15 @@ class Asset(models.Model):
     def set_readme(self, content):
         self.readme = str(base64.b64encode(content.encode('utf-8')).decode('utf-8'))
         return self
+
+    def log_error(self, error_slug, status_text=None):
+        error = AssetErrorLog(slug=error_slug,
+                              asset=self,
+                              asset_type=self.asset_type,
+                              status_text=status_text,
+                              path=self.slug)
+        error.save()
+        return error
 
     @staticmethod
     def get_by_slug(asset_slug, request=None, asset_type=None):
@@ -254,6 +263,7 @@ class AssetErrorLog(models.Model):
     DIFFERENT_TYPE = 'different-type'
     EMPTY_README = 'empty-readme'
     INVALID_URL = 'invalid-url'
+    README_SYNTAX = 'readme-syntax-error'
 
     asset_type = models.CharField(max_length=20, choices=TYPE, default=None, null=True, blank=True)
     slug = models.SlugField(max_length=200)

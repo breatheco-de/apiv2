@@ -1,4 +1,4 @@
-import logging, re
+import logging, re, html
 from django.contrib import admin, messages
 from django.utils.html import format_html
 from django.contrib.auth.models import User
@@ -332,4 +332,9 @@ class AssetErrorLogAdmin(admin.ModelAdmin):
             'IGNORED': '',
             None: 'bg-warning',
         }
-        return format_html(f'<span class="badge d-block {colors[obj.status]}">{obj.slug}</span>')
+        message = ''
+        if obj.status_text is not None:
+            message = html.escape(obj.status_text)
+        return format_html(
+            f'<span class="badge {colors[obj.status]}">{obj.slug}</span><small style="display: block;">{message}</small>'
+        )
