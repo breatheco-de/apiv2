@@ -2,6 +2,7 @@ from breathecode.admissions.caches import CohortCache
 import logging
 import pytz
 from django.db.models import Q
+from breathecode.utils.decorators import has_permission
 from django.utils import timezone
 from django.contrib.auth.models import AnonymousUser
 from breathecode.utils import HeaderLimitOffsetPagination
@@ -21,6 +22,8 @@ from .serializers import (AcademySerializer, GetSyllabusSerializer, SyllabusSche
                           PublicCohortSerializer, GetSyllabusSmallSerializer)
 from .models import (Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule, Cohort,
                      STUDENT, DELETED, Syllabus, SyllabusVersion)
+
+from .actions import update_asset_on_json
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -1094,6 +1097,32 @@ class SyllabusView(APIView, HeaderLimitOffsetPagination):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SyllabusAssetView(APIView, HeaderLimitOffsetPagination):
+
+    # @has_permission('superadmin')
+    def put(self, request, asset_slug=None):
+
+        if asset_slug is None or asset_slug == '':
+            raise ValidationException('Please specify the asset slug you want to replace',
+                                      slug='invalid-asset-slug')
+        asset = request.data
+        if 'slug' not in asset or asset['slug'] == '':
+            raise ValidationException('Missing or invalid slug', slug='invalid-asset-slug')
+        if 'type' not in asset or asset['type'] == '':
+            raise ValidationException('Missing or invalid asset type', slug='invalid-asset-type')
+
+        simulate = True
+        if 'simulate' in asset and asset['simulate'] == False:
+            simulate = False
+
+        findings = update_asset_on_json(from_slug=asset_slug,
+                                        to_slug=asset['slug'],
+                                        asset_type=asset['type'],
+                                        simulate=simulate)
+
+        return Response(findings, status=status.HTTP_200_OK)
 
 
 class SyllabusVersionView(APIView):

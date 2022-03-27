@@ -1,4 +1,4 @@
-import logging
+import logging, json
 from django.db.models.query_utils import Q
 from .models import SyllabusVersion
 from breathecode.services.google_cloud import Storage
@@ -118,8 +118,23 @@ def sync_cohort_timeslots(cohort_id):
     return [append_cohort_id_if_not_exist(x) for x in timeslots]
 
 
+def weeks_to_days(json):
+
+    days = []
+    weeks = json.pop('weeks', [])
+    for week in weeks:
+        days += week['days']
+
+    if 'days' not in json:
+        json['days'] = days
+
+    return json
+
+
 def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
 
+    asset_type = asset_type.upper()
+    logger.debug(f'Replacing {asset_type} slug {from_slug} with {to_slug} in all the syllabus and versions')
     syllabus_list = SyllabusVersion.objects.all()
     key_map = {
         'QUIZ': 'quizzes',
@@ -131,9 +146,21 @@ def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
     findings = []
     for s in syllabus_list:
         moduleIndex = -1
+        if isinstance(s.json, str):
+            s.json = json.loads(s.json)
+
+        # in case the json contains "weeks" instead of "days"
+        s.json = weeks_to_days(s.json)
+
         for day in s.json['days']:
             moduleIndex += 1
             assetIndex = -1
+            if key_map[asset_type] not in day:
+                logger.debug(
+                    f'{key_map[asset_type]} not found on module {moduleIndex} for syllabus {s.syllabus.slug} json'
+                )
+                continue
+
             for a in day[key_map[asset_type]]:
                 assetIndex += 1
                 if a['slug'] == from_slug:
