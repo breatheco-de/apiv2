@@ -1,5 +1,6 @@
 import logging
 from django.db.models.query_utils import Q
+from .models import SyllabusVersion
 from breathecode.services.google_cloud import Storage
 
 BUCKET_NAME = 'admissions-breathecode'
@@ -117,34 +118,32 @@ def sync_cohort_timeslots(cohort_id):
     return [append_cohort_id_if_not_exist(x) for x in timeslots]
 
 
-def update_asset_on_json(from_slug, to_slug, asset_type, test=False):
+def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
 
     syllabus_list = SyllabusVersion.objects.all()
+    key_map = {
+        'QUIZ': 'quizzes',
+        'LESSON': 'lessons',
+        'EXERCISE': 'replits',
+        'PROJECT': 'assignments',
+    }
 
     findings = []
     for s in syllabus_list:
-        json = s.json
-        moduleIndex = 0
-        for day in json.days:
-            target_assets = []
-            if asset_type == 'LESSON':
-                target_assets = day.lessons
-            elif asset_type == 'QUIZ':
-                target_assets = day.quizzes
-            elif asset_type == 'EXERCISE':
-                target_assets = day.replits
-            elif asset_type == 'PROJECT':
-                target_assets = day.assignments
-
-            for a in target_assets:
-                if a.slug == from_slug:
+        moduleIndex = -1
+        for day in s.json['days']:
+            moduleIndex += 1
+            assetIndex = -1
+            for a in day[key_map[asset_type]]:
+                assetIndex += 1
+                if a['slug'] == from_slug:
                     findings.append({
                         'module': moduleIndex,
                         'version': s.version,
                         'syllabus': s.syllabus.slug
                     })
-                    if not test:
-                        a.slug = to_slug
-        s.save()
+                    s.json['days'][moduleIndex][key_map[asset_type]][assetIndex]['slug'] = to_slug
+        if not simulate:
+            s.save()
 
     return findings

@@ -1,4 +1,4 @@
-import requests, logging
+import requests, logging, os
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
@@ -21,6 +21,8 @@ from rest_framework import status
 from django.http import HttpResponseRedirect
 
 logger = logging.getLogger(__name__)
+
+SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', None)
 
 
 @api_view(['GET'])
@@ -127,11 +129,13 @@ def get_config(request, asset_slug):
         return Response(response.json())
     except Exception as e:
         data = {
-            'MESSAGE': f'learn.json or bc.json not found or invalid for for {asset.url}',
-            'TITLE': f'Error fetching the exercise meta-data learn.json for {asset.slug}',
+            'MESSAGE':
+            f'learn.json or bc.json not found or invalid for for: \n {asset.url}',
+            'TITLE':
+            f'Error fetching the exercise meta-data learn.json for {asset.asset_type.lower()} {asset.slug}',
         }
 
-        to = 'support@4geeksacademy.com'
+        to = SYSTEM_EMAIL
         if asset.author is not None:
             to = asset.author.email
 
