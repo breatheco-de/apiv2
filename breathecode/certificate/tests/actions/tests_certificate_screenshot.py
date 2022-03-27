@@ -102,9 +102,14 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call(f'https://api.screenshotmachine.com?{query_string}', stream=True),
         ])
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
-            call(instance=model.user_specialty, sender=model.user_specialty.__class__),
-        ])
+        self.assertEqual(
+            signals.user_specialty_saved.send.call_args_list,
+            [
+                # Mixer
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+                # Save
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+            ])
 
         self.assertEqual(File.upload.call_args_list, [call('mailgun response', public=True)])
         self.assertEqual(File.url.call_args_list, [call()])
@@ -149,9 +154,14 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         self.assertEqual(requests.get.call_args_list, [
             call(f'https://api.screenshotmachine.com?{query_string}', stream=True),
         ])
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
-            call(instance=model.user_specialty, sender=model.user_specialty.__class__),
-        ])
+        self.assertEqual(
+            signals.user_specialty_saved.send.call_args_list,
+            [
+                # Mixer
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+                # Save
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+            ])
 
         self.assertEqual(File.upload.call_args_list, [call('mailgun response', public=True)])
         self.assertEqual(File.url.call_args_list, [call()])
@@ -165,10 +175,6 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
                (200, f'https://api.screenshotmachine.com?{query_string}', 'mailgun response'),
            ]))
     @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
-    # @patch.multiple('google.cloud.storage.Client',
-    #                 __init__=MagicMock(return_value=None),
-    #                 bucket=MagicMock(return_value='bucket-name'),
-    #                 create=True)
     @patch.multiple('breathecode.services.google_cloud.Storage',
                     __init__=MagicMock(return_value=None),
                     client=PropertyMock(),
@@ -198,9 +204,14 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
         ])
 
         self.assertEqual(requests.get.call_args_list, [])
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
-            call(instance=model.user_specialty, sender=model.user_specialty.__class__),
-        ])
+        self.assertEqual(
+            signals.user_specialty_saved.send.call_args_list,
+            [
+                # Mixer
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+                # Save
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+            ])
 
         self.assertEqual(File.upload.call_args_list, [])
         self.assertEqual(File.url.call_args_list, [call()])

@@ -208,6 +208,7 @@ class CertificateTestSuite(CertificateTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(
             self.all_user_specialty_dict(),
             [{
@@ -224,7 +225,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'issued_at': issued_at,
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
-                'user_id': 1
+                'user_id': 1,
+                'update_hash': user_specialty.update_hash,
             }])
 
         self.assertEqual(

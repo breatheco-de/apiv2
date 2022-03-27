@@ -389,6 +389,8 @@ class CertificateTestSuite(CertificateTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(
             self.all_user_specialty_dict(),
             [{
@@ -405,7 +407,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'issued_at': None,
                 'status_text': 'bad-finantial-status',
                 'user_id': 1,
-                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
+                'update_hash': self.generate_update_hash(user_specialty),
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
             }])
 
         self.assertEqual(
@@ -514,11 +517,12 @@ class CertificateTestSuite(CertificateTestCase):
                 'first_name': model['user'].first_name,
                 'id': 1,
                 'last_name': model['user'].last_name
-            }
+            },
         }]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(
             self.all_user_specialty_dict(),
             [{
@@ -535,7 +539,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'issued_at': None,
                 'status_text': 'bad-educational-status',
                 'user_id': 1,
-                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
+                'update_hash': user_specialty.update_hash,
             }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -640,6 +645,7 @@ class CertificateTestSuite(CertificateTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(
             self.all_user_specialty_dict(),
             [{
@@ -656,7 +662,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'issued_at': None,
                 'status_text': 'cohort-not-finished',
                 'user_id': 1,
-                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
+                'update_hash': user_specialty.update_hash,
             }])
 
         self.assertEqual(
@@ -782,6 +789,7 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(
             self.all_user_specialty_dict(),
             [{
@@ -798,7 +806,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'issued_at': issued_at,
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 1,
-                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
+                'update_hash': user_specialty.update_hash,
             }])
 
         self.assertEqual(

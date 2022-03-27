@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 @receiver(user_specialty_saved, sender=UserSpecialty)
 def post_save_user_specialty(sender, instance: UserSpecialty, **kwargs):
-    if instance.status == 'PERSISTED' and instance.preview_url:
+    if instance._hash_was_updated and instance.status == 'PERSISTED' and instance.preview_url:
         tasks.reset_screenshot.delay(instance.id)
 
-    elif instance.status == 'PERSISTED' and not instance.preview_url:
+    elif instance._hash_was_updated and instance.status == 'PERSISTED' and not instance.preview_url:
         tasks.take_screenshot.delay(instance.id)

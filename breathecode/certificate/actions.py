@@ -174,7 +174,7 @@ def certificate_screenshot(certificate_id: int):
         # after created, lets save the URL
         if file.blob is not None:
             certificate.preview_url = file.url()
-            certificate.save(prevent_signal=True)
+            certificate.save()
 
 
 def remove_certificate_screenshot(certificate_id):
@@ -188,6 +188,6 @@ def remove_certificate_screenshot(certificate_id):
     file.delete()
 
     certificate.preview_url = ''
-    certificate.save(prevent_signal=True)
+    certificate.save()
 
     return True

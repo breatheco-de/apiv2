@@ -151,7 +151,12 @@ class ActionCertificateScreenshotTestCase(CertificateTestCase):
             },
         ])
 
-        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
-            call(instance=model.user_specialty, sender=model.user_specialty.__class__),
-        ])
+        self.assertEqual(
+            signals.user_specialty_saved.send.call_args_list,
+            [
+                # Mixer
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+                # Save
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+            ])
         self.assertEqual(File.delete.call_args_list, [call()])

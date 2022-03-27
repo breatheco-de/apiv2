@@ -250,6 +250,7 @@ class CertificateTestSuite(CertificateTestCase):
 
         del certificates[0]['issued_at']
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(
             certificates, [{
                 'academy_id': 1,
@@ -264,7 +265,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'status': 'PERSISTED',
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 1,
-                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
+                'update_hash': user_specialty.update_hash,
             }])
 
         self.assertEqual(
@@ -479,6 +481,8 @@ class CertificateTestSuite(CertificateTestCase):
         del certificates[0]['issued_at']
         del certificates[1]['issued_at']
 
+        user_specialty1 = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        user_specialty2 = self.bc.database.get('certificate.UserSpecialty', 2, dict=False)
         self.assertEqual(certificates, [
             {
                 'academy_id': 1,
@@ -493,7 +497,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'status': 'PERSISTED',
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 2,
-                'token': 'huhuhuhuhu'
+                'token': 'huhuhuhuhu',
+                'update_hash': user_specialty1.update_hash,
             },
             {
                 'academy_id': 1,
@@ -508,7 +513,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'status': 'PERSISTED',
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 3,
-                'token': 'qwerrty'
+                'token': 'qwerrty',
+                'update_hash': user_specialty2.update_hash,
             },
         ])
 

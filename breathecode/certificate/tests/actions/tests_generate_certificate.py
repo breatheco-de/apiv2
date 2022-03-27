@@ -103,6 +103,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         result['token'] = None
 
         translation = strings[model['cohort'].language]
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -118,6 +119,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'token': None,
             'status_text': 'cohort-without-status-ended',
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertEqual(result, expected)
@@ -295,6 +297,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         result['token'] = None
 
         translation = strings[model['cohort'].language]
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -310,6 +313,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'token': None,
             'status_text': 'bad-finantial-status',
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertEqual(result, expected)
@@ -360,6 +364,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertToken(result['token'])
         result['token'] = None
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -375,6 +380,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'token': None,
             'status_text': 'with-pending-tasks',
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
         self.assertEqual(result, expected)
         self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
@@ -421,6 +427,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertToken(result['token'])
         result['token'] = None
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -436,6 +443,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'bad-educational-status',
             'token': None,
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
         self.assertEqual(result, expected)
         self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
@@ -481,6 +489,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertToken(result['token'])
         result['token'] = None
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -496,6 +505,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'bad-educational-status',
             'token': None,
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertEqual(result, expected)
@@ -543,6 +553,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertToken(result['token'])
         result['token'] = None
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -558,6 +569,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'bad-educational-status',
             'token': None,
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertEqual(result, expected)
@@ -601,6 +613,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                              cohort_user_kwargs=cohort_user_kwargs,
                                              models=base)
         result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -615,6 +628,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status': 'ERROR',
             'status_text': 'cohort-not-finished',
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertToken(result['token'])
@@ -674,6 +688,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertGreater(issued_at, start)
         self.assertLess(issued_at, end)
         del result['issued_at']
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -688,6 +703,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'Certificate successfully queued for PDF generation',
             'user_id': 1,
             'is_cleaned': True,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertToken(result['token'])
@@ -750,6 +766,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         del result['issued_at']
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -764,6 +781,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'Certificate successfully queued for PDF generation',
             'user_id': 1,
             'is_cleaned': True,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertToken(result['token'])
@@ -819,6 +837,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertGreater(issued_at, start)
         self.assertLess(issued_at, end)
         del result['issued_at']
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -833,6 +853,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'Certificate successfully queued for PDF generation',
             'user_id': 1,
             'is_cleaned': True,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertToken(result['token'])
