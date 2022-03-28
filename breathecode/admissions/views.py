@@ -1171,7 +1171,7 @@ class SyllabusVersionView(APIView):
         if syllabus_id or syllabus_slug:
             syllabus = Syllabus.objects.filter(Q(id=syllabus_id)
                                                | Q(slug=syllabus_slug, slug__isnull=False)).filter(
-                                                   syllabus__academy_owner__id=academy_id).first()
+                                                   academy_owner__id=academy_id).first()
 
             if not syllabus:
                 raise ValidationException(f'Syllabus not found for this academy',

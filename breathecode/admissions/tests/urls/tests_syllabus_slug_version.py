@@ -98,6 +98,11 @@ class CertificateTestSuite(AdmissionsTestCase):
             'slug': model['syllabus'].slug,
             'syllabus': 1,
             'version': model['syllabus_version'].version,
+            'academy_owner': {
+                'id': model['syllabus'].academy_owner.id,
+                'name': model['syllabus'].academy_owner.name,
+                'slug': model['syllabus'].academy_owner.slug,
+            },
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,
             'github_url': model.syllabus.github_url,
