@@ -6,6 +6,7 @@ import requests
 import base64
 from django.contrib import admin
 from django import forms
+from django.utils.html import format_html
 from django.contrib.auth.admin import UserAdmin
 from django.contrib import messages
 from breathecode.utils import getLogger
@@ -322,7 +323,13 @@ class SyllabusAdmin(admin.ModelAdmin):
 
 @admin.register(SyllabusVersion)
 class SyllabusVersionAdmin(admin.ModelAdmin):
-    list_display = ('version', 'syllabus')
+    list_display = ('version', 'syllabus', 'owner')
+
+    def owner(self, obj):
+        if obj.syllabus.academy_owner is None:
+            return format_html(f'<span class="badge bg-error">No academy owner</span>')
+
+        return format_html(f'<span>{obj.syllabus.academy_owner.name}</span>')
 
 
 @admin.register(CohortTimeSlot)

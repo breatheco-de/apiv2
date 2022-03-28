@@ -1042,7 +1042,8 @@ class SyllabusView(APIView, HeaderLimitOffsetPagination):
             serializer = GetSyllabusSerializer(syllabus, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        items = Syllabus.objects.filter(Q(academy_owner__id=academy_id) | Q(private=False))
+        items = Syllabus.objects.filter(Q(academy_owner__id=academy_id)
+                                        | Q(private=False)).exclude(academy_owner__isnull=True)
 
         page = self.paginate_queryset(items, request)
         serializer = GetSyllabusSerializer(page, many=True)
