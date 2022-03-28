@@ -2,6 +2,7 @@ import logging, json
 from django.db.models.query_utils import Q
 from .models import SyllabusVersion
 from breathecode.services.google_cloud import Storage
+from .signals import syllabus_asset_slug_updated
 
 BUCKET_NAME = 'admissions-breathecode'
 logger = logging.getLogger(__name__)
@@ -156,9 +157,6 @@ def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
             moduleIndex += 1
             assetIndex = -1
             if key_map[asset_type] not in day:
-                logger.debug(
-                    f'{key_map[asset_type]} not found on module {moduleIndex} for syllabus {s.syllabus.slug} json'
-                )
                 continue
 
             for a in day[key_map[asset_type]]:
@@ -172,5 +170,11 @@ def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
                     s.json['days'][moduleIndex][key_map[asset_type]][assetIndex]['slug'] = to_slug
         if not simulate:
             s.save()
+
+    if not simulate and len(findings) > 0:
+        syllabus_asset_slug_updated.send(sender=update_asset_on_json,
+                                         from_slug=from_slug,
+                                         to_slug=to_slug,
+                                         asset_type=asset_type)
 
     return findings
