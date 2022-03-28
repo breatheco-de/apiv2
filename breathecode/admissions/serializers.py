@@ -55,7 +55,7 @@ class ProfileSerializer(serpy.Serializer):
     github_username = serpy.Field()
 
 
-class AcademySerializer(serpy.Serializer):
+class GetSmallAcademySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
@@ -76,7 +76,7 @@ class GetProfileAcademySmallSerializer(serpy.Serializer):
 class ProfileAcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
-    academy = AcademySerializer()
+    academy = GetSmallAcademySerializer()
     role = serpy.MethodField()
 
     def get_role(self, obj):
@@ -205,6 +205,7 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
     updated_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+    academy_owner = serpy.MethodField()
     slug = serpy.MethodField()
     name = serpy.MethodField()
     syllabus = serpy.MethodField()
@@ -223,6 +224,11 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
 
     def get_syllabus(self, obj):
         return obj.syllabus.id if obj.syllabus else None
+
+    def get_academy_owner(self, obj):
+        if obj.syllabus is not None and obj.syllabus.academy_owner is not None:
+            return GetSmallAcademySerializer(obj.syllabus.academy_owner).data
+        return None
 
     def get_duration_in_hours(self, obj):
         return obj.syllabus.duration_in_hours if obj.syllabus else None
@@ -317,7 +323,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     current_day = serpy.Field()
     current_module = serpy.Field()
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
-    academy = AcademySerializer()
+    academy = GetSmallAcademySerializer()
     stage = serpy.Field()
 
 

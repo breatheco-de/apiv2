@@ -1170,10 +1170,13 @@ class SyllabusVersionView(APIView):
         syllabus = None
         if syllabus_id or syllabus_slug:
             syllabus = Syllabus.objects.filter(Q(id=syllabus_id)
-                                               | Q(slug=syllabus_slug, slug__isnull=False)).first()
+                                               | Q(slug=syllabus_slug, slug__isnull=False)).filter(
+                                                   syllabus__academy_owner__id=academy_id).first()
 
             if not syllabus:
-                raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
+                raise ValidationException(f'Syllabus not found for this academy',
+                                          code=404,
+                                          slug='syllabus-not-found')
 
         if not syllabus and 'syllabus' not in request.data:
             raise ValidationException(f'Missing syllabus in the request', slug='missing-syllabus-in-request')
@@ -1182,7 +1185,9 @@ class SyllabusVersionView(APIView):
             syllabus = Syllabus.objects.filter(id=request.data['syllabus']).first()
 
         if not syllabus:
-            raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
+            raise ValidationException(f'Syllabus not found for this academy',
+                                      code=404,
+                                      slug='syllabus-not-found')
 
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:
