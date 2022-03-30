@@ -1,14 +1,17 @@
 from typing import Any
+from pyparsing import Literal
 import pytz
 import re
 import logging
 
 from datetime import datetime, timedelta
 from django.utils import timezone
-from breathecode.admissions.models import Cohort, CohortTimeSlot
+from breathecode.admissions.models import Cohort, CohortTimeSlot, TimeSlot
+from breathecode.utils.datetime_interger import DatetimeInteger
 
 from .models import Organization, Venue, Event, Organizer
 from .utils import Eventbrite
+from django.db.models import QuerySet
 
 logger = logging.getLogger(__name__)
 
@@ -396,7 +399,94 @@ def publish_event_from_eventbrite(data, org: Organization) -> None:
         raise e
 
 
-def fix_datetime_weekday(current, timeslot, prev=False, next=False):
+def datetime_in_range(start: datetime, end: datetime, current: datetime):
+    """
+    Check if a datetime is in the range.
+
+    Usages:
+
+    ```py
+    from django.utils import timezone
+    from datetime import timedelta
+
+    utc_now = timezone.now()
+    start = utc_now - timedelta(days=1)
+    end = utc_now + timedelta(days=1)
+
+    datetime_in_range(start, end, utc_now)  # returns 0, the datetime is in the range
+
+    utc_now = utc_now - timedelta(days=2)
+    datetime_in_range(start, end, utc_now)  # returns -1, the datetime is less than start
+
+    utc_now = utc_now + timedelta(days=4)
+    datetime_in_range(start, end, utc_now)  # returns 1, the datetime is greater than start
+    ```
+    """
+
+    if current < start:
+        return -1
+
+    if current > end:
+        return 1
+
+    return 0
+
+
+def update_timeslots_out_of_range(start: datetime, end: datetime, timeslots: QuerySet[TimeSlot]):
+    """
+    Get a list of timeslots in the range.
+
+    Usages:
+
+    ```py
+    from django.utils import timezone
+    from datetime import timedelta
+
+    start = utc_now - timedelta(days=1)
+    end = utc_now + timedelta(days=1)
+    queryset = ...
+
+    update_timeslots_out_of_range(start, end, queryset)  # returns a list of timeslots
+    ```
+    """
+
+    lists = []
+
+    for timeslot in timeslots:
+        starting_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at)
+        ending_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at)
+        delta = ending_at - starting_at
+
+        n1 = datetime_in_range(start, end, starting_at)
+        n2 = datetime_in_range(start, end, ending_at)
+
+        less_than_start = n1 == -1 or n2 == -1
+        greater_than_end = n2 == 1 or n2 == 1
+
+        if not timeslot.recurrent and (less_than_start or greater_than_end):
+            continue
+
+        if less_than_start:
+            starting_at = fix_datetime_weekday(start, starting_at, next=True)
+            ending_at = starting_at + delta
+
+        elif greater_than_end:
+            ending_at = fix_datetime_weekday(end, ending_at, prev=True)
+            starting_at = ending_at - delta
+
+        lists.append({
+            **vars(timeslot),
+            'starting_at': starting_at,
+            'ending_at': ending_at,
+        })
+
+    return sorted(lists, key=lambda x: (x['starting_at'], x['ending_at']))
+
+
+def fix_datetime_weekday(current: datetime,
+                         timeslot: datetime,
+                         prev: bool = False,
+                         next: bool = False) -> datetime:
     if not prev and not next:
         raise Exception('You should provide a prev or next argument')
 
@@ -408,7 +498,7 @@ def fix_datetime_weekday(current, timeslot, prev=False, next=False):
                          hour=timeslot.hour,
                          minute=timeslot.minute,
                          second=timeslot.second,
-                         tzinfo=current.tzinfo)
+                         tzinfo=timeslot.tzinfo)
 
     while True:
         if prev:
