@@ -805,7 +805,7 @@ class ICalEventView(APIView):
             raise ValidationException('Some academy not exist')
 
         upcoming = request.GET.get('upcoming')
-        if upcoming == 'true':
+        if items and upcoming == 'true':
             now = timezone.now()
             items = items.filter(starting_at__gte=now)
 

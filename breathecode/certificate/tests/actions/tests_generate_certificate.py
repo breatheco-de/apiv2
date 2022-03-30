@@ -2,10 +2,11 @@
 Tasks tests
 """
 import re
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 from breathecode.utils import APIException
 from django.utils import timezone
 from ...actions import generate_certificate, strings
+import breathecode.certificate.signals as signals
 from ..mixins import CertificateTestCase
 from ..mocks import (
     GOOGLE_CLOUD_PATH,
@@ -22,6 +23,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__with_user_without_cohort(self):
         model = self.generate_models(user=True)
         try:
@@ -32,6 +34,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     """
     🔽🔽🔽 without CohortUser
     """
@@ -39,6 +43,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__without_cohort_user(self):
         model = self.generate_models(user=True, cohort=True)
         try:
@@ -49,6 +54,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     """
     🔽🔽🔽 Cohort not ended
     """
@@ -56,6 +63,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__cohort_not_ended(self):
         cohort_user_kwargs = {
             'finantial_status': 'FULLY_PAID',
@@ -95,6 +103,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         result['token'] = None
 
         translation = strings[model['cohort'].language]
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -110,11 +119,17 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'token': None,
             'status_text': 'cohort-without-status-ended',
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertEqual(result, expected)
         self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
                          [expected])
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
 
     """
     🔽🔽🔽 without SyllabusVersion
@@ -123,6 +138,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__without_syllabus_version(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True, cohort=True, cohort_user=True, cohort_kwargs=cohort_kwargs)
@@ -134,6 +150,9 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     """
     🔽🔽🔽 without Specialty
     """
@@ -141,6 +160,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__without_specialty(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -157,6 +177,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     """
     🔽🔽🔽 without Syllabus
     """
@@ -164,6 +186,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__without_syllabus(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -180,6 +203,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     """
     🔽🔽🔽 without default Layout
     """
@@ -187,6 +212,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__without_specialty_layout(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -205,6 +231,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     """
     🔽🔽🔽 without main teacher
     """
@@ -212,6 +240,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__without_teacher(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -231,6 +260,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     """
     🔽🔽🔽 Bad financial status
     """
@@ -238,6 +269,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate_with_bad_student_financial_status(self):
         cohort_kwargs = {'stage': 'ENDED'}
         model = self.generate_models(user=True,
@@ -265,6 +297,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         result['token'] = None
 
         translation = strings[model['cohort'].language]
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -280,11 +313,17 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'token': None,
             'status_text': 'bad-finantial-status',
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertEqual(result, expected)
         self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
                          [expected])
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
 
     """
     🔽🔽🔽 Student with pending tasks
@@ -293,6 +332,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__with_student_that_didnt_finish_tasks(self):
         cohort_kwargs = {'stage': 'ENDED'}
         task_kwargs = {'task_type': 'PROJECT', 'revision_status': 'PENDING'}
@@ -324,6 +364,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertToken(result['token'])
         result['token'] = None
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -339,10 +380,16 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'token': None,
             'status_text': 'with-pending-tasks',
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
         self.assertEqual(result, expected)
         self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
                          [expected])
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
 
     """
     🔽🔽🔽 Student not graduated
@@ -351,6 +398,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__without_proper_educational_status(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'FULLY_PAID'}
@@ -379,6 +427,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertToken(result['token'])
         result['token'] = None
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -394,10 +443,16 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'bad-educational-status',
             'token': None,
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
         self.assertEqual(result, expected)
         self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
                          [expected])
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
 
     """
     🔽🔽🔽 Student with bad finantial_status
@@ -406,6 +461,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__with_cohort_user__with_finantial_status_eq_up_to_date(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE'}
@@ -433,6 +489,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertToken(result['token'])
         result['token'] = None
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -448,11 +505,17 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'bad-educational-status',
             'token': None,
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertEqual(result, expected)
         self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
                          [expected])
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
 
     """
     🔽🔽🔽 Student dropped
@@ -461,6 +524,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__with_cohort_user__with_educational_status_eq_dropped(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'DROPPED'}
@@ -489,6 +553,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertToken(result['token'])
         result['token'] = None
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -504,11 +569,17 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'bad-educational-status',
             'token': None,
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertEqual(result, expected)
         self.assertEqual(self.clear_keys(self.all_user_specialty_dict(), ['preview_url', 'token']),
                          [expected])
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
 
     """
     🔽🔽🔽 Cohort not finished
@@ -517,6 +588,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__with_cohort_not_finished(self):
         cohort_kwargs = {'stage': 'ENDED'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -541,6 +613,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
                                              cohort_user_kwargs=cohort_user_kwargs,
                                              models=base)
         result = self.remove_dinamics_fields(generate_certificate(model['user'], model['cohort']).__dict__)
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -555,6 +628,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status': 'ERROR',
             'status_text': 'cohort-not-finished',
             'user_id': 1,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertToken(result['token'])
@@ -564,8 +638,14 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertEqual(result, expected)
 
         self.assertEqual(self.clear_preview_url(self.all_user_specialty_dict()), [{
-            **expected, 'token': token
+            **expected,
+            'token': token,
         }])
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
 
     """
     🔽🔽🔽 Generate certificate
@@ -574,6 +654,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -607,6 +688,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertGreater(issued_at, start)
         self.assertLess(issued_at, end)
         del result['issued_at']
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -621,6 +703,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'Certificate successfully queued for PDF generation',
             'user_id': 1,
             'is_cleaned': True,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertToken(result['token'])
@@ -635,6 +718,11 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'issued_at': issued_at
         }])
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
+
     """
     🔽🔽🔽 Translations
     """
@@ -642,6 +730,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__lang_en(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799, 'language': 'en'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -677,6 +766,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
 
         del result['issued_at']
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -691,6 +781,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'Certificate successfully queued for PDF generation',
             'user_id': 1,
             'is_cleaned': True,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertToken(result['token'])
@@ -705,9 +796,15 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'issued_at': issued_at
         }])
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__lang_es(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799, 'language': 'es'}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -740,6 +837,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         self.assertGreater(issued_at, start)
         self.assertLess(issued_at, end)
         del result['issued_at']
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         expected = {
             'academy_id': 1,
             'cohort_id': 1,
@@ -754,6 +853,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'status_text': 'Certificate successfully queued for PDF generation',
             'user_id': 1,
             'is_cleaned': True,
+            'update_hash': self.generate_update_hash(user_specialty),
         }
 
         self.assertToken(result['token'])
@@ -768,6 +868,11 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
             'issued_at': issued_at
         }])
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
+
     """
     🔽🔽🔽 Retry generate certificate
     """
@@ -775,6 +880,7 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate__retry_generate_certificate(self):
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -811,3 +917,8 @@ class ActionGenerateCertificateTestCase(CertificateTestCase):
         del user_specialty['is_cleaned']
 
         self.assertEqual(self.all_user_specialty_dict(), [user_specialty])
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [
+            call(instance=user_specialty, sender=user_specialty.__class__),
+        ])
