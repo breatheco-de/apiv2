@@ -13,6 +13,7 @@ class UserSerializer(serpy.Serializer):
 
 
 class AssetSerializer(serpy.Serializer):
+    id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
