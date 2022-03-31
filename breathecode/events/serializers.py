@@ -163,6 +163,9 @@ class EventSerializer(serializers.ModelSerializer):
         title = data.get('title')
         slug = data.get('slug')
 
+        if slug and self.instance:
+            raise ValidationException(f'The slug field is readonly', slug='try-update-slug')
+
         if title and not slug:
             slug = slugify(data['title']).lower()
 
@@ -170,8 +173,7 @@ class EventSerializer(serializers.ModelSerializer):
             slug = f'{data["slug"].lower()}'
 
         existing_events = Event.objects.filter(slug=slug)
-        if slug and ((self.instance and existing_events.exclude(id=self.instance.id).exists()) or
-                     (not self.instance and existing_events.exists())):
+        if slug and not self.instance and existing_events.exists():
             raise ValidationException(f'Event slug {slug} already taken, try a different event slug?',
                                       slug='slug-taken')
 
