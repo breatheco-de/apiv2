@@ -18,9 +18,11 @@ class Freelancer(models.Model):
 DUE = 'DUE'
 APPROVED = 'APPROVED'
 PAID = 'PAID'
+IGNORED = 'IGNORED'
 BILL_STATUS = (
     (DUE, 'Due'),
     (APPROVED, 'Approved'),
+    (IGNORED, 'Ignored'),
     (PAID, 'Paid'),
 )
 

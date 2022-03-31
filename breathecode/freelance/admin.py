@@ -3,6 +3,7 @@ from django.contrib import admin, messages
 from .models import Freelancer, Issue, Bill, RepositoryIssueWebhook
 from django.utils.html import format_html
 from . import actions
+from breathecode.utils.admin import change_field
 from .tasks import async_repository_issue_github
 # Register your models here.
 
@@ -50,27 +51,6 @@ def mark_as(queryset, status, request):
         messages.error(request, e)
 
 
-def mask_as_done(modeladmin, request, queryset):
-    mark_as(queryset, 'DONE', request)
-
-
-mask_as_done.short_description = 'Mark as DONE'
-
-
-def mask_as_todo(modeladmin, request, queryset):
-    mark_as(queryset, 'TODO', request)
-
-
-mask_as_todo.short_description = 'Mark as TODO'
-
-
-def mask_as_ignored(modeladmin, request, queryset):
-    mark_as(queryset, 'IGNORED', request)
-
-
-mask_as_ignored.short_description = 'Mark as IGNORED'
-
-
 @admin.register(Freelancer)
 class FreelancerAdmin(admin.ModelAdmin):
     list_display = ['user_id', 'full_name', 'email', 'github', 'price_per_hour']
@@ -102,25 +82,11 @@ class IssueAdmin(admin.ModelAdmin):
     list_display = ('id', 'github_number', 'freelancer', 'title', 'status', 'duration_in_hours', 'bill_id',
                     'github_url')
     list_filter = ['status', 'bill__status']
-    actions = [mask_as_todo, mask_as_done, mask_as_ignored]
+    actions = change_field(['TODO', 'DONE', 'IGNORED', 'DRAFT', 'DOING'], name='status')
 
     def github_url(self, obj):
         return format_html("<a rel='noopener noreferrer' target='_blank' href='{url}'>open in github</a>",
                            url=obj.url)
-
-
-def mask_as_paid(modeladmin, request, queryset):
-    issues = queryset.update(status='PAID')
-
-
-mask_as_paid.short_description = 'Mark as PAID'
-
-
-def mask_as_approved(modeladmin, request, queryset):
-    issues = queryset.update(status='APPROVED')
-
-
-mask_as_approved.short_description = 'Mark as APPROVED'
 
 
 @admin.register(Bill)
@@ -128,7 +94,7 @@ class BillAdmin(admin.ModelAdmin):
     list_display = ('id', 'freelancer', 'status', 'total_duration_in_hours', 'total_price', 'paid_at',
                     'invoice_url')
     list_filter = ['status']
-    actions = [mask_as_paid, mask_as_approved]
+    actions = change_field(['PAID', 'APPROVED', 'IGNORED', 'DUE'], name='status')
 
     def invoice_url(self, obj):
         return format_html(
