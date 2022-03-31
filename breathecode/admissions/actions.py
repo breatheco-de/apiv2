@@ -95,7 +95,7 @@ def append_cohort_id_if_not_exist(cohort_timeslot):
     return cohort_timeslot
 
 
-def sync_cohort_timeslots(cohort_id):
+def sync_cohort_timeslots(cohort_id: int):
     from breathecode.admissions.models import SyllabusScheduleTimeSlot, CohortTimeSlot, Cohort
     CohortTimeSlot.objects.filter(cohort__id=cohort_id).delete()
 
@@ -117,6 +117,17 @@ def sync_cohort_timeslots(cohort_id):
     ])
 
     return [append_cohort_id_if_not_exist(x) for x in timeslots]
+
+
+def post_cohort_change_syllabus_schedule(cohort_id: int):
+    """
+    Reset the CohortTimeSlot associate to a Cohort, this is thinking to be used in the POST or PUT serializer
+    """
+
+    from breathecode.admissions.models import CohortTimeSlot
+
+    CohortTimeSlot.objects.filter(cohort__id=cohort_id).delete()
+    return sync_cohort_timeslots(cohort_id)
 
 
 def weeks_to_days(json):

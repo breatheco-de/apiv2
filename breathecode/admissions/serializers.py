@@ -1,17 +1,14 @@
-import re
-import pytz
 import logging
 import serpy
-from datetime import datetime
-from dateutil.tz import gettz, tzutc
-from breathecode.admissions.actions import sync_cohort_timeslots
+from breathecode.admissions.actions import sync_cohort_timeslots, post_cohort_change_syllabus_schedule
 from django.db.models import Q
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, localize_query, SerpyExtensions
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, Profile
-from .models import Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser, Syllabus, SyllabusVersion
+from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser,
+                     Syllabus, SyllabusVersion)
 
 logger = logging.getLogger(__name__)
 
@@ -548,6 +545,17 @@ class CohortPUTSerializer(CohortSerializerMixin):
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
                   'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private', 'online_meeting_url',
                   'timezone', 'current_module')
+
+    def update(self, instance, validated_data):
+        last_schedule = instance.schedule
+
+        update_timeslots = 'schedule' in validated_data and last_schedule != validated_data['schedule']
+        cohort = super().update(instance, validated_data)
+
+        if update_timeslots:
+            post_cohort_change_syllabus_schedule(cohort.id)
+
+        return cohort
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):
