@@ -148,10 +148,12 @@ class MentorProfile(models.Model):
 DUE = 'DUE'
 APPROVED = 'APPROVED'
 PAID = 'PAID'
+IGNORED = 'PAID'
 BILL_STATUS = (
     (DUE, 'Due'),
     (APPROVED, 'Approved'),
     (PAID, 'Paid'),
+    (IGNORED, 'Ignoed'),
 )
 
 
