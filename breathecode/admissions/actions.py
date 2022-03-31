@@ -109,7 +109,8 @@ def sync_cohort_timeslots(cohort_id: int):
         return
 
     certificate_timeslots = SyllabusScheduleTimeSlot.objects.filter(
-        schedule__academy__id=cohort_values['academy__id'], schedule__id=cohort_values['schedule__id'])
+        Q(schedule__academy__id=cohort_values['academy__id']) | Q(schedule__syllabus__private=False),
+        schedule__id=cohort_values['schedule__id'])
 
     timeslots = CohortTimeSlot.objects.bulk_create([
         fill_cohort_timeslot(certificate_timeslot, cohort_id, timezone)
