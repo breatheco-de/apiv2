@@ -147,6 +147,7 @@ class SessionAdmin(admin.ModelAdmin):
             'FAILED': 'bg-error',
             'STARTED': 'bg-warning',
             'PENDING': 'bg-secondary',
+            'IGNORED': 'bg-secondary',
         }
 
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")

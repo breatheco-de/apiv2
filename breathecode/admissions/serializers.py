@@ -1,17 +1,14 @@
-import re
-import pytz
 import logging
 import serpy
-from datetime import datetime
-from dateutil.tz import gettz, tzutc
-from breathecode.admissions.actions import sync_cohort_timeslots
+from breathecode.admissions.actions import sync_cohort_timeslots, post_cohort_change_syllabus_schedule
 from django.db.models import Q
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, localize_query, SerpyExtensions
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy, Profile
-from .models import Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser, Syllabus, SyllabusVersion
+from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
+from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser,
+                     Syllabus, SyllabusVersion)
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +52,7 @@ class ProfileSerializer(serpy.Serializer):
     github_username = serpy.Field()
 
 
-class AcademySerializer(serpy.Serializer):
+class GetSmallAcademySerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     id = serpy.Field()
@@ -76,7 +73,7 @@ class GetProfileAcademySmallSerializer(serpy.Serializer):
 class ProfileAcademySmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
-    academy = AcademySerializer()
+    academy = GetSmallAcademySerializer()
     role = serpy.MethodField()
 
     def get_role(self, obj):
@@ -205,6 +202,7 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
     updated_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
+    academy_owner = serpy.MethodField()
     slug = serpy.MethodField()
     name = serpy.MethodField()
     syllabus = serpy.MethodField()
@@ -223,6 +221,11 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
 
     def get_syllabus(self, obj):
         return obj.syllabus.id if obj.syllabus else None
+
+    def get_academy_owner(self, obj):
+        if obj.syllabus is not None and obj.syllabus.academy_owner is not None:
+            return GetSmallAcademySerializer(obj.syllabus.academy_owner).data
+        return None
 
     def get_duration_in_hours(self, obj):
         return obj.syllabus.duration_in_hours if obj.syllabus else None
@@ -317,7 +320,7 @@ class GetMeCohortSerializer(serpy.Serializer):
     current_day = serpy.Field()
     current_module = serpy.Field()
     syllabus_version = SyllabusVersionSmallSerializer(required=False)
-    academy = AcademySerializer()
+    academy = GetSmallAcademySerializer()
     stage = serpy.Field()
 
 
@@ -542,6 +545,17 @@ class CohortPUTSerializer(CohortSerializerMixin):
         fields = ('id', 'slug', 'name', 'kickoff_date', 'ending_date', 'current_day', 'stage', 'language',
                   'syllabus', 'syllabus_version', 'schedule', 'never_ends', 'private', 'online_meeting_url',
                   'timezone', 'current_module')
+
+    def update(self, instance, validated_data):
+        last_schedule = instance.schedule
+
+        update_timeslots = 'schedule' in validated_data and last_schedule != validated_data['schedule']
+        cohort = super().update(instance, validated_data)
+
+        if update_timeslots:
+            post_cohort_change_syllabus_schedule(cohort.id)
+
+        return cohort
 
 
 class UserDJangoRestSerializer(serializers.ModelSerializer):

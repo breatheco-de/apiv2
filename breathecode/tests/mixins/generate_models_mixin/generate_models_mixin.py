@@ -94,6 +94,7 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
             self.generate_freelance_models,
             self.generate_feedback_models,
             self.generate_notify_models,
+            self.generate_mentorship_models,
             self.generate_monitoring_models,
             self.generate_certificate_models,
             self.generate_mentorship_models,

@@ -68,4 +68,4 @@ class BigBillSerializer(serpy.Serializer):
 class BillSerializer(serializers.ModelSerializer):
     class Meta:
         model = Bill
-        exclude = ()
+        exclude = ('freelancer', )

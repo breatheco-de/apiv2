@@ -3,7 +3,7 @@ from .views import (AcademyView, CohortUserView, AcademyCohortView, SyllabusVers
                     get_timezones, UserView, UserMeView, AcademyCohortUserView, get_schedule,
                     AcademySyllabusScheduleView, SyllabusScheduleView, get_all_academies, get_cohorts,
                     AcademyCohortTimeSlotView, AcademySyllabusScheduleTimeSlotView,
-                    AcademySyncCohortTimeSlotView, AcademyReportView, get_public_syllabus)
+                    AcademySyncCohortTimeSlotView, AcademyReportView, get_public_syllabus, SyllabusAssetView)
 
 app_name = 'admissions'
 urlpatterns = [
@@ -58,9 +58,6 @@ urlpatterns = [
     path('academy/schedule/<int:certificate_id>',
          AcademySyllabusScheduleView.as_view(),
          name='academy_schedule_id'),
-    path('academy/schedule/<int:certificate_id>',
-         AcademySyllabusScheduleView.as_view(),
-         name='academy_schedule_id'),
     path('syllabus', SyllabusView.as_view(), name='syllabus'),
     path('syllabus/<int:syllabus_id>', SyllabusView.as_view(), name='syllabus_id'),
     path('syllabus/<int:syllabus_id>/version', SyllabusVersionView.as_view(), name='syllabus_id_version'),
@@ -93,4 +90,7 @@ urlpatterns = [
          name='academy_id_syllabus_slug_version_version'),
     path('catalog/timezones', get_timezones, name='timezones_all'),
     path('report', AcademyReportView.as_view(), name='report_admissions'),
+
+    #replaces an asset slug in all syllabus versions
+    path('admin/syllabus/asset/<str:asset_slug>', SyllabusAssetView.as_view(), name='syllabus_asset'),
 ]

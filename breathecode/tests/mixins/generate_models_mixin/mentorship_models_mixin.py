@@ -2,7 +2,7 @@
 Collections of mixins used to login in authorize microservice
 """
 from breathecode.tests.mixins.models_mixin import ModelsMixin
-from .utils import is_valid, create_models, just_one, get_list
+from .utils import is_valid, create_models, just_one
 
 
 class MentorshipModelsMixin(ModelsMixin):

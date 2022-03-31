@@ -113,6 +113,11 @@ class CertificateTestSuite(AdmissionsTestCase):
             'updated_at': datetime_to_iso_format(model['syllabus_version'].updated_at),
             'name': model['syllabus'].name,
             'slug': model['syllabus'].slug,
+            'academy_owner': {
+                'id': model['syllabus'].academy_owner.id,
+                'name': model['syllabus'].academy_owner.name,
+                'slug': model['syllabus'].academy_owner.slug,
+            },
             'syllabus': 1,
             'version': model['syllabus_version'].version,
             'duration_in_days': model.syllabus.duration_in_days,

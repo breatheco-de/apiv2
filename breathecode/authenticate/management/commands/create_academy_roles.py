@@ -228,6 +228,14 @@ CAPABILITIES = [
         'description': 'Create, delete or update all session from one academy'
     },
     {
+        'slug': 'crud_freelancer_bill',
+        'description': 'Create, delete or update all freelancer bills from one academy'
+    },
+    {
+        'slug': 'read_freelancer_bill',
+        'description': 'Read all all freelancer bills from one academy'
+    },
+    {
         'slug': 'crud_mentorship_bill',
         'description': 'Create, delete or update all mentroship bills from one academy'
     },
@@ -439,6 +447,15 @@ def extend_roles(roles: list[RoleType]) -> None:
         ]
     })
     roles.append({
+        'slug':
+        'accountant',
+        'name':
+        'Accountant',
+        'caps':
+        extend(roles, ['staff']) +
+        ['read_freelancer_bill', 'crud_freelancer_bill', 'crud_mentorship_bill', 'read_mentorship_bill']
+    })
+    roles.append({
         'slug': 'homework_reviewer',
         'name': 'Homework Reviewer',
         'caps': extend(roles, ['assistant'])
@@ -491,6 +508,7 @@ def extend_roles(roles: list[RoleType]) -> None:
             'growth_manager',
             'admissions_developer',
             'syllabus_coordinator',
+            'accountant',
         ]) + [
             'crud_my_academy', 'crud_organization', 'generate_academy_token', 'send_reset_password',
             'generate_temporal_token', 'read_organization'

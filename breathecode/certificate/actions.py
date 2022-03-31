@@ -150,7 +150,7 @@ def generate_certificate(user, cohort=None, layout=None):
 def certificate_screenshot(certificate_id: int):
 
     certificate = UserSpecialty.objects.get(id=certificate_id)
-    if certificate.preview_url is None or certificate.preview_url == '':
+    if not certificate.preview_url:
         file_name = f'{certificate.token}'
 
         storage = Storage()
@@ -179,7 +179,7 @@ def certificate_screenshot(certificate_id: int):
 
 def remove_certificate_screenshot(certificate_id):
     certificate = UserSpecialty.objects.get(id=certificate_id)
-    if certificate.preview_url is None or certificate.preview_url == '':
+    if not certificate.preview_url:
         return False
 
     file_name = certificate.token
