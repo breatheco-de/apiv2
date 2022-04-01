@@ -59,10 +59,10 @@ def mark_as_active(modeladmin, request, queryset):
     except requests.exceptions.ConnectionError:
         message = 'Error: Booking or meeting URL for mentor is failing'
         logger.fatal(message)
-        messages.add_message(request, messages.Error, message)
+        messages.success(request, message)
     except Exception as e:
         logger.fatal(str(e))
-        messages.add_message(request, messages.Error, 'Error: ' + str(e))
+        messages.success(request, 'Error: ' + str(e))
 
 
 mark_as_active.short_description = 'Mark as ACTIVE'
