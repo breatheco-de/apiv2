@@ -181,7 +181,8 @@ class MentorshipBillAdmin(admin.ModelAdmin):
     list_display = ('id', 'mentor', 'status', 'total_duration_in_hours', 'total_price', 'paid_at',
                     'invoice_url')
     list_filter = ['status']
-    actions = [release_sessions_from_bill] + change_field(['DUE', 'APPROVED', 'PAID'], name='status')
+    actions = [release_sessions_from_bill] + change_field(['DUE', 'APPROVED', 'PAID', 'IGNORED'],
+                                                          name='status')
 
     def invoice_url(self, obj):
         return format_html(

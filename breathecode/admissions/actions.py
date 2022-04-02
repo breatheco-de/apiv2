@@ -173,13 +173,23 @@ def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
 
             for a in day[key_map[asset_type]]:
                 assetIndex += 1
-                if a['slug'] == from_slug:
-                    findings.append({
-                        'module': moduleIndex,
-                        'version': s.version,
-                        'syllabus': s.syllabus.slug
-                    })
-                    s.json['days'][moduleIndex][key_map[asset_type]][assetIndex]['slug'] = to_slug
+
+                if isinstance(a, dict):
+                    if a['slug'] == from_slug:
+                        findings.append({
+                            'module': moduleIndex,
+                            'version': s.version,
+                            'syllabus': s.syllabus.slug
+                        })
+                        s.json['days'][moduleIndex][key_map[asset_type]][assetIndex]['slug'] = to_slug
+                else:
+                    if a == from_slug:
+                        findings.append({
+                            'module': moduleIndex,
+                            'version': s.version,
+                            'syllabus': s.syllabus.slug
+                        })
+                        s.json['days'][moduleIndex][key_map[asset_type]][assetIndex] = to_slug
         if not simulate:
             s.save()
 
