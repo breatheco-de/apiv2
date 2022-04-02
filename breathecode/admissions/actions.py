@@ -158,6 +158,7 @@ def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
 
     findings = []
     for s in syllabus_list:
+        logger.debug(f'Starting with syllabus {s.syllabus.slug} version {str(s.version)}')
         moduleIndex = -1
         if isinstance(s.json, str):
             s.json = json.loads(s.json)
