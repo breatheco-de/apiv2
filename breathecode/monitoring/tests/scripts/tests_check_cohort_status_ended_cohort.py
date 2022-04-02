@@ -98,9 +98,9 @@ class AcademyCohortTestSuite(MonitoringTestCase):
 
         expected = {
             'btn': None,
-            'severity_level': 5,
-            'status': 'MINOR',
-            'error_slug': None,
+            'severity_level': 100,
+            'status': 'CRITICAL',
+            'error_slug': 'cohort-stage-should-be-ended',
         }
 
         self.assertEqual(script, expected)
