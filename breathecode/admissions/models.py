@@ -2,7 +2,6 @@ import os
 from django.contrib.auth.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator, RegexValidator
 from django.db import models
-from .actions import get_bucket_object
 from .signals import student_edu_status_updated
 
 GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', None)
@@ -55,6 +54,9 @@ class Academy(models.Model):
     slug = models.SlugField(max_length=100, unique=True)
     name = models.CharField(max_length=150)
     logo_url = models.CharField(max_length=255)
+    icon_url = models.CharField(max_length=255,
+                                help_text='It has to be a square',
+                                default='/static/icons/picture.png')
     website_url = models.CharField(max_length=255, blank=True, null=True, default=None)
 
     street_address = models.CharField(max_length=250)
@@ -106,6 +108,7 @@ class Academy(models.Model):
     #     super(Image, self).delete(*args, **kwargs)
 
     def save(self, *args, **kwargs):
+        from .actions import get_bucket_object
         if os.getenv('ENV', '') == 'production':
             obj = get_bucket_object(f'location-{self.slug}')
             if obj is not None:
@@ -158,13 +161,14 @@ class SyllabusVersion(models.Model):
         return f'{self.syllabus.slug}.v{self.version}'
 
 
-class SpecialtyMode(models.Model):
+class SyllabusSchedule(models.Model):
     name = models.CharField(max_length=150)
 
     schedule_type = models.CharField(max_length=15, choices=SCHEDULE_TYPE, default='PART-TIME')
     description = models.TextField(max_length=450)
 
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE, default=None, null=True)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE, default=None, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
@@ -184,14 +188,6 @@ class SpecialtyMode(models.Model):
     #             self.logo = obj.public_url
 
     #     super().save(*args, **kwargs)  # Call the "real" save() method.
-
-
-class AcademySpecialtyMode(models.Model):
-    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE)
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-
-    created_at = models.DateTimeField(auto_now_add=True, editable=False)
-    updated_at = models.DateTimeField(auto_now=True, editable=False)
 
 
 INACTIVE = 'INACTIVE'
@@ -216,7 +212,15 @@ class Cohort(models.Model):
 
     kickoff_date = models.DateTimeField()
     ending_date = models.DateTimeField(blank=True, null=True)
-    current_day = models.IntegerField()
+    current_day = models.IntegerField(
+        help_text='Each day the teacher takes attendancy and increases the day in one')
+    current_module = models.IntegerField(
+        null=True,
+        default=None,
+        blank=True,
+        help_text=
+        'The syllabus is separated by modules, from 1 to N and the teacher decides when to start a new mobule (after a couple of days)'
+    )
     stage = models.CharField(max_length=15, choices=COHORT_STAGE, default=INACTIVE)
     private = models.BooleanField(default=False)
     never_ends = models.BooleanField(default=False)
@@ -229,9 +233,8 @@ class Cohort(models.Model):
 
     academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
 
-    syllabus_version = models.ForeignKey(SyllabusVersion, on_delete=models.CASCADE, default=None, null=True)
-
-    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE, default=None, null=True)
+    syllabus_version = models.ForeignKey(SyllabusVersion, on_delete=models.SET_NULL, default=None, null=True)
+    schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.SET_NULL, default=None, null=True)
 
     language = models.CharField(max_length=2, default='en')
 
@@ -351,9 +354,8 @@ class TimeSlot(models.Model):
         abstract = True
 
 
-class SpecialtyModeTimeSlot(TimeSlot):
-    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
-    specialty_mode = models.ForeignKey(SpecialtyMode, on_delete=models.CASCADE)
+class SyllabusScheduleTimeSlot(TimeSlot):
+    schedule = models.ForeignKey(SyllabusSchedule, on_delete=models.CASCADE)
 
 
 class CohortTimeSlot(TimeSlot):

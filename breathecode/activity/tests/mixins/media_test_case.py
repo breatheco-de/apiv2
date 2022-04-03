@@ -16,3 +16,4 @@ class MediaTestCase(APITestCase, GenerateModelsMixin, CacheMixin, TokenMixin, Ge
     def setUp(self):
         self.generate_queries()
         os.environ['MEDIA_GALLERY_BUCKET'] = 'bucket-name'
+        self.set_test_instance(self)

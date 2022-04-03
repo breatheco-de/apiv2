@@ -1,4 +1,5 @@
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +11,8 @@ def event_updated(self, webhook, payload: dict):
 
     org = Organization.objects.filter(id=webhook.organization_id).first()
 
-    update_or_create_event(payload, org)
-    webhook.status = 'DONE'
-    webhook.status_text = 'OK'
+    # prevent receive a event.created and event.updated in the same time and try to create the same event
+    # two times
+    time.sleep(6)
 
-    webhook.save()
+    update_or_create_event(payload, org)

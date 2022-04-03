@@ -1,4 +1,5 @@
 import os, requests, base64, logging
+import urllib.parse
 from datetime import timezone, timedelta
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
@@ -38,15 +39,20 @@ from .models import (
 from .actions import reset_password, resend_invite, generate_academy_token
 from breathecode.admissions.models import Academy, CohortUser
 from breathecode.notify.models import SlackTeam
+from breathecode.notify.actions import send_email_message
 from breathecode.utils import (capable_of, ValidationException, HeaderLimitOffsetPagination,
                                GenerateLookupsMixin)
+from breathecode.utils.views import private_view, render_message, set_query_parameter
 from breathecode.utils.find_by_full_name import query_like_by_full_name
-from .serializers import (GetProfileAcademySmallSerializer, UserSerializer, AuthSerializer,
-                          UserSmallSerializer, GetProfileAcademySerializer, MemberPOSTSerializer,
-                          MemberPUTSerializer, StudentPOSTSerializer, RoleSmallSerializer, UserMeSerializer,
-                          UserInviteSerializer, TokenSmallSerializer)
+from breathecode.utils.views import set_query_parameter
+from .serializers import (GetProfileAcademySmallSerializer, UserInviteWaitingListSerializer, UserSerializer,
+                          AuthSerializer, UserSmallSerializer, GetProfileAcademySerializer,
+                          MemberPOSTSerializer, MemberPUTSerializer, StudentPOSTSerializer,
+                          RoleSmallSerializer, UserMeSerializer, UserInviteSerializer, TokenSmallSerializer,
+                          RoleBigSerializer, ProfileAcademySmallSerializer, UserTinySerializer)
 
 logger = logging.getLogger(__name__)
+STUDENT_URL = os.getenv('STUDENT_URL', '')
 
 
 class TemporalTokenView(ObtainAuthToken):
@@ -109,6 +115,17 @@ class LogoutView(APIView):
         return Response({
             'message': 'User tokens successfully deleted',
         })
+
+
+class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = UserInviteWaitingListSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -226,22 +243,32 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if request.user is None:
             raise ValidationException('User not found', 404)
 
-        invite = UserInvite.objects.filter(email=request.user.email, status='PENDING').first()
-        if invite is None:
-            raise ValidationException('No pending invite was found', 404)
+        invites = UserInvite.objects.filter(email=request.user.email)
 
-        serializer = UserInviteSerializer(invite, many=False)
+        status = request.GET.get('status', '')
+        if status != '':
+            invites = invites.filter(status__in=status.split(','))
+        else:
+            invites = invites.filter(status='PENDING')
+
+        serializer = UserInviteSerializer(invites, many=True)
         return Response(serializer.data)
 
-    def put(self, request):
+    def put(self, request, new_status=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
+
+        if new_status is None:
+            raise ValidationException(f'Please specify new status for the invites', slug='missing-status')
+
+        if new_status.upper() not in ['ACCEPTED', 'REJECTED']:
+            raise ValidationException(f'Invalid invite status {new_status}')
 
         if lookups:
             items = UserInvite.objects.filter(**lookups, email=request.user.email)
 
             for item in items:
 
-                item.status = 'ACCEPTED'
+                item.status = new_status.upper()
                 item.save()
 
                 exists = ProfileAcademy.objects.filter(email=item.email, academy__id=item.academy.id)
@@ -273,11 +300,17 @@ class ProfileInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         invite = UserInvite.objects.filter(academy__id=academy_id, email=profile.email,
                                            status='PENDING').first()
 
-        if invite is None:
-            raise ValidationException('No pending invite was found', 404)
+        if invite is None and profile.status != 'INVITED':
+            raise ValidationException('No pending invite was found for this user and academy', 404)
 
-        serializer = UserInviteSerializer(invite, many=False)
-        return Response(serializer.data)
+        # IMPORTANTE: both serializers need to include "invite_url" property to have a consistent response
+        if invite is not None:
+            serializer = UserInviteSerializer(invite, many=False)
+            return Response(serializer.data)
+
+        if profile.status == 'INVITED':
+            serializer = GetProfileAcademySerializer(profile, many=False)
+            return Response(serializer.data)
 
     @capable_of('crud_invite')
     def delete(self, request, academy_id=None):
@@ -496,7 +529,17 @@ def get_user_by_id_or_email(request, id_or_email):
 
 
 @api_view(['GET'])
-def get_roles(request):
+@permission_classes([AllowAny])
+def get_roles(request, role_slug=None):
+
+    if role_slug is not None:
+        role = Role.objects.filter(slug=role_slug).first()
+        if role is None:
+            raise ValidationException('Role not found', code=404)
+
+        serializer = RoleBigSerializer(role)
+        return Response(serializer.data)
+
     queryset = Role.objects.all()
     serializer = RoleSmallSerializer(queryset, many=True)
     return Response(serializer.data)
@@ -554,6 +597,13 @@ def save_github_token(request):
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationException('No callback URL specified', slug='no-callback-url')
+
+    # the url may or may not be encoded
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     code = request.query_params.get('code', None)
     if code == None:
         raise ValidationException('No github code specified', slug='no-code')
@@ -622,18 +672,21 @@ def save_github_token(request):
                 user = User(username=github_user['email'], email=github_user['email'])
                 user.save()
 
-            CredentialsGithub.objects.filter(github_id=github_user['id']).delete()
-            github_credentials = CredentialsGithub(github_id=github_user['id'],
-                                                   user=user,
-                                                   token=github_token,
-                                                   username=github_user['login'],
-                                                   email=github_user['email'],
-                                                   avatar_url=github_user['avatar_url'],
-                                                   name=github_user['name'],
-                                                   blog=github_user['blog'],
-                                                   bio=github_user['bio'],
-                                                   company=github_user['company'],
-                                                   twitter_username=github_user['twitter_username'])
+            github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
+            if github_credentials is not None and github_credentials.user.id != user.id:
+                github_credentials.delete()
+            elif github_credentials is None:
+                github_credentials = CredentialsGithub(github_id=github_user['id'], user=user)
+
+            github_credentials.token = github_token
+            github_credentials.username = github_user['login']
+            github_credentials.email = github_user['email']
+            github_credentials.avatar_url = github_user['avatar_url']
+            github_credentials.name = github_user['name']
+            github_credentials.blog = github_user['blog']
+            github_credentials.bio = github_user['bio']
+            github_credentials.company = github_user['company']
+            github_credentials.twitter_username = github_user['twitter_username']
             github_credentials.save()
 
             profile = Profile.objects.filter(user=user).first()
@@ -678,6 +731,12 @@ def get_slack_token(request):
     if url is None:
         raise ValidationError('No callback URL specified')
 
+    # the url may or may not be encoded
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     user_id = request.query_params.get('user', None)
     if user_id is None:
         raise ValidationError('No user specified on the URL')
@@ -686,7 +745,6 @@ def get_slack_token(request):
     if academy is None:
         raise ValidationError('No academy specified on the URL')
 
-    url = base64.b64decode(url).decode('utf-8')
     # Missing scopes!! admin.invites:write, identify
     scopes = ('app_mentions:read', 'channels:history', 'channels:join', 'channels:read', 'chat:write',
               'chat:write.customize', 'commands', 'files:read', 'files:write', 'groups:history',
@@ -815,6 +873,12 @@ def get_facebook_token(request):
     if url is None:
         raise ValidationError('No callback URL specified')
 
+    # the url may or may not be encoded
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
+
     user_id = request.query_params.get('user', None)
     if user_id is None:
         raise ValidationError('No user specified on the URL')
@@ -823,7 +887,6 @@ def get_facebook_token(request):
     if academy is None:
         raise ValidationError('No academy specified on the URL')
 
-    url = base64.b64decode(url).decode('utf-8')
     # Missing scopes!! admin.invites:write, identify
     scopes = (
         'email',
@@ -857,7 +920,6 @@ def get_facebook_token(request):
 def save_facebook_token(request):
     """Save facebook token"""
     logger.debug('Facebook callback just landed')
-    print(request.GET)
     error = request.query_params.get('error_code', False)
     error_description = request.query_params.get('error_message', '')
     if error:
@@ -1058,14 +1120,28 @@ class PasswordResetView(APIView):
 
 
 class AcademyInviteView(APIView):
-    @capable_of('crud_member')
+    @capable_of('invite_resend')
     def put(self, request, pa_id=None, academy_id=None):
+        from breathecode.notify.actions import send_email_message
+
         if pa_id is not None:
             profile_academy = ProfileAcademy.objects.filter(id=pa_id).first()
 
             if profile_academy is None:
                 raise ValidationException('Member not found', 400)
+
             invite = UserInvite.objects.filter(academy__id=academy_id, email=profile_academy.email).first()
+
+            if invite is None and profile_academy.status == 'INVITED':
+                send_email_message(
+                    'academy_invite', profile_academy.user.email, {
+                        'subject': f'Invitation to study at {profile_academy.academy.name}',
+                        'invites': [ProfileAcademySmallSerializer(profile_academy).data],
+                        'user': UserSmallSerializer(profile_academy.user).data,
+                        'LINK': os.getenv('API_URL') + '/v1/auth/academy/html/invite',
+                    })
+                serializer = GetProfileAcademySerializer(profile_academy)
+                return Response(serializer.data)
 
             if invite is None:
                 raise ValidationException('Invite not found', 400)
@@ -1093,8 +1169,8 @@ def render_invite(request, token, member_id=None):
 
         invite = UserInvite.objects.filter(token=token, status='PENDING').first()
         if invite is None:
-            return render(request, 'message.html',
-                          {'message': 'Invitation noot found with this token or it was already accepted'})
+            return render_message(request, 'Invitation not found with this token or it was already accepted')
+
         form = InviteForm({
             **_dict, 'first_name': invite.first_name,
             'last_name': invite.last_name,
@@ -1171,7 +1247,36 @@ def render_invite(request, token, member_id=None):
             return HttpResponseRedirect(redirect_to=callback[2:-2])
         else:
             return render(request, 'message.html',
-                          {'MESSAGE': 'Welcome to BreatheCode, you can go ahead an log in'})
+                          {'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in'})
+
+
+@private_view()
+def render_academy_invite(request, token):
+    callback_url = request.GET.get('callback', '')
+    accepting = request.GET.get('accepting', '')
+    rejecting = request.GET.get('rejecting', '')
+    if accepting.strip() != '':
+        ProfileAcademy.objects.filter(id__in=accepting.split(','), user__id=token.user.id,
+                                      status='INVITED').update(status='ACTIVE')
+    if rejecting.strip() != '':
+        ProfileAcademy.objects.filter(id__in=rejecting.split(','), user__id=token.user.id).delete()
+
+    pending_invites = ProfileAcademy.objects.filter(user__id=token.user.id, status='INVITED')
+    if pending_invites.count() == 0:
+        return render_message(request,
+                              f'You don\'t have any more pending invites',
+                              btn_label='Continue to 4Geeks',
+                              btn_url=STUDENT_URL)
+
+    querystr = urllib.parse.urlencode({'callback': STUDENT_URL, 'token': token.key})
+    url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
+    return render(
+        request, 'academy_invite.html', {
+            'subject': f'Invitation to study at 4Geeks.com',
+            'invites': ProfileAcademySmallSerializer(pending_invites, many=True).data,
+            'LINK': url,
+            'user': UserTinySerializer(token.user, many=False).data
+        })
 
 
 def login_html_view(request):
@@ -1186,6 +1291,12 @@ def login_html_view(request):
             url = request.POST.get('url', None)
             if url is None or url == '':
                 raise Exception('Invalid redirect url, you must specify a url to redirect to')
+
+            # the url may or may not be encoded
+            try:
+                url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+            except Exception as e:
+                pass
 
             email = request.POST.get('email', None)
             password = request.POST.get('password', None)
@@ -1207,7 +1318,10 @@ def login_html_view(request):
                 raise Exception(msg, code=403)
 
             token, created = Token.get_or_create(user=user, token_type='login')
-            return HttpResponseRedirect(url + '?token=' + str(token))
+
+            request.session['token'] = token.key
+            return HttpResponseRedirect(
+                set_query_parameter(set_query_parameter(url, 'attempt', '1'), 'token', str(token)))
 
         except Exception as e:
             messages.error(request, e.message if hasattr(e, 'message') else e)
@@ -1231,6 +1345,11 @@ def get_google_token(request, token=None):
     url = request.query_params.get('url', None)
     if url == None:
         raise ValidationException('No callback URL specified', slug='no-callback-url')
+
+    try:
+        url = base64.b64decode(url.encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        pass
 
     token = Token.get_valid(
         token)  # IMPORTANT!! you can only connect to google with temporal short lasting tokens

@@ -1,25 +1,17 @@
 from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
-from breathecode.utils import Cache
-from unittest.mock import patch
 from ..mixins.new_events_tests_case import EventTestCase
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
 from breathecode.services import datetime_to_iso_format
-from breathecode.tests.mixins.cache_mixin import CacheMixin
-from .tests_academy_event import AcademyEventTestSuite
+from unittest.mock import MagicMock, call, patch
 
 
-class AcademyEventsTestSuite(EventTestCase):
+class AcademyEventIdTestSuite(EventTestCase):
     cache = EventCache()
 
-    def test_academy_single_event_no_auth(self):
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
+    def test_academy_event_id_no_auth(self):
         self.headers(academy=1)
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
 
         response = self.client.get(url)
         json = response.json()
@@ -28,9 +20,10 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 401)
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_all_academy_events_without_capability(self):
         self.headers(academy=1)
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         self.generate_models(authenticate=True)
 
         response = self.client.get(url)
@@ -43,9 +36,10 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 403)
 
-    def test_academy_single_event_invalid_id(self):
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
+    def test_academy_event_id_invalid_id(self):
         self.headers(academy=1)
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='read_event',
@@ -59,9 +53,10 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 404)
 
-    def test_academy_single_event_valid_id(self):
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
+    def test_academy_event_id_valid_id(self):
         self.headers(academy=1)
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='read_event',
@@ -82,8 +77,10 @@ class AcademyEventsTestSuite(EventTestCase):
             'banner': model['event'].banner,
             'tags': model['event'].tags,
             'slug': model['event'].slug,
+            'host': model['event'].host,
             'starting_at': datetime_to_iso_format(model['event'].starting_at),
             'ending_at': datetime_to_iso_format(model['event'].ending_at),
+            # 'updated_at': datetime_to_iso_format(model['event'].updated_at),
             'status': model['event'].status,
             'event_type': model['event'].event_type,
             'online_event': model['event'].online_event,
@@ -104,6 +101,7 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 200)
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id_put__without_organization(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -114,7 +112,7 @@ class AcademyEventsTestSuite(EventTestCase):
                                      role='potato2',
                                      event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         data = {}
 
         response = self.client.put(url, data)
@@ -127,6 +125,7 @@ class AcademyEventsTestSuite(EventTestCase):
             **self.model_to_dict(model, 'event'),
         }])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id_put_without_required_fields(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -138,7 +137,7 @@ class AcademyEventsTestSuite(EventTestCase):
                                      role='potato2',
                                      event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         current_date = self.datetime_now()
         data = {
             'id': 1,
@@ -148,7 +147,6 @@ class AcademyEventsTestSuite(EventTestCase):
         json = response.json()
 
         expected = {
-            'url': ['This field is required.'],
             'banner': ['This field is required.'],
             'capacity': ['This field is required.'],
             'starting_at': ['This field is required.'],
@@ -165,6 +163,7 @@ class AcademyEventsTestSuite(EventTestCase):
     🔽🔽🔽 Put - bad tags
     """
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__two_commas(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -176,7 +175,7 @@ class AcademyEventsTestSuite(EventTestCase):
                                      role='potato2',
                                      event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         current_date = self.datetime_now()
         data = {
             'id': 1,
@@ -197,6 +196,7 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__with_spaces(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -208,7 +208,7 @@ class AcademyEventsTestSuite(EventTestCase):
                                      role='potato2',
                                      event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         current_date = self.datetime_now()
         data = {
             'id': 1,
@@ -229,6 +229,7 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__starts_with_comma(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -240,7 +241,7 @@ class AcademyEventsTestSuite(EventTestCase):
                                      role='potato2',
                                      event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         current_date = self.datetime_now()
         data = {
             'id': 1,
@@ -261,6 +262,7 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__ends_with_comma(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -272,7 +274,7 @@ class AcademyEventsTestSuite(EventTestCase):
                                      role='potato2',
                                      event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         current_date = self.datetime_now()
         data = {
             'id': 1,
@@ -293,6 +295,7 @@ class AcademyEventsTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__one_tag_not_exists(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -304,7 +307,7 @@ class AcademyEventsTestSuite(EventTestCase):
                                      role='potato2',
                                      event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         current_date = self.datetime_now()
         data = {
             'id': 1,
@@ -319,12 +322,46 @@ class AcademyEventsTestSuite(EventTestCase):
         response = self.client.put(url, data, format='json')
         json = response.json()
 
+        expected = {'detail': 'have-less-two-tags', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
+
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
+    def test_academy_cohort_id__put__two_tags_not_exists(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': 'expecto-patronum,wingardium-leviosa',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
         expected = {'detail': 'tag-not-exist', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(self.all_event_dict(), [self.model_to_dict(model, 'event')])
 
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__one_of_two_tags_not_exists(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -337,7 +374,7 @@ class AcademyEventsTestSuite(EventTestCase):
                                      role='potato2',
                                      event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         current_date = self.datetime_now()
         data = {
             'id': 1,
@@ -362,6 +399,87 @@ class AcademyEventsTestSuite(EventTestCase):
     🔽🔽🔽 Put
     """
 
+    def test_academy_cohort_id__put(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     tag=(2, {
+                                         'tag_type': 'DISCOVERY'
+                                     }),
+                                     active_campaign_academy=True,
+                                     event=True)
+
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': ','.join([x.slug for x in model.tag]),
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        self.assertDatetime(json['created_at'])
+        self.assertDatetime(json['updated_at'])
+
+        del json['created_at']
+        del json['updated_at']
+
+        expected = {
+            'academy': 1,
+            'author': 1,
+            'description': None,
+            'event_type': None,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'excerpt': None,
+            'host': model['event'].host,
+            'id': 2,
+            'lang': None,
+            'online_event': False,
+            'organization': 1,
+            'published_at': None,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'venue': None,
+            'sync_with_eventbrite': False,
+            'eventbrite_sync_status': 'PENDING',
+            'currency': 'USD',
+            'tags': '',
+            'slug': None,
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.all_event_dict(), [{
+            **self.model_to_dict(model, 'event'),
+            **data,
+            'organization_id': 1,
+            'starting_at': current_date,
+            'ending_at': current_date,
+            'slug': None,
+        }])
+
+    """
+    🔽🔽🔽 Put, tags empty
+    """
+
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__tags_is_blank(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -373,13 +491,14 @@ class AcademyEventsTestSuite(EventTestCase):
                                      role='potato2',
                                      event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         current_date = self.datetime_now()
         data = {
             'id': 1,
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
             'tags': '',
+            'slug': 'event-they-killed-kenny',
             'capacity': 11,
             'starting_at': self.datetime_to_iso(current_date),
             'ending_at': self.datetime_to_iso(current_date),
@@ -388,50 +507,98 @@ class AcademyEventsTestSuite(EventTestCase):
         response = self.client.put(url, data, format='json')
         json = response.json()
 
-        self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
-
-        del json['created_at']
-        del json['updated_at']
-
-        expected = {
-            'academy': 1,
-            'author': 1,
-            'description': None,
-            'event_type': None,
-            'eventbrite_id': None,
-            'eventbrite_organizer_id': None,
-            'eventbrite_status': None,
-            'eventbrite_url': None,
-            'excerpt': None,
-            'host': model['event'].host,
-            'id': 2,
-            'lang': None,
-            'slug': None,
-            'online_event': False,
-            'organization': 1,
-            'published_at': None,
-            'status': 'DRAFT',
-            'eventbrite_sync_description': None,
-            'eventbrite_sync_status': 'PENDING',
-            'title': None,
-            'venue': None,
-            'sync_with_eventbrite': False,
-            'eventbrite_sync_status': 'PENDING',
-            'currency': 'USD',
-            **data,
-        }
+        expected = {'detail': 'empty-tags', 'status_code': 400}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 400)
         self.assertEqual(self.all_event_dict(), [{
             **self.model_to_dict(model, 'event'),
-            **data,
-            'organization_id': 1,
-            'starting_at': current_date,
-            'ending_at': current_date,
         }])
 
+    """
+    🔽🔽🔽 Try to update the slug
+    """
+
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
+    def test_academy_cohort_id__put__tags_is_blank__try_to_update_the_slug(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     tag=(2, {
+                                         'tag_type': 'DISCOVERY'
+                                     }),
+                                     active_campaign_academy=True,
+                                     event=True)
+
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': ','.join([x.slug for x in model.tag]),
+            'slug': 'EVENT-THEY-KILLED-KENNY',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'try-update-slug', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [{
+            **self.model_to_dict(model, 'event'),
+        }])
+
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
+    def test_academy_cohort_id__put__with_tags__without_acp(self):
+        """Test /cohort without auth"""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     academy=True,
+                                     tag=(2, {
+                                         'tag_type': 'DISCOVERY'
+                                     }),
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': ','.join([x.slug for x in model.tag]),
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        expected = {'detail': 'tag-not-exist', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [{
+            **self.model_to_dict(model, 'event'),
+        }])
+
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_id__put__with_tags(self):
         """Test /cohort without auth"""
         self.headers(academy=1)
@@ -439,18 +606,22 @@ class AcademyEventsTestSuite(EventTestCase):
         model = self.generate_models(authenticate=True,
                                      organization=True,
                                      profile_academy=True,
-                                     tag=True,
+                                     academy=True,
+                                     active_campaign_academy=True,
+                                     tag=(2, {
+                                         'tag_type': 'DISCOVERY'
+                                     }),
                                      capability='crud_event',
                                      role='potato2',
                                      event=True)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         current_date = self.datetime_now()
         data = {
             'id': 1,
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
-            'tags': model.tag.slug,
+            'tags': ','.join([x.slug for x in model.tag]),
             'capacity': 11,
             'starting_at': self.datetime_to_iso(current_date),
             'ending_at': self.datetime_to_iso(current_date),
@@ -459,11 +630,8 @@ class AcademyEventsTestSuite(EventTestCase):
         response = self.client.put(url, data, format='json')
         json = response.json()
 
-        self.assertDatetime(json['created_at'])
-        self.assertDatetime(json['updated_at'])
-
-        del json['created_at']
         del json['updated_at']
+        del json['created_at']
 
         expected = {
             'academy': 1,
@@ -494,7 +662,7 @@ class AcademyEventsTestSuite(EventTestCase):
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(self.all_event_dict(), [{
             **self.model_to_dict(model, 'event'),
             **data,
@@ -503,6 +671,99 @@ class AcademyEventsTestSuite(EventTestCase):
             'ending_at': current_date,
         }])
 
+    """
+    🔽🔽🔽 Put with duplicate tags
+    """
+
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
+    def test_academy_cohort_id__put__with_duplicate_tags(self):
+        self.headers(academy=1)
+
+        tags = [
+            {
+                'slug': 'they-killed-kenny',
+                'tag_type': 'DISCOVERY'
+            },
+            {
+                'slug': 'they-killed-kenny',
+                'tag_type': 'DISCOVERY'
+            },
+            {
+                'slug': 'kenny-has-born-again',
+                'tag_type': 'DISCOVERY'
+            },
+        ]
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     academy=True,
+                                     active_campaign_academy=True,
+                                     tag=tags,
+                                     capability='crud_event',
+                                     role='potato2',
+                                     event=True)
+
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
+        current_date = self.datetime_now()
+        data = {
+            'id': 1,
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'tags': 'they-killed-kenny,kenny-has-born-again',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.put(url, data, format='json')
+        json = response.json()
+
+        del json['updated_at']
+        del json['created_at']
+
+        expected = {
+            'academy': 1,
+            'author': 1,
+            'description': None,
+            'event_type': None,
+            'eventbrite_id': None,
+            'eventbrite_organizer_id': None,
+            'eventbrite_status': None,
+            'eventbrite_url': None,
+            'excerpt': None,
+            'host': model['event'].host,
+            'id': 2,
+            'lang': None,
+            'slug': None,
+            'online_event': False,
+            'organization': 1,
+            'published_at': None,
+            'status': 'DRAFT',
+            'eventbrite_sync_description': None,
+            'eventbrite_sync_status': 'PENDING',
+            'title': None,
+            'venue': None,
+            'sync_with_eventbrite': False,
+            'eventbrite_sync_status': 'PENDING',
+            'currency': 'USD',
+            **data,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.all_event_dict(), [{
+            **self.model_to_dict(model, 'event'),
+            **data,
+            'organization_id': 1,
+            'starting_at': current_date,
+            'ending_at': current_date,
+        }])
+
+    """
+    🔽🔽🔽 Cache
+    """
+
+    @patch('breathecode.marketing.signals.downloadable_saved.send', MagicMock())
     def test_academy_cohort_with_data_testing_cache_and_remove_in_put(self):
         """Test /cohort without auth"""
         cache_keys = [
@@ -512,7 +773,7 @@ class AcademyEventsTestSuite(EventTestCase):
 
         self.assertEqual(self.cache.keys(), [])
 
-        old_model = AcademyEventTestSuite.test_all_academy_events(self)
+        old_model = self.check_all_academy_events()
         self.assertEqual(self.cache.keys(), cache_keys)
 
         self.headers(academy=1)
@@ -529,12 +790,17 @@ class AcademyEventsTestSuite(EventTestCase):
                                      profile_academy=True,
                                      capability='crud_event',
                                      role='potato2',
+                                     tag=(2, {
+                                         'tag_type': 'DISCOVERY'
+                                     }),
+                                     active_campaign_academy=True,
                                      models=base)
 
-        url = reverse_lazy('events:academy_single_event', kwargs={'event_id': 1})
+        url = reverse_lazy('events:academy_event_id', kwargs={'event_id': 1})
         current_date = self.datetime_now()
         data = {
             'id': 1,
+            'tags': ','.join([x.slug for x in model.tag]),
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
             'capacity': 11,
@@ -561,7 +827,7 @@ class AcademyEventsTestSuite(EventTestCase):
             'eventbrite_status': None,
             'eventbrite_url': None,
             'excerpt': None,
-            'tags': model['event'].tags,
+            'tags': ','.join([x.slug for x in model.tag]),
             'slug': model['event'].slug,
             'host': model['event'].host,
             'id': 2,
@@ -580,7 +846,7 @@ class AcademyEventsTestSuite(EventTestCase):
         }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.status_code, 200)
         self.assertEqual(self.all_event_dict(), [{
             **self.model_to_dict(model, 'event'),
             **data,
@@ -601,5 +867,5 @@ class AcademyEventsTestSuite(EventTestCase):
             self.generate_models(authenticate=True, models=old_model[0]),
         ]
 
-        AcademyEventTestSuite.test_all_academy_events(self, base)
+        self.check_all_academy_events(base)
         self.assertEqual(self.cache.keys(), cache_keys)

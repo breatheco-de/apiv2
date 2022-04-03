@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 from django.db.models import Model
 from mixer.backend.django import mixer
 
-from breathecode.authenticate.management.commands.create_roles import Command
+from breathecode.authenticate.management.commands.create_academy_roles import Command
 
 logger = logging.getLogger(__name__)
 

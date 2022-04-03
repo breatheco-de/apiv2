@@ -90,6 +90,7 @@ class SyncEventbriteTestSuite(EventTestCase):
     @patch.object(sys.stdout, 'write', write_mock())
     @patch.object(sys.stderr, 'write', write_mock())
     @patch.object(actions, 'sync_org_events', sync_org_events_mock())
+    @patch('builtins.print', MagicMock())
     def test_sync_eventbrite__with_organization__without_name(self):
         """Test /answer without auth"""
         import breathecode.events.actions as actions
@@ -103,7 +104,7 @@ class SyncEventbriteTestSuite(EventTestCase):
 
         self.assertEqual(sys.stdout.write.call_args_list, [call('Enqueued 0 of 1 for sync events\n')])
         self.assertEqual(sys.stderr.write.call_args_list,
-                         [call(f'Organization (1) is missing evenbrite key or ID\n')])
+                         [call(f'Organization Nameless is missing evenbrite key or ID\n')])
         self.assertEqual(actions.sync_org_events.call_args_list, [])
 
     """
@@ -113,6 +114,7 @@ class SyncEventbriteTestSuite(EventTestCase):
     @patch.object(sys.stdout, 'write', write_mock())
     @patch.object(sys.stderr, 'write', write_mock())
     @patch.object(actions, 'sync_org_events', sync_org_events_mock())
+    @patch('builtins.print', MagicMock())
     def test_sync_eventbrite__with_organization__with_name(self):
         """Test /answer without auth"""
         import breathecode.events.actions as actions
@@ -127,7 +129,7 @@ class SyncEventbriteTestSuite(EventTestCase):
 
         self.assertEqual(sys.stdout.write.call_args_list, [call('Enqueued 0 of 1 for sync events\n')])
         self.assertEqual(sys.stderr.write.call_args_list,
-                         [call(f'Organization They killed kenny (1) is missing evenbrite key or ID\n')])
+                         [call(f'Organization They killed kenny is missing evenbrite key or ID\n')])
         self.assertEqual(actions.sync_org_events.call_args_list, [])
 
     """
@@ -137,6 +139,7 @@ class SyncEventbriteTestSuite(EventTestCase):
     @patch.object(sys.stdout, 'write', write_mock())
     @patch.object(sys.stderr, 'write', write_mock())
     @patch.object(actions, 'sync_org_events', sync_org_events_mock())
+    @patch('builtins.print', MagicMock())
     def test_sync_eventbrite__with_organization(self):
         """Test /answer without auth"""
         import breathecode.events.actions as actions

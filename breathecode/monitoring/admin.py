@@ -2,8 +2,7 @@ import os, ast
 from django.contrib import admin
 from django import forms
 from django.utils import timezone
-from django.contrib.auth.models import User
-from .models import Endpoint, Application, MonitorScript
+from .models import Endpoint, Application, MonitorScript, CSVDownload
 from breathecode.notify.models import SlackChannel
 from django.utils.html import format_html
 
@@ -148,3 +147,23 @@ class MonitorScriptAdmin(admin.ModelAdmin):
             return format_html(f"<span class='badge bc-warning'> ⏸ PAUSED</span>")
 
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+
+
+@admin.register(CSVDownload)
+class CSVDownloadAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'current_status', 'created_at', 'finished_at', 'download')
+    list_filter = ['academy', 'status']
+
+    def current_status(self, obj):
+        colors = {
+            'DONE': 'bg-success',
+            'ERROR': 'bg-error',
+            'LOADING': 'bg-warning',
+        }
+        return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
+
+    def download(self, obj):
+        if obj.status == 'DONE':
+            return format_html(
+                f"<a href='/v1/monitoring/download/{obj.id}?raw=true' target='_blank'>download</span>")
+        return format_html('nothing to download')

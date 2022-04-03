@@ -3,10 +3,11 @@ Test /cohort
 """
 from django.utils import timezone
 from breathecode.admissions.caches import CohortCache
-import re
 from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.utils.datetime_interger import DatetimeInteger
 from ..mixins import AdmissionsTestCase
 
 
@@ -72,7 +73,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, {'status_code': 400, 'detail': 'Specified cohort not be found'})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     """
@@ -104,7 +108,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     """
@@ -140,7 +147,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     """
@@ -177,10 +187,11 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
             'current_day': model['cohort'].current_day,
+            'current_module': model['cohort'].current_module,
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'syllabus_version': model['cohort'].syllabus_version,
-            'specialty_mode': model['cohort'].specialty_mode,
+            'schedule': model['cohort'].schedule,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
@@ -201,10 +212,12 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), [{
-            **self.model_to_dict(model, 'cohort'),
-            'never_ends': True,
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
+                         [{
+                             **self.model_to_dict(model, 'cohort'),
+                             'never_ends': True,
+                         }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list,
                          [call(instance=model.cohort, sender=model.cohort.__class__, created=False)])
 
@@ -246,7 +259,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     """
@@ -286,7 +302,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     """
@@ -305,7 +324,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus_version=True,
                                      syllabus=True,
                                      syllabus_kwargs=syllabus_kwargs)
@@ -330,7 +349,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     """
@@ -350,7 +372,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus=True,
                                      syllabus_kwargs=syllabus_kwargs,
                                      cohort_kwargs=cohort_kwargs)
@@ -375,7 +397,10 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
+        self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     """
@@ -390,28 +415,36 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         cohort_kwargs = {'ending_date': timezone.now()}
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        academy = {'timezone': 'Pacific/Pago_Pago'}
+        timeslot = {'timezone': 'Pacific/Pago_Pago'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
+                                     academy=academy,
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      cohort_kwargs=cohort_kwargs,
-                                     specialty_mode_time_slot=True,
+                                     syllabus_schedule_time_slot=True,
+                                     cohort_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        model2 = self.generate_models(specialty_mode=True, syllabus=model.syllabus)
+        model2 = self.generate_models(academy=model.academy,
+                                      skip_cohort=True,
+                                      syllabus_schedule=True,
+                                      syllabus=model.syllabus,
+                                      syllabus_schedule_time_slot=(2, timeslot))
         url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
         data = {
             'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
-            'specialty_mode': 2,
+            'schedule': 2,
             'current_day': model['cohort'].current_day + 1,
             'language': 'es',
         }
@@ -419,23 +452,50 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         json = response.json()
 
         expected = {
-            'id': model['cohort'].id,
-            'slug': data['slug'],
-            'name': data['name'],
-            'never_ends': False,
-            'private': False,
-            'language': data['language'],
-            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
-            'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
-            'current_day': data['current_day'],
-            'stage': model['cohort'].stage,
-            'online_meeting_url': model['cohort'].online_meeting_url,
-            'timezone': model['cohort'].timezone,
-            'timeslots': [],
-            'specialty_mode': {
-                'id': model2.specialty_mode.id,
-                'name': model2.specialty_mode.name,
-                'syllabus': model2.specialty_mode.syllabus.id,
+            'id':
+            model['cohort'].id,
+            'slug':
+            data['slug'],
+            'name':
+            data['name'],
+            'never_ends':
+            False,
+            'private':
+            False,
+            'language':
+            data['language'],
+            'kickoff_date':
+            self.datetime_to_iso(model['cohort'].kickoff_date),
+            'ending_date':
+            self.datetime_to_iso(model['cohort'].ending_date),
+            'current_day':
+            data['current_day'],
+            'current_module':
+            None,
+            'stage':
+            model['cohort'].stage,
+            'online_meeting_url':
+            model['cohort'].online_meeting_url,
+            'timezone':
+            model['cohort'].timezone,
+            'timeslots': [{
+                'ending_at':
+                DatetimeInteger.to_iso_string(syllabus_schedule_time_slot.timezone,
+                                              syllabus_schedule_time_slot.ending_at),
+                'id':
+                syllabus_schedule_time_slot.id,
+                'recurrency_type':
+                syllabus_schedule_time_slot.recurrency_type,
+                'recurrent':
+                syllabus_schedule_time_slot.recurrent,
+                'starting_at':
+                DatetimeInteger.to_iso_string(syllabus_schedule_time_slot.timezone,
+                                              syllabus_schedule_time_slot.starting_at),
+            } for syllabus_schedule_time_slot in model2.syllabus_schedule_time_slot],
+            'schedule': {
+                'id': model2.syllabus_schedule.id,
+                'name': model2.syllabus_schedule.name,
+                'syllabus': model2.syllabus_schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -466,24 +526,322 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), [{
-            'academy_id': 1,
-            'current_day': data['current_day'],
-            'ending_date': model['cohort'].ending_date,
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
+                         [{
+                             'academy_id': 1,
+                             'current_day': data['current_day'],
+                             'current_module': None,
+                             'ending_date': model['cohort'].ending_date,
+                             'id': model['cohort'].id,
+                             'kickoff_date': model['cohort'].kickoff_date,
+                             'remote_available': model['cohort'].remote_available,
+                             'online_meeting_url': model['cohort'].online_meeting_url,
+                             'language': data['language'],
+                             'name': data['name'],
+                             'never_ends': False,
+                             'private': False,
+                             'slug': data['slug'],
+                             'stage': model['cohort'].stage,
+                             'syllabus_version_id': model['cohort'].syllabus_version.id,
+                             'schedule_id': model2.syllabus_schedule.id,
+                             'timezone': None,
+                         }])
+
+        self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
+                         [{
+                             'cohort_id': 1,
+                             'ending_at': syllabus_schedule_time_slot.ending_at,
+                             'id': syllabus_schedule_time_slot.id,
+                             'timezone': syllabus_schedule_time_slot.timezone,
+                             'recurrency_type': syllabus_schedule_time_slot.recurrency_type,
+                             'recurrent': syllabus_schedule_time_slot.recurrent,
+                             'starting_at': syllabus_schedule_time_slot.starting_at,
+                         } for syllabus_schedule_time_slot in model2.syllabus_schedule_time_slot])
+
+        self.assertEqual(cohort_saved.send.call_args_list,
+                         [call(instance=model.cohort, sender=model.cohort.__class__, created=False)])
+
+    """
+    🔽🔽🔽 Put with some data, of other academy, syllabus public
+    """
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    def test_cohort_id__put__with_id__schedule_related_to_syllabus_of_other_academy_public(self):
+        """Test /cohort/:id without auth"""
+
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        cohort_kwargs = {'ending_date': timezone.now()}
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        academy = {'timezone': 'Pacific/Pago_Pago'}
+        timeslot = {'timezone': 'Pacific/Pago_Pago'}
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     academy=academy,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato',
+                                     syllabus=True,
+                                     syllabus_version=True,
+                                     syllabus_schedule=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     syllabus_schedule_time_slot=True,
+                                     cohort_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        syllabus = {'private': False}
+        model2 = self.generate_models(academy=1,
+                                      skip_cohort=True,
+                                      syllabus=syllabus,
+                                      syllabus_schedule=True,
+                                      syllabus_schedule_time_slot=(2, timeslot))
+        url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
+        data = {
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'schedule': 2,
+            'current_day': model['cohort'].current_day + 1,
+            'language': 'es',
+        }
+        response = self.client.put(url, data)
+        json = response.json()
+
+        expected = {
+            'id':
+            model['cohort'].id,
+            'slug':
+            data['slug'],
+            'name':
+            data['name'],
+            'never_ends':
+            False,
+            'private':
+            False,
+            'language':
+            data['language'],
+            'kickoff_date':
+            self.datetime_to_iso(model['cohort'].kickoff_date),
+            'ending_date':
+            self.datetime_to_iso(model['cohort'].ending_date),
+            'current_day':
+            data['current_day'],
+            'current_module':
+            None,
+            'stage':
+            model['cohort'].stage,
+            'online_meeting_url':
+            model['cohort'].online_meeting_url,
+            'timezone':
+            model['cohort'].timezone,
+            'timeslots': [{
+                'ending_at':
+                DatetimeInteger.to_iso_string(syllabus_schedule_time_slot.timezone,
+                                              syllabus_schedule_time_slot.ending_at),
+                'id':
+                syllabus_schedule_time_slot.id,
+                'recurrency_type':
+                syllabus_schedule_time_slot.recurrency_type,
+                'recurrent':
+                syllabus_schedule_time_slot.recurrent,
+                'starting_at':
+                DatetimeInteger.to_iso_string(syllabus_schedule_time_slot.timezone,
+                                              syllabus_schedule_time_slot.starting_at),
+            } for syllabus_schedule_time_slot in model2.syllabus_schedule_time_slot],
+            'schedule': {
+                'id': model2.syllabus_schedule.id,
+                'name': model2.syllabus_schedule.name,
+                'syllabus': model2.syllabus_schedule.syllabus.id,
+            },
+            'syllabus_version': {
+                'name': model.syllabus.name,
+                'slug': model.syllabus.slug,
+                'version': model['cohort'].syllabus_version.version,
+                'syllabus': model['cohort'].syllabus_version.syllabus.id,
+                'duration_in_days': model.syllabus.duration_in_days,
+                'duration_in_hours': model.syllabus.duration_in_hours,
+                'github_url': model.syllabus.github_url,
+                'logo': model.syllabus.logo,
+                'private': model.syllabus.private,
+                'week_hours': model.syllabus.week_hours,
+            },
+            'academy': {
+                'id': model.academy.id,
+                'slug': model.academy.slug,
+                'name': model.academy.name,
+                'country': {
+                    'code': model.academy.country.code,
+                    'name': model.academy.country.name,
+                },
+                'city': {
+                    'name': model.academy.city.name,
+                },
+                'logo_url': model.academy.logo_url,
+            }
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
+                         [{
+                             'academy_id': 1,
+                             'current_day': data['current_day'],
+                             'current_module': None,
+                             'ending_date': model['cohort'].ending_date,
+                             'id': model['cohort'].id,
+                             'kickoff_date': model['cohort'].kickoff_date,
+                             'remote_available': model['cohort'].remote_available,
+                             'online_meeting_url': model['cohort'].online_meeting_url,
+                             'language': data['language'],
+                             'name': data['name'],
+                             'never_ends': False,
+                             'private': False,
+                             'slug': data['slug'],
+                             'stage': model['cohort'].stage,
+                             'syllabus_version_id': model['cohort'].syllabus_version.id,
+                             'schedule_id': model2.syllabus_schedule.id,
+                             'timezone': None,
+                         }])
+
+        self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'),
+                         [{
+                             'cohort_id': 1,
+                             'ending_at': syllabus_schedule_time_slot.ending_at,
+                             'id': syllabus_schedule_time_slot.id,
+                             'timezone': syllabus_schedule_time_slot.timezone,
+                             'recurrency_type': syllabus_schedule_time_slot.recurrency_type,
+                             'recurrent': syllabus_schedule_time_slot.recurrent,
+                             'starting_at': syllabus_schedule_time_slot.starting_at,
+                         } for syllabus_schedule_time_slot in model2.syllabus_schedule_time_slot])
+
+        self.assertEqual(cohort_saved.send.call_args_list,
+                         [call(instance=model.cohort, sender=model.cohort.__class__, created=False)])
+
+    """
+    🔽🔽🔽 Put with some data, of other academy, syllabus private
+    """
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    def test_cohort_id__put__with_id__schedule_related_to_syllabus_of_other_academy_private(self):
+        """Test /cohort/:id without auth"""
+
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        cohort_kwargs = {'ending_date': timezone.now()}
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        academy = {'timezone': 'Pacific/Pago_Pago'}
+        timeslot = {'timezone': 'Pacific/Pago_Pago'}
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     academy=academy,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato',
+                                     syllabus=True,
+                                     syllabus_version=True,
+                                     syllabus_schedule=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     syllabus_schedule_time_slot=True,
+                                     cohort_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        syllabus = {'private': True}
+        model2 = self.generate_models(academy=1,
+                                      skip_cohort=True,
+                                      syllabus=syllabus,
+                                      syllabus_schedule=True,
+                                      syllabus_schedule_time_slot=(2, timeslot))
+        url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
+        data = {
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'schedule': 2,
+            'current_day': model['cohort'].current_day + 1,
+            'language': 'es',
+        }
+        response = self.client.put(url, data)
+        json = response.json()
+
+        expected = {
             'id': model['cohort'].id,
-            'kickoff_date': model['cohort'].kickoff_date,
-            'remote_available': model['cohort'].remote_available,
-            'online_meeting_url': model['cohort'].online_meeting_url,
-            'language': data['language'],
+            'slug': data['slug'],
             'name': data['name'],
             'never_ends': False,
             'private': False,
-            'slug': data['slug'],
+            'language': data['language'],
+            'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
+            'ending_date': self.datetime_to_iso(model['cohort'].ending_date),
+            'current_day': data['current_day'],
+            'current_module': None,
             'stage': model['cohort'].stage,
-            'syllabus_version_id': model['cohort'].syllabus_version.id,
-            'specialty_mode_id': model2.specialty_mode.id,
-            'timezone': None,
-        }])
+            'online_meeting_url': model['cohort'].online_meeting_url,
+            'timezone': model['cohort'].timezone,
+            'timeslots': [],
+            'schedule': {
+                'id': model2.syllabus_schedule.id,
+                'name': model2.syllabus_schedule.name,
+                'syllabus': model2.syllabus_schedule.syllabus.id,
+            },
+            'syllabus_version': {
+                'name': model.syllabus.name,
+                'slug': model.syllabus.slug,
+                'version': model['cohort'].syllabus_version.version,
+                'syllabus': model['cohort'].syllabus_version.syllabus.id,
+                'duration_in_days': model.syllabus.duration_in_days,
+                'duration_in_hours': model.syllabus.duration_in_hours,
+                'github_url': model.syllabus.github_url,
+                'logo': model.syllabus.logo,
+                'private': model.syllabus.private,
+                'week_hours': model.syllabus.week_hours,
+            },
+            'academy': {
+                'id': model.academy.id,
+                'slug': model.academy.slug,
+                'name': model.academy.name,
+                'country': {
+                    'code': model.academy.country.code,
+                    'name': model.academy.country.name,
+                },
+                'city': {
+                    'name': model.academy.city.name,
+                },
+                'logo_url': model.academy.logo_url,
+            }
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
+                         [{
+                             'academy_id': 1,
+                             'current_day': data['current_day'],
+                             'current_module': None,
+                             'ending_date': model['cohort'].ending_date,
+                             'id': model['cohort'].id,
+                             'kickoff_date': model['cohort'].kickoff_date,
+                             'remote_available': model['cohort'].remote_available,
+                             'online_meeting_url': model['cohort'].online_meeting_url,
+                             'language': data['language'],
+                             'name': data['name'],
+                             'never_ends': False,
+                             'private': False,
+                             'slug': data['slug'],
+                             'stage': model['cohort'].stage,
+                             'syllabus_version_id': model['cohort'].syllabus_version.id,
+                             'schedule_id': model2.syllabus_schedule.id,
+                             'timezone': None,
+                         }])
+
+        self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list,
                          [call(instance=model.cohort, sender=model.cohort.__class__, created=False)])
 
@@ -502,7 +860,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='read_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus=True,
                                      syllabus_version=True)
 
@@ -524,13 +882,14 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'current_module': model['cohort'].current_module,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -607,7 +966,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='read_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus=True,
                                      syllabus_version=True)
 
@@ -629,13 +988,14 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'language': model['cohort'].language,
             'stage': model['cohort'].stage,
             'current_day': model['cohort'].current_day,
+            'current_module': model['cohort'].current_module,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -776,10 +1136,11 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.cache.keys(), [])
-        self.assertEqual(self.all_cohort_dict(), [{
-            **self.model_to_dict(model, 'cohort'),
-            'stage': 'DELETED',
-        }])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'),
+                         [{
+                             **self.model_to_dict(model, 'cohort'),
+                             'stage': 'DELETED',
+                         }])
 
         old_models[0]['cohort'].stage = 'DELETED'
 
@@ -820,5 +1181,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        self.assertEqual(self.all_cohort_dict(), [{**self.model_to_dict(model, 'cohort')}])
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [{
+            **self.model_to_dict(model, 'cohort')
+        }])
         self.assertEqual(cohort_saved.send.call_args_list, [])

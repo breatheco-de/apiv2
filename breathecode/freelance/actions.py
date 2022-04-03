@@ -1,5 +1,6 @@
 import os, re, json, logging
 from itertools import chain
+from django.db.models import Q
 from .models import Freelancer, Issue, Bill, RepositoryIssueWebhook
 from breathecode.authenticate.models import CredentialsGithub
 from schema import Schema, And, Use, Optional, SchemaError
@@ -64,28 +65,42 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     if 'issue' in issue:
         issue = issue['issue']
 
-    issue_id = None
+    issue_number = None
     if 'number' in issue:
-        issue_id = issue['number']
-    elif 'id' in issue:
-        issue_id = issue['id']
+        issue_number = issue['number']
 
-    _issue = Issue.objects.filter(github_number=issue_id).first()
+    node_id = None
+    if 'node_id' in issue:
+        node_id = issue['node_id']
+    else:
+        logger.debug(
+            f'Impossible to identify issue because it does not have a node_id (number:{issue_number}), ignoring synch: '
+            + str(issue))
+        return None
+
+    _issue = Issue.objects.filter(node_id=node_id).first()
 
     if _issue is None:
         _issue = Issue(
             title='Untitled',
-            github_number=issue_id,
+            node_id=node_id,
         )
 
     if _issue.status in ['DONE', 'IGNORED'] and incoming_github_action not in ['reopened']:
         logger.debug(
-            f'Ignoring changes to this issue {issue_id} because status is {_issue.status} and its not being reponened: {_issue.title}'
+            f'Ignoring changes to this issue {node_id} ({issue_number}) because status is {_issue.status} and its not being reponened: {_issue.title}'
         )
         return _issue
 
-    _issue.title = issue['title'][:255]
-    _issue.body = issue['body'][:500]
+    if issue_number is not None:
+        _issue.github_number = issue_number
+
+    if issue['title'] is not None:
+        _issue.title = issue['title'][:255]
+
+    if issue['body'] is not None:
+        _issue.body = issue['body'][:500]
+
     _issue.url = issue['html_url']
 
     if freelancer is None:
@@ -100,7 +115,8 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     _issue.freelancer = freelancer
     hours = get_hours(_issue.body)
     if hours is not None and _issue.duration_in_hours != hours:
-        logger.debug(f'Updating issue {issue_id} hrs with {hours}, found <hrs> tag on updated body')
+        logger.debug(
+            f'Updating issue {node_id} ({issue_number}) hrs with {hours}, found <hrs> tag on updated body')
         _issue.duration_in_minutes = hours * 60
         _issue.duration_in_hours = hours
 
@@ -108,13 +124,16 @@ def sync_single_issue(issue, comment=None, freelancer=None, incoming_github_acti
     if comment is not None:
         hours = get_hours(comment['body'])
         if hours is not None and _issue.duration_in_hours != hours:
-            logger.debug(f'Updating issue {issue_id} hrs with {hours}, found <hrs> tag on new comment')
+            logger.debug(
+                f'Updating issue {node_id} ({issue_number}) hrs with {hours}, found <hrs> tag on new comment')
             _issue.duration_in_minutes = hours * 60
             _issue.duration_in_hours = hours
 
         status = get_status(comment['body'])
         if status is not None:
-            logger.debug(f'Updating issue {issue_id} status to {status} found <status> tag on new comment')
+            logger.debug(
+                f'Updating issue {node_id} ({issue_number}) status to {status} found <status> tag on new comment'
+            )
             _issue.status = status
 
     _issue.save()
@@ -135,8 +154,12 @@ def sync_user_issues(freelancer):
     g = Github(credentials.token)
     user = g.get_user()
     open_issues = user.get_user_issues(state='open')
+
+    count = 0
     for issue in open_issues:
+        count += 1
         sync_single_issue(issue, freelancer=freelancer)
+    logger.debug(f'{str(count)} issues where synched for this Github user credentials {str(credentials)}')
 
     return None
 
@@ -149,25 +172,33 @@ def change_status(issue, status):
 
 def generate_freelancer_bill(freelancer):
 
-    Issue.objects.filter(status='TODO', bill__isnull=False).update(bill=None)
+    Issue.objects.filter(bill__isnull=False,
+                         freelancer__id=freelancer.id).exclude(status='DONE').update(bill=None)
 
     open_bill = Bill.objects.filter(freelancer__id=freelancer.id, status='DUE').first()
     if open_bill is None:
         open_bill = Bill(freelancer=freelancer, )
         open_bill.save()
 
-    done_issues = Issue.objects.filter(status='DONE', bill__isnull=True)
-    total = {
-        'minutes': open_bill.total_duration_in_minutes,
-        'hours': open_bill.total_duration_in_hours,
-        'price': open_bill.total_price
-    }
-    print(f'{done_issues.count()} issues found')
+    done_issues = Issue.objects.filter(freelancer__id=freelancer.id,
+                                       status='DONE').filter(Q(bill__isnull=True) | Q(bill__status='DUE'))
+    total = {'minutes': 0, 'hours': 0, 'price': 0}
+
     for issue in done_issues:
         issue.bill = open_bill
+        issue.status_message = ''
+
+        if issue.status != 'DONE':
+            issue.status_message += 'Issue is still ' + issue.status
+        if issue.node_id is None or issue.node_id == '':
+            issue.status_message += 'Github node id not found'
+
+        if issue.status_message == '':
+            total['hours'] = total['hours'] + issue.duration_in_hours
+            total['minutes'] = total['minutes'] + issue.duration_in_minutes
+
         issue.save()
-        total['hours'] = total['hours'] + issue.duration_in_hours
-        total['minutes'] = total['minutes'] + issue.duration_in_minutes
+
     total['price'] = total['hours'] * freelancer.price_per_hour
 
     open_bill.total_duration_in_hours = total['hours']

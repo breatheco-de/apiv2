@@ -7,6 +7,7 @@ from django.utils.html import format_html
 from .models import (CredentialsGithub, DeviceId, Token, UserProxy, Profile, CredentialsSlack, ProfileAcademy,
                      Role, CredentialsFacebook, Capability, UserInvite, CredentialsGoogle, AcademyProxy)
 from .actions import reset_password
+from breathecode.utils.admin import change_field
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ class TokenAdmin(admin.ModelAdmin):
 @admin.register(UserInvite)
 class UserInviteAdmin(admin.ModelAdmin):
     search_fields = ['email', 'first_name', 'last_name']
-    list_filter = ['academy', 'cohort', 'role']
+    list_filter = ['academy', 'cohort', 'role', 'status']
     list_display = ('email', 'first_name', 'last_name', 'status', 'academy', 'token', 'created_at',
                     'invite_url')
 
@@ -124,24 +125,12 @@ class CapabilityAdmin(admin.ModelAdmin):
     list_display = ('slug', 'description')
 
 
-def mark_as_active(modeladmin, request, queryset):
-    aca_profs = queryset.all()
-    for ap in aca_profs:
-        ap.status = 'ACTIVE'
-        ap.save()
-
-    logger.info(f'All AcademyProfiles marked as ACTIVE')
-
-
-mark_as_active.short_description = 'Mark as ACTIVE'
-
-
 @admin.register(ProfileAcademy)
 class ProfileAcademyAdmin(admin.ModelAdmin):
-    list_display = ('user', 'email', 'academy', 'role', 'status', 'created_at', 'slack', 'facebook')
+    list_display = ('user', 'stats', 'email', 'academy', 'role', 'created_at', 'slack', 'facebook')
     search_fields = ['user__first_name', 'user__last_name', 'user__email']
     list_filter = ['academy__slug', 'status', 'role__slug']
-    actions = [mark_as_active]
+    actions = change_field(['ACTIVE', 'INVITED'], name='status')
     raw_id_fields = ['user']
 
     def get_queryset(self, request):
@@ -149,6 +138,17 @@ class ProfileAcademyAdmin(admin.ModelAdmin):
         self.slack_callback = f'https://app.breatheco.de'
         self.slack_callback = str(base64.urlsafe_b64encode(self.slack_callback.encode('utf-8')), 'utf-8')
         return super(ProfileAcademyAdmin, self).get_queryset(request)
+
+    def stats(self, obj):
+
+        colors = {
+            'ACTIVE': 'bg-success',
+            'INVITED': 'bg-error',
+        }
+
+        return format_html(
+            f"<span class='badge {colors[obj.status]}'><a rel='noopener noreferrer' target='_blank' href='/v1/auth/academy/html/invite'>{obj.status}</a></span>"
+        )
 
     def slack(self, obj):
         if obj.user is not None:

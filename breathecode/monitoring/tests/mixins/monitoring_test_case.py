@@ -12,6 +12,7 @@ class MonitoringTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
     """AdmissionsTestCase with auth methods"""
     def setUp(self):
         self.generate_queries()
+        self.set_test_instance(self)
 
     def tearDown(self):
         self.clear_cache()
@@ -73,7 +74,7 @@ class MonitoringTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 '\n'
                 '\n'
                 '\n'
-                'The BreatheCode Team'
+                'The 4Geeks Team'
             })
         self.assertToken(token)
         self.assertTrue(link in html)

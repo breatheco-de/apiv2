@@ -63,6 +63,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -133,6 +134,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -181,7 +183,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         json = response.json()
 
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'user': {
                 'id': model['cohort_user'].user.id,
                 'first_name': model['cohort_user'].user.first_name,
@@ -253,6 +255,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -301,7 +304,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -373,7 +376,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -423,7 +426,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -476,7 +479,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -525,7 +528,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -597,7 +600,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
-            # 'id': model['cohort_user'].id,
+            'id': model['cohort_user'].id,
             'role': model['cohort_user'].role,
             'finantial_status': model['cohort_user'].finantial_status,
             'educational_status': model['cohort_user'].educational_status,
@@ -838,7 +841,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -903,7 +906,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,

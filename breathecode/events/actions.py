@@ -1,13 +1,17 @@
+from typing import Any
+from pyparsing import Literal
 import pytz
 import re
 import logging
 
 from datetime import datetime, timedelta
-from breathecode.admissions.models import Cohort, CohortTimeSlot
 from django.utils import timezone
+from breathecode.admissions.models import Cohort, CohortTimeSlot, TimeSlot
+from breathecode.utils.datetime_interger import DatetimeInteger
 
 from .models import Organization, Venue, Event, Organizer
 from .utils import Eventbrite
+from django.db.models import QuerySet
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +104,70 @@ def create_or_update_venue(data, org, force_update=False):
     return venue
 
 
+def export_event_description_to_eventbrite(event: Event) -> None:
+    if not event:
+        logger.error(f'Event is not being provided')
+        return
+
+    if not event.eventbrite_id:
+        logger.error(f'Event {event.id} not have the integration with eventbrite')
+        return
+
+    if not event.organization:
+        logger.error(f'Event {event.id} not have a organization assigned')
+        return
+
+    if not event.description:
+        logger.warning(f'The event {event.id} not have description yet')
+        return
+
+    eventbrite_id = event.eventbrite_id
+    client = Eventbrite(event.organization.eventbrite_key)
+
+    payload = {
+        'modules': [{
+            'type': 'text',
+            'data': {
+                'body': {
+                    'type': 'text',
+                    'text': event.description,
+                    'alignment': 'left',
+                },
+            },
+        }],
+        'publish':
+        True,
+        'purpose':
+        'listing',
+    }
+
+    try:
+        structured_content = client.get_event_description(eventbrite_id)
+        result = client.create_or_update_event_description(eventbrite_id,
+                                                           structured_content['page_version_number'], payload)
+
+        if not result['modules']:
+            error = 'Could not create event description in eventbrite'
+            logger.error(error)
+
+            event.eventbrite_sync_description = error
+            event.eventbrite_sync_status = 'ERROR'
+            event.save()
+
+        else:
+            event.eventbrite_sync_description = timezone.now()
+            event.eventbrite_sync_status = 'SYNCHED'
+            event.save()
+
+    except Exception as e:
+        error = str(e)
+        logger.error(error)
+
+        event.eventbrite_sync_description = error
+        event.eventbrite_sync_status = 'ERROR'
+        event.save()
+
+
 def export_event_to_eventbrite(event: Event, org: Organization):
     if not org.academy:
         logger.error(f'The organization {org} not have a academy assigned')
@@ -121,6 +189,9 @@ def export_event_to_eventbrite(event: Event, org: Organization):
         'event.currency': event.currency,
     }
 
+    if event.eventbrite_organizer_id:
+        data['event.organizer_id'] = event.eventbrite_organizer_id
+
     if timezone:
         data['event.start.timezone'] = timezone
         data['event.end.timezone'] = timezone
@@ -135,6 +206,8 @@ def export_event_to_eventbrite(event: Event, org: Organization):
 
         event.eventbrite_sync_description = now
         event.eventbrite_sync_status = 'SYNCHED'
+
+        export_event_description_to_eventbrite(event)
 
     except Exception as e:
         event.eventbrite_sync_description = f'{now} => {e}'
@@ -153,6 +226,7 @@ def sync_org_events(org):
     result = client.get_organization_events(org.eventbrite_id)
 
     try:
+
         for data in result['events']:
             update_or_create_event(data, org)
 
@@ -176,7 +250,39 @@ def sync_org_events(org):
 
 # use for mocking purpose
 def get_current_iso_string():
+    from django.utils import timezone
+
     return str(timezone.now())
+
+
+def update_event_description_from_eventbrite(event: Event) -> None:
+    if not event:
+        logger.error(f'Event is not being provided')
+        return
+
+    if not event.eventbrite_id:
+        logger.error(f'Event {event.id} not have the integration with eventbrite')
+        return
+
+    if not event.organization:
+        logger.error(f'Event {event.id} not have a organization assigned')
+        return
+
+    eventbrite_id = event.eventbrite_id
+    client = Eventbrite(event.organization.eventbrite_key)
+
+    try:
+        data = client.get_event_description(eventbrite_id)
+        event.description = data['modules'][0]['data']['body']['text']
+        event.eventbrite_sync_description = timezone.now()
+        event.eventbrite_sync_status = 'PERSISTED'
+        event.save()
+
+    except:
+        error = f'The event {eventbrite_id} is coming from eventbrite not have a description'
+        logger.warning(error)
+        event.eventbrite_sync_description = error
+        event.eventbrite_sync_status = 'ERROR'
 
 
 def update_or_create_event(data, org):
@@ -196,10 +302,10 @@ def update_or_create_event(data, org):
     event = Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).first()
     try:
         venue = None
-        if 'venue' in data:
+        if 'venue' in data and data['venue'] is not None:
             venue = create_or_update_venue(data['venue'], org)
         organizer = None
-        if 'organizer' in data:
+        if 'organizer' in data and data['organizer'] is not None:
             organizer = create_or_update_organizer(data['organizer'], org, force_update=True)
         else:
             print('Event without organizer', data)
@@ -224,6 +330,7 @@ def update_or_create_event(data, org):
 
         if event is None:
             event = Event(**kwargs)
+            event.sync_with_eventbrite = True
 
         else:
             for attr in kwargs:
@@ -245,11 +352,11 @@ def update_or_create_event(data, org):
         elif org.academy is not None:
             event.academy = org.academy
 
-        event.save()
-
         event.eventbrite_sync_description = now
         event.eventbrite_sync_status = 'PERSISTED'
         event.save()
+
+        update_event_description_from_eventbrite(event)
 
     except Exception as e:
         if event is not None:
@@ -261,7 +368,125 @@ def update_or_create_event(data, org):
     return event
 
 
-def fix_datetime_weekday(current, timeslot, prev=False, next=False):
+def publish_event_from_eventbrite(data, org: Organization) -> None:
+    if not data:  #skip if no data
+        logger.debug('Ignored event')
+        raise ValueError('data is empty')
+
+    now = get_current_iso_string()
+
+    try:
+        if not Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).count():
+            raise Warning(f'The event with the eventbrite id `{data["id"]}` doesn\'t exist in breathecode '
+                          'yet')
+
+        kwargs = {
+            'status': 'ACTIVE',
+            'eventbrite_status': data['status'],
+            'eventbrite_sync_description': now,
+            'eventbrite_sync_status': 'PERSISTED'
+        }
+
+        Event.objects.filter(eventbrite_id=data['id'], organization__id=org.id).update(**kwargs)
+        logger.debug(f'The event with the eventbrite id `{data["id"]}` was saved')
+
+    except Warning as e:
+        logger.error(f'{now} => {e}')
+        raise e
+
+    except Exception as e:
+        logger.exception(f'{now} => the body is coming from eventbrite has change')
+        raise e
+
+
+def datetime_in_range(start: datetime, end: datetime, current: datetime):
+    """
+    Check if a datetime is in the range.
+
+    Usages:
+
+    ```py
+    from django.utils import timezone
+    from datetime import timedelta
+
+    utc_now = timezone.now()
+    start = utc_now - timedelta(days=1)
+    end = utc_now + timedelta(days=1)
+
+    datetime_in_range(start, end, utc_now)  # returns 0, the datetime is in the range
+
+    utc_now = utc_now - timedelta(days=2)
+    datetime_in_range(start, end, utc_now)  # returns -1, the datetime is less than start
+
+    utc_now = utc_now + timedelta(days=4)
+    datetime_in_range(start, end, utc_now)  # returns 1, the datetime is greater than start
+    ```
+    """
+
+    if current < start:
+        return -1
+
+    if current > end:
+        return 1
+
+    return 0
+
+
+def update_timeslots_out_of_range(start: datetime, end: datetime, timeslots: QuerySet[TimeSlot]):
+    """
+    Get a list of timeslots in the range.
+
+    Usages:
+
+    ```py
+    from django.utils import timezone
+    from datetime import timedelta
+
+    start = utc_now - timedelta(days=1)
+    end = utc_now + timedelta(days=1)
+    queryset = ...
+
+    update_timeslots_out_of_range(start, end, queryset)  # returns a list of timeslots
+    ```
+    """
+
+    lists = []
+
+    for timeslot in timeslots:
+        starting_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.starting_at)
+        ending_at = DatetimeInteger.to_datetime(timeslot.timezone, timeslot.ending_at)
+        delta = ending_at - starting_at
+
+        n1 = datetime_in_range(start, end, starting_at)
+        n2 = datetime_in_range(start, end, ending_at)
+
+        less_than_start = n1 == -1 or n2 == -1
+        greater_than_end = n2 == 1 or n2 == 1
+
+        if not timeslot.recurrent and (less_than_start or greater_than_end):
+            continue
+
+        if less_than_start:
+            starting_at = fix_datetime_weekday(start, starting_at, next=True)
+            ending_at = starting_at + delta
+
+        elif greater_than_end:
+            ending_at = fix_datetime_weekday(end, ending_at, prev=True)
+            starting_at = ending_at - delta
+
+        lists.append({
+            **vars(timeslot),
+            'starting_at': starting_at,
+            'ending_at': ending_at,
+        })
+
+    return sorted(lists, key=lambda x: (x['starting_at'], x['ending_at']))
+
+
+def fix_datetime_weekday(current: datetime,
+                         timeslot: datetime,
+                         prev: bool = False,
+                         next: bool = False) -> datetime:
     if not prev and not next:
         raise Exception('You should provide a prev or next argument')
 
@@ -273,7 +498,7 @@ def fix_datetime_weekday(current, timeslot, prev=False, next=False):
                          hour=timeslot.hour,
                          minute=timeslot.minute,
                          second=timeslot.second,
-                         tzinfo=current.tzinfo)
+                         tzinfo=timeslot.tzinfo)
 
     while True:
         if prev:

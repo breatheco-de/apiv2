@@ -2,13 +2,16 @@ import logging, secrets
 from django.contrib import admin, messages
 from django import forms
 from .models import (FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook,
-                     AcademyAlias, Downloadable, LeadGenerationApp)
+                     AcademyAlias, Downloadable, LeadGenerationApp, UTMField)
 from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
-                      sync_tags, sync_automations, acp_ids)
+                      sync_tags, sync_automations, acp_ids, delete_tag)
 from breathecode.services.activecampaign import ActiveCampaign
+from django.utils import timezone
 from django.utils.html import format_html
 from django.contrib.admin import SimpleListFilter
 from breathecode.utils import AdminExportCsvMixin
+from breathecode.utils.admin import change_field
+from breathecode.utils.validation_exception import ValidationException
 # Register your models here.
 
 logger = logging.getLogger(__name__)
@@ -84,8 +87,18 @@ class AcademyAliasAdmin(admin.ModelAdmin):
 
 def send_to_ac(modeladmin, request, queryset):
     entries = queryset.all()
-    for entry in entries:
-        register_new_lead(entry.toFormData())
+    total = 0
+    try:
+        for entry in entries:
+            register_new_lead(entry.toFormData())
+            total += 1
+
+        messages.add_message(request, messages.SUCCESS, f'{total} entries were successfully added')
+    except Exception as e:
+        messages.add_message(
+            request, messages.ERROR,
+            f'{total} entries were successfully added but an error was found on entry {entry.id}: \n ' +
+            str(e))
 
 
 send_to_ac.short_description = '⨁ Add lead to automations in AC'
@@ -138,35 +151,60 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app',
         'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium', 'country'
     ]
-    actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'export_as_csv']
+    actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv']
 
 
-def mark_tag_as_strong(modeladmin, request, queryset):
-    queryset.update(tag_type='STRONG')
+def add_dispute(modeladmin, request, queryset):
+    queryset.update(disputed_at=timezone.now())
 
 
-mark_tag_as_strong.short_description = 'Mark tags as STRONG'
+def remove_dispute(modeladmin, request, queryset):
+    queryset.update(disputed_at=None)
 
 
-def mark_tag_as_soft(modeladmin, request, queryset):
-    queryset.update(tag_type='SOFT')
+def delete_from_everywhere(modeladmin, request, queryset):
+
+    for t in queryset:
+        slug = t.slug
+        try:
+            if delete_tag(t) == True:
+                messages.add_message(request, messages.INFO, f'Tag {slug} successully deleted')
+            else:
+                messages.add_message(request, messages.ERROR, f'Error deleding tag {slug}')
+        except Exception as e:
+            messages.add_message(request, messages.ERROR, f'Error deleding tag {slug}: {str(e)}')
 
 
-mark_tag_as_soft.short_description = 'Mark tags as SOFT'
+def upload_to_active_campaign(modeladmin, request, queryset):
+
+    for t in queryset:
+        slug = t.slug
+        try:
+            ac_academy = t.ac_academy
+            if ac_academy is None:
+                raise ValidationException(f'Invalid ac_academy for this tag {t.slug}',
+                                          code=400,
+                                          slug='invalid-ac_academy')
+
+            client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+            data = client.create_tag(t.slug, description=t.description)
+            t.acp_id = data['id']
+            t.subscribers = 0
+            t.save()
+            messages.add_message(request, messages.INFO, f'Tag {t.slug} successully uploaded')
+        except Exception as e:
+            messages.add_message(request, messages.ERROR, f'Error uploading tag {slug}: {str(e)}')
 
 
-def mark_tag_as_discovery(modeladmin, request, queryset):
-    queryset.update(tag_type='DISCOVERY')
+def prepend_tech_on_name(modeladmin, request, queryset):
 
+    for t in queryset:
+        if t.slug[:5] == 'tech-':
+            continue
+        t.slug = 'tech-' + t.slug
+        t.save()
 
-mark_tag_as_discovery.short_description = 'Mark tags as DISCOVERY'
-
-
-def mark_tag_as_other(modeladmin, request, queryset):
-    queryset.update(tag_type='OTHER')
-
-
-mark_tag_as_other.short_description = 'Mark tags as OTHER'
+    prepend_tech_on_name.short_description = 'Prepend "tech-" on slug'
 
 
 class CustomTagModelForm(forms.ModelForm):
@@ -181,15 +219,62 @@ class CustomTagModelForm(forms.ModelForm):
                 ac_academy=self.instance.ac_academy.id)  # or something else
 
 
+class TagTypeFilter(SimpleListFilter):
+    title = 'tag_type'
+    parameter_name = 'tag_type'
+
+    def lookups(self, request, model_admin):
+        tags = set([c.tag_type for c in Tag.objects.filter(tag_type__isnull=False)])
+        return [(c, c) for c in tags] + [('NONE', 'No type')]
+
+    def queryset(self, request, queryset):
+        if self.value() == 'NONE':
+            return queryset.filter(tag_type__isnull=True)
+        if self.value():
+            return queryset.filter(tag_type__exact=self.value())
+
+
+class DisputedFilter(admin.SimpleListFilter):
+
+    title = 'Disputed tag'
+
+    parameter_name = 'is_disputed'
+
+    def lookups(self, request, model_admin):
+
+        return (
+            ('yes', 'Yes'),
+            ('no', 'No'),
+        )
+
+    def queryset(self, request, queryset):
+
+        if self.value() == 'yes':
+            return queryset.filter(disputed_at__isnull=False)
+
+        if self.value() == 'no':
+            return queryset.filter(disputed_at__isnull=True)
+
+
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     form = CustomTagModelForm
     search_fields = ['slug']
-    list_display = ('id', 'slug', 'tag_type', 'acp_id', 'subscribers')
-    list_filter = ['tag_type', 'ac_academy__academy__slug']
+    list_display = ('id', 'slug', 'tag_type', 'disputed', 'ac_academy', 'acp_id', 'subscribers')
+    list_filter = [DisputedFilter, TagTypeFilter, 'ac_academy__academy__slug']
     actions = [
-        mark_tag_as_strong, mark_tag_as_soft, mark_tag_as_discovery, mark_tag_as_other, 'export_as_csv'
-    ]
+        delete_from_everywhere, 'export_as_csv', upload_to_active_campaign, add_dispute, remove_dispute,
+        prepend_tech_on_name
+    ] + change_field(['STRONG', 'SOFT', 'DISCOVERY', 'COHORT', 'DOWNLOADABLE', 'EVENT', 'OTHER'],
+                     name='tag_type')
+
+    def disputed(self, obj):
+        if obj.disputed_at is not None:
+            return format_html(
+                f"<div><span class='badge bg-error' style='font-size: 11px;'>Will delete</span><p style='margin:0; padding: 0; font-size: 9px;'>On {obj.disputed_at.strftime('%b %d, %y')}</p></div>"
+            )
+        else:
+            return format_html(f"<span class='badge'></span>")
 
 
 @admin.register(Automation)
@@ -282,10 +367,14 @@ class LeadAppCustomForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super(LeadAppCustomForm, self).__init__(*args, **kwargs)
 
-        self.fields['default_automations'].queryset = Automation.objects.filter(
-            ac_academy__academy__id=self.instance.academy.id).exclude(slug='')  # or something else
-        self.fields['default_tags'].queryset = Tag.objects.filter(
-            ac_academy__academy__id=self.instance.academy.id)  # or something else
+        try:
+            self.fields['default_automations'].queryset = Automation.objects.filter(
+                ac_academy__academy__id=self.instance.academy.id).exclude(slug='')  # or something else
+            self.fields['default_tags'].queryset = Tag.objects.filter(
+                ac_academy__academy__id=self.instance.academy.id)  # or something else
+        except:
+            self.fields['default_automations'].queryset = Automation.objects.none()
+            self.fields['default_tags'].queryset = Tag.objects.none()
 
 
 @admin.register(LeadGenerationApp)
@@ -304,3 +393,10 @@ class LeadGenerationAppAdmin(admin.ModelAdmin):
             return format_html(f"<span class='badge'>Not yet called</span>")
         return format_html(
             f"<span class='badge {colors[obj.last_call_status]}'>{obj.last_call_status}</span>")
+
+
+@admin.register(UTMField)
+class UTMFieldAdmin(admin.ModelAdmin):
+    list_display = ('slug', 'name', 'utm_type')
+    list_filter = ['utm_type', 'academy__slug']
+    actions = change_field(['SOURCE', 'MEDIUM', 'CAMPAIGN', 'CONTENT'], name='utm_type')

@@ -18,9 +18,11 @@ class Freelancer(models.Model):
 DUE = 'DUE'
 APPROVED = 'APPROVED'
 PAID = 'PAID'
+IGNORED = 'IGNORED'
 BILL_STATUS = (
     (DUE, 'Due'),
     (APPROVED, 'Approved'),
+    (IGNORED, 'Ignored'),
     (PAID, 'Paid'),
 )
 
@@ -59,7 +61,21 @@ ISSUE_STATUS = (
 class Issue(models.Model):
     title = models.CharField(max_length=255)
 
+    node_id = models.CharField(
+        max_length=50,
+        default=None,
+        null=True,
+        blank=True,
+        help_text=
+        'This is the only unique identifier we get from github, the issue number its not unique among repos')
     status = models.CharField(max_length=20, choices=ISSUE_STATUS, default=DRAFT)
+    status_message = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        default=None,
+        help_text='Important message like reasong why not included on bill, etc.')
+
     github_state = models.CharField(max_length=30, blank=True, null=True, default=None)
     github_number = models.PositiveIntegerField()
     body = models.TextField(max_length=500)
@@ -67,8 +83,8 @@ class Issue(models.Model):
     duration_in_minutes = models.FloatField(default=0)
     duration_in_hours = models.FloatField(default=0)
 
-    url = models.URLField(max_length=255)
-    repository_url = models.URLField(max_length=255, blank=True, default=None, null=True)
+    url = models.URLField()
+    repository_url = models.URLField(blank=True, default=None, null=True)
 
     author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None, blank=True)
     freelancer = models.ForeignKey(Freelancer, on_delete=models.CASCADE)

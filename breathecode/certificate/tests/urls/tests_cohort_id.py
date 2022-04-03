@@ -1,8 +1,9 @@
 """
 Test /certificate
 """
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 from breathecode.tests.mocks import (
     GOOGLE_CLOUD_PATH,
@@ -11,6 +12,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins import CertificateTestCase
+import breathecode.certificate.signals as signals
 
 
 class CertificateTestSuite(CertificateTestCase):
@@ -21,6 +23,7 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_certificate_cohort_user__without_auth(self):
         self.headers(academy=1)
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
@@ -34,9 +37,12 @@ class CertificateTestSuite(CertificateTestCase):
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_certificate_cohort_user__with_auth_without_permissions(self):
         self.headers(academy=1)
         self.generate_models(authenticate=True)
@@ -52,6 +58,8 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 403)
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     """
     🔽🔽🔽 Post method
     """
@@ -59,6 +67,7 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate_with_role_student_without_syllabus_version(self):
         """ No main teacher in cohort """
         self.headers(academy=1)
@@ -71,7 +80,7 @@ class CertificateTestSuite(CertificateTestCase):
                              role='STUDENT',
                              cohort_user=True,
                              syllabus=True,
-                             specialty_mode=True,
+                             syllabus_schedule=True,
                              specialty=True,
                              layout_design=True,
                              cohort_kwargs=cohort_kwargs)
@@ -85,9 +94,12 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate_with_role_student_without_main_teacher(self):
         """ No main teacher in cohort """
         self.headers(academy=1)
@@ -101,7 +113,7 @@ class CertificateTestSuite(CertificateTestCase):
                              cohort_user=True,
                              syllabus=True,
                              syllabus_version=True,
-                             specialty_mode=True,
+                             syllabus_schedule=True,
                              specialty=True,
                              layout_design=True,
                              cohort_kwargs=cohort_kwargs)
@@ -115,9 +127,12 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate_without_cohort_user(self):
         """ No cohort user"""
         self.headers(academy=1)
@@ -138,10 +153,13 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_generate_certificate_with_everything_but_specialty_mode(self):
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
+    def test_generate_certificate_with_everything_but_schedule(self):
         """ Should be ok because cohorts dont need specialy mode to generate certificates """
         self.headers(academy=1)
         cohort_kwargs = {'stage': 'ENDED'}
@@ -172,9 +190,18 @@ class CertificateTestSuite(CertificateTestCase):
         response = self.client.post(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        self.assertEqual(
+            signals.user_specialty_saved.send.call_args_list,
+            [
+                # Action
+                call(instance=user_specialty, sender=user_specialty.__class__),
+            ])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate_with_role_student_with_syllabus_without_specialty(self):
         """ No specialty """
         self.headers(academy=1)
@@ -199,9 +226,12 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate_test_without_layout(self):
         """ No specialty """
         self.headers(academy=1)
@@ -216,7 +246,7 @@ class CertificateTestSuite(CertificateTestCase):
                              syllabus=True,
                              syllabus_version=True,
                              specialty=True,
-                             specialty_mode=True,
+                             syllabus_schedule=True,
                              cohort_kwargs=cohort_kwargs)
 
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
@@ -228,9 +258,12 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate_test_with_cohort_stage_no_ended(self):
         """ No specialty """
         self.headers(academy=1)
@@ -254,9 +287,12 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate_test_without_cohort_user_finantial_status(self):
         self.headers(academy=1)
         cohort_kwargs = {'stage': 'ENDED'}
@@ -270,7 +306,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      syllabus=True,
                                      syllabus_version=True,
                                      specialty=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      user_specialty=True,
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs)
@@ -306,10 +342,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
-                'specialty_mode': {
-                    'id': model['specialty_mode'].id,
-                    'name': model['specialty_mode'].name,
-                    'syllabus': model['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': model['syllabus_schedule'].id,
+                    'name': model['syllabus_schedule'].name,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': model['syllabus_version'].version,
@@ -342,6 +378,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'updated_at': self.datetime_to_iso(model['specialty'].updated_at),
             },
             'status': 'ERROR',
+            'issued_at': None,
             'status_text': 'bad-finantial-status',
             'user': {
                 'first_name': model['user'].first_name,
@@ -352,6 +389,8 @@ class CertificateTestSuite(CertificateTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(
             self.all_user_specialty_dict(),
             [{
@@ -365,14 +404,26 @@ class CertificateTestSuite(CertificateTestCase):
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'ERROR',
+                'issued_at': None,
                 'status_text': 'bad-finantial-status',
                 'user_id': 1,
-                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
+                'update_hash': self.generate_update_hash(user_specialty),
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
             }])
+
+        self.assertEqual(
+            signals.user_specialty_saved.send.call_args_list,
+            [
+                # Mixer
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+                # Action
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+            ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate_test_without_cohort_user_educational_status(self):
         self.headers(academy=1)
         cohort_kwargs = {'stage': 'ENDED'}
@@ -387,7 +438,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      syllabus=True,
                                      syllabus_version=True,
                                      specialty=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      user_specialty=True,
                                      layout_design=True,
                                      cohort_user_kwargs=cohort_user_kwargs,
@@ -424,10 +475,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
-                'specialty_mode': {
-                    'id': model['specialty_mode'].id,
-                    'name': model['specialty_mode'].name,
-                    'syllabus': model['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': model['syllabus_schedule'].id,
+                    'name': model['syllabus_schedule'].name,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': model['syllabus_version'].version,
@@ -460,16 +511,18 @@ class CertificateTestSuite(CertificateTestCase):
                 'updated_at': self.datetime_to_iso(model['specialty'].updated_at),
             },
             'status': 'ERROR',
+            'issued_at': None,
             'status_text': 'bad-educational-status',
             'user': {
                 'first_name': model['user'].first_name,
                 'id': 1,
                 'last_name': model['user'].last_name
-            }
+            },
         }]
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(
             self.all_user_specialty_dict(),
             [{
@@ -483,14 +536,17 @@ class CertificateTestSuite(CertificateTestCase):
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'ERROR',
+                'issued_at': None,
                 'status_text': 'bad-educational-status',
                 'user_id': 1,
-                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
+                'update_hash': user_specialty.update_hash,
             }])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate_test_with_final_cohort(self):
         self.headers(academy=1)
         cohort_kwargs = {'stage': 'ENDED'}
@@ -505,7 +561,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      capability='crud_certificate',
                                      role='STUDENT',
                                      specialty=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      user_specialty=True,
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs,
@@ -542,10 +598,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
-                'specialty_mode': {
-                    'id': model['specialty_mode'].id,
-                    'name': model['specialty_mode'].name,
-                    'syllabus': model['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': model['syllabus_schedule'].id,
+                    'name': model['syllabus_schedule'].name,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': model['syllabus_version'].version,
@@ -578,6 +634,7 @@ class CertificateTestSuite(CertificateTestCase):
                 'updated_at': self.datetime_to_iso(model['specialty'].updated_at),
             },
             'status': 'ERROR',
+            'issued_at': None,
             'status_text': 'cohort-not-finished',
             'user': {
                 'first_name': model['user'].first_name,
@@ -588,6 +645,7 @@ class CertificateTestSuite(CertificateTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(
             self.all_user_specialty_dict(),
             [{
@@ -601,17 +659,29 @@ class CertificateTestSuite(CertificateTestCase):
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'ERROR',
+                'issued_at': None,
                 'status_text': 'cohort-not-finished',
                 'user_id': 1,
-                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
+                'update_hash': user_specialty.update_hash,
             }])
+
+        self.assertEqual(
+            signals.user_specialty_saved.send.call_args_list,
+            [
+                # Mixer
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+                # Action
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+            ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_generate_certificate_good_request(self):
-        """Test /certificate/cohort/id """
-        """ status: 201 """
+        """Test /certificate/cohort/id status: 201"""
+
         self.headers(academy=1)
         cohort_kwargs = {'stage': 'ENDED', 'current_day': 9545799}
         cohort_user_kwargs = {'finantial_status': 'UP_TO_DATE', 'educational_status': 'GRADUATED'}
@@ -626,7 +696,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      role='STUDENT',
                                      cohort_user=True,
                                      specialty=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      user_specialty=True,
                                      layout_design=True,
                                      cohort_kwargs=cohort_kwargs,
@@ -645,11 +715,18 @@ class CertificateTestSuite(CertificateTestCase):
 
         url = reverse_lazy('certificate:cohort_id', kwargs={'cohort_id': 1})
         data = {'layout_slug': 'vanilla'}
+        start = timezone.now()
         response = self.client.post(url, data, format='json')
+        end = timezone.now()
         json = response.json()
 
         self.assertDatetime(json[0]['updated_at'])
         del json[0]['updated_at']
+
+        issued_at = self.iso_to_datetime(json[0]['issued_at'])
+        self.assertGreater(issued_at, start)
+        self.assertLess(issued_at, end)
+        del json[0]['issued_at']
 
         expected = [{
             'academy': {
@@ -665,10 +742,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
-                'specialty_mode': {
-                    'id': model['specialty_mode'].id,
-                    'name': model['specialty_mode'].name,
-                    'syllabus': model['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': model['syllabus_schedule'].id,
+                    'name': model['syllabus_schedule'].name,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': model['syllabus_version'].version,
@@ -711,6 +788,8 @@ class CertificateTestSuite(CertificateTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(
             self.all_user_specialty_dict(),
             [{
@@ -724,7 +803,18 @@ class CertificateTestSuite(CertificateTestCase):
                 'signed_by_role': 'Director',
                 'specialty_id': 1,
                 'status': 'PERSISTED',
+                'issued_at': issued_at,
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 1,
-                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
+                'update_hash': user_specialty.update_hash,
             }])
+
+        self.assertEqual(
+            signals.user_specialty_saved.send.call_args_list,
+            [
+                # Mixer
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+                # Action
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+            ])

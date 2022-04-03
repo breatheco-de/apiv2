@@ -1,9 +1,45 @@
 import re
 
 from datetime import datetime
+from django.utils import timezone
 from dateutil.tz import gettz, tzutc
 from dateutil import parser
 import pytz
+
+__all__ = ['DatetimeInteger', 'duration_to_str', 'from_now']
+
+
+def duration_to_str(duration, include_seconds=False):
+    if duration is None:
+        return 'none'
+
+    total_seconds = duration.seconds
+    sec_value = total_seconds % (24 * 3600)
+    hour_value = sec_value // 3600
+    sec_value %= 3600
+    min = sec_value // 60
+    sec_value %= 60
+
+    if hour_value > 0:
+        msg = f'{hour_value} hr'
+        if min > 0:
+            msg += f', {min} min'
+        if sec_value > 0 and include_seconds:
+            msg += f' and {sec_value} sec'
+        return msg
+    elif min > 0:
+        msg = f'{min} min'
+        if sec_value > 0 and include_seconds:
+            msg += f' and {sec_value} sec'
+        return msg
+    elif sec_value > 0 and include_seconds:
+        return f'{sec_value} sec'
+    else:
+        return 'none'
+
+
+def from_now(_date, include_seconds=False):
+    return duration_to_str(timezone.now() - _date, include_seconds)
 
 
 class Datetime(datetime):
@@ -15,6 +51,7 @@ class Datetime(datetime):
 
 
 class DatetimeInteger:
+    """This type of date pretend resolve the problems related to summer schedule"""
     def __init__(self, year, month, day, hour, minute):
         self.year = str(year)
         self.month = str(month)

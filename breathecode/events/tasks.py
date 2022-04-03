@@ -1,5 +1,4 @@
 import logging
-import os
 from breathecode.services.eventbrite import Eventbrite
 from celery import shared_task, Task
 from .models import Event, Organization, EventbriteWebhook
@@ -73,9 +72,4 @@ def async_export_event_to_eventbrite(self, event_id: int):
     try:
         export_event_to_eventbrite(event, event.organization)
     except Exception as e:
-        import traceback
-
-        traceback.print_exc()
-
-        logger.error(f'The {event_id} export was failed')
-        logger.error(str(e))
+        logger.exception(f'The {event_id} export was failed')

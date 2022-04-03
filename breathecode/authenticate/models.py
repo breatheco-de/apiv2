@@ -1,8 +1,9 @@
 from datetime import datetime
 from typing import Any
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group, Permission
 from django.core.exceptions import MultipleObjectsReturned
 from django.conf import settings
+from django.db.models import Q
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 import rest_framework.authtoken.models
@@ -15,9 +16,9 @@ from .signals import invite_accepted
 from breathecode.admissions.models import Academy, Cohort
 
 __all__ = [
-    'User', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite', 'ProfileAcademy', 'CredentialsGithub',
-    'CredentialsSlack', 'CredentialsFacebook', 'CredentialsQuickBooks', 'CredentialsGoogle', 'DeviceId',
-    'Token'
+    'User', 'Group', 'Permission', 'UserProxy', 'Profile', 'Capability', 'Role', 'UserInvite',
+    'ProfileAcademy', 'CredentialsGithub', 'CredentialsSlack', 'CredentialsFacebook', 'CredentialsQuickBooks',
+    'CredentialsGoogle', 'DeviceId', 'Token'
 ]
 
 TOKEN_TYPE = ['login', 'one_time', 'temporal', 'permanent']
@@ -79,13 +80,16 @@ class Role(models.Model):
 
 PENDING = 'PENDING'
 ACCEPTED = 'ACCEPTED'
+REJECTED = 'REJECTED'
+WAITING_LIST = 'WAITING_LIST'
 INVITE_STATUS = (
     (PENDING, 'Pending'),
+    (REJECTED, 'Rejected'),
     (ACCEPTED, 'Accepted'),
+    (WAITING_LIST, 'Waiting list'),
 )
 
 
-# TODO: list this invite
 class UserInvite(models.Model):
 
     email = models.CharField(blank=False, max_length=150, null=True, default=None)
@@ -99,7 +103,7 @@ class UserInvite(models.Model):
 
     token = models.CharField(max_length=255, unique=True)
 
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE, null=True, default=None)
 
     status = models.CharField(max_length=15, choices=INVITE_STATUS, default=PENDING)
 
@@ -329,7 +333,8 @@ class Token(rest_framework.authtoken.models.Token):
         cls.delete_expired_tokens(utc_now)
 
         # find among any non-expired token
-        return Token.objects.filter(key=token, expires_at__gt=utc_now).first()
+        return Token.objects.filter(key=token).filter(Q(expires_at__gt=utc_now)
+                                                      | Q(expires_at__isnull=True)).first()
 
     @classmethod
     def validate_and_destroy(cls, user: User, hash: str) -> None:

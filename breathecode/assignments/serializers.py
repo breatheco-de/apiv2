@@ -23,6 +23,7 @@ class TaskGETSerializer(serpy.Serializer):
     title = serpy.Field()
     task_status = serpy.Field()
     associated_slug = serpy.Field()
+    description = serpy.Field()
     revision_status = serpy.Field()
     github_url = serpy.Field()
     live_url = serpy.Field()
@@ -109,13 +110,14 @@ class PUTTaskSerializer(serializers.ModelSerializer):
 
         if self.instance.user.id != self.context['request'].user.id:
             if 'task_status' in data and data['task_status'] != self.instance.task_status:
-                raise ValidationException('Only the task owner can modify its status')
+                raise ValidationException('Only the task owner can modify its status',
+                                          slug='put-task-status-of-other-user')
             if 'live_url' in data and data['live_url'] != self.instance.live_url:
-                raise ValidationException('Only the task owner can modify its live_url')
+                raise ValidationException('Only the task owner can modify its live_url',
+                                          slug='put-live-url-of-other-user')
             if 'github_url' in data and data['github_url'] != self.instance.github_url:
-                raise ValidationException('Only the task owner can modify its github_url')
-
-        print('Data: ', data)
+                raise ValidationException('Only the task owner can modify its github_url',
+                                          slug='put-github-url-of-other-user')
 
         # the teacher shouldn't be allowed to approve a project that isn't done
         if ('task_status' in data and 'revision_status' in data and data['task_status'] == 'PENDING'
@@ -145,7 +147,8 @@ class PUTTaskSerializer(serializers.ModelSerializer):
 
             if staff is None and teacher is None:
                 raise ValidationException(
-                    'Only staff members or teachers from the same academy as this student can update the review status'
-                )
+                    'Only staff members or teachers from the same academy as this student can update the '
+                    'review status',
+                    slug='editing-revision-status-but-is-not-teacher-or-assistant')
 
         return data

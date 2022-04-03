@@ -109,6 +109,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': model['profile_academy'].last_name,
             'phone': model['profile_academy'].phone,
             'role': {
+                'id': 'student',
                 'name': 'student',
                 'slug': 'student'
             },
@@ -166,6 +167,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': model['profile_academy'].last_name,
             'phone': model['profile_academy'].phone,
             'role': {
+                'id': 'student',
                 'name': 'student',
                 'slug': 'student'
             },
@@ -226,6 +228,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': model['profile_academy'].last_name,
             'phone': model['profile_academy'].phone,
             'role': {
+                'id': 'student',
                 'name': 'student',
                 'slug': 'student'
             },
@@ -295,6 +298,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'last_name': model['profile_academy'].last_name,
                 'phone': model['profile_academy'].phone,
                 'role': {
+                    'id': 'student',
                     'name': 'student',
                     'slug': 'student'
                 },
@@ -365,6 +369,7 @@ class AuthenticateTestSuite(AuthTestCase):
                 'last_name': model['profile_academy'].last_name,
                 'phone': model['profile_academy'].phone,
                 'role': {
+                    'id': 'student',
                     'name': 'student',
                     'slug': 'student'
                 },
@@ -652,6 +657,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': model_1['profile_academy'].last_name,
             'phone': model_1['profile_academy'].phone,
             'role': {
+                'id': 'student',
                 'name': 'student',
                 'slug': 'student'
             },
@@ -732,6 +738,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': model_1['profile_academy'].last_name,
             'phone': model_1['profile_academy'].phone,
             'role': {
+                'id': 'student',
                 'name': 'student',
                 'slug': 'student'
             },
@@ -812,6 +819,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': model_1['profile_academy'].last_name,
             'phone': model_1['profile_academy'].phone,
             'role': {
+                'id': 'student',
                 'name': 'student',
                 'slug': 'student'
             },
@@ -892,6 +900,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'last_name': model_1['profile_academy'].last_name,
             'phone': model_1['profile_academy'].phone,
             'role': {
+                'id': 'student',
                 'name': 'student',
                 'slug': 'student'
             },

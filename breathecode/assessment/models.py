@@ -11,7 +11,11 @@ class UserProxy(User):
 
 
 class Assessment(models.Model):
-    slug = models.SlugField(max_length=200, primary_key=True)
+    def __init__(self, *args, **kwargs):
+        super(Assessment, self).__init__(*args, **kwargs)
+        self.__old_slug = self.slug
+
+    slug = models.SlugField(max_length=200, unique=True)
     title = models.CharField(max_length=255, blank=True)
     lang = models.CharField(max_length=3, blank=True, default='en')
 
@@ -44,6 +48,12 @@ class Assessment(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return f'{self.slug} ({self.lang})'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
 
 
 TEXT = 'TEXT'

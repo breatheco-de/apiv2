@@ -1,10 +1,11 @@
-import serpy, logging
+import serpy, logging, hashlib, re
 from django.utils import timezone
 from datetime import timedelta
-from .models import FormEntry, AcademyAlias, ShortLink
+from .models import FormEntry, AcademyAlias, ShortLink, Tag
 from breathecode.monitoring.actions import test_link
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
+from breathecode.utils.integer_to_base import to_base
 from breathecode.utils.validation_exception import ValidationException
 
 logger = logging.getLogger(__name__)
@@ -22,11 +23,26 @@ class ShortlinkSmallSerializer(serpy.Serializer):
     destination = serpy.Field()
     hits = serpy.Field()
     private = serpy.Field()
+    destination_status = serpy.Field()
+    destination_status_text = serpy.Field()
     lastclick_at = serpy.Field()
+    active = serpy.Field()
+
+    utm_content = serpy.Field()
+    utm_medium = serpy.Field()
+    utm_campaign = serpy.Field()
+    utm_source = serpy.Field()
 
 
 class UserSmallSerializer(serpy.Serializer):
     id = serpy.Field()
+
+
+class UTMSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+    utm_type = serpy.Field()
+    updated_at = serpy.Field()
 
 
 class AutomationSmallSerializer(serpy.Serializer):
@@ -44,9 +60,11 @@ class DownloadableSerializer(serpy.Serializer):
 
 
 class TagSmallSerializer(serpy.Serializer):
-    id = serpy.Field()
     slug = serpy.Field()
     tag_type = serpy.Field()
+    subscribers = serpy.Field()
+    disputed_at = serpy.Field()
+    disputed_reason = serpy.Field()
     automation = AutomationSmallSerializer(required=False)
 
 
@@ -78,6 +96,7 @@ class FormEntrySmallSerializer(serpy.Serializer):
     last_name = serpy.Field()
     email = serpy.Field()
     course = serpy.Field()
+    phone = serpy.Field()
     location = serpy.Field()
     language = serpy.Field()
     gclid = serpy.Field()
@@ -121,16 +140,32 @@ class PostFormEntrySerializer(serializers.ModelSerializer):
 
 
 class ShortLinkSerializer(serializers.ModelSerializer):
+    slug = serializers.CharField(required=False, default=None)
+
     class Meta:
         model = ShortLink
-        exclude = ('academy', )
+        exclude = ('academy', 'author', 'hits', 'destination_status', 'destination_status_text')
 
     def validate(self, data):
 
-        link = ShortLink.objects.filter(slug=data['slug']).first()
-        if link is not None and self.instance is None and self.instance.id != link.id:
-            raise ValidationException(f'Shortlink with slug {data["slug"]} already exists',
-                                      slug='shortlink-already-exists')
+        if 'slug' in data and data['slug'] is not None:
+
+            if not re.match('^[-\w]+$', data['slug']):
+                raise ValidationException(
+                    f'Invalid link slug {data["slug"]}, should only contain letters, numbers and slash "-"',
+                    slug='invalid-slug-format')
+
+            link = ShortLink.objects.filter(slug=data['slug']).first()
+            if link is not None and (self.instance is None or self.instance.id != link.id):
+                raise ValidationException(f'Shortlink with slug {data["slug"]} already exists',
+                                          slug='shortlink-already-exists')
+        elif self.instance is None:
+            # only if it's being created I will pick a new slug, if not I will allow it to have the original slug
+            latest_url = ShortLink.objects.all().last()
+            if latest_url is None:
+                data['slug'] = 'L' + to_base(1)
+            else:
+                data['slug'] = 'L' + to_base(latest_url.id + 1)
 
         status = test_link(data['destination'])
         if status['status_code'] < 200 or status['status_code'] > 299:
@@ -141,14 +176,23 @@ class ShortLinkSerializer(serializers.ModelSerializer):
             raise ValidationException(f'Academy {self.context["academy"]} not found',
                                       slug='academy-not-found')
 
-        utc_now = timezone.now()
-        days_ago = self.instance.created_at + timedelta(days=1)
-        if days_ago < utc_now:
-            raise ValidationException(
-                f'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
-                slug='update-days-ago')
+        if self.instance is not None:  #creating a new link (instead of updating)
+            utc_now = timezone.now()
+            days_ago = self.instance.created_at + timedelta(days=1)
+            if days_ago < utc_now and (self.instance.destination != data['destination']
+                                       or self.instance.slug != data['slug']):
+                raise ValidationException(
+                    f'You cannot update or delete short links that have been created more than 1 day ago, create a new link instead',
+                    slug='update-days-ago')
 
         return {**data, 'academy': academy}
 
     def create(self, validated_data):
-        return ShortLink.objects.create(**validated_data)
+
+        return ShortLink.objects.create(**validated_data, author=self.context.get('request').user)
+
+
+class PUTTagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        exclude = ('slug', 'acp_id', 'subscribers', 'ac_academy', 'created_at', 'updated_at')

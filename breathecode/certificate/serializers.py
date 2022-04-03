@@ -1,5 +1,5 @@
 import serpy
-from breathecode.admissions.serializers import GetSmallSpecialtyModeSerializer
+from breathecode.admissions.serializers import GetSmallSyllabusScheduleSerializer
 
 
 class ProfileSmallSerializer(serpy.Serializer):
@@ -89,7 +89,7 @@ class CohortSmallSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
-    specialty_mode = GetSmallSpecialtyModeSerializer(required=False, many=False)
+    schedule = GetSmallSyllabusScheduleSerializer(required=False, many=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False, many=False)
 
 
@@ -101,7 +101,7 @@ class CohortMidSerializer(serpy.Serializer):
     name = serpy.Field()
     kickoff_date = serpy.Field()
     ending_date = serpy.Field()
-    specialty_mode = GetSmallSpecialtyModeSerializer(required=False, many=False)
+    schedule = GetSmallSyllabusScheduleSerializer(required=False, many=False)
     syllabus_version = SyllabusVersionSmallSerializer(required=False, many=False)
 
 
@@ -154,3 +154,4 @@ class UserSpecialtySerializer(serpy.Serializer):
     expires_at = serpy.Field()
     updated_at = serpy.Field()
     created_at = serpy.Field()
+    issued_at = serpy.Field()

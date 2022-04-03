@@ -166,7 +166,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -267,7 +267,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -329,7 +329,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                     'city': model['cohort'].academy.city.id,
                     'street_address': model['cohort'].academy.street_address,
                 },
-                'specialty_mode': None,
+                'schedule': None,
                 'syllabus_version': None,
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
@@ -374,7 +374,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                  profile_academy=True,
                                  cohort_user=True,
                                  syllabus=True,
-                                 specialty_mode=True)
+                                 syllabus_schedule=True)
         ]
 
         base = models[0].copy()
@@ -593,7 +593,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user__post__with_unsuccess_task(self):
         """Test /cohort/:id/user without auth"""
-        task = {'status': 'PENDING', 'type': 'PROJECT'}
+        task = {'task_status': 'PENDING', 'task_type': 'PROJECT'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,

@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from breathecode.utils import HeaderLimitOffsetPagination, GenerateLookupsMixin
 import os
 
+__all__ = ['CommonViewMixin']
+
 IS_TEST_ENV = os.getenv('ENV') == 'test'
 
 

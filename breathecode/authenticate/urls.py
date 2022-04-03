@@ -16,19 +16,22 @@ Including another URLconf
 # from django.contrib import admin
 # from rest_framework.authtoken import views
 from django.urls import path
-from .views import (TokenTemporalView, get_users, get_user_by_id_or_email, UserMeView, LoginView, LogoutView,
-                    TemporalTokenView, get_github_token, save_github_token, get_slack_token, save_slack_token,
-                    pick_password, get_token_info, get_facebook_token, save_facebook_token, MemberView,
-                    reset_password_view, login_html_view, StudentView, get_roles, render_invite,
-                    AcademyInviteView, ProfileInviteView, MeInviteView, AcademyTokenView, PasswordResetView,
-                    get_google_token, save_google_token)
+from .views import (TokenTemporalView, WaitingListView, get_users, get_user_by_id_or_email, UserMeView,
+                    LoginView, LogoutView, TemporalTokenView, get_github_token, save_github_token,
+                    get_slack_token, save_slack_token, pick_password, get_token_info, get_facebook_token,
+                    save_facebook_token, MemberView, reset_password_view, login_html_view, StudentView,
+                    get_roles, render_invite, AcademyInviteView, ProfileInviteView, MeInviteView,
+                    AcademyTokenView, PasswordResetView, get_google_token, save_google_token,
+                    render_academy_invite)
 
 app_name = 'authenticate'
 urlpatterns = [
+    path('subscribe/', WaitingListView.as_view(), name='subscribe'),
     path('user/', get_users, name='user'),
     path('user/me', UserMeView.as_view(), name='user_me'),
     path('user/<str:id_or_email>', get_user_by_id_or_email),
     path('role', get_roles, name='role'),
+    path('role/<str:role_slug>', get_roles, name='role_slug'),
     path('member/invite/resend/<int:pa_id>', AcademyInviteView.as_view(), name='academy_resent_invite'),
     path('member/invite/<str:token>', render_invite, name='academy_invite'),
     path('member/<int:profile_academy_id>/token',
@@ -43,8 +46,10 @@ urlpatterns = [
     path('academy/student', StudentView.as_view(), name='academy_student'),
     path('academy/student/<str:user_id_or_email>', StudentView.as_view(), name='academy_student_id'),
     path('academy/user/me/invite', MeInviteView.as_view(), name='user_me_invite'),
+    path('academy/user/me/invite/<slug:new_status>', MeInviteView.as_view(), name='user_me_invite_status'),
     path('academy/user/<int:profileacademy_id>/invite', ProfileInviteView.as_view()),
     path('academy/user/invite', ProfileInviteView.as_view(), name='user_invite'),
+    path('academy/html/invite', render_academy_invite),
     # path('group/', get_groups, name="group"),
     path('view/login', login_html_view, name='login_view'),  # html login form
     # get token from email and password
@@ -68,6 +73,7 @@ urlpatterns = [
     path('facebook/callback/', save_facebook_token, name='facebook_callback'),
     path('user/me', UserMeView.as_view(), name='user_me'),
     path('user/me/invite', MeInviteView.as_view()),
+    path('user/me/invite/<slug:new_status>', MeInviteView.as_view()),
 
     # google authentication oath2.0
     path('google/<str:token>', get_google_token, name='google_token'),

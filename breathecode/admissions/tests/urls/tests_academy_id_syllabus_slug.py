@@ -24,7 +24,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'status_code': status.HTTP_401_UNAUTHORIZED
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_syllabus_id_without_capability(self):
         """Test /certificate without auth"""
@@ -44,7 +44,7 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_syllabus_id_without_data(self):
         """Test /certificate without auth"""
@@ -64,14 +64,14 @@ class CertificateTestSuite(AdmissionsTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(self.all_specialty_mode_dict(), [])
+        self.assertEqual(self.all_syllabus_schedule_dict(), [])
 
     def test_syllabus_id(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         model = self.generate_models(authenticate=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      capability='read_syllabus',
                                      role='potato',
@@ -197,8 +197,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_syllabus',
                                      role='potato',
-                                     specialty_mode=True,
-                                     specialty_mode_time_slot=True)
+                                     syllabus_schedule=True,
+                                     syllabus_schedule_time_slot=True)
         url = reverse_lazy('admissions:academy_id_syllabus_slug',
                            kwargs={
                                'academy_id': 1,
@@ -222,8 +222,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      capability='crud_syllabus',
                                      role='potato',
                                      syllabus=True,
-                                     specialty_mode=True,
-                                     specialty_mode_time_slot=True,
+                                     syllabus_schedule=True,
+                                     syllabus_schedule_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs)
         url = reverse_lazy('admissions:academy_id_syllabus_slug',
                            kwargs={
@@ -259,8 +259,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                                      capability='crud_syllabus',
                                      role='potato',
                                      syllabus=True,
-                                     specialty_mode=True,
-                                     specialty_mode_time_slot=True,
+                                     syllabus_schedule=True,
+                                     syllabus_schedule_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs)
         url = reverse_lazy('admissions:academy_id_syllabus_slug',
                            kwargs={

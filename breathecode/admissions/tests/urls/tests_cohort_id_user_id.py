@@ -131,7 +131,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      cohort_user=True)
         model_dict = self.get_cohort_user_dict(1)
@@ -140,7 +140,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'cohort_id': model.cohort.id,
                                'user_id': model.user.id
                            })
-        data = {'specialty_mode': model.specialty_mode.id}
+        data = {'schedule': model.syllabus_schedule.id}
         response = self.client.put(url, data)
         json = response.json()
         expected = {
@@ -163,7 +163,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      cohort_user=True)
         url = reverse_lazy('admissions:cohort_id_user_id',
@@ -171,7 +171,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'cohort_id': model.cohort.id,
                                'user_id': 9999
                            })
-        data = {'specialty_mode': model.specialty_mode.id}
+        data = {'schedule': model.syllabus_schedule.id}
         response = self.client.delete(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -183,7 +183,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      cohort_user=True)
         url = reverse_lazy('admissions:cohort_id_user_id',
@@ -191,7 +191,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'cohort_id': 9999,
                                'user_id': model.user.id
                            })
-        data = {'specialty_mode': model.specialty_mode.id}
+        data = {'schedule': model.syllabus_schedule.id}
         response = self.client.delete(url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -203,7 +203,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      profile_academy=True,
                                      cohort_user=True)
         url = reverse_lazy('admissions:cohort_id_user_id',
@@ -211,7 +211,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
                                'cohort_id': model.cohort.id,
                                'user_id': model.user.id
                            })
-        data = {'specialty_mode': model.specialty_mode.id}
+        data = {'schedule': model.syllabus_schedule.id}
         response = self.client.delete(url, data)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.count_cohort_user(), 0)
@@ -221,7 +221,7 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_cohort_id_user_id_put_with_unsuccess_task(self):
         """Test /cohort/:id/user/:id without auth"""
-        task = {'status': 'PENDING', 'type': 'PROJECT'}
+        task = {'task_status': 'PENDING', 'task_type': 'PROJECT'}
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      user=True,
@@ -238,7 +238,6 @@ class CohortIdUserIdTestSuite(AdmissionsTestCase):
         }
         response = self.client.put(url, data)
         json = response.json()
-        print(vars(model.task))
         expected = {
             'status_code': 400,
             'detail': 'User has tasks with status pending the educational status cannot be GRADUATED',
