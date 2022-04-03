@@ -27,7 +27,6 @@ class MarketingModelsMixin(ModelsMixin):
                                   form_entry_kwargs={},
                                   short_link_kwargs={},
                                   lead_generation_app_kwargs={},
-                                  downloadable=False,
                                   downloadable_kwargs={},
                                   models={},
                                   **kwargs):
