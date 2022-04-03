@@ -19,7 +19,7 @@ class DownloadableTestSuite(MarketingTestCase):
     # - Update the POST /marketing/lead test to make sure that the current_download
     # field is being property sent to activecampaign like all the other fields.
 
-    def test_get_downloadables_without_model(self):
+    def test_downloadable_without_model(self):
         """Test /downloadable to check if it returns an empty list"""
         url = reverse_lazy('marketing:downloadable')
         response = self.client.get(url)
@@ -30,7 +30,23 @@ class DownloadableTestSuite(MarketingTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.all_form_entry_dict(), [])
 
-    def test_get_downloadables_with_data_from_model(self):
+    def test_downloadable_with_model(self):
+        """Test /downloadable to check if it returns data after creating model"""
+        url = reverse_lazy('marketing:downloadable')
+        model = self.generate_models(downloadable=True)
+        response = self.client.get(url)
+        json = response.json()
+        expected = [{
+            'destination_url': model['downloadable'].destination_url,
+            'name': model['downloadable'].name,
+            'preview_url': model['downloadable'].preview_url,
+            'slug': model['downloadable'].slug,
+        }]
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_downloadable_with_multiple_data(self):
         """Test /downloadable to check if it returns data after creating model"""
         url = reverse_lazy('marketing:downloadable')
         model = self.generate_models(downloadable=True)
@@ -38,5 +54,6 @@ class DownloadableTestSuite(MarketingTestCase):
         json = response.json()
         expected = []
 
-        assertEqual(json, expected)
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         assert False
