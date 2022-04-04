@@ -1,17 +1,19 @@
-import requests, logging
+import requests, logging, os
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
 from django.http import HttpResponse
-from .models import Asset, AssetAlias, AssetTechnology, AssetTranslation
-from .actions import test_syllabus
+from django.core.validators import URLValidator
+from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog
+from .actions import test_syllabus, test_asset
 from breathecode.notify.actions import send_email_message
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
-                          PostAssetSerializer, AssetTranslationSerializer)
+                          PostAssetSerializer)
 from breathecode.utils import ValidationException, capable_of
+from breathecode.utils.views import private_view, render_message, set_query_parameter
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
@@ -20,18 +22,45 @@ from django.http import HttpResponseRedirect
 
 logger = logging.getLogger(__name__)
 
+SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', None)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def redirect_gitpod(request, asset_slug):
-    alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
-    if alias is None:
-        raise ValidationException('Asset alias not found', status.HTTP_404_NOT_FOUND)
+def forward_asset_url(request, asset_slug=None):
+    asset = Asset.get_by_slug(asset_slug, request)
+    if asset is None:
+        return render_message(request, f'Asset with slug {asset_slug} not found')
 
-    if alias.asset.gitpod:
-        return HttpResponseRedirect(redirect_to='https://gitpod.io#' + alias.asset.url)
-    else:
-        return HttpResponseRedirect(redirect_to=alias.asset.url)
+    validator = URLValidator()
+    try:
+        validator(asset.url)
+        if asset.gitpod:
+            return HttpResponseRedirect(redirect_to='https://gitpod.io#' + asset.url)
+        else:
+            return HttpResponseRedirect(redirect_to=asset.url)
+    except Exception as e:
+        msg = f'The url for the {asset.asset_type.lower()} your are trying to open ({asset_slug}) was not found, this error has been reported and will be fixed soon.'
+        AssetErrorLog(slug=AssetErrorLog.INVALID_URL,
+                      path=asset_slug,
+                      asset=asset,
+                      asset_type=asset_type,
+                      status_text=msg).save()
+        return render_message(request, msg)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def render_preview_html(request, asset_slug):
+    asset = Asset.get_by_slug(asset_slug, request)
+    if asset is None:
+        return render_message(request, f'Asset with slug {asset_slug} not found')
+
+    readme = asset.get_readme(parse=True)
+    return render(request, 'markdown.html', {
+        **AssetBigSerializer(asset).data, 'html': readme['html'],
+        'frontmatter': readme['frontmatter'].items()
+    })
 
 
 @api_view(['GET'])
@@ -46,37 +75,43 @@ def get_technologies(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_translations(request):
-    langs = AssetTranslation.objects.all()
+    langs = Asset.objects.all().values_list('lang', flat=True)
+    langs = set(langs)
 
-    serializer = AssetTranslationSerializer(langs, many=True)
-    return Response(serializer.data)
+    return Response([{'slug': l, 'title': l} for l in langs])
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def handle_test_syllabus(request):
-    syl = test_syllabus(request.data)
+    report = test_syllabus(request.data)
+    return Response({'status': 'ok'})
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def handle_test_asset(request):
+    report = test_asset(request.data)
     return Response({'status': 'ok'})
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def get_readme(request, asset_slug):
-    alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
-    if alias is None:
-        raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
+def render_readme(request, asset_slug):
+    asset = Asset.get_by_slug(asset_slug, request)
+    if asset is None:
+        raise ValidationException('Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
-    return Response(alias.asset.readme)
+    return Response(asset.readme)
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_config(request, asset_slug):
-    alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
-    if alias is None:
-        raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
+    asset = Asset.get_by_slug(asset_slug, request)
+    if asset is None:
+        raise ValidationException(f'Asset not {asset_slug} found', status.HTTP_404_NOT_FOUND)
 
-    asset = alias.asset
     main_branch = 'master'
     response = requests.head(f'{asset.url}/tree/{main_branch}', allow_redirects=False)
     if response.status_code == 302:
@@ -94,11 +129,13 @@ def get_config(request, asset_slug):
         return Response(response.json())
     except Exception as e:
         data = {
-            'MESSAGE': f'learn.json or bc.json not found or invalid for for {asset.url}',
-            'TITLE': f'Error fetching the exercise meta-data learn.json for {asset.slug}',
+            'MESSAGE':
+            f'learn.json or bc.json not found or invalid for for: \n {asset.url}',
+            'TITLE':
+            f'Error fetching the exercise meta-data learn.json for {asset.asset_type.lower()} {asset.slug}',
         }
 
-        to = 'support@4geeksacademy.com'
+        to = SYSTEM_EMAIL
         if asset.author is not None:
             to = asset.author.email
 
@@ -118,11 +155,11 @@ class AssetView(APIView):
     def get(self, request, asset_slug=None):
 
         if asset_slug is not None:
-            alias = AssetAlias.objects.filter(Q(slug=asset_slug) | Q(asset__slug=asset_slug)).first()
-            if alias is None:
-                raise ValidationException('Asset not found', status.HTTP_404_NOT_FOUND)
+            asset = Asset.get_by_slug(asset_slug, request)
+            if asset is None:
+                raise ValidationException(f'Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
-            serializer = AssetBigSerializer(alias.asset)
+            serializer = AssetBigSerializer(asset)
             return Response(serializer.data)
 
         items = Asset.objects.all()
@@ -143,11 +180,18 @@ class AssetView(APIView):
             lookup['asset_type__iexact'] = param
 
         if 'slug' in self.request.GET:
+            asset_type = self.request.GET.get('type', None)
             param = self.request.GET.get('slug')
-            lookup['slug'] = param
+            asset = Asset.get_by_slug(param, request, asset_type=asset_type)
+            if asset is not None:
+                lookup['slug'] = asset.slug
+            else:
+                lookup['slug'] = param
 
         if 'language' in self.request.GET:
             param = self.request.GET.get('language')
+            if param == 'en':
+                param = 'us'
             lookup['lang'] = param
 
         if 'visibility' in self.request.GET:

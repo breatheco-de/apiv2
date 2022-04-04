@@ -57,7 +57,7 @@ delete_cohort_tasks.short_description = 'Delete tasks for all students of this c
 
 @admin.register(CohortProxy)
 class CohortAdmin(CohortAdmin):
-    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'specialty_mode')
+    list_display = ('id', 'slug', 'stage', 'name', 'kickoff_date', 'syllabus_version', 'schedule')
     actions = [sync_cohort_tasks, delete_cohort_tasks]
 
 

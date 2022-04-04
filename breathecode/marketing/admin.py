@@ -4,13 +4,14 @@ from django import forms
 from .models import (FormEntry, Tag, Automation, ShortLink, ActiveCampaignAcademy, ActiveCampaignWebhook,
                      AcademyAlias, Downloadable, LeadGenerationApp, UTMField)
 from .actions import (register_new_lead, save_get_geolocal, get_facebook_lead_info, test_ac_connection,
-                      sync_tags, sync_automations, acp_ids)
+                      sync_tags, sync_automations, acp_ids, delete_tag)
 from breathecode.services.activecampaign import ActiveCampaign
 from django.utils import timezone
 from django.utils.html import format_html
 from django.contrib.admin import SimpleListFilter
 from breathecode.utils import AdminExportCsvMixin
 from breathecode.utils.admin import change_field
+from breathecode.utils.validation_exception import ValidationException
 # Register your models here.
 
 logger = logging.getLogger(__name__)
@@ -86,8 +87,18 @@ class AcademyAliasAdmin(admin.ModelAdmin):
 
 def send_to_ac(modeladmin, request, queryset):
     entries = queryset.all()
-    for entry in entries:
-        register_new_lead(entry.toFormData())
+    total = 0
+    try:
+        for entry in entries:
+            register_new_lead(entry.toFormData())
+            total += 1
+
+        messages.add_message(request, messages.SUCCESS, f'{total} entries were successfully added')
+    except Exception as e:
+        messages.add_message(
+            request, messages.ERROR,
+            f'{total} entries were successfully added but an error was found on entry {entry.id}: \n ' +
+            str(e))
 
 
 send_to_ac.short_description = '⨁ Add lead to automations in AC'
@@ -140,7 +151,7 @@ class FormEntryAdmin(admin.ModelAdmin, AdminExportCsvMixin):
         'storage_status', 'location', 'course', 'deal_status', PPCFilter, 'lead_generation_app',
         'tag_objects__tag_type', 'automation_objects__slug', 'utm_medium', 'country'
     ]
-    actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'export_as_csv']
+    actions = [send_to_ac, get_geoinfo, fetch_more_facebook_info, 'async_export_as_csv']
 
 
 def add_dispute(modeladmin, request, queryset):
@@ -149,6 +160,40 @@ def add_dispute(modeladmin, request, queryset):
 
 def remove_dispute(modeladmin, request, queryset):
     queryset.update(disputed_at=None)
+
+
+def delete_from_everywhere(modeladmin, request, queryset):
+
+    for t in queryset:
+        slug = t.slug
+        try:
+            if delete_tag(t) == True:
+                messages.add_message(request, messages.INFO, f'Tag {slug} successully deleted')
+            else:
+                messages.add_message(request, messages.ERROR, f'Error deleding tag {slug}')
+        except Exception as e:
+            messages.add_message(request, messages.ERROR, f'Error deleding tag {slug}: {str(e)}')
+
+
+def upload_to_active_campaign(modeladmin, request, queryset):
+
+    for t in queryset:
+        slug = t.slug
+        try:
+            ac_academy = t.ac_academy
+            if ac_academy is None:
+                raise ValidationException(f'Invalid ac_academy for this tag {t.slug}',
+                                          code=400,
+                                          slug='invalid-ac_academy')
+
+            client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+            data = client.create_tag(t.slug, description=t.description)
+            t.acp_id = data['id']
+            t.subscribers = 0
+            t.save()
+            messages.add_message(request, messages.INFO, f'Tag {t.slug} successully uploaded')
+        except Exception as e:
+            messages.add_message(request, messages.ERROR, f'Error uploading tag {slug}: {str(e)}')
 
 
 def prepend_tech_on_name(modeladmin, request, queryset):
@@ -217,8 +262,11 @@ class TagAdmin(admin.ModelAdmin, AdminExportCsvMixin):
     search_fields = ['slug']
     list_display = ('id', 'slug', 'tag_type', 'disputed', 'ac_academy', 'acp_id', 'subscribers')
     list_filter = [DisputedFilter, TagTypeFilter, 'ac_academy__academy__slug']
-    actions = ['export_as_csv', add_dispute, remove_dispute, prepend_tech_on_name] + change_field(
-        ['STRONG', 'SOFT', 'DISCOVERY', 'COHORT', 'DOWNLOADABLE', 'EVENT', 'OTHER'], name='tag_type')
+    actions = [
+        delete_from_everywhere, 'export_as_csv', upload_to_active_campaign, add_dispute, remove_dispute,
+        prepend_tech_on_name
+    ] + change_field(['STRONG', 'SOFT', 'DISCOVERY', 'COHORT', 'DOWNLOADABLE', 'EVENT', 'OTHER'],
+                     name='tag_type')
 
     def disputed(self, obj):
         if obj.disputed_at is not None:

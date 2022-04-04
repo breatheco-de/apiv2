@@ -1,17 +1,16 @@
-import logging
 from typing import Optional
 from celery import shared_task, Task
-from django.db.models import F
 from django.utils import timezone
 from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 from breathecode.services.activecampaign import ActiveCampaign
 from breathecode.monitoring.actions import test_link
+from breathecode.utils import getLogger
 from .models import FormEntry, ShortLink, ActiveCampaignWebhook, ActiveCampaignAcademy, Tag, Downloadable
 from .actions import register_new_lead, save_get_geolocal, acp_ids
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
 class BaseTaskWithRetry(Task):
@@ -235,7 +234,8 @@ def add_cohort_slug_as_acp_tag(self, cohort_id: int, academy_id: int) -> None:
         tag.save()
 
     except:
-        pass
+        logger.exception(f'There was an error creating tag for cohort {cohort.slug}',
+                         slug='exception-creating-tag-in-acp')
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
@@ -274,16 +274,14 @@ def add_event_slug_as_acp_tag(self, event_id: int, academy_id: int) -> None:
 
     try:
         data = client.create_tag(new_tag_slug, description=f'Event {event.slug} at {ac_academy.academy.slug}')
-        tag = Tag(slug=data['slug'],
-                  acp_id=data['id'],
-                  tag_type='EVENT',
-                  ac_academy=ac_academy,
-                  subscribers=0)
+
+        tag = Tag(slug=data['tag'], acp_id=data['id'], tag_type='EVENT', ac_academy=ac_academy, subscribers=0)
 
         tag.save()
 
     except:
-        pass
+        logger.exception(f'There was an error creating tag for event {event.slug}',
+                         slug='exception-creating-tag-in-acp')
 
 
 @shared_task(bind=True, base=BaseTaskWithRetry)
@@ -329,4 +327,4 @@ def add_downloadable_slug_as_acp_tag(self, downloadable_id: int, academy_id: int
         tag.save()
 
     except:
-        pass
+        logger.exception(f'There was an error creating tag for downloadable {downloadable.slug}')

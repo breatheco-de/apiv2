@@ -24,6 +24,8 @@ reviews = Review.objects.filter(status='PENDING',
                                 cohort__ending_date__gte=EIGHT_WEEKS_AGO,
                                 cohort__kickoff_date__lte=TODAY)
 
+call_to_action = f'Click here to <a href="{ADMIN_URL}/growth/reviews?location={academy.slug}">see a more detailed list</a>'
+
 # exclude cohorts that never end
 reviews = reviews.exclude(cohort__never_ends=True).exclude(cohort__stage__in=['DELETED', 'INACTIVE'])
 total_reviews = reviews.count()
@@ -39,7 +41,7 @@ else:
 
     raise ScriptNotification(
         f'There are {str(total_reviews)} reviews to be requested because the students gave us 8 or more on the NPS survey: '
-        f'\n {review_names}',
+        f'\n {review_names} \n\n {call_to_action}',
         status='CRITICAL',
-        title=f'There are {str(total_reviews)} reviews pending to be requested',
+        title=f'There are {str(total_reviews)} reviews pending to be requested at {academy.name}',
         slug='cohort-have-pending-reviews')

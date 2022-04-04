@@ -63,18 +63,18 @@ class CohortUserTestSuite(AdmissionsTestCase):
                          }])
 
     """
-    🔽🔽🔽 With one Cohort, SyllabusVersion and SpecialtyMode
+    🔽🔽🔽 With one Cohort, SyllabusVersion and SyllabusSchedule
     """
 
     @patch(DJANGO_CONTRIB_PATH['messages'], apply_django_contrib_messages_mock())
-    def test_link_randomly_relations_to_cohorts__with_one_cohort__with_specialty_mode(self):
+    def test_link_randomly_relations_to_cohorts__with_one_cohort__with_schedule(self):
         # self.generate_models(academy=True, skip_cohort=True)
-        cohort_kwargs = {'syllabus_version': None, 'specialty_mode': None}
+        cohort_kwargs = {'syllabus_version': None, 'schedule': None}
         model = self.generate_models(academy=True,
                                      cohort=True,
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      cohort_kwargs=cohort_kwargs)
 
         request = HttpRequest()
@@ -85,5 +85,5 @@ class CohortUserTestSuite(AdmissionsTestCase):
                          [{
                              **self.model_to_dict(model, 'cohort'),
                              'syllabus_version_id': 1,
-                             'specialty_mode_id': 1,
+                             'schedule_id': 1,
                          }])

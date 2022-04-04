@@ -15,6 +15,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         response = requests.get(f'https://content.breatheco.de/static/api/lessons.json')
         items = response.json()
+        items.sort(key=lambda x: x['lang'] == 'es')
         count = 0
         for lesson in items:
             BASE_PATH = 'https://github.com/breatheco-de/content/blob/master/src/content/lesson/'
@@ -24,8 +25,9 @@ class Command(BaseCommand):
             if 'authors' in lesson and lesson['authors'] is not None:
                 lesson['authors_username'] = ','.join(lesson['authors'])
 
+            lesson['slug'] = lesson['fileName'].replace('.md', '')
+
             a, created = create_asset(lesson, asset_type='LESSON', force=True)
-            async_sync_with_github.delay(a.slug)
 
     def _exists(self, slug):
         aa = AssetAlias.objects.filter(Q(slug=slug) | Q(asset__slug=slug)).first()

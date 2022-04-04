@@ -1,3 +1,4 @@
+from typing import Any
 from breathecode.marketing.actions import validate_marketing_tags
 from breathecode.utils.validation_exception import ValidationException
 from .models import Event, Organization, EventbriteWebhook
@@ -145,7 +146,7 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         exclude = ()
 
-    def validate(self, data):
+    def validate(self, data: dict[str, Any]):
 
         academy = self.context.get('academy_id')
 
@@ -159,16 +160,24 @@ class EventSerializer(serializers.ModelSerializer):
 
         validate_marketing_tags(data['tags'], academy, types=['DISCOVERY'])
 
-        if 'slug' not in data or data['slug'] == '' or data['slug'] is None:
-            data['slug'] = slugify(data['title'])
+        title = data.get('title')
+        slug = data.get('slug')
 
-        if not data['slug'].lower().startswith('event-'):
-            data['slug'] = f'event-{data["slug"].lower()}'
+        if slug and self.instance:
+            raise ValidationException(f'The slug field is readonly', slug='try-update-slug')
 
-        previous = Event.objects.filter(slug=data['slug']).first()
-        if previous is not None:
-            raise ValidationException(f'Event slug already taken, try a different event title?',
+        if title and not slug:
+            slug = slugify(data['title']).lower()
+
+        elif slug:
+            slug = f'{data["slug"].lower()}'
+
+        existing_events = Event.objects.filter(slug=slug)
+        if slug and not self.instance and existing_events.exists():
+            raise ValidationException(f'Event slug {slug} already taken, try a different event slug?',
                                       slug='slug-taken')
+
+        data['slug'] = slug
 
         return data
 

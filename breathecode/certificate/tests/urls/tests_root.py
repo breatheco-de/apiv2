@@ -1,7 +1,7 @@
 """
 Test /certificate
 """
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from breathecode.tests.mocks import (
@@ -11,6 +11,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins import CertificateTestCase
+import breathecode.certificate.signals as signals
 
 
 class CertificateTestSuite(CertificateTestCase):
@@ -21,6 +22,7 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_certificate_cohort_user__without_auth(self):
         """Test /root without auth"""
         self.headers(academy=1)
@@ -35,6 +37,8 @@ class CertificateTestSuite(CertificateTestCase):
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     """
     🔽🔽🔽 Post method
     """
@@ -42,6 +46,7 @@ class CertificateTestSuite(CertificateTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_certificate_re_attemps_without_capability(self):
         """Test /root with auth"""
         """ No capability for the request"""
@@ -63,9 +68,12 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_certificate_re_attemps_without_cohort_user(self):
         """Test /root with auth"""
         """ No cohort_user for the request"""
@@ -89,9 +97,12 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_certificate_re_attemps_without_user_specialty(self):
         """Test /root with auth"""
         """ No user_specialty for the request"""
@@ -116,9 +127,12 @@ class CertificateTestSuite(CertificateTestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(self.all_user_specialty_dict(), [])
 
+        self.assertEqual(signals.user_specialty_saved.send.call_args_list, [])
+
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_certificate_re_attemps(self):
         """Test /root with auth"""
         """ Good Request """
@@ -145,7 +159,7 @@ class CertificateTestSuite(CertificateTestCase):
                                      specialty=True,
                                      layout_design=True,
                                      user_specialty=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      cohort_kwargs=cohort_kwargs,
                                      cohort_user_kwargs=cohort_user_kwargs,
                                      syllabus_kwargs=syllabus_kwargs)
@@ -186,10 +200,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': model['cohort'].name,
                 'slug': model['cohort'].slug,
-                'specialty_mode': {
-                    'id': model['specialty_mode'].id,
-                    'name': model['specialty_mode'].name,
-                    'syllabus': model['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': model['syllabus_schedule'].id,
+                    'name': model['syllabus_schedule'].name,
+                    'syllabus': model['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': model['syllabus_version'].version,
@@ -236,6 +250,7 @@ class CertificateTestSuite(CertificateTestCase):
 
         del certificates[0]['issued_at']
 
+        user_specialty = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
         self.assertEqual(
             certificates, [{
                 'academy_id': 1,
@@ -250,12 +265,25 @@ class CertificateTestSuite(CertificateTestCase):
                 'status': 'PERSISTED',
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 1,
-                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949'
+                'token': '9e76a2ab3bd55454c384e0a5cdb5298d17285949',
+                'update_hash': user_specialty.update_hash,
             }])
+
+        self.assertEqual(
+            signals.user_specialty_saved.send.call_args_list,
+            [
+                # Mixer
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+                # View
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+                # Action
+                call(instance=model.user_specialty, sender=model.user_specialty.__class__),
+            ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.certificate.signals.user_specialty_saved.send', MagicMock())
     def test_certificate_re_attemps_two_certificates(self):
         """Test /root with auth"""
         """ Good Request """
@@ -278,7 +306,7 @@ class CertificateTestSuite(CertificateTestCase):
                                     syllabus=True,
                                     syllabus_version=True,
                                     specialty=True,
-                                    specialty_mode=True,
+                                    syllabus_schedule=True,
                                     layout_design=True,
                                     syllabus_kwargs=syllabus_kwargs,
                                     cohort_kwargs=cohort_kwargs)
@@ -345,10 +373,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
-                'specialty_mode': {
-                    'id': models[0]['specialty_mode'].id,
-                    'name': models[0]['specialty_mode'].name,
-                    'syllabus': models[0]['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': models[0]['syllabus_schedule'].id,
+                    'name': models[0]['syllabus_schedule'].name,
+                    'syllabus': models[0]['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': models[0]['syllabus_version'].version,
@@ -401,10 +429,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': models[1].cohort.name,
                 'slug': models[1].cohort.slug,
-                'specialty_mode': {
-                    'id': models[0]['specialty_mode'].id,
-                    'name': models[0]['specialty_mode'].name,
-                    'syllabus': models[0]['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': models[0]['syllabus_schedule'].id,
+                    'name': models[0]['syllabus_schedule'].name,
+                    'syllabus': models[0]['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': {
                     'version': models[0]['syllabus_version'].version,
@@ -453,6 +481,8 @@ class CertificateTestSuite(CertificateTestCase):
         del certificates[0]['issued_at']
         del certificates[1]['issued_at']
 
+        user_specialty1 = self.bc.database.get('certificate.UserSpecialty', 1, dict=False)
+        user_specialty2 = self.bc.database.get('certificate.UserSpecialty', 2, dict=False)
         self.assertEqual(certificates, [
             {
                 'academy_id': 1,
@@ -467,7 +497,8 @@ class CertificateTestSuite(CertificateTestCase):
                 'status': 'PERSISTED',
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 2,
-                'token': 'huhuhuhuhu'
+                'token': 'huhuhuhuhu',
+                'update_hash': user_specialty1.update_hash,
             },
             {
                 'academy_id': 1,
@@ -482,9 +513,26 @@ class CertificateTestSuite(CertificateTestCase):
                 'status': 'PERSISTED',
                 'status_text': 'Certificate successfully queued for PDF generation',
                 'user_id': 3,
-                'token': 'qwerrty'
+                'token': 'qwerrty',
+                'update_hash': user_specialty2.update_hash,
             },
         ])
+
+        self.assertEqual(
+            signals.user_specialty_saved.send.call_args_list,
+            [
+                # Mixer
+                call(instance=models[0].user_specialty, sender=models[0].user_specialty.__class__),
+                call(instance=models[1].user_specialty, sender=models[1].user_specialty.__class__),
+                # View
+                call(instance=models[0].user_specialty, sender=models[0].user_specialty.__class__),
+                # Action
+                call(instance=models[0].user_specialty, sender=models[0].user_specialty.__class__),
+                # View
+                call(instance=models[1].user_specialty, sender=models[1].user_specialty.__class__),
+                # Action
+                call(instance=models[1].user_specialty, sender=models[1].user_specialty.__class__),
+            ])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -493,7 +541,7 @@ class CertificateTestSuite(CertificateTestCase):
         """Test /root """
         self.headers(academy=1)
 
-        specialty_mode_kwargs = {'duration_in_days': 543665478761}
+        schedule_kwargs = {'duration_in_days': 543665478761}
         cohort_kwargs = {
             'current_day': 543665478761,
             'stage': 'ENDED',
@@ -505,8 +553,8 @@ class CertificateTestSuite(CertificateTestCase):
                                     academy=True,
                                     profile_academy=True,
                                     specialty=True,
-                                    specialty_mode=True,
-                                    specialty_mode_kwargs=specialty_mode_kwargs,
+                                    syllabus_schedule=True,
+                                    syllabus_schedule_kwargs=schedule_kwargs,
                                     syllabus=True,
                                     cohort_kwargs=cohort_kwargs)
 
@@ -559,10 +607,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
-                'specialty_mode': {
-                    'id': models[0]['specialty_mode'].id,
-                    'name': models[0]['specialty_mode'].name,
-                    'syllabus': models[0]['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': models[0]['syllabus_schedule'].id,
+                    'name': models[0]['syllabus_schedule'].name,
+                    'syllabus': models[0]['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': None,
             },
@@ -605,7 +653,7 @@ class CertificateTestSuite(CertificateTestCase):
     def test_certificate__with_first_name_in_querystring(self):
         """Test /root """
         self.headers(academy=1)
-        specialty_mode_kwargs = {'duration_in_days': 543665478761}
+        schedule_kwargs = {'duration_in_days': 543665478761}
         cohort_kwargs = {
             'current_day': 543665478761,
             'stage': 'ENDED',
@@ -617,8 +665,8 @@ class CertificateTestSuite(CertificateTestCase):
                                     academy=True,
                                     profile_academy=True,
                                     specialty=True,
-                                    specialty_mode=True,
-                                    specialty_mode_kwargs=specialty_mode_kwargs,
+                                    syllabus_schedule=True,
+                                    syllabus_schedule_kwargs=schedule_kwargs,
                                     syllabus=True,
                                     cohort_kwargs=cohort_kwargs)
 
@@ -671,10 +719,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
-                'specialty_mode': {
-                    'id': models[0]['specialty_mode'].id,
-                    'name': models[0]['specialty_mode'].name,
-                    'syllabus': models[0]['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': models[0]['syllabus_schedule'].id,
+                    'name': models[0]['syllabus_schedule'].name,
+                    'syllabus': models[0]['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': None,
             },
@@ -713,7 +761,7 @@ class CertificateTestSuite(CertificateTestCase):
     def test_certificate__with_last_name_in_querystring(self):
         """Test /root """
         self.headers(academy=1)
-        specialty_mode_kwargs = {'duration_in_days': 543665478761}
+        schedule_kwargs = {'duration_in_days': 543665478761}
         cohort_kwargs = {
             'current_day': 543665478761,
             'stage': 'ENDED',
@@ -725,8 +773,8 @@ class CertificateTestSuite(CertificateTestCase):
                                     academy=True,
                                     profile_academy=True,
                                     specialty=True,
-                                    specialty_mode=True,
-                                    specialty_mode_kwargs=specialty_mode_kwargs,
+                                    syllabus_schedule=True,
+                                    syllabus_schedule_kwargs=schedule_kwargs,
                                     syllabus=True,
                                     cohort_kwargs=cohort_kwargs)
 
@@ -779,10 +827,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
-                'specialty_mode': {
-                    'id': models[0]['specialty_mode'].id,
-                    'name': models[0]['specialty_mode'].name,
-                    'syllabus': models[0]['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': models[0]['syllabus_schedule'].id,
+                    'name': models[0]['syllabus_schedule'].name,
+                    'syllabus': models[0]['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': None,
             },
@@ -821,7 +869,7 @@ class CertificateTestSuite(CertificateTestCase):
     def test_certificate__with_email_in_querystring(self):
         """Test /root """
         self.headers(academy=1)
-        specialty_mode_kwargs = {'duration_in_days': 543665478761}
+        schedule_kwargs = {'duration_in_days': 543665478761}
         cohort_kwargs = {
             'current_day': 543665478761,
             'stage': 'ENDED',
@@ -834,8 +882,8 @@ class CertificateTestSuite(CertificateTestCase):
                                     academy=True,
                                     profile_academy=True,
                                     specialty=True,
-                                    specialty_mode=True,
-                                    specialty_mode_kwargs=specialty_mode_kwargs,
+                                    syllabus_schedule=True,
+                                    syllabus_schedule_kwargs=schedule_kwargs,
                                     syllabus=True,
                                     cohort_kwargs=cohort_kwargs)
 
@@ -888,10 +936,10 @@ class CertificateTestSuite(CertificateTestCase):
                 'ending_date': None,
                 'name': models[0].cohort.name,
                 'slug': models[0].cohort.slug,
-                'specialty_mode': {
-                    'id': models[0]['specialty_mode'].id,
-                    'name': models[0]['specialty_mode'].name,
-                    'syllabus': models[0]['specialty_mode'].syllabus.id,
+                'schedule': {
+                    'id': models[0]['syllabus_schedule'].id,
+                    'name': models[0]['syllabus_schedule'].name,
+                    'syllabus': models[0]['syllabus_schedule'].syllabus.id,
                 },
                 'syllabus_version': None,
             },

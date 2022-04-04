@@ -1,30 +1,44 @@
 """
 Tasks tests
 """
-from unittest.mock import patch, call
+from unittest.mock import MagicMock, patch, call
 from ...tasks import reset_screenshot
 from ..mixins import CertificateTestCase
-from ..mocks import (
-    ACTIONS_PATH,
-    ACTIONS_INSTANCES,
-    apply_certificate_screenshot_mock,
-    apply_remove_certificate_screenshot_mock,
-)
+import breathecode.certificate.actions as actions
 
 
 class ActionCertificateScreenshotTestCase(CertificateTestCase):
     """Tests action reset_screenshot"""
-    @patch(ACTIONS_PATH['certificate_screenshot'], apply_certificate_screenshot_mock())
-    @patch(ACTIONS_PATH['remove_certificate_screenshot'], apply_remove_certificate_screenshot_mock())
-    def test_reset_screenshot_return_true_and_call_certificate_screenshot(self):
+    @patch('breathecode.certificate.actions.certificate_screenshot', MagicMock())
+    @patch('breathecode.certificate.actions.remove_certificate_screenshot', MagicMock())
+    def test_reset_screenshot__call_all_properly(self):
         """reset_screenshot don't call open in development environment"""
-        ACTIONS_INSTANCES['certificate_screenshot'].call_args_list = []
-        ACTIONS_INSTANCES['remove_certificate_screenshot'].call_args_list = []
 
-        for number in range(1, 10):
-            self.assertEqual(reset_screenshot(number), True)
+        result = reset_screenshot(1)
 
-        self.assertEqual(ACTIONS_INSTANCES['remove_certificate_screenshot'].call_args_list,
-                         [call(number) for number in range(1, 10)])
-        self.assertEqual(ACTIONS_INSTANCES['certificate_screenshot'].call_args_list,
-                         [call(number) for number in range(1, 10)])
+        self.assertTrue(result)
+        self.assertEqual(actions.certificate_screenshot.call_args_list, [call(1)])
+        self.assertEqual(actions.remove_certificate_screenshot.call_args_list, [call(1)])
+
+    @patch('breathecode.certificate.actions.certificate_screenshot', MagicMock(side_effect=Exception()))
+    @patch('breathecode.certificate.actions.remove_certificate_screenshot', MagicMock())
+    def test_reset_screenshot__certificate_screenshot_raise_a_exception(self):
+        """reset_screenshot don't call open in development environment"""
+
+        result = reset_screenshot(1)
+
+        self.assertFalse(result)
+        self.assertEqual(actions.certificate_screenshot.call_args_list, [call(1)])
+        self.assertEqual(actions.remove_certificate_screenshot.call_args_list, [call(1)])
+
+    @patch('breathecode.certificate.actions.certificate_screenshot', MagicMock())
+    @patch('breathecode.certificate.actions.remove_certificate_screenshot',
+           MagicMock(side_effect=Exception()))
+    def test_reset_screenshot__remove_certificate_screenshot_raise_a_exception(self):
+        """reset_screenshot don't call open in development environment"""
+
+        result = reset_screenshot(1)
+
+        self.assertFalse(result)
+        self.assertEqual(actions.certificate_screenshot.call_args_list, [])
+        self.assertEqual(actions.remove_certificate_screenshot.call_args_list, [call(1)])

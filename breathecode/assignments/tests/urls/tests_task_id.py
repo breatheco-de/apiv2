@@ -68,6 +68,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             'task_type': model.task.task_type,
             'title': model.task.title,
+            'description': model.task.description,
             'user': {
                 'first_name': model.user.first_name,
                 'id': model.user.id,

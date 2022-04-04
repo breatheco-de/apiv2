@@ -75,7 +75,8 @@ class AuthenticateTestSuite(AuthTestCase):
             json, {
                 'user': {
                     'id': 1,
-                    'email': profile_academy.user.email
+                    'email': profile_academy.user.email,
+                    'first_name': profile_academy.user.first_name,
                 },
                 'key': f'{token}',
                 'reset_password_url': f'http://localhost:8000/v1/auth/password/{token}',

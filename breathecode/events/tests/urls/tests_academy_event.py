@@ -1,3 +1,4 @@
+from unittest.mock import MagicMock, patch
 from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
 from ..mixins.new_events_tests_case import EventTestCase
@@ -453,6 +454,35 @@ class AcademyEventTestSuite(EventTestCase):
         response = self.client.post(url, data)
         json = response.json()
 
+        expected = {'detail': 'have-less-two-tags', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [])
+
+    def test_all_academy_events__post__bad_tags__two_tags_not_exists(self):
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     capability='crud_event',
+                                     role='potato')
+
+        url = reverse_lazy('events:academy_event')
+        current_date = self.datetime_now()
+        data = {
+            'tags': 'expecto-patronum,wingardium-leviosa',
+            'url': 'https://www.google.com/',
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.post(url, data)
+        json = response.json()
+
         expected = {'detail': 'tag-not-exist', 'status_code': 400}
 
         self.assertEqual(json, expected)
@@ -493,6 +523,7 @@ class AcademyEventTestSuite(EventTestCase):
     🔽🔽🔽 Post bad slug
     """
 
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
     def test_all_academy_events__post__bad_slug(self):
         self.headers(academy=1)
 
@@ -500,11 +531,16 @@ class AcademyEventTestSuite(EventTestCase):
                                      organization=True,
                                      profile_academy=True,
                                      capability='crud_event',
+                                     tag=(2, {
+                                         'tag_type': 'DISCOVERY'
+                                     }),
+                                     active_campaign_academy=True,
                                      role='potato')
 
         url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
         data = {
+            'tags': ','.join([x.slug for x in model.tag]),
             'slug': 'they-killed-kenny',
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
@@ -549,7 +585,6 @@ class AcademyEventTestSuite(EventTestCase):
             'sync_with_eventbrite': False,
             'currency': 'USD',
             **data,
-            'slug': 'event-they-killed-kenny',
         }
 
         self.assertEqual(json, expected)
@@ -568,7 +603,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_url': None,
             'excerpt': None,
             'tags': '',
-            'slug': 'event-they-killed-kenny',
+            'slug': 'they-killed-kenny',
             'host': None,
             'id': 1,
             'lang': None,
@@ -584,6 +619,7 @@ class AcademyEventTestSuite(EventTestCase):
             'venue_id': None,
             'sync_with_eventbrite': False,
             'currency': 'USD',
+            'tags': ','.join([x.slug for x in model.tag]),
         }])
 
     """
@@ -614,6 +650,44 @@ class AcademyEventTestSuite(EventTestCase):
         response = self.client.post(url, data)
         json = response.json()
 
+        expected = {'detail': 'empty-tags', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.all_event_dict(), [])
+
+    @patch('breathecode.events.signals.event_saved.send', MagicMock())
+    def test_all_academy_events__post__event_exist_with_the_same_eventbrite_id_as_null(self):
+        self.headers(academy=1)
+
+        event = {'eventbrite_id': None}
+        model = self.generate_models(authenticate=True,
+                                     organization=True,
+                                     profile_academy=True,
+                                     event=event,
+                                     capability='crud_event',
+                                     tag=(2, {
+                                         'tag_type': 'DISCOVERY'
+                                     }),
+                                     active_campaign_academy=True,
+                                     role='potato')
+
+        url = reverse_lazy('events:academy_event')
+        current_date = self.datetime_now()
+        data = {
+            'tags': ','.join([x.slug for x in model.tag]),
+            'slug': 'EVENT-THEY-KILLED-KENNY',
+            'url': 'https://www.google.com/',
+            'eventbrite_id': None,
+            'banner': 'https://www.google.com/banner',
+            'capacity': 11,
+            'starting_at': self.datetime_to_iso(current_date),
+            'ending_at': self.datetime_to_iso(current_date),
+        }
+
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+
         self.assertDatetime(json['created_at'])
         self.assertDatetime(json['updated_at'])
 
@@ -633,7 +707,7 @@ class AcademyEventTestSuite(EventTestCase):
             'slug': None,
             'excerpt': None,
             'host': None,
-            'id': 1,
+            'id': 2,
             'slug': None,
             'lang': None,
             'online_event': False,
@@ -647,11 +721,15 @@ class AcademyEventTestSuite(EventTestCase):
             'sync_with_eventbrite': False,
             'currency': 'USD',
             **data,
+            'slug': 'event-they-killed-kenny',
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 201)
         self.assertEqual(self.all_event_dict(), [{
+            **self.bc.format.to_dict(model.event),
+            'eventbrite_id': None,
+        }, {
             'academy_id': 1,
             'author_id': None,
             'banner': 'https://www.google.com/banner',
@@ -664,10 +742,10 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_status': None,
             'eventbrite_url': None,
             'excerpt': None,
-            'tags': '',
+            'tags': ','.join([x.slug for x in model.tag]),
             'slug': 'event-they-killed-kenny',
             'host': None,
-            'id': 1,
+            'id': 2,
             'lang': None,
             'online_event': False,
             'organization_id': 1,
@@ -690,12 +768,16 @@ class AcademyEventTestSuite(EventTestCase):
                                      organization=True,
                                      profile_academy=True,
                                      capability='crud_event',
+                                     tag=(2, {
+                                         'tag_type': 'DISCOVERY'
+                                     }),
+                                     active_campaign_academy=True,
                                      role='potato')
 
         url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
         data = {
-            'tags': '',
+            'tags': ','.join([x.slug for x in model.tag]),
             'slug': 'EVENT-THEY-KILLED-KENNY',
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
@@ -758,7 +840,7 @@ class AcademyEventTestSuite(EventTestCase):
             'eventbrite_status': None,
             'eventbrite_url': None,
             'excerpt': None,
-            'tags': '',
+            'tags': ','.join([x.slug for x in model.tag]),
             'slug': 'event-they-killed-kenny',
             'host': None,
             'id': 1,
@@ -784,14 +866,16 @@ class AcademyEventTestSuite(EventTestCase):
                                      organization=True,
                                      profile_academy=True,
                                      academy=True,
-                                     tag={'tag_type': 'DISCOVERY'},
+                                     tag=(2, {
+                                         'tag_type': 'DISCOVERY'
+                                     }),
                                      capability='crud_event',
                                      role='potato')
 
         url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
         data = {
-            'tags': model.tag.slug,
+            'tags': ','.join([x.slug for x in model.tag]),
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
             'capacity': 11,
@@ -816,14 +900,16 @@ class AcademyEventTestSuite(EventTestCase):
                                      profile_academy=True,
                                      academy=True,
                                      active_campaign_academy=True,
-                                     tag={'tag_type': 'DISCOVERY'},
+                                     tag=(2, {
+                                         'tag_type': 'DISCOVERY'
+                                     }),
                                      capability='crud_event',
                                      role='potato')
 
         url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
         data = {
-            'tags': model.tag.slug,
+            'tags': ','.join([x.slug for x in model.tag]),
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
             'capacity': 11,
@@ -914,6 +1000,10 @@ class AcademyEventTestSuite(EventTestCase):
                 'slug': 'they-killed-kenny',
                 'tag_type': 'DISCOVERY'
             },
+            {
+                'slug': 'kenny-has-born-again',
+                'tag_type': 'DISCOVERY'
+            },
         ]
         model = self.generate_models(authenticate=True,
                                      organization=True,
@@ -927,7 +1017,7 @@ class AcademyEventTestSuite(EventTestCase):
         url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
         data = {
-            'tags': model.tag[0].slug,
+            'tags': 'they-killed-kenny,kenny-has-born-again',
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
             'capacity': 11,
@@ -1323,11 +1413,16 @@ class AcademyEventTestSuite(EventTestCase):
                                      profile_academy=True,
                                      capability='crud_event',
                                      role='potato2',
+                                     tag=(2, {
+                                         'tag_type': 'DISCOVERY'
+                                     }),
+                                     active_campaign_academy=True,
                                      models=base)
 
         url = reverse_lazy('events:academy_event')
         current_date = self.datetime_now()
         data = {
+            'tags': ','.join([x.slug for x in model.tag]),
             'url': 'https://www.google.com/',
             'banner': 'https://www.google.com/banner',
             'capacity': 11,
@@ -1403,7 +1498,7 @@ class AcademyEventTestSuite(EventTestCase):
             'url': 'https://www.google.com/',
             'venue_id': None,
             'sync_with_eventbrite': False,
-            'tags': model['event'].tags,
+            'tags': ','.join([x.slug for x in model.tag]),
             'slug': model['event'].slug,
             'currency': 'USD',
         }])

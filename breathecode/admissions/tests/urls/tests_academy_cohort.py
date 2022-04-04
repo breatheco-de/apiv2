@@ -95,7 +95,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus=True,
                                      syllabus_kwargs=syllabus_kwargs)
 
@@ -105,7 +105,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:academy_cohort')
         data = {
             'syllabus': model['syllabus'].id,
-            'specialty_mode': 1,
+            'schedule': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
@@ -134,7 +134,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      capability='crud_cohort',
                                      role='potato',
                                      syllabus=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
@@ -147,7 +147,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
-            'specialty_mode': 1,
+            'schedule': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
@@ -159,7 +159,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     # @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    # def test_academy_cohort__post__without_specialty_mode(self):
+    # def test_academy_cohort__post__without_schedule(self):
     #     """Test /academy/cohort without auth"""
     #     from breathecode.admissions.signals import cohort_saved
     #
@@ -169,11 +169,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     #                                  profile_academy=True,
     #                                  capability='crud_cohort',
     #                                  role='potato',
-    #                                  specialty_mode=True,
+    #                                  syllabus_schedule=True,
     #                                  syllabus=True,
     #                                  syllabus_version=True,
     #                                  skip_cohort=True,
-    #                                  specialty_mode_time_slot=True)
+    #                                  syllabus_schedule_time_slot=True)
     #     url = reverse_lazy('admissions:academy_cohort')
     #     data = {
     #         'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
@@ -205,11 +205,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus=True,
                                      syllabus_version=True,
                                      skip_cohort=True,
-                                     specialty_mode_time_slot=True,
+                                     syllabus_schedule_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
@@ -221,7 +221,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
-            'specialty_mode': 1,
+            'schedule': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
@@ -248,11 +248,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus=True,
                                      syllabus_version=True,
                                      skip_cohort=True,
-                                     specialty_mode_time_slot=True,
+                                     syllabus_schedule_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
@@ -266,7 +266,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'kickoff_date': datetime.today().isoformat(),
             'ending_date': datetime.today().isoformat(),
             'never_ends': True,
-            'specialty_mode': 1,
+            'schedule': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
@@ -293,11 +293,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus=True,
                                      syllabus_version=True,
                                      skip_cohort=True,
-                                     specialty_mode_time_slot=True,
+                                     syllabus_schedule_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
@@ -310,7 +310,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
             'never_ends': False,
-            'specialty_mode': 1,
+            'schedule': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
@@ -337,11 +337,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus=True,
                                      syllabus_version=True,
                                      skip_cohort=True,
-                                     specialty_mode_time_slot=True,
+                                     syllabus_schedule_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
@@ -355,7 +355,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
             'never_ends': True,
-            'specialty_mode': 1,
+            'schedule': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
@@ -367,7 +367,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'never_ends': True,
             'kickoff_date': self.datetime_to_iso(cohort.kickoff_date),
             'current_day': cohort.current_day,
-            'specialty_mode': cohort.specialty_mode.id,
+            'schedule': cohort.schedule.id,
             'online_meeting_url': cohort.online_meeting_url,
             'timezone': cohort.timezone,
             'academy': {
@@ -390,7 +390,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_two = cohort.__dict__.copy()
         cohort_two.update(data)
         del cohort_two['syllabus']
-        del cohort_two['specialty_mode']
+        del cohort_two['schedule']
 
         models_dict.append(self.remove_dinamics_fields({**cohort_two}))
 
@@ -414,11 +414,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      profile_academy=True,
                                      capability='crud_cohort',
                                      role='potato',
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      syllabus=True,
                                      syllabus_version=True,
                                      skip_cohort=True,
-                                     specialty_mode_time_slot=True,
+                                     syllabus_schedule_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs,
                                      academy_kwargs=academy_kwargs)
 
@@ -433,7 +433,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
             'never_ends': True,
-            'specialty_mode': 1,
+            'schedule': 1,
         }
         response = self.client.post(url, data)
         json = response.json()
@@ -445,7 +445,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'never_ends': True,
             'kickoff_date': self.datetime_to_iso(cohort.kickoff_date),
             'current_day': cohort.current_day,
-            'specialty_mode': cohort.specialty_mode.id,
+            'schedule': cohort.schedule.id,
             'online_meeting_url': cohort.online_meeting_url,
             'timezone': cohort.timezone,
             'academy': {
@@ -468,7 +468,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_two = cohort.__dict__.copy()
         cohort_two.update(data)
         del cohort_two['syllabus']
-        del cohort_two['specialty_mode']
+        del cohort_two['schedule']
 
         models_dict.append(self.remove_dinamics_fields({**cohort_two}))
 
@@ -479,10 +479,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                          [{
                              'id': 1,
                              'cohort_id': 1,
-                             'starting_at': model.specialty_mode_time_slot.starting_at,
-                             'ending_at': model.specialty_mode_time_slot.ending_at,
-                             'recurrent': model.specialty_mode_time_slot.recurrent,
-                             'recurrency_type': model.specialty_mode_time_slot.recurrency_type,
+                             'starting_at': model.syllabus_schedule_time_slot.starting_at,
+                             'ending_at': model.syllabus_schedule_time_slot.ending_at,
+                             'recurrent': model.syllabus_schedule_time_slot.recurrent,
+                             'recurrency_type': model.syllabus_schedule_time_slot.recurrency_type,
                              'timezone': model.academy.timezone,
                          }])
         self.assertEqual(cohort_saved.send.call_args_list,
@@ -575,7 +575,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True)
+                                     syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -596,13 +596,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'current_module': None,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -652,7 +653,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True)
+                                     syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -686,7 +687,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
+                                     syllabus_schedule=True,
                                      cohort_kwargs=cohort_kwargs)
 
         # reset because this call are coming from mixer
@@ -708,13 +709,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'current_module': None,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -764,7 +766,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True)
+                                     syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -795,7 +797,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True)
+                                     syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -816,13 +818,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'current_module': model['cohort'].current_module,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -871,7 +874,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True)
+                                     syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -892,13 +895,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'current_module': None,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -948,7 +952,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                  role='potato',
                                  syllabus=True,
                                  syllabus_version=True,
-                                 specialty_mode=True)
+                                 syllabus_schedule=True)
         ]
 
         base = models[0].copy()
@@ -977,13 +981,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'current_day': model['cohort'].current_day,
+            'current_module': None,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -1038,7 +1043,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             self.generate_models(cohort=True,
                                  syllabus=True,
                                  syllabus_version=True,
-                                 specialty_mode=True,
+                                 syllabus_schedule=True,
                                  models=base) for _ in range(0, 2)
         ]
 
@@ -1055,6 +1060,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'current_day': model.cohort.current_day,
+            'current_module': None,
             'never_ends': model['cohort'].never_ends,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
@@ -1064,10 +1070,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -1116,7 +1122,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True)
+                                     syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -1147,7 +1153,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True)
+                                     syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -1168,13 +1174,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'current_module': None,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -1223,7 +1230,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True)
+                                     syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -1244,13 +1251,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'stage': model['cohort'].stage,
             'language': model['cohort'].language,
             'current_day': model['cohort'].current_day,
+            'current_module': None,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -1300,7 +1308,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                  role='potato',
                                  syllabus=True,
                                  syllabus_version=True,
-                                 specialty_mode=True)
+                                 syllabus_schedule=True)
         ]
 
         base = models[0].copy()
@@ -1329,13 +1337,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'current_day': model['cohort'].current_day,
+            'current_module': None,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -1384,7 +1393,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                  role='potato',
                                  syllabus=True,
                                  syllabus_version=True,
-                                 specialty_mode=True)
+                                 syllabus_schedule=True)
         ]
 
         base = models[0].copy()
@@ -1413,13 +1422,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'ending_date': model['cohort'].ending_date,
             'stage': model['cohort'].stage,
             'current_day': model['cohort'].current_day,
+            'current_module': None,
             'online_meeting_url': model['cohort'].online_meeting_url,
             'timezone': model['cohort'].timezone,
             'timeslots': [],
-            'specialty_mode': {
-                'id': model['cohort'].specialty_mode.id,
-                'name': model['cohort'].specialty_mode.name,
-                'syllabus': model['cohort'].specialty_mode.syllabus.id,
+            'schedule': {
+                'id': model['cohort'].schedule.id,
+                'name': model['cohort'].schedule.name,
+                'syllabus': model['cohort'].schedule.syllabus.id,
             },
             'syllabus_version': {
                 'name': model.syllabus.name,
@@ -1468,7 +1478,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                  role='potato',
                                  syllabus=True,
                                  syllabus_version=True,
-                                 specialty_mode=True)
+                                 syllabus_schedule=True)
         ]
 
         base = models[0].copy()
@@ -1510,13 +1520,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
                 'current_day': model['cohort'].current_day,
+                'current_module': None,
                 'online_meeting_url': model['cohort'].online_meeting_url,
                 'timezone': model['cohort'].timezone,
                 'timeslots': [],
-                'specialty_mode': {
-                    'id': model['cohort'].specialty_mode.id,
-                    'name': model['cohort'].specialty_mode.name,
-                    'syllabus': model['cohort'].specialty_mode.syllabus.id,
+                'schedule': {
+                    'id': model['cohort'].schedule.id,
+                    'name': model['cohort'].schedule.name,
+                    'syllabus': model['cohort'].schedule.syllabus.id,
                 },
                 'syllabus_version': {
                     'name': model.syllabus.name,
@@ -1566,7 +1577,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                  role='potato',
                                  syllabus=True,
                                  syllabus_version=True,
-                                 specialty_mode=True)
+                                 syllabus_schedule=True)
         ]
 
         base = models[0].copy()
@@ -1608,13 +1619,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'ending_date': model['cohort'].ending_date,
                 'stage': model['cohort'].stage,
                 'current_day': model['cohort'].current_day,
+                'current_module': None,
                 'online_meeting_url': model['cohort'].online_meeting_url,
                 'timezone': model['cohort'].timezone,
                 'timeslots': [],
-                'specialty_mode': {
-                    'id': model['cohort'].specialty_mode.id,
-                    'name': model['cohort'].specialty_mode.name,
-                    'syllabus': model['cohort'].specialty_mode.syllabus.id,
+                'schedule': {
+                    'id': model['cohort'].schedule.id,
+                    'name': model['cohort'].schedule.name,
+                    'syllabus': model['cohort'].schedule.syllabus.id,
                 },
                 'syllabus_version': {
                     'name': model.syllabus.name,
@@ -1664,7 +1676,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                  role='potato',
                                  syllabus=True,
                                  syllabus_version=True,
-                                 specialty_mode=True)
+                                 syllabus_schedule=True)
         ]
 
         base = models[0].copy()
@@ -1898,8 +1910,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      role='potato2',
                                      syllabus=True,
                                      syllabus_version=True,
-                                     specialty_mode=True,
-                                     specialty_mode_time_slot=True,
+                                     syllabus_schedule=True,
+                                     syllabus_schedule_time_slot=True,
                                      syllabus_kwargs=syllabus_kwargs,
                                      academy_kwargs=academy_kwargs,
                                      models=base)
@@ -1914,7 +1926,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'name': 'They killed kenny',
             'kickoff_date': self.datetime_to_iso(datetime.today()),
             'never_ends': True,
-            'specialty_mode': 1,
+            'schedule': 1,
         }
 
         response = self.client.post(url, data)
@@ -1956,12 +1968,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             }, 'cohort')
         }])
 
-        self.assertEqual(
-            self.all_cohort_time_slot_dict(),
-            [{
-                **self.fill_cohort_timeslot(1, 2, model.specialty_mode_time_slot),
-                'timezone': 'America/Caracas',
-            }])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [{
+            **self.fill_cohort_timeslot(1, 2, model.syllabus_schedule_time_slot),
+            'timezone':
+            'America/Caracas',
+        }])
 
         base = [
             self.generate_models(authenticate=True, models=old_models[0]),

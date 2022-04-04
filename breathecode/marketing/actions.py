@@ -9,7 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from .serializers import FormEntrySerializer
 from breathecode.notify.actions import send_email_message
 from breathecode.authenticate.models import CredentialsFacebook
-from breathecode.services.activecampaign import AC_Old_Client
+from breathecode.services.activecampaign import AC_Old_Client, ActiveCampaign
 from breathecode.utils.validation_exception import ValidationException
 from breathecode.marketing.models import Tag
 
@@ -53,7 +53,7 @@ def get_lead_tags(ac_academy, form_entry):
     if 'tags' not in form_entry or form_entry['tags'] == '':
         raise Exception('You need to specify tags for this entry')
     else:
-        _tags = form_entry['tags'].split(',')
+        _tags = [t.strip() for t in form_entry['tags'].split(',')]
         if len(_tags) == 0 or _tags[0] == '':
             raise Exception('The contact tags are empty', 400)
 
@@ -63,10 +63,11 @@ def get_lead_tags(ac_academy, form_entry):
     other_tags = Tag.objects.filter(slug__in=_tags, tag_type='OTHER', ac_academy=ac_academy)
 
     tags = list(chain(strong_tags, soft_tags, dicovery_tags, other_tags))
-    if len(tags) == 0:
-        logger.error('Tag applied to the contact not found or has tag_type assigned')
-        logger.error(_tags)
-        raise Exception('Tag applied to the contact not found or has not tag_type assigned')
+    if len(tags) != len(_tags):
+        message = 'Some tag applied to the contact not found or have tag_type different than [STRONG, SOFT, DISCOVER, OTHER]: '
+        message += f'Check for the follow tags:  {",".join(_tags)}'
+        logger.error(message)
+        raise Exception(message)
 
     return tags
 
@@ -461,6 +462,9 @@ def validate_marketing_tags(tags: str, academy_id: int, types: Optional[list] = 
         raise ValidationException(f'Tags string cannot ends with comma', code=400, slug='ends-with-comma')
 
     tags = [x for x in tags.split(',') if x]
+    if len(tags) < 2:
+        raise ValidationException(f'Event must have at least two tags', slug='have-less-two-tags')
+
     _tags = Tag.objects.filter(slug__in=tags, ac_academy__academy__id=academy_id)
     if types:
         _tags = _tags.filter(tag_type__in=types)
@@ -481,3 +485,26 @@ def validate_marketing_tags(tags: str, academy_id: int, types: Optional[list] = 
         f'Following tags not found with types {",".join(types)}: {",".join(not_founds)}',
         code=400,
         slug='tag-not-exist')
+
+
+def delete_tag(tag, include_other_academies=False):
+
+    ac_academy = tag.ac_academy
+    if ac_academy is None:
+        raise ValidationException(f'Invalid ac_academy for this tag {tag.slug}',
+                                  code=400,
+                                  slug='invalid-ac_academy')
+
+    client = ActiveCampaign(ac_academy.ac_key, ac_academy.ac_url)
+    try:
+        if client.delete_tag(tag.id):
+            if include_other_academies:
+                Tag.objects.filter(slug=tag.slug).delete()
+            else:
+                tag.delete()
+
+            return True
+
+    except:
+        logger.exception(f'There was an error deleting tag for {tag.slug}')
+        return False
