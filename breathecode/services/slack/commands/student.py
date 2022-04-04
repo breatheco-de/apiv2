@@ -14,22 +14,25 @@ from breathecode.admissions.models import CohortUser
 from breathecode.authenticate.models import Profile
 from ..decorator import command
 from ..utils import to_string, jump
+from ..exceptions import SlackException
 
 
 @command(capable_of='read_student')
 def execute(users, academies, **context):
 
     if len(users) == 0:
-        raise Exception('No usernames found on the command')
+        raise SlackException('No usernames found on the command', slug='users-not-provided')
 
     cohort_users = CohortUser.objects.filter(user__slackuser__slack_id=users[0],
                                              role='STUDENT',
                                              cohort__academy__id__in=[academies])
+    print(users[0])
     user = cohort_users.first()
     if user is None:
-        raise Exception(
-            f'Student {users[0]} not found on any cohort for your available academies, if you feel you should have access to this information maybe you need to be added to the relevant academy for this student'
-        )
+        raise SlackException(
+            f'Student {users[0]} not found on any cohort for your available academies, if you feel you should have access " \
+                "to this information maybe you need to be added to the relevant academy for this student',
+            slug='cohort-user-not-found')
 
     user = user.user
 

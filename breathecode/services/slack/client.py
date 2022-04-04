@@ -2,6 +2,7 @@ import requests, logging, re, os, json, inspect
 from .decorator import commands, actions
 from breathecode.services.slack.commands import student, cohort
 from breathecode.services.slack.actions import monitoring
+from .exceptions import SlackException
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class Slack:
 
         _commands = re.findall(patterns['command'], content)
         if len(_commands) != 1:
-            raise Exception('Imposible to determine command')
+            raise SlackException('Imposible to determine command', slug='command-does-not-found')
 
         matches = re.findall(patterns['users'], content)
         response['users'] = [u[0] for u in matches]
@@ -69,7 +70,8 @@ class Slack:
         if hasattr(commands, _commands[0]):
             return getattr(commands, _commands[0]).execute(**response)
         else:
-            raise Exception('No implementation has been found for this command')
+            raise SlackException('No implementation has been found for this command',
+                                 slug='command-does-not-exist')
 
     def execute_action(self, context):
 

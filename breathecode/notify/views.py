@@ -61,9 +61,12 @@ def slack_command(request):
 
     try:
         client = Slack()
-        response = client.execute_command(context=request.POST)
+        print(request.data, ':checkered_flag:')
+        response = client.execute_command(context=request.data)
         logger.debug('Slack reponse')
         logger.debug(response)
         return Response(response, status=status.HTTP_200_OK)
     except Exception as e:
+        import traceback
+        print(traceback.format_exc())
         return Response(str(e), status=status.HTTP_200_OK)

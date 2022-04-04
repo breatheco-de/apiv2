@@ -12,6 +12,7 @@ import os
 from breathecode.admissions.models import Cohort, CohortUser
 from ..decorator import command
 from ..utils import to_string
+from ..exceptions import SlackException
 
 
 @command(capable_of='read_cohort')
@@ -27,8 +28,9 @@ def render_cohort(channel_id):
 
     cohort = Cohort.objects.filter(slackchannel__slack_id=channel_id).first()
     if cohort is None:
-        raise Exception(
-            f'Cohort was not found as slack channel, make sure the channel name matches the cohort slug')
+        raise SlackException(
+            f'Cohort was not found as slack channel, make sure the channel name matches the cohort slug',
+            slug='cohort-not-found')
 
     teachers = CohortUser.objects.filter(cohort=cohort, role__in=['TEACHER', 'ASSISTANT'])
     return {
@@ -39,9 +41,9 @@ def render_cohort(channel_id):
             'text':
             f"""
 *Cohort name:* {cohort.name}
-*Start Date*: {cohort.kickoff_date}
-*End Date*: {cohort.ending_date}
-*Current day:*: {cohort.current_day}
+*Start Date:* {cohort.kickoff_date}
+*End Date:* {cohort.ending_date}
+*Current day:* {cohort.current_day}
 *Stage:* {cohort.stage}
 *Teachers:* {', '.join([cu.user.first_name + ' ' + cu.user.last_name for cu in teachers])}
 """

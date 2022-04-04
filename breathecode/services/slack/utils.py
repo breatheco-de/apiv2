@@ -1,8 +1,8 @@
-def to_string(_s):
-    if _s is None:
-        return 'Undefined'
+def to_string(s):
+    if s is None:
+        return 'Not set'
     else:
-        return _s
+        return s.replace('_', ' ')
 
 
 def jump():
