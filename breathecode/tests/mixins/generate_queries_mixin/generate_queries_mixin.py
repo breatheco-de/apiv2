@@ -17,7 +17,7 @@ from .freelance_queries_mixin import FreelanceQueriesMixin
 from .marketing_queries_mixin import MarketingQueriesMixin
 from .monitoring_queries_mixin import MonitoringQueriesMixin
 from .media_queries_mixin import MediaQueriesMixin
-from .carreer_queries_mixin import CarreerQueriesMixin
+from .career_queries_mixin import CareerQueriesMixin
 
 __all__ = ['GenerateQueriesMixin']
 
@@ -26,7 +26,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
                            AssignmentsQueriesMixin, AuthenticateQueriesMixin, CertificateQueriesMixin,
                            EventsQueriesMixin, FeedbackQueriesMixin, FreelanceQueriesMixin,
                            MarketingQueriesMixin, NotifyQueriesMixin, MonitoringQueriesMixin,
-                           MediaQueriesMixin, CarreerQueriesMixin):
+                           MediaQueriesMixin, CareerQueriesMixin):
     __project__ = 'breathecode'
     __generate_queries_was_loaded__ = False
 
@@ -100,7 +100,7 @@ class GenerateQueriesMixin(ModelsMixin, AdmissionsQueriesMixin, AssessmentQuerie
             self.generate_media_queries,
             self.generate_monitoring_queries,
             self.generate_notify_queries,
-            self.generate_carreer_queries,
+            self.generate_career_queries,
         ]
 
         for descriptor in descriptors:
