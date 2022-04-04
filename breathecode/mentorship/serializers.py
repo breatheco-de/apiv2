@@ -185,7 +185,7 @@ class GETMentorBigSerializer(serpy.Serializer):
     updated_at = serpy.Field()
 
     def get_syllabus(self, obj):
-        return map(lambda s: s.slug, obj.syllabus.all())
+        return GetSyllabusSmallSerializer(obj.syllabus.all(), many=True).data
 
 
 class GETSessionReportSerializer(serpy.Serializer):

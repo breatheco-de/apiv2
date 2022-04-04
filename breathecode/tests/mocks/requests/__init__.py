@@ -4,11 +4,11 @@ Mocks for `requests` module
 from unittest.mock import Mock
 from .requests_mock import request_mock
 
-__all__ = [
-    'apply_requests_get_mock', 'apply_requests_post_mock', 'apply_requests_put_mock',
-    'apply_requests_delete_mock', 'apply_requests_request_mock', 'apply_requests_head_mock',
-    'apply_requests_patch_mock'
-]
+# __all__ = [
+#     'apply_requests_get_mock', 'apply_requests_post_mock', 'apply_requests_put_mock',
+#     'apply_requests_delete_mock', 'apply_requests_request_mock', 'apply_requests_head_mock',
+#     'apply_requests_patch_mock'
+# ]
 
 REQUESTS_PATH = {
     'get': 'requests.get',

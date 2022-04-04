@@ -109,7 +109,6 @@ class MentorProfile(models.Model):
 
     syllabus = models.ManyToManyField(to=Syllabus,
                                       blank=True,
-                                      null=True,
                                       default=None,
                                       help_text='What syllabis is this mentor going to be menting to?')
 
@@ -149,10 +148,12 @@ class MentorProfile(models.Model):
 DUE = 'DUE'
 APPROVED = 'APPROVED'
 PAID = 'PAID'
+IGNORED = 'IGNORED'
 BILL_STATUS = (
     (DUE, 'Due'),
     (APPROVED, 'Approved'),
     (PAID, 'Paid'),
+    (IGNORED, 'Ignored'),
 )
 
 

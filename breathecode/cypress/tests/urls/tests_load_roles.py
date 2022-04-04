@@ -3,7 +3,7 @@ import os
 from unittest.mock import MagicMock, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-import breathecode.authenticate.management.commands.create_roles as create_roles
+import breathecode.authenticate.management.commands.create_academy_roles as create_academy_roles
 
 from ..mixins import CypressTestCase
 
@@ -316,7 +316,7 @@ def extend_roles(roles: list):
         'name':
         'Teacher Assistant',
         'caps':
-        create_roles.extend(roles, ['staff']) + [
+        create_academy_roles.extend(roles, ['staff']) + [
             'read_assigment',
             'crud_assignment',
             'read_cohort_activity',
@@ -333,7 +333,8 @@ def extend_roles(roles: list):
         'name':
         'Career Support Specialist',
         'caps':
-        create_roles.extend(roles, ['staff']) + ['read_certificate', 'crud_certificate', 'crud_shortlink']
+        create_academy_roles.extend(roles, ['staff']) +
+        ['read_certificate', 'crud_certificate', 'crud_shortlink']
     })
     roles.append({
         'slug':
@@ -341,18 +342,21 @@ def extend_roles(roles: list):
         'name':
         'Admissions Developer',
         'caps':
-        create_roles.extend(roles, ['staff']) +
+        create_academy_roles.extend(roles, ['staff']) +
         ['crud_lead', 'crud_student', 'crud_cohort', 'read_cohort', 'read_lead', 'read_activity']
     })
     roles.append({
-        'slug': 'syllabus_coordinator',
-        'name': 'Syllabus Coordinator',
-        'caps': create_roles.extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset']
+        'slug':
+        'syllabus_coordinator',
+        'name':
+        'Syllabus Coordinator',
+        'caps':
+        create_academy_roles.extend(roles, ['staff']) + ['crud_syllabus', 'crud_media', 'crud_asset']
     })
     roles.append({
         'slug': 'culture_and_recruitment',
         'name': 'Culture and Recruitment',
-        'caps': create_roles.extend(roles, ['staff']) + ['crud_member']
+        'caps': create_academy_roles.extend(roles, ['staff']) + ['crud_member']
     })
     roles.append({
         'slug':
@@ -360,7 +364,7 @@ def extend_roles(roles: list):
         'name':
         'Manage Syllabus, Exercises and all academy content',
         'caps':
-        create_roles.extend(roles, ['staff']) + [
+        create_academy_roles.extend(roles, ['staff']) + [
             'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
             'read_cohort', 'crud_media'
         ]
@@ -371,7 +375,7 @@ def extend_roles(roles: list):
         'name':
         'Growth Manager',
         'caps':
-        create_roles.extend(roles, ['staff', 'community_manager']) + [
+        create_academy_roles.extend(roles, ['staff', 'community_manager']) + [
             'crud_media', 'read_activity', 'read_lead', 'read_won_lead', 'crud_review', 'crud_shortlink',
             'crud_tag'
         ]
@@ -379,12 +383,12 @@ def extend_roles(roles: list):
     roles.append({
         'slug': 'homework_reviewer',
         'name': 'Homework Reviewer',
-        'caps': create_roles.extend(roles, ['assistant'])
+        'caps': create_academy_roles.extend(roles, ['assistant'])
     })
     roles.append({
         'slug': 'teacher',
         'name': 'Teacher',
-        'caps': create_roles.extend(roles, ['assistant']) + ['crud_cohort']
+        'caps': create_academy_roles.extend(roles, ['assistant']) + ['crud_cohort']
     })
     roles.append({
         'slug':
@@ -392,7 +396,7 @@ def extend_roles(roles: list):
         'name':
         'Mentor in residence',
         'caps':
-        create_roles.extend(roles, ['teacher']) + [
+        create_academy_roles.extend(roles, ['teacher']) + [
             'crud_syllabus', 'crud_cohort', 'crud_student', 'crud_survey', 'read_won_lead', 'crud_member',
             'send_reset_password', 'generate_temporal_token', 'crud_certificate', 'crud_review',
             'crud_mentor', 'read_mentor', 'read_assignment_sensitive_details', 'crud_shortlink'
@@ -404,7 +408,7 @@ def extend_roles(roles: list):
         'name':
         'Country Manager',
         'caps':
-        create_roles.extend(roles, [
+        create_academy_roles.extend(roles, [
             'academy_coordinator', 'student', 'career_support', 'growth_manager', 'admissions_developer',
             'syllabus_coordinator', 'read_organization', 'crud_organization'
         ]) + ['crud_my_academy', 'generate_academy_token', 'send_reset_password', 'generate_temporal_token']
@@ -439,11 +443,11 @@ class AcademyEventTestSuite(CypressTestCase):
         self.assertEqual(self.all_role_dict(), [])
         self.assertEqual(self.all_capability_dict(), [])
 
-    @patch('breathecode.authenticate.management.commands.create_roles.get_capabilities',
+    @patch('breathecode.authenticate.management.commands.create_academy_roles.get_capabilities',
            MagicMock(return_value=CAPABILITIES))
-    @patch('breathecode.authenticate.management.commands.create_roles.get_roles',
+    @patch('breathecode.authenticate.management.commands.create_academy_roles.get_roles',
            MagicMock(return_value=ROLES))
-    @patch('breathecode.authenticate.management.commands.create_roles.extend_roles',
+    @patch('breathecode.authenticate.management.commands.create_academy_roles.extend_roles',
            MagicMock(side_effect=extend_roles))
     def test_load_roles(self):
         self.maxDiff = None
@@ -747,7 +751,7 @@ class AcademyEventTestSuite(CypressTestCase):
         ])
 
     def test_load_roles__check_the_capabilities(self):
-        from ....authenticate.management.commands.create_roles import CAPABILITIES
+        from ....authenticate.management.commands.create_academy_roles import CAPABILITIES
 
         for capability in CAPABILITIES:
             self.assertRegex(capability['slug'], r'^[a-z_]+$')
@@ -755,7 +759,7 @@ class AcademyEventTestSuite(CypressTestCase):
             self.assertEqual(len(capability), 2)
 
     def test_load_roles__check_the_roles(self):
-        from ....authenticate.management.commands.create_roles import ROLES
+        from ....authenticate.management.commands.create_academy_roles import ROLES
 
         for role in ROLES:
             self.assertRegex(role['slug'], r'^[a-z_]+$')

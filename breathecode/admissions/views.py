@@ -2,6 +2,7 @@ from breathecode.admissions.caches import CohortCache
 import logging
 import pytz
 from django.db.models import Q
+from breathecode.utils.decorators import has_permission
 from django.utils import timezone
 from django.contrib.auth.models import AnonymousUser
 from breathecode.utils import HeaderLimitOffsetPagination
@@ -21,6 +22,8 @@ from .serializers import (AcademySerializer, GetSyllabusSerializer, SyllabusSche
                           PublicCohortSerializer, GetSyllabusSmallSerializer)
 from .models import (Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule, Cohort,
                      STUDENT, DELETED, Syllabus, SyllabusVersion)
+
+from .actions import update_asset_on_json
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -1039,7 +1042,8 @@ class SyllabusView(APIView, HeaderLimitOffsetPagination):
             serializer = GetSyllabusSerializer(syllabus, many=False)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-        items = Syllabus.objects.filter(Q(academy_owner__id=academy_id) | Q(private=False))
+        items = Syllabus.objects.filter(Q(academy_owner__id=academy_id)
+                                        | Q(private=False)).exclude(academy_owner__isnull=True)
 
         page = self.paginate_queryset(items, request)
         serializer = GetSyllabusSerializer(page, many=True)
@@ -1096,6 +1100,32 @@ class SyllabusView(APIView, HeaderLimitOffsetPagination):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class SyllabusAssetView(APIView, HeaderLimitOffsetPagination):
+
+    # @has_permission('superadmin')
+    def put(self, request, asset_slug=None):
+
+        if asset_slug is None or asset_slug == '':
+            raise ValidationException('Please specify the asset slug you want to replace',
+                                      slug='invalid-asset-slug')
+        asset = request.data
+        if 'slug' not in asset or asset['slug'] == '':
+            raise ValidationException('Missing or invalid slug', slug='invalid-asset-slug')
+        if 'type' not in asset or asset['type'] == '':
+            raise ValidationException('Missing or invalid asset type', slug='invalid-asset-type')
+
+        simulate = True
+        if 'simulate' in asset and asset['simulate'] == False:
+            simulate = False
+
+        findings = update_asset_on_json(from_slug=asset_slug,
+                                        to_slug=asset['slug'],
+                                        asset_type=asset['type'],
+                                        simulate=simulate)
+
+        return Response(findings, status=status.HTTP_200_OK)
+
+
 class SyllabusVersionView(APIView):
     """
     List all snippets, or create a new snippet.
@@ -1141,10 +1171,13 @@ class SyllabusVersionView(APIView):
         syllabus = None
         if syllabus_id or syllabus_slug:
             syllabus = Syllabus.objects.filter(Q(id=syllabus_id)
-                                               | Q(slug=syllabus_slug, slug__isnull=False)).first()
+                                               | Q(slug=syllabus_slug, slug__isnull=False)).filter(
+                                                   academy_owner__id=academy_id).first()
 
             if not syllabus:
-                raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
+                raise ValidationException(f'Syllabus not found for this academy',
+                                          code=404,
+                                          slug='syllabus-not-found')
 
         if not syllabus and 'syllabus' not in request.data:
             raise ValidationException(f'Missing syllabus in the request', slug='missing-syllabus-in-request')
@@ -1153,7 +1186,9 @@ class SyllabusVersionView(APIView):
             syllabus = Syllabus.objects.filter(id=request.data['syllabus']).first()
 
         if not syllabus:
-            raise ValidationException(f'Syllabus not found', code=404, slug='syllabus-not-found')
+            raise ValidationException(f'Syllabus not found for this academy',
+                                      code=404,
+                                      slug='syllabus-not-found')
 
         academy = Academy.objects.filter(id=academy_id).first()
         if academy is None:

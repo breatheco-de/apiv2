@@ -462,6 +462,9 @@ def validate_marketing_tags(tags: str, academy_id: int, types: Optional[list] = 
         raise ValidationException(f'Tags string cannot ends with comma', code=400, slug='ends-with-comma')
 
     tags = [x for x in tags.split(',') if x]
+    if len(tags) < 2:
+        raise ValidationException(f'Event must have at least two tags', slug='have-less-two-tags')
+
     _tags = Tag.objects.filter(slug__in=tags, ac_academy__academy__id=academy_id)
     if types:
         _tags = _tags.filter(tag_type__in=types)

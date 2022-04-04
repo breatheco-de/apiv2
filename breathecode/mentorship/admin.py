@@ -147,6 +147,7 @@ class SessionAdmin(admin.ModelAdmin):
             'FAILED': 'bg-error',
             'STARTED': 'bg-warning',
             'PENDING': 'bg-secondary',
+            'IGNORED': 'bg-secondary',
         }
 
         return format_html(f"<span class='badge {colors[obj.status]}'>{obj.status}</span>")
@@ -180,7 +181,8 @@ class MentorshipBillAdmin(admin.ModelAdmin):
     list_display = ('id', 'mentor', 'status', 'total_duration_in_hours', 'total_price', 'paid_at',
                     'invoice_url')
     list_filter = ['status']
-    actions = [release_sessions_from_bill] + change_field(['DUE', 'APPROVED', 'PAID'], name='status')
+    actions = [release_sessions_from_bill] + change_field(['DUE', 'APPROVED', 'PAID', 'IGNORED'],
+                                                          name='status')
 
     def invoice_url(self, obj):
         return format_html(

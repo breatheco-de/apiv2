@@ -160,22 +160,26 @@ class EventSerializer(serializers.ModelSerializer):
 
         validate_marketing_tags(data['tags'], academy, types=['DISCOVERY'])
 
-        if 'title' in data and not data.get('slug'):
-            data['slug'] = slugify(data['title']).lower()
+        title = data.get('title')
+        slug = data.get('slug')
 
-        elif 'slug' in data:
-            data['slug'] = f'{data["slug"].lower()}'
+        if slug and self.instance:
+            raise ValidationException(f'The slug field is readonly', slug='try-update-slug')
 
-        return data
+        if title and not slug:
+            slug = slugify(data['title']).lower()
 
-    def validate_slug(self, value):
-        existing_events = Event.objects.filter(slug=value)
-        if ((self.instance and existing_events.exclude(id=self.instance.id).exists())
-                or existing_events.exists()):
-            raise ValidationException(f'Event slug {value} already taken, try a different event slug?',
+        elif slug:
+            slug = f'{data["slug"].lower()}'
+
+        existing_events = Event.objects.filter(slug=slug)
+        if slug and not self.instance and existing_events.exists():
+            raise ValidationException(f'Event slug {slug} already taken, try a different event slug?',
                                       slug='slug-taken')
 
-        return value
+        data['slug'] = slug
+
+        return data
 
     def create(self, validated_data):
         # hard-code the organizer to the academy organizer

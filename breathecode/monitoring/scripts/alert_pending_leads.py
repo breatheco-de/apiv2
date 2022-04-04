@@ -13,6 +13,7 @@ pending_leads = FormEntry.objects.filter(
 
 leads_html = ''
 for l in pending_leads:
+    # beware!! from_now cannot be used inside a map or join function, you have to do a traditional for loop
     leads_html += f'- {l.first_name} {l.last_name} {l.email} added {from_now(l.created_at)} ago. \n'
 
 if len(pending_leads) > 0:
