@@ -143,6 +143,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'invites': [],
             'mentor_profiles': [{
                 'booking_url': model.mentor_profile.booking_url,
+                'online_meeting_url': None,
                 'created_at': self.bc.datetime.to_iso_string(model.mentor_profile.created_at),
                 'email': model.mentor_profile.email,
                 'id': model.mentor_profile.id,
@@ -220,6 +221,7 @@ class AuthenticateTestSuite(AuthTestCase):
             'invites': [],
             'mentor_profiles': [{
                 'booking_url': mentor_profile.booking_url,
+                'online_meeting_url': None,
                 'created_at': self.bc.datetime.to_iso_string(mentor_profile.created_at),
                 'email': mentor_profile.email,
                 'id': mentor_profile.id,
