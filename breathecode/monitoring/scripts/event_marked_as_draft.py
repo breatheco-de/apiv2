@@ -7,7 +7,6 @@ from breathecode.events.models import Event
 from breathecode.utils import ScriptNotification
 from breathecode.utils.datetime_interger import duration_to_str, from_now
 
-ADMIN_URL = os.getenv('ADMIN_URL', '')
 pendings = Event.objects.filter(status='DRAFT', academy__id=academy.id)
 total_pendings = pendings.count()
 
