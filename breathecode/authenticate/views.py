@@ -22,6 +22,9 @@ from rest_framework.schemas.openapi import AutoSchema
 from rest_framework.views import APIView
 from django.utils import timezone
 from datetime import datetime
+
+from breathecode.mentorship.models import MentorProfile
+from breathecode.mentorship.serializers import GETMentorSmallSerializer
 from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
@@ -1158,6 +1161,19 @@ class AcademyInviteView(APIView):
             invite.save()
             serializer = UserInviteSerializer(invite, many=False)
             return Response(serializer.data)
+
+
+class ProfileInviteMeView(APIView):
+    def get(self, request):
+        invites = UserInvite.objects.filter(email=request.user.email)
+        profile_academies = ProfileAcademy.objects.filter(user=request.user, status='INVITED')
+        mentor_profiles = MentorProfile.objects.filter(user=request.user, status='INVITED')
+
+        return Response({
+            'invites': UserInviteSerializer(invites, many=True).data,
+            'profile_academies': GetProfileAcademySerializer(profile_academies, many=True).data,
+            'mentor_profiles': GETMentorSmallSerializer(mentor_profiles, many=True).data,
+        })
 
 
 def render_invite(request, token, member_id=None):

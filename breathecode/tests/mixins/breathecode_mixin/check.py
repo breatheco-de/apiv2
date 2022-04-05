@@ -1,5 +1,8 @@
 from datetime import datetime
+from typing import Any
 from rest_framework.test import APITestCase
+from django.db.models import Model
+from django.db.models.query import QuerySet
 from ..sha256_mixin import Sha256Mixin
 from ..token_mixin import TokenMixin
 
@@ -94,3 +97,61 @@ class Check:
             original[key] = second[key]
 
         return original
+
+    def queryset_of(self, query: Any, model: Model) -> None:
+        """
+        Check if the first argument is a queryset of a models provided as second argument.
+
+        Usage:
+
+        ```py
+        from breathecode.admissions.models import Cohort, Academy
+
+        self.bc.database.create(cohort=1)
+
+        collection = []
+        queryset = Cohort.objects.filter()
+
+        # pass because the first argument is a QuerySet and it's type Cohort
+        self.bc.check.queryset_of(queryset, Cohort)  # 🟢
+
+        # fail because the first argument is a QuerySet and it is not type Academy
+        self.bc.check.queryset_of(queryset, Academy)  # 🔴
+
+        # fail because the first argument is not a QuerySet
+        self.bc.check.queryset_of(collection, Academy)  # 🔴
+        ```
+        """
+
+        if not isinstance(query, QuerySet):
+            self._parent.fail('The first argument is not a QuerySet')
+
+        if query.model != model:
+            self._parent.fail(f'The QuerySet is type {query.model.__name__} instead of {model.__name__}')
+
+    def queryset_with_pks(self, query: Any, pks: list[int]) -> None:
+        """
+        Check if the queryset have the following primary keys.
+
+        Usage:
+
+        ```py
+        from breathecode.admissions.models import Cohort, Academy
+
+        self.bc.database.create(cohort=1)
+
+        collection = []
+        queryset = Cohort.objects.filter()
+
+        # pass because the QuerySet has the primary keys 1
+        self.bc.check.queryset_with_pks(queryset, [1])  # 🟢
+
+        # fail because the QuerySet has the primary keys 1 but the second argument is empty
+        self.bc.check.queryset_with_pks(queryset, [])  # 🔴
+        ```
+        """
+
+        if not isinstance(query, QuerySet):
+            self._parent.fail('The first argument is not a QuerySet')
+
+        self._parent.assertEqual([x.pk for x in query], pks)

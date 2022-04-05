@@ -37,6 +37,6 @@ def post_mentorin_session_ended(sender, instance, **kwargs):
         if instance.started_at is not None and instance.ended_at is not None:
             duration = instance.ended_at - instance.started_at
 
-        if duration > timedelta(minutes=5):
+        if duration > timedelta(minutes=5) and instance.mentor and instance.mentee:
             logger.debug(f'Session lasted for {str(duration.seconds/60)} minutes, sending survey')
             send_mentorship_session_survey.delay(instance.id)
