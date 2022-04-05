@@ -97,12 +97,25 @@ def handle_test_asset(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def render_readme(request, asset_slug):
+def render_readme(request, asset_slug, extension='raw'):
     asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:
         raise ValidationException('Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
-    return Response(asset.readme)
+    readme = asset.get_readme(parse=True)
+
+    response = HttpResponse('Invalid extension format', content_type='text/html')
+    if extension == 'html':
+        response = HttpResponse(readme['html'], content_type='text/html')
+        response['Content-Length'] = len(readme['html'])
+    elif extension in ['md', 'mdx', 'txt']:
+        response = HttpResponse(readme['decoded'], content_type='text/markdown')
+        response['Content-Length'] = len(readme['decoded'])
+    elif extension == 'ipynb':
+        response = HttpResponse(readme['decoded'], content_type='application/json')
+        response['Content-Length'] = len(readme['decoded'])
+
+    return response
 
 
 @api_view(['GET'])
