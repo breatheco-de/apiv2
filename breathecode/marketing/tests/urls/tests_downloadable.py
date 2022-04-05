@@ -49,7 +49,7 @@ class DownloadableTestSuite(MarketingTestCase):
     def test_downloadable_with_multiple_data(self):
         """Test /downloadable to check if it returns data after creating model"""
         url = reverse_lazy('marketing:downloadable')
-        model = self.generate_models(downloadable=True)
+        model = self.generate_models(downloadable=2)
         response = self.client.get(url)
         json = response.json()
         expected = []
