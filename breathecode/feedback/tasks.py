@@ -1,11 +1,14 @@
-import logging, os
+from datetime import timedelta
+import os
 from breathecode.authenticate.models import Token
 from breathecode.utils import ValidationException
 from django.db.models import Avg
 from celery import shared_task, Task
 from django.utils import timezone
 from breathecode.notify.actions import send_email_message, send_slack
+import breathecode.notify.actions as actions
 from .utils import strings
+from breathecode.utils import getLogger
 from breathecode.admissions.models import CohortUser, Cohort
 from django.contrib.auth.models import User
 from .models import Survey, Answer, Review, ReviewPlatform
@@ -13,11 +16,12 @@ from breathecode.mentorship.models import MentorshipSession
 from django.utils import timezone
 
 # Get an instance of a logger
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 ADMIN_URL = os.getenv('ADMIN_URL', '')
 SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', '')
 API_URL = os.getenv('API_URL', '')
+ENV = os.getenv('ENV', '')
 
 
 class BaseTaskWithRetry(Task):
@@ -219,7 +223,21 @@ def send_mentorship_session_survey(self, session_id):
     logger.debug('Starting send_mentorship_session_survey')
     session = MentorshipSession.objects.filter(id=session_id).first()
     if session is None:
-        logger.error('Mentoring session not found')
+        logger.error('Mentoring session not found', slug='without-mentorship-session')
+        return False
+
+    if session.mentee is None:
+        logger.error('The current session not have a mentee', slug='mentorship-session-without-mentee')
+        return False
+
+    if not session.started_at or not session.ended_at:
+        logger.error('Mentorship session not finished',
+                     slug='mentorship-session-without-started-at-or-ended-at')
+        return False
+
+    if session.ended_at - session.started_at <= timedelta(minutes=5):
+        logger.error('Mentorship session duration less or equal than five minutes',
+                     slug='mentorship-session-duration-less-or-equal-than-five-minutes')
         return False
 
     answer = Answer.objects.filter(mentorship_session__id=session.id).first()
@@ -235,24 +253,29 @@ def send_mentorship_session_survey(self, session_id):
         answer.status = 'SENT'
         answer.save()
     elif answer.status == 'ANSWERED':
+        logger.debug(f'This survey about MentorshipSession {session.id} was answered',
+                     slug='answer-with-status-answered')
         return False
 
     has_slackuser = hasattr(session.mentee, 'slackuser')
     if not session.mentee.email:
-        message = f'Author not have email, this survey cannot be send by {str(session.mentee.id)}'
-        logger.info(message)
-        raise Exception(message)
+        message = f'Author not have email, this survey cannot be send by {session.mentee.id}'
+        logger.debug(message, slug='mentee-without-email')
+        return False
 
     token, created = Token.get_or_create(session.mentee, token_type='temporal', hours_length=48)
+
+    # lazyload api url in test environment
+    api_url = API_URL if ENV != 'test' else os.getenv('API_URL', '')
     data = {
         'SUBJECT': strings[answer.lang]['survey_subject'],
         'MESSAGE': answer.title,
-        'TRACKER_URL': f'{API_URL}/v1/feedback/answer/{answer.id}/tracker.png',
+        'TRACKER_URL': f'{api_url}/v1/feedback/answer/{answer.id}/tracker.png',
         'BUTTON': strings[answer.lang]['button_label'],
         'LINK': f'https://nps.breatheco.de/{answer.id}?token={token.key}',
     }
 
     if session.mentee.email:
-        if send_email_message('nps_survey', session.mentee.email, data):
+        if actions.send_email_message('nps_survey', session.mentee.email, data):
             answer.sent_at = timezone.now()
             answer.save()

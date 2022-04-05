@@ -311,7 +311,7 @@ class MentorshipSession(models.Model):
 
     def save(self, *args, **kwargs):
 
+        super().save(*args, **kwargs)  # Call the "real" save() method.
+
         if self.__old_status != self.status:
             signals.mentorship_session_status.send(instance=self, sender=MentorshipSession)
-
-        super().save(*args, **kwargs)  # Call the "real" save() method.

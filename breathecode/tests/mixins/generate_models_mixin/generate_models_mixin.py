@@ -92,12 +92,11 @@ class GenerateModelsMixin(AuthMixin, AssignmentsModelsMixin, AdmissionsModelsMix
             # self.generate_assessment_models,
             self.generate_authenticate_models,
             self.generate_freelance_models,
+            self.generate_mentorship_models,
             self.generate_feedback_models,
             self.generate_notify_models,
-            self.generate_mentorship_models,
             self.generate_monitoring_models,
             self.generate_certificate_models,
-            self.generate_mentorship_models,
         )
 
         return fn(models=models, **kwargs)
