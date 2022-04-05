@@ -105,6 +105,8 @@ def generate_spanish_translation(modeladmin, request, queryset):
             new_asset = old
             new_asset.pk = None
             new_asset.lang = 'es'
+            new_asset.sync_status = 'PENDING'
+            new_asset.status_text = 'Translation generated, waiting for sync'
             new_asset.slug = old.slug + '-es'
             new_asset.save()
 
