@@ -1,4 +1,4 @@
-import base64, frontmatter, markdown
+import base64, frontmatter, markdown, pathlib
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AnonymousUser
@@ -88,6 +88,7 @@ class Asset(models.Model):
     intro_video_url = models.URLField(null=True, blank=True, default=None)
     solution_video_url = models.URLField(null=True, blank=True, default=None)
     readme = models.TextField(null=True, blank=True, default=None)
+    html = models.TextField(null=True, blank=True, default=None)
 
     config = models.JSONField(null=True, blank=True, default=None)
 
@@ -175,7 +176,7 @@ class Asset(models.Model):
         else:
             super().save(*args, **kwargs)
 
-    def get_readme(self, parse=False, raw=False):
+    def get_readme(self, parse=None, raw=False):
         if self.readme is None:
             AssetErrorLog(slug=AssetErrorLog.EMPTY_README,
                           path=self.slug,
@@ -196,10 +197,33 @@ class Asset(models.Model):
             'raw': self.readme,
             'decoded': base64.b64decode(self.readme.encode('utf-8')).decode('utf-8')
         }
-        if parse:
+        if parse is not None:
+            extension = pathlib.Path(self.readme_url).suffix
+            if extension in ['.md', '.mdx', '.txt']:
+                readme = self.parse(readme, type='markdown')
+            elif extension in ['.ipynb']:
+                readme = self.parse(readme, type='notebook')
+            else:
+                raise Exception('Uknown readme file extension ' + extension + ' for ' + self.asset_type +
+                                ': ' + self.slug)
+        return readme
+
+    def parse(self, readme, type='markdown'):
+        if type == 'markdown':
             _data = frontmatter.loads(readme['decoded'])
             readme['frontmatter'] = _data.metadata
             readme['html'] = markdown.markdown(_data.content, extensions=['markdown.extensions.fenced_code'])
+        if type == 'notebook':
+            import nbformat
+            from nbconvert import HTMLExporter
+            notebook = nbformat.reads(readme['decoded'], as_version=4)
+            # Instantiate the exporter. We use the `classic` template for now; we'll get into more details
+            # later about how to customize the exporter further.
+            html_exporter = HTMLExporter(template_name='classic')
+            # Process the notebook we loaded earlier
+            body, resources = html_exporter.from_notebook_node(notebook)
+            readme['frontmatter'] = resources
+            readme['html'] = body
         return readme
 
     def set_readme(self, content):
