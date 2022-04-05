@@ -144,6 +144,58 @@ def weeks_to_days(json):
     return json
 
 
+def find_asset_on_json(asset_slug, asset_type=None):
+
+    logger.debug(f'Searching slug {asset_slug} in all the syllabus and versions')
+    syllabus_list = SyllabusVersion.objects.all()
+    key_map = {
+        'QUIZ': 'quizzes',
+        'LESSON': 'lessons',
+        'EXERCISE': 'replits',
+        'PROJECT': 'assignments',
+    }
+
+    findings = []
+    for s in syllabus_list:
+        logger.debug(f'Starting with syllabus {s.syllabus.slug} version {str(s.version)}')
+        moduleIndex = -1
+        if isinstance(s.json, str):
+            s.json = json.loads(s.json)
+
+        # in case the json contains "weeks" instead of "days"
+        s.json = weeks_to_days(s.json)
+
+        for day in s.json['days']:
+            moduleIndex += 1
+            assetIndex = -1
+
+            for atype in key_map:
+                if key_map[atype] not in day or (asset_type is not None and atype != asset_type.upper()):
+                    continue
+
+                for a in day[key_map[atype]]:
+                    assetIndex += 1
+
+                    if isinstance(a, dict):
+                        if a['slug'] == asset_slug:
+                            findings.append({
+                                'module': moduleIndex,
+                                'version': s.version,
+                                'type': atype,
+                                'syllabus': s.syllabus.slug
+                            })
+                    else:
+                        if a == asset_slug:
+                            findings.append({
+                                'module': moduleIndex,
+                                'version': s.version,
+                                'type': atype,
+                                'syllabus': s.syllabus.slug
+                            })
+
+    return findings
+
+
 def update_asset_on_json(from_slug, to_slug, asset_type, simulate=True):
 
     asset_type = asset_type.upper()

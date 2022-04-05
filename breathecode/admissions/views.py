@@ -23,7 +23,7 @@ from .serializers import (AcademySerializer, GetSyllabusSerializer, SyllabusSche
 from .models import (Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule, Cohort,
                      STUDENT, DELETED, Syllabus, SyllabusVersion)
 
-from .actions import update_asset_on_json
+from .actions import update_asset_on_json, find_asset_on_json
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -1102,7 +1102,18 @@ class SyllabusView(APIView, HeaderLimitOffsetPagination):
 
 class SyllabusAssetView(APIView, HeaderLimitOffsetPagination):
 
-    # @has_permission('superadmin')
+    # TODO: @has_permission('superadmin')
+    def get(self, request, asset_slug=None):
+
+        if asset_slug is None or asset_slug == '':
+            raise ValidationException('Please specify the asset slug you want to search',
+                                      slug='invalid-asset-slug')
+
+        findings = find_asset_on_json(asset_slug=asset_slug, asset_type=request.GET.get('asset_type', None))
+
+        return Response(findings, status=status.HTTP_200_OK)
+
+    # TODO: @has_permission('superadmin')
     def put(self, request, asset_slug=None):
 
         if asset_slug is None or asset_slug == '':
