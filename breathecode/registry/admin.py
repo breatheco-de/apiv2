@@ -56,8 +56,8 @@ def pull_from_github(modeladmin, request, queryset):
     queryset.update(sync_status='PENDING', status_text='Starting to sync...')
     assets = queryset.all()
     for a in assets:
-        # async_sync_with_github.delay(a.slug, request.user.id)
-        sync_with_github(a.slug)  # uncomment for testing purposes
+        async_sync_with_github.delay(a.slug, request.user.id)
+        # sync_with_github(a.slug)  # uncomment for testing purposes
 
 
 def make_me_author(modeladmin, request, queryset):
@@ -105,6 +105,8 @@ def generate_spanish_translation(modeladmin, request, queryset):
             new_asset = old
             new_asset.pk = None
             new_asset.lang = 'es'
+            new_asset.sync_status = 'PENDING'
+            new_asset.status_text = 'Translation generated, waiting for sync'
             new_asset.slug = old.slug + '-es'
             new_asset.save()
 

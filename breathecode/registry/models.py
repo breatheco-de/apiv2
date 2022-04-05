@@ -81,10 +81,13 @@ class Asset(models.Model):
     solution_url = models.URLField(null=True, blank=True, default=None)
     preview = models.URLField(null=True, blank=True, default=None)
     description = models.TextField(null=True, blank=True, default=None)
-    readme_url = models.URLField(null=True,
-                                 blank=True,
-                                 default=None,
-                                 help_text='This will be used to synch from github')
+    readme_url = models.URLField(
+        null=True,
+        blank=True,
+        default=None,
+        help_text=
+        'This will be used to synch only lessons from github. Projects, quizzes and exercises it will try README.md for english and README.lang.md for other langs'
+    )
     intro_video_url = models.URLField(null=True, blank=True, default=None)
     solution_video_url = models.URLField(null=True, blank=True, default=None)
     readme = models.TextField(null=True, blank=True, default=None)
