@@ -247,8 +247,13 @@ def get_url_info(url: str):
 
 def sync_github_lesson(github, asset):
 
+    logger.debug(f'Sync sync_github_lesson {asset.slug}')
+
     org_name, repo_name = get_url_info(asset.url)
     repo = github.get_repo(f'{org_name}/{repo_name}')
+
+    if asset.readme_url is None:
+        raise Exception('Missing Readme URL for lesson ' + asset.slug + '.')
 
     file_name = os.path.basename(asset.readme_url)
 
@@ -257,11 +262,13 @@ def sync_github_lesson(github, asset):
         raise Exception('Invalid Github URL for asset ' + asset.slug + '.')
 
     branch, file_path = result.groups()
-    logger.debug(f'Fetching markdown readme: {file_path}')
+    logger.debug(f'Fetching readme: {file_path}')
     asset.readme = repo.get_contents(file_path).content
+    readme = asset.get_readme(parse=True)
+    asset.html = readme['html']
 
-    if org_name == 'breatheco-de' and repo_name == 'content':
-        readme = asset.get_readme(parse=True)
+    # PATCH: Only for lessons coming from the old breathecode repository
+    if readme is not None and org_name == 'breatheco-de' and repo_name == 'content':
         logger.debug(f'Markdown is coming from breathecode/content, replacing images')
         base_url = os.path.dirname(asset.readme_url)
         replaced = re.sub(r'(["\'(])\.\.\/\.\.\/assets\/images\/([_\w\-\.]+)(["\')])',
