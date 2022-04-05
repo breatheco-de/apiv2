@@ -222,8 +222,6 @@ def process_answer_received(self, answer_id):
     if answer.user and answer.academy and answer.score is not None and answer.score < 8:
         system_email = get_system_email()
         admin_url = get_admin_url()
-        print(system_email)
-        print(admin_url)
         list_of_emails = []
 
         if system_email is not None:

@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def answer_received(sender, instance, **kwargs):
     """
     Update survey avg score when new answers are received
-    also notivy bad nps score.
+    also notify bad nps score.
     """
     logger.debug('Answer received, calling task process_answer_received')
     process_answer_received.delay(instance.id)
