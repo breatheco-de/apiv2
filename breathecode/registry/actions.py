@@ -13,7 +13,7 @@ from breathecode.authenticate.models import CredentialsGithub
 from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
 from .serializers import AssetBigSerializer
 from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator
-from github import Github
+from github import Github, GithubException
 
 logger = logging.getLogger(__name__)
 
@@ -237,18 +237,36 @@ def sync_with_github(asset_slug, author_id=None):
 
 
 def get_url_info(url: str):
-    parts = urlparse(url).path[1:].split('/')
-    org_name = parts[0]
-    repo_name = parts[1]
 
-    return org_name, repo_name
+    result = re.search(r'blob\/([\w\-]+)', url)
+    branch_name = result.group(1)
+
+    result = re.search(r'^https?:\/\/github.com\/(\w+)\/([\w\-]+)\/', url)
+    org_name = result.group(1)
+    repo_name = result.group(2)
+
+    return org_name, repo_name, branch_name
+
+
+def get_blob_content(repo, path_name, branch='main'):
+    # first get the branch reference
+    ref = repo.get_git_ref(f'heads/{branch}')
+    # then get the tree
+    tree = repo.get_git_tree(ref.object.sha, recursive='/' in path_name).tree
+    # look for path in tree
+    sha = [x.sha for x in tree if x.path == path_name]
+    if not sha:
+        # well, not found..
+        return None
+    # we have sha
+    return repo.get_git_blob(sha[0])
 
 
 def sync_github_lesson(github, asset):
 
     logger.debug(f'Sync sync_github_lesson {asset.slug}')
 
-    org_name, repo_name = get_url_info(asset.url)
+    org_name, repo_name, branch_name = get_url_info(asset.url)
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
     if asset.readme_url is None:
@@ -262,7 +280,12 @@ def sync_github_lesson(github, asset):
 
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
-    asset.readme = repo.get_contents(file_path).content
+
+    try:
+        asset.readme = repo.get_contents(file_path).content
+    except GithubException as e:
+        asset.readme = get_blob_content(repo, file_path, branch=branch_name).content
+
     readme = asset.get_readme(parse=True)
     asset.html = readme['html']
 
@@ -312,7 +335,7 @@ def clean_asset_readme(asset):
 
 def sync_learnpack_asset(github, asset):
 
-    org_name, repo_name = get_url_info(asset.url)
+    org_name, repo_name, branch_name = get_url_info(asset.url)
     repo = github.get_repo(f'{org_name}/{repo_name}')
 
     lang = asset.lang
