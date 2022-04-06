@@ -223,7 +223,6 @@ def sync_with_github(asset_slug, author_id=None):
         asset.save()
         logger.debug(f'Successfully re-synched asset {asset_slug} with github')
     except Exception as e:
-        raise e
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
