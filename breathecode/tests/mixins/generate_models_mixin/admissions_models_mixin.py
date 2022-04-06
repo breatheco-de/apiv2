@@ -30,6 +30,7 @@ class AdmissionsModelsMixin(ModelsMixin):
         return cohort.stage
 
     def generate_admissions_models(self,
+                                   mentorship_service=False,
                                    academy=False,
                                    cohort=False,
                                    profile_academy=False,
@@ -43,6 +44,7 @@ class AdmissionsModelsMixin(ModelsMixin):
                                    syllabus_version=False,
                                    syllabus_schedule_time_slot=False,
                                    monitor_script=False,
+                                   mentor_profile=False,
                                    country_kwargs={},
                                    city_kwargs={},
                                    cohort_time_slot_kwargs={},
@@ -71,7 +73,8 @@ class AdmissionsModelsMixin(ModelsMixin):
             models['city'] = create_models(city, 'admissions.City', **{**kargs, **city_kwargs})
 
         if not 'academy' in models and (is_valid(academy) or is_valid(profile_academy) or is_valid(syllabus)
-                                        or is_valid(cohort) or is_valid(monitor_script)):
+                                        or is_valid(cohort) or is_valid(monitor_script)
+                                        or is_valid(mentorship_service) or is_valid(mentor_profile)):
             kargs = {}
 
             if 'country' in models:

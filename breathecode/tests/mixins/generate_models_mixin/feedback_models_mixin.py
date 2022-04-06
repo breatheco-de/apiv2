@@ -60,6 +60,9 @@ class FeedbackModelsMixin(ModelsMixin):
             if 'user' in models:
                 kargs['user'] = just_one(models['user'])
 
+            if 'mentorship_session' in models:
+                kargs['mentorship_session'] = just_one(models['mentorship_session'])
+
             if answer_status:
                 kargs['status'] = answer_status
 
