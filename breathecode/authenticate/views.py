@@ -55,7 +55,7 @@ from .serializers import (GetProfileAcademySmallSerializer, UserInviteWaitingLis
                           RoleBigSerializer, ProfileAcademySmallSerializer, UserTinySerializer)
 
 logger = logging.getLogger(__name__)
-STUDENT_URL = os.getenv('STUDENT_URL', '')
+APP_URL = os.getenv('APP_URL', '')
 
 
 class TemporalTokenView(ObtainAuthToken):
@@ -1282,9 +1282,9 @@ def render_academy_invite(request, token):
         return render_message(request,
                               f'You don\'t have any more pending invites',
                               btn_label='Continue to 4Geeks',
-                              btn_url=STUDENT_URL)
+                              btn_url=APP_URL)
 
-    querystr = urllib.parse.urlencode({'callback': STUDENT_URL, 'token': token.key})
+    querystr = urllib.parse.urlencode({'callback': APP_URL, 'token': token.key})
     url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
     return render(
         request, 'academy_invite.html', {

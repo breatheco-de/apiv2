@@ -23,28 +23,36 @@ from django.http import HttpResponseRedirect
 logger = logging.getLogger(__name__)
 
 SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', None)
+APP_URL = os.getenv('APP_URL', '')
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def forward_asset_url(request, asset_slug=None):
+
     asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:
         return render_message(request, f'Asset with slug {asset_slug} not found')
 
     validator = URLValidator()
     try:
+
+        if not asset.external and asset.asset_type == 'LESSON':
+            return HttpResponseRedirect(redirect_to='https://content.breatheco.de/en/lesson/' + asset.slug +
+                                        '?plain=true')
+
         validator(asset.url)
         if asset.gitpod:
             return HttpResponseRedirect(redirect_to='https://gitpod.io#' + asset.url)
         else:
             return HttpResponseRedirect(redirect_to=asset.url)
     except Exception as e:
+        logger.error(e)
         msg = f'The url for the {asset.asset_type.lower()} your are trying to open ({asset_slug}) was not found, this error has been reported and will be fixed soon.'
         AssetErrorLog(slug=AssetErrorLog.INVALID_URL,
                       path=asset_slug,
                       asset=asset,
-                      asset_type=asset_type,
+                      asset_type=asset.asset_type,
                       status_text=msg).save()
         return render_message(request, msg)
 

@@ -2,6 +2,6 @@
 {% block content %}
 Hi {{ FIRST_NAME }}, one or more academies have invited you to become a part of their campus. Please login to accept or reject:
 
-{{ STUDENT_URL }}}
+{{ APP_URL }}}
 
 {% endblock %}
