@@ -144,10 +144,13 @@ class TaskMeView(APIView):
 
         cohort = request.GET.get('cohort', None)
         if cohort is not None:
-            cohorts = cohort.split(',')
-            ids = [x for x in cohorts if x.isnumeric()]
-            slugs = [x for x in cohorts if not x.isnumeric()]
-            items = items.filter(Q(cohort__slug__in=slugs) | Q(cohort__id__in=ids))
+            if cohort == 'null':
+                items = items.filter(cohort__isnull=True)
+            else:
+                cohorts = cohort.split(',')
+                ids = [x for x in cohorts if x.isnumeric()]
+                slugs = [x for x in cohorts if not x.isnumeric()]
+                items = items.filter(Q(cohort__slug__in=slugs) | Q(cohort__id__in=ids))
 
         serializer = TaskGETSerializer(items, many=True)
         return Response(serializer.data)
