@@ -75,31 +75,6 @@ class PostTaskSerializer(serializers.ModelSerializer):
         return Task.objects.create(**validated_data)
 
 
-# class PostBulkTaskSerializer(serializers.ListSerializer):
-
-#     def validate(self, data):
-#         _data = data
-#         user = User.objects.filter(id=self.context["user_id"]).first()
-#         if user is None:
-#             raise ValidationException("User does not exists")
-#         logger.debug("User found")
-
-#         for task in _data:
-#             PostTaskSerializer.validate({ **task, "user": user })
-#         return _data
-
-#     def create(self, validated_data):
-
-#         user = User.objects.filter(id=self.context["user_id"]).first()
-
-#         _tasks = []
-#         logger.debug("multiple", validated_data)
-#         for task in validated_data:
-#             p = { **task, "user_id": user.id }
-#             _tasks.append(Task.objects.create(**p))
-#         return _tasks
-
-
 class PUTTaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task

@@ -128,8 +128,28 @@ class TaskMeView(APIView):
             serializer = TaskGETSerializer(item, many=False)
             return Response(serializer.data)
 
-        tasks = Task.objects.filter(user__id=user_id)
-        serializer = TaskGETSerializer(tasks, many=True)
+        items = Task.objects.filter(user__id=user_id)
+
+        task_type = request.GET.get('task_type', None)
+        if task_type is not None:
+            items = items.filter(task_type__in=task_type.split(','))
+
+        task_status = request.GET.get('task_status', None)
+        if task_status is not None:
+            items = items.filter(task_status__in=task_status.split(','))
+
+        revision_status = request.GET.get('revision_status', None)
+        if revision_status is not None:
+            items = items.filter(revision_status__in=revision_status.split(','))
+
+        cohort = request.GET.get('cohort', None)
+        if cohort is not None:
+            cohorts = cohort.split(',')
+            ids = [x for x in cohorts if x.isnumeric()]
+            slugs = [x for x in cohorts if not x.isnumeric()]
+            items = items.filter(Q(cohort__slug__in=slugs) | Q(cohort__id__in=ids))
+
+        serializer = TaskGETSerializer(items, many=True)
         return Response(serializer.data)
 
     def put(self, request, task_id):
