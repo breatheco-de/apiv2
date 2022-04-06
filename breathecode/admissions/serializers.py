@@ -8,7 +8,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
 from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser,
-                     Syllabus, SyllabusVersion)
+                     Syllabus, SyllabusVersion, COHORT_STAGE)
 
 logger = logging.getLogger(__name__)
 
@@ -463,6 +463,12 @@ class CohortSerializerMixin(serializers.ModelSerializer):
     syllabus_version = serializers.CharField(required=False)
 
     def validate(self, data):
+
+        if 'stage' in data:
+            possible_stages = [stage_slug for stage_slug, stage_label in COHORT_STAGE]
+            if data['stage'] not in possible_stages:
+                raise ValidationException(f'Invalid cohort stage {stage}', slug='invalid-cohort-stage')
+
         if 'syllabus' in data:
             strings = data['syllabus'].split('.v')
 
@@ -508,6 +514,16 @@ class CohortSerializerMixin(serializers.ModelSerializer):
         if not never_ends and not ending_date:
             raise ValidationException('A cohort most have ending date or it should be marked as ever_ends',
                                       slug='cohort-without-ending-date-and-never-ends')
+
+        if ('online_meeting_url' not in data or data['online_meeting_url'] is None
+                or data['online_meeting_url'] == '') and self.instance is not None:
+            is_remote = (data['remote_available']
+                         if 'remote_available' in data else self.instance.remote_available)
+            stage = (data['stage'] if 'stage' in data else self.instance.stage)
+            if is_remote and stage in ['STARTED', 'FINAL_PROJECT']:
+                raise ValidationException(
+                    'This cohort has a remote option but no online meeting URL has been specified',
+                    slug='remove-without-online-meeting')
 
         return data
 
