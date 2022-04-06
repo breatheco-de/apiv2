@@ -1,4 +1,5 @@
 import requests, logging, os
+from pathlib import Path
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', None)
 APP_URL = os.getenv('APP_URL', '')
+ENV = os.getenv('ENV', 'development')
 
 
 @api_view(['GET'])
@@ -38,8 +40,12 @@ def forward_asset_url(request, asset_slug=None):
     try:
 
         if not asset.external and asset.asset_type == 'LESSON':
-            return HttpResponseRedirect(redirect_to='https://content.breatheco.de/en/lesson/' + asset.slug +
-                                        '?plain=true')
+            slug = Path(asset.readme_url).stem
+            url = 'https://content.breatheco.de/en/lesson/' + slug + '?plain=true'
+            if ENV == 'development':
+                return render_message(request, 'Redirect to: ' + url)
+            else:
+                return HttpResponseRedirect(redirect_to=url)
 
         validator(asset.url)
         if asset.gitpod:
