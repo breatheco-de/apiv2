@@ -83,6 +83,14 @@ def make_me_owner(modeladmin, request, queryset):
         a.save()
 
 
+def remove_dot_from_slug(modeladmin, request, queryset):
+    assets = queryset.all()
+    for a in assets:
+        if '.' in a.slug:
+            a.slug = a.slug.replace('.', '-')
+            a.save()
+
+
 def generate_spanish_translation(modeladmin, request, queryset):
     assets = queryset.all()
     for old in assets:
@@ -203,6 +211,7 @@ class AssetAdmin(admin.ModelAdmin):
         create_assessment_from_asset,
         get_author_grom_github_usernames,
         generate_spanish_translation,
+        remove_dot_from_slug,
     ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status') + change_field(['us', 'es'], name='lang')
 
     def url_path(self, obj):

@@ -672,7 +672,7 @@ def save_github_token(request):
 
             # create the user if not exists
             if user is None:
-                user = User(username=github_user['email'], email=github_user['email'])
+                user = User(username=github_user['email'].lower(), email=github_user['email'].lower())
                 user.save()
 
             github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
@@ -683,7 +683,7 @@ def save_github_token(request):
 
             github_credentials.token = github_token
             github_credentials.username = github_user['login']
-            github_credentials.email = github_user['email']
+            github_credentials.email = github_user['email'].lower()
             github_credentials.avatar_url = github_user['avatar_url']
             github_credentials.name = github_user['name']
             github_credentials.blog = github_user['blog']
