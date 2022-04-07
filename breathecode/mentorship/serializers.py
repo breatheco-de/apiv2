@@ -1,6 +1,7 @@
-import serpy, re, math
+import serpy, re, math, requests
 from breathecode.utils import ValidationException
 from .models import MentorshipSession, MentorshipService, MentorProfile, MentorshipBill
+from .actions import mentor_is_ready
 from breathecode.admissions.models import Academy
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -396,6 +397,12 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
 
         if 'academy' in data:
             raise ValidationException('Mentor academy cannot be updated', slug='academy-read-only')
+
+        if 'status' in data and data['status'] == 'ACTIVE' and self.instance.status != 'ACTIVE':
+            try:
+                mentor_is_ready(self.instance)
+            except Exception as e:
+                raise ValidationException(str(e))
 
         return data
 
