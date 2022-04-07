@@ -3,7 +3,7 @@ Test /answer/:id
 """
 import re
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, call
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from breathecode.services.datetime_to_iso_format import datetime_to_iso_format
@@ -14,6 +14,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_blob_mock,
 )
 from ..mixins import FeedbackTestCase
+from ...signals import survey_answered
 
 
 class AnswerIdTestSuite(FeedbackTestCase):
@@ -23,7 +24,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_answer_id_without_auth(self):
         """Test /answer/:id without auth"""
-        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': 9999})
+        url = reverse_lazy('feedback:user_me_answer_id', kwargs={'answer_id': 9999})
         response = self.client.get(url)
         json = response.json()
         expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
@@ -38,7 +39,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
     def test_answer_id_without_data(self):
         """Test /answer/:id without auth"""
         self.generate_models(authenticate=True)
-        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': 9999})
+        url = reverse_lazy('feedback:user_me_answer_id', kwargs={'answer_id': 9999})
         response = self.client.get(url)
         json = response.json()
         expected = {
@@ -58,7 +59,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
         self.generate_models(authenticate=True)
         model = self.generate_models(answer=True)
         db = self.model_to_dict(model, 'answer')
-        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:user_me_answer_id', kwargs={'answer_id': model['answer'].id})
         response = self.client.get(url)
         json = response.json()
         expected = {'detail': 'answer-of-other-user-or-not-exists', 'status_code': 404}
@@ -76,7 +77,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
         model = self.generate_models(authenticate=True, answer=True, user=True, answer_kwargs=answer_kwargs)
 
         db = self.model_to_dict(model, 'answer')
-        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:user_me_answer_id', kwargs={'answer_id': model['answer'].id})
         response = self.client.get(url)
         json = response.json()
         expected = {
@@ -115,10 +116,11 @@ class AnswerIdTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     def test_answer_id_put_with_bad_id(self):
         """Test /answer/:id without auth"""
         self.generate_models(authenticate=True)
-        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': 9999})
+        url = reverse_lazy('feedback:user_me_answer_id', kwargs={'answer_id': 9999})
         response = self.client.put(url, {})
         json = response.json()
         expected = {
@@ -128,10 +130,12 @@ class AnswerIdTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(survey_answered.send.call_args_list, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     def test_answer_id_put_without_score(self):
         """Test /answer/:id without auth"""
         answer_kwargs = {'status': 'SENT'}
@@ -140,23 +144,25 @@ class AnswerIdTestSuite(FeedbackTestCase):
         data = {
             'comment': 'They killed kenny',
         }
-        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:user_me_answer_id', kwargs={'answer_id': model['answer'].id})
         response = self.client.put(url, data)
         json = response.json()
 
         self.assertEqual(json, {'non_field_errors': ['Score must be between 1 and 10']})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(survey_answered.send.call_args_list, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     def test_answer_id_put_with_score_less_of_1(self):
         """Test /answer/:id without auth"""
         answer_kwargs = {'status': 'SENT'}
         model = self.generate_models(authenticate=True, answer=True, user=True, answer_kwargs=answer_kwargs)
         db = self.model_to_dict(model, 'answer')
-        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:user_me_answer_id', kwargs={'answer_id': model['answer'].id})
         data = {
             'comment': 'They killed kenny',
             'score': 0,
@@ -167,16 +173,18 @@ class AnswerIdTestSuite(FeedbackTestCase):
         self.assertEqual(json, {'non_field_errors': ['Score must be between 1 and 10']})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(survey_answered.send.call_args_list, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     def test_answer_id_put_with_score_more_of_10(self):
         """Test /answer/:id without auth"""
         answer_kwargs = {'status': 'SENT'}
         model = self.generate_models(authenticate=True, answer=True, user=True, answer_kwargs=answer_kwargs)
         db = self.model_to_dict(model, 'answer')
-        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:user_me_answer_id', kwargs={'answer_id': model['answer'].id})
         data = {
             'comment': 'They killed kenny',
             'score': 11,
@@ -187,22 +195,28 @@ class AnswerIdTestSuite(FeedbackTestCase):
         self.assertEqual(json, {'non_field_errors': ['Score must be between 1 and 10']})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(survey_answered.send.call_args_list, [])
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     def test_answer_id_put_with_all_valid_scores(self):
         """Test /answer/:id without auth"""
         answer_kwargs = {'status': 'SENT'}
+        answers = []
 
         for score in range(1, 10):
             self.remove_all_answer()
-            model = self.generate_models(authenticate=True,
-                                         answer=True,
-                                         user=True,
-                                         answer_kwargs=answer_kwargs)
+            model = self.generate_models(
+                authenticate=True,
+                answer=True,
+                user=True,
+                answer_kwargs=answer_kwargs,
+            )
+            answers.append(model.answer)
             db = self.model_to_dict(model, 'answer')
-            url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
+            url = reverse_lazy('feedback:user_me_answer_id', kwargs={'answer_id': model['answer'].id})
 
             data = {
                 'comment': 'They killed kenny',
@@ -249,6 +263,9 @@ class AnswerIdTestSuite(FeedbackTestCase):
 
             self.assertEqual(dicts, [db])
 
+        self.assertEqual(survey_answered.send.call_args_list,
+                         [call(instance=answer, sender=answer.__class__) for answer in answers])
+
     # # TODO: this test should return 400 but its returning 200, why? If needs to return 400 because you cannot change your score in the answer once you already answered
 
     # @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
@@ -262,7 +279,7 @@ class AnswerIdTestSuite(FeedbackTestCase):
     #                                  answer_score=7,
     #                                  answer_status='SENT')
     #     db = self.model_to_dict(model, 'answer')
-    #     url = reverse_lazy('feedback:answer_id',
+    #     url = reverse_lazy('feedback:user_me_answer_id',
     #                        kwargs={'answer_id': model['answer'].id})
     #     data = {
     #         'comment': 'They killed kenny',
@@ -279,23 +296,21 @@ class AnswerIdTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
     def test_answer_id_put_twice_same_score(self):
         """Test /answer/:id without auth"""
         answer_kwargs = {'status': 'SENT', 'score': 3}
         model = self.generate_models(authenticate=True, answer=True, user=True, answer_kwargs=answer_kwargs)
         db = self.model_to_dict(model, 'answer')
-        url = reverse_lazy('feedback:answer_id', kwargs={'answer_id': model['answer'].id})
+        url = reverse_lazy('feedback:user_me_answer_id', kwargs={'answer_id': model['answer'].id})
         data = {
             'comment': 'They killed kenny',
             'score': 3,
         }
         self.client.put(url, data)
-
-        # self.auth_with_token(model['user'])
         response = self.client.put(url, data)
         json = response.json()
 
-        # assert False
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         db['score'] = data['score']
@@ -303,3 +318,5 @@ class AnswerIdTestSuite(FeedbackTestCase):
         db['comment'] = data['comment']
 
         self.assertEqual(self.all_answer_dict(), [db])
+        self.assertEqual(survey_answered.send.call_args_list,
+                         [call(instance=model.answer, sender=model.answer.__class__)])
