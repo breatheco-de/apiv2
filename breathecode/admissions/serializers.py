@@ -520,7 +520,7 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             is_remote = (data['remote_available']
                          if 'remote_available' in data else self.instance.remote_available)
             stage = (data['stage'] if 'stage' in data else self.instance.stage)
-            if is_remote and stage in ['STARTED', 'FINAL_PROJECT']:
+            if is_remote and stage in ['STARTED', 'FINAL_PROJECT'] and stage != self.instance.stage:
                 raise ValidationException(
                     'This cohort has a remote option but no online meeting URL has been specified',
                     slug='remove-without-online-meeting')
