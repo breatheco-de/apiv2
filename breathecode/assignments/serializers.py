@@ -78,10 +78,11 @@ class PostTaskSerializer(serializers.ModelSerializer):
 class PUTTaskSerializer(serializers.ModelSerializer):
     title = serializers.CharField(required=False)
     associated_slug = serializers.CharField(read_only=True)
+    task_type = serializers.CharField(read_only=True)
 
     class Meta:
         model = Task
-        exclude = ('user', 'task_type')
+        exclude = ('user', )
 
     def validate(self, data):
         user = self.context['request'].user

@@ -239,9 +239,9 @@ def sync_with_github(asset_slug, author_id=None):
 def get_url_info(url: str):
 
     result = re.search(r'blob\/([\w\-]+)', url)
-    if result is None:
-        raise Exception('Invalid URL when looking branch: ' + url)
-    branch_name = result.group(1)
+    branch_name = None
+    if result is not None:
+        branch_name = result.group(1)
 
     result = re.search(r'^https?:\/\/github.com\/([\w\-]+)\/([\w\-]+)\/', url)
     if result is None:
@@ -271,18 +271,18 @@ def sync_github_lesson(github, asset):
 
     logger.debug(f'Sync sync_github_lesson {asset.slug}')
 
-    org_name, repo_name, branch_name = get_url_info(asset.url)
-    repo = github.get_repo(f'{org_name}/{repo_name}')
-
     if asset.readme_url is None:
         raise Exception('Missing Readme URL for lesson ' + asset.slug + '.')
 
+    org_name, repo_name, branch_name = get_url_info(asset.readme_url)
+    repo = github.get_repo(f'{org_name}/{repo_name}')
+
     file_name = os.path.basename(asset.readme_url)
 
-    result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
-    if result is None:
-        raise Exception('Invalid Github URL for asset ' + asset.slug + '.')
+    if branch_name is None:
+        raise Exception('Lesson URL must include branch name after blob')
 
+    result = re.search(r'\/blob\/([\w\d_\-]+)\/(.+)', asset.readme_url)
     branch, file_path = result.groups()
     logger.debug(f'Fetching readme: {file_path}')
 

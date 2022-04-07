@@ -2,6 +2,7 @@ from datetime import timedelta
 import os
 from breathecode.authenticate.models import Token
 from breathecode.utils import ValidationException
+from breathecode.utils import getLogger
 from django.db.models import Avg
 from celery import shared_task, Task
 from django.utils import timezone
@@ -19,7 +20,6 @@ from django.utils import timezone
 logger = getLogger(__name__)
 
 ADMIN_URL = os.getenv('ADMIN_URL', '')
-SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', '')
 API_URL = os.getenv('API_URL', '')
 ENV = os.getenv('ENV', '')
 
@@ -60,6 +60,16 @@ def build_question(answer):
         question['highest'] = strings[answer.lang]['academy']['highest']
 
     return question
+
+
+def get_system_email():
+    system_email = os.getenv('SYSTEM_EMAIL')
+    return system_email
+
+
+def get_admin_url():
+    admin_url = os.getenv('ADMIN_URL')
+    return admin_url
 
 
 def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
@@ -191,29 +201,64 @@ def process_answer_received(self, answer_id):
     the task will reivew the score, if we got less than 7 it will notify
     the school.
     """
+
+    from breathecode.notify.actions import send_email_message
+
     logger.debug('Starting notify_bad_nps_score')
     answer = Answer.objects.filter(id=answer_id).first()
     if answer is None:
-        raise ValidationException('Answer not found')
+        logger.error('Answer not found')
+        return
 
-    if answer.survey is not None:
-        survey_score = Answer.objects.filter(survey=answer.survey).aggregate(Avg('score'))
-        answer.survey.avg_score = survey_score['score__avg']
-        answer.survey.save()
+    if answer.survey is None:
+        logger.error('No survey connected to answer.')
+        return
 
-    if answer.score is not None and answer.score < 8:
+    survey_score = Answer.objects.filter(survey=answer.survey).aggregate(Avg('score'))
+    answer.survey.avg_score = survey_score['score__avg']
+
+    total_responses = Answer.objects.filter(survey=answer.survey).count()
+    answered_responses = Answer.objects.filter(survey=answer.survey, status='ANSWERED').count()
+    response_rate = (answered_responses / total_responses) * 100
+    answer.survey.response_rate = response_rate
+    answer.survey.save()
+
+    if answer.user and answer.academy and answer.score is not None and answer.score < 8:
+        system_email = get_system_email()
+        admin_url = get_admin_url()
+        list_of_emails = []
+
+        if system_email is not None:
+            list_of_emails.append(system_email)
+        else:
+            logger.error('No system email found.', slug='system-email-not-found')
+
+        if answer.academy.feedback_email is not None:
+            list_of_emails.append(answer.academy.feedback_email)
+
+        else:
+            logger.error('No academy feedback email found.', slug='academy-feedback-email-not-found')
+
         # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
-        send_email_message('negative_answer', [SYSTEM_EMAIL, answer.academy.feedback_email],
-                           data={
-                               'SUBJECT': f'A student answered with a bad NPS score at {answer.academy.name}',
-                               'FULL_NAME': answer.user.first_name + ' ' + answer.user.last_name,
-                               'QUESTION': answer.title,
-                               'SCORE': answer.score,
-                               'COMMENTS': answer.comment,
-                               'ACADEMY': answer.academy.name,
-                               'LINK':
-                               f'{ADMIN_URL}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
-                           })
+        if list_of_emails:
+            send_email_message('negative_answer',
+                               list_of_emails,
+                               data={
+                                   'SUBJECT':
+                                   f'A student answered with a bad NPS score at {answer.academy.name}',
+                                   'FULL_NAME':
+                                   answer.user.first_name + ' ' + answer.user.last_name,
+                                   'QUESTION':
+                                   answer.title,
+                                   'SCORE':
+                                   answer.score,
+                                   'COMMENTS':
+                                   answer.comment,
+                                   'ACADEMY':
+                                   answer.academy.name,
+                                   'LINK':
+                                   f'{admin_url}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
+                               })
 
     return True
 
