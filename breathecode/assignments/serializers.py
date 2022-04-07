@@ -76,6 +76,9 @@ class PostTaskSerializer(serializers.ModelSerializer):
 
 
 class PUTTaskSerializer(serializers.ModelSerializer):
+    title = serializers.CharField(required=False)
+    associated_slug = serializers.CharField(read_only=False)
+
     class Meta:
         model = Task
         exclude = ('user', 'task_type')
