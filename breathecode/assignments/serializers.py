@@ -82,7 +82,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Task
-        exclude = ('user')
+        exclude = ('user', )
 
     def validate(self, data):
         user = self.context['request'].user
