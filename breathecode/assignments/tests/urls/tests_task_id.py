@@ -131,7 +131,7 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
-    def test_task_id__put__with_one_task__bad_fields(self):
+    def test_task_id__put__with_one_task__prividing_nothing_in_body(self):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
 
@@ -139,13 +139,30 @@ class MediaTestSuite(AssignmentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
+        start = self.bc.datetime.now()
         response = self.client.put(url)
-
+        end = self.bc.datetime.now()
         json = response.json()
-        expected = {'associated_slug': ['This field is required.'], 'title': ['This field is required.']}
+
+        updated_at = self.bc.datetime.from_iso_string(json['updated_at'])
+        self.bc.check.datetime_in_range(start, end, updated_at)
+        del json['updated_at']
+
+        expected = {
+            'associated_slug': model.task.associated_slug,
+            'title': model.task.title,
+            'github_url': model.task.github_url,
+            'cohort': model.task.cohort,
+            'created_at': self.bc.datetime.to_iso_string(model.task.created_at),
+            'id': model.task.id,
+            'description': model.task.description,
+            'live_url': model.task.live_url,
+            'revision_status': model.task.revision_status,
+            'task_status': model.task.task_status,
+        }
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
@@ -186,14 +203,17 @@ class MediaTestSuite(AssignmentsTestCase):
             'revision_status': model.task.revision_status,
             'task_status': model.task.task_status,
             **data,
+            'associated_slug': model.task.associated_slug,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            **self.bc.format.to_dict(model.task),
-            **data,
-        }])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'),
+                         [{
+                             **self.bc.format.to_dict(model.task),
+                             **data,
+                             'associated_slug': model.task.associated_slug,
+                         }])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -362,14 +382,17 @@ class MediaTestSuite(AssignmentsTestCase):
             'revision_status': model.task.revision_status,
             'task_status': model.task.task_status,
             **data,
+            'associated_slug': model.task.associated_slug,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            **self.bc.format.to_dict(model.task),
-            **data,
-        }])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'),
+                         [{
+                             **self.bc.format.to_dict(model.task),
+                             **data,
+                             'associated_slug': model.task.associated_slug,
+                         }])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -415,14 +438,17 @@ class MediaTestSuite(AssignmentsTestCase):
             'revision_status': model.task.revision_status,
             'task_status': model.task.task_status,
             **data,
+            'associated_slug': model.task.associated_slug,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            **self.bc.format.to_dict(model.task),
-            **data,
-        }])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'),
+                         [{
+                             **self.bc.format.to_dict(model.task),
+                             **data,
+                             'associated_slug': model.task.associated_slug,
+                         }])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -454,7 +480,7 @@ class MediaTestSuite(AssignmentsTestCase):
         del json['updated_at']
         expected = {
             'id': 1,
-            'associated_slug': 'hello',
+            'associated_slug': model.task.associated_slug,
             'title': 'hello',
             'task_status': 'PENDING',
             'revision_status': 'PENDING',
@@ -467,7 +493,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
             'id': 1,
-            'associated_slug': 'hello',
+            'associated_slug': model.task.associated_slug,
             'title': 'hello',
             'task_status': 'PENDING',
             'revision_status': 'PENDING',
