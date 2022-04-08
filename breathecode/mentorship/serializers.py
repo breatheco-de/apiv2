@@ -180,6 +180,7 @@ class GETMentorBigSerializer(serpy.Serializer):
     status = serpy.Field()
     price_per_hour = serpy.Field()
     booking_url = serpy.Field()
+    online_meeting_url = serpy.Field()
     timezone = serpy.Field()
     syllabus = serpy.MethodField()
     email = serpy.Field()
