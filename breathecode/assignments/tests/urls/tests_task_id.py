@@ -162,14 +162,18 @@ class MediaTestSuite(AssignmentsTestCase):
             'revision_status': model.task.revision_status,
             'task_status': model.task.task_status,
             **data,
+            'associated_slug': model.task.associated_slug,
+            'task_type': model.task.task_type,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            **self.bc.format.to_dict(model.task),
-            **data,
-        }])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'),
+                         [{
+                             **self.bc.format.to_dict(model.task),
+                             **data,
+                             'associated_slug': model.task.associated_slug,
+                         }])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -339,14 +343,18 @@ class MediaTestSuite(AssignmentsTestCase):
             'revision_status': model.task.revision_status,
             'task_status': model.task.task_status,
             **data,
+            'associated_slug': model.task.associated_slug,
+            'task_type': model.task.task_type,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            **self.bc.format.to_dict(model.task),
-            **data,
-        }])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'),
+                         [{
+                             **self.bc.format.to_dict(model.task),
+                             **data,
+                             'associated_slug': model.task.associated_slug,
+                         }])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -393,14 +401,18 @@ class MediaTestSuite(AssignmentsTestCase):
             'revision_status': model.task.revision_status,
             'task_status': model.task.task_status,
             **data,
+            'associated_slug': model.task.associated_slug,
+            'task_type': model.task.task_type,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            **self.bc.format.to_dict(model.task),
-            **data,
-        }])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'),
+                         [{
+                             **self.bc.format.to_dict(model.task),
+                             **data,
+                             'associated_slug': model.task.associated_slug,
+                         }])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
