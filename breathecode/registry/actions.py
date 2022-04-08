@@ -243,7 +243,7 @@ def get_url_info(url: str):
     if result is not None:
         branch_name = result.group(1)
 
-    result = re.search(r'^https?:\/\/github.com\/([\w\-]+)\/([\w\-]+)\/', url)
+    result = re.search(r'https?:\/\/github\.com\/([\w\-]+)\/([\w\-]+)\/?', url)
     if result is None:
         raise Exception('Invalid URL when looking organization: ' + url)
 
