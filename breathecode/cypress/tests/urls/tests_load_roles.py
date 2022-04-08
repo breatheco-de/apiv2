@@ -91,7 +91,7 @@ CAPABILITIES = [
         'description': 'Create, update or delete event information'
     },
     {
-        'slug': 'read_cohort',
+        'slug': 'read_all_cohort',
         'description': 'List all the cohorts or a single cohort information'
     },
     {
@@ -249,7 +249,7 @@ ROLES = [
             'read_member',
             'read_syllabus',
             'read_student',
-            'read_cohort',
+            'read_all_cohort',
             'read_media',
             'read_my_academy',
             'read_invite',
@@ -270,7 +270,7 @@ ROLES = [
             'read_member',
             'read_syllabus',
             'read_student',
-            'read_cohort',
+            'read_all_cohort',
             'read_media',
             'read_my_academy',
             'read_invite',
@@ -299,7 +299,7 @@ ROLES = [
             'crud_assignment',
             'read_syllabus',
             'read_assignment',
-            'read_cohort',
+            'read_all_cohort',
             'read_my_academy',
             'crud_activity',
             'read_mentorship_service',
@@ -343,7 +343,7 @@ def extend_roles(roles: list):
         'Admissions Developer',
         'caps':
         create_academy_roles.extend(roles, ['staff']) +
-        ['crud_lead', 'crud_student', 'crud_cohort', 'read_cohort', 'read_lead', 'read_activity']
+        ['crud_lead', 'crud_student', 'crud_cohort', 'read_all_cohort', 'read_lead', 'read_activity']
     })
     roles.append({
         'slug':
@@ -366,7 +366,7 @@ def extend_roles(roles: list):
         'caps':
         create_academy_roles.extend(roles, ['staff']) + [
             'crud_lead', 'read_event', 'crud_event', 'read_eventcheckin', 'read_nps_answers', 'read_lead',
-            'read_cohort', 'crud_media'
+            'read_all_cohort', 'crud_media'
         ]
     })
     roles.append({
@@ -607,7 +607,7 @@ class AcademyEventTestSuite(CypressTestCase):
                 'description': 'Create, update or delete event information'
             },
             {
-                'slug': 'read_cohort',
+                'slug': 'read_all_cohort',
                 'description': 'List all the cohorts or a single cohort information'
             },
             {

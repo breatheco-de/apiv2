@@ -858,7 +858,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus_schedule=True,
                                      syllabus=True,
@@ -937,7 +937,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.generate_models(authenticate=True,
                              cohort=True,
                              profile_academy=True,
-                             capability='read_cohort',
+                             capability='read_all_cohort',
                              role='potato',
                              syllabus=True)
 
@@ -964,7 +964,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus_schedule=True,
                                      syllabus=True,
@@ -1046,7 +1046,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
                                      cohort=True,
                                      user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus=True,
                                      cohort_user=True)
