@@ -1,4 +1,4 @@
-import os, re, json, logging, time, datetime
+import os, re, json, logging, time, datetime, requests
 from itertools import chain
 from django.db.models import Q
 from django.utils import timezone
