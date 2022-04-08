@@ -159,6 +159,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'live_url': model.task.live_url,
             'revision_status': model.task.revision_status,
             'task_status': model.task.task_status,
+            'task_type': model.task.task_type,
         }
 
         self.assertEqual(json, expected)
@@ -204,6 +205,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             **data,
             'associated_slug': model.task.associated_slug,
+            'task_type': model.task.task_type,
         }
 
         self.assertEqual(json, expected)
@@ -383,6 +385,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             **data,
             'associated_slug': model.task.associated_slug,
+            'task_type': model.task.task_type,
         }
 
         self.assertEqual(json, expected)
@@ -439,6 +442,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'task_status': model.task.task_status,
             **data,
             'associated_slug': model.task.associated_slug,
+            'task_type': model.task.task_type,
         }
 
         self.assertEqual(json, expected)
@@ -487,7 +491,8 @@ class MediaTestSuite(AssignmentsTestCase):
             'github_url': None,
             'live_url': None,
             'description': model.task.description,
-            'cohort': None
+            'task_type': model.task.task_type,
+            'cohort': None,
         }
 
         self.assertEqual(json, expected)
