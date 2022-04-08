@@ -265,9 +265,9 @@ def generate_mentor_bill(mentor, reset=False):
 
 def mentor_is_ready(mentor):
 
-    if mentor.online_meeting_url is None or mentor.online_meeting_url == '':
+    if mentor.meeting_url is None or mentor.meeting_url == '':
         raise Exception(
-            f'Mentor {mentor.name} does not have online_meeting_url, update the value before activating.')
+            f'Mentor {mentor.name} does not have backup meeting_url, update the value before activating.')
     elif mentor.booking_url is None or 'https://calendly.com' not in mentor.booking_url:
         raise Exception(
             f'Mentor {mentor.name} booking_url must point to calendly, update the value before activating.')
@@ -279,9 +279,9 @@ def mentor_is_ready(mentor):
         if response.status_code > 399:
             raise Exception(
                 f'Mentor {mentor.name} booking URL is failing with code {str(response.status_code)}')
-        response = requests.head(mentor.online_meeting_url)
+        response = requests.head(mentor.meeting_url)
         if response.status_code > 399:
             raise Exception(
-                f'Mentor {mentor.name} meeting URL is failing with code {str(response.status_code)}')
+                f'Mentor {mentor.name} meeting_url is failing with code {str(response.status_code)}')
 
     return True
