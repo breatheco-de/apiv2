@@ -77,7 +77,7 @@ def forward_booking_url(request, mentor_slug, token):
     # add academy to session, will be available on html templates
     request.session['academy'] = GetAcademySmallSerializer(mentor.service.academy).data
 
-    if mentor.status != 'ACTIVE':
+    if mentor.status not in ['ACTIVE', 'UNLISTED']:
         return render_message(request, f'This mentor is not active')
 
     booking_url = mentor.booking_url
@@ -118,7 +118,7 @@ def forward_meet_url(request, mentor_slug, token):
     # add academy to session, will be available on html templates
     request.session['academy'] = GetAcademySmallSerializer(mentor.service.academy).data
 
-    if mentor.status != 'ACTIVE':
+    if mentor.status not in ['ACTIVE', 'UNLISTED']:
         return render_message(request, f'This mentor is not active at the moment')
 
     # if the mentor is not the user, then we assume is the mentee
