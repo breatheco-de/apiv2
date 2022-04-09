@@ -483,7 +483,8 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if not item:
             raise ValidationException('Time slot not found', 404, slug='time-slot-not-found')
 
-        timezone = Academy.objects.filter(id=academy_id).values_list('timezone', flat=True).first()
+        timezone = cohort.timezone or Academy.objects.filter(id=academy_id).values_list('timezone',
+                                                                                        flat=True).first()
         if not timezone:
             raise ValidationException('Academy doesn\'t have a timezone assigned',
                                       slug='academy-without-timezone')
@@ -561,7 +562,7 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
                     'ending_at': certificate_timeslot.ending_at,
                     'recurrent': certificate_timeslot.recurrent,
                     'recurrency_type': certificate_timeslot.recurrency_type,
-                    'timezone': academy.timezone,
+                    'timezone': cohort.timezone or academy.timezone,
                 })
 
         serializer = CohortTimeSlotSerializer(data=data, many=True)
