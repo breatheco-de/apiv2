@@ -1,6 +1,6 @@
 import logging, json
 from django.db.models.query_utils import Q
-from .models import Cohort, SyllabusVersion
+from .models import Cohort, SyllabusScheduleTimeSlot, SyllabusVersion
 from breathecode.services.google_cloud import Storage
 from .signals import syllabus_asset_slug_updated
 
@@ -20,19 +20,19 @@ def get_bucket_object(file_name):
 class ImportCohortTimeSlots:
     cohort: Cohort
 
-    def __init__(self, cohort_id):
+    def __init__(self, cohort_id: int) -> None:
         self.cohort = Cohort.objects.filter(id=cohort_id).first()
 
         if not self.cohort:
             logger.error(f'Cohort {cohort_id} not found')
             return
 
-    def clean(self):
+    def clean(self) -> None:
         from breathecode.admissions.models import CohortTimeSlot
 
         CohortTimeSlot.objects.filter(cohort=self.cohort).delete()
 
-    def sync(self):
+    def sync(self) -> None:
         from breathecode.admissions.models import SyllabusScheduleTimeSlot, CohortTimeSlot
 
         if not self.cohort:
@@ -55,7 +55,8 @@ class ImportCohortTimeSlots:
 
         return [self._append_id_of_timeslot(x) for x in timeslots]
 
-    def _fill_timeslot(self, certificate_timeslot, cohort_id, timezone):
+    def _fill_timeslot(self, certificate_timeslot: SyllabusScheduleTimeSlot, cohort_id: int,
+                       timezone: str) -> None:
         from breathecode.admissions.models import CohortTimeSlot
 
         cohort_timeslot = CohortTimeSlot(cohort_id=cohort_id,

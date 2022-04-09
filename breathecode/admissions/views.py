@@ -787,6 +787,9 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         for key in request.data:
             data[key] = request.data.get(key)
 
+        if 'timezone' not in data:
+            data['timezone'] = academy.timezone
+
         if 'syllabus_version' in data:
             del data['syllabus_version']
 
