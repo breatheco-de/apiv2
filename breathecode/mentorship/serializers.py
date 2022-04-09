@@ -180,6 +180,7 @@ class GETMentorBigSerializer(serpy.Serializer):
     status = serpy.Field()
     price_per_hour = serpy.Field()
     booking_url = serpy.Field()
+    online_meeting_url = serpy.Field()
     timezone = serpy.Field()
     syllabus = serpy.MethodField()
     email = serpy.Field()
@@ -398,7 +399,8 @@ class MentorUpdateSerializer(serializers.ModelSerializer):
         if 'academy' in data:
             raise ValidationException('Mentor academy cannot be updated', slug='academy-read-only')
 
-        if 'status' in data and data['status'] == 'ACTIVE' and self.instance.status != 'ACTIVE':
+        if 'status' in data and data['status'] in ['ACTIVE', 'UNLISTED'
+                                                   ] and self.instance.status != data['status']:
             try:
                 mentor_is_ready(self.instance)
             except Exception as e:

@@ -21,10 +21,12 @@ from slugify import slugify
 
 DRAFT = 'DRAFT'
 ACTIVE = 'ACTIVE'
+UNLISTED = 'UNLISTED'
 INNACTIVE = 'INNACTIVE'
 MENTORSHIP_STATUS = (
     (DRAFT, 'Draft'),
     (ACTIVE, 'Active'),
+    (UNLISTED, 'Unlisted'),
     (INNACTIVE, 'Innactive'),
 )
 
@@ -68,6 +70,7 @@ INVITED = 'INVITED'
 MENTOR_STATUS = (
     (INVITED, 'Invited'),
     (ACTIVE, 'Active'),
+    (UNLISTED, 'Unlisted'),
     (INNACTIVE, 'Innactive'),
 )
 

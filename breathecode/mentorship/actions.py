@@ -1,4 +1,4 @@
-import os, re, json, logging, time, datetime
+import os, re, json, logging, time, datetime, requests
 from itertools import chain
 from django.db.models import Q
 from django.utils import timezone
@@ -267,7 +267,8 @@ def mentor_is_ready(mentor):
 
     if mentor.online_meeting_url is None or mentor.online_meeting_url == '':
         raise Exception(
-            f'Mentor {mentor.name} does not have online_meeting_url, update the value before activating.')
+            f'Mentor {mentor.name} does not have backup online_meeting_url, update the value before activating.'
+        )
     elif mentor.booking_url is None or 'https://calendly.com' not in mentor.booking_url:
         raise Exception(
             f'Mentor {mentor.name} booking_url must point to calendly, update the value before activating.')
@@ -282,6 +283,6 @@ def mentor_is_ready(mentor):
         response = requests.head(mentor.online_meeting_url)
         if response.status_code > 399:
             raise Exception(
-                f'Mentor {mentor.name} meeting URL is failing with code {str(response.status_code)}')
+                f'Mentor {mentor.name} online_meeting_url is failing with code {str(response.status_code)}')
 
     return True
