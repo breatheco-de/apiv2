@@ -267,7 +267,8 @@ def mentor_is_ready(mentor):
 
     if mentor.online_meeting_url is None or mentor.online_meeting_url == '':
         raise Exception(
-            f'Mentor {mentor.name} does not have backup online_meeting_url, update the value before activating.')
+            f'Mentor {mentor.name} does not have backup online_meeting_url, update the value before activating.'
+        )
     elif mentor.booking_url is None or 'https://calendly.com' not in mentor.booking_url:
         raise Exception(
             f'Mentor {mentor.name} booking_url must point to calendly, update the value before activating.')
