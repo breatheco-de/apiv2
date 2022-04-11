@@ -20,6 +20,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import status
 from django.http import HttpResponseRedirect
+from django.views.decorators.clickjacking import xframe_options_exempt
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,7 @@ def handle_test_asset(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@xframe_options_exempt
 def render_readme(request, asset_slug, extension='raw'):
     asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:
@@ -129,8 +131,8 @@ def render_readme(request, asset_slug, extension='raw'):
         response = HttpResponse(readme['decoded'], content_type='application/json')
         response['Content-Length'] = len(readme['decoded'])
 
-    response[
-        'Content-Security-Policy'] = "frame-ancestors 'self' https://4geeks.com http://localhost:3000 https://dev.4geeks.com"
+    # response[
+    # 'Content-Security-Policy'] = "frame-ancestors 'self' https://4geeks.com http://localhost:3000 https://dev.4geeks.com"
     return response
 
 
