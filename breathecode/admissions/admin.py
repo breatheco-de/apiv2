@@ -324,6 +324,8 @@ class SyllabusAdmin(admin.ModelAdmin):
 @admin.register(SyllabusVersion)
 class SyllabusVersionAdmin(admin.ModelAdmin):
     list_display = ('version', 'syllabus', 'owner')
+    search_fields = ['syllabus__name', 'syllabus__slug']
+    list_filter = ['syllabus__private', 'syllabus__academy_owner']
 
     def owner(self, obj):
         if obj.syllabus.academy_owner is None:
