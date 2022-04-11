@@ -129,6 +129,8 @@ def render_readme(request, asset_slug, extension='raw'):
         response = HttpResponse(readme['decoded'], content_type='application/json')
         response['Content-Length'] = len(readme['decoded'])
 
+    response[
+        'Content-Security-Policy'] = "frame-ancestors 'self' https://4geeks.com http://localhost:3000 https://dev.4geeks.com"
     return response
 
 
