@@ -478,15 +478,21 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                     'Syllabus field marformed(`${syllabus.slug}.v{syllabus_version.version}`)',
                     slug='syllabus-field-marformed')
 
-            [syllabus_slug, syllabus_version] = strings
+            [syllabus_slug, syllabus_version_number] = strings
 
             syllabus_version = SyllabusVersion.objects.filter(
                 Q(syllabus__private=False) | Q(syllabus__academy_owner__id=self.context['academy'].id),
                 syllabus__slug=syllabus_slug,
-                version=syllabus_version).first()
+                version=syllabus_version_number).first()
 
             if not syllabus_version:
                 raise ValidationException('Syllabus doesn\'t exist', slug='syllabus-version-not-found')
+
+            if syllabus_version_number == '1':
+                raise ValidationException(
+                    'Syllabus version 1 is only used for marketing purposes and it cannot be assigned to '
+                    'any cohort',
+                    slug='assigning-a-syllabus-version-1')
 
             data['syllabus_version'] = syllabus_version
 
