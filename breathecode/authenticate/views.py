@@ -294,7 +294,14 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
 class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('read_invite')
-    def get(self, request, academy_id=None, profileacademy_id=None):
+    def get(self, request, academy_id=None, profileacademy_id=None, invite_id=None):
+
+        if invite_id is not None:
+            invite = UserInvite.objects.filter(academy__id=academy_id, id=invite_id, status='PENDING').first()
+            if invite is None:
+                raise ValidationException('No pending invite was found for this user and academy', 404)
+            serializer = UserInviteSerializer(invite, many=False)
+            return Response(serializer.data)
 
         if profileacademy_id is not None:
             profile = ProfileAcademy.objects.filter(academy__id=academy_id, id=profileacademy_id).first()
