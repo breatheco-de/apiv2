@@ -71,6 +71,9 @@ def render_preview_html(request, asset_slug):
     if asset is None:
         return render_message(request, f'Asset with slug {asset_slug} not found')
 
+    if asset.asset_type == 'QUIZ':
+        return render_message(request, f'Quiz cannot be previewed')
+
     readme = asset.get_readme(parse=True)
     return render(request, 'markdown.html', {
         **AssetBigSerializer(asset).data, 'html': readme['html'],
