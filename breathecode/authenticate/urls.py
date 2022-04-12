@@ -33,7 +33,7 @@ urlpatterns = [
     path('role', get_roles, name='role'),
     path('role/<str:role_slug>', get_roles, name='role_slug'),
     path('profile/invite/me', ProfileInviteMeView.as_view(), name='profile_invite_me'),
-    path('member/invite/resend/<int:pa_id>', AcademyInviteView.as_view(), name='academy_resent_invite'),
+    path('member/invite/resend/<int:invite_id>', AcademyInviteView.as_view(), name='academy_resent_invite'),
     path('member/invite/<str:token>', render_invite, name='academy_invite'),
     path('member/<int:profile_academy_id>/token',
          TokenTemporalView.as_view(),
