@@ -1,6 +1,6 @@
 import logging
 import serpy
-from breathecode.admissions.actions import sync_cohort_timeslots, post_cohort_change_syllabus_schedule
+from breathecode.admissions.actions import ImportCohortTimeSlots
 from django.db.models import Q
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, localize_query, SerpyExtensions
@@ -541,7 +541,11 @@ class CohortSerializer(CohortSerializerMixin):
     def create(self, validated_data):
         del self.context['request']
         cohort = Cohort.objects.create(**validated_data, **self.context)
-        sync_cohort_timeslots(cohort.id)
+
+        x = ImportCohortTimeSlots(cohort.id)
+        x.clean()
+        x.sync()
+
         return cohort
 
 
@@ -570,7 +574,9 @@ class CohortPUTSerializer(CohortSerializerMixin):
         cohort = super().update(instance, validated_data)
 
         if update_timeslots:
-            post_cohort_change_syllabus_schedule(cohort.id)
+            x = ImportCohortTimeSlots(cohort.id)
+            x.clean()
+            x.sync()
 
         return cohort
 
