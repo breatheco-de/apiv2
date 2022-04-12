@@ -323,9 +323,23 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 serializer = GetProfileAcademySerializer(profile, many=False)
                 return Response(serializer.data)
         else:
-            invites = UserInvite.objects.filter(academy__id=academy_id, status='PENDING')
-            serializer = UserInviteSerializer(invites, many=True)
-            return Response(serializer.data)
+            invites = UserInvite.objects.filter(academy__id=academy_id)
+
+            status = request.GET.get('status', '')
+            if status != '':
+                invites = invites.filter(status__in=status.split(','))
+            else:
+                invites = invites.filter(status='PENDING')
+
+            invites = invites.order_by(request.GET.get('sort', '-created_at'))
+
+            page = self.paginate_queryset(invites, request)
+            serializer = UserInviteSerializer(page, many=True)
+
+            if self.is_paginate(request):
+                return self.get_paginated_response(serializer.data)
+            else:
+                return Response(serializer.data, status=200)
 
     @capable_of('crud_invite')
     def delete(self, request, academy_id=None):
