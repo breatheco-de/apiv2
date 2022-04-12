@@ -404,6 +404,69 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     """
+    🔽🔽🔽 Put assigning the syllabus version 1
+    """
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    def test_cohort_id__put__with_id__assigning_syllabus_version_1(self):
+        """Test /cohort/:id without auth"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        cohort_kwargs = {'ending_date': timezone.now()}
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        academy = {'timezone': 'Pacific/Pago_Pago'}
+        timeslot = {'timezone': 'Pacific/Pago_Pago'}
+        syllabus_version = {'version': 1}
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     academy=academy,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato',
+                                     syllabus=True,
+                                     syllabus_version=syllabus_version,
+                                     syllabus_schedule=True,
+                                     cohort_kwargs=cohort_kwargs,
+                                     syllabus_schedule_time_slot=True,
+                                     cohort_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        model2 = self.generate_models(academy=model.academy,
+                                      skip_cohort=True,
+                                      syllabus_schedule=True,
+                                      syllabus=model.syllabus,
+                                      syllabus_schedule_time_slot=(2, timeslot))
+        url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': model['cohort'].id})
+        data = {
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'schedule': 2,
+            'current_day': model['cohort'].current_day + 1,
+            'language': 'es',
+        }
+        response = self.client.put(url, data)
+        json = response.json()
+
+        expected = {'detail': 'assigning-a-syllabus-version-1', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
+            self.bc.format.to_dict(model.cohort),
+        ])
+
+        self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [
+            self.bc.format.to_dict(model.cohort_time_slot),
+        ])
+
+        self.assertEqual(cohort_saved.send.call_args_list, [])
+
+    """
     🔽🔽🔽 Put with some data
     """
 
