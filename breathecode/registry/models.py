@@ -6,6 +6,7 @@ from django.template.loader import get_template
 from breathecode.admissions.models import Academy, Cohort
 from breathecode.events.models import Event
 from django.db.models import Q
+from .signals import asset_slug_modified
 from breathecode.assessment.models import Assessment
 
 __all__ = ['AssetTechnology', 'Asset', 'AssetAlias']
@@ -33,12 +34,14 @@ EXERCISE = 'EXERCISE'
 LESSON = 'LESSON'
 QUIZ = 'QUIZ'
 VIDEO = 'VIDEO'
+ARTICLE = 'ARTICLE'
 TYPE = (
     (PROJECT, 'Project'),
     (EXERCISE, 'Exercise'),
     (QUIZ, 'Quiz'),
     (LESSON, 'Lesson'),
     (VIDEO, 'Video'),
+    (ARTICLE, 'Article'),
 )
 
 BEGINNER = 'BEGINNER'
@@ -172,10 +175,11 @@ class Asset(models.Model):
         if self.pk is None or self.__old_slug != self.slug:
             alias = AssetAlias.objects.filter(slug=self.slug).first()
             if alias is not None:
-                raise Exception('Slug is already taken by alias')
-            super().save(*args, **kwargs)
-            AssetAlias.objects.create(slug=self.slug, asset=self)
+                raise Exception(f'New slug {self.slug} for {self.__old_slug} is already taken by alias')
 
+            super().save(*args, **kwargs)
+            self.__old_slug = self.slug
+            asset_slug_modified.send(instance=self, sender=Asset)
         else:
             super().save(*args, **kwargs)
 
@@ -196,6 +200,10 @@ class Asset(models.Model):
         if raw:
             return self.readme
 
+        if self.readme_url is None and self.asset_type == 'LESSON':
+            self.readme_url = self.url
+            self.save()
+
         readme = {
             'raw': self.readme,
             'decoded': base64.b64decode(self.readme.encode('utf-8')).decode('utf-8')
@@ -203,29 +211,31 @@ class Asset(models.Model):
         if parse is not None:
             extension = pathlib.Path(self.readme_url).suffix
             if extension in ['.md', '.mdx', '.txt']:
-                readme = self.parse(readme, type='markdown')
+                readme = self.parse(readme, format='markdown')
             elif extension in ['.ipynb']:
-                readme = self.parse(readme, type='notebook')
+                readme = self.parse(readme, format='notebook')
             else:
                 raise Exception('Uknown readme file extension ' + extension + ' for ' + self.asset_type +
                                 ': ' + self.slug)
         return readme
 
-    def parse(self, readme, type='markdown'):
-        if type == 'markdown':
+    def parse(self, readme, format='markdown'):
+        if format == 'markdown':
             _data = frontmatter.loads(readme['decoded'])
             readme['frontmatter'] = _data.metadata
+            readme['frontmatter']['format'] = format
             readme['html'] = markdown.markdown(_data.content, extensions=['markdown.extensions.fenced_code'])
-        if type == 'notebook':
+        if format == 'notebook':
             import nbformat
             from nbconvert import HTMLExporter
             notebook = nbformat.reads(readme['decoded'], as_version=4)
             # Instantiate the exporter. We use the `classic` template for now; we'll get into more details
-            # later about how to customize the exporter further.
-            html_exporter = HTMLExporter(template_name='classic')
+            # later about how to customize the exporter further. You can use 'basic'
+            html_exporter = HTMLExporter(template_name='basic')
             # Process the notebook we loaded earlier
             body, resources = html_exporter.from_notebook_node(notebook)
             readme['frontmatter'] = resources
+            readme['frontmatter']['format'] = format
             readme['html'] = body
         return readme
 

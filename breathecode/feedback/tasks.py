@@ -1,11 +1,15 @@
-import logging, os
+from datetime import timedelta
+import os
 from breathecode.authenticate.models import Token
 from breathecode.utils import ValidationException
+from breathecode.utils import getLogger
 from django.db.models import Avg
 from celery import shared_task, Task
 from django.utils import timezone
 from breathecode.notify.actions import send_email_message, send_slack
+import breathecode.notify.actions as actions
 from .utils import strings
+from breathecode.utils import getLogger
 from breathecode.admissions.models import CohortUser, Cohort
 from django.contrib.auth.models import User
 from .models import Survey, Answer, Review, ReviewPlatform
@@ -13,11 +17,11 @@ from breathecode.mentorship.models import MentorshipSession
 from django.utils import timezone
 
 # Get an instance of a logger
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 ADMIN_URL = os.getenv('ADMIN_URL', '')
-SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', '')
 API_URL = os.getenv('API_URL', '')
+ENV = os.getenv('ENV', '')
 
 
 class BaseTaskWithRetry(Task):
@@ -56,6 +60,16 @@ def build_question(answer):
         question['highest'] = strings[answer.lang]['academy']['highest']
 
     return question
+
+
+def get_system_email():
+    system_email = os.getenv('SYSTEM_EMAIL')
+    return system_email
+
+
+def get_admin_url():
+    admin_url = os.getenv('ADMIN_URL')
+    return admin_url
 
 
 def generate_user_cohort_survey_answers(user, survey, status='OPENED'):
@@ -187,29 +201,64 @@ def process_answer_received(self, answer_id):
     the task will reivew the score, if we got less than 7 it will notify
     the school.
     """
+
+    from breathecode.notify.actions import send_email_message
+
     logger.debug('Starting notify_bad_nps_score')
     answer = Answer.objects.filter(id=answer_id).first()
     if answer is None:
-        raise ValidationException('Answer not found')
+        logger.error('Answer not found')
+        return
 
-    if answer.survey is not None:
-        survey_score = Answer.objects.filter(survey=answer.survey).aggregate(Avg('score'))
-        answer.survey.avg_score = survey_score['score__avg']
-        answer.survey.save()
+    if answer.survey is None:
+        logger.error('No survey connected to answer.')
+        return
 
-    if answer.score is not None and answer.score < 8:
+    survey_score = Answer.objects.filter(survey=answer.survey).aggregate(Avg('score'))
+    answer.survey.avg_score = survey_score['score__avg']
+
+    total_responses = Answer.objects.filter(survey=answer.survey).count()
+    answered_responses = Answer.objects.filter(survey=answer.survey, status='ANSWERED').count()
+    response_rate = (answered_responses / total_responses) * 100
+    answer.survey.response_rate = response_rate
+    answer.survey.save()
+
+    if answer.user and answer.academy and answer.score is not None and answer.score < 8:
+        system_email = get_system_email()
+        admin_url = get_admin_url()
+        list_of_emails = []
+
+        if system_email is not None:
+            list_of_emails.append(system_email)
+        else:
+            logger.error('No system email found.', slug='system-email-not-found')
+
+        if answer.academy.feedback_email is not None:
+            list_of_emails.append(answer.academy.feedback_email)
+
+        else:
+            logger.error('No academy feedback email found.', slug='academy-feedback-email-not-found')
+
         # TODO: instead of sending, use notifications system to be built on the breathecode.admin app.
-        send_email_message('negative_answer', [SYSTEM_EMAIL, answer.academy.feedback_email],
-                           data={
-                               'SUBJECT': f'A student answered with a bad NPS score at {answer.academy.name}',
-                               'FULL_NAME': answer.user.first_name + ' ' + answer.user.last_name,
-                               'QUESTION': answer.title,
-                               'SCORE': answer.score,
-                               'COMMENTS': answer.comment,
-                               'ACADEMY': answer.academy.name,
-                               'LINK':
-                               f'{ADMIN_URL}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
-                           })
+        if list_of_emails:
+            send_email_message('negative_answer',
+                               list_of_emails,
+                               data={
+                                   'SUBJECT':
+                                   f'A student answered with a bad NPS score at {answer.academy.name}',
+                                   'FULL_NAME':
+                                   answer.user.first_name + ' ' + answer.user.last_name,
+                                   'QUESTION':
+                                   answer.title,
+                                   'SCORE':
+                                   answer.score,
+                                   'COMMENTS':
+                                   answer.comment,
+                                   'ACADEMY':
+                                   answer.academy.name,
+                                   'LINK':
+                                   f'{admin_url}/feedback/surveys/{answer.academy.slug}/{answer.survey.id}'
+                               })
 
     return True
 
@@ -219,7 +268,21 @@ def send_mentorship_session_survey(self, session_id):
     logger.debug('Starting send_mentorship_session_survey')
     session = MentorshipSession.objects.filter(id=session_id).first()
     if session is None:
-        logger.error('Mentoring session not found')
+        logger.error('Mentoring session not found', slug='without-mentorship-session')
+        return False
+
+    if session.mentee is None:
+        logger.error('The current session not have a mentee', slug='mentorship-session-without-mentee')
+        return False
+
+    if not session.started_at or not session.ended_at:
+        logger.error('Mentorship session not finished',
+                     slug='mentorship-session-without-started-at-or-ended-at')
+        return False
+
+    if session.ended_at - session.started_at <= timedelta(minutes=5):
+        logger.error('Mentorship session duration less or equal than five minutes',
+                     slug='mentorship-session-duration-less-or-equal-than-five-minutes')
         return False
 
     answer = Answer.objects.filter(mentorship_session__id=session.id).first()
@@ -235,24 +298,29 @@ def send_mentorship_session_survey(self, session_id):
         answer.status = 'SENT'
         answer.save()
     elif answer.status == 'ANSWERED':
+        logger.debug(f'This survey about MentorshipSession {session.id} was answered',
+                     slug='answer-with-status-answered')
         return False
 
     has_slackuser = hasattr(session.mentee, 'slackuser')
     if not session.mentee.email:
-        message = f'Author not have email, this survey cannot be send by {str(session.mentee.id)}'
-        logger.info(message)
-        raise Exception(message)
+        message = f'Author not have email, this survey cannot be send by {session.mentee.id}'
+        logger.debug(message, slug='mentee-without-email')
+        return False
 
     token, created = Token.get_or_create(session.mentee, token_type='temporal', hours_length=48)
+
+    # lazyload api url in test environment
+    api_url = API_URL if ENV != 'test' else os.getenv('API_URL', '')
     data = {
         'SUBJECT': strings[answer.lang]['survey_subject'],
         'MESSAGE': answer.title,
-        'TRACKER_URL': f'{API_URL}/v1/feedback/answer/{answer.id}/tracker.png',
+        'TRACKER_URL': f'{api_url}/v1/feedback/answer/{answer.id}/tracker.png',
         'BUTTON': strings[answer.lang]['button_label'],
         'LINK': f'https://nps.breatheco.de/{answer.id}?token={token.key}',
     }
 
     if session.mentee.email:
-        if send_email_message('nps_survey', session.mentee.email, data):
+        if actions.send_email_message('nps_survey', session.mentee.email, data):
             answer.sent_at = timezone.now()
             answer.save()

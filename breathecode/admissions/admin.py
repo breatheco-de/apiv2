@@ -324,6 +324,8 @@ class SyllabusAdmin(admin.ModelAdmin):
 @admin.register(SyllabusVersion)
 class SyllabusVersionAdmin(admin.ModelAdmin):
     list_display = ('version', 'syllabus', 'owner')
+    search_fields = ['syllabus__name', 'syllabus__slug']
+    list_filter = ['syllabus__private', 'syllabus__academy_owner']
 
     def owner(self, obj):
         if obj.syllabus.academy_owner is None:
@@ -332,8 +334,15 @@ class SyllabusVersionAdmin(admin.ModelAdmin):
         return format_html(f'<span>{obj.syllabus.academy_owner.name}</span>')
 
 
+class CohortTimeSlotForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(CohortTimeSlotForm, self).__init__(*args, **kwargs)
+        self.fields['timezone'] = forms.ChoiceField(choices=timezones)
+
+
 @admin.register(CohortTimeSlot)
 class CohortTimeSlotAdmin(admin.ModelAdmin):
+    form = CohortTimeSlotForm
     list_display = ('cohort', 'timezone', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type')
     list_filter = ['cohort__academy__slug', 'timezone', 'recurrent', 'recurrency_type']
     search_fields = ['cohort__slug', 'timezone', 'cohort__name', 'cohort__academy__city__name']
@@ -418,8 +427,15 @@ class SyllabusScheduleAdmin(admin.ModelAdmin):
     actions = [replicate_in_all]
 
 
+class SyllabusScheduleTimeSlotForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super(SyllabusScheduleTimeSlotForm, self).__init__(*args, **kwargs)
+        self.fields['timezone'] = forms.ChoiceField(choices=timezones)
+
+
 @admin.register(SyllabusScheduleTimeSlot)
 class SyllabusScheduleTimeSlotAdmin(admin.ModelAdmin):
+    form = SyllabusScheduleTimeSlotForm
     list_display = ('id', 'schedule', 'timezone', 'starting_at', 'ending_at', 'recurrent', 'recurrency_type')
     list_filter = ['schedule__name', 'timezone', 'recurrent', 'recurrency_type']
     search_fields = ['schedule__name', 'timezone', 'schedule__name']

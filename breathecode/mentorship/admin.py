@@ -1,8 +1,8 @@
-import json, pytz, logging, requests
+import json, pytz, logging, requests, re
 from django.contrib import admin, messages
 from django import forms
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
-from .actions import generate_mentor_bill
+from .actions import generate_mentor_bill, mentor_is_ready
 from django.utils.html import format_html
 from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
@@ -39,21 +39,7 @@ def mark_as_active(modeladmin, request, queryset):
     entries = queryset.all()
     try:
         for entry in entries:
-            if entry.online_meeting_url is None or entry.online_meeting_url == '':
-                raise Exception(f'Mentor {entry.name} does not have online_meeting_url')
-            elif entry.booking_url is None or 'calendly' not in entry.booking_url:
-                raise Exception(f'Mentor {entry.name} booking_url must point to calendly')
-            elif len(entry.syllabus.all()) == 0:
-                raise Exception(f'Mentor {entry.name} has no syllabus associated')
-            else:
-                response = requests.head(entry.booking_url)
-                if response.status_code > 399:
-                    raise Exception(
-                        f'Mentor {entry.name} booking URL is failing with code {str(response.status_code)}')
-                response = requests.head(entry.online_meeting_url)
-                if response.status_code > 399:
-                    raise Exception(
-                        f'Mentor {entry.name} meeting URL is failing with code {str(response.status_code)}')
+            mentor_is_ready(entry)
 
         messages.success(request, message='Mentor updated successfully')
     except requests.exceptions.ConnectionError:
@@ -65,7 +51,22 @@ def mark_as_active(modeladmin, request, queryset):
         messages.error(request, 'Error: ' + str(e))
 
 
-mark_as_active.short_description = 'Mark as ACTIVE'
+def generate_slug_based_on_calendly(modeladmin, request, queryset):
+    entries = queryset.all()
+    for entry in entries:
+
+        if entry.booking_url is None:
+            messages.error(request, f'Mentor {entry.id} has no booking url')
+            continue
+
+        result = re.search(r'^https?:\/\/calendly.com\/([\w\-]+)\/?.*', entry.booking_url)
+        if result is None:
+            messages.error(request, f'Mentor {entry.id} booking url is not calendly: {entry.booking_url}')
+            continue
+
+        calendly_username = result.group(1)
+        entry.slug = calendly_username
+        entry.save()
 
 
 @admin.register(MentorProfile)
@@ -76,7 +77,8 @@ class MentorAdmin(admin.ModelAdmin):
     search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email']
     list_filter = ['service__academy__slug', 'status', 'service__slug']
     readonly_fields = ('token', )
-    actions = [generate_bill, mark_as_active] + change_field(['INNACTIVE', 'INVITED'], name='status')
+    actions = [generate_bill, mark_as_active, generate_slug_based_on_calendly] + change_field(
+        ['INNACTIVE', 'INVITED'], name='status')
 
     def current_status(self, obj):
         colors = {

@@ -128,24 +128,75 @@ class TaskMeView(APIView):
             serializer = TaskGETSerializer(item, many=False)
             return Response(serializer.data)
 
-        tasks = Task.objects.filter(user__id=user_id)
-        serializer = TaskGETSerializer(tasks, many=True)
+        items = Task.objects.filter(user__id=user_id)
+
+        task_type = request.GET.get('task_type', None)
+        if task_type is not None:
+            items = items.filter(task_type__in=task_type.split(','))
+
+        task_status = request.GET.get('task_status', None)
+        if task_status is not None:
+            items = items.filter(task_status__in=task_status.split(','))
+
+        revision_status = request.GET.get('revision_status', None)
+        if revision_status is not None:
+            items = items.filter(revision_status__in=revision_status.split(','))
+
+        cohort = request.GET.get('cohort', None)
+        if cohort is not None:
+            if cohort == 'null':
+                items = items.filter(cohort__isnull=True)
+            else:
+                cohorts = cohort.split(',')
+                ids = [x for x in cohorts if x.isnumeric()]
+                slugs = [x for x in cohorts if not x.isnumeric()]
+                items = items.filter(Q(cohort__slug__in=slugs) | Q(cohort__id__in=ids))
+
+        serializer = TaskGETSerializer(items, many=True)
         return Response(serializer.data)
 
-    def put(self, request, task_id):
-        item = Task.objects.filter(id=task_id).first()
-        if item is None:
-            raise ValidationException('Task not found', slug='task-not-found')
+    def put(self, request, task_id=None):
+        def update(_req, data, _id=None, only_validate=True):
+            if _id is None:
+                raise ValidationException('Missing task id to update', slug='missing=task-id')
 
-        serializer = PUTTaskSerializer(item, data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
+            item = Task.objects.filter(id=_id).first()
+            if item is None:
+                raise ValidationException('Task not found', slug='task-not-found')
+            serializer = PUTTaskSerializer(item, data=data, context={'request': _req})
+            if serializer.is_valid():
+                if not only_validate:
+                    serializer.save()
+                    if _req.user.id != item.user.id:
+                        tasks.student_task_notification.delay(item.id)
+                return status.HTTP_200_OK, serializer.data
+            return status.HTTP_400_BAD_REQUEST, serializer.errors
 
-            if request.user.id != item.user.id:
-                tasks.student_task_notification.delay(item.id)
+        if task_id is not None:
+            code, data = update(request, request.data, task_id, only_validate=False)
+            return Response(data, status=code)
 
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:  # task_id is None:
+
+            if isinstance(request.data, list) == False:
+                raise ValidationException(
+                    'You are trying to update many tasks at once but you didn\'t provide a list on the payload',
+                    slug='update-whout-list')
+
+            for item in request.data:
+                if 'id' not in item:
+                    item['id'] = None
+                code, data = update(request, item, item['id'], only_validate=True)
+                if code != status.HTTP_200_OK:
+                    return Response(data, status=code)
+
+            updated_tasks = []
+            for item in request.data:
+                code, data = update(request, item, item['id'], only_validate=False)
+                if code == status.HTTP_200_OK:
+                    updated_tasks.append(data)
+
+            return Response(updated_tasks, status=status.HTTP_200_OK)
 
     def post(self, request, user_id=None):
 
@@ -169,6 +220,25 @@ class TaskMeView(APIView):
             # tasks.teacher_task_notification.delay(serializer.data['id'])
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, task_id=None):
+
+        if task_id is not None:
+            item = Task.objects.filter(id=task_id, user__id=request.user.id).first()
+            if item is None:
+                raise ValidationException('Task not found for this user', slug='task-not-found')
+
+            item.delete()
+
+        else:  # task_id is None:
+            ids = request.GET.get('id', '')
+            if ids == '':
+                raise ValidationException('Missing querystring propery id for bulk delete tasks',
+                                          slug='missing-id')
+            ids_to_delete = [id.strip() for id in ids.split(',')]
+            Task.objects.filter(id__in=ids_to_delete, user__id=request.user.id).delete()
+
+        return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class TaskMeDeliverView(APIView):

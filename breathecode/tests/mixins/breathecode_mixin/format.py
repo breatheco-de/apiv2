@@ -2,6 +2,7 @@ import yaml
 from typing import Any
 from rest_framework.test import APITestCase
 from django.db.models import Model
+from django.db.models.query import QuerySet
 from ..models_mixin import ModelsMixin
 
 __all__ = ['Format']
@@ -35,7 +36,7 @@ class Format:
         ```
         """
 
-        if isinstance(arg, list):
+        if isinstance(arg, list) or isinstance(arg, QuerySet):
             return [self._one_to_dict(x) for x in arg]
 
         return self._one_to_dict(arg)

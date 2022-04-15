@@ -1172,7 +1172,7 @@ class SyllabusVersionView(APIView):
         syllabus_version = SyllabusVersion.objects.filter(
             Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
             Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
-        )
+        ).order_by('version')
 
         serializer = GetSyllabusVersionSerializer(syllabus_version, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

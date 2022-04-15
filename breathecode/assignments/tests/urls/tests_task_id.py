@@ -131,32 +131,6 @@ class MediaTestSuite(AssignmentsTestCase):
 
     @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
     @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
-    def test_task_id__put__with_one_task__bad_fields(self):
-        from breathecode.assignments.tasks import student_task_notification
-        from breathecode.assignments.tasks import teacher_task_notification
-
-        model = self.bc.database.create(user=1, task=1)
-        self.bc.request.authenticate(model.user)
-
-        url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
-        response = self.client.put(url)
-
-        json = response.json()
-        expected = {'associated_slug': ['This field is required.'], 'title': ['This field is required.']}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [self.bc.format.to_dict(model.task)])
-
-        self.assertEqual(student_task_notification.delay.call_args_list, [])
-        self.assertEqual(teacher_task_notification.delay.call_args_list, [])
-
-    """
-    🔽🔽🔽 Put with Task
-    """
-
-    @patch('breathecode.assignments.tasks.student_task_notification', MagicMock())
-    @patch('breathecode.assignments.tasks.teacher_task_notification', MagicMock())
     def test_task_id__put__with_one_task(self):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
@@ -165,7 +139,7 @@ class MediaTestSuite(AssignmentsTestCase):
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
-        data = {'associated_slug': 'they-killed-kenny', 'title': 'They killed kenny'}
+        data = {'title': 'They killed kennyy'}
         start = self.bc.datetime.now()
         response = self.client.put(url, data, format='json')
         end = self.bc.datetime.now()
@@ -183,17 +157,23 @@ class MediaTestSuite(AssignmentsTestCase):
             'id': model.task.id,
             'description': model.task.description,
             'live_url': model.task.live_url,
+            'task_type': model.task.task_type,
+            'associated_slug': model.task.associated_slug,
             'revision_status': model.task.revision_status,
             'task_status': model.task.task_status,
             **data,
+            'associated_slug': model.task.associated_slug,
+            'task_type': model.task.task_type,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            **self.bc.format.to_dict(model.task),
-            **data,
-        }])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'),
+                         [{
+                             **self.bc.format.to_dict(model.task),
+                             **data,
+                             'associated_slug': model.task.associated_slug,
+                         }])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -310,7 +290,6 @@ class MediaTestSuite(AssignmentsTestCase):
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         data = {
-            'associated_slug': 'they-killed-kenny',
             'title': 'They killed kenny',
             'revision_status': 'APPROVED',
         }
@@ -335,11 +314,11 @@ class MediaTestSuite(AssignmentsTestCase):
         task = {'revision_status': 'PENDING', 'user_id': 1, 'task_status': 'DONE'}
         cohort_users = [{'role': 'STUDENT', 'user_id': 1}, {'role': 'TEACHER', 'user_id': 2}]
         model = self.bc.database.create(user=2, task=task, cohort=1, cohort_user=cohort_users)
+        model2 = self.bc.database.create(cohort=1)
         self.bc.request.authenticate(model.user[1])
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         data = {
-            'associated_slug': 'they-killed-kenny',
             'title': 'They killed kenny',
             'revision_status': 'APPROVED',
         }
@@ -351,25 +330,31 @@ class MediaTestSuite(AssignmentsTestCase):
         updated_at = self.bc.datetime.from_iso_string(json['updated_at'])
         self.bc.check.datetime_in_range(start, end, updated_at)
         del json['updated_at']
+        del json['cohort']
 
         expected = {
             'github_url': model.task.github_url,
-            'cohort': model.task.cohort.id,
             'created_at': self.bc.datetime.to_iso_string(model.task.created_at),
             'id': model.task.id,
+            'task_type': model.task.task_type,
+            'associated_slug': model.task.associated_slug,
             'description': model.task.description,
             'live_url': model.task.live_url,
             'revision_status': model.task.revision_status,
             'task_status': model.task.task_status,
             **data,
+            'associated_slug': model.task.associated_slug,
+            'task_type': model.task.task_type,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            **self.bc.format.to_dict(model.task),
-            **data,
-        }])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'),
+                         [{
+                             **self.bc.format.to_dict(model.task),
+                             **data,
+                             'associated_slug': model.task.associated_slug,
+                         }])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -392,7 +377,6 @@ class MediaTestSuite(AssignmentsTestCase):
 
         url = reverse_lazy('assignments:task_id', kwargs={'task_id': 1})
         data = {
-            'associated_slug': 'they-killed-kenny',
             'title': 'They killed kenny',
             'revision_status': 'APPROVED',
         }
@@ -407,22 +391,28 @@ class MediaTestSuite(AssignmentsTestCase):
 
         expected = {
             'github_url': model.task.github_url,
-            'cohort': model.task.cohort.id,
             'created_at': self.bc.datetime.to_iso_string(model.task.created_at),
             'id': model.task.id,
             'description': model.task.description,
+            'associated_slug': model.task.associated_slug,
+            'task_type': model.task.task_type,
+            'cohort': model.task.cohort.id,
             'live_url': model.task.live_url,
             'revision_status': model.task.revision_status,
             'task_status': model.task.task_status,
             **data,
+            'associated_slug': model.task.associated_slug,
+            'task_type': model.task.task_type,
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
-            **self.bc.format.to_dict(model.task),
-            **data,
-        }])
+        self.assertEqual(self.bc.database.list_of('assignments.Task'),
+                         [{
+                             **self.bc.format.to_dict(model.task),
+                             **data,
+                             'associated_slug': model.task.associated_slug,
+                         }])
 
         self.assertEqual(student_task_notification.delay.call_args_list, [call(1)])
         self.assertEqual(teacher_task_notification.delay.call_args_list, [])
@@ -439,13 +429,13 @@ class MediaTestSuite(AssignmentsTestCase):
         from breathecode.assignments.tasks import student_task_notification
         from breathecode.assignments.tasks import teacher_task_notification
 
-        model = self.bc.database.create(task=1, user=1)
+        model = self.bc.database.create(task=1, user=1, cohort=1)
         self.bc.request.authenticate(model.user)
 
         url = reverse_lazy('assignments:task_id', kwargs={
             'task_id': model.task.id,
         })
-        data = {'associated_slug': 'hello', 'title': 'hello'}
+        data = {'cohort': model['cohort'].id, 'title': 'hello'}
         response = self.client.put(url, data)
         json = response.json()
         self.assertDatetime(json['created_at'])
@@ -454,20 +444,21 @@ class MediaTestSuite(AssignmentsTestCase):
         del json['updated_at']
         expected = {
             'id': 1,
-            'associated_slug': 'hello',
+            'associated_slug': model.task.associated_slug,
             'title': 'hello',
             'task_status': 'PENDING',
             'revision_status': 'PENDING',
             'github_url': None,
             'live_url': None,
+            'task_type': model.task.task_type,
             'description': model.task.description,
-            'cohort': None
+            'cohort': model['cohort'].id
         }
 
         self.assertEqual(json, expected)
         self.assertEqual(self.bc.database.list_of('assignments.Task'), [{
             'id': 1,
-            'associated_slug': 'hello',
+            'associated_slug': model.task.associated_slug,
             'title': 'hello',
             'task_status': 'PENDING',
             'revision_status': 'PENDING',
@@ -475,7 +466,7 @@ class MediaTestSuite(AssignmentsTestCase):
             'github_url': None,
             'live_url': None,
             'description': model.task.description,
-            'cohort_id': None,
+            'cohort_id': model['cohort'].id,
             'user_id': 1
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
