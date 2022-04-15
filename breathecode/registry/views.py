@@ -75,10 +75,15 @@ def render_preview_html(request, asset_slug):
         return render_message(request, f'Quiz cannot be previewed')
 
     readme = asset.get_readme(parse=True)
-    return render(request, 'markdown.html', {
-        **AssetBigSerializer(asset).data, 'html': readme['html'],
-        'frontmatter': readme['frontmatter'].items()
-    })
+    return render(
+        request, readme['frontmatter']['format'] + '.html', {
+            **AssetBigSerializer(asset).data, 'html': readme['html'],
+            'theme': request.GET.get('theme', 'white'),
+            'plain': request.GET.get('plain', 'false'),
+            'styles':
+            readme['frontmatter']['inlining']['css'][0] if 'inlining' in readme['frontmatter'] else None,
+            'frontmatter': readme['frontmatter'].items()
+        })
 
 
 @api_view(['GET'])

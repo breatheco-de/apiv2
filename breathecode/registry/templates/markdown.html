@@ -45,6 +45,7 @@
             max-width: 100%;
         }
     </style>
+    {% if plain != 'true' %}
     <div class="topbar"><a href="{{ readme_url }}">Open in Github</a></div>
     <table class="frontmatter">
     {% for property, value in frontmatter %}
@@ -54,6 +55,7 @@
         </tr>
     {% endfor %}
     </table>
+    {% endif %}
     <div class="container">
         {{ html|safe }}
     </div>

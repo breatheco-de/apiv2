@@ -417,6 +417,7 @@ class GetSyllabusSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    main_technologies = serpy.Field()
     github_url = serpy.Field()
     duration_in_hours = serpy.Field()
     duration_in_days = serpy.Field()
