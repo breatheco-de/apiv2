@@ -19,13 +19,6 @@ def command(capable_of=None):
             profiles = None
             if capable_of is not None:
 
-                print(ProfileAcademy.objects.filter(user__slackuser__slack_id=context['user_id']))
-                print(ProfileAcademy.objects.filter(academy__slackteam__slack_id=context['team_id']))
-
-                print(ProfileAcademy.objects.filter(role__capabilities__slug=capable_of))
-
-                print([x.role.capabilities for x in ProfileAcademy.objects.filter()], capable_of)
-
                 profiles = ProfileAcademy.objects.filter(user__slackuser__slack_id=context['user_id'],
                                                          academy__slackteam__slack_id=context['team_id'],
                                                          role__capabilities__slug=capable_of).values_list(
@@ -33,7 +26,7 @@ def command(capable_of=None):
 
                 if len(profiles) == 0:
                     raise SlackException(
-                        f"Your user {context['user_id']} don't have permissions to query this student, are you a staff on this academy?",
+                        f"Your user {context['user_id']} don't have permissions to query this student/cohort, are you a staff on this academy?",
                         slug='unauthorized-user')
 
             kwargs['academies'] = profiles

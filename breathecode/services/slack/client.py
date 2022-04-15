@@ -68,10 +68,16 @@ class Slack:
         response['context'] = context
 
         if hasattr(commands, _commands[0]):
-            return getattr(commands, _commands[0]).execute(**response)
+            return self._execute_command(commands, _commands[0], response)
+            # return getattr(commands, _commands[0]).execute(**response)
+
         else:
             raise SlackException('No implementation has been found for this command',
                                  slug='command-does-not-exist')
+
+    def _execute_command(self, module, command, response):
+
+        return getattr(module, command).execute(**response)
 
     def execute_action(self, context):
 
