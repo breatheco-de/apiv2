@@ -79,7 +79,7 @@ def render_preview_html(request, asset_slug):
     return render(
         request, readme['frontmatter']['format'] + '.html', {
             **AssetBigSerializer(asset).data, 'html': readme['html'],
-            'theme': request.GET.get('theme', 'white'),
+            'theme': request.GET.get('theme', 'light'),
             'plain': request.GET.get('plain', 'false'),
             'styles':
             readme['frontmatter']['inlining']['css'][0] if 'inlining' in readme['frontmatter'] else None,
