@@ -35,7 +35,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_downloadable_slug_as_acp_tag.delay(1, 1)
 
-        self.assertEqual(self.all_tag_dict(), [])
+        self.assertEqual(self.bc.database.list_of('marketing.Tag'), [])
         self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [call('Academy 1 not found')])
 
@@ -54,7 +54,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_downloadable_slug_as_acp_tag.delay(1, 1)
 
-        self.assertEqual(self.all_tag_dict(), [])
+        self.assertEqual(self.bc.database.list_of('marketing.Tag'), [])
 
         self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [call('ActiveCampaign Academy 1 not found')])
@@ -77,7 +77,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_downloadable_slug_as_acp_tag.delay(1, 1)
 
-        self.assertEqual(self.all_tag_dict(), [])
+        self.assertEqual(self.bc.database.list_of('marketing.Tag'), [])
 
         self.assertEqual(logging.Logger.warn.call_args_list, [call(TASK_STARTED_MESSAGE)])
         self.assertEqual(logging.Logger.error.call_args_list, [call('Downloadable 1 not found')])
@@ -101,7 +101,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_downloadable_slug_as_acp_tag.delay(1, 1)
 
-        self.assertEqual(self.all_tag_dict(), [{
+        self.assertEqual(self.bc.database.list_of('marketing.Tag'), [{
             'ac_academy_id': 1,
             'acp_id': 1,
             'automation_id': None,
@@ -148,7 +148,7 @@ class AnswerIdTestSuite(MarketingTestCase):
 
         add_downloadable_slug_as_acp_tag.delay(1, 1)
 
-        self.assertEqual(self.all_tag_dict(), [self.model_to_dict(model, 'tag')])
+        self.assertEqual(self.bc.database.list_of('marketing.Tag'), [self.model_to_dict(model, 'tag')])
 
         self.assertEqual(logging.Logger.warn.call_args_list, [
             call(TASK_STARTED_MESSAGE),

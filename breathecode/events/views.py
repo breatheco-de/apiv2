@@ -9,6 +9,7 @@ from breathecode.utils import APIException
 from datetime import datetime, timedelta
 import logging
 import re
+import pytz
 
 from django.http.response import HttpResponse
 from breathecode.utils.cache import Cache
@@ -579,12 +580,20 @@ class ICalStudentView(APIView):
                 until_date = timezone.make_aware(
                     datetime(year=2100, month=12, day=31, hour=12, minute=00, second=00))
 
-            if item.recurrent:
-                event.add('rrule', {'freq': item.recurrency_type, 'until': until_date})
-
             ending_at = DatetimeInteger.to_datetime(item.timezone, item.ending_at)
             ending_at = fix_datetime_weekday(item.cohort.kickoff_date, ending_at, next=True)
             event.add('dtend', ending_at)
+
+            if item.recurrent:
+                utc_ending_at = ending_at.astimezone(pytz.UTC)
+
+                # is possible hour of cohort.ending_date are wrong filled, I's assumes the max diff between
+                # summer/winter timezone should have two hours
+                delta = timedelta(hours=utc_ending_at.hour - until_date.hour + 3,
+                                  minutes=utc_ending_at.minute - until_date.minute,
+                                  seconds=utc_ending_at.second - until_date.second)
+
+                event.add('rrule', {'freq': item.recurrency_type, 'until': until_date + delta})
 
             teacher = CohortUser.objects.filter(role='TEACHER', cohort__id=item.cohort.id).first()
 

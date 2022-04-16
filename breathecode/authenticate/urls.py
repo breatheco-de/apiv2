@@ -20,9 +20,9 @@ from .views import (TokenTemporalView, WaitingListView, get_users, get_user_by_i
                     LoginView, LogoutView, TemporalTokenView, get_github_token, save_github_token,
                     get_slack_token, save_slack_token, pick_password, get_token_info, get_facebook_token,
                     save_facebook_token, MemberView, reset_password_view, login_html_view, StudentView,
-                    get_roles, render_invite, AcademyInviteView, ProfileInviteView, MeInviteView,
-                    AcademyTokenView, PasswordResetView, get_google_token, save_google_token,
-                    render_academy_invite, ProfileInviteMeView)
+                    get_roles, render_invite, AcademyInviteView, MeInviteView, AcademyTokenView,
+                    PasswordResetView, get_google_token, save_google_token, render_academy_invite,
+                    ProfileInviteMeView)
 
 app_name = 'authenticate'
 urlpatterns = [
@@ -33,7 +33,7 @@ urlpatterns = [
     path('role', get_roles, name='role'),
     path('role/<str:role_slug>', get_roles, name='role_slug'),
     path('profile/invite/me', ProfileInviteMeView.as_view(), name='profile_invite_me'),
-    path('member/invite/resend/<int:pa_id>', AcademyInviteView.as_view(), name='academy_resent_invite'),
+    path('member/invite/resend/<int:invite_id>', AcademyInviteView.as_view(), name='academy_resent_invite'),
     path('member/invite/<str:token>', render_invite, name='academy_invite'),
     path('member/<int:profile_academy_id>/token',
          TokenTemporalView.as_view(),
@@ -48,8 +48,11 @@ urlpatterns = [
     path('academy/student/<str:user_id_or_email>', StudentView.as_view(), name='academy_student_id'),
     path('academy/user/me/invite', MeInviteView.as_view(), name='user_me_invite'),
     path('academy/user/me/invite/<slug:new_status>', MeInviteView.as_view(), name='user_me_invite_status'),
-    path('academy/user/<int:profileacademy_id>/invite', ProfileInviteView.as_view()),
-    path('academy/user/invite', ProfileInviteView.as_view(), name='user_invite'),
+    path('academy/invite/<int:invite_id>', AcademyInviteView.as_view(), name='academy_invite_id'),
+    path('academy/member/<int:profileacademy_id>/invite',
+         AcademyInviteView.as_view(),
+         name='academy_member_id_invite'),
+    path('academy/user/invite', AcademyInviteView.as_view(), name='user_invite'),
     path('academy/html/invite', render_academy_invite),
     # path('group/', get_groups, name="group"),
     path('view/login', login_html_view, name='login_view'),  # html login form
