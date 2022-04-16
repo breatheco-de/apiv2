@@ -342,9 +342,6 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
                     f'This user is already a member of this academy as {str(already.role)}',
                     slug='user-already-exists')
 
-        if 'role' not in data:
-            raise ValidationException('Missing role')
-
         return data
 
     def create(self, validated_data):
@@ -359,7 +356,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
         email = None
         status = 'INVITED'
 
-        # if the user already exists, we don't consider it and invite, we add the user immediatly to the academy.
+        # if the user already exists, we don't consider it and invite, we add the user immediately to the academy.
         if 'user' in validated_data:
             user = User.objects.filter(id=validated_data['user']).first()
             if user is None:

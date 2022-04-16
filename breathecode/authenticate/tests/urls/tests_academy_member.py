@@ -87,7 +87,7 @@ class MemberSetOfDuckTestSuite(AuthTestCase):
     """
 
     @patch('breathecode.authenticate.views.MemberView.post', MagicMock(side_effect=view_method_mock))
-    def test_academy_member__post__with_auth___mock_view(self):
+    def test_academy_member__post____with_auth___mock_view(self):
         profile_academies = [{'academy_id': id} for id in range(1, 4)]
         model = self.bc.database.create(academy=3,
                                         capability='read_member',
@@ -1503,7 +1503,7 @@ class MemberGetPaginationTestSuite(AuthTestCase):
 
 class MemberPostTestSuite(AuthTestCase):
     """Authentication test suite"""
-    def test_academy_member_post_no_data(self):
+    def test_academy_member__post__no_data(self):
         """Test /academy/:id/member"""
         role = 'konan'
         self.bc.request.set_headers(academy=1)
@@ -1532,7 +1532,7 @@ class MemberPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
-    def test_academy_member_post_no_user(self):
+    def test_academy_member__post__no_user(self):
         """Test /academy/:id/member"""
         role = 'konan'
         self.bc.request.set_headers(academy=1)
@@ -1545,7 +1545,6 @@ class MemberPostTestSuite(AuthTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {'detail': 'user-not-found', 'status_code': 400}
-        profile_academy = self.get_profile_academy(1)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -1562,7 +1561,7 @@ class MemberPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
-    def test_academy_member_post_no_invite(self):
+    def test_academy_member__post__no_invite(self):
         """Test /academy/:id/member"""
         role = 'konan'
         self.bc.request.set_headers(academy=1)
@@ -1575,7 +1574,6 @@ class MemberPostTestSuite(AuthTestCase):
         response = self.client.post(url, data)
         json = response.json()
         expected = {'detail': 'no-email-or-id', 'status_code': 400}
-        profile_academy = self.get_profile_academy(1)
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -1592,7 +1590,7 @@ class MemberPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
-    def test_academy_member_post_user_with_not_student_role(self):
+    def test_academy_member__post__user_with_not_student_role(self):
         """Test /academy/:id/member"""
         role = 'konan'
         self.bc.request.set_headers(academy=1)
@@ -1606,8 +1604,6 @@ class MemberPostTestSuite(AuthTestCase):
         json = response.json()
         expected = {'detail': 'user-already-exists', 'status_code': 400}
 
-        profile_academy = self.get_profile_academy(1)
-
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.all_profile_academy_dict(), [{
@@ -1623,7 +1619,7 @@ class MemberPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
-    def test_academy_member_post_user_with_student_role(self):
+    def test_academy_member__post__user_with_student_role(self):
         """Test /academy/:id/member"""
         role = 'student'
         self.bc.request.set_headers(academy=1)
@@ -1661,7 +1657,7 @@ class MemberPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
-    def test_academy_member_post_teacher_with_student_role(self):
+    def test_academy_member__post__teacher_with_student_role(self):
         """Test /academy/:id/member"""
         role = 'student'
         self.bc.request.set_headers(academy=1)
@@ -1715,7 +1711,7 @@ class MemberDeleteTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:academy_member')
         response = self.client.delete(url)
         json = response.json()
-        expected = {'detail': 'Member not found', 'status_code': 404}
+        expected = {'detail': 'profile-academy-not-found', 'status_code': 404}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)

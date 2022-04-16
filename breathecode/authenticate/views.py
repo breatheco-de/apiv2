@@ -229,15 +229,17 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        if not user_id_or_email.isnumeric():
+        if user_id_or_email and not user_id_or_email.isnumeric():
             raise ValidationException('User id must be a numeric value',
                                       code=404,
                                       slug='user-id-is-not-numeric')
 
         member = ProfileAcademy.objects.filter(user=user_id_or_email,
                                                academy__id=academy_id).exclude(role__slug='student').first()
+
         if member is None:
             raise ValidationException('Member not found', code=404, slug='profile-academy-not-found')
+
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
