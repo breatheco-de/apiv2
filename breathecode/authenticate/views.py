@@ -134,8 +134,6 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('read_member')
     def get(self, request, academy_id, user_id_or_email=None):
-        is_many = bool(not user_id_or_email)
-
         if user_id_or_email is not None:
             item = None
             if user_id_or_email.isnumeric():
@@ -145,7 +143,9 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                                      academy_id=academy_id).first()
 
             if item is None:
-                raise ValidationException('Profile not found for this user and academy', 404)
+                raise ValidationException('Profile not found for this user and academy',
+                                          code=404,
+                                          slug='profile-academy-not-found')
 
             serializer = GetProfileAcademySerializer(item, many=False)
             return Response(serializer.data)
@@ -153,11 +153,11 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         items = ProfileAcademy.objects.filter(academy__id=academy_id).exclude(role__slug='student')
 
         roles = request.GET.get('roles', None)
-        if is_many and roles is not None:
+        if roles is not None:
             items = items.filter(role__in=roles.split(','))
 
         status = request.GET.get('status', None)
-        if is_many and status is not None:
+        if status is not None:
             items = items.filter(status__iexact=status)
 
         like = request.GET.get('like', None)
@@ -166,11 +166,8 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         items = items.exclude(user__email__contains='@token.com')
 
-        if not is_many:
-            items = items.first()
-
         page = self.paginate_queryset(items, request)
-        serializer = GetProfileAcademySmallSerializer(page, many=is_many)
+        serializer = GetProfileAcademySmallSerializer(page, many=True)
 
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
@@ -213,29 +210,34 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_member')
-    def delete(self, request, academy_id=None, user_id=None):
+    def delete(self, request, academy_id=None, user_id_or_email=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
-        if lookups and user_id:
+        if lookups and user_id_or_email:
             raise ValidationException(
                 'user_id or cohort_id was provided in url '
                 'in bulk mode request, use querystring style instead',
-                code=400)
+                code=400,
+                slug='user-id-and-bulk-mode')
 
         if lookups:
             items = ProfileAcademy.objects.filter(**lookups,
                                                   academy__id=academy_id).exclude(role__slug='student')
 
             for item in items:
-
                 item.delete()
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        member = ProfileAcademy.objects.filter(user=user_id,
+        if not user_id_or_email.isnumeric():
+            raise ValidationException('User id must be a numeric value',
+                                      code=404,
+                                      slug='user-id-is-not-numeric')
+
+        member = ProfileAcademy.objects.filter(user=user_id_or_email,
                                                academy__id=academy_id).exclude(role__slug='student').first()
         if member is None:
-            raise ValidationException('Member not found', 404)
+            raise ValidationException('Member not found', code=404, slug='profile-academy-not-found')
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 

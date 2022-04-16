@@ -43,7 +43,7 @@ urlpatterns = [
     path('academy/<int:academy_id>/member/<str:user_id_or_email>',
          MemberView.as_view(),
          name='academy_id_member_id'),
-    path('academy/member/<str:user_id_or_email>', MemberView.as_view(), name='academy_id_member_id'),
+    path('academy/member/<str:user_id_or_email>', MemberView.as_view(), name='academy_member_id'),
     path('academy/student', StudentView.as_view(), name='academy_student'),
     path('academy/student/<str:user_id_or_email>', StudentView.as_view(), name='academy_student_id'),
     path('academy/user/me/invite', MeInviteView.as_view(), name='user_me_invite'),

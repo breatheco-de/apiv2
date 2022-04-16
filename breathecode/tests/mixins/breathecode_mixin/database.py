@@ -1,6 +1,6 @@
 import re
 from importlib import import_module
-from typing import Any
+from typing import Any, Optional
 from rest_framework.test import APITestCase
 from django.db.models import Model
 from ..generate_models_mixin import GenerateModelsMixin
@@ -61,6 +61,44 @@ class Database:
             result = [ModelsMixin.remove_dinamics_fields(self, data.__dict__.copy()) for data in result]
 
         return result
+
+    def delete(self, path: str, pk: Optional[int or str] = None) -> tuple[int, dict[str, int]]:
+        """
+        This is a wrapper for `Model.objects.filter(pk=pk).delete()`, delete a element if `pk` is provided else
+        all the entries.
+
+        Usage:
+
+        ```py
+        # create 19110911 cohorts 🦾
+        self.bc.database.create(cohort=19110911)
+
+        # exists 19110911 cohorts 🦾
+        self.assertEqual(self.bc.database.count('admissions.Cohort'), 19110911)
+
+        # remove all the cohorts
+        self.bc.database.delete(10)
+
+        # exists 19110910 cohorts
+        self.assertEqual(self.bc.database.count('admissions.Cohort'), 19110910)
+        ```
+
+        # remove all the cohorts
+        self.bc.database.delete()
+
+        # exists 0 cohorts
+        self.assertEqual(self.bc.database.count('admissions.Cohort'), 0)
+        ```
+
+        Keywords arguments:
+        - path(`str`): path to a model, for example `admissions.CohortUser`.
+        - pk(`str | int`): primary key of model.
+        """
+
+        lookups = {'pk': pk} if pk else {}
+
+        model = Database._get_model(path)
+        return model.objects.filter(**lookups).delete()
 
     def get(self, path: str, pk: int or str, dict: bool = True) -> Model | dict[str, Any]:
         """
