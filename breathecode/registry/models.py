@@ -209,7 +209,8 @@ class Asset(models.Model):
             'decoded': base64.b64decode(self.readme.encode('utf-8')).decode('utf-8')
         }
         if parse is not None:
-            extension = pathlib.Path(self.readme_url).suffix
+            # external assets will have a default markdown readme generated internally
+            extension = pathlib.Path(self.readme_url).suffix if not self.external else '.md'
             if extension in ['.md', '.mdx', '.txt']:
                 readme = self.parse(readme, format='markdown')
             elif extension in ['.ipynb']:
