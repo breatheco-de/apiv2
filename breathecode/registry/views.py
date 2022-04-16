@@ -66,6 +66,7 @@ def forward_asset_url(request, asset_slug=None):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@xframe_options_exempt
 def render_preview_html(request, asset_slug):
     asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:
