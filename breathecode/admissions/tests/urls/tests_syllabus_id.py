@@ -84,6 +84,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'id': model.syllabus.id,
             'logo': model.syllabus.logo,
             'private': model.syllabus.private,
+            'main_technologies': None,
             'created_at': self.datetime_to_iso(model.syllabus.created_at),
             'updated_at': self.datetime_to_iso(model.syllabus.updated_at),
         }

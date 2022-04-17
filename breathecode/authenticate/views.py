@@ -303,7 +303,9 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if invite_id is not None:
             invite = UserInvite.objects.filter(academy__id=academy_id, id=invite_id, status='PENDING').first()
             if invite is None:
-                raise ValidationException('No pending invite was found for this user and academy', 404)
+                raise ValidationException('No pending invite was found for this user and academy',
+                                          code=404,
+                                          slug='user-invite-not-found')
             serializer = UserInviteSerializer(invite, many=False)
             return Response(serializer.data)
 
@@ -366,7 +368,9 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if invite_id is not None:
             invite = UserInvite.objects.filter(academy__id=academy_id, id=invite_id, status='PENDING').first()
             if invite is None:
-                raise ValidationException('No pending invite was found for this user and academy', 404)
+                raise ValidationException('No pending invite was found for this user and academy',
+                                          code=404,
+                                          slug='user-invite-not-found')
 
         elif profileacademy_id is not None:
             profile_academy = ProfileAcademy.objects.filter(id=profileacademy_id).first()
@@ -376,9 +380,10 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
             invite = UserInvite.objects.filter(academy__id=academy_id, email=profile_academy.email).first()
 
-        if invite is None and profile_academy is not None and profile_academy.status == 'INVITED':
+        if (invite is None and profile_academy is not None and profile_academy.status == 'INVITED'
+                and (profile_academy.user.email or invite.email)):
             send_email_message(
-                'academy_invite', profile_academy.user.email, {
+                'academy_invite', profile_academy.user.email or invite.email, {
                     'subject': f'Invitation to study at {profile_academy.academy.name}',
                     'invites': [ProfileAcademySmallSerializer(profile_academy).data],
                     'user': UserSmallSerializer(profile_academy.user).data,
@@ -395,8 +400,15 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
 
             if minutes_diff < 2:
-                raise ValidationException('Imposible to resend invitation', 400)
-        resend_invite(invite.token, invite.email, invite.first_name)
+                raise ValidationException('Impossible to resend invitation', 400)
+
+        email = (profile_academy and profile_academy.user and profile_academy.user.email) or invite.email
+        if not email:
+            raise ValidationException('Impossible to determine the email of user',
+                                      code=400,
+                                      slug='without-email')
+
+        resend_invite(invite.token, email, invite.first_name)
 
         invite.sent_at = timezone.now()
         invite.save()
