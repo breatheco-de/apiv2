@@ -206,6 +206,7 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
     slug = serpy.MethodField()
     name = serpy.MethodField()
     syllabus = serpy.MethodField()
+    main_technologies = serpy.MethodField()
     duration_in_hours = serpy.MethodField()
     duration_in_days = serpy.MethodField()
     week_hours = serpy.MethodField()
@@ -221,6 +222,9 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
 
     def get_syllabus(self, obj):
         return obj.syllabus.id if obj.syllabus else None
+
+    def get_main_technologies(self, obj):
+        return obj.syllabus.main_technologies if obj.syllabus else None
 
     def get_academy_owner(self, obj):
         if obj.syllabus is not None and obj.syllabus.academy_owner is not None:

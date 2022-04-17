@@ -128,6 +128,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'logo': model.syllabus.logo,
             'private': model.syllabus.private,
             'week_hours': model.syllabus.week_hours,
+            'main_technologies': None,
         }
 
         self.assertEqual(json, expected)
