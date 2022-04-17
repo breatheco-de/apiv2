@@ -20,6 +20,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import status
 from django.http import HttpResponseRedirect
+from django.views.decorators.clickjacking import xframe_options_exempt
 
 logger = logging.getLogger(__name__)
 
@@ -65,16 +66,25 @@ def forward_asset_url(request, asset_slug=None):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@xframe_options_exempt
 def render_preview_html(request, asset_slug):
     asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:
         return render_message(request, f'Asset with slug {asset_slug} not found')
 
+    if asset.asset_type == 'QUIZ':
+        return render_message(request, f'Quiz cannot be previewed')
+
     readme = asset.get_readme(parse=True)
-    return render(request, 'markdown.html', {
-        **AssetBigSerializer(asset).data, 'html': readme['html'],
-        'frontmatter': readme['frontmatter'].items()
-    })
+    return render(
+        request, readme['frontmatter']['format'] + '.html', {
+            **AssetBigSerializer(asset).data, 'html': readme['html'],
+            'theme': request.GET.get('theme', 'light'),
+            'plain': request.GET.get('plain', 'false'),
+            'styles':
+            readme['frontmatter']['inlining']['css'][0] if 'inlining' in readme['frontmatter'] else None,
+            'frontmatter': readme['frontmatter'].items()
+        })
 
 
 @api_view(['GET'])
@@ -111,6 +121,7 @@ def handle_test_asset(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@xframe_options_exempt
 def render_readme(request, asset_slug, extension='raw'):
     asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:
@@ -129,6 +140,8 @@ def render_readme(request, asset_slug, extension='raw'):
         response = HttpResponse(readme['decoded'], content_type='application/json')
         response['Content-Length'] = len(readme['decoded'])
 
+    # response[
+    # 'Content-Security-Policy'] = "frame-ancestors 'self' https://4geeks.com http://localhost:3000 https://dev.4geeks.com"
     return response
 
 
