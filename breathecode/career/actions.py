@@ -199,10 +199,10 @@ def fetch_sync_all_data(spider):
     return res
 
 
-def get_was_publiched_date_from_string(job):
+def get_was_published_date_from_string(job):
 
     if job is None:
-        logger.error(f'First you must specify a job (get_was_publiched_date_from_string)')
+        logger.error(f'First you must specify a job (get_was_published_date_from_string)')
         raise ValidationException('First you must specify a job', slug='data-job-none')
 
     platform = job.spider.zyte_project.platform.name

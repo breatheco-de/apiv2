@@ -98,6 +98,7 @@ class CertificateTestSuite(AdmissionsTestCase):
             'private': model.syllabus.private,
             'created_at': self.datetime_to_iso(model.syllabus.created_at),
             'updated_at': self.datetime_to_iso(model.syllabus.updated_at),
+            'main_technologies': None,
         }
 
         self.assertEqual(json, expected)

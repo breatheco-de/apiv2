@@ -23,7 +23,7 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_resend_invite_no_auth(self):
         """Test """
         self.headers(academy=1)
-        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'pa_id': 1})
+        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'invite_id': 1})
 
         response = self.client.put(url)
         json = response.json()
@@ -39,7 +39,7 @@ class AuthenticateTestSuite(AuthTestCase):
         """Test """
         self.headers(academy=1)
         model = self.generate_models(authenticate=True, profile_academy=True, syllabus=True)
-        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'pa_id': 1})
+        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'invite_id': 1})
 
         response = self.client.put(url)
         json = response.json()
@@ -63,13 +63,13 @@ class AuthenticateTestSuite(AuthTestCase):
                                      role='potato',
                                      syllabus=True)
 
-        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'pa_id': 1359})
+        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'invite_id': 1359})
 
         response = self.client.put(url)
         json = response.json()
-        expected = {'detail': 'Member not found', 'status_code': 400}
+        expected = {'detail': 'user-invite-not-found', 'status_code': 404}
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 404)
 
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
@@ -78,50 +78,22 @@ class AuthenticateTestSuite(AuthTestCase):
     def test_resend_invite_no_invitation(self):
         """Test """
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='invite_resend',
-                                     role='potato',
-                                     syllabus=True)
-        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'pa_id': 1})
+        model = self.generate_models(
+            authenticate=True,
+            profile_academy=True,
+            capability='invite_resend',
+            #  user_invite=1,
+            role='potato',
+            syllabus=True)
 
+        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'invite_id': 1})
         response = self.client.put(url)
-        json = response.json()
-        created = json['created_at']
-        del json['created_at']
 
-        expected = {
-            'id': 1,
-            'status': 'INVITED',
-            'address': None,
-            'email': None,
-            'email': None,
-            'first_name': None,
-            'last_name': None,
-            'phone': '',
-            'invite_url': 'http://localhost:8000/v1/auth/academy/html/invite',
-            'academy': {
-                'id': model['academy'].id,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-            },
-            'role': {
-                'id': 'potato',
-                'name': 'potato',
-                'slug': 'potato'
-            },
-            'user': {
-                'email': model['user'].email,
-                'first_name': model['user'].first_name,
-                'github': None,
-                'id': model['user'].id,
-                'last_name': model['user'].last_name,
-                'profile': None
-            },
-        }
+        json = response.json()
+        expected = {'detail': 'user-invite-not-found', 'status_code': 404}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 404)
         all_user_invite = [x for x in self.all_user_invite_dict() if x.pop('sent_at')]
         self.assertEqual(all_user_invite, [])
 
@@ -145,7 +117,7 @@ class AuthenticateTestSuite(AuthTestCase):
                                      user_invite=True,
                                      profile_academy_kwargs=profile_academy_kwargs,
                                      user_invite_kwargs=user_invite_kwargs)
-        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'pa_id': 1})
+        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'invite_id': 1})
         response = self.client.put(url)
         json = response.json()
         created = json['created_at']
@@ -209,10 +181,10 @@ class AuthenticateTestSuite(AuthTestCase):
                                      user_invite=True,
                                      token=True,
                                      user_invite_kwargs={'sent_at': past_time})
-        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'pa_id': 1})
+        url = reverse_lazy('authenticate:academy_resent_invite', kwargs={'invite_id': 1})
         response = self.client.put(url)
         json = response.json()
-        expected = {'detail': 'Imposible to resend invitation', 'status_code': 400}
+        expected = {'detail': 'Impossible to resend invitation', 'status_code': 400}
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
 

@@ -77,6 +77,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = {
+            'main_technologies': None,
             'slug': model.syllabus.slug,
             'name': model.syllabus.name,
             'academy_owner': model.syllabus.academy_owner.id,

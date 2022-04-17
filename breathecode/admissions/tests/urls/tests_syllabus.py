@@ -68,6 +68,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
+            'main_technologies': None,
             'slug': model.syllabus.slug,
             'name': model.syllabus.name,
             'academy_owner': model.syllabus.academy_owner.id,
@@ -170,6 +171,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_syllabus_dict(), [{
+            'main_technologies': None,
             'academy_owner_id': 1,
             'duration_in_days': None,
             'duration_in_hours': None,
@@ -200,6 +202,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
 
         self.assertEqual(json, [{
+            'main_technologies': None,
             'slug': model.syllabus.slug,
             'name': model.syllabus.name,
             'academy_owner': model.syllabus.academy_owner.id,
@@ -246,6 +249,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'previous':
                 None,
                 'results': [{
+                    'main_technologies': None,
                     'slug': model.syllabus.slug,
                     'name': model.syllabus.name,
                     'academy_owner': model.syllabus.academy_owner.id,
@@ -293,6 +297,7 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'previous':
                 'http://testserver/v1/admissions/syllabus?limit=5',
                 'results': [{
+                    'main_technologies': None,
                     'slug': model.syllabus.slug,
                     'name': model.syllabus.name,
                     'academy_owner': model.syllabus.academy_owner.id,
