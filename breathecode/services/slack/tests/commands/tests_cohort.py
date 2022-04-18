@@ -8,8 +8,8 @@ from ...commands.cohort import execute
 
 
 class SlackTestSuite(SlackTestCase):
-    def test_slack_command___context_is_not_provide_or_is_none(self):
-        """Testing  ."""
+    def test_slack_command___context_is_not_provided_or_is_none(self):
+        """Testing when context is None or not provided."""
 
         with self.assertRaisesMessage(SlackException, 'context-missing'):
             result = execute(users=[])
@@ -18,7 +18,7 @@ class SlackTestSuite(SlackTestCase):
             result = execute(users=[], context=None)
 
     def test_slack_command___user_is_not_authorized(self):
-        """Testing  ."""
+        """Testing when user is not authorized."""
 
         data = {'text': 'cohort', 'user_id': 'name', 'team_id': 'team', 'channel_id': 'test'}
 
@@ -26,7 +26,7 @@ class SlackTestSuite(SlackTestCase):
             result = execute(users=[], context=data)
 
     def test_slack_command___cohort_does_not_exist(self):
-        """Testing  when cohort does not exist."""
+        """Testing when cohort does not exist."""
 
         slack_user = {'slack_id': 'name'}
         slack_team = {'slack_id': 'team'}

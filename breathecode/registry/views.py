@@ -1,4 +1,5 @@
 import requests, logging, os
+from pathlib import Path
 from django.shortcuts import render
 from django.utils import timezone
 from django.db.models import Q
@@ -19,32 +20,46 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework import status
 from django.http import HttpResponseRedirect
+from django.views.decorators.clickjacking import xframe_options_exempt
 
 logger = logging.getLogger(__name__)
 
 SYSTEM_EMAIL = os.getenv('SYSTEM_EMAIL', None)
+APP_URL = os.getenv('APP_URL', '')
+ENV = os.getenv('ENV', 'development')
 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def forward_asset_url(request, asset_slug=None):
+
     asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:
         return render_message(request, f'Asset with slug {asset_slug} not found')
 
     validator = URLValidator()
     try:
+
+        if not asset.external and asset.asset_type == 'LESSON':
+            slug = Path(asset.readme_url).stem
+            url = 'https://content.breatheco.de/en/lesson/' + slug + '?plain=true'
+            if ENV == 'development':
+                return render_message(request, 'Redirect to: ' + url)
+            else:
+                return HttpResponseRedirect(redirect_to=url)
+
         validator(asset.url)
         if asset.gitpod:
             return HttpResponseRedirect(redirect_to='https://gitpod.io#' + asset.url)
         else:
             return HttpResponseRedirect(redirect_to=asset.url)
     except Exception as e:
+        logger.error(e)
         msg = f'The url for the {asset.asset_type.lower()} your are trying to open ({asset_slug}) was not found, this error has been reported and will be fixed soon.'
         AssetErrorLog(slug=AssetErrorLog.INVALID_URL,
                       path=asset_slug,
                       asset=asset,
-                      asset_type=asset_type,
+                      asset_type=asset.asset_type,
                       status_text=msg).save()
         return render_message(request, msg)
 
@@ -56,11 +71,19 @@ def render_preview_html(request, asset_slug):
     if asset is None:
         return render_message(request, f'Asset with slug {asset_slug} not found')
 
+    if asset.asset_type == 'QUIZ':
+        return render_message(request, f'Quiz cannot be previewed')
+
     readme = asset.get_readme(parse=True)
-    return render(request, 'markdown.html', {
-        **AssetBigSerializer(asset).data, 'html': readme['html'],
-        'frontmatter': readme['frontmatter'].items()
-    })
+    return render(
+        request, readme['frontmatter']['format'] + '.html', {
+            **AssetBigSerializer(asset).data, 'html': readme['html'],
+            'theme': request.GET.get('theme', 'white'),
+            'plain': request.GET.get('plain', 'false'),
+            'styles':
+            readme['frontmatter']['inlining']['css'][0] if 'inlining' in readme['frontmatter'] else None,
+            'frontmatter': readme['frontmatter'].items()
+        })
 
 
 @api_view(['GET'])
@@ -97,12 +120,28 @@ def handle_test_asset(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
-def render_readme(request, asset_slug):
+@xframe_options_exempt
+def render_readme(request, asset_slug, extension='raw'):
     asset = Asset.get_by_slug(asset_slug, request)
     if asset is None:
         raise ValidationException('Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
-    return Response(asset.readme)
+    readme = asset.get_readme(parse=True)
+
+    response = HttpResponse('Invalid extension format', content_type='text/html')
+    if extension == 'html':
+        response = HttpResponse(readme['html'], content_type='text/html')
+        response['Content-Length'] = len(readme['html'])
+    elif extension in ['md', 'mdx', 'txt']:
+        response = HttpResponse(readme['decoded'], content_type='text/markdown')
+        response['Content-Length'] = len(readme['decoded'])
+    elif extension == 'ipynb':
+        response = HttpResponse(readme['decoded'], content_type='application/json')
+        response['Content-Length'] = len(readme['decoded'])
+
+    # response[
+    # 'Content-Security-Policy'] = "frame-ancestors 'self' https://4geeks.com http://localhost:3000 https://dev.4geeks.com"
+    return response
 
 
 @api_view(['GET'])

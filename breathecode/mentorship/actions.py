@@ -1,4 +1,4 @@
-import os, re, json, logging, time, datetime
+import os, re, json, logging, time, datetime, requests
 from itertools import chain
 from django.db.models import Q
 from django.utils import timezone
@@ -7,7 +7,6 @@ from django.shortcuts import render
 from breathecode.services.daily.client import DailyClient
 from rest_framework.exceptions import APIException, ValidationError, PermissionDenied
 from .models import MentorshipSession, MentorshipBill
-from .serializers import GETSessionReportSerializer
 from breathecode.utils.datetime_interger import duration_to_str
 
 logger = logging.getLogger(__name__)
@@ -99,7 +98,7 @@ def extend_session(session, duration_in_minutes=None, exp_in_epoch=None):
 
 
 def render_session(request, session, token):
-
+    from .serializers import GETSessionReportSerializer
     data = {
         'subject': session.mentor.service.name,
         'room_url': session.online_meeting_url,
@@ -262,3 +261,28 @@ def generate_mentor_bill(mentor, reset=False):
     open_bill.save()
 
     return open_bill
+
+
+def mentor_is_ready(mentor):
+
+    if mentor.online_meeting_url is None or mentor.online_meeting_url == '':
+        raise Exception(
+            f'Mentor {mentor.name} does not have backup online_meeting_url, update the value before activating.'
+        )
+    elif mentor.booking_url is None or 'https://calendly.com' not in mentor.booking_url:
+        raise Exception(
+            f'Mentor {mentor.name} booking_url must point to calendly, update the value before activating.')
+    elif len(mentor.syllabus.all()) == 0:
+        raise Exception(
+            f'Mentor {mentor.name} has no syllabus associated, update the value before activating.')
+    else:
+        response = requests.head(mentor.booking_url)
+        if response.status_code > 399:
+            raise Exception(
+                f'Mentor {mentor.name} booking URL is failing with code {str(response.status_code)}')
+        response = requests.head(mentor.online_meeting_url)
+        if response.status_code > 399:
+            raise Exception(
+                f'Mentor {mentor.name} online_meeting_url is failing with code {str(response.status_code)}')
+
+    return True

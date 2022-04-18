@@ -250,6 +250,9 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('crud_survey')
     def delete(self, request, academy_id=None, survey_id=None):
+        if Answer.objects.filter(survey__id=survey_id, status='ANSWERED').exists():
+            raise ValidationException('Survey cannot be deleted', slug='survey-cannot-be-deleted')
+
         lookups = self.generate_lookups(request, many_fields=['id'])
 
         if lookups and survey_id:
@@ -273,22 +276,23 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         sur.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
+    @api_view(['GET'])
+    @permission_classes([AllowAny])
+    def get_review_platform(request, platform_slug=None):
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def get_review_platform(request, platform_slug=None):
-
-    rp = ReviewPlatform.objects.all()
-    if platform_slug is not None:
-        rp = cu.filter(slug=platform_slug).first()
-        if rp is not None:
-            serializer = ReviewPlatformSerializer(items, many=False)
-            return Response(serializer.data)
+        rp = ReviewPlatform.objects.all()
+        if platform_slug is not None:
+            rp = cu.filter(slug=platform_slug).first()
+            if rp is not None:
+                serializer = ReviewPlatformSerializer(items, many=False)
+                return Response(serializer.data)
+            else:
+                raise ValidationException('Review platform not found',
+                                          slug='reivew_platform_not_found',
+                                          code=404)
         else:
-            raise ValidationException('Review platform not found', slug='reivew_platform_not_found', code=404)
-    else:
-        serializer = ReviewPlatformSerializer(rp, many=True)
-        return Response(serializer.data)
+            serializer = ReviewPlatformSerializer(rp, many=True)
+            return Response(serializer.data)
 
 
 class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):

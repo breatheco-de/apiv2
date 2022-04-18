@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 def answer_received(sender, instance, **kwargs):
     """
     Update survey avg score when new answers are received
-    also notivy bad nps score.
+    also notify bad nps score.
     """
     logger.debug('Answer received, calling task process_answer_received')
     process_answer_received.delay(instance.id)
@@ -37,6 +37,6 @@ def post_mentorin_session_ended(sender, instance, **kwargs):
         if instance.started_at is not None and instance.ended_at is not None:
             duration = instance.ended_at - instance.started_at
 
-        if duration > timedelta(minutes=5):
+        if duration > timedelta(minutes=5) and instance.mentor and instance.mentee:
             logger.debug(f'Session lasted for {str(duration.seconds/60)} minutes, sending survey')
             send_mentorship_session_survey.delay(instance.id)

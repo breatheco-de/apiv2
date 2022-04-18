@@ -128,6 +128,11 @@ SCHEDULE_TYPE = (
 class Syllabus(models.Model):
     slug = models.SlugField(max_length=100, blank=True, null=True, default=None)
     name = models.CharField(max_length=150, blank=True, null=True, default=None)
+    main_technologies = models.CharField(max_length=150,
+                                         blank=True,
+                                         null=True,
+                                         default=None,
+                                         help_text='Coma separated, E.g: HTML, CSS, Javascript')
 
     github_url = models.URLField(max_length=255, blank=True, null=True, default=None)
     duration_in_hours = models.IntegerField(null=True, default=None)

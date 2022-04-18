@@ -18,7 +18,7 @@ from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
-STUDENT_URL = os.getenv('STUDENT_URL', '')
+APP_URL = os.getenv('APP_URL', '')
 
 
 class UserTinySerializer(serpy.Serializer):
@@ -490,7 +490,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             email = user.email
 
             token, created = Token.get_or_create(user, token_type='temporal')
-            querystr = urllib.parse.urlencode({'callback': STUDENT_URL, 'token': token})
+            querystr = urllib.parse.urlencode({'callback': APP_URL, 'token': token})
             url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
 
             profile_academy = ProfileAcademy.objects.create(
@@ -533,7 +533,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
             logger.debug('Sending invite email to ' + email)
 
-            querystr = urllib.parse.urlencode({'callback': STUDENT_URL})
+            querystr = urllib.parse.urlencode({'callback': APP_URL})
             url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
                 str(invite.token) + '?' + querystr
 

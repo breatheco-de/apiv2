@@ -77,7 +77,7 @@ def forward_booking_url(request, mentor_slug, token):
     # add academy to session, will be available on html templates
     request.session['academy'] = GetAcademySmallSerializer(mentor.service.academy).data
 
-    if mentor.status != 'ACTIVE':
+    if mentor.status not in ['ACTIVE', 'UNLISTED']:
         return render_message(request, f'This mentor is not active')
 
     booking_url = mentor.booking_url
@@ -118,7 +118,7 @@ def forward_meet_url(request, mentor_slug, token):
     # add academy to session, will be available on html templates
     request.session['academy'] = GetAcademySmallSerializer(mentor.service.academy).data
 
-    if mentor.status != 'ACTIVE':
+    if mentor.status not in ['ACTIVE', 'UNLISTED']:
         return render_message(request, f'This mentor is not active at the moment')
 
     # if the mentor is not the user, then we assume is the mentee
@@ -558,6 +558,55 @@ class ServiceSessionView(APIView, HeaderLimitOffsetPagination):
             raise ValidationException('Missing service id', code=404)
 
         items = MentorshipSession.objects.filter(mentor__service__id=service_id,
+                                                 mentor__service__academy__id=academy_id)
+        lookup = {}
+
+        _status = request.GET.get('status', '')
+        if _status != '':
+            _status = [s.strip().upper() for s in _status.split(',')]
+            _status = list(filter(lambda s: s != '', _status))
+            items = items.filter(status__in=_status)
+
+        billed = request.GET.get('billed', '')
+        if billed == 'true':
+            items = items.filter(bill__isnull=False)
+        elif billed == 'false':
+            items = items.filter(bill__isnull=True)
+
+        started_after = request.GET.get('started_after', '')
+        if started_after != '':
+            items = items.filter(Q(started_at__gte=started_after) | Q(started_at__isnull=True))
+
+        ended_before = request.GET.get('ended_before', '')
+        if ended_before != '':
+            items = items.filter(Q(ended_at__lte=ended_before) | Q(ended_at__isnull=True))
+
+        mentor = request.GET.get('mentor', None)
+        if mentor is not None:
+            lookup['mentor__id__in'] = mentor.split(',')
+
+        items = items.filter(**lookup).order_by('-created_at')
+
+        page = self.paginate_queryset(items, request)
+        serializer = BillSessionSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MentorSessionView(APIView, HeaderLimitOffsetPagination):
+    """
+    List all snippets, or create a new snippet.
+    """
+    @capable_of('read_mentorship_session')
+    def get(self, request, mentor_id, academy_id=None):
+
+        if mentor_id is None:
+            raise ValidationException('Missing mentor id', code=404)
+
+        items = MentorshipSession.objects.filter(mentor__id=mentor_id,
                                                  mentor__service__academy__id=academy_id)
         lookup = {}
 

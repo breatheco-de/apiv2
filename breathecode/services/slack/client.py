@@ -69,7 +69,6 @@ class Slack:
 
         if hasattr(commands, _commands[0]):
             return self._execute_command(commands, _commands[0], response)
-            # return getattr(commands, _commands[0]).execute(**response)
 
         else:
             raise SlackException('No implementation has been found for this command',

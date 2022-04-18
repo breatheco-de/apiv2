@@ -1,6 +1,6 @@
 import logging
 import serpy
-from breathecode.admissions.actions import sync_cohort_timeslots, post_cohort_change_syllabus_schedule
+from breathecode.admissions.actions import ImportCohortTimeSlots
 from django.db.models import Q
 from breathecode.assignments.models import Task
 from breathecode.utils import ValidationException, localize_query, SerpyExtensions
@@ -8,7 +8,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from breathecode.authenticate.models import CredentialsGithub, ProfileAcademy
 from .models import (Academy, SyllabusScheduleTimeSlot, Cohort, SyllabusSchedule, CohortTimeSlot, CohortUser,
-                     Syllabus, SyllabusVersion)
+                     Syllabus, SyllabusVersion, COHORT_STAGE)
 
 logger = logging.getLogger(__name__)
 
@@ -417,6 +417,7 @@ class GetSyllabusSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     name = serpy.Field()
+    main_technologies = serpy.Field()
     github_url = serpy.Field()
     duration_in_hours = serpy.Field()
     duration_in_days = serpy.Field()
@@ -463,6 +464,13 @@ class CohortSerializerMixin(serializers.ModelSerializer):
     syllabus_version = serializers.CharField(required=False)
 
     def validate(self, data):
+
+        if 'stage' in data:
+            possible_stages = [stage_slug for stage_slug, stage_label in COHORT_STAGE]
+            if data['stage'] not in possible_stages:
+                raise ValidationException(
+                    f"Invalid cohort stage {data['stage']}', slug='invalid-cohort-stage")
+
         if 'syllabus' in data:
             strings = data['syllabus'].split('.v')
 
@@ -471,15 +479,21 @@ class CohortSerializerMixin(serializers.ModelSerializer):
                     'Syllabus field marformed(`${syllabus.slug}.v{syllabus_version.version}`)',
                     slug='syllabus-field-marformed')
 
-            [syllabus_slug, syllabus_version] = strings
+            [syllabus_slug, syllabus_version_number] = strings
 
             syllabus_version = SyllabusVersion.objects.filter(
                 Q(syllabus__private=False) | Q(syllabus__academy_owner__id=self.context['academy'].id),
                 syllabus__slug=syllabus_slug,
-                version=syllabus_version).first()
+                version=syllabus_version_number).first()
 
             if not syllabus_version:
                 raise ValidationException('Syllabus doesn\'t exist', slug='syllabus-version-not-found')
+
+            if syllabus_version_number == '1':
+                raise ValidationException(
+                    'Syllabus version 1 is only used for marketing purposes and it cannot be assigned to '
+                    'any cohort',
+                    slug='assigning-a-syllabus-version-1')
 
             data['syllabus_version'] = syllabus_version
 
@@ -509,6 +523,16 @@ class CohortSerializerMixin(serializers.ModelSerializer):
             raise ValidationException('A cohort most have ending date or it should be marked as ever_ends',
                                       slug='cohort-without-ending-date-and-never-ends')
 
+        # if cohort is being activated the online_meeting_url should not be null
+        if self.instance is not None and (self.instance.online_meeting_url is None
+                                          or self.instance.online_meeting_url
+                                          == '') and self.instance.remote_available:
+            stage = (data['stage'] if 'stage' in data else self.instance.stage)
+            if stage in ['STARTED', 'FINAL_PROJECT'] and stage != self.instance.stage:
+                raise ValidationException(
+                    'This cohort has a remote option but no online meeting URL has been specified',
+                    slug='remove-without-online-meeting')
+
         return data
 
 
@@ -524,7 +548,11 @@ class CohortSerializer(CohortSerializerMixin):
     def create(self, validated_data):
         del self.context['request']
         cohort = Cohort.objects.create(**validated_data, **self.context)
-        sync_cohort_timeslots(cohort.id)
+
+        x = ImportCohortTimeSlots(cohort.id)
+        x.clean()
+        x.sync()
+
         return cohort
 
 
@@ -553,7 +581,9 @@ class CohortPUTSerializer(CohortSerializerMixin):
         cohort = super().update(instance, validated_data)
 
         if update_timeslots:
-            post_cohort_change_syllabus_schedule(cohort.id)
+            x = ImportCohortTimeSlots(cohort.id)
+            x.clean()
+            x.sync()
 
         return cohort
 

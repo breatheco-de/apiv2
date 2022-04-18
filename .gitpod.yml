@@ -26,6 +26,7 @@ tasks:
 vscode:
   extensions:
     - ms-python.python
+    - streetsidesoftware.code-spell-checker
     - mikestead.dotenv
     - ms-azuretools.vscode-docker
     - github.vscode-pull-request-github

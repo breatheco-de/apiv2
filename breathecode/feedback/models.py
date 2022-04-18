@@ -59,6 +59,8 @@ class Survey(models.Model):
                                  help_text='The avg from all the answers taken under this survey',
                                  editable=False)
 
+    response_rate = models.FloatField(default=None, blank=True, null=True)
+
     status = models.CharField(max_length=15, choices=SURVEY_STATUS, default=PENDING)
     status_json = models.JSONField(default=None, null=True, blank=True)
 
@@ -136,11 +138,11 @@ class Answer(models.Model):
 
     def save(self, *args, **kwargs):
 
+        super().save(*args, **kwargs)  # Call the "real" save() method.
+
         if self.__old_status != self.status and self.status == 'ANSWERED':
             # signal the updated answer
             survey_answered.send(instance=self, sender=Answer)
-
-        super().save(*args, **kwargs)  # Call the "real" save() method.
 
 
 class ReviewPlatform(models.Model):

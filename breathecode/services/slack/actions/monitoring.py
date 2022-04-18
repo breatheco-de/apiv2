@@ -8,7 +8,7 @@ class Monitoring:
         self.context = context
 
     # disable endpoint testing until specific time
-    @action(capable_of='can_snooze_test_endpoint')
+    @action(only='staff')
     def snooze_test_endpoint(self, **kwargs):
 
         selected_date = kwargs['actions'][0]['selected_date']
@@ -24,7 +24,7 @@ class Monitoring:
         }
 
     # disable script until specific time
-    @action(capable_of='can_snooze_test_endpoint')
+    @action(only='staff')
     def snooze_script(self, **kwargs):
 
         selected_date = kwargs['actions'][0]['selected_date']

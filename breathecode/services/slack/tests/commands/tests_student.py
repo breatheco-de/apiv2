@@ -111,7 +111,7 @@ class SlackTestSuite(SlackTestCase):
         }
 
         result = execute(users=['percybrown'], context=data)
-        print(result)
+
         self.assertEqual(result, expected)
 
     def test_slack_command___user_registered_in_two_cohorts__with_financial_status_and_educational_status(
@@ -174,7 +174,7 @@ class SlackTestSuite(SlackTestCase):
 
     def test_slack_command___user_registered_in_two_different_cohorts__with_financial_status_and_educational_status(
             self):
-        """Testing when user is registered in a cohort."""
+        """Testing when user is registered in two different cohorts with financial and educational status."""
 
         slack_users = [{'slack_id': 'name'}, {'slack_id': 'percybrown', 'user_id': 2}]
         slack_team = {'slack_id': 'team'}
@@ -227,5 +227,4 @@ class SlackTestSuite(SlackTestCase):
         }
 
         result = execute(users=['percybrown'], context=data)
-        print(result)
         self.assertEqual(result, expected)

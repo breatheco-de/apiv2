@@ -23,7 +23,7 @@ from .serializers import (AcademySerializer, GetSyllabusSerializer, SyllabusSche
 from .models import (Academy, SyllabusScheduleTimeSlot, CohortTimeSlot, CohortUser, SyllabusSchedule, Cohort,
                      STUDENT, DELETED, Syllabus, SyllabusVersion)
 
-from .actions import update_asset_on_json
+from .actions import update_asset_on_json, find_asset_on_json
 from breathecode.authenticate.models import ProfileAcademy
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
@@ -483,7 +483,8 @@ class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
         if not item:
             raise ValidationException('Time slot not found', 404, slug='time-slot-not-found')
 
-        timezone = Academy.objects.filter(id=academy_id).values_list('timezone', flat=True).first()
+        timezone = cohort.timezone or Academy.objects.filter(id=academy_id).values_list('timezone',
+                                                                                        flat=True).first()
         if not timezone:
             raise ValidationException('Academy doesn\'t have a timezone assigned',
                                       slug='academy-without-timezone')
@@ -561,7 +562,7 @@ class AcademySyncCohortTimeSlotView(APIView, GenerateLookupsMixin):
                     'ending_at': certificate_timeslot.ending_at,
                     'recurrent': certificate_timeslot.recurrent,
                     'recurrency_type': certificate_timeslot.recurrency_type,
-                    'timezone': academy.timezone,
+                    'timezone': cohort.timezone or academy.timezone,
                 })
 
         serializer = CohortTimeSlotSerializer(data=data, many=True)
@@ -785,6 +786,9 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         for key in request.data:
             data[key] = request.data.get(key)
+
+        if 'timezone' not in data:
+            data['timezone'] = academy.timezone
 
         if 'syllabus_version' in data:
             del data['syllabus_version']
@@ -1102,7 +1106,18 @@ class SyllabusView(APIView, HeaderLimitOffsetPagination):
 
 class SyllabusAssetView(APIView, HeaderLimitOffsetPagination):
 
-    # @has_permission('superadmin')
+    # TODO: @has_permission('superadmin')
+    def get(self, request, asset_slug=None):
+
+        if asset_slug is None or asset_slug == '':
+            raise ValidationException('Please specify the asset slug you want to search',
+                                      slug='invalid-asset-slug')
+
+        findings = find_asset_on_json(asset_slug=asset_slug, asset_type=request.GET.get('asset_type', None))
+
+        return Response(findings, status=status.HTTP_200_OK)
+
+    # TODO: @has_permission('superadmin')
     def put(self, request, asset_slug=None):
 
         if asset_slug is None or asset_slug == '':
@@ -1161,7 +1176,7 @@ class SyllabusVersionView(APIView):
         syllabus_version = SyllabusVersion.objects.filter(
             Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
             Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
-        )
+        ).order_by('version')
 
         serializer = GetSyllabusVersionSerializer(syllabus_version, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)

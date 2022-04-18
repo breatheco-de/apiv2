@@ -4,7 +4,7 @@ from breathecode.admissions.models import Academy, Syllabus
 from django.contrib.auth.models import User
 from django.db import models
 from datetime import timedelta
-from .signals import mentorship_session_status
+import breathecode.mentorship.signals as signals
 from slugify import slugify
 
 # settings customizable for each academy
@@ -21,10 +21,12 @@ from slugify import slugify
 
 DRAFT = 'DRAFT'
 ACTIVE = 'ACTIVE'
+UNLISTED = 'UNLISTED'
 INNACTIVE = 'INNACTIVE'
 MENTORSHIP_STATUS = (
     (DRAFT, 'Draft'),
     (ACTIVE, 'Active'),
+    (UNLISTED, 'Unlisted'),
     (INNACTIVE, 'Innactive'),
 )
 
@@ -68,6 +70,7 @@ INVITED = 'INVITED'
 MENTOR_STATUS = (
     (INVITED, 'Invited'),
     (ACTIVE, 'Active'),
+    (UNLISTED, 'Unlisted'),
     (INNACTIVE, 'Innactive'),
 )
 
@@ -215,7 +218,7 @@ class MentorshipSession(models.Model):
                             null=True,
                             default=None)
 
-    is_online = models.BooleanField()
+    is_online = models.BooleanField(default=False)
     latitude = models.FloatField(blank=True, null=True, default=None)
     longitude = models.FloatField(blank=True, null=True, default=None)
 
@@ -311,7 +314,7 @@ class MentorshipSession(models.Model):
 
     def save(self, *args, **kwargs):
 
-        if self.__old_status != self.status:
-            mentorship_session_status.send(instance=self, sender=MentorshipSession)
-
         super().save(*args, **kwargs)  # Call the "real" save() method.
+
+        if self.__old_status != self.status:
+            signals.mentorship_session_status.send(instance=self, sender=MentorshipSession)

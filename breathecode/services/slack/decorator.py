@@ -43,7 +43,7 @@ def command(capable_of=None):
     return decorator
 
 
-def action(capable_of=None):
+def action(only=None):
     def decorator(function):
         def wrapper(*args, **kwargs):
             if 'payload' not in kwargs or kwargs['payload'] is None:
@@ -52,10 +52,10 @@ def action(capable_of=None):
 
             profiles = None
             if only == 'staff':
-                profiles = ProfileAcademy.objects.filter(user__slackuser__slack_id=context['user']['id'],
-                                                         academy__slackteam__slack_id=context['team']['id'],
-                                                         role__capabilities__slug=capable_of).values_list(
-                                                             'academy__id', flat=True)
+                profiles = ProfileAcademy.objects.filter(
+                    user__slackuser__slack_id=context['user']['id'],
+                    academy__slackteam__slack_id=context['team']['id']).values_list('academy__id', flat=True)
+
                 if len(profiles) == 0:
                     raise Exception(
                         f"Your user {context['user']['id']} don't have permissions execute this action")
