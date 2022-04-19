@@ -250,8 +250,6 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('crud_survey')
     def delete(self, request, academy_id=None, survey_id=None):
-        if Answer.objects.filter(survey__id=survey_id, status='ANSWERED').exists():
-            raise ValidationException('Survey cannot be deleted', slug='survey-cannot-be-deleted')
 
         lookups = self.generate_lookups(request, many_fields=['id'])
 
