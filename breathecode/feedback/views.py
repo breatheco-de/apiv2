@@ -274,23 +274,22 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         sur.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-    @api_view(['GET'])
-    @permission_classes([AllowAny])
-    def get_review_platform(request, platform_slug=None):
 
-        rp = ReviewPlatform.objects.all()
-        if platform_slug is not None:
-            rp = cu.filter(slug=platform_slug).first()
-            if rp is not None:
-                serializer = ReviewPlatformSerializer(items, many=False)
-                return Response(serializer.data)
-            else:
-                raise ValidationException('Review platform not found',
-                                          slug='reivew_platform_not_found',
-                                          code=404)
-        else:
-            serializer = ReviewPlatformSerializer(rp, many=True)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_review_platform(request, platform_slug=None):
+
+    rp = ReviewPlatform.objects.all()
+    if platform_slug is not None:
+        rp = cu.filter(slug=platform_slug).first()
+        if rp is not None:
+            serializer = ReviewPlatformSerializer(items, many=False)
             return Response(serializer.data)
+        else:
+            raise ValidationException('Review platform not found', slug='reivew_platform_not_found', code=404)
+    else:
+        serializer = ReviewPlatformSerializer(rp, many=True)
+        return Response(serializer.data)
 
 
 class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
