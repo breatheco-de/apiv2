@@ -169,7 +169,7 @@ class SlackTestSuite(SlackTestCase):
         }
 
         result = execute(users=['percybrown'], context=data)
-        print(result)
+
         self.assertEqual(result, expected)
 
     def test_slack_command___user_registered_in_two_different_cohorts__with_financial_status_and_educational_status(

@@ -26,7 +26,7 @@ def execute(users, academies, **context):
     cohort_users = CohortUser.objects.filter(user__slackuser__slack_id=users[0],
                                              role='STUDENT',
                                              cohort__academy__id__in=[academies])
-    print(users[0])
+
     user = cohort_users.first()
     if user is None:
         raise SlackException(

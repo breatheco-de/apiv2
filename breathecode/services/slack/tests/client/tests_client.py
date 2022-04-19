@@ -60,6 +60,5 @@ class SlackTestSuite(SlackTestCase):
         expected = 'potato'
         result = slack._execute_command(fake_command, 'fake', data)
 
-        print(fake_command.fake.execute.call_args_list)
         self.assertEqual(result, expected)
         self.assertEqual(fake_command.fake.execute.call_args_list, [call(**data)])
