@@ -23,7 +23,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_cohort_me__post__without_authorization(self):
         """Test /academy/cohort without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('admissions:cohort_me')
+        url = reverse_lazy('admissions:academy_cohort_me')
         response = self.client.get(url)
         json = response.json()
         expected = {'detail': 'Authentication credentials were not provided.', 'status_code': 401}
@@ -35,7 +35,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     def test_cohort_me__without_capability(self):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
-        url = reverse_lazy('admissions:cohort_me')
+        url = reverse_lazy('admissions:academy_cohort_me')
         self.generate_models(authenticate=True)
         response = self.client.get(url)
         json = response.json()
@@ -61,7 +61,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
-        url = reverse_lazy('admissions:cohort_me')
+        url = reverse_lazy('admissions:academy_cohort_me')
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
                                      capability='read_single_cohort',
@@ -113,7 +113,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         model_dict = self.remove_dinamics_fields(model['cohort'].__dict__)
-        base_url = reverse_lazy('admissions:cohort_me')
+        base_url = reverse_lazy('admissions:academy_cohort_me')
         url = f'{base_url}?upcoming=false'
         response = self.client.get(url)
         json = response.json()
@@ -192,7 +192,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         model_dict = self.remove_dinamics_fields(model['cohort'].__dict__)
-        base_url = reverse_lazy('admissions:cohort_me')
+        base_url = reverse_lazy('admissions:academy_cohort_me')
         url = f'{base_url}?upcoming=true'
         response = self.client.get(url)
         json = response.json()
@@ -228,7 +228,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         model_dict = self.get_cohort_dict(1)
-        base_url = reverse_lazy('admissions:cohort_me')
+        base_url = reverse_lazy('admissions:academy_cohort_me')
         url = f'{base_url}?upcoming=true'
         response = self.client.get(url)
         json = response.json()
@@ -306,7 +306,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         model_dict = self.get_cohort_dict(1)
-        base_url = reverse_lazy('admissions:cohort_me')
+        base_url = reverse_lazy('admissions:academy_cohort_me')
         url = f'{base_url}?academy=' + model['academy'].slug
         response = self.client.get(url)
         json = response.json()
@@ -384,7 +384,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         model_dict = self.get_cohort_dict(1)
-        base_url = reverse_lazy('admissions:cohort_me')
+        base_url = reverse_lazy('admissions:academy_cohort_me')
         url = f'{base_url}?academy=' + model['academy'].slug + ',they-killed-kenny'
         response = self.client.get(url)
         json = response.json()
@@ -469,7 +469,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     #     cohort_saved.send.call_args_list = []
 
     #     self.client.force_authenticate(user=models[0]['user'])
-    #     base_url = reverse_lazy('admissions:cohort_me')
+    #     base_url = reverse_lazy('admissions:academy_cohort_me')
     #     params = ','.join([model['academy'].slug for model in models])
     #     url = f'{base_url}?academy={params}'
     #     response = self.client.get(url)
@@ -558,7 +558,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         ordened_models = sorted(models, key=lambda x: x['cohort'].slug, reverse=True)
 
-        url = reverse_lazy('admissions:cohort_me') + '?sort=-slug'
+        url = reverse_lazy('admissions:academy_cohort_me') + '?sort=-slug'
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -634,7 +634,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         model_dict = self.get_cohort_dict(1)
-        base_url = reverse_lazy('admissions:cohort_me')
+        base_url = reverse_lazy('admissions:academy_cohort_me')
         url = f'{base_url}?location=they-killed-kenny'
         response = self.client.get(url)
         json = response.json()
@@ -666,7 +666,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         model_dict = self.get_cohort_dict(1)
-        base_url = reverse_lazy('admissions:cohort_me')
+        base_url = reverse_lazy('admissions:academy_cohort_me')
         url = f'{base_url}?location=' + model['academy'].slug
         response = self.client.get(url)
         json = response.json()
@@ -744,7 +744,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         model_dict = self.get_cohort_dict(1)
-        base_url = reverse_lazy('admissions:cohort_me')
+        base_url = reverse_lazy('admissions:academy_cohort_me')
         url = f'{base_url}?location=' + model['academy'].slug + ',they-killed-kenny'
         response = self.client.get(url)
         json = response.json()
@@ -827,7 +827,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         self.client.force_authenticate(user=model['user'])
-        url = reverse_lazy('admissions:cohort_me')
+        url = reverse_lazy('admissions:academy_cohort_me')
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -908,7 +908,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         self.client.force_authenticate(user=model['user'])
-        url = reverse_lazy('admissions:cohort_me')
+        url = reverse_lazy('admissions:academy_cohort_me')
         response = self.client.get(url)
         json = response.json()
         expected = [{
@@ -989,7 +989,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         self.client.force_authenticate(user=model['user'])
-        base_url = reverse_lazy('admissions:cohort_me')
+        base_url = reverse_lazy('admissions:academy_cohort_me')
         url = f'{base_url}?limit=5&offset=0'
         response = self.client.get(url)
         json = response.json()
@@ -999,11 +999,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'first':
             None,
             'next':
-            'http://testserver/v1/admissions/cohort/me?limit=5&offset=5',
+            'http://testserver/v1/admissions/academy/cohort/me?limit=5&offset=5',
             'previous':
             None,
             'last':
-            'http://testserver/v1/admissions/cohort/me?limit=5&offset=5',
+            'http://testserver/v1/admissions/academy/cohort/me?limit=5&offset=5',
             'results': [{
                 'id': cohort.id,
                 'slug': cohort.slug,
@@ -1083,7 +1083,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         self.client.force_authenticate(user=model['user'])
-        base_url = reverse_lazy('admissions:cohort_me')
+        base_url = reverse_lazy('admissions:academy_cohort_me')
         url = f'{base_url}?limit=5&offset=5'
         response = self.client.get(url)
         json = response.json()
@@ -1091,11 +1091,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'count':
             10,
             'first':
-            'http://testserver/v1/admissions/cohort/me?limit=5',
+            'http://testserver/v1/admissions/academy/cohort/me?limit=5',
             'next':
             None,
             'previous':
-            'http://testserver/v1/admissions/cohort/me?limit=5',
+            'http://testserver/v1/admissions/academy/cohort/me?limit=5',
             'last':
             None,
             'results': [{
@@ -1176,15 +1176,15 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_saved.send.call_args_list = []
 
         self.client.force_authenticate(user=model['user'])
-        base_url = reverse_lazy('admissions:cohort_me')
+        base_url = reverse_lazy('admissions:academy_cohort_me')
         url = f'{base_url}?limit=5&offset=10'
         response = self.client.get(url)
         json = response.json()
         expected = {
             'count': 10,
-            'first': 'http://testserver/v1/admissions/cohort/me?limit=5',
+            'first': 'http://testserver/v1/admissions/academy/cohort/me?limit=5',
             'next': None,
-            'previous': 'http://testserver/v1/admissions/cohort/me?limit=5&offset=5',
+            'previous': 'http://testserver/v1/admissions/academy/cohort/me?limit=5&offset=5',
             'last': None,
             'results': [],
         }

@@ -7,6 +7,8 @@ from .views import (AcademyView, CohortMeView, CohortUserView, AcademyCohortView
 
 app_name = 'admissions'
 urlpatterns = [
+    # keep before that academy/cohort/:id
+    path('academy/cohort/me', CohortMeView.as_view(), name='academy_cohort_me'),
     path('public/syllabus', get_public_syllabus),
     # depcrecated methods, soon to be deleted
     path('cohort/all', get_cohorts, name='cohort_all'),
@@ -43,7 +45,6 @@ urlpatterns = [
          name='academy_schedule_id_timeslot_id'),
     path('academy/', get_all_academies, name='academy'),
     path('academy/me', AcademyView.as_view(), name='academy_me'),
-    path('cohort/me', CohortMeView.as_view(), name='cohort_me'),
     path('academy/cohort', AcademyCohortView.as_view(), name='academy_cohort'),
     path('user/me', UserMeView.as_view(), name='user_me'),
     path('user', UserView.as_view(), name='user'),

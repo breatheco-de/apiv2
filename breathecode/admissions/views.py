@@ -685,7 +685,6 @@ class CohortMeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    permission_classes = [IsAuthenticated]
     cache = CohortCache()
 
     @capable_of('read_single_cohort')
