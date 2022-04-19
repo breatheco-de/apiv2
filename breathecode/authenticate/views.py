@@ -193,17 +193,23 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if user_id_or_email.isnumeric():
             already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()
         else:
-            raise ValidationException('User id must be a numeric value', 404)
+            raise ValidationException('User id must be a numeric value',
+                                      code=404,
+                                      slug='user-id-is-not-numeric')
 
         request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id}
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            serializer = MemberPOSTSerializer(data=request_data)
+            serializer = MemberPOSTSerializer(data=request_data,
+                                              context={
+                                                  'academy_id': academy_id,
+                                                  'request': request
+                                              })
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -429,7 +435,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                                         user__email=user_id_or_email).first()
 
             if profile is None:
-                raise ValidationException('Profile not found', 404)
+                raise ValidationException('Profile not found', code=404, slug='profile-academy-not-found')
 
             serializer = GetProfileAcademySerializer(profile, many=False)
             return Response(serializer.data)
@@ -466,26 +472,36 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('crud_student')
     def put(self, request, academy_id=None, user_id_or_email=None):
+        if not user_id_or_email.isnumeric():
+            raise ValidationException('User id must be a numeric value',
+                                      code=404,
+                                      slug='user-id-is-not-numeric')
 
-        student = ProfileAcademy.objects.filter(user=user_id_or_email, academy__id=academy_id).first()
+        student = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy__id=academy_id).first()
 
         if student and student.role.slug != 'student':
             raise ValidationException(
-                f'This endpoint can only update student profiles (not {student.role.slug})')
+                f'This endpoint can only update student profiles (not {student.role.slug})',
+                code=400,
+                slug='trying-to-change-a-staff')
 
-        request_data = {**request.data, 'user': student.user.id, 'academy': academy_id, 'role': 'student'}
+        request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id, 'role': 'student'}
         if 'role' in request.data:
             raise ValidationException(
-                'The student role cannot be updated with this endpoint, user /member instead.')
+                'The student role cannot be updated with this endpoint, user /member instead.',
+                code=400,
+                slug='trying-to-change-role')
 
-        if student:
-            serializer = MemberPUTSerializer(student, data=request_data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            raise ValidationException('The user is not a student in this academy')
+        if not student:
+            raise ValidationException('The user is not a student in this academy',
+                                      code=404,
+                                      slug='profile-academy-not-found')
+
+        serializer = MemberPUTSerializer(student, data=request_data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id_or_email=None):
@@ -495,7 +511,8 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             raise ValidationException(
                 'user_id was provided in url '
                 'in bulk mode request, use querystring style instead',
-                code=400)
+                code=400,
+                slug='user-id-and-bulk-mode')
 
         if lookups:
             items = ProfileAcademy.objects.filter(**lookups, academy__id=academy_id, role__slug='student')
@@ -509,11 +526,18 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if academy_id is None or user_id_or_email is None:
             raise serializers.ValidationError('Missing user_id or academy_id', code=400)
 
+        if user_id_or_email and not user_id_or_email.isnumeric():
+            raise ValidationException('User id must be a numeric value',
+                                      code=404,
+                                      slug='user-id-is-not-numeric')
+
         profile = ProfileAcademy.objects.filter(academy__id=academy_id,
                                                 user__id=user_id_or_email,
                                                 role__slug='student').first()
         if profile is None:
-            raise serializers.ValidationError('User doest not exist or does not belong to this academy')
+            raise ValidationException('User doest not exist or does not belong to this academy',
+                                      code=404,
+                                      slug='profile-academy-not-found')
 
         profile.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)

@@ -1,9 +1,9 @@
 """
 Test cases for /academy/member
 """
-from unittest.mock import MagicMock, patch
+import os
+from unittest.mock import MagicMock, call, patch
 from breathecode.authenticate.models import ProfileAcademy
-from breathecode.services import datetime_to_iso_format
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from random import choice
@@ -11,6 +11,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from breathecode.utils import capable_of
 from ..mixins.new_auth_test_case import AuthTestCase
+import breathecode.notify.actions as actions
+import urllib.parse
 
 # the test have too must lines, that's split in many test suite
 
@@ -87,7 +89,7 @@ class MemberSetOfDuckTestSuite(AuthTestCase):
     """
 
     @patch('breathecode.authenticate.views.MemberView.post', MagicMock(side_effect=view_method_mock))
-    def test_academy_member__post____with_auth___mock_view(self):
+    def test_academy_member__post__with_auth___mock_view(self):
         profile_academies = [{'academy_id': id} for id in range(1, 4)]
         model = self.bc.database.create(academy=3,
                                         capability='read_member',
@@ -1111,7 +1113,7 @@ class MemberGetTestSuite(AuthTestCase):
 
         self.assertEqual(json, [])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
             'academy_id': 1,
             'address': None,
             'email': None,
@@ -1167,7 +1169,7 @@ class MemberGetTestSuite(AuthTestCase):
             },
         }])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
             'academy_id': 1,
             'address': None,
             'email': None,
@@ -1240,7 +1242,7 @@ class MemberGetTestSuite(AuthTestCase):
             },
         } for model in models])
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
             'academy_id': 1,
             'address': None,
             'email': None,
@@ -1503,6 +1505,7 @@ class MemberGetPaginationTestSuite(AuthTestCase):
 
 class MemberPostTestSuite(AuthTestCase):
     """Authentication test suite"""
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_academy_member__post__no_data(self):
         """Test /academy/:id/member"""
         role = 'konan'
@@ -1519,7 +1522,7 @@ class MemberPostTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_profile_academy_dict(), [{
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
             'academy_id': 1,
             'address': None,
             'email': None,
@@ -1532,7 +1535,10 @@ class MemberPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
-    def test_academy_member__post__no_user(self):
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    def test_academy_member__post__no_user__invite_is_false(self):
         """Test /academy/:id/member"""
         role = 'konan'
         self.bc.request.set_headers(academy=1)
@@ -1541,14 +1547,14 @@ class MemberPostTestSuite(AuthTestCase):
                                         capability='crud_member',
                                         profile_academy=True)
         url = reverse_lazy('authenticate:academy_member')
-        data = {'role': role}
+        data = {'role': role, 'invite': False}
         response = self.client.post(url, data)
         json = response.json()
         expected = {'detail': 'user-not-found', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_profile_academy_dict(), [{
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
             'academy_id': 1,
             'address': None,
             'email': None,
@@ -1561,6 +1567,9 @@ class MemberPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_academy_member__post__no_invite(self):
         """Test /academy/:id/member"""
         role = 'konan'
@@ -1577,7 +1586,7 @@ class MemberPostTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_profile_academy_dict(), [{
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
             'academy_id': 1,
             'address': None,
             'email': None,
@@ -1590,6 +1599,71 @@ class MemberPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    def test_academy_member__post__exists_profile_academy_with_this_email__is_none(self):
+        """Test /academy/:id/member"""
+        role = 'student'
+        self.bc.request.set_headers(academy=1)
+        profile_academy = {'email': None}
+        model = self.bc.database.create(authenticate=True,
+                                        role=role,
+                                        capability='crud_member',
+                                        profile_academy=profile_academy)
+        url = reverse_lazy('authenticate:academy_member')
+
+        data = {
+            'role': 'student',
+            'first_name': 'Kenny',
+            'last_name': 'McKornick',
+            'invite': True,
+            'email': model.profile_academy.email,
+        }
+
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {'detail': 'already-exists-with-this-email', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
+                         [self.bc.format.to_dict(model.profile_academy)])
+
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    def test_academy_member__post__exists_profile_academy_with_this_email__with_email(self):
+        """Test /academy/:id/member"""
+        role = 'student'
+        self.bc.request.set_headers(academy=1)
+        profile_academy = {'email': 'dude@dude.dude'}
+        model = self.bc.database.create(authenticate=True,
+                                        role=role,
+                                        capability='crud_member',
+                                        profile_academy=profile_academy)
+        url = reverse_lazy('authenticate:academy_member')
+
+        data = {
+            'role': 'student',
+            'first_name': 'Kenny',
+            'last_name': 'McKornick',
+            'invite': True,
+            'email': model.profile_academy.email,
+        }
+
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {'detail': 'already-exists-with-this-email', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
+                         [self.bc.format.to_dict(model.profile_academy)])
+
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_academy_member__post__user_with_not_student_role(self):
         """Test /academy/:id/member"""
         role = 'konan'
@@ -1602,11 +1676,11 @@ class MemberPostTestSuite(AuthTestCase):
         data = {'role': role, 'user': model['user'].id, 'first_name': 'Kenny', 'last_name': 'McKornick'}
         response = self.client.post(url, data)
         json = response.json()
-        expected = {'detail': 'user-already-exists', 'status_code': 400}
+        expected = {'detail': 'already-exists', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_profile_academy_dict(), [{
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
             'academy_id': 1,
             'address': None,
             'email': None,
@@ -1619,6 +1693,9 @@ class MemberPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_academy_member__post__user_with_student_role(self):
         """Test /academy/:id/member"""
         role = 'student'
@@ -1644,7 +1721,7 @@ class MemberPostTestSuite(AuthTestCase):
                 'status': 'ACTIVE',
             })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_profile_academy_dict(), [{
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
             'academy_id': 1,
             'address': None,
             'email': profile_academy.email,
@@ -1657,6 +1734,10 @@ class MemberPostTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
     def test_academy_member__post__teacher_with_student_role(self):
         """Test /academy/:id/member"""
         role = 'student'
@@ -1683,7 +1764,7 @@ class MemberPostTestSuite(AuthTestCase):
                 'status': 'ACTIVE',
             })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_profile_academy_dict(), [{
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [{
             'academy_id': 1,
             'address': None,
             'email': profile_academy.email,
@@ -1695,6 +1776,121 @@ class MemberPostTestSuite(AuthTestCase):
             'status': 'ACTIVE',
             'user_id': 1,
         }])
+
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    def test_academy_member__post__without_user_in_data(self):
+        """Test /academy/:id/member"""
+
+        role = 'student'
+        self.bc.request.set_headers(academy=1)
+        model = self.bc.database.create(authenticate=True,
+                                        role=role,
+                                        capability='crud_member',
+                                        profile_academy=1)
+
+        url = reverse_lazy('authenticate:academy_member')
+        data = {
+            'role': 'student',
+            'first_name': 'Kenny',
+            'last_name': 'McKornick',
+            'invite': True,
+            'email': 'dude@dude.dude',
+        }
+
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {
+            'address': None,
+            'email': 'dude@dude.dude',
+            'first_name': 'Kenny',
+            'last_name': 'McKornick',
+            'phone': '',
+            'role': 'student',
+            'status': 'INVITED',
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy), {
+                'academy_id': 1,
+                'address': None,
+                'email': 'dude@dude.dude',
+                'first_name': 'Kenny',
+                'id': 2,
+                'last_name': 'McKornick',
+                'phone': '',
+                'role_id': 'student',
+                'status': 'INVITED',
+                'user_id': None,
+            }
+        ])
+
+        invite = self.bc.database.get('authenticate.UserInvite', 1, dict=False)
+        params = {'callback': 'https://admin.breatheco.de'}
+        querystr = urllib.parse.urlencode(params)
+        # TODO: obj is not defined
+        url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
+            str(invite.token) + '?' + querystr
+
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
+        self.assertEqual(actions.send_email_message.call_args_list, [
+            call('welcome_academy', 'dude@dude.dude', {
+                'email': 'dude@dude.dude',
+                'subject': 'Welcome to 4Geeks',
+                'LINK': url,
+                'FIST_NAME': 'Kenny'
+            })
+        ])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    def test_academy_member__post__without_user_in_data__invite_already_exists(self):
+        """Test /academy/:id/member"""
+
+        role = 'student'
+        self.bc.request.set_headers(academy=1)
+        user = {'email': 'dude@dude.dude'}
+        model = self.bc.database.create(authenticate=True,
+                                        user=user,
+                                        user_invite=user,
+                                        role=role,
+                                        capability='crud_member',
+                                        profile_academy=1)
+
+        url = reverse_lazy('authenticate:academy_member')
+        data = {
+            'role': 'student',
+            'first_name': 'Kenny',
+            'last_name': 'McKornick',
+            'invite': True,
+            'email': model.user.email,
+        }
+
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {'detail': 'already-invited', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+        invite = self.bc.database.get('authenticate.UserInvite', 1, dict=False)
+        params = {'callback': 'https://admin.breatheco.de'}
+        querystr = urllib.parse.urlencode(params)
+        # TODO: obj is not defined
+        url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
+            str(invite.token) + '?' + querystr
+
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            self.bc.format.to_dict(model.user_invite),
+        ])
+
+        self.assertEqual(actions.send_email_message.call_args_list, [])
 
 
 class MemberDeleteTestSuite(AuthTestCase):

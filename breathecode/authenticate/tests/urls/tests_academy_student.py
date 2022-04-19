@@ -8,6 +8,41 @@ from random import choice
 from ...models import ProfileAcademy
 from ..mixins.new_auth_test_case import AuthTestCase
 
+PROFILE_ACADEMY_STATUS = [
+    'INVITED',
+    'ACTIVE',
+]
+
+
+def format_profile_academy(self, profile_academy, role, academy):
+    return {
+        'academy': {
+            'id': academy.id,
+            'name': academy.name,
+            'slug': academy.slug
+        },
+        'address': profile_academy.address,
+        'created_at': self.datetime_to_iso(profile_academy.created_at),
+        'email': profile_academy.email,
+        'first_name': profile_academy.first_name,
+        'id': profile_academy.id,
+        'last_name': profile_academy.last_name,
+        'phone': profile_academy.phone,
+        'role': {
+            'id': role.slug,
+            'name': role.name,
+            'slug': role.slug,
+        },
+        'status': profile_academy.status,
+        'user': {
+            'email': profile_academy.user.email,
+            'first_name': profile_academy.user.first_name,
+            'profile': None,
+            'id': profile_academy.user.id,
+            'last_name': profile_academy.user.last_name
+        }
+    }
+
 
 class StudentGetTestSuite(AuthTestCase):
     """Authentication test suite"""
@@ -523,6 +558,80 @@ class StudentGetTestSuite(AuthTestCase):
             'status': 'INVITED',
             'user_id': 1
         }])
+
+    """
+    🔽🔽🔽 GET query status
+    """
+
+    def test_academy_student__query_status__bad_status(self):
+        base = self.bc.database.create(user=1, role='student', capability='read_student')
+        for status in PROFILE_ACADEMY_STATUS:
+            bad_status = [x for x in PROFILE_ACADEMY_STATUS if status != x][0]
+            profile_academy = {'status': status}
+
+            model = self.bc.database.create(profile_academy=(2, profile_academy), models=base)
+            self.bc.request.set_headers(academy=model.academy.id)
+            self.bc.request.authenticate(model.user)
+
+            url = reverse_lazy('authenticate:academy_student') + f'?status={bad_status}'
+            response = self.client.get(url)
+
+            json = response.json()
+            expected = []
+
+            self.assertEqual(json, expected)
+            self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
+                             self.bc.format.to_dict(model.profile_academy))
+
+            self.bc.database.delete('authenticate.ProfileAcademy')
+
+    def test_academy_student__query_status__one_status__uppercase(self):
+        base = self.bc.database.create(user=1, role='student', capability='read_student')
+        for status in PROFILE_ACADEMY_STATUS:
+            profile_academy = {'status': status}
+
+            model = self.bc.database.create(profile_academy=(2, profile_academy), models=base)
+            self.bc.request.set_headers(academy=model.academy.id)
+            self.bc.request.authenticate(model.user)
+
+            url = reverse_lazy('authenticate:academy_student') + f'?status={status.upper()}'
+            response = self.client.get(url)
+
+            json = response.json()
+            expected = [
+                format_profile_academy(self, profile_academy, model.role, model.academy)
+                for profile_academy in model.profile_academy
+            ]
+
+            self.assertEqual(json, expected)
+            self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
+                             self.bc.format.to_dict(model.profile_academy))
+
+            self.bc.database.delete('authenticate.ProfileAcademy')
+
+    def test_academy_student__query_status__one_status__lowercase(self):
+        base = self.bc.database.create(user=1, role='student', capability='read_student')
+        for status in PROFILE_ACADEMY_STATUS:
+            profile_academy = {'status': status}
+
+            model = self.bc.database.create(profile_academy=(2, profile_academy), models=base)
+            self.bc.request.set_headers(academy=model.academy.id)
+            self.bc.request.authenticate(model.user)
+
+            url = reverse_lazy('authenticate:academy_student') + f'?status={status.lower()}'
+            response = self.client.get(url)
+
+            json = response.json()
+            expected = [
+                format_profile_academy(self, profile_academy, model.role, model.academy)
+                for profile_academy in model.profile_academy
+            ]
+
+            self.assertEqual(json, expected)
+            self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
+                             self.bc.format.to_dict(model.profile_academy))
+
+            self.bc.database.delete('authenticate.ProfileAcademy')
 
 
 class StudentGetPaginationTestSuite(AuthTestCase):

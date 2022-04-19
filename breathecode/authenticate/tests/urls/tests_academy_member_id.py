@@ -1,6 +1,9 @@
 """
 Test cases for /academy/:id/member/:id
 """
+import os
+import urllib.parse
+import breathecode.notify.actions as actions
 from unittest.mock import MagicMock, patch
 from breathecode.services import datetime_to_iso_format
 from django.urls.base import reverse_lazy
@@ -243,6 +246,8 @@ class AuthenticateTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
+
     """
     🔽🔽🔽 GET without data, passing email
     """
@@ -275,6 +280,8 @@ class AuthenticateTestSuite(AuthTestCase):
             'status': 'INVITED',
             'user_id': 1,
         }])
+
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
 
     """
     🔽🔽🔽 GET with data, passing email
@@ -340,6 +347,8 @@ class AuthenticateTestSuite(AuthTestCase):
             'status': 'INVITED',
             'user_id': 1,
         }])
+
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
 
     """
     🔽🔽🔽 GET with profile and github
@@ -411,6 +420,8 @@ class AuthenticateTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
+
     """
     🔽🔽🔽 GET with github
     """
@@ -478,6 +489,224 @@ class AuthenticateTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
+
+    """
+    🔽🔽🔽 PUT capability
+    """
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__put__without_capability(self):
+        """Test /academy/:id/member/:id"""
+        self.bc.request.set_headers(academy=1)
+        self.generate_models(authenticate=True)
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '1'})
+        response = self.client.put(url)
+        json = response.json()
+
+        self.assertEqual(
+            json, {
+                'detail': "You (user: 1) don't have this capability: crud_member "
+                'for academy 1',
+                'status_code': 403
+            })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    """
+    🔽🔽🔽 PUT passing email
+    """
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__put__passing_email(self):
+        """Test /academy/:id/member/:id"""
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='crud_member',
+                                     profile_academy=True)
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': 'dude@dude.dude'})
+
+        response = self.client.put(url)
+        json = response.json()
+        expected = {'detail': 'user-id-is-not-numeric', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+    """
+    🔽🔽🔽 PUT without required fields
+    """
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__put__without_required_fields(self):
+        """Test /academy/:id/member/:id"""
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='crud_member',
+                                     profile_academy=True)
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '1'})
+
+        response = self.client.put(url)
+        json = response.json()
+        expected = {'role': ['This field is required.']}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+    """
+    🔽🔽🔽 PUT user not exists, it's use the post serializer
+    """
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__put__user_does_not_exists(self):
+        """Test /academy/:id/member/:id"""
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='crud_member',
+                                     profile_academy=True)
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '2'})
+
+        data = {'role': role}
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'user-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+    """
+    🔽🔽🔽 PUT User exists but without a ProfileAcademy, it's use the post serializer
+    """
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__put__user_exists_but_without_profile_academy(self):
+        """Test /academy/:id/member/:id"""
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(role=role, user=2, capability='crud_member', profile_academy=True)
+
+        self.bc.request.authenticate(model.user[0])
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '2'})
+
+        data = {'role': role}
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {
+            'address': None,
+            'email': model.user[1].email,
+            'first_name': None,
+            'last_name': None,
+            'phone': '',
+            'role': role,
+            'status': 'ACTIVE',
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+            {
+                **self.bc.format.to_dict(model.profile_academy),
+                'id': 2,
+                'email': model.user[1].email,
+                'first_name': None,
+                'last_name': None,
+                'role_id': role,
+                'status': 'ACTIVE',
+                'user_id': 2,
+            },
+        ])
+
+    """
+    🔽🔽🔽 PUT with data
+    """
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__put__with_data(self):
+        """Test /academy/:id/member/:id"""
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='crud_member',
+                                     profile_academy=True)
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '1'})
+
+        data = {'role': role}
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {
+            'academy': model.academy.id,
+            'address': model.profile_academy.address,
+            'first_name': model.profile_academy.first_name,
+            'last_name': model.profile_academy.last_name,
+            'phone': model.profile_academy.phone,
+            'role': role,
+            'user': model.user.id,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+    """
+    🔽🔽🔽 PUT with data, changing values
+    """
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_member_id__put__with_data__changing_values(self):
+        """Test /academy/:id/member/:id"""
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     role=role,
+                                     capability='crud_member',
+                                     profile_academy=True)
+        url = reverse_lazy('authenticate:academy_member_id', kwargs={'user_id_or_email': '1'})
+
+        data = {'role': role, 'first_name': 'Lord', 'last_name': 'Valdomero'}
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {
+            'academy': model.academy.id,
+            'address': model.profile_academy.address,
+            'first_name': 'Lord',
+            'last_name': 'Valdomero',
+            'phone': model.profile_academy.phone,
+            'role': role,
+            'user': model.user.id,
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            {
+                **self.bc.format.to_dict(model.profile_academy),
+                'first_name': 'Lord',
+                'last_name': 'Valdomero',
+            },
+        ])
+
     """
     🔽🔽🔽 DELETE with data, passing email
     """
@@ -510,6 +739,8 @@ class AuthenticateTestSuite(AuthTestCase):
             'status': 'INVITED',
             'user_id': 1,
         }])
+
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
 
     """
     🔽🔽🔽 DELETE with data, passing id and bulk mode
@@ -544,6 +775,8 @@ class AuthenticateTestSuite(AuthTestCase):
             'user_id': 1,
         }])
 
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
+
     """
     🔽🔽🔽 DELETE with data, passing bad id
     """
@@ -576,6 +809,8 @@ class AuthenticateTestSuite(AuthTestCase):
             'status': 'INVITED',
             'user_id': 1,
         }])
+
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
 
     """
     🔽🔽🔽 DELETE with data, passing id

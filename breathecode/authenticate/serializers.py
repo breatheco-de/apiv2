@@ -4,12 +4,12 @@ import logging
 import random
 import os
 import urllib.parse
+import breathecode.notify.actions as notify_actions
 from django.utils import timezone
 from django.contrib.auth.models import User, Group
 from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy, Cohort
-from breathecode.notify.actions import send_email_message
 from django.db import models
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth import authenticate
@@ -322,15 +322,19 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             if 'invite' not in data or data['invite'] != True:
                 raise ValidationException('User does not exists, do you want to invite it?',
                                           slug='user-not-found')
+
             elif 'email' not in data:
                 raise ValidationException('Please specify user id or member email', slug='no-email-or-id')
 
             already = ProfileAcademy.objects.filter(email=data['email'],
-                                                    academy=self.context['academy_id']).first()
+                                                    academy=self.context['academy_id']).exists()
+
             if already:
                 raise ValidationException(
-                    'There is a member already in this academy with this email, or with invitation to this email pending'
-                )
+                    'There is a member already in this academy with this email, or with invitation to this '
+                    'email pending',
+                    code=400,
+                    slug='already-exists-with-this-email')
 
         elif 'user' in data:
             student_role = Role.objects.filter(slug='student').first()
@@ -340,12 +344,11 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             if already:
                 raise ValidationException(
                     f'This user is already a member of this academy as {str(already.role)}',
-                    slug='user-already-exists')
+                    slug='already-exists')
 
         return data
 
     def create(self, validated_data):
-
         academy = Academy.objects.filter(id=self.context.get('academy_id')).first()
         if academy is None:
             raise ValidationException('Academy not found')
@@ -360,7 +363,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
         if 'user' in validated_data:
             user = User.objects.filter(id=validated_data['user']).first()
             if user is None:
-                raise ValidationException('User not found')
+                raise ValidationException('User not found', code=400, slug='user-not-found')
             email = user.email
             status = 'ACTIVE'
 
@@ -388,7 +391,9 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             # avoid double invite
             if invite is not None:
                 raise ValidationException(
-                    'You already invited this user, check for previous invites and resend')
+                    'You already invited this user, check for previous invites and resend',
+                    code=400,
+                    slug='already-invited')
 
             invite = UserInvite(email=email,
                                 first_name=validated_data['first_name'],
@@ -407,7 +412,7 @@ class MemberPOSTSerializer(serializers.ModelSerializer):
             url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
                 str(invite.token) + '?' + querystr
 
-            send_email_message(
+            notify_actions.send_email_message(
                 'welcome_academy', email, {
                     'email': email,
                     'subject': 'Welcome to 4Geeks',
@@ -500,7 +505,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                 })
             profile_academy.save()
 
-            send_email_message(
+            notify_actions.send_email_message(
                 'academy_invite', email, {
                     'subject': f'Invitation to study at {academy.name}',
                     'invites': [ProfileAcademySmallSerializer(profile_academy).data],
@@ -534,7 +539,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
                 str(invite.token) + '?' + querystr
 
-            send_email_message(
+            notify_actions.send_email_message(
                 'welcome', email, {
                     'email': email,
                     'subject': 'Welcome to 4Geeks.com',
