@@ -6,13 +6,11 @@ import os
 import urllib.parse
 import breathecode.notify.actions as notify_actions
 from django.utils import timezone
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User
 from .models import CredentialsGithub, ProfileAcademy, Role, UserInvite, Profile, Token
 from breathecode.utils import ValidationException
 from breathecode.admissions.models import Academy, Cohort
-from django.db import models
 from rest_framework.exceptions import ValidationError
-from django.contrib.auth import authenticate
 from rest_framework import serializers
 from django.db.models import Q
 
@@ -443,26 +441,30 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
                   'status')
 
     def validate(self, data):
-        if 'email' in data:
+        if 'email' in data and data['email']:
             data['email'] = data['email'].lower()
 
         if 'user' not in data:
             if 'invite' not in data or data['invite'] != True:
-                raise ValidationException('User does not exists, do you want to invite it?')
+                raise ValidationException('User does not exists, do you want to invite it?',
+                                          slug='user-not-found')
             elif 'email' not in data:
-                raise ValidationException('Please specify user id or student email')
+                raise ValidationException('Please specify user id or student email', slug='no-email-or-id')
 
             already = ProfileAcademy.objects.filter(email=data['email'],
                                                     academy=self.context['academy_id']).first()
             if already:
                 raise ValidationException(
-                    'There is a student already in this academy, or with invitation pending')
+                    'There is a student already in this academy, or with invitation pending',
+                    slug='already-exists-with-this-email')
 
         elif 'user' in data:
             already = ProfileAcademy.objects.filter(user=data['user'],
                                                     academy=self.context['academy_id']).first()
             if already:
-                raise ValidationError('This user is already a member of this academy staff')
+                raise ValidationException('This user is already a member of this academy staff',
+                                          code=400,
+                                          slug='already-exists')
 
         return data
 
@@ -474,34 +476,39 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
 
         role = Role.objects.filter(slug='student').first()
         if role is None:
-            raise ValidationException('Role student not found')
+            raise ValidationException('Role student not found', slug='role-not-found')
 
         cohort = None
         if 'cohort' in validated_data:
             cohort = Cohort.objects.filter(id=validated_data.pop('cohort')).first()
             if cohort is None:
-                raise ValidationException('Cohort not found')
+                raise ValidationException('Cohort not found', slug='cohort-not-found')
 
         user = None
         email = None
         status = 'INVITED'
         if 'user' in validated_data:
+
             user = User.objects.filter(id=validated_data['user']).first()
             if user is None:
-                raise ValidationException('User not found')
+                raise ValidationException('User not found', slug='user-not-found')
             email = user.email
 
             token, created = Token.get_or_create(user, token_type='temporal')
             querystr = urllib.parse.urlencode({'callback': APP_URL, 'token': token})
             url = os.getenv('API_URL') + '/v1/auth/academy/html/invite?' + querystr
 
+            if 'invite' in validated_data:
+                del validated_data['invite']
+
             profile_academy = ProfileAcademy.objects.create(
                 **{
-                    **validated_data, 'email': email,
+                    **validated_data,
+                    'email': email,
                     'user': user,
                     'academy': academy,
                     'role': role,
-                    'status': status
+                    'status': status,
                 })
             profile_academy.save()
 
@@ -521,7 +528,7 @@ class StudentPOSTSerializer(serializers.ModelSerializer):
             invite = UserInvite.objects.filter(email=validated_data['email'],
                                                author=self.context.get('request').user).first()
             if invite is not None:
-                raise ValidationException('You already invited this user')
+                raise ValidationException('You already invited this user', code=400, slug='already-invited')
 
             invite = UserInvite(email=validated_data['email'],
                                 first_name=validated_data['first_name'],

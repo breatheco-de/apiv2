@@ -28,6 +28,13 @@ def view_method_mock(request, *args, **kwargs):
     return Response(response, status=200)
 
 
+def getrandbits(n):
+    return int(n * (10**37) + n)
+
+
+TOKEN = str(getrandbits(128))
+
+
 def format_profile_academy(self, profile_academy, role, academy):
     return {
         'academy': {
@@ -55,6 +62,24 @@ def format_profile_academy(self, profile_academy, role, academy):
             'id': profile_academy.user.id,
             'last_name': profile_academy.user.last_name
         }
+    }
+
+
+def generate_user_invite(data: dict) -> dict:
+    return {
+        'academy_id': None,
+        'author_id': None,
+        'cohort_id': None,
+        'email': None,
+        'first_name': None,
+        'id': 0,
+        'last_name': None,
+        'phone': '',
+        'role_id': None,
+        'sent_at': None,
+        'status': 'PENDING',
+        'token': '',
+        **data,
     }
 
 
@@ -1781,6 +1806,7 @@ class MemberPostTestSuite(AuthTestCase):
         self.assertEqual(actions.send_email_message.call_args_list, [])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('random.getrandbits', MagicMock(side_effect=getrandbits))
     def test_academy_member__post__without_user_in_data(self):
         """Test /academy/:id/member"""
 
@@ -1834,9 +1860,20 @@ class MemberPostTestSuite(AuthTestCase):
         querystr = urllib.parse.urlencode(params)
         # TODO: obj is not defined
         url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
-            str(invite.token) + '?' + querystr
+            str(TOKEN) + '?' + querystr
 
-        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            generate_user_invite({
+                'id': 1,
+                'academy_id': 1,
+                'author_id': 1,
+                'email': 'dude@dude.dude',
+                'first_name': 'Kenny',
+                'last_name': 'McKornick',
+                'role_id': 'student',
+                'token': TOKEN,
+            }),
+        ])
         self.assertEqual(actions.send_email_message.call_args_list, [
             call('welcome_academy', 'dude@dude.dude', {
                 'email': 'dude@dude.dude',
@@ -1847,6 +1884,7 @@ class MemberPostTestSuite(AuthTestCase):
         ])
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    @patch('random.getrandbits', MagicMock(side_effect=getrandbits))
     def test_academy_member__post__without_user_in_data__invite_already_exists(self):
         """Test /academy/:id/member"""
 
@@ -1884,7 +1922,7 @@ class MemberPostTestSuite(AuthTestCase):
         querystr = urllib.parse.urlencode(params)
         # TODO: obj is not defined
         url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
-            str(invite.token) + '?' + querystr
+            str(TOKEN) + '?' + querystr
 
         self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
             self.bc.format.to_dict(model.user_invite),

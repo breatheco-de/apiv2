@@ -372,7 +372,7 @@ class AuthenticateTestSuite(AuthTestCase):
         ])
 
     """
-    🔽🔽🔽 PUT user not exists, it's use the post serializer
+    🔽🔽🔽 PUT user not exists
     """
 
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
@@ -389,7 +389,33 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.put(url)
 
         json = response.json()
-        expected = {'detail': 'user-not-found', 'status_code': 400}
+        expected = {'detail': 'profile-academy-not-found', 'status_code': 404}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+    """
+    🔽🔽🔽 PUT changing role
+    """
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_student_id__put__changing_role(self):
+        """Test /academy/:id/member/:id"""
+        role = 'student'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(role=role, user=1, capability='crud_student', profile_academy=True)
+
+        self.bc.request.authenticate(model.user)
+        url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '1'})
+
+        data = {'role': 'nut'}
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'trying-to-change-role', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -398,7 +424,33 @@ class AuthenticateTestSuite(AuthTestCase):
         ])
 
     """
-    🔽🔽🔽 PUT User exists but without a ProfileAcademy, it's use the post serializer
+    🔽🔽🔽 PUT changing a staff
+    """
+
+    @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
+    def test_academy_student_id__put__changing_a_staff(self):
+        """Test /academy/:id/member/:id"""
+        role = 'konan'
+        self.bc.request.set_headers(academy=1)
+        model = self.generate_models(role=role, user=1, capability='crud_student', profile_academy=True)
+
+        self.bc.request.authenticate(model.user)
+        url = reverse_lazy('authenticate:academy_student_id', kwargs={'user_id_or_email': '1'})
+
+        data = {}
+        response = self.client.put(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'trying-to-change-a-staff', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+    """
+    🔽🔽🔽 PUT User exists but without a ProfileAcademy
     """
 
     @patch('os.getenv', MagicMock(return_value='https://dotdotdotdotdot.dot'))
@@ -414,30 +466,12 @@ class AuthenticateTestSuite(AuthTestCase):
         response = self.client.put(url)
 
         json = response.json()
-        expected = {
-            'address': None,
-            'email': model.user[1].email,
-            'first_name': None,
-            'last_name': None,
-            'phone': '',
-            'role': role,
-            'status': 'ACTIVE',
-        }
+        expected = {'detail': 'profile-academy-not-found', 'status_code': 404}
 
         self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
             self.bc.format.to_dict(model.profile_academy),
-            {
-                **self.bc.format.to_dict(model.profile_academy),
-                'id': 2,
-                'email': model.user[1].email,
-                'first_name': None,
-                'last_name': None,
-                'role_id': role,
-                'status': 'ACTIVE',
-                'user_id': 2,
-            },
         ])
 
     """
