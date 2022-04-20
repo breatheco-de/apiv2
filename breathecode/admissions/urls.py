@@ -10,7 +10,7 @@ urlpatterns = [
     # keep before that academy/cohort/:id
     path('academy/cohort/me', CohortMeView.as_view(), name='academy_cohort_me'),
     path('public/syllabus', get_public_syllabus),
-    # depcrecated methods, soon to be deleted
+    # deprecated methods, soon to be deleted
     path('cohort/all', get_cohorts, name='cohort_all'),
     path('cohort/user', CohortUserView.as_view(), name='cohort_user'),
     path('cohort/<int:cohort_id>/user/<int:user_id>', CohortUserView.as_view(), name='cohort_id_user_id'),
