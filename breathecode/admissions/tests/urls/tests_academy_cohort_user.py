@@ -36,7 +36,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         url = reverse_lazy('admissions:academy_cohort_user')
         response = self.client.get(url)
@@ -56,7 +56,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         url = reverse_lazy('admissions:academy_cohort_user')
@@ -107,7 +107,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -126,7 +126,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -174,7 +174,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -227,7 +227,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -247,7 +247,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'finantial_status': 'LATE'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -296,7 +296,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'finantial_status': 'LATE'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -348,7 +348,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -368,7 +368,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'educational_status': 'GRADUATED'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -417,7 +417,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'educational_status': 'GRADUATED'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -471,7 +471,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'educational_status': 'GRADUATED'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -520,7 +520,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'educational_status': 'GRADUATED'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -572,7 +572,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort_user=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')
@@ -592,7 +592,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
                                      cohort_user=True,
                                      cohort_user_kwargs={'educational_status': 'GRADUATED'},
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         model_dict = self.remove_dinamics_fields(model['cohort_user'].__dict__)
         base_url = reverse_lazy('admissions:academy_cohort_user')

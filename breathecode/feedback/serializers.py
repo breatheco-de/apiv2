@@ -98,6 +98,7 @@ class SurveySmallSerializer(serpy.Serializer):
     avg_score = serpy.Field()
     response_rate = serpy.Field()
     status = serpy.Field()
+    status_json = serpy.Field()
     duration = serpy.Field()
     created_at = serpy.Field()
     sent_at = serpy.Field()

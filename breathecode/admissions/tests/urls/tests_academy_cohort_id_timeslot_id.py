@@ -56,10 +56,11 @@ class CohortUserTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: read_cohort for academy 1",
-            'status_code': 403,
-        })
+        self.assertEqual(
+            json, {
+                'detail': "You (user: 1) don't have this capability: read_all_cohort for academy 1",
+                'status_code': 403,
+            })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
@@ -71,7 +72,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato')
         url = reverse_lazy('admissions:academy_cohort_id_timeslot_id',
                            kwargs={
@@ -97,7 +98,7 @@ class CohortUserTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      cohort_time_slot=True)
         url = reverse_lazy('admissions:academy_cohort_id_timeslot_id',

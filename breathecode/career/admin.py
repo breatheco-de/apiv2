@@ -2,7 +2,7 @@ import logging
 from django.contrib import admin
 from django.contrib import messages
 from .models import Platform, ZyteProject, Spider, Job, Employer, Position, PositionAlias, CareerTag, Location, LocationAlias
-from .actions import fetch_sync_all_data, run_spider, get_was_publiched_date_from_string
+from .actions import fetch_sync_all_data, run_spider, get_was_published_date_from_string
 
 logger = logging.getLogger(__name__)
 
@@ -40,13 +40,13 @@ def run_spider_admin(modeladmin, request, queryset):
         messages.error(request, message)
 
 
-def get_was_publiched_date_from_string_admin(modeladmin, request, queryset):
+def get_was_published_date_from_string_admin(modeladmin, request, queryset):
     from django.contrib import messages
-    from .actions import get_was_publiched_date_from_string
+    from .actions import get_was_published_date_from_string
     jobs = queryset.all()
     try:
         for job in jobs:
-            get_was_publiched_date_from_string(job)
+            get_was_published_date_from_string(job)
         messages.success(request, f'The publication date was successfully parsed')
     except Exception as e:
         logger.error(f'There was an error retriving the jobs {str(e)}')
@@ -55,7 +55,7 @@ def get_was_publiched_date_from_string_admin(modeladmin, request, queryset):
 
 fetch_sync_all_data_admin.short_description = 'Fetch sync all data.'
 run_spider_admin.short_description = 'Run spider.'
-get_was_publiched_date_from_string_admin.short_description = 'Get was publiched date.'
+get_was_published_date_from_string_admin.short_description = 'Get was publiched date.'
 
 
 @admin.register(Spider)
@@ -77,7 +77,7 @@ class ZyteProjectAdmin(admin.ModelAdmin):
 class JobAdmin(admin.ModelAdmin):
     list_display = ('title', 'spider', 'published_date_raw', 'salary', 'status', 'employer', 'position',
                     'apply_url', 'currency', 'remote', 'created_at')
-    actions = (get_was_publiched_date_from_string_admin, )
+    actions = (get_was_published_date_from_string_admin, )
 
 
 @admin.register(Employer)

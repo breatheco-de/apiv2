@@ -1,12 +1,14 @@
 from django.urls import path
-from .views import (AcademyView, CohortUserView, AcademyCohortView, SyllabusVersionView, SyllabusView,
-                    get_timezones, UserView, UserMeView, AcademyCohortUserView, get_schedule,
+from .views import (AcademyView, CohortMeView, CohortUserView, AcademyCohortView, SyllabusVersionView,
+                    SyllabusView, get_timezones, UserView, UserMeView, AcademyCohortUserView, get_schedule,
                     AcademySyllabusScheduleView, SyllabusScheduleView, get_all_academies, get_cohorts,
                     AcademyCohortTimeSlotView, AcademySyllabusScheduleTimeSlotView,
                     AcademySyncCohortTimeSlotView, AcademyReportView, get_public_syllabus, SyllabusAssetView)
 
 app_name = 'admissions'
 urlpatterns = [
+    # keep before that academy/cohort/:id
+    path('academy/cohort/me', CohortMeView.as_view(), name='academy_cohort_me'),
     path('public/syllabus', get_public_syllabus),
     # deprecated methods, soon to be deleted
     path('cohort/all', get_cohorts, name='cohort_all'),
