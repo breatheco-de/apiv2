@@ -40,10 +40,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(json, {
-            'detail': "You (user: 1) don't have this capability: read_cohort for academy 1",
-            'status_code': 403
-        })
+        self.assertEqual(
+            json, {
+                'detail': "You (user: 1) don't have this capability: read_all_cohort for academy 1",
+                'status_code': 403
+            })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
@@ -638,7 +639,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         url = reverse_lazy('admissions:academy_cohort')
         model = self.generate_models(authenticate=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus=True,
                                      skip_cohort=True)
@@ -705,7 +706,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
@@ -783,7 +784,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
@@ -817,7 +818,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
@@ -896,7 +897,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                                      cohort=True,
                                      impossible_kickoff_date=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
@@ -927,7 +928,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
@@ -1004,7 +1005,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
@@ -1082,7 +1083,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             self.generate_models(authenticate=True,
                                  cohort=True,
                                  profile_academy=True,
-                                 capability='read_cohort',
+                                 capability='read_all_cohort',
                                  role='potato',
                                  syllabus=True,
                                  syllabus_version=True,
@@ -1169,7 +1170,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         base = self.generate_models(authenticate=True,
                                     profile_academy=True,
-                                    capability='read_cohort',
+                                    capability='read_all_cohort',
                                     role='potato',
                                     skip_cohort=True)
 
@@ -1252,7 +1253,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
@@ -1283,7 +1284,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
@@ -1360,7 +1361,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         model = self.generate_models(authenticate=True,
                                      cohort=True,
                                      profile_academy=True,
-                                     capability='read_cohort',
+                                     capability='read_all_cohort',
                                      role='potato',
                                      syllabus=True,
                                      syllabus_version=True,
@@ -1438,7 +1439,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             self.generate_models(authenticate=True,
                                  cohort=True,
                                  profile_academy=True,
-                                 capability='read_cohort',
+                                 capability='read_all_cohort',
                                  role='potato',
                                  syllabus=True,
                                  syllabus_version=True,
@@ -1523,7 +1524,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             self.generate_models(authenticate=True,
                                  cohort=True,
                                  profile_academy=True,
-                                 capability='read_cohort',
+                                 capability='read_all_cohort',
                                  role='potato',
                                  syllabus=True,
                                  syllabus_version=True,
@@ -1608,7 +1609,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             self.generate_models(authenticate=True,
                                  cohort=True,
                                  profile_academy=True,
-                                 capability='read_cohort',
+                                 capability='read_all_cohort',
                                  role='potato',
                                  syllabus=True,
                                  syllabus_version=True,
@@ -1707,7 +1708,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             self.generate_models(authenticate=True,
                                  cohort=True,
                                  profile_academy=True,
-                                 capability='read_cohort',
+                                 capability='read_all_cohort',
                                  role='potato',
                                  syllabus=True,
                                  syllabus_version=True,
@@ -1806,7 +1807,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             self.generate_models(authenticate=True,
                                  cohort=True,
                                  profile_academy=True,
-                                 capability='read_cohort',
+                                 capability='read_all_cohort',
                                  role='potato',
                                  syllabus=True,
                                  syllabus_version=True,

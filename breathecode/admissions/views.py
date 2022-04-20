@@ -287,7 +287,7 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
     """
     List all snippets, or create a new snippet.
     """
-    @capable_of('read_cohort')
+    @capable_of('read_all_cohort')
     def get(self, request, format=None, cohort_id=None, user_id=None, academy_id=None):
         if user_id is not None:
             item = CohortUser.objects.filter(cohort__academy__id=academy_id,
@@ -414,7 +414,7 @@ class AcademyCohortUserView(APIView, HeaderLimitOffsetPagination, GenerateLookup
 
 
 class AcademyCohortTimeSlotView(APIView, GenerateLookupsMixin):
-    @capable_of('read_cohort')
+    @capable_of('read_all_cohort')
     def get(self, request, cohort_id=None, timeslot_id=None, academy_id=None):
 
         if timeslot_id is not None:
@@ -682,6 +682,78 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
+class CohortMeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+    """
+    List all snippets, or create a new snippet.
+    """
+    cache = CohortCache()
+
+    @capable_of('read_single_cohort')
+    def get(self, request, cohort_id=None, academy_id=None):
+        upcoming = request.GET.get('upcoming', None)
+        academy = request.GET.get('academy', None)
+        stage = request.GET.get('stage', None)
+        like = request.GET.get('like', None)
+        cache_kwargs = {
+            'resource': cohort_id,
+            'upcoming': upcoming,
+            'stage': stage,
+            'academy': academy,
+            'like': like,
+            **self.pagination_params(request),
+        }
+
+        cache = self.cache.get(**cache_kwargs)
+        if cache:
+            return Response(cache, status=status.HTTP_200_OK)
+
+        if cohort_id is not None:
+            if cohort_id.isnumeric():
+                cohort_user = CohortUser.objects.filter(user=request.user,
+                                                        academy__id=academy_id,
+                                                        cohort__id=cohort_id).first()
+            else:
+                cohort_user = CohortUser.objects.filter(user=request.user,
+                                                        academy__id=academy_id,
+                                                        cohort__slug=cohort_id).first()
+
+            if not cohort_user or not cohort_user.cohort:
+                return Response(status=status.HTTP_404_NOT_FOUND)
+
+            serializer = GetCohortSerializer(cohort_user.cohort, many=False)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        cohorts_of_student = CohortUser.objects.filter(user=request.user).values_list('cohort__id', flat=True)
+        items = Cohort.objects.filter(academy__id=academy_id, id__in=cohorts_of_student)
+
+        if upcoming == 'true':
+            now = timezone.now()
+            items = items.filter(kickoff_date__gte=now)
+
+        if stage is not None:
+            items = items.filter(stage__in=stage.upper().split(','))
+        else:
+            items = items.exclude(stage='DELETED')
+
+        if like is not None:
+            items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
+
+        sort = request.GET.get('sort', None)
+        if sort is None or sort == '':
+            sort = '-kickoff_date'
+
+        items = items.order_by(sort)
+
+        page = self.paginate_queryset(items, request)
+        serializer = GetCohortSerializer(page, many=True)
+
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data, cache=self.cache, cache_kwargs=cache_kwargs)
+        else:
+            self.cache.set(serializer.data, **cache_kwargs)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
@@ -689,7 +761,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
     permission_classes = [IsAuthenticated]
     cache = CohortCache()
 
-    @capable_of('read_cohort')
+    @capable_of('read_all_cohort')
     def get(self, request, cohort_id=None, academy_id=None):
         upcoming = request.GET.get('upcoming', None)
         academy = request.GET.get('academy', None)
