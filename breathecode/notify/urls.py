@@ -14,5 +14,5 @@ urlpatterns = [
     path('preview/slack/<slug>', preview_slack_template),
     path('test/email/<email>', test_email),
     path('slack/interaction', process_interaction),
-    path('slack/command', slack_command),
+    path('slack/command', slack_command, name='slack_command')
 ]

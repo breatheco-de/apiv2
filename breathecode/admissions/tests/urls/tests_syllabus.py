@@ -68,9 +68,14 @@ class CertificateTestSuite(AdmissionsTestCase):
         response = self.client.get(url)
         json = response.json()
         expected = [{
+            'main_technologies': None,
             'slug': model.syllabus.slug,
             'name': model.syllabus.name,
-            'academy_owner': model.syllabus.academy_owner.id,
+            'academy_owner': {
+                'id': model.syllabus.academy_owner.id,
+                'name': model.syllabus.academy_owner.name,
+                'slug': model.syllabus.academy_owner.slug
+            },
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,
             'week_hours': model.syllabus.week_hours,
@@ -170,6 +175,7 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_syllabus_dict(), [{
+            'main_technologies': None,
             'academy_owner_id': 1,
             'duration_in_days': None,
             'duration_in_hours': None,
@@ -200,9 +206,14 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
 
         self.assertEqual(json, [{
+            'main_technologies': None,
             'slug': model.syllabus.slug,
             'name': model.syllabus.name,
-            'academy_owner': model.syllabus.academy_owner.id,
+            'academy_owner': {
+                'id': model.syllabus.academy_owner.id,
+                'name': model.syllabus.academy_owner.name,
+                'slug': model.syllabus.academy_owner.slug
+            },
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,
             'week_hours': model.syllabus.week_hours,
@@ -246,9 +257,14 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'previous':
                 None,
                 'results': [{
+                    'main_technologies': None,
                     'slug': model.syllabus.slug,
                     'name': model.syllabus.name,
-                    'academy_owner': model.syllabus.academy_owner.id,
+                    'academy_owner': {
+                        'id': model.syllabus.academy_owner.id,
+                        'name': model.syllabus.academy_owner.name,
+                        'slug': model.syllabus.academy_owner.slug
+                    },
                     'duration_in_days': model.syllabus.duration_in_days,
                     'duration_in_hours': model.syllabus.duration_in_hours,
                     'week_hours': model.syllabus.week_hours,
@@ -293,9 +309,14 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'previous':
                 'http://testserver/v1/admissions/syllabus?limit=5',
                 'results': [{
+                    'main_technologies': None,
                     'slug': model.syllabus.slug,
                     'name': model.syllabus.name,
-                    'academy_owner': model.syllabus.academy_owner.id,
+                    'academy_owner': {
+                        'id': model.syllabus.academy_owner.id,
+                        'name': model.syllabus.academy_owner.name,
+                        'slug': model.syllabus.academy_owner.slug
+                    },
                     'duration_in_days': model.syllabus.duration_in_days,
                     'duration_in_hours': model.syllabus.duration_in_hours,
                     'week_hours': model.syllabus.week_hours,
