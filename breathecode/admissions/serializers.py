@@ -428,12 +428,13 @@ class GetSyllabusSerializer(serpy.Serializer):
     week_hours = serpy.Field()
     logo = serpy.Field()
     private = serpy.Field()
-    academy_owner = serpy.MethodField()
+    # academy_owner = serpy.MethodField()
+    academy_owner = GetSmallAcademySerializer()
     created_at = serpy.Field()
     updated_at = serpy.Field()
 
-    def get_academy_owner(self, obj):
-        return obj.academy_owner.id if obj.academy_owner else None
+    # def get_academy_owner(self, obj):
+    #     return obj.academy_owner.id if obj.academy_owner else None
 
 
 #        ↓ EDIT SERIALIZERS ↓

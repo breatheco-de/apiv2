@@ -250,6 +250,7 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('crud_survey')
     def delete(self, request, academy_id=None, survey_id=None):
+
         lookups = self.generate_lookups(request, many_fields=['id'])
 
         if lookups and survey_id:
