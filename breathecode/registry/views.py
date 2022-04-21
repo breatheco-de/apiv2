@@ -127,7 +127,10 @@ def render_readme(request, asset_slug, extension='raw'):
     if asset is None:
         raise ValidationException('Asset {asset_slug} not found', status.HTTP_404_NOT_FOUND)
 
-    readme = asset.get_readme(parse=True)
+    is_parse = True
+    if asset.asset_type == 'QUIZ':
+        is_parse = False
+    readme = asset.get_readme(parse=is_parse)
 
     response = HttpResponse('Invalid extension format', content_type='text/html')
     if extension == 'html':
