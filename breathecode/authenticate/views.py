@@ -1,5 +1,6 @@
 import os, requests, base64, logging
 import urllib.parse
+import breathecode.notify.actions as notify_actions
 from datetime import timezone, timedelta
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
@@ -312,19 +313,23 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 raise ValidationException('No pending invite was found for this user and academy',
                                           code=404,
                                           slug='user-invite-not-found')
+
             serializer = UserInviteSerializer(invite, many=False)
             return Response(serializer.data)
 
         if profileacademy_id is not None:
             profile = ProfileAcademy.objects.filter(academy__id=academy_id, id=profileacademy_id).first()
             if profile is None:
-                raise ValidationException('Profile not found', 404)
+                raise ValidationException('Profile not found', code=404, slug='profile-academy-not-found')
 
             invite = UserInvite.objects.filter(academy__id=academy_id, email=profile.email,
                                                status='PENDING').first()
 
             if invite is None and profile.status != 'INVITED':
-                raise ValidationException('No pending invite was found for this user and academy', 404)
+                raise ValidationException(
+                    'No pending invite was found for this user and academy',
+                    code=404,
+                    slug='user-invite-and-profile-academy-with-status-invited-not-found')
 
             # IMPORTANT: both serializers need to include "invite_url" property to have a consistent response
             if invite is not None:
@@ -334,24 +339,24 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             if profile.status == 'INVITED':
                 serializer = GetProfileAcademySerializer(profile, many=False)
                 return Response(serializer.data)
+
+        invites = UserInvite.objects.filter(academy__id=academy_id)
+
+        status = request.GET.get('status', '')
+        if status != '':
+            invites = invites.filter(status__in=status.split(','))
         else:
-            invites = UserInvite.objects.filter(academy__id=academy_id)
+            invites = invites.filter(status='PENDING')
 
-            status = request.GET.get('status', '')
-            if status != '':
-                invites = invites.filter(status__in=status.split(','))
-            else:
-                invites = invites.filter(status='PENDING')
+        invites = invites.order_by(request.GET.get('sort', '-created_at'))
 
-            invites = invites.order_by(request.GET.get('sort', '-created_at'))
+        page = self.paginate_queryset(invites, request)
+        serializer = UserInviteSerializer(page, many=True)
 
-            page = self.paginate_queryset(invites, request)
-            serializer = UserInviteSerializer(page, many=True)
-
-            if self.is_paginate(request):
-                return self.get_paginated_response(serializer.data)
-            else:
-                return Response(serializer.data, status=200)
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
     @capable_of('crud_invite')
     def delete(self, request, academy_id=None):
@@ -388,7 +393,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         if (invite is None and profile_academy is not None and profile_academy.status == 'INVITED'
                 and (profile_academy.user.email or invite.email)):
-            send_email_message(
+            notify_actions.send_email_message(
                 'academy_invite', profile_academy.user.email or invite.email, {
                     'subject': f'Invitation to study at {profile_academy.academy.name}',
                     'invites': [ProfileAcademySmallSerializer(profile_academy).data],
