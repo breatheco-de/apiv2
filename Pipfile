@@ -45,7 +45,7 @@ mkdocstrings = "*"
 pytest-xdist = "*"
 
 [packages]
-django = "~=3.2.12"
+django = "~=3.2.13"
 djangorestframework = "~=3.11.1"
 setuptools="~=62.0.0"
 serpy = "*"
