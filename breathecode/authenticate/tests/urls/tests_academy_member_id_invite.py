@@ -1,9 +1,14 @@
+import os
 import breathecode.notify.actions as actions
 from unittest.mock import MagicMock, patch, call
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.tests.mocks.requests import apply_requests_post_mock
 from ..mixins.new_auth_test_case import AuthTestCase
 from rest_framework import status
+from django.utils import timezone
+from datetime import timedelta
 
 
 def generate_user_invite(self, model, user_invite, arguments={}):
@@ -272,14 +277,33 @@ class AuthenticateTestSuite(AuthTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(actions.send_email_message.call_args_list, [])
 
     """
-    🔽🔽🔽 PUT capability
+    🔽🔽🔽 PUT ProfileAcademy not found
     """
 
     @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    def test_resend_invite__put__with_capability__(self):
+    def test_resend_invite__put__profile_academy_not_found(self):
+        """Test """
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True, profile_academy=1, role=1, capability='invite_resend')
+        url = reverse_lazy('authenticate:academy_member_id_invite', kwargs={'profileacademy_id': 2})
+        response = self.client.put(url)
+
+        json = response.json()
+        expected = {'detail': 'profile-academy-not-found', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    """
+    🔽🔽🔽 PUT with ProfileAcademy
+    """
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    def test_resend_invite__put__with_profile_academy(self):
         """Test """
         self.headers(academy=1)
 
@@ -294,116 +318,93 @@ class AuthenticateTestSuite(AuthTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(actions.send_email_message.call_args_list, generate_send_email_message(self, model))
 
-    # @patch('breathecode.notify.actions.send_email_message', MagicMock())
-    # def test_resend_invite_no_invitation(self):
-    #     """Test """
-    #     self.headers(academy=1)
-    #     model = self.generate_models(
-    #         authenticate=True,
-    #         profile_academy=True,
-    #         capability='invite_resend',
-    #         #  user_invite=1,
-    #         role='potato',
-    #         syllabus=True)
+    @patch('requests.post',
+           apply_requests_post_mock([
+               (201, f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages", {})
+           ]))
+    def test_resend_invite_with_invitation(self):
+        """Test """
+        self.headers(academy=1)
+        profile_academy_kwargs = {'email': 'email@dotdotdotdot.dot'}
+        user_invite_kwargs = {'email': 'email@dotdotdotdot.dot'}
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='invite_resend',
+                                     role='potato',
+                                     syllabus=True,
+                                     user_invite=True,
+                                     profile_academy_kwargs=profile_academy_kwargs,
+                                     user_invite_kwargs=user_invite_kwargs)
+        url = reverse_lazy('authenticate:academy_member_id_invite', kwargs={'profileacademy_id': 1})
+        response = self.client.put(url)
+        json = response.json()
+        created = json['created_at']
+        sent = json['sent_at']
+        del json['sent_at']
+        del json['created_at']
 
-    #     url = reverse_lazy('authenticate:academy_member_id_invite', kwargs={'profileacademy_id': 1})
-    #     response = self.client.put(url)
+        expected = {
+            'id': 1,
+            'status': 'PENDING',
+            'email': 'email@dotdotdotdot.dot',
+            'first_name': None,
+            'last_name': None,
+            'token': model.user_invite.token,
+            'invite_url': f'http://localhost:8000/v1/auth/member/invite/{model.user_invite.token}',
+            'academy': {
+                'id': model['academy'].id,
+                'slug': model['academy'].slug,
+                'name': model['academy'].name,
+            },
+            'role': {
+                'id': 'potato',
+                'name': 'potato',
+                'slug': 'potato'
+            },
+            'cohort': {
+                'slug': model['cohort'].slug,
+                'name': model['cohort'].name,
+            },
+        }
 
-    #     json = response.json()
-    #     expected = {'detail': 'user-invite-not-found', 'status_code': 404}
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 200)
+        all_user_invite = [x for x in self.all_user_invite_dict() if x.pop('sent_at')]
+        self.assertEqual(all_user_invite, [{
+            'id': model['user_invite'].id,
+            'email': model['user_invite'].email,
+            'academy_id': model['user_invite'].academy_id,
+            'cohort_id': model['user_invite'].cohort_id,
+            'role_id': model['user_invite'].role_id,
+            'first_name': model['user_invite'].first_name,
+            'last_name': model['user_invite'].last_name,
+            'token': model['user_invite'].token,
+            'author_id': model['user_invite'].author_id,
+            'status': model['user_invite'].status,
+            'phone': model['user_invite'].phone,
+        }])
 
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, 404)
-    #     all_user_invite = [x for x in self.all_user_invite_dict() if x.pop('sent_at')]
-    #     self.assertEqual(all_user_invite, [])
+    def test_resend_invite_recently(self):
+        """Test """
+        self.headers(academy=1)
+        past_time = timezone.now() - timedelta(seconds=100)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='invite_resend',
+                                     role='potato',
+                                     syllabus=True,
+                                     user_invite=True,
+                                     token=True,
+                                     user_invite_kwargs={'sent_at': past_time})
+        url = reverse_lazy('authenticate:academy_member_id_invite', kwargs={'profileacademy_id': 1})
+        response = self.client.put(url)
+        json = response.json()
+        expected = {'detail': 'sent-at-diff-less-two-minutes', 'status_code': 400}
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
 
-    # @patch('requests.post',
-    #        apply_requests_post_mock([
-    #            (201, f"https://api.mailgun.net/v3/{os.environ.get('MAILGUN_DOMAIN')}/messages", {})
-    #        ]))
-    # def test_resend_invite_with_invitation(self):
-    #     """Test """
-    #     self.headers(academy=1)
-    #     profile_academy_kwargs = {'email': 'email@dotdotdotdot.dot'}
-    #     user_invite_kwargs = {'email': 'email@dotdotdotdot.dot'}
-    #     model = self.generate_models(authenticate=True,
-    #                                  profile_academy=True,
-    #                                  capability='invite_resend',
-    #                                  role='potato',
-    #                                  syllabus=True,
-    #                                  user_invite=True,
-    #                                  profile_academy_kwargs=profile_academy_kwargs,
-    #                                  user_invite_kwargs=user_invite_kwargs)
-    #     url = reverse_lazy('authenticate:academy_member_id_invite', kwargs={'profileacademy_id': 1})
-    #     response = self.client.put(url)
-    #     json = response.json()
-    #     created = json['created_at']
-    #     sent = json['sent_at']
-    #     del json['sent_at']
-    #     del json['created_at']
-
-    #     expected = {
-    #         'id': 1,
-    #         'status': 'PENDING',
-    #         'email': 'email@dotdotdotdot.dot',
-    #         'first_name': None,
-    #         'last_name': None,
-    #         'token': model.user_invite.token,
-    #         'invite_url': f'http://localhost:8000/v1/auth/member/invite/{model.user_invite.token}',
-    #         'academy': {
-    #             'id': model['academy'].id,
-    #             'slug': model['academy'].slug,
-    #             'name': model['academy'].name,
-    #         },
-    #         'role': {
-    #             'id': 'potato',
-    #             'name': 'potato',
-    #             'slug': 'potato'
-    #         },
-    #         'cohort': {
-    #             'slug': model['cohort'].slug,
-    #             'name': model['cohort'].name,
-    #         },
-    #     }
-
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, 200)
-    #     all_user_invite = [x for x in self.all_user_invite_dict() if x.pop('sent_at')]
-    #     self.assertEqual(all_user_invite, [{
-    #         'id': model['user_invite'].id,
-    #         'email': model['user_invite'].email,
-    #         'academy_id': model['user_invite'].academy_id,
-    #         'cohort_id': model['user_invite'].cohort_id,
-    #         'role_id': model['user_invite'].role_id,
-    #         'first_name': model['user_invite'].first_name,
-    #         'last_name': model['user_invite'].last_name,
-    #         'token': model['user_invite'].token,
-    #         'author_id': model['user_invite'].author_id,
-    #         'status': model['user_invite'].status,
-    #         'phone': model['user_invite'].phone,
-    #     }])
-
-    # def test_resend_invite_recently(self):
-    #     """Test """
-    #     self.headers(academy=1)
-    #     past_time = timezone.now() - timedelta(seconds=100)
-    #     model = self.generate_models(authenticate=True,
-    #                                  profile_academy=True,
-    #                                  capability='invite_resend',
-    #                                  role='potato',
-    #                                  syllabus=True,
-    #                                  user_invite=True,
-    #                                  token=True,
-    #                                  user_invite_kwargs={'sent_at': past_time})
-    #     url = reverse_lazy('authenticate:academy_member_id_invite', kwargs={'profileacademy_id': 1})
-    #     response = self.client.put(url)
-    #     json = response.json()
-    #     expected = {'detail': 'Impossible to resend invitation', 'status_code': 400}
-    #     self.assertEqual(json, expected)
-    #     self.assertEqual(response.status_code, 400)
-
-    #     self.assertEqual(self.all_user_invite_dict(),
-    #                      [{
-    #                          **self.model_to_dict(model, 'user_invite'),
-    #                          'sent_at': past_time,
-    #                      }])
+        self.assertEqual(self.all_user_invite_dict(),
+                         [{
+                             **self.model_to_dict(model, 'user_invite'),
+                             'sent_at': past_time,
+                         }])

@@ -46,8 +46,12 @@ urlpatterns = [
     path('academy/member/<str:user_id_or_email>', MemberView.as_view(), name='academy_member_id'),
     path('academy/student', StudentView.as_view(), name='academy_student'),
     path('academy/student/<str:user_id_or_email>', StudentView.as_view(), name='academy_student_id'),
-    path('academy/user/me/invite', MeInviteView.as_view(), name='user_me_invite'),
-    path('academy/user/me/invite/<slug:new_status>', MeInviteView.as_view(), name='user_me_invite_status'),
+    # TODO: 🔽 is normal a endpoint starts with 'endpoint/' are a endpoint that refer to me? 🔽
+    path('academy/user/me/invite', MeInviteView.as_view(), name='academy_user_me_invite'),
+    path('academy/user/me/invite/<slug:new_status>',
+         MeInviteView.as_view(),
+         name='academy_user_me_invite_status'),
+    # 🔼🔼🔼
     path('academy/invite/<int:invite_id>', AcademyInviteView.as_view(), name='academy_invite_id'),
     path('academy/member/<int:profileacademy_id>/invite',
          AcademyInviteView.as_view(),
@@ -76,8 +80,8 @@ urlpatterns = [
     path('facebook/', get_facebook_token, name='facebook'),
     path('facebook/callback/', save_facebook_token, name='facebook_callback'),
     path('user/me', UserMeView.as_view(), name='user_me'),
-    path('user/me/invite', MeInviteView.as_view()),
-    path('user/me/invite/<slug:new_status>', MeInviteView.as_view()),
+    path('user/me/invite', MeInviteView.as_view(), name='user_me_invite'),
+    path('user/me/invite/<slug:new_status>', MeInviteView.as_view(), name='user_me_invite_status'),
 
     # google authentication oath2.0
     path('google/<str:token>', get_google_token, name='google_token'),

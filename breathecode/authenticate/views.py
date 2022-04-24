@@ -253,10 +253,6 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def get(self, request):
-
-        if request.user is None:
-            raise ValidationException('User not found', 404)
-
         invites = UserInvite.objects.filter(email=request.user.email)
 
         status = request.GET.get('status', '')
@@ -275,7 +271,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             raise ValidationException(f'Please specify new status for the invites', slug='missing-status')
 
         if new_status.upper() not in ['ACCEPTED', 'REJECTED']:
-            raise ValidationException(f'Invalid invite status {new_status}')
+            raise ValidationException(f'Invalid invite status {new_status}', slug='invalid-status')
 
         if lookups:
             items = UserInvite.objects.filter(**lookups, email=request.user.email)
@@ -300,7 +296,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         else:
-            raise ValidationException('Invite ids were not provided', 404, slug='missing_ids')
+            raise ValidationException('Invite ids were not provided', code=400, slug='missing-ids')
 
 
 class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -376,7 +372,9 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         invite = None
         profile_academy = None
+        print('here0')
         if invite_id is not None:
+            print('here1')
             invite = UserInvite.objects.filter(academy__id=academy_id, id=invite_id, status='PENDING').first()
             if invite is None:
                 raise ValidationException('No pending invite was found for this user and academy',
@@ -387,7 +385,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             profile_academy = ProfileAcademy.objects.filter(id=profileacademy_id).first()
 
             if profile_academy is None:
-                raise ValidationException('Member not found', 400)
+                raise ValidationException('Member not found', code=400, slug='profile-academy-not-found')
 
             invite = UserInvite.objects.filter(academy__id=academy_id, email=profile_academy.email).first()
 
@@ -404,14 +402,16 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             return Response(serializer.data)
 
         if invite is None:
-            raise ValidationException('Invite not found', 400)
+            raise ValidationException('Invite not found', code=400, slug='user-invite-not-found')
 
         if invite.sent_at is not None:
             now = timezone.now()
             minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
 
             if minutes_diff < 2:
-                raise ValidationException('Impossible to resend invitation', 400)
+                raise ValidationException('Impossible to resend invitation',
+                                          code=400,
+                                          slug='sent-at-diff-less-two-minutes')
 
         email = (profile_academy and profile_academy.user and profile_academy.user.email) or invite.email
         if not email:

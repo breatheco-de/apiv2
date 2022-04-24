@@ -195,7 +195,6 @@ class MemberPutDuckTestSuite(AuthTestCase):
             self.bc.request.set_headers(academy=1)
 
             url = reverse_lazy('authenticate:member_invite_resend_id', kwargs={'invite_id': n})
-            print(url)
             response = self.client.put(url)
             json = response.json()
             expected = {'args': [], 'kwargs': {'academy_id': '1', 'invite_id': n}}
@@ -426,7 +425,7 @@ class AuthenticateTestSuite(AuthTestCase):
         url = reverse_lazy('authenticate:member_invite_resend_id', kwargs={'invite_id': 1})
         response = self.client.put(url)
         json = response.json()
-        expected = {'detail': 'Impossible to resend invitation', 'status_code': 400}
+        expected = {'detail': 'sent-at-diff-less-two-minutes', 'status_code': 400}
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, 400)
 
