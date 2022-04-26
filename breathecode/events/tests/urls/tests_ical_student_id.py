@@ -483,17 +483,6 @@ class AcademyCohortTestSuite(EventTestCase):
                                                                      model.cohort_time_slot.ending_at),
                                          next=True)
 
-        delta = timedelta(hours=ending_at.hour - model.cohort.ending_date.hour + 3,
-                          minutes=ending_at.minute - model.cohort.ending_date.minute,
-                          seconds=ending_at.second - model.cohort.ending_date.second)
-
-        # ending_date = self.datetime_to_ical(fix_datetime_weekday(model.cohort.kickoff_date,
-        #                                                          DatetimeInteger.to_datetime(
-        #                                                              model.cohort_time_slot.timezone,
-        #                                                              model.cohort_time_slot.ending_at),
-        #                                                          next=True),
-        #                                     utc=False)
-
         ending_at = self.datetime_to_ical(ending_at, utc=False)
 
         expected = '\r\n'.join([
