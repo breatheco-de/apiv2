@@ -372,9 +372,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
         invite = None
         profile_academy = None
-        print('here0')
         if invite_id is not None:
-            print('here1')
             invite = UserInvite.objects.filter(academy__id=academy_id, id=invite_id, status='PENDING').first()
             if invite is None:
                 raise ValidationException('No pending invite was found for this user and academy',
