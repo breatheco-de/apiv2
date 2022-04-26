@@ -629,8 +629,6 @@ class ICalCohortsView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        items = Cohort.objects.all()
-
         ids = request.GET.get('academy', '')
         slugs = request.GET.get('academy_slug', '')
 
@@ -638,10 +636,13 @@ class ICalCohortsView(APIView):
         slugs = slugs.split(',') if slugs else []
 
         if ids:
-            items = Cohort.objects.filter(academy__id__in=ids).order_by('id')
+            items = Cohort.objects.filter(ending_date__isnull=False, never_ends=False,
+                                          academy__id__in=ids).order_by('id')
 
         elif slugs:
-            items = Cohort.objects.filter(academy__slug__in=slugs).order_by('id')
+            items = Cohort.objects.filter(ending_date__isnull=False,
+                                          never_ends=False,
+                                          academy__slug__in=slugs).order_by('id')
 
         else:
             items = []
