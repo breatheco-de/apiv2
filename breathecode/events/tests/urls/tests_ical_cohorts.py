@@ -136,7 +136,6 @@ class AcademyCohortTestSuite(EventTestCase):
         device_id_kwargs = {'name': 'server'}
         model = self.generate_models(academy=1, cohort=1, device_id=1, device_id_kwargs=device_id_kwargs)
 
-        print(vars(model.cohort))
         url = reverse_lazy('events:academy_id_ical_cohorts')
         args = {'academy': '1'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))
@@ -164,7 +163,6 @@ class AcademyCohortTestSuite(EventTestCase):
         cohort = {'never_ends': True}
         model = self.generate_models(academy=1, cohort=cohort, device_id=1, device_id_kwargs=device_id_kwargs)
 
-        print(vars(model.cohort))
         url = reverse_lazy('events:academy_id_ical_cohorts')
         args = {'academy': '1'}
         response = self.client.get(url + '?' + urllib.parse.urlencode(args))

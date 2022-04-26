@@ -4,6 +4,7 @@ Test /academy/cohort
 from datetime import datetime, timedelta
 import urllib
 from django.urls.base import reverse_lazy
+import pytz
 from rest_framework import status
 from breathecode.events.actions import fix_datetime_weekday
 
@@ -62,10 +63,96 @@ class AcademyCohortTestSuite(EventTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     """
-    🔽🔽🔽 One time slot
+    🔽🔽🔽 One time slot and the Cohort never ends
     """
 
-    def test_ical_cohorts__with_one(self):
+    def test_ical_cohorts__with_one__cohort_never_ends(self):
+        device_id_kwargs = {'name': 'server'}
+        cohort_kwargs = {
+            'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0),
+            'never_ends': True,
+        }
+
+        # don't forget 🦾
+        datetime_interger = 191109111330
+        cohort_time_slot_kwargs = {
+            'timezone': 'America/Bogota',
+            'starting_at': datetime_interger,
+            'ending_at': datetime_interger,
+        }
+
+        model = self.generate_models(academy=True,
+                                     device_id=device_id_kwargs,
+                                     cohort_user=1,
+                                     cohort_time_slot=cohort_time_slot_kwargs,
+                                     cohort=cohort_kwargs)
+
+        url = reverse_lazy('events:ical_student_id', kwargs={'user_id': 1})
+        response = self.client.get(url)
+
+        key = model.device_id.key
+        expected = '\r\n'.join([
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            'METHOD:PUBLISH',
+            'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/student/1',
+            'X-WR-CALDESC:',
+            'X-WR-CALNAME:Academy - Schedule',
+            'END:VCALENDAR',
+            '',
+        ])
+
+        self.assertEqual(response.content.decode('utf-8'), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    """
+    🔽🔽🔽 One time slot and the Cohort with ending_date as None
+    """
+
+    def test_ical_cohorts__with_one__cohort_without_ending_date(self):
+        device_id_kwargs = {'name': 'server'}
+
+        # don't forget 🦾
+        datetime_interger = 191109111330
+        cohort_time_slot_kwargs = {
+            'timezone': 'America/Bogota',
+            'starting_at': datetime_interger,
+            'ending_at': datetime_interger,
+        }
+
+        model = self.generate_models(academy=True,
+                                     device_id=device_id_kwargs,
+                                     cohort_user=1,
+                                     cohort_time_slot=cohort_time_slot_kwargs,
+                                     cohort=1)
+
+        url = reverse_lazy('events:ical_student_id', kwargs={'user_id': 1})
+        response = self.client.get(url)
+
+        key = model.device_id.key
+        expected = '\r\n'.join([
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            f'PRODID:-//BreatheCode//Student Schedule (1) {key}//EN',
+            'METHOD:PUBLISH',
+            'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+            'URL:http://localhost:8000/v1/events/ical/student/1',
+            'X-WR-CALDESC:',
+            'X-WR-CALNAME:Academy - Schedule',
+            'END:VCALENDAR',
+            '',
+        ])
+
+        self.assertEqual(response.content.decode('utf-8'), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    """
+    🔽🔽🔽 One time slot with ending_date in Cohort
+    """
+
+    def test_ical_cohorts__with_one__with_ending_date(self):
         device_id_kwargs = {'name': 'server'}
         cohort_kwargs = {'ending_date': datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0)}
 
@@ -256,16 +343,6 @@ class AcademyCohortTestSuite(EventTestCase):
             'URL:http://localhost:8000/v1/events/ical/student/1',
             'X-WR-CALDESC:',
             'X-WR-CALNAME:Academy - Schedule',
-            # event
-            'BEGIN:VEVENT',
-            f'SUMMARY:{model.cohort.name}',
-            f'DTSTART;TZID=America/Bogota;VALUE=DATE-TIME:{starting_at}',
-            f'DTEND;TZID=America/Bogota;VALUE=DATE-TIME:{ending_at}',
-            f'DTSTAMP;VALUE=DATE-TIME:{created_at}',
-            f'UID:breathecode_cohort_time_slot_{model.cohort_time_slot.id}_{key}',
-            f'RRULE:FREQ=WEEKLY;UNTIL=21001231T212600Z',
-            f'LOCATION:{model.academy.name}',
-            'END:VEVENT',
             'END:VCALENDAR',
             '',
         ])
@@ -362,7 +439,12 @@ class AcademyCohortTestSuite(EventTestCase):
 
     def test_ical_cohorts__with_one__with_incoming_true(self):
         device_id_kwargs = {'name': 'server'}
-        cohort_kwargs = {'kickoff_date': datetime.now() + timedelta(days=2)}
+        cohort_kwargs = {
+            'kickoff_date':
+            datetime.now() + timedelta(days=2),
+            'ending_date':
+            datetime(year=2060, day=31, month=12, hour=12, minute=0, second=0, tzinfo=pytz.timezone('UTC')),
+        }
 
         # don't forget 🦾
         datetime_interger = 191109111330
@@ -396,12 +478,23 @@ class AcademyCohortTestSuite(EventTestCase):
             model.cohort_time_slot.timezone, model.cohort_time_slot.starting_at),
                                                 utc=True)
 
-        ending_at = self.datetime_to_ical(fix_datetime_weekday(model.cohort.kickoff_date,
-                                                               DatetimeInteger.to_datetime(
-                                                                   model.cohort_time_slot.timezone,
-                                                                   model.cohort_time_slot.ending_at),
-                                                               next=True),
-                                          utc=False)
+        ending_at = fix_datetime_weekday(model.cohort.kickoff_date,
+                                         DatetimeInteger.to_datetime(model.cohort_time_slot.timezone,
+                                                                     model.cohort_time_slot.ending_at),
+                                         next=True)
+
+        delta = timedelta(hours=ending_at.hour - model.cohort.ending_date.hour + 3,
+                          minutes=ending_at.minute - model.cohort.ending_date.minute,
+                          seconds=ending_at.second - model.cohort.ending_date.second)
+
+        # ending_date = self.datetime_to_ical(fix_datetime_weekday(model.cohort.kickoff_date,
+        #                                                          DatetimeInteger.to_datetime(
+        #                                                              model.cohort_time_slot.timezone,
+        #                                                              model.cohort_time_slot.ending_at),
+        #                                                          next=True),
+        #                                     utc=False)
+
+        ending_at = self.datetime_to_ical(ending_at, utc=False)
 
         expected = '\r\n'.join([
             'BEGIN:VCALENDAR',
@@ -419,7 +512,7 @@ class AcademyCohortTestSuite(EventTestCase):
             f'DTEND;TZID=America/Bogota;VALUE=DATE-TIME:{ending_at}',
             f'DTSTAMP;VALUE=DATE-TIME:{starting_at_utc}',
             f'UID:breathecode_cohort_time_slot_{model.cohort_time_slot.id}_{key}',
-            f'RRULE:FREQ=WEEKLY;UNTIL=21001231T212600Z',
+            f'RRULE:FREQ=WEEKLY;UNTIL=20601231T212600Z',
             f'LOCATION:{model.academy.name}',
             'END:VEVENT',
             'END:VCALENDAR',

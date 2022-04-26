@@ -531,16 +531,15 @@ class ICalStudentView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, user_id):
-        items = Cohort.objects.all()
-
         if not User.objects.filter(id=user_id).count():
             raise ValidationException('Student not exist', 404, slug='student-not-exist')
 
-        cohort_ids = (CohortUser.objects.filter(user_id=user_id).values_list(
-            'cohort_id', flat=True).exclude(cohort__stage='DELETED'))
+        cohort_ids = (CohortUser.objects.filter(user__id=user_id,
+                                                cohort__ending_date__isnull=False,
+                                                cohort__never_ends=False).values_list(
+                                                    'cohort_id', flat=True).exclude(cohort__stage='DELETED'))
 
         items = CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).order_by('id')
-        items = items
 
         upcoming = request.GET.get('upcoming')
         if upcoming == 'true':
