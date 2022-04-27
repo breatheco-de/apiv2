@@ -296,6 +296,10 @@ class AssetTechnologyAdmin(admin.ModelAdmin):
 class AssetAliasAdmin(admin.ModelAdmin):
     search_fields = ['slug']
     list_display = ('slug', 'asset', 'created_at')
+    list_filter = [
+        'asset__asset_type', 'asset__status', 'asset__sync_status', 'asset__test_status', 'asset__lang',
+        'asset__external'
+    ]
     raw_id_fields = ['asset']
 
 
@@ -354,10 +358,10 @@ def change_status_IGNORED_including_similar(modeladmin, request, queryset):
 
 @admin.register(AssetErrorLog)
 class AssetErrorLogAdmin(admin.ModelAdmin):
-    search_fields = ['slug', 'user__email', 'user_first_name', 'user_last_name']
+    search_fields = ['slug', 'user__email', 'user__first_name', 'user__last_name']
     list_display = ('slug', 'path', 'current_status', 'user', 'created_at', 'asset')
     raw_id_fields = ['user', 'asset']
-    list_filter = ['status', 'slug']
+    list_filter = ['status', 'slug', 'asset_type']
     actions = [
         make_alias, change_status_FIXED_including_similar, change_status_ERROR_including_similar,
         change_status_IGNORED_including_similar
