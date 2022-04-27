@@ -2,7 +2,7 @@ import requests, logging, os
 from pathlib import Path
 from django.shortcuts import render
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.http import HttpResponse
 from django.core.validators import URLValidator
 from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog
@@ -212,6 +212,10 @@ class AssetView(APIView):
             param = self.request.GET.get('author')
             lookup['author__id'] = param
 
+        if 'owner' in self.request.GET:
+            param = self.request.GET.get('owner')
+            lookup['owner__id'] = param
+
         like = request.GET.get('like', None)
         if like is not None:
             items = items.filter(
@@ -265,6 +269,10 @@ class AssetView(APIView):
             param = self.request.GET.get('graded')
             if param == 'true':
                 lookup['graded'] = True
+
+        need_translation = self.request.GET.get('need_translation', False)
+        if need_translation == 'true':
+            items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1) \
 
         items = items.filter(**lookup).order_by('-created_at')
 
