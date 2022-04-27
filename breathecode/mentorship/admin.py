@@ -84,7 +84,9 @@ class MentorAdmin(admin.ModelAdmin):
         colors = {
             'ACTIVE': 'bg-success',
             'INVITED': 'bg-warning',
-            'INNACTIVE': 'bg-warning',
+            'UNLISTED': 'bg-warning',
+            'INNACTIVE': 'bg-error',
+            None: 'bg-warning',
         }
 
         if obj.online_meeting_url is None:
