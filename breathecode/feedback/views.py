@@ -337,7 +337,7 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         like = request.GET.get('like', None)
         if like is not None:
-            items = query_like_by_full_name(like=like, items=items)
+            items = query_like_by_full_name(like=like, items=items, prefix='author__')
 
         page = self.paginate_queryset(items, request)
         serializer = ReviewSmallSerializer(page, many=True)
