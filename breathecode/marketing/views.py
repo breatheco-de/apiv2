@@ -84,6 +84,9 @@ def create_lead(request):
     if 'phone' in data:
         data['phone'] = data['phone'].replace(' ', '')
 
+    if 'referral_code' in data and 'referral_key' not in data:
+        data['referral_key'] = data['referral_code']
+
     serializer = PostFormEntrySerializer(data=data)
     if serializer.is_valid():
         serializer.save()

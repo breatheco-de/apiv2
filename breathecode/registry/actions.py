@@ -1,4 +1,4 @@
-import logging, json, os, re
+import logging, json, os, re, pathlib
 from breathecode.utils.validation_exception import ValidationException
 from django.db.models import Q
 from django.contrib.auth.models import User
@@ -223,6 +223,7 @@ def sync_with_github(asset_slug, author_id=None):
         asset.save()
         logger.debug(f'Successfully re-synched asset {asset_slug} with github')
     except Exception as e:
+        # raise e
         message = ''
         if hasattr(e, 'data'):
             message = e.data['message']
@@ -294,18 +295,27 @@ def sync_github_lesson(github, asset):
     readme = asset.get_readme(parse=True)
     asset.html = readme['html']
 
-    # PATCH: Only for lessons coming from the old breathecode repository
-    if readme is not None and org_name == 'breatheco-de' and repo_name == 'content':
-        logger.debug(f'Markdown is coming from breathecode/content, replacing images')
-        base_url = os.path.dirname(asset.readme_url)
-        replaced = re.sub(r'(["\'(])\.\.\/\.\.\/assets\/images\/([_\w\-\.]+)(["\')])',
-                          r'\1' + base_url + r'/../../assets/images/\2?raw=true\3', readme['decoded'])
-        asset.set_readme(replaced)
+    base_url = os.path.dirname(asset.readme_url)
+    relative_urls = list(re.finditer(r'((?:\.\.?\/)+[^)"\']+)', readme['decoded']))
+    replaced = readme['decoded']
+    while len(relative_urls) > 0:
+        match = relative_urls.pop(0)
+        found_url = match.group()
+        if found_url.endswith('\\'):
+            found_url = found_url[:-1].strip()
+        extension = pathlib.Path(found_url).suffix
+        if readme['decoded'][match.start() - 1] in ['(', "'", '"'] and extension and extension.strip() in [
+                '.png', '.jpg', '.png', '.jpeg', '.svg', '.gif'
+        ]:
+            logger.debug('Replaced url: ' + base_url + '/' + found_url + '?raw=true')
+            replaced = replaced.replace(found_url, base_url + '/' + found_url + '?raw=true')
 
-        fm = dict(readme['frontmatter'].items())
-        if 'slug' in fm and fm['slug'] != asset.slug:
-            logger.debug(f'New slug {fm["slug"]} found for lesson {asset.slug}')
-            asset.slug = fm['slug']
+    asset.set_readme(replaced)
+
+    fm = dict(readme['frontmatter'].items())
+    if 'slug' in fm and fm['slug'] != asset.slug:
+        logger.debug(f'New slug {fm["slug"]} found for lesson {asset.slug}')
+        asset.slug = fm['slug']
 
     return asset
 

@@ -57,7 +57,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 **capability_kwargs
             })
 
-        if not 'role' in models and is_valid(role):
+        if not 'role' in models and (is_valid(role) or is_valid(profile_academy)):
             kargs = {
                 'slug': role,
                 'name': role,

@@ -159,5 +159,9 @@ dump.rdb
 .vscode/
 .theia/
 
-#mac
+# mac
 .DS_Store
+
+# Test of render html
+/content.html
+/expected.html

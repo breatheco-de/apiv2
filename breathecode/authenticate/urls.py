@@ -34,7 +34,7 @@ urlpatterns = [
     path('role', get_roles, name='role'),
     path('role/<str:role_slug>', get_roles, name='role_slug'),
     path('profile/invite/me', ProfileInviteMeView.as_view(), name='profile_invite_me'),
-    path('member/invite/<str:token>', render_invite, name='academy_invite'),
+    path('member/invite/<str:token>', render_invite, name='member_invite_token'),
     path('member/<int:profile_academy_id>/token',
          TokenTemporalView.as_view(),
          name='profile_academy_reset_github_link'),
@@ -57,7 +57,7 @@ urlpatterns = [
          AcademyInviteView.as_view(),
          name='academy_member_id_invite'),
     path('academy/user/invite', AcademyInviteView.as_view(), name='academy_user_invite'),
-    path('academy/html/invite', render_academy_invite),
+    path('academy/html/invite', render_academy_invite, name='academy_html_invite'),
     # path('group/', get_groups, name="group"),
     path('view/login', login_html_view, name='login_view'),  # html login form
     # get token from email and password
