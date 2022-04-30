@@ -1231,9 +1231,11 @@ def render_invite(request, token, member_id=None):
             return render_message(request, 'Invitation not found with this token or it was already accepted')
 
         form = InviteForm({
-            **_dict, 'first_name': invite.first_name,
+            'callback': [''],
+            **_dict,
+            'first_name': invite.first_name,
             'last_name': invite.last_name,
-            'phone': invite.phone
+            'phone': invite.phone,
         })
 
         return render(request, 'form_invite.html', {
@@ -1245,13 +1247,7 @@ def render_invite(request, token, member_id=None):
         password1 = request.POST.get('password1', None)
         password2 = request.POST.get('password2', None)
 
-        if password1 != password2:
-            messages.error(request, 'Passwords don\'t match')
-            return render(request, 'form_invite.html', {
-                'form': form,
-            })
-
-        invite = UserInvite.objects.filter(token=str(token), status='PENDING').first()
+        invite = UserInvite.objects.filter(token=str(token), status='PENDING', email__isnull=False).first()
         if invite is None:
             messages.error(request, 'Invalid or expired invitation ' + str(token))
             return render(request, 'form_invite.html', {'form': form})
@@ -1260,6 +1256,18 @@ def render_invite(request, token, member_id=None):
         last_name = request.POST.get('last_name', None)
         if first_name is None or first_name == '' or last_name is None or last_name == '':
             messages.error(request, 'Invalid first or last name')
+            return render(request, 'form_invite.html', {
+                'form': form,
+            })
+
+        if password1 != password2:
+            messages.error(request, 'Passwords don\'t match')
+            return render(request, 'form_invite.html', {
+                'form': form,
+            })
+
+        if not password1:
+            messages.error(request, 'Password is empty')
             return render(request, 'form_invite.html', {
                 'form': form,
             })
@@ -1274,10 +1282,21 @@ def render_invite(request, token, member_id=None):
         if invite.academy is not None:
             profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
             if profile is None:
-                role = invite.role.slug
+                role = invite.role
+                if not role:
+                    role = Role.objects.filter(slug='student').first()
+
+                if not role:
+                    messages.error(
+                        request, 'Unexpected error occurred with invite, please contact the '
+                        'staff of 4geeks')
+                    return render(request, 'form_invite.html', {
+                        'form': form,
+                    })
+
                 profile = ProfileAcademy(email=invite.email,
                                          academy=invite.academy,
-                                         role=invite.role,
+                                         role=role,
                                          first_name=first_name,
                                          last_name=last_name)
                 if invite.first_name is not None and invite.first_name != '':
@@ -1293,6 +1312,7 @@ def render_invite(request, token, member_id=None):
             role = 'student'
             if invite.role is not None and invite.role.slug != 'student':
                 role = invite.role.slug.upper()
+
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
             if cu is None:
                 cu = CohortUser(user=user, cohort=invite.cohort, role=role)
@@ -1301,9 +1321,10 @@ def render_invite(request, token, member_id=None):
         invite.status = 'ACCEPTED'
         invite.save()
 
-        callback = str(request.POST.get('callback', None))
-        if callback is not None and callback != '' and callback != "['']":
-            return HttpResponseRedirect(redirect_to=callback[2:-2])
+        callback = request.POST.get('callback', None)
+        if callback:
+            uri = callback[0] if isinstance(callback, list) else callback
+            return HttpResponseRedirect(redirect_to=uri)
         else:
             return render(request, 'message.html',
                           {'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in'})
