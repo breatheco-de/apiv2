@@ -1357,6 +1357,51 @@ class StudentPostTestSuite(AuthTestCase):
         role = 'student'
         self.bc.request.set_headers(academy=1)
         user = {'email': 'dude@dude.dude'}
+        user_invite = {'email': 'dude2@dude.dude'}
+        model = self.bc.database.create(authenticate=True,
+                                        user=user,
+                                        user_invite=user_invite,
+                                        role=role,
+                                        capability='crud_student',
+                                        profile_academy=1)
+
+        url = reverse_lazy('authenticate:academy_student')
+        data = {
+            'first_name': 'Kenny',
+            'last_name': 'McKornick',
+            'invite': True,
+            'email': 'dude2@dude.dude',
+        }
+
+        response = self.client.post(url, data, format='json')
+        json = response.json()
+        expected = {'detail': 'already-invited', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'), [
+            self.bc.format.to_dict(model.profile_academy),
+        ])
+
+        invite = self.bc.database.get('authenticate.UserInvite', 1, dict=False)
+        params = {'callback': ''}
+        querystr = urllib.parse.urlencode(params)
+        url = os.getenv('API_URL') + '/v1/auth/member/invite/' + \
+            str(TOKEN) + '?' + querystr
+
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [
+            self.bc.format.to_dict(model.user_invite),
+        ])
+
+        self.assertEqual(actions.send_email_message.call_args_list, [])
+
+    @patch('breathecode.notify.actions.send_email_message', MagicMock())
+    def test_academy_student__post__without_user_in_data__user_already_exists(self):
+        """Test /academy/:id/member"""
+
+        role = 'student'
+        self.bc.request.set_headers(academy=1)
+        user = {'email': 'dude@dude.dude'}
         model = self.bc.database.create(authenticate=True,
                                         user=user,
                                         user_invite=user,
@@ -1369,12 +1414,12 @@ class StudentPostTestSuite(AuthTestCase):
             'first_name': 'Kenny',
             'last_name': 'McKornick',
             'invite': True,
-            'email': model.user.email,
+            'email': 'dude@dude.dude',
         }
 
         response = self.client.post(url, data, format='json')
         json = response.json()
-        expected = {'detail': 'already-invited', 'status_code': 400}
+        expected = {'detail': 'already-exists', 'status_code': 400}
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

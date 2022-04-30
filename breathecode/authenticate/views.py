@@ -368,8 +368,6 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
     @capable_of('invite_resend')
     def put(self, request, invite_id=None, profileacademy_id=None, academy_id=None):
-        from breathecode.notify.actions import send_email_message
-
         invite = None
         profile_academy = None
         if invite_id is not None:
@@ -1330,6 +1328,7 @@ def render_invite(request, token, member_id=None):
                                          role=role,
                                          first_name=first_name,
                                          last_name=last_name)
+
                 if invite.first_name is not None and invite.first_name != '':
                     profile.first_name = invite.first_name
                 if invite.last_name is not None and invite.last_name != '':
