@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.events.models import Event
 from breathecode.mentorship.models import MentorshipSession
-from .signals import survey_answered
+import breathecode.feedback.signals as signals
 from breathecode.authenticate.models import Token
 
 __all__ = ['UserProxy', 'CohortUserProxy', 'CohortProxy', 'Survey', 'Answer']
@@ -142,7 +142,7 @@ class Answer(models.Model):
 
         if self.__old_status != self.status and self.status == 'ANSWERED':
             # signal the updated answer
-            survey_answered.send(instance=self, sender=Answer)
+            signals.survey_answered.send(instance=self, sender=Answer)
 
 
 class ReviewPlatform(models.Model):

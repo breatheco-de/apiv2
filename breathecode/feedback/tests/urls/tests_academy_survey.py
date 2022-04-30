@@ -129,7 +129,7 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__with_response_rate(self):
-        """Test /academy/survey with data"""
+        """Test /academy/survey wiith response rate"""
 
         self.headers(academy=1)
         survey_kwargs = {'response_rate': 7.5}
@@ -297,7 +297,7 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__with_different_cohort_slug_cohort_query(self):
-        """Test /academy/survey with different cohort slug than what in the cohort query"""
+        """Test /academy/survey with different cohort slug than what is in the cohort query"""
 
         self.headers(academy=1)
         model = self.bc.database.create(
@@ -322,7 +322,7 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__get__with_same_cohort_slug_cohort_query(self):
-        """Test /academy/survey with same chort slug that is in the model"""
+        """Test /academy/survey with same cohort slug as in the model"""
 
         self.headers(academy=1)
         cohort_kwargs = {'slug': 'testing-cohort'}
@@ -393,7 +393,7 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__without_role(self):
-        """Test /academy/survey without authorization"""
+        """Test /academy/survey without role"""
         self.headers(academy=1)
         url = reverse_lazy('feedback:academy_survey')
         self.bc.database.create(authenticate=True)
@@ -411,7 +411,7 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__without_cohort(self):
-        """Test /academy/survey post without data"""
+        """Test /academy/survey post without cohort"""
 
         self.headers(academy=1)
         model = self.bc.database.create(
@@ -433,7 +433,7 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__with_cohort_needs_rights(self):
-        """Test /academy/survey post without data"""
+        """Test /academy/survey post with cohort needs rights"""
 
         self.headers(academy=2)
         profile_academy_kwargs = {'academy_id': 2}
@@ -457,7 +457,7 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__with_cohort_shorter_than_hour(self):
-        """Test /academy/survey post without data"""
+        """Test /academy/survey post with cohort shorter than hour"""
 
         self.headers(academy=1)
         model = self.bc.database.create(
@@ -480,7 +480,7 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__without_cohort_teacher_assigned(self):
-        """Test /academy/survey post without data"""
+        """Test /academy/survey post without cohort teacher assigned"""
 
         self.headers(academy=1)
         model = self.bc.database.create(
@@ -504,7 +504,7 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__with_cohort_teacher_assigned(self):
-        """Test /academy/survey post without data"""
+        """Test /academy/survey post with cohort teacher assigned"""
 
         self.headers(academy=1)
         cohort_user_kwargs = [{'role': 'STUDENT'}, {'role': 'TEACHER'}]
@@ -542,7 +542,7 @@ class SurveyTestSuite(FeedbackTestCase):
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
     def test_academy_survey__post__with_cohort_teacher_assigned_with_longer_than_hour(self):
-        """Test /academy/survey post without data"""
+        """Test /academy/survey post with cohort teacher assigned with longer than hour."""
 
         self.headers(academy=1)
         cohort_user_kwargs = [{'role': 'STUDENT'}, {'role': 'TEACHER'}]
@@ -575,3 +575,95 @@ class SurveyTestSuite(FeedbackTestCase):
         }
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    """DELETE Auth"""
+
+    def test_academy_survey__delete__in_bulk_without_capability(self):
+        """Test /academy/survey delete in bulk without capability."""
+        self.headers(academy=1)
+        base = self.generate_models(authenticate=True, )
+        url = reverse_lazy('feedback:academy_survey')
+        response = self.client.delete(url)
+        json = response.json()
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: crud_survey for academy 1",
+            'status_code': 403,
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_academy_survey_delete_in_bulk_with_two_surveys(self):
+        """Test /academy/survey/ delete in bulk with two surveys."""
+        self.headers(academy=1)
+
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     survey=2,
+                                     capability='crud_survey',
+                                     role=1)
+
+        url = reverse_lazy('feedback:academy_survey') + '?id=1,2'
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.bc.database.list_of('feedback.Survey'), [])
+
+    def test_academy_survey__delete__without_passing_ids(self):
+        """Test /academy/survey/ delete without passing ids."""
+        self.headers(academy=1)
+
+        slug = 'without-survey-id-and-lookups'
+
+        model = self.generate_models(user=1, profile_academy=True, survey=2, capability='crud_survey', role=1)
+
+        self.bc.request.authenticate(model.user)
+        url = reverse_lazy('feedback:academy_survey')
+
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json()['detail'], slug)
+        self.assertEqual(self.bc.database.list_of('feedback.Survey'), self.bc.format.to_dict(model.survey))
+
+    def test_academy_survey_id__delete__not_answered(self):
+        """Test /academy/survey/ id delete not answered."""
+
+        SURVEY_STATUS = ['PENDING', 'SENT', 'OPENED', 'EXPIRED']
+
+        for x in SURVEY_STATUS:
+            answer = {'status': x}
+            model = self.generate_models(user=1,
+                                         profile_academy=True,
+                                         survey=1,
+                                         capability='crud_survey',
+                                         role=1,
+                                         answer=answer)
+            self.headers(academy=model.academy.id)
+
+            self.bc.request.authenticate(model.user)
+
+            url = reverse_lazy('feedback:academy_survey') + f'?id={model.survey.id}'
+            response = self.client.delete(url)
+
+            self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+            self.assertEqual(self.bc.database.list_of('feedback.Survey'), [])
+
+    @patch('breathecode.feedback.signals.survey_answered.send', MagicMock())
+    def test_academy_survey_id__delete__answered(self):
+        """Test /academy/survey/ id delete answered."""
+        self.headers(academy=1)
+
+        answer = {'status': 'ANSWERED'}
+        model = self.generate_models(user=1,
+                                     profile_academy=True,
+                                     survey=1,
+                                     capability='crud_survey',
+                                     role=1,
+                                     answer=answer)
+
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('feedback:academy_survey') + '?id=1'
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('feedback.Survey'), [self.bc.format.to_dict(model.survey)])
