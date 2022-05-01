@@ -252,7 +252,6 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def delete(self, request, academy_id=None, survey_id=None):
 
         lookups = self.generate_lookups(request, many_fields=['id'])
-        print(lookups)
 
         if lookups and survey_id:
             raise ValidationException(
@@ -274,7 +273,6 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             if answers := Answer.objects.filter(survey__id__in=ids, status='ANSWERED'):
 
                 slugs = set([answer.survey.cohort.slug for answer in answers])
-                print(f'Survey cannot be deleted because it has been answered for cohorts {", ".join(slugs)}')
 
                 raise ValidationException(
                     f'Survey cannot be deleted because it has been answered for cohorts {", ".join(slugs)}',
