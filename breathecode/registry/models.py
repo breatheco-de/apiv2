@@ -1,4 +1,4 @@
-import base64, frontmatter, markdown, pathlib
+import base64, frontmatter, markdown, pathlib, logging
 from django.db import models
 from django.contrib.auth.models import User
 from django.contrib.auth.models import AnonymousUser
@@ -10,6 +10,7 @@ from .signals import asset_slug_modified
 from breathecode.assessment.models import Assessment
 
 __all__ = ['AssetTechnology', 'Asset', 'AssetAlias']
+logger = logging.getLogger(__name__)
 
 
 class AssetTechnology(models.Model):
@@ -184,7 +185,8 @@ class Asset(models.Model):
             super().save(*args, **kwargs)
 
     def get_readme(self, parse=None, raw=False):
-        if self.readme is None:
+        print('wewewe', type(self.readme), self.readme)
+        if self.readme is None or self.readme == '':
             AssetErrorLog(slug=AssetErrorLog.EMPTY_README,
                           path=self.slug,
                           asset_type=self.asset_type,
@@ -210,7 +212,10 @@ class Asset(models.Model):
         }
         if parse:
             # external assets will have a default markdown readme generated internally
-            extension = pathlib.Path(self.readme_url).suffix if not self.external else '.md'
+            extension = '.md'
+            if self.readme_url and self.readme_url != '':
+                extension = pathlib.Path(self.readme_url).suffix if not self.external else '.md'
+
             if extension in ['.md', '.mdx', '.txt']:
                 readme = self.parse(readme, format='markdown')
             elif extension in ['.ipynb']:
