@@ -269,6 +269,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
             for item in items:
                 item.delete()
 
+            self.cache.clear()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if academy_id is None or event_id is None:
@@ -282,6 +283,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
             raise ValidationException('Only draft events can be deleted')
 
         event.delete()
+        self.cache.clear()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
