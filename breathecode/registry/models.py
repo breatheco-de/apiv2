@@ -21,6 +21,53 @@ class AssetTechnology(models.Model):
         return self.title
 
 
+class AssetCategory(models.Model):
+    slug = models.SlugField(max_length=200, unique=True)
+    title = models.CharField(max_length=200)
+    lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
+    description = models.TextField(null=True, blank=True, default=None)
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return self.slug
+
+
+class KeywordCluster(models.Model):
+    slug = models.SlugField(max_length=200, unique=True)
+    title = models.CharField(max_length=200)
+    lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return self.slug
+
+
+class AssetKeyword(models.Model):
+    slug = models.SlugField(max_length=200, unique=True)
+    title = models.CharField(max_length=200)
+    lang = models.CharField(max_length=2, help_text='E.g: en, es, it')
+
+    cluster = models.ForeignKey(KeywordCluster,
+                                on_delete=models.SET_NULL,
+                                default=None,
+                                blank=True,
+                                null=True)
+
+    academy = models.ForeignKey(Academy, on_delete=models.CASCADE)
+
+    created_at = models.DateTimeField(auto_now_add=True, editable=False)
+    updated_at = models.DateTimeField(auto_now=True, editable=False)
+
+    def __str__(self):
+        return self.slug
+
+
 PUBLIC = 'PUBLIC'
 UNLISTED = 'UNLISTED'
 PRIVATE = 'PRIVATE'
@@ -80,6 +127,14 @@ class Asset(models.Model):
 
     all_translations = models.ManyToManyField('self', blank=True)
     technologies = models.ManyToManyField(AssetTechnology)
+    seo_keywords = models.ManyToManyField(AssetKeyword,
+                                          blank=True,
+                                          help_text='Optimize for a max of two keywords per asset')
+    category = models.ForeignKey(AssetCategory,
+                                 on_delete=models.SET_NULL,
+                                 default=None,
+                                 blank=True,
+                                 null=True)
 
     url = models.URLField()
     solution_url = models.URLField(null=True, blank=True, default=None)
