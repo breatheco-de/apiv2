@@ -11,8 +11,8 @@ from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_json
 from breathecode.utils.admin import change_field
 from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
-from .tasks import async_sync_with_github, async_test_asset
-from .actions import sync_with_github, get_user_from_github_username, test_asset
+from .tasks import async_pull_from_github, async_test_asset
+from .actions import pull_from_github, get_user_from_github_username, test_asset
 
 logger = logging.getLogger(__name__)
 lang_flags = {
@@ -52,12 +52,12 @@ def make_internal(modeladmin, request, queryset):
 make_internal.short_description = 'Make it an INTERNAL resource (same window)'
 
 
-def pull_from_github(modeladmin, request, queryset):
+def pull_content_from_github(modeladmin, request, queryset):
     queryset.update(sync_status='PENDING', status_text='Starting to sync...')
     assets = queryset.all()
     for a in assets:
-        async_sync_with_github.delay(a.slug, request.user.id)
-        # sync_with_github(a.slug)  # uncomment for testing purposes
+        #async_pull_from_github.delay(a.slug, request.user.id)
+        pull_from_github(a.slug)  # uncomment for testing purposes
 
 
 def make_me_author(modeladmin, request, queryset):
@@ -205,7 +205,7 @@ class AssetAdmin(admin.ModelAdmin):
         test_asset_integrity,
         add_gitpod,
         remove_gitpod,
-        pull_from_github,
+        pull_content_from_github,
         make_me_author,
         make_me_owner,
         create_assessment_from_asset,

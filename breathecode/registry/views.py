@@ -135,16 +135,11 @@ def render_readme(request, asset_slug, extension='raw'):
     response = HttpResponse('Invalid extension format', content_type='text/html')
     if extension == 'html':
         response = HttpResponse(readme['html'], content_type='text/html')
-        response['Content-Length'] = len(readme['html'])
     elif extension in ['md', 'mdx', 'txt']:
         response = HttpResponse(readme['decoded'], content_type='text/markdown')
-        response['Content-Length'] = len(readme['decoded'])
     elif extension == 'ipynb':
         response = HttpResponse(readme['decoded'], content_type='application/json')
-        response['Content-Length'] = len(readme['decoded'])
 
-    # response[
-    # 'Content-Security-Policy'] = "frame-ancestors 'self' https://4geeks.com http://localhost:3000 https://dev.4geeks.com"
     return response
 
 
