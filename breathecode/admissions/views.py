@@ -768,6 +768,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         stage = request.GET.get('stage', None)
         location = request.GET.get('location', None)
         like = request.GET.get('like', None)
+        sort = request.GET.get('sort', None)
         cache_kwargs = {
             'resource': cohort_id,
             'academy_id': academy_id,
@@ -776,6 +777,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             'academy': academy,
             'location': location,
             'like': like,
+            'sort': sort,
             **self.pagination_params(request),
         }
 
@@ -816,7 +818,6 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         if like is not None:
             items = items.filter(Q(name__icontains=like) | Q(slug__icontains=like))
 
-        sort = request.GET.get('sort', None)
         if sort is None or sort == '':
             sort = '-kickoff_date'
 
