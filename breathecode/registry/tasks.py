@@ -1,7 +1,7 @@
 import logging
 from celery import shared_task, Task
 from .models import Asset
-from .actions import sync_with_github, test_asset
+from .actions import pull_from_github, test_asset
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +14,9 @@ class BaseTaskWithRetry(Task):
 
 
 @shared_task
-def async_sync_with_github(asset_slug, user_id=None):
+def async_pull_from_github(asset_slug, user_id=None):
     logger.debug(f'Synching asset {asset_slug} with data found on github')
-    return sync_with_github(asset_slug)
+    return pull_from_github(asset_slug)
 
 
 @shared_task
