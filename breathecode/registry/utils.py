@@ -116,6 +116,11 @@ class LessonValidator(AssetValidator):
     errors = ['readme']
 
 
+class ArticleValidator(AssetValidator):
+    warns = []
+    errors = ['readme']
+
+
 class ExerciseValidator(AssetValidator):
     warns = ['difficulty']
     errors = ['readme', 'preview']
