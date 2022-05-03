@@ -449,6 +449,50 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                          [call(instance=cohort, sender=cohort.__class__, created=True)])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    def test_academy_cohort__post__kickoff_date_greater_than_ending_date(self):
+        """Test /academy/cohort without auth"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        syllabus_kwargs = {'slug': 'they-killed-kenny'}
+        model = self.generate_models(authenticate=True,
+                                     user=True,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato',
+                                     syllabus_schedule=True,
+                                     syllabus=True,
+                                     syllabus_version=True,
+                                     skip_cohort=True,
+                                     syllabus_schedule_time_slot=True,
+                                     syllabus_kwargs=syllabus_kwargs)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        url = reverse_lazy('admissions:academy_cohort')
+        utc_now = timezone.now()
+        data = {
+            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
+            'slug': 'they-killed-kenny',
+            'name': 'They killed kenny',
+            'kickoff_date': datetime.today().isoformat(),
+            'never_ends': True,
+            'schedule': 1,
+            'kickoff_date': utc_now + timedelta(seconds=1),
+            'ending_date': utc_now,
+        }
+        response = self.client.post(url, data)
+        json = response.json()
+        expected = {'detail': 'kickoff-date-greather-than-ending-date', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.all_cohort_dict(), [])
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+        self.assertEqual(cohort_saved.send.call_args_list, [])
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
     def test_academy_cohort__post__with_timezone(self):
         """Test /academy/cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
