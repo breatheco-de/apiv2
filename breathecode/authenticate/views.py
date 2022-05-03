@@ -789,9 +789,14 @@ def save_github_token(request):
                 user.save()
 
             github_credentials = CredentialsGithub.objects.filter(github_id=github_user['id']).first()
-            if github_credentials is not None and github_credentials.user.id != user.id:
+
+            # update latest credentials if the user.id doesn't match
+            if github_credentials and github_credentials.user.id != user.id:
                 github_credentials.delete()
-            elif github_credentials is None:
+                github_credentials = None
+
+            # create a new credentials if it doesn't exists
+            if github_credentials is None:
                 github_credentials = CredentialsGithub(github_id=github_user['id'], user=user)
 
             github_credentials.token = github_token

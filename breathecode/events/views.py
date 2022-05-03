@@ -269,6 +269,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
             for item in items:
                 item.delete()
 
+            self.cache.clear()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if academy_id is None or event_id is None:
@@ -282,6 +283,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
             raise ValidationException('Only draft events can be deleted')
 
         event.delete()
+        self.cache.clear()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
@@ -531,16 +533,15 @@ class ICalStudentView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, user_id):
-        items = Cohort.objects.all()
-
         if not User.objects.filter(id=user_id).count():
             raise ValidationException('Student not exist', 404, slug='student-not-exist')
 
-        cohort_ids = (CohortUser.objects.filter(user_id=user_id).values_list(
-            'cohort_id', flat=True).exclude(cohort__stage='DELETED'))
+        cohort_ids = (CohortUser.objects.filter(user__id=user_id,
+                                                cohort__ending_date__isnull=False,
+                                                cohort__never_ends=False).values_list(
+                                                    'cohort_id', flat=True).exclude(cohort__stage='DELETED'))
 
         items = CohortTimeSlot.objects.filter(cohort__id__in=cohort_ids).order_by('id')
-        items = items
 
         upcoming = request.GET.get('upcoming')
         if upcoming == 'true':
@@ -629,8 +630,6 @@ class ICalCohortsView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        items = Cohort.objects.all()
-
         ids = request.GET.get('academy', '')
         slugs = request.GET.get('academy_slug', '')
 
@@ -638,10 +637,13 @@ class ICalCohortsView(APIView):
         slugs = slugs.split(',') if slugs else []
 
         if ids:
-            items = Cohort.objects.filter(academy__id__in=ids).order_by('id')
+            items = Cohort.objects.filter(ending_date__isnull=False, never_ends=False,
+                                          academy__id__in=ids).order_by('id')
 
         elif slugs:
-            items = Cohort.objects.filter(academy__slug__in=slugs).order_by('id')
+            items = Cohort.objects.filter(ending_date__isnull=False,
+                                          never_ends=False,
+                                          academy__slug__in=slugs).order_by('id')
 
         else:
             items = []

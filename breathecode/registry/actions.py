@@ -174,7 +174,7 @@ def get_user_from_github_username(username):
     return github_users
 
 
-def sync_with_github(asset_slug, author_id=None):
+def pull_from_github(asset_slug, author_id=None):
 
     logger.debug(f'Sync with github asset {asset_slug}')
 

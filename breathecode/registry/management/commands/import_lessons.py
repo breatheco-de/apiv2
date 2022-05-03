@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db.models import Q
 from ...actions import create_asset
 from ...models import AssetAlias
-from ...tasks import async_sync_with_github
+from ...tasks import async_pull_from_github
 from slugify import slugify
 
 logger = logging.getLogger(__name__)

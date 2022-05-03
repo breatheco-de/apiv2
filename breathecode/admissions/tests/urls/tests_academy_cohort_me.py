@@ -1200,7 +1200,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort without auth"""
         cache_keys = [
             'Cohort__resource=None&academy_id=1&upcoming=None&stage=None&academy='
-            'None&location=None&like=None&limit=None&offset=None'
+            'None&location=None&like=None&sort=None&limit=None&offset=None'
         ]
 
         self.assertEqual(self.cache.keys(), [])

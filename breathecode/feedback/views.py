@@ -257,20 +257,41 @@ class SurveyView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             raise ValidationException(
                 'survey_id was provided in url '
                 'in bulk mode request, use querystring style instead',
-                code=400)
+                code=400,
+                slug='survey-id-and-lookups-together')
+
+        if not lookups and not survey_id:
+            raise ValidationException('survey_id was not provided in url',
+                                      code=400,
+                                      slug='without-survey-id-and-lookups')
 
         if lookups:
             items = Survey.objects.filter(**lookups, cohort__academy__id=academy_id).exclude(status='SENT')
+
+            ids = [item.id for item in items]
+
+            if answers := Answer.objects.filter(survey__id__in=ids, status='ANSWERED'):
+
+                slugs = set([answer.survey.cohort.slug for answer in answers])
+
+                raise ValidationException(
+                    f'Survey cannot be deleted because it has been answered for cohorts {", ".join(slugs)}',
+                    code=400,
+                    slug='survey-cannot-be-deleted')
 
             for item in items:
                 item.delete()
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        sur = Survey.objects.filter(user=survey_id,
+        sur = Survey.objects.filter(id=survey_id,
                                     cohort__academy__id=academy_id).exclude(status='SENT').first()
         if sur is None:
-            raise ValidationException('Survey not found', 404)
+            raise ValidationException('Survey not found', 404, slug='survey-not-found')
+
+        if Answer.objects.filter(survey__id=survey_id, status='ANSWERED'):
+            raise ValidationException('Survey cannot be deleted', code=400, slug='survey-cannot-be-deleted')
+
         sur.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
@@ -337,7 +358,7 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         like = request.GET.get('like', None)
         if like is not None:
-            items = query_like_by_full_name(like=like, items=items)
+            items = query_like_by_full_name(like=like, items=items, prefix='author__')
 
         page = self.paginate_queryset(items, request)
         serializer = ReviewSmallSerializer(page, many=True)
