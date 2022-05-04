@@ -214,6 +214,13 @@ class AssetAdmin(admin.ModelAdmin):
         remove_dot_from_slug,
     ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status') + change_field(['us', 'es'], name='lang')
 
+    def get_form(self, request, obj=None, **kwargs):
+
+        if 'ipynb' in obj.url:
+            self.exclude = ('readme', 'html')
+        form = super(AssetAdmin, self).get_form(request, obj, **kwargs)
+        return form
+
     def url_path(self, obj):
         return format_html(f"""
             <a rel='noopener noreferrer' target='_blank' href='{obj.url}'>github</a> |
