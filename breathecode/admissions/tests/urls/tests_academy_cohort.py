@@ -477,7 +477,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'slug': 'they-killed-kenny',
             'name': 'They killed kenny',
             'kickoff_date': datetime.today().isoformat(),
-            'never_ends': True,
             'schedule': 1,
             'kickoff_date': utc_now + timedelta(seconds=1),
             'ending_date': utc_now,
