@@ -1262,7 +1262,12 @@ def render_invite(request, token, member_id=None):
 
         invite = UserInvite.objects.filter(token=token, status='PENDING').first()
         if invite is None:
-            return render_message(request, 'Invitation not found with this token or it was already accepted')
+            callback_msg = ''
+            if _dict['callback'] != '':
+                callback_msg = ". You can try and login at <a href='" + _dict['callback'] + "'>" + _dict[
+                    'callback'] + '</a>'
+            return render_message(
+                request, 'Invitation not found with this token or it was already accepted' + callback_msg)
 
         form = InviteForm({
             'callback': [''],
@@ -1359,7 +1364,13 @@ def render_invite(request, token, member_id=None):
         callback = request.POST.get('callback', None)
         if callback:
             uri = callback[0] if isinstance(callback, list) else callback
-            return HttpResponseRedirect(redirect_to=uri)
+            if len(uri) > 0 and uri[0] == '[':
+                uri = uri[2:-2]
+            if settings.DEBUG:
+                print(type(callback))
+                return HttpResponse(f"Redirect to: <a href='{uri}'>{uri}</a>")
+            else:
+                return HttpResponseRedirect(redirect_to=uri)
         else:
             return render(request, 'message.html',
                           {'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in'})
