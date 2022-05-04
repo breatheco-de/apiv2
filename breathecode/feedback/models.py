@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from breathecode.admissions.models import Academy, Cohort, CohortUser
 from breathecode.events.models import Event
 from breathecode.mentorship.models import MentorshipSession
-from .signals import survey_answered
+import breathecode.feedback.signals as signals
 from breathecode.authenticate.models import Token
 
 __all__ = ['UserProxy', 'CohortUserProxy', 'CohortProxy', 'Survey', 'Answer']
@@ -39,7 +39,7 @@ SURVEY_STATUS = (
 
 class Survey(models.Model):
     """
-    Multiple questions/answers for one single person, survays can only be send to entire cohorts and they will ask all the possible questions involved in a cohort
+    Multiple questions/answers for one single person, surveys can only be send to entire cohorts and they will ask all the possible questions involved in a cohort
     1. How is your teacher?
     2. How is the academy?
     3. How is the blabla..
@@ -142,7 +142,7 @@ class Answer(models.Model):
 
         if self.__old_status != self.status and self.status == 'ANSWERED':
             # signal the updated answer
-            survey_answered.send(instance=self, sender=Answer)
+            signals.survey_answered.send(instance=self, sender=Answer)
 
 
 class ReviewPlatform(models.Model):
@@ -182,7 +182,7 @@ class Review(models.Model):
         blank=True,
         null=True,
         default=None,
-        help_text='Automatically calculated based on NPS survay responses')
+        help_text='Automatically calculated based on NPS survey responses')
     total_rating = models.FloatField(blank=True, null=True, default=None)
     public_url = models.URLField(blank=True, null=True, default=None)
 

@@ -92,6 +92,34 @@ class SubscribeTestSuite(AuthTestCase):
         ])
 
     """
+    🔽🔽🔽 Post with UserInvite
+    """
+
+    @patch('django.utils.timezone.now', MagicMock(return_value=now))
+    def test_task__post__with_user_invite__user_exists(self):
+        """
+        Descriptions of models are being generated:
+
+          User(id=1):
+            groups: []
+            user_permissions: []
+        """
+
+        user = {'email': 'pokemon@potato.io'}
+        model = self.bc.database.create(user=user)
+
+        url = reverse_lazy('authenticate:subscribe')
+        data = {'email': 'pokemon@potato.io'}
+        response = self.client.post(url, data, format='json')
+
+        json = response.json()
+        expected = {'detail': 'user-exists', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(self.bc.database.list_of('authenticate.UserInvite'), [])
+
+    """
     🔽🔽🔽 Post with UserInvite with other email
     """
 

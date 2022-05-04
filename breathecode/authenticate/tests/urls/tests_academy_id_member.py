@@ -1,19 +1,30 @@
 """
 Test cases for /academy/:id/member
 """
-from breathecode.services import datetime_to_iso_format
+from unittest.mock import MagicMock, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
-from ..mixins import AuthTestCase
+from rest_framework.response import Response
+
+from breathecode.utils import capable_of
+from ..mixins.new_auth_test_case import AuthTestCase
 
 
-class AuthenticateTestSuite(AuthTestCase):
-    """Authentication test suite"""
+@capable_of('read_member')
+def view_method_mock(request, *args, **kwargs):
+    response = {'args': args, 'kwargs': kwargs}
+    return Response(response, status=200)
+
+
+# Duck test
+class MemberGetDuckTestSuite(AuthTestCase):
+    """
+    🔽🔽🔽 Check decorator
+    """
     def test_academy_id_member_without_auth(self):
         """Test /academy/:id/member without auth"""
         url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        data = {'email': self.email, 'password': self.password}
-        response = self.client.post(url, data)
+        response = self.client.get(url)
         json = response.json()
 
         self.assertEqual(
@@ -23,743 +34,205 @@ class AuthenticateTestSuite(AuthTestCase):
             })
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_academy_id_member_without_capability(self):
-        """Test /academy/:id/member"""
-        self.generate_models(authenticate=True)
+    def test_academy_id_member__without_capabilities(self):
+        self.bc.request.set_headers(academy=1)
+        model = self.bc.database.create(authenticate=True)
         url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
         response = self.client.get(url)
         json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 2) don't have this capability: read_member "
-                'for academy 1',
-                'status_code': 403
-            })
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: read_member for academy 1",
+            'status_code': 403,
+        })
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
 
-    def test_academy_id_member_without_academy(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        self.generate_models(authenticate=True, role=role, capability='read_member')
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        response = self.client.get(url)
-        json = response.json()
+    def test_academy_id_member__with_auth(self):
+        for n in range(1, 4):
+            self.bc.request.set_headers(academy=n)
+            model = self.bc.database.create(authenticate=True,
+                                            capability='read_member',
+                                            role='role',
+                                            profile_academy=1)
+            url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': n})
+            response = self.client.get(url)
+            json = response.json()
 
-        self.assertEqual(
-            json, {
-                'detail': "You (user: 2) don't have this capability: read_member "
-                'for academy 1',
-                'status_code': 403
-            })
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_academy_id_member(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='read_member',
-                                     profile_academy=True)
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        response = self.client.get(url)
-        json = response.json()
-
-        profile_academy = self.get_profile_academy(1)
-
-        self.assertEqual(json, [{
-            'academy': {
-                'id': model['academy'].id,
-                'name': model['academy'].name,
-                'slug': model['academy'].slug,
-            },
-            'address': None,
-            'created_at': datetime_to_iso_format(profile_academy.created_at),
-            'email': None,
-            'first_name': None,
-            'id': model['profile_academy'].id,
-            'last_name': None,
-            'phone': '',
-            'role': {
-                'id': role,
-                'name': role,
-                'slug': role,
-            },
-            'status': 'INVITED',
-            'user': {
-                'email': model['user'].email,
-                'first_name': model['user'].first_name,
-                'id': model['user'].id,
-                'last_name': model['user'].last_name,
-                'profile': None,
-            },
-        }])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 2,
-        }])
+            self.bc.check.partial_equality(json, [{'academy': {'id': n}}])
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     """
-    🔽🔽🔽 With profile
+    🔽🔽🔽 Check the param is being passed
     """
 
-    def test_academy_id_member__with_profile(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='read_member',
-                                     profile_academy=True,
-                                     profile=True)
+    @patch('breathecode.authenticate.views.MemberView.get', MagicMock(side_effect=view_method_mock))
+    def test_academy_id_member__with_auth___mock_view(self):
+        model = self.bc.database.create(academy=3,
+                                        capability='read_member',
+                                        role='role',
+                                        profile_academy=[{
+                                            'academy_id': id
+                                        } for id in range(1, 4)])
+
+        for n in range(1, 4):
+            self.bc.request.authenticate(model.user)
+            self.bc.request.set_headers(academy=1)
+
+            url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': n})
+            response = self.client.get(url)
+            json = response.json()
+            expected = {'args': [], 'kwargs': {'academy_id': n}}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+# Duck test
+class MemberPostDuckTestSuite(AuthTestCase):
+    """
+    🔽🔽🔽 Check decorator
+    """
+    def test_academy_id_member_without_auth(self):
+        """Test /academy/:id/member without auth"""
         url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        response = self.client.get(url)
+        response = self.client.post(url)
         json = response.json()
 
-        profile_academy = self.get_profile_academy(1)
-
-        self.assertEqual(json, [{
-            'academy': {
-                'id': model['academy'].id,
-                'name': model['academy'].name,
-                'slug': model['academy'].slug,
-            },
-            'address': None,
-            'created_at': datetime_to_iso_format(profile_academy.created_at),
-            'email': None,
-            'first_name': None,
-            'id': model['profile_academy'].id,
-            'last_name': None,
-            'phone': '',
-            'role': {
-                'id': role,
-                'name': role,
-                'slug': role,
-            },
-            'status': 'INVITED',
-            'user': {
-                'email': model['user'].email,
-                'first_name': model['user'].first_name,
-                'id': model['user'].id,
-                'last_name': model['user'].last_name,
-                'profile': {
-                    'avatar_url': None
-                },
-            },
-        }])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_with_github(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='read_member',
-                                     profile_academy=True,
-                                     credentials_github=True)
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        response = self.client.get(url)
-        json = response.json()
-
-        profile_academy = self.get_profile_academy(1)
-
-        self.assertEqual(
-            json,
-            [{
-                'academy': {
-                    'id': model['academy'].id,
-                    'name': model['academy'].name,
-                    'slug': model['academy'].slug,
-                },
-                'address': None,
-                'created_at': datetime_to_iso_format(profile_academy.created_at),
-                'email': None,
-                'first_name': None,
-                'id': model['profile_academy'].id,
-                'last_name': None,
-                'phone': '',
-                'role': {
-                    'id': role,
-                    'name': role,
-                    'slug': role,
-                },
-                'status': 'INVITED',
-                'user': {
-                    'email': model['user'].email,
-                    'first_name': model['user'].first_name,
-                    'id': model['user'].id,
-                    'last_name': model['user'].last_name,
-                    'profile': None,
-                },
-            }],
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_with_status_invited(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='read_member',
-                                     profile_academy=True,
-                                     profile_academy_status='INVITED')
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        url = f'{url}?status=INVITED'
-        response = self.client.get(url)
-        json = response.json()
-
-        profile_academy = self.get_profile_academy(1)
-
-        self.assertEqual(json, [{
-            'academy': {
-                'id': model['academy'].id,
-                'name': model['academy'].name,
-                'slug': model['academy'].slug,
-            },
-            'address': None,
-            'created_at': datetime_to_iso_format(profile_academy.created_at),
-            'email': None,
-            'first_name': None,
-            'id': model['profile_academy'].id,
-            'last_name': None,
-            'phone': '',
-            'role': {
-                'id': role,
-                'name': role,
-                'slug': role,
-            },
-            'status': 'INVITED',
-            'user': {
-                'email': model['user'].email,
-                'first_name': model['user'].first_name,
-                'id': model['user'].id,
-                'last_name': model['user'].last_name,
-                'profile': None,
-            },
-        }])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_with_status_invited_without_data(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='read_member',
-                                     profile_academy=True,
-                                     profile_academy_status='ACTIVE')
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        url = f'{url}?status=INVITED'
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(json, [])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'ACTIVE',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_with_status_active(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='read_member',
-                                     profile_academy=True,
-                                     profile_academy_status='ACTIVE')
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        url = f'{url}?status=ACTIVE'
-        response = self.client.get(url)
-        json = response.json()
-
-        profile_academy = self.get_profile_academy(1)
-
-        self.assertEqual(json, [{
-            'academy': {
-                'id': model['academy'].id,
-                'name': model['academy'].name,
-                'slug': model['academy'].slug,
-            },
-            'address': None,
-            'created_at': datetime_to_iso_format(profile_academy.created_at),
-            'email': None,
-            'first_name': None,
-            'id': model['profile_academy'].id,
-            'last_name': None,
-            'phone': '',
-            'role': {
-                'id': role,
-                'name': role,
-                'slug': role,
-            },
-            'status': 'ACTIVE',
-            'user': {
-                'email': model['user'].email,
-                'first_name': model['user'].first_name,
-                'id': model['user'].id,
-                'last_name': model['user'].last_name,
-                'profile': None,
-            },
-        }])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'ACTIVE',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_with_status_active_without_data(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        self.generate_models(authenticate=True,
-                             role=role,
-                             capability='read_member',
-                             profile_academy=True,
-                             profile_academy_status='INVITED')
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        url = f'{url}?status=ACTIVE'
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(json, [])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_with_zero_roles(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='read_member',
-                                     profile_academy=True)
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        url = f'{url}?roles='
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(json, [])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_with_zero_roles(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        self.generate_models(authenticate=True, role=role, capability='read_member', profile_academy=True)
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        url = f'{url}?roles='
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(json, [])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_with_one_roles(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='read_member',
-                                     profile_academy=True)
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        url = f'{url}?roles={role}'
-        response = self.client.get(url)
-        json = response.json()
-
-        profile_academy = self.get_profile_academy(1)
-
-        self.assertEqual(json, [{
-            'academy': {
-                'id': model['academy'].id,
-                'name': model['academy'].name,
-                'slug': model['academy'].slug,
-            },
-            'address': None,
-            'created_at': datetime_to_iso_format(profile_academy.created_at),
-            'email': None,
-            'first_name': None,
-            'id': model['profile_academy'].id,
-            'last_name': None,
-            'phone': '',
-            'role': {
-                'id': role,
-                'name': role,
-                'slug': role,
-            },
-            'status': 'INVITED',
-            'user': {
-                'email': model['user'].email,
-                'first_name': model['user'].first_name,
-                'id': model['user'].id,
-                'last_name': model['user'].last_name,
-                'profile': None,
-            },
-        }])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_with_two_roles(self):
-        """Test /academy/:id/member"""
-        roles = ['konan', 'pain']
-        models = [
-            self.generate_models(authenticate=True,
-                                 role=roles[0],
-                                 capability='read_member',
-                                 profile_academy=True)
-        ]
-
-        models = models + [
-            self.generate_models(authenticate=True,
-                                 role=roles[1],
-                                 capability='read_member',
-                                 profile_academy=True,
-                                 models={'academy': models[0]['academy']})
-        ]
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        args = ','.join(roles)
-        url = f'{url}?roles={args}'
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(json, [{
-            'academy': {
-                'id': model['academy'].id,
-                'name': model['academy'].name,
-                'slug': model['academy'].slug,
-            },
-            'address':
-            None,
-            'created_at':
-            datetime_to_iso_format(self.get_profile_academy(model['profile_academy'].id).created_at),
-            'email':
-            None,
-            'first_name':
-            None,
-            'id':
-            model['profile_academy'].id,
-            'last_name':
-            None,
-            'phone':
-            '',
-            'role': {
-                'id': roles[model['profile_academy'].id - 1],
-                'name': roles[model['profile_academy'].id - 1],
-                'slug': roles[model['profile_academy'].id - 1],
-            },
-            'status':
-            'INVITED',
-            'user': {
-                'email': model['user'].email,
-                'first_name': model['user'].first_name,
-                'id': model['user'].id,
-                'last_name': model['user'].last_name,
-                'profile': None,
-            },
-        } for model in models])
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1 + index,
-            'last_name': None,
-            'phone': '',
-            'role_id': roles[index],
-            'status': 'INVITED',
-            'user_id': 2 + index,
-        } for index in range(0, 2)])
-
-    def test_academy_id_member_post_no_data(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_member',
-                                     profile_academy=True)
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        data = {}
-        response = self.client.post(url, data)
-        json = response.json()
-        expected = {'role': ['This field is required.']}
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_post_no_user(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_member',
-                                     profile_academy=True)
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        data = {'role': role}
-        response = self.client.post(url, data)
-        json = response.json()
-        expected = {'detail': 'user-not-found', 'status_code': 400}
-        profile_academy = self.get_profile_academy(1)
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_post_no_invite(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_member',
-                                     profile_academy=True)
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        data = {'role': role, 'invite': True}
-        response = self.client.post(url, data)
-        json = response.json()
-        expected = {'detail': 'no-email-or-id', 'status_code': 400}
-        profile_academy = self.get_profile_academy(1)
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_post_user_with_not_student_role(self):
-        """Test /academy/:id/member"""
-        role = 'konan'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_member',
-                                     profile_academy=True)
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        data = {'role': role, 'user': model['user'].id, 'first_name': 'Kenny', 'last_name': 'McKornick'}
-        response = self.client.post(url, data)
-        json = response.json()
-        expected = {'detail': 'user-already-exists', 'status_code': 400}
-
-        profile_academy = self.get_profile_academy(1)
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': 1,
-            'last_name': None,
-            'phone': '',
-            'role_id': role,
-            'status': 'INVITED',
-            'user_id': 2,
-        }])
-
-    def test_academy_id_member_post_user_with_student_role(self):
-        """Test /academy/:id/member"""
-        role = 'student'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_member',
-                                     profile_academy=True)
-        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        data = {'role': role, 'user': model['user'].id, 'first_name': 'Kenny', 'last_name': 'McKornick'}
-        response = self.client.post(url, data)
-        json = response.json()
-
-        profile_academy = self.get_profile_academy(1)
         self.assertEqual(
             json, {
-                'address': None,
-                'email': profile_academy.email,
-                'first_name': 'Kenny',
-                'last_name': 'McKornick',
-                'phone': '',
-                'role': role,
-                'status': 'ACTIVE',
+                'detail': 'Authentication credentials were not provided.',
+                'status_code': status.HTTP_401_UNAUTHORIZED,
             })
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': profile_academy.email,
-            'first_name': 'Kenny',
-            'id': 1,
-            'last_name': 'McKornick',
-            'phone': '',
-            'role_id': role,
-            'status': 'ACTIVE',
-            'user_id': 2,
-        }])
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_academy_id_member_post_teacher_with_student_role(self):
-        """Test /academy/:id/member"""
-        role = 'student'
-        model = self.generate_models(authenticate=True,
-                                     role=role,
-                                     capability='crud_member',
-                                     profile_academy=True)
-        model2 = self.generate_models(role='teacher', capability='crud_member')
+    def test_academy_id_member__without_capabilities(self):
+        self.bc.request.set_headers(academy=1)
+        model = self.bc.database.create(authenticate=True)
         url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
-        data = {'role': 'teacher', 'user': model['user'].id, 'first_name': 'Kenny', 'last_name': 'McKornick'}
-        response = self.client.post(url, data)
+        response = self.client.post(url)
         json = response.json()
 
-        profile_academy = self.get_profile_academy(1)
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: crud_member for academy 1",
+            'status_code': 403,
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+
+    def test_academy_id_member__with_auth(self):
+        for n in range(1, 4):
+            self.bc.request.set_headers(academy=n)
+            model = self.bc.database.create(authenticate=True,
+                                            capability='crud_member',
+                                            role='role',
+                                            profile_academy=1)
+
+            url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': n})
+            response = self.client.post(url)
+
+            json = response.json()
+            expected = {'role': ['This field is required.']}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    """
+    🔽🔽🔽 Check the param is being passed
+    """
+
+    @patch('breathecode.authenticate.views.MemberView.post', MagicMock(side_effect=view_method_mock))
+    def test_academy_id_member__with_auth___mock_view(self):
+        model = self.bc.database.create(academy=3,
+                                        capability='read_member',
+                                        role='role',
+                                        profile_academy=[{
+                                            'academy_id': id
+                                        } for id in range(1, 4)])
+
+        for n in range(1, 4):
+            self.bc.request.authenticate(model.user)
+            self.bc.request.set_headers(academy=1)
+
+            url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': n})
+            response = self.client.post(url)
+            json = response.json()
+            expected = {'args': [], 'kwargs': {'academy_id': n}}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+# Duck test
+class MemberDeleteDuckTestSuite(AuthTestCase):
+    """
+    🔽🔽🔽 Check decorator
+    """
+    def test_academy_id_member_without_auth(self):
+        """Test /academy/:id/member without auth"""
+        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
+        response = self.client.delete(url)
+        json = response.json()
+
         self.assertEqual(
             json, {
-                'address': None,
-                'email': profile_academy.email,
-                'first_name': 'Kenny',
-                'last_name': 'McKornick',
-                'phone': '',
-                'role': 'teacher',
-                'status': 'ACTIVE',
+                'detail': 'Authentication credentials were not provided.',
+                'status_code': status.HTTP_401_UNAUTHORIZED,
             })
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': profile_academy.email,
-            'first_name': 'Kenny',
-            'id': 1,
-            'last_name': 'McKornick',
-            'phone': '',
-            'role_id': 'teacher',
-            'status': 'ACTIVE',
-            'user_id': 2,
-        }])
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_academy_id_member__without_capabilities(self):
+        self.bc.request.set_headers(academy=1)
+        model = self.bc.database.create(authenticate=True)
+        url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': 1})
+        response = self.client.delete(url)
+        json = response.json()
+
+        self.assertEqual(json, {
+            'detail': "You (user: 1) don't have this capability: crud_member for academy 1",
+            'status_code': 403,
+        })
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.all_cohort_time_slot_dict(), [])
+
+    def test_academy_id_member__with_auth(self):
+        for n in range(1, 4):
+            self.bc.request.set_headers(academy=n)
+            model = self.bc.database.create(authenticate=True,
+                                            capability='crud_member',
+                                            role='role',
+                                            profile_academy=1)
+
+            url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': n})
+            response = self.client.delete(url)
+
+            json = response.json()
+            expected = {'detail': 'profile-academy-not-found', 'status_code': 404}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    """
+    🔽🔽🔽 Check the param is being passed
+    """
+
+    @patch('breathecode.authenticate.views.MemberView.delete', MagicMock(side_effect=view_method_mock))
+    def test_academy_id_member__with_auth___mock_view(self):
+        model = self.bc.database.create(academy=3,
+                                        capability='read_member',
+                                        role='role',
+                                        profile_academy=[{
+                                            'academy_id': id
+                                        } for id in range(1, 4)])
+
+        for n in range(1, 4):
+            self.bc.request.authenticate(model.user)
+            self.bc.request.set_headers(academy=1)
+
+            url = reverse_lazy('authenticate:academy_id_member', kwargs={'academy_id': n})
+            response = self.client.delete(url)
+            json = response.json()
+            expected = {'args': [], 'kwargs': {'academy_id': n}}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
