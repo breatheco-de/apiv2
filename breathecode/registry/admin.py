@@ -10,7 +10,7 @@ from breathecode.admissions.admin import CohortAdmin
 from breathecode.assessment.models import Assessment
 from breathecode.assessment.actions import create_from_json
 from breathecode.utils.admin import change_field
-from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
+from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword
 from .tasks import async_pull_from_github, async_test_asset
 from .actions import pull_from_github, get_user_from_github_username, test_asset
 
@@ -380,3 +380,27 @@ class AssetErrorLogAdmin(admin.ModelAdmin):
         return format_html(
             f'<span class="badge {colors[obj.status]}">{obj.slug}</span><small style="display: block;">{message}</small>'
         )
+
+
+@admin.register(AssetCategory)
+class AssetCategoryAdmin(admin.ModelAdmin):
+    search_fields = ['slug', 'title']
+    list_display = ('slug', 'title', 'academy')
+    raw_id_fields = ['academy']
+    list_filter = ['academy']
+
+
+@admin.register(AssetKeyword)
+class AssetKeywordAdmin(admin.ModelAdmin):
+    search_fields = ['slug', 'title']
+    list_display = ('slug', 'title', 'cluster', 'academy')
+    raw_id_fields = ['academy']
+    list_filter = ['academy']
+
+
+@admin.register(KeywordCluster)
+class KeywordClusterAdmin(admin.ModelAdmin):
+    search_fields = ['slug', 'title']
+    list_display = ('slug', 'title', 'academy')
+    raw_id_fields = ['academy']
+    list_filter = ['academy']

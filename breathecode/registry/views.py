@@ -5,14 +5,15 @@ from django.utils import timezone
 from django.db.models import Q, Count
 from django.http import HttpResponse
 from django.core.validators import URLValidator
-from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog
+from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword
 from .actions import test_syllabus, test_asset
 from breathecode.notify.actions import send_email_message
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
-                          PostAssetSerializer)
+                          PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
+                          KeywordClusterSerializer)
 from breathecode.utils import ValidationException, capable_of
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from rest_framework.response import Response
@@ -93,6 +94,27 @@ def get_technologies(request):
     tech = AssetTechnology.objects.all()
 
     serializer = AssetTechnologySerializer(tech, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_categories(request):
+    items = AssetCategory.objects.all()
+    serializer = AssetCategorySerializer(items, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_keywords(request):
+    items = AssetKeyword.objects.all()
+    serializer = AssetKeywordSerializer(items, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_clusters(request):
+    items = KeywordCluster.objects.all()
+    serializer = KeywordClusterSerializer(items, many=True)
     return Response(serializer.data)
 
 
@@ -220,6 +242,10 @@ class AssetView(APIView):
         if 'type' in self.request.GET:
             param = self.request.GET.get('type')
             lookup['asset_type__iexact'] = param
+
+        if 'category' in self.request.GET:
+            param = self.request.GET.get('category')
+            lookup['category__slug__iexact'] = param
 
         if 'slug' in self.request.GET:
             asset_type = self.request.GET.get('type', None)
