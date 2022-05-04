@@ -29,7 +29,7 @@ def test_endpoint(self, endpoint_id):
     logger.debug(f'Running diagnostic for: {endpoint.url} ')
     result = run_endpoint_diagnostic(endpoint.id)
     if not result:
-        # the endpoint diganostic did not run.
+        # the endpoint diagnostic did not run.
         return False
 
     if result['status'] != 'OPERATIONAL':

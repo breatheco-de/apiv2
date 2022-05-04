@@ -1,5 +1,6 @@
 import os, requests, base64, logging
 import urllib.parse
+import breathecode.notify.actions as notify_actions
 from datetime import timezone, timedelta
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.decorators import api_view, permission_classes
@@ -134,8 +135,6 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
 class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     @capable_of('read_member')
     def get(self, request, academy_id, user_id_or_email=None):
-        is_many = bool(not user_id_or_email)
-
         if user_id_or_email is not None:
             item = None
             if user_id_or_email.isnumeric():
@@ -145,7 +144,9 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                                      academy_id=academy_id).first()
 
             if item is None:
-                raise ValidationException('Profile not found for this user and academy', 404)
+                raise ValidationException('Profile not found for this user and academy',
+                                          code=404,
+                                          slug='profile-academy-not-found')
 
             serializer = GetProfileAcademySerializer(item, many=False)
             return Response(serializer.data)
@@ -153,11 +154,11 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         items = ProfileAcademy.objects.filter(academy__id=academy_id).exclude(role__slug='student')
 
         roles = request.GET.get('roles', None)
-        if is_many and roles is not None:
+        if roles is not None:
             items = items.filter(role__in=roles.split(','))
 
         status = request.GET.get('status', None)
-        if is_many and status is not None:
+        if status is not None:
             items = items.filter(status__iexact=status)
 
         like = request.GET.get('like', None)
@@ -166,11 +167,8 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         items = items.exclude(user__email__contains='@token.com')
 
-        if not is_many:
-            items = items.first()
-
         page = self.paginate_queryset(items, request)
-        serializer = GetProfileAcademySmallSerializer(page, many=is_many)
+        serializer = GetProfileAcademySmallSerializer(page, many=True)
 
         if self.is_paginate(request):
             return self.get_paginated_response(serializer.data)
@@ -196,56 +194,65 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if user_id_or_email.isnumeric():
             already = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy_id=academy_id).first()
         else:
-            raise ValidationException('User id must be a numeric value', 404)
+            raise ValidationException('User id must be a numeric value',
+                                      code=404,
+                                      slug='user-id-is-not-numeric')
 
         request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id}
         if already:
             serializer = MemberPUTSerializer(already, data=request_data)
             if serializer.is_valid():
                 serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
-            serializer = MemberPOSTSerializer(data=request_data)
+            serializer = MemberPOSTSerializer(data=request_data,
+                                              context={
+                                                  'academy_id': academy_id,
+                                                  'request': request
+                                              })
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_member')
-    def delete(self, request, academy_id=None, user_id=None):
+    def delete(self, request, academy_id=None, user_id_or_email=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
-        if lookups and user_id:
+        if lookups and user_id_or_email:
             raise ValidationException(
                 'user_id or cohort_id was provided in url '
                 'in bulk mode request, use querystring style instead',
-                code=400)
+                code=400,
+                slug='user-id-and-bulk-mode')
 
         if lookups:
             items = ProfileAcademy.objects.filter(**lookups,
                                                   academy__id=academy_id).exclude(role__slug='student')
 
             for item in items:
-
                 item.delete()
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        member = ProfileAcademy.objects.filter(user=user_id,
+        if user_id_or_email and not user_id_or_email.isnumeric():
+            raise ValidationException('User id must be a numeric value',
+                                      code=404,
+                                      slug='user-id-is-not-numeric')
+
+        member = ProfileAcademy.objects.filter(user=user_id_or_email,
                                                academy__id=academy_id).exclude(role__slug='student').first()
+
         if member is None:
-            raise ValidationException('Member not found', 404)
+            raise ValidationException('Member not found', code=404, slug='profile-academy-not-found')
+
         member.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
 class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
     def get(self, request):
-
-        if request.user is None:
-            raise ValidationException('User not found', 404)
-
         invites = UserInvite.objects.filter(email=request.user.email)
 
         status = request.GET.get('status', '')
@@ -264,7 +271,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             raise ValidationException(f'Please specify new status for the invites', slug='missing-status')
 
         if new_status.upper() not in ['ACCEPTED', 'REJECTED']:
-            raise ValidationException(f'Invalid invite status {new_status}')
+            raise ValidationException(f'Invalid invite status {new_status}', slug='invalid-status')
 
         if lookups:
             items = UserInvite.objects.filter(**lookups, email=request.user.email)
@@ -289,7 +296,7 @@ class MeInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         else:
-            raise ValidationException('Invite ids were not provided', 404, slug='missing_ids')
+            raise ValidationException('Invite ids were not provided', code=400, slug='missing-ids')
 
 
 class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
@@ -302,19 +309,23 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
                 raise ValidationException('No pending invite was found for this user and academy',
                                           code=404,
                                           slug='user-invite-not-found')
+
             serializer = UserInviteSerializer(invite, many=False)
             return Response(serializer.data)
 
         if profileacademy_id is not None:
             profile = ProfileAcademy.objects.filter(academy__id=academy_id, id=profileacademy_id).first()
             if profile is None:
-                raise ValidationException('Profile not found', 404)
+                raise ValidationException('Profile not found', code=404, slug='profile-academy-not-found')
 
             invite = UserInvite.objects.filter(academy__id=academy_id, email=profile.email,
                                                status='PENDING').first()
 
             if invite is None and profile.status != 'INVITED':
-                raise ValidationException('No pending invite was found for this user and academy', 404)
+                raise ValidationException(
+                    'No pending invite was found for this user and academy',
+                    code=404,
+                    slug='user-invite-and-profile-academy-with-status-invited-not-found')
 
             # IMPORTANT: both serializers need to include "invite_url" property to have a consistent response
             if invite is not None:
@@ -324,24 +335,24 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             if profile.status == 'INVITED':
                 serializer = GetProfileAcademySerializer(profile, many=False)
                 return Response(serializer.data)
+
+        invites = UserInvite.objects.filter(academy__id=academy_id)
+
+        status = request.GET.get('status', '')
+        if status != '':
+            invites = invites.filter(status__in=status.split(','))
         else:
-            invites = UserInvite.objects.filter(academy__id=academy_id)
+            invites = invites.filter(status='PENDING')
 
-            status = request.GET.get('status', '')
-            if status != '':
-                invites = invites.filter(status__in=status.split(','))
-            else:
-                invites = invites.filter(status='PENDING')
+        invites = invites.order_by(request.GET.get('sort', '-created_at'))
 
-            invites = invites.order_by(request.GET.get('sort', '-created_at'))
+        page = self.paginate_queryset(invites, request)
+        serializer = UserInviteSerializer(page, many=True)
 
-            page = self.paginate_queryset(invites, request)
-            serializer = UserInviteSerializer(page, many=True)
-
-            if self.is_paginate(request):
-                return self.get_paginated_response(serializer.data)
-            else:
-                return Response(serializer.data, status=200)
+        if self.is_paginate(request):
+            return self.get_paginated_response(serializer.data)
+        else:
+            return Response(serializer.data, status=200)
 
     @capable_of('crud_invite')
     def delete(self, request, academy_id=None):
@@ -357,8 +368,6 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
 
     @capable_of('invite_resend')
     def put(self, request, invite_id=None, profileacademy_id=None, academy_id=None):
-        from breathecode.notify.actions import send_email_message
-
         invite = None
         profile_academy = None
         if invite_id is not None:
@@ -372,13 +381,13 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             profile_academy = ProfileAcademy.objects.filter(id=profileacademy_id).first()
 
             if profile_academy is None:
-                raise ValidationException('Member not found', 400)
+                raise ValidationException('Member not found', code=400, slug='profile-academy-not-found')
 
             invite = UserInvite.objects.filter(academy__id=academy_id, email=profile_academy.email).first()
 
         if (invite is None and profile_academy is not None and profile_academy.status == 'INVITED'
                 and (profile_academy.user.email or invite.email)):
-            send_email_message(
+            notify_actions.send_email_message(
                 'academy_invite', profile_academy.user.email or invite.email, {
                     'subject': f'Invitation to study at {profile_academy.academy.name}',
                     'invites': [ProfileAcademySmallSerializer(profile_academy).data],
@@ -389,14 +398,16 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
             return Response(serializer.data)
 
         if invite is None:
-            raise ValidationException('Invite not found', 400)
+            raise ValidationException('Invite not found', code=400, slug='user-invite-not-found')
 
         if invite.sent_at is not None:
             now = timezone.now()
             minutes_diff = (now - invite.sent_at).total_seconds() / 60.0
 
             if minutes_diff < 2:
-                raise ValidationException('Impossible to resend invitation', 400)
+                raise ValidationException('Impossible to resend invitation',
+                                          code=400,
+                                          slug='sent-at-diff-less-two-minutes')
 
         email = (profile_academy and profile_academy.user and profile_academy.user.email) or invite.email
         if not email:
@@ -425,7 +436,7 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
                                                         user__email=user_id_or_email).first()
 
             if profile is None:
-                raise ValidationException('Profile not found', 404)
+                raise ValidationException('Profile not found', code=404, slug='profile-academy-not-found')
 
             serializer = GetProfileAcademySerializer(profile, many=False)
             return Response(serializer.data)
@@ -462,26 +473,36 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
     @capable_of('crud_student')
     def put(self, request, academy_id=None, user_id_or_email=None):
+        if not user_id_or_email.isnumeric():
+            raise ValidationException('User id must be a numeric value',
+                                      code=404,
+                                      slug='user-id-is-not-numeric')
 
-        student = ProfileAcademy.objects.filter(user=user_id_or_email, academy__id=academy_id).first()
+        student = ProfileAcademy.objects.filter(user__id=user_id_or_email, academy__id=academy_id).first()
 
         if student and student.role.slug != 'student':
             raise ValidationException(
-                f'This endpoint can only update student profiles (not {student.role.slug})')
+                f'This endpoint can only update student profiles (not {student.role.slug})',
+                code=400,
+                slug='trying-to-change-a-staff')
 
-        request_data = {**request.data, 'user': student.user.id, 'academy': academy_id, 'role': 'student'}
+        request_data = {**request.data, 'user': user_id_or_email, 'academy': academy_id, 'role': 'student'}
         if 'role' in request.data:
             raise ValidationException(
-                'The student role cannot be updated with this endpoint, user /member instead.')
+                'The student role cannot be updated with this endpoint, user /member instead.',
+                code=400,
+                slug='trying-to-change-role')
 
-        if student:
-            serializer = MemberPUTSerializer(student, data=request_data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            raise ValidationException('The user is not a student in this academy')
+        if not student:
+            raise ValidationException('The user is not a student in this academy',
+                                      code=404,
+                                      slug='profile-academy-not-found')
+
+        serializer = MemberPUTSerializer(student, data=request_data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @capable_of('crud_student')
     def delete(self, request, academy_id=None, user_id_or_email=None):
@@ -491,7 +512,8 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
             raise ValidationException(
                 'user_id was provided in url '
                 'in bulk mode request, use querystring style instead',
-                code=400)
+                code=400,
+                slug='user-id-and-bulk-mode')
 
         if lookups:
             items = ProfileAcademy.objects.filter(**lookups, academy__id=academy_id, role__slug='student')
@@ -505,11 +527,18 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if academy_id is None or user_id_or_email is None:
             raise serializers.ValidationError('Missing user_id or academy_id', code=400)
 
+        if user_id_or_email and not user_id_or_email.isnumeric():
+            raise ValidationException('User id must be a numeric value',
+                                      code=404,
+                                      slug='user-id-is-not-numeric')
+
         profile = ProfileAcademy.objects.filter(academy__id=academy_id,
                                                 user__id=user_id_or_email,
                                                 role__slug='student').first()
         if profile is None:
-            raise serializers.ValidationError('User doest not exist or does not belong to this academy')
+            raise ValidationException('User doest not exist or does not belong to this academy',
+                                      code=404,
+                                      slug='profile-academy-not-found')
 
         profile.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
@@ -1236,9 +1265,11 @@ def render_invite(request, token, member_id=None):
             return render_message(request, 'Invitation not found with this token or it was already accepted')
 
         form = InviteForm({
-            **_dict, 'first_name': invite.first_name,
+            'callback': [''],
+            **_dict,
+            'first_name': invite.first_name,
             'last_name': invite.last_name,
-            'phone': invite.phone
+            'phone': invite.phone,
         })
 
         return render(request, 'form_invite.html', {
@@ -1250,13 +1281,7 @@ def render_invite(request, token, member_id=None):
         password1 = request.POST.get('password1', None)
         password2 = request.POST.get('password2', None)
 
-        if password1 != password2:
-            messages.error(request, 'Passwords don\'t match')
-            return render(request, 'form_invite.html', {
-                'form': form,
-            })
-
-        invite = UserInvite.objects.filter(token=str(token), status='PENDING').first()
+        invite = UserInvite.objects.filter(token=str(token), status='PENDING', email__isnull=False).first()
         if invite is None:
             messages.error(request, 'Invalid or expired invitation ' + str(token))
             return render(request, 'form_invite.html', {'form': form})
@@ -1265,6 +1290,18 @@ def render_invite(request, token, member_id=None):
         last_name = request.POST.get('last_name', None)
         if first_name is None or first_name == '' or last_name is None or last_name == '':
             messages.error(request, 'Invalid first or last name')
+            return render(request, 'form_invite.html', {
+                'form': form,
+            })
+
+        if password1 != password2:
+            messages.error(request, 'Passwords don\'t match')
+            return render(request, 'form_invite.html', {
+                'form': form,
+            })
+
+        if not password1:
+            messages.error(request, 'Password is empty')
             return render(request, 'form_invite.html', {
                 'form': form,
             })
@@ -1279,12 +1316,24 @@ def render_invite(request, token, member_id=None):
         if invite.academy is not None:
             profile = ProfileAcademy.objects.filter(email=invite.email, academy=invite.academy).first()
             if profile is None:
-                role = invite.role.slug
+                role = invite.role
+                if not role:
+                    role = Role.objects.filter(slug='student').first()
+
+                if not role:
+                    messages.error(
+                        request, 'Unexpected error occurred with invite, please contact the '
+                        'staff of 4geeks')
+                    return render(request, 'form_invite.html', {
+                        'form': form,
+                    })
+
                 profile = ProfileAcademy(email=invite.email,
                                          academy=invite.academy,
-                                         role=invite.role,
+                                         role=role,
                                          first_name=first_name,
                                          last_name=last_name)
+
                 if invite.first_name is not None and invite.first_name != '':
                     profile.first_name = invite.first_name
                 if invite.last_name is not None and invite.last_name != '':
@@ -1298,6 +1347,7 @@ def render_invite(request, token, member_id=None):
             role = 'student'
             if invite.role is not None and invite.role.slug != 'student':
                 role = invite.role.slug.upper()
+
             cu = CohortUser.objects.filter(user=user, cohort=invite.cohort).first()
             if cu is None:
                 cu = CohortUser(user=user, cohort=invite.cohort, role=role)
@@ -1306,9 +1356,10 @@ def render_invite(request, token, member_id=None):
         invite.status = 'ACCEPTED'
         invite.save()
 
-        callback = str(request.POST.get('callback', None))
-        if callback is not None and callback != '' and callback != "['']":
-            return HttpResponseRedirect(redirect_to=callback[2:-2])
+        callback = request.POST.get('callback', None)
+        if callback:
+            uri = callback[0] if isinstance(callback, list) else callback
+            return HttpResponseRedirect(redirect_to=uri)
         else:
             return render(request, 'message.html',
                           {'MESSAGE': 'Welcome to 4Geeks, you can go ahead an log in'})

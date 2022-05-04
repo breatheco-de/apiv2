@@ -57,7 +57,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
                 **capability_kwargs
             })
 
-        if not 'role' in models and role:
+        if not 'role' in models and (is_valid(role) or is_valid(profile_academy)):
             kargs = {
                 'slug': role,
                 'name': role,
@@ -66,7 +66,7 @@ class AuthenticateMixin(DateFormatterMixin, HeadersMixin, ModelsMixin):
             if capability:
                 kargs['capabilities'] = get_list(models['capability'])
 
-            models['role'] = create_models(role if isinstance(role, dict) else {}, 'authenticate.Role', **{
+            models['role'] = create_models(role if not isinstance(role, str) else {}, 'authenticate.Role', **{
                 **kargs,
                 **role_kwargs
             })

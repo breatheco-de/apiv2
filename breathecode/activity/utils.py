@@ -3,7 +3,6 @@ import re
 from datetime import datetime
 
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError
 
 from breathecode.utils.validation_exception import ValidationException
 

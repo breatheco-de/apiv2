@@ -39,7 +39,7 @@ SURVEY_STATUS = (
 
 class Survey(models.Model):
     """
-    Multiple questions/answers for one single person, survays can only be send to entire cohorts and they will ask all the possible questions involved in a cohort
+    Multiple questions/answers for one single person, surveys can only be send to entire cohorts and they will ask all the possible questions involved in a cohort
     1. How is your teacher?
     2. How is the academy?
     3. How is the blabla..
@@ -182,7 +182,7 @@ class Review(models.Model):
         blank=True,
         null=True,
         default=None,
-        help_text='Automatically calculated based on NPS survay responses')
+        help_text='Automatically calculated based on NPS survey responses')
     total_rating = models.FloatField(blank=True, null=True, default=None)
     public_url = models.URLField(blank=True, null=True, default=None)
 

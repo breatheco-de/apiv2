@@ -83,7 +83,7 @@ class Slack:
         payload = json.loads(context['payload'])
 
         if 'actions' not in payload or len(payload['actions']) == 0:
-            raise Exception('Imposible to determine action')
+            raise Exception('Impossible to determine action')
 
         try:
             logger.debug(f"Slack action: {str(payload['actions'])}")
@@ -94,7 +94,7 @@ class Slack:
 
         except:
             raise Exception(
-                'Invalid slack action format, must be ajson with class and method properties at least')
+                'Invalid slack action format, must be json with class and method properties at least')
 
         logger.debug(f'Executing {action_class} => {method}')
         if hasattr(actions, action_class):

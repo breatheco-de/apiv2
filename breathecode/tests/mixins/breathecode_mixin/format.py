@@ -1,4 +1,6 @@
+import base64
 import yaml
+import urllib.parse
 from typing import Any
 from rest_framework.test import APITestCase
 from django.db.models import Model
@@ -7,11 +9,14 @@ from ..models_mixin import ModelsMixin
 
 __all__ = ['Format']
 
+ENCODE = 'utf-8'
+
 
 class Format:
     """Mixin with the purpose of cover all the related with format or parse something"""
 
     _parent: APITestCase
+    ENCODE = ENCODE
 
     def __init__(self, parent) -> None:
         self._parent = parent
@@ -161,3 +166,37 @@ class Format:
                 return key
 
         return 'pk'
+
+    def from_base64(self, hash: str | bytes) -> str:
+        """
+        Transform a base64 hash to string.
+        """
+
+        if isinstance(hash, str):
+            hash = hash.encode()
+
+        return base64.b64decode(hash).decode(ENCODE)
+
+    def to_base64(self, string: str | bytes) -> str:
+        """
+        Transform a base64 hash to string.
+        """
+
+        if isinstance(string, str):
+            string = string.encode()
+
+        return base64.b64encode(string).decode(ENCODE)
+
+    def to_querystring(self, params: dict) -> str:
+        """
+        Transform dict to querystring
+        """
+
+        return urllib.parse.urlencode(params)
+
+    def from_bytes(self, s: bytes, encode: str = ENCODE) -> str:
+        """
+        Transform bytes to a string.
+        """
+
+        return s.decode(encode)
