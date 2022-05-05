@@ -216,7 +216,7 @@ class AssetAdmin(admin.ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
 
-        if 'ipynb' in obj.url:
+        if obj is not None and 'ipynb' in obj.url and len(self.readme) > 2000:
             self.exclude = ('readme', 'html')
         form = super(AssetAdmin, self).get_form(request, obj, **kwargs)
         return form
