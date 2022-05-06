@@ -12,11 +12,27 @@ class UserSerializer(serpy.Serializer):
     last_name = serpy.Field()
 
 
+class AcademySmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    name = serpy.Field()
+
+
+class AssetCategorySmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+
+
+class KeywordClusterSmallSerializer(serpy.Serializer):
+    id = serpy.Field()
+    slug = serpy.Field()
+
+
 class AssetSerializer(serpy.Serializer):
     id = serpy.Field()
     slug = serpy.Field()
     title = serpy.Field()
     lang = serpy.Field()
+    category = AssetCategorySmallSerializer(required=False)
     asset_type = serpy.Field()
     visibility = serpy.Field()
     url = serpy.Field()
@@ -33,6 +49,7 @@ class AssetSerializer(serpy.Serializer):
 
     translations = serpy.MethodField()
     technologies = serpy.MethodField()
+    seo_keywords = serpy.MethodField()
 
     def get_translations(self, obj):
         result = {}
@@ -42,6 +59,10 @@ class AssetSerializer(serpy.Serializer):
 
     def get_technologies(self, obj):
         _s = map(lambda t: t.slug, obj.technologies.all())
+        return _s
+
+    def get_seo_keywords(self, obj):
+        _s = map(lambda t: t.slug, obj.seo_keywords.all())
         return _s
 
 
@@ -66,6 +87,28 @@ class AssetBigSerializer(AssetMidSerializer):
 class AssetTechnologySerializer(serpy.Serializer):
     slug = serpy.Field()
     title = serpy.Field()
+
+
+class AssetCategorySerializer(serpy.Serializer):
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    academy = AcademySmallSerializer()
+
+
+class KeywordClusterSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    title = serpy.Field()
+    academy = AcademySmallSerializer()
+    lang = serpy.Field()
+
+
+class AssetKeywordSerializer(serpy.Serializer):
+    slug = serpy.Field()
+    title = serpy.Field()
+    lang = serpy.Field()
+    academy = AcademySmallSerializer()
+    cluster = KeywordClusterSmallSerializer()
 
 
 class PostAssetSerializer(serializers.ModelSerializer):

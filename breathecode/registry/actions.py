@@ -12,7 +12,7 @@ from breathecode.assessment.actions import create_from_json
 from breathecode.authenticate.models import CredentialsGithub
 from .models import Asset, AssetTechnology, AssetAlias, AssetErrorLog
 from .serializers import AssetBigSerializer
-from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator
+from .utils import LessonValidator, ExerciseValidator, QuizValidator, AssetException, ProjectValidator, ArticleValidator
 from github import Github, GithubException
 
 logger = logging.getLogger(__name__)
@@ -174,7 +174,7 @@ def get_user_from_github_username(username):
     return github_users
 
 
-def sync_with_github(asset_slug, author_id=None):
+def pull_from_github(asset_slug, author_id=None):
 
     logger.debug(f'Sync with github asset {asset_slug}')
 
@@ -212,7 +212,7 @@ def sync_with_github(asset_slug, author_id=None):
                 f'Github credentials for this user {author_id} not found when sync asset {asset_slug}')
 
         g = Github(credentials.token)
-        if asset.asset_type == 'LESSON':
+        if asset.asset_type in ['LESSON', 'ARTICLE']:
             asset = sync_github_lesson(g, asset)
         else:
             asset = sync_learnpack_asset(g, asset)
@@ -389,9 +389,10 @@ def sync_learnpack_asset(github, asset):
         config = json.loads(learn_file.decoded_content.decode('utf-8'))
         asset.config = config
 
-        if 'title' in config:
+        # only replace title and description of English language
+        if 'title' in config and (lang == '' or asset.title == '' or asset.title is None):
             asset.title = config['title']
-        if 'description' in config:
+        if 'description' in config and (lang == '' or asset.description == '' or asset.description is None):
             asset.description = config['description']
 
         if 'preview' in config:
@@ -433,6 +434,8 @@ def test_asset(asset):
             validator = ProjectValidator(asset)
         elif asset.asset_type == 'QUIZ':
             validator = QuizValidator(asset)
+        elif asset.asset_type == 'ARTICLE':
+            validator = ArticleValidator(asset)
 
         validator.validate()
         asset.status_text = 'Test Successfull'

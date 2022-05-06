@@ -271,7 +271,7 @@ class CohortAdmin(admin.ModelAdmin):
         return obj.certificate.slug + '.v' + str(obj.version)
 
 
-def sync_with_github(modeladmin, request, queryset):
+def pull_from_github(modeladmin, request, queryset):
     all_syllabus = queryset.all()
 
     credentials = None
@@ -314,14 +314,14 @@ def sync_with_github(modeladmin, request, queryset):
                     'correct access rights to the repository')
 
 
-sync_with_github.short_description = 'Sync from Github'
+pull_from_github.short_description = 'Sync from Github'
 
 
 @admin.register(Syllabus)
 class SyllabusAdmin(admin.ModelAdmin):
     list_display = ('slug', 'name', 'academy_owner', 'private', 'github_url', 'duration_in_hours',
                     'duration_in_days', 'week_hours', 'logo')
-    actions = [sync_with_github]
+    actions = [pull_from_github]
 
 
 @admin.register(SyllabusVersion)

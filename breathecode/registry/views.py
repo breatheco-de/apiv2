@@ -2,17 +2,18 @@ import requests, logging, os
 from pathlib import Path
 from django.shortcuts import render
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.http import HttpResponse
 from django.core.validators import URLValidator
-from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog
+from .models import Asset, AssetAlias, AssetTechnology, AssetErrorLog, KeywordCluster, AssetCategory, AssetKeyword
 from .actions import test_syllabus, test_asset
 from breathecode.notify.actions import send_email_message
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .serializers import (AssetSerializer, AssetBigSerializer, AssetMidSerializer, AssetTechnologySerializer,
-                          PostAssetSerializer)
+                          PostAssetSerializer, AssetCategorySerializer, AssetKeywordSerializer,
+                          KeywordClusterSerializer)
 from breathecode.utils import ValidationException, capable_of
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from rest_framework.response import Response
@@ -97,6 +98,27 @@ def get_technologies(request):
 
 
 @api_view(['GET'])
+def get_categories(request):
+    items = AssetCategory.objects.all()
+    serializer = AssetCategorySerializer(items, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_keywords(request):
+    items = AssetKeyword.objects.all()
+    serializer = AssetKeywordSerializer(items, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_clusters(request):
+    items = KeywordCluster.objects.all()
+    serializer = KeywordClusterSerializer(items, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
 @permission_classes([AllowAny])
 def get_translations(request):
     langs = Asset.objects.all().values_list('lang', flat=True)
@@ -135,16 +157,11 @@ def render_readme(request, asset_slug, extension='raw'):
     response = HttpResponse('Invalid extension format', content_type='text/html')
     if extension == 'html':
         response = HttpResponse(readme['html'], content_type='text/html')
-        response['Content-Length'] = len(readme['html'])
     elif extension in ['md', 'mdx', 'txt']:
         response = HttpResponse(readme['decoded'], content_type='text/markdown')
-        response['Content-Length'] = len(readme['decoded'])
     elif extension == 'ipynb':
         response = HttpResponse(readme['decoded'], content_type='application/json')
-        response['Content-Length'] = len(readme['decoded'])
 
-    # response[
-    # 'Content-Security-Policy'] = "frame-ancestors 'self' https://4geeks.com http://localhost:3000 https://dev.4geeks.com"
     return response
 
 
@@ -212,6 +229,10 @@ class AssetView(APIView):
             param = self.request.GET.get('author')
             lookup['author__id'] = param
 
+        if 'owner' in self.request.GET:
+            param = self.request.GET.get('owner')
+            lookup['owner__id'] = param
+
         like = request.GET.get('like', None)
         if like is not None:
             items = items.filter(
@@ -221,6 +242,10 @@ class AssetView(APIView):
         if 'type' in self.request.GET:
             param = self.request.GET.get('type')
             lookup['asset_type__iexact'] = param
+
+        if 'category' in self.request.GET:
+            param = self.request.GET.get('category')
+            lookup['category__slug__iexact'] = param
 
         if 'slug' in self.request.GET:
             asset_type = self.request.GET.get('type', None)
@@ -265,6 +290,10 @@ class AssetView(APIView):
             param = self.request.GET.get('graded')
             if param == 'true':
                 lookup['graded'] = True
+
+        need_translation = self.request.GET.get('need_translation', False)
+        if need_translation == 'true':
+            items = items.annotate(num_translations=Count('all_translations')).filter(num_translations__lte=1) \
 
         items = items.filter(**lookup).order_by('-created_at')
 

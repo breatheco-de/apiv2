@@ -26,6 +26,7 @@ from .views import (TokenTemporalView, WaitingListView, get_users, get_user_by_i
 
 app_name = 'authenticate'
 urlpatterns = [
+    path('member/invite/resend/<int:invite_id>', AcademyInviteView.as_view(), name='member_invite_resend_id'),
     path('subscribe/', WaitingListView.as_view(), name='subscribe'),
     path('user/', get_users, name='user'),
     path('user/me', UserMeView.as_view(), name='user_me'),
@@ -33,8 +34,7 @@ urlpatterns = [
     path('role', get_roles, name='role'),
     path('role/<str:role_slug>', get_roles, name='role_slug'),
     path('profile/invite/me', ProfileInviteMeView.as_view(), name='profile_invite_me'),
-    path('member/invite/resend/<int:invite_id>', AcademyInviteView.as_view(), name='academy_resent_invite'),
-    path('member/invite/<str:token>', render_invite, name='academy_invite'),
+    path('member/invite/<str:token>', render_invite, name='member_invite_token'),
     path('member/<int:profile_academy_id>/token',
          TokenTemporalView.as_view(),
          name='profile_academy_reset_github_link'),
@@ -43,17 +43,21 @@ urlpatterns = [
     path('academy/<int:academy_id>/member/<str:user_id_or_email>',
          MemberView.as_view(),
          name='academy_id_member_id'),
-    path('academy/member/<str:user_id_or_email>', MemberView.as_view(), name='academy_id_member_id'),
+    path('academy/member/<str:user_id_or_email>', MemberView.as_view(), name='academy_member_id'),
     path('academy/student', StudentView.as_view(), name='academy_student'),
     path('academy/student/<str:user_id_or_email>', StudentView.as_view(), name='academy_student_id'),
-    path('academy/user/me/invite', MeInviteView.as_view(), name='user_me_invite'),
-    path('academy/user/me/invite/<slug:new_status>', MeInviteView.as_view(), name='user_me_invite_status'),
+    # TODO: 🔽 is normal a endpoint starts with 'endpoint/' are a endpoint that refer to me? 🔽
+    path('academy/user/me/invite', MeInviteView.as_view(), name='academy_user_me_invite'),
+    path('academy/user/me/invite/<slug:new_status>',
+         MeInviteView.as_view(),
+         name='academy_user_me_invite_status'),
+    # 🔼🔼🔼
     path('academy/invite/<int:invite_id>', AcademyInviteView.as_view(), name='academy_invite_id'),
     path('academy/member/<int:profileacademy_id>/invite',
          AcademyInviteView.as_view(),
          name='academy_member_id_invite'),
-    path('academy/user/invite', AcademyInviteView.as_view(), name='user_invite'),
-    path('academy/html/invite', render_academy_invite),
+    path('academy/user/invite', AcademyInviteView.as_view(), name='academy_user_invite'),
+    path('academy/html/invite', render_academy_invite, name='academy_html_invite'),
     # path('group/', get_groups, name="group"),
     path('view/login', login_html_view, name='login_view'),  # html login form
     # get token from email and password
@@ -76,8 +80,8 @@ urlpatterns = [
     path('facebook/', get_facebook_token, name='facebook'),
     path('facebook/callback/', save_facebook_token, name='facebook_callback'),
     path('user/me', UserMeView.as_view(), name='user_me'),
-    path('user/me/invite', MeInviteView.as_view()),
-    path('user/me/invite/<slug:new_status>', MeInviteView.as_view()),
+    path('user/me/invite', MeInviteView.as_view(), name='user_me_invite'),
+    path('user/me/invite/<slug:new_status>', MeInviteView.as_view(), name='user_me_invite_status'),
 
     # google authentication oath2.0
     path('google/<str:token>', get_google_token, name='google_token'),
