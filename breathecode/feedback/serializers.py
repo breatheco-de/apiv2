@@ -8,6 +8,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 import serpy, re
 from django.utils import timezone
+import breathecode.feedback.actions as actions
 
 
 class GetAcademySerializer(serpy.Serializer):
@@ -232,7 +233,7 @@ class SurveySerializer(serializers.ModelSerializer):
         result = super().create(validated_data)
 
         if send_now:
-            send_survey_group(survey=result)
+            actions.send_survey_group(survey=result)
 
         return result
 

@@ -15,26 +15,30 @@ logger = logging.getLogger(__name__)
 def send_survey_group(survey=None, cohort=None):
 
     if survey is None and cohort is None:
-        raise ValidationException('Missing survey or cohort')
+        raise ValidationException('Missing survey or cohort', slug='missing-survey-or-cohort')
 
     if survey is None:
         survey = Survey(cohort=cohort, lang=cohort.language)
 
+    result = {'success': [], 'error': []}
     try:
 
         if cohort is not None:
             if survey.cohort.id != cohort.id:
-                raise ValidationException('The survey does not match the cohort id')
+                raise ValidationException('The survey does not match the cohort id',
+                                          slug='survey-does-not-match-cohort')
 
         if cohort is None:
             cohort = survey.cohort
 
         cohort_teacher = CohortUser.objects.filter(cohort=survey.cohort, role='TEACHER')
         if cohort_teacher.count() == 0:
-            raise ValidationException('This cohort must have a teacher assigned to be able to survey it', 400)
+            raise ValidationException('This cohort must have a teacher assigned to be able to survey it',
+                                      400,
+                                      slug='cohort-must-have-teacher-assigned-to-survey')
 
         ucs = CohortUser.objects.filter(cohort=cohort, role='STUDENT').filter()
-        result = {'success': [], 'error': []}
+
         for uc in ucs:
             if uc.educational_status in ['ACTIVE', 'GRADUATED']:
                 send_cohort_survey.delay(uc.user.id, survey.id)
