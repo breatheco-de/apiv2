@@ -340,7 +340,7 @@ class ReviewView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         if 'platform' in self.request.GET:
             param = self.request.GET.get('platform')
-            lookup['platform__slug'] = param
+            items = items.filter(platform__name__icontains=param)
 
         if 'cohort' in self.request.GET:
             param = self.request.GET.get('cohort')

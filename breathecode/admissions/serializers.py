@@ -266,6 +266,7 @@ class GetCohortSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     never_ends = serpy.Field()
+    remote_available = serpy.Field()
     private = serpy.Field()
     language = serpy.Field()
     kickoff_date = serpy.Field()
@@ -546,9 +547,9 @@ class CohortSerializer(CohortSerializerMixin):
 
     class Meta:
         model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus', 'schedule',
-                  'syllabus_version', 'ending_date', 'stage', 'language', 'created_at', 'updated_at',
-                  'never_ends', 'online_meeting_url', 'timezone')
+        fields = ('id', 'slug', 'name', 'remote_available', 'kickoff_date', 'current_day', 'academy',
+                  'syllabus', 'schedule', 'syllabus_version', 'ending_date', 'stage', 'language',
+                  'created_at', 'updated_at', 'never_ends', 'online_meeting_url', 'timezone')
 
     def create(self, validated_data):
         del self.context['request']

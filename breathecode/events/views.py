@@ -270,6 +270,8 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
                 item.delete()
 
             self.cache.clear()
+            if (len(lookups['id__in']) != len(items)):
+                return Response('One or more events were not draft', status=status.HTTP_200_OK)
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if academy_id is None or event_id is None:

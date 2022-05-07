@@ -183,6 +183,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': True,
+            'remote_available': True,
             'private': False,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -523,6 +524,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             data['name'],
             'never_ends':
             False,
+            'remote_available':
+            True,
             'private':
             False,
             'language':
@@ -676,6 +679,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             data['name'],
             'never_ends':
             False,
+            'remote_available':
+            True,
             'private':
             False,
             'language':
@@ -834,6 +839,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             data['name'],
             'never_ends':
             False,
+            'remote_available':
+            True,
             'private':
             False,
             'language':
@@ -989,6 +996,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': data['slug'],
             'name': data['name'],
             'never_ends': False,
+            'remote_available': True,
             'private': False,
             'language': data['language'],
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
@@ -1089,6 +1097,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': model['cohort'].never_ends,
+            'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -1195,6 +1204,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': model['cohort'].never_ends,
+            'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
