@@ -132,6 +132,7 @@ class PUTTaskSerializer(serializers.ModelSerializer):
             staff = ProfileAcademy.objects.filter(academy__id__in=student_academies,
                                                   user__id=self.context['request'].user.id).first()
 
+            # task ownler should only be able to mark revision status to PENDING
             if data['revision_status'] != 'PENDING' and staff is None and teacher is None:
                 raise ValidationException(
                     'Only staff members or teachers from the same academy as this student can update the '
