@@ -266,6 +266,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
 
         if lookups:
             items = Event.objects.filter(**lookups, academy__id=academy_id, status='DRAFT')
+            draft = list(items.values('slug'))
             for item in items:
                 item.delete()
 
@@ -274,9 +275,15 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
                 not_draft = list(
                     Event.objects.filter(**lookups,
                                          academy__id=academy_id).exclude(status='DRAFT').values('slug'))
-                not_draft = ', '.join(d['slug'] for d in not_draft)
 
-                return Response('The following events are not draft: ' + not_draft, status=status.HTTP_200_OK)
+                not_draft = ', '.join(d['slug'] for d in not_draft)
+                draft = ', '.join(d['slug'] for d in draft)
+                content = {
+                    'deleted': draft,
+                    'not_deleted': not_draft,
+                }
+
+                return Response(content, status=status.HTTP_207_MULTI_STATUS)
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if academy_id is None or event_id is None:
