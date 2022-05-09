@@ -56,8 +56,8 @@ def pull_content_from_github(modeladmin, request, queryset):
     queryset.update(sync_status='PENDING', status_text='Starting to sync...')
     assets = queryset.all()
     for a in assets:
-        #async_pull_from_github.delay(a.slug, request.user.id)
-        pull_from_github(a.slug)  # uncomment for testing purposes
+        async_pull_from_github.delay(a.slug, request.user.id)
+        # pull_from_github(a.slug)  # uncomment for testing purposes
 
 
 def make_me_author(modeladmin, request, queryset):

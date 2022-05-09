@@ -240,7 +240,7 @@ class Asset(models.Model):
             super().save(*args, **kwargs)
 
     def get_readme(self, parse=None, raw=False):
-        print('wewewe', type(self.readme), self.readme)
+
         if self.readme is None or self.readme == '':
             AssetErrorLog(slug=AssetErrorLog.EMPTY_README,
                           path=self.slug,
