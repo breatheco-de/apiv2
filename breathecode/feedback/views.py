@@ -65,10 +65,11 @@ def get_survey_questions(request, survey_id=None):
 
 
 # Create your views here.
-class GetAnswerView(APIView, HeaderLimitOffsetPagination):
+class GetAnswerView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_nps_answers')

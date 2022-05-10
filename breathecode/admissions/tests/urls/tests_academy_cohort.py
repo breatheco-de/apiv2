@@ -1667,8 +1667,8 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                              [call(instance=model1.cohort, sender=model1.cohort.__class__, created=False)])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
-    def test_academy_cohort__spy_extensions(self):
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_academy_cohort__spy_extension_arguments(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
 
@@ -1686,6 +1686,6 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.client.get(url)
 
-        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
-            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(cache=CohortCache, sort='-kickoff_date', paginate=True),
         ])

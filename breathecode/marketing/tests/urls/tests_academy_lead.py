@@ -802,3 +802,19 @@ class CohortUserTestSuite(MarketingTestCase):
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
             call(['PaginationExtension', 'SortExtension']),
         ])
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_academy_lead__spy_extension_arguments(self):
+        """Test /cohort/:id/user without auth"""
+        self.headers(academy=1)
+        url = reverse_lazy('marketing:academy_lead')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_lead',
+                                     role='potato')
+
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(sort='-created_at', paginate=True),
+        ])

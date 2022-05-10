@@ -829,3 +829,31 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
             call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
         ])
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_cohort_me__spy_extension_arguments(self):
+        """Test /cohort without auth"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     cohort=True,
+                                     profile_academy=True,
+                                     capability='read_single_cohort',
+                                     role='potato',
+                                     cohort_user=1,
+                                     syllabus=True,
+                                     syllabus_version=True,
+                                     syllabus_schedule=True)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        url = reverse_lazy(
+            'admissions:academy_cohort_me') + f'?location={model["academy"].slug},they-killed-kenny'
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(cache=CohortCache, cache_per_user=True, sort='-kickoff_date', paginate=True),
+        ])

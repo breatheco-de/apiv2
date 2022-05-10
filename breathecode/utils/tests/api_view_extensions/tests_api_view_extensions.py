@@ -3,7 +3,7 @@ import serpy
 from unittest.mock import MagicMock, call, patch
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIRequestFactory, force_authenticate
 from breathecode.admissions.caches import CohortCache
 from breathecode.admissions.models import Cohort
 from breathecode.utils import APIViewExtensions, ValidationException
@@ -85,6 +85,17 @@ class PaginateFalseTestView(TestView):
     extensions = APIViewExtensions(cache=CohortCache, sort='name', paginate=False)
 
 
+class CachePerUserTestView(TestView):
+    extensions = APIViewExtensions(cache=CohortCache, cache_per_user=True, sort='name', paginate=False)
+
+
+class CachePrefixTestView(TestView):
+    extensions = APIViewExtensions(cache=CohortCache,
+                                   cache_prefix='the-beans-should-not-have-sugar',
+                                   sort='name',
+                                   paginate=False)
+
+
 class ApiViewExtensionsGetTestSuite(UtilsTestCase):
     """
     🔽🔽🔽 Spy the extensions
@@ -106,6 +117,70 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
 
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
             call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+        ])
+
+    """
+    🔽🔽🔽 Spy the extension arguments
+    """
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_cache__get__spy_the_extension_arguments__view1(self):
+        cache.clear()
+
+        # keep before cache handling
+        slug = self.bc.fake.slug()
+        self.bc.database.delete('admissions.Cohort')
+        model = self.bc.database.create(cohort={'slug': slug})
+
+        request = APIRequestFactory()
+        request = request.get(f'/the-beans-should-not-have-sugar/1')
+
+        view = TestView.as_view()
+        view(request).render()
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(cache=CohortCache, sort='name', paginate=True),
+        ])
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_cache__get__spy_the_extension_arguments__view2(self):
+        cache.clear()
+
+        # keep before cache handling
+        slug = self.bc.fake.slug()
+        self.bc.database.delete('admissions.Cohort')
+        model = self.bc.database.create(cohort={'slug': slug})
+
+        request = APIRequestFactory()
+        request = request.get(f'/the-beans-should-not-have-sugar/1')
+
+        view = CachePerUserTestView.as_view()
+        view(request).render()
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(cache=CohortCache, cache_per_user=True, sort='name', paginate=False),
+        ])
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_cache__get__spy_the_extension_arguments__view3(self):
+        cache.clear()
+
+        # keep before cache handling
+        slug = self.bc.fake.slug()
+        self.bc.database.delete('admissions.Cohort')
+        model = self.bc.database.create(cohort={'slug': slug})
+
+        request = APIRequestFactory()
+        request = request.get(f'/the-beans-should-not-have-sugar/1')
+
+        view = CachePrefixTestView.as_view()
+        view(request).render()
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(cache=CohortCache,
+                 cache_prefix='the-beans-should-not-have-sugar',
+                 sort='name',
+                 paginate=False),
         ])
 
     """
@@ -279,6 +354,294 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             self.assertEqual(cohort_cache.keys(), ['Cohort__', f'Cohort__sort=slug&slug={slug}'])
             self.assertEqual(cache.get('Cohort__'), json_data_root)
             self.assertEqual(cache.get(f'Cohort__sort=slug&slug={slug}'), json_data_query)
+
+    """
+    🔽🔽🔽 Cache per user without auth
+    """
+
+    def test_cache_per_user__get__with_cache__passing_arguments(self):
+        cache.clear()
+
+        cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
+        params = [bin(x).replace('0b', '') for x in range(4, 8)]
+        for expected in cases:
+            json_data = json.dumps(expected)
+            cache.set('Cohort__keys', '["Cohort__sort=slug&slug=100%2C101%2C110%2C111&request.user.id=None"]')
+            cache.set('Cohort__sort=slug&slug=100%2C101%2C110%2C111&request.user.id=None', json_data)
+
+            request = APIRequestFactory()
+            request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={",".join(params)}')
+
+            view = CachePerUserTestView.as_view()
+            response = view(request).render()
+
+            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(cohort_cache.keys(),
+                             ['Cohort__sort=slug&slug=100%2C101%2C110%2C111&request.user.id=None'])
+            self.assertEqual(cache.get('Cohort__sort=slug&slug=100%2C101%2C110%2C111&request.user.id=None'),
+                             str(expected).replace('\'', '"'))
+
+    def test_cache_per_user__get__with_cache_but_other_case__passing_arguments(self):
+        cache.clear()
+
+        cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
+        for case in cases:
+            # keep before cache handling
+            slug = self.bc.fake.slug()
+            model = self.bc.database.create(cohort={'slug': slug})
+
+            json_data = json.dumps(case)
+            cache.set('Cohort__', json_data)
+            cache.set('Cohort__keys', '["Cohort__"]')
+
+            request = APIRequestFactory()
+            request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
+
+            view = CachePerUserTestView.as_view()
+            response = view(request).render()
+            expected = GetCohortSerializer([model.cohort], many=True).data
+
+            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(cohort_cache.keys(),
+                             ['Cohort__', f'Cohort__sort=slug&slug={slug}&request.user.id=None'])
+            self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
+            self.assertEqual(cache.get(f'Cohort__sort=slug&slug={slug}&request.user.id=None'),
+                             serialize_cache_value(expected))
+
+    def test_cache_per_user__get__with_cache_case_of_root_and_current__passing_arguments(self):
+        cache.clear()
+
+        cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
+        for case in cases:
+            # keep before cache handling
+            slug = self.bc.fake.slug()
+            self.bc.database.delete('admissions.Cohort')
+            model = self.bc.database.create(cohort={'slug': slug})
+
+            json_data_root = json.dumps(case)
+            json_data_query = json.dumps(case + case)
+            cache.set('Cohort__', json_data_root)
+            cache.set(f'Cohort__sort=slug&slug={slug}&request.user.id=None', json_data_query)
+            cache.set('Cohort__keys', f'["Cohort__", "Cohort__sort=slug&slug={slug}&request.user.id=None"]')
+
+            request = APIRequestFactory()
+            request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
+
+            view = CachePerUserTestView.as_view()
+            response = view(request).render()
+            expected = case + case
+
+            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(cohort_cache.keys(),
+                             ['Cohort__', f'Cohort__sort=slug&slug={slug}&request.user.id=None'])
+            self.assertEqual(cache.get('Cohort__'), json_data_root)
+            self.assertEqual(cache.get(f'Cohort__sort=slug&slug={slug}&request.user.id=None'),
+                             json_data_query)
+
+    """
+    🔽🔽🔽 Cache per user with auth
+    """
+
+    def test_cache_per_user__get__auth__with_cache__passing_arguments(self):
+        cache.clear()
+
+        cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
+        params = [bin(x).replace('0b', '') for x in range(4, 8)]
+        for expected in cases:
+            model = self.bc.database.create(user=1)
+            json_data = json.dumps(expected)
+            cache.set('Cohort__keys',
+                      f'["Cohort__sort=slug&slug=100%2C101%2C110%2C111&request.user.id={model.user.id}"]')
+            cache.set(f'Cohort__sort=slug&slug=100%2C101%2C110%2C111&request.user.id={model.user.id}',
+                      json_data)
+
+            request = APIRequestFactory()
+            request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={",".join(params)}')
+
+            force_authenticate(request, user=model.user)
+            view = CachePerUserTestView.as_view()
+            response = view(request).render()
+
+            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(
+                cohort_cache.keys(),
+                [f'Cohort__sort=slug&slug=100%2C101%2C110%2C111&request.user.id={model.user.id}'])
+            self.assertEqual(
+                cache.get(f'Cohort__sort=slug&slug=100%2C101%2C110%2C111&request.user.id={model.user.id}'),
+                str(expected).replace('\'', '"'))
+
+    def test_cache_per_user__get__auth__with_cache_but_other_case__passing_arguments(self):
+        cache.clear()
+
+        cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
+        for case in cases:
+            # keep before cache handling
+            slug = self.bc.fake.slug()
+            model = self.bc.database.create(cohort={'slug': slug}, user=1)
+
+            json_data = json.dumps(case)
+            cache.set('Cohort__', json_data)
+            cache.set('Cohort__keys', '["Cohort__"]')
+
+            request = APIRequestFactory()
+            request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
+
+            force_authenticate(request, user=model.user)
+            view = CachePerUserTestView.as_view()
+            response = view(request).render()
+            expected = GetCohortSerializer([model.cohort], many=True).data
+
+            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(cohort_cache.keys(),
+                             ['Cohort__', f'Cohort__sort=slug&slug={slug}&request.user.id={model.user.id}'])
+            self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
+            self.assertEqual(cache.get(f'Cohort__sort=slug&slug={slug}&request.user.id={model.user.id}'),
+                             serialize_cache_value(expected))
+
+    def test_cache_per_user__get__auth__with_cache_case_of_root_and_current__passing_arguments(self):
+        cache.clear()
+
+        cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
+        for case in cases:
+            # keep before cache handling
+            slug = self.bc.fake.slug()
+            self.bc.database.delete('admissions.Cohort')
+            model = self.bc.database.create(cohort={'slug': slug}, user=1)
+
+            json_data_root = json.dumps(case)
+            json_data_query = json.dumps(case + case)
+            cache.set('Cohort__', json_data_root)
+            cache.set(f'Cohort__sort=slug&slug={slug}&request.user.id={model.user.id}', json_data_query)
+            cache.set('Cohort__keys',
+                      f'["Cohort__", "Cohort__sort=slug&slug={slug}&request.user.id={model.user.id}"]')
+
+            request = APIRequestFactory()
+            request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
+
+            force_authenticate(request, user=model.user)
+            view = CachePerUserTestView.as_view()
+            response = view(request).render()
+            expected = case + case
+
+            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(cohort_cache.keys(),
+                             ['Cohort__', f'Cohort__sort=slug&slug={slug}&request.user.id={model.user.id}'])
+            self.assertEqual(cache.get('Cohort__'), json_data_root)
+            self.assertEqual(cache.get(f'Cohort__sort=slug&slug={slug}&request.user.id={model.user.id}'),
+                             json_data_query)
+
+    """
+    🔽🔽🔽 Cache with prefix
+    """
+
+    def test_cache_with_prefix__get__with_cache__passing_arguments(self):
+        cache.clear()
+
+        cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
+        params = [bin(x).replace('0b', '') for x in range(4, 8)]
+        for expected in cases:
+            json_data = json.dumps(expected)
+            cache.set(
+                'Cohort__keys',
+                '["Cohort__sort=slug&slug=100%2C101%2C110%2C111&breathecode.view.get=the-beans-should-not-have-sugar"]'
+            )
+            cache.set(
+                'Cohort__sort=slug&slug=100%2C101%2C110%2C111&breathecode.view.get=the-beans-should-not-have-sugar',
+                json_data)
+
+            request = APIRequestFactory()
+            request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={",".join(params)}')
+
+            view = CachePrefixTestView.as_view()
+            response = view(request).render()
+
+            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(cohort_cache.keys(), [
+                'Cohort__sort=slug&slug=100%2C101%2C110%2C111&breathecode.view.get=the-beans-should-not-have-sugar'
+            ])
+            self.assertEqual(
+                cache.get(
+                    'Cohort__sort=slug&slug=100%2C101%2C110%2C111&breathecode.view.get=the-beans-should-not-have-sugar'
+                ),
+                str(expected).replace('\'', '"'))
+
+    def test_cache_with_prefix__get__with_cache_but_other_case__passing_arguments(self):
+        cache.clear()
+
+        cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
+        for case in cases:
+            # keep before cache handling
+            slug = self.bc.fake.slug()
+            model = self.bc.database.create(cohort={'slug': slug})
+
+            json_data = json.dumps(case)
+            cache.set('Cohort__', json_data)
+            cache.set('Cohort__keys', '["Cohort__"]')
+
+            request = APIRequestFactory()
+            request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
+
+            view = CachePrefixTestView.as_view()
+            response = view(request).render()
+            expected = GetCohortSerializer([model.cohort], many=True).data
+
+            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(cohort_cache.keys(), [
+                'Cohort__',
+                f'Cohort__sort=slug&slug={slug}&breathecode.view.get=the-beans-should-not-have-sugar'
+            ])
+            self.assertEqual(cache.get('Cohort__'), serialize_cache_value(case))
+            self.assertEqual(
+                cache.get(
+                    f'Cohort__sort=slug&slug={slug}&breathecode.view.get=the-beans-should-not-have-sugar'),
+                serialize_cache_value(expected))
+
+    def test_cache_with_prefix__get__with_cache_case_of_root_and_current__passing_arguments(self):
+        cache.clear()
+
+        cases = [[], [{'x': 1}], [{'x': 1}, {'x': 2}]]
+        for case in cases:
+            # keep before cache handling
+            slug = self.bc.fake.slug()
+            self.bc.database.delete('admissions.Cohort')
+            model = self.bc.database.create(cohort={'slug': slug})
+
+            json_data_root = json.dumps(case)
+            json_data_query = json.dumps(case + case)
+            cache.set('Cohort__', json_data_root)
+            cache.set(f'Cohort__sort=slug&slug={slug}&breathecode.view.get=the-beans-should-not-have-sugar',
+                      json_data_query)
+            cache.set(
+                'Cohort__keys',
+                f'["Cohort__", "Cohort__sort=slug&slug={slug}&breathecode.view.get=the-beans-should-not-have-sugar"]'
+            )
+
+            request = APIRequestFactory()
+            request = request.get(f'/the-beans-should-not-have-sugar?sort=slug&slug={slug}')
+
+            view = CachePrefixTestView.as_view()
+            response = view(request).render()
+            expected = case + case
+
+            self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(cohort_cache.keys(), [
+                'Cohort__',
+                f'Cohort__sort=slug&slug={slug}&breathecode.view.get=the-beans-should-not-have-sugar'
+            ])
+            self.assertEqual(cache.get('Cohort__'), json_data_root)
+            self.assertEqual(
+                cache.get(
+                    f'Cohort__sort=slug&slug={slug}&breathecode.view.get=the-beans-should-not-have-sugar'),
+                json_data_query)
 
     """
     🔽🔽🔽 Sort

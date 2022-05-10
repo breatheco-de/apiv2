@@ -206,3 +206,20 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
             call(['PaginationExtension']),
         ])
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_syllabus__spy_extension_arguments(self):
+        """Test /certificate without auth"""
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     syllabus_schedule=True,
+                                     profile_academy=True,
+                                     capability='read_syllabus',
+                                     role='potato')
+
+        url = reverse_lazy('admissions:syllabus')
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(paginate=True),
+        ])

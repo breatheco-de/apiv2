@@ -31,7 +31,7 @@ def media_gallery_bucket():
     return os.getenv('MEDIA_GALLERY_BUCKET')
 
 
-class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class MediaView(ViewSet, GenerateLookupsMixin):
     """
     get:
         Return a list of Media.
@@ -256,7 +256,7 @@ class MediaView(ViewSet, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class CategoryView(ViewSet, HeaderLimitOffsetPagination):
+class CategoryView(ViewSet):
     """
     get:
         Get a Category.

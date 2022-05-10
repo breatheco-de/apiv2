@@ -256,3 +256,15 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
             call(['PaginationExtension']),
         ])
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_certificate__spy_extension_arguments(self):
+        """Test /certificate without auth"""
+
+        url = reverse_lazy('admissions:schedule')
+        self.bc.database.create(authenticate=True)
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(paginate=True),
+        ])

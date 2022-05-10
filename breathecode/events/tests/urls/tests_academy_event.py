@@ -1184,3 +1184,21 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
             call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
         ])
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_all_academy_events__spy_extension_arguments(self):
+        self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_event',
+                                     role='potato',
+                                     syllabus=True,
+                                     venue=True,
+                                     event=True)
+
+        url = reverse_lazy('events:academy_event') + '?city=patata'
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(cache=EventCache, sort='-starting_at', paginate=True),
+        ])

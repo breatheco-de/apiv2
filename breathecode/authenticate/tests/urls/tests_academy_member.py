@@ -1302,6 +1302,23 @@ class MemberGetTestSuite(AuthTestCase):
             call(['PaginationExtension']),
         ])
 
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_academy_member__spy_extension_arguments(self):
+        """Test /academy/member"""
+
+        self.bc.request.set_headers(academy=1)
+        role = 'hitman'
+        model = self.bc.database.create(authenticate=True,
+                                        role=role,
+                                        capability='read_member',
+                                        profile_academy=True)
+        url = reverse_lazy('authenticate:academy_member')
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(paginate=True),
+        ])
+
 
 class MemberPostTestSuite(AuthTestCase):
     """Authentication test suite"""

@@ -37,6 +37,7 @@ class APIViewExtensionHandlers:
         for extension in valid_extensions:
             instance = extension(**kwargs)
             instance._set_request(request)
+            instance._optional_dependencies(**kwargs)
             self._instances.add(instance)
 
             if name := instance._instance_name():
@@ -44,6 +45,7 @@ class APIViewExtensionHandlers:
 
         if is_test_env:
             self._register_valid_extensions()
+            self._spy_extension_arguments(**kwargs)
 
     def queryset(self, queryset: QuerySet[Any]) -> QuerySet[Any]:
         """Apply mutations over queryset"""
@@ -81,5 +83,11 @@ class APIViewExtensionHandlers:
     def _spy_extensions(self, _: list[str]) -> None:
         """
         That is used for spy the extensions is being used.
+        """
+        ...
+
+    def _spy_extension_arguments(self, **kwargs) -> None:
+        """
+        That is used for spy the extension arguments is being used.
         """
         ...

@@ -687,6 +687,23 @@ class StudentGetTestSuite(AuthTestCase):
             call(['PaginationExtension']),
         ])
 
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_academy_student__spy_extension_arguments(self):
+        """Test /academy/student"""
+        self.headers(academy=1)
+        role = 'konan'
+        model = self.bc.database.create(authenticate=True,
+                                        role=role,
+                                        capability='read_student',
+                                        profile_academy=True)
+
+        url = reverse_lazy('authenticate:academy_student')
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(paginate=True),
+        ])
+
 
 class StudentPostTestSuite(AuthTestCase):
     @patch('breathecode.notify.actions.send_email_message', MagicMock())

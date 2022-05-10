@@ -683,11 +683,15 @@ class AcademySyllabusScheduleTimeSlotView(APIView, GenerateLookupsMixin):
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class CohortMeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class CohortMeView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
-    extensions = APIViewExtensions(cache=CohortCache, sort='-kickoff_date', paginate=True)
+
+    extensions = APIViewExtensions(cache=CohortCache,
+                                   cache_per_user=True,
+                                   sort='-kickoff_date',
+                                   paginate=True)
 
     @capable_of('read_single_cohort')
     def get(self, request, cohort_id=None, academy_id=None):
@@ -737,7 +741,7 @@ class CohortMeView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         return handler.response(serializer.data)
 
 
-class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class AcademyCohortView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
@@ -925,7 +929,7 @@ class AcademyCohortView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
-class SyllabusScheduleView(APIView, HeaderLimitOffsetPagination):
+class SyllabusScheduleView(APIView):
     extensions = APIViewExtensions(paginate=True)
 
     def get(self, request):
@@ -1050,7 +1054,7 @@ def get_schedule(request, schedule_id):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class SyllabusView(APIView, HeaderLimitOffsetPagination):
+class SyllabusView(APIView):
     """
     List all snippets, or create a new snippet.
     """

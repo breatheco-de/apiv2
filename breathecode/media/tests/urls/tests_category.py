@@ -169,3 +169,22 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
             call(['PaginationExtension']),
         ])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_category__spy_extension_arguments(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        models = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      capability='read_media',
+                                      role='potato')
+
+        url = reverse_lazy('media:category')
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(paginate=True),
+        ])

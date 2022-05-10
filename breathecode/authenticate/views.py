@@ -133,7 +133,7 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class MemberView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(paginate=True)
 
     @capable_of('read_member')
@@ -425,7 +425,7 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         return Response(serializer.data)
 
 
-class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class StudentView(APIView, GenerateLookupsMixin):
     extensions = APIViewExtensions(paginate=True)
 
     @capable_of('read_student')

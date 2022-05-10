@@ -131,7 +131,7 @@ class EventView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class AcademyEventView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
@@ -287,7 +287,7 @@ class EventTypeView(APIView):
         return Response(serializer.data)
 
 
-class EventCheckinView(APIView, HeaderLimitOffsetPagination):
+class EventCheckinView(APIView):
     """
     List all snippets, or create a new snippet.
     """

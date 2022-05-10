@@ -484,14 +484,15 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
             return Response(serializer.data, status=200)
 
 
-class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class AcademyLeadView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
     extensions = APIViewExtensions(sort='-created_at', paginate=True)
 
     @capable_of('read_lead')
-    def get(self, request, format=None, academy_id=None):
+    def get(self, request, academy_id=None):
         handler = self.extensions(request)
 
         academy = Academy.objects.get(id=academy_id)
