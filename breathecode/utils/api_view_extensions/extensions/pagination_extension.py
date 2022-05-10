@@ -36,18 +36,19 @@ class PaginationExtension(ExtensionBase):
     _count: int
     _offset: int
     _use_envelope: bool
+    _paginate: bool
 
     def __init__(self, paginate: bool, **kwargs) -> None:
-        ...
+        self._paginate = paginate
 
     def _can_modify_queryset(self) -> bool:
-        return True
+        return self._paginate
 
     def _get_order_of_mutator(self) -> int:
         return MutatorOrder.PAGINATION
 
     def _can_modify_response(self) -> bool:
-        return self._is_paginate()
+        return self._paginate and self._is_paginate()
 
     def _get_order_of_response(self) -> int:
         return int(ResponseOrder.PAGINATION) if self._is_paginate() else -1

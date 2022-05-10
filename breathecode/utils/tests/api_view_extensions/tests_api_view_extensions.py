@@ -81,6 +81,10 @@ class TestView(APIView):
         return handler.response(serializer.data)
 
 
+class PaginateFalseTestView(TestView):
+    extensions = APIViewExtensions(cache=CohortCache, sort='name', paginate=False)
+
+
 class ApiViewExtensionsGetTestSuite(UtilsTestCase):
     """
     🔽🔽🔽 Spy the extensions
@@ -297,10 +301,10 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     """
-    🔽🔽🔽 Pagination
+    🔽🔽🔽 Pagination True
     """
 
-    def test_pagination__get__105_cohorts_just_get_100(self):
+    def test_pagination__get__activate__105_cohorts_just_get_100(self):
         cache.clear()
 
         model = self.bc.database.create(cohort=105)
@@ -316,7 +320,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_pagination__get__with_10_cohorts__get_first_five(self):
+    def test_pagination__get__activate__with_10_cohorts__get_first_five(self):
         cache.clear()
 
         model = self.bc.database.create(cohort=10)
@@ -339,7 +343,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_pagination__get__with_10_cohorts__get_last_five(self):
+    def test_pagination__get__activate__with_10_cohorts__get_last_five(self):
         cache.clear()
 
         model = self.bc.database.create(cohort=10)
@@ -362,7 +366,7 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_pagination__get__with_10_cohorts__after_last_five(self):
+    def test_pagination__get__activate__with_10_cohorts__after_last_five(self):
         cache.clear()
 
         model = self.bc.database.create(cohort=10)
@@ -381,6 +385,74 @@ class ApiViewExtensionsGetTestSuite(UtilsTestCase):
             'previous': 'http://testserver/the-beans-should-not-have-sugar?limit=5&offset=5',
             'results': [],
         }
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    """
+    🔽🔽🔽 Pagination False
+    """
+
+    def test_pagination__get__deactivate__105_cohorts_just_get_100(self):
+        cache.clear()
+
+        model = self.bc.database.create(cohort=105)
+
+        request = APIRequestFactory()
+        request = request.get('/the-beans-should-not-have-sugar')
+
+        view = PaginateFalseTestView.as_view()
+
+        response = view(request).render()
+        expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name), many=True).data
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_pagination__get__deactivate__with_10_cohorts__get_first_five(self):
+        cache.clear()
+
+        model = self.bc.database.create(cohort=10)
+
+        request = APIRequestFactory()
+        request = request.get('/the-beans-should-not-have-sugar?limit=5&offset=0')
+
+        view = PaginateFalseTestView.as_view()
+
+        response = view(request).render()
+        expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name), many=True).data
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_pagination__get__deactivate__with_10_cohorts__get_last_five(self):
+        cache.clear()
+
+        model = self.bc.database.create(cohort=10)
+
+        request = APIRequestFactory()
+        request = request.get('/the-beans-should-not-have-sugar?limit=5&offset=5')
+
+        view = PaginateFalseTestView.as_view()
+
+        response = view(request).render()
+        expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name), many=True).data
+
+        self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_pagination__get__deactivate__with_10_cohorts__after_last_five(self):
+        cache.clear()
+
+        model = self.bc.database.create(cohort=10)
+
+        request = APIRequestFactory()
+        request = request.get('/the-beans-should-not-have-sugar?limit=5&offset=10')
+
+        view = PaginateFalseTestView.as_view()
+
+        response = view(request).render()
+        expected = GetCohortSerializer(sorted(model.cohort, key=lambda x: x.name), many=True).data
 
         self.assertEqual(json.loads(response.content.decode('utf-8')), expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
