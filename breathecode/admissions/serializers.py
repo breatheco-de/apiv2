@@ -474,11 +474,21 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
     def validate(self, data):
 
+        kickoff_date = (data['kickoff_date'] if 'kickoff_date' in data else
+                        None) or (self.instance.kickoff_date if self.instance else None)
+
+        ending_date = (data['ending_date'] if 'ending_date' in data else None) or (self.instance.ending_date
+                                                                                   if self.instance else None)
+
+        if kickoff_date and ending_date and kickoff_date > ending_date:
+            raise ValidationException('kickoff_date cannot be greather than ending_date',
+                                      slug='kickoff-date-greather-than-ending-date')
+
         if 'stage' in data:
             possible_stages = [stage_slug for stage_slug, stage_label in COHORT_STAGE]
             if data['stage'] not in possible_stages:
-                raise ValidationException(
-                    f"Invalid cohort stage {data['stage']}', slug='invalid-cohort-stage")
+                raise ValidationException(f"Invalid cohort stage {data['stage']}",
+                                          slug='invalid-cohort-stage')
 
         if 'syllabus' in data:
             strings = data['syllabus'].split('.v')
