@@ -157,6 +157,7 @@ class SyllabusVersionSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     version = serpy.Field()
+    status = serpy.Field()
     slug = serpy.MethodField()
     name = serpy.MethodField()
     syllabus = serpy.MethodField()
@@ -199,6 +200,8 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
     """The serializer schema definition."""
     json = serpy.Field()
     version = serpy.Field()
+    status = serpy.Field()
+    change_log_details = serpy.Field()
     updated_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -846,7 +849,7 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusVersion
-        fields = ['json', 'version', 'syllabus']
+        fields = ['json', 'version', 'syllabus', 'status', 'change_log_details']
         exclude = ()
         extra_kwargs = {
             'syllabus': {
