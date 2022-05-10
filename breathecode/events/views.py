@@ -260,10 +260,17 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
     def delete(self, request, academy_id=None, event_id=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
+        if not lookups and not event_id:
+            raise ValidationException('provide arguments in the url',
+                                      code=400,
+                                      slug='without-lookups-and-event-id')
+
         if lookups and event_id:
             raise ValidationException(
                 'event_id in url '
-                'in bulk mode request, use querystring style instead', code=400)
+                'in bulk mode request, use querystring style instead',
+                code=400,
+                slug='lookups-and-event-id-together')
 
         if lookups:
             items = Event.objects.filter(**lookups, academy__id=academy_id, status='DRAFT')
@@ -287,18 +294,15 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
-        if academy_id is None or event_id is None:
-            raise ValidationException('Missing event_id or academy_id', code=400)
-
         event = Event.objects.filter(academy__id=academy_id, id=event_id).first()
         if event is None:
-            raise ValidationException('Event doest not exist or does not belong to this academy')
+            raise ValidationException('Event doest not exist or does not belong to this academy',
+                                      slug='not-found')
 
         if event.status != 'DRAFT':
-            raise ValidationException('Only draft events can be deleted')
+            raise ValidationException('Only draft events can be deleted', slug='non-draft-event')
 
         event.delete()
-        self.cache.clear()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
