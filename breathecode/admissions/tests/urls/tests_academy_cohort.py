@@ -1667,6 +1667,30 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                              [call(instance=model1.cohort, sender=model1.cohort.__class__, created=False)])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_academy_cohort__spy_extensions(self):
+        """Test /cohort without auth"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        url = reverse_lazy('admissions:academy_cohort')
+        model = self.bc.database.create(authenticate=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        skip_cohort=True)
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
+        ])
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
     @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
     def test_academy_cohort__spy_extension_arguments(self):
         """Test /cohort without auth"""
