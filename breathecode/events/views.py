@@ -33,7 +33,7 @@ from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
 from breathecode.utils import ValidationException
-from breathecode.utils import Response207
+from breathecode.utils import response_207
 from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 import breathecode.events.receivers
 
@@ -284,7 +284,7 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
                     'resources': [d['slug']]
                 } for d in not_draft]
 
-                return Response207(success=draft, failure=not_draft)
+                return response_207(success=draft, success_key='slug', failure=not_draft, failure_key='slug')
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
