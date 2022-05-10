@@ -273,18 +273,17 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
 
             self.cache.clear()
             if (len(lookups['id__in']) != len(items)):
-                not_draft = list(
-                    Event.objects.filter(**lookups,
-                                         academy__id=academy_id).exclude(status='DRAFT').values('slug'))
+                not_draft = Event.objects.filter(**lookups, academy__id=academy_id).exclude(status='DRAFT')
 
-                draft = [d['slug'] for d in draft]
-                not_draft = [{
-                    'detail': 'Event status was not DRAFT',
-                    'status_code': 400,
-                    'resources': [d['slug']]
-                } for d in not_draft]
+                status_code = 400
+                detail = 'Event is not of type draft'
 
-                return response_207(success=draft, success_key='slug', failure=not_draft, failure_key='slug')
+                return response_207(success=draft,
+                                    success_key='slug',
+                                    failure=not_draft,
+                                    failure_key='slug',
+                                    status_code=status_code,
+                                    detail=detail)
 
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
