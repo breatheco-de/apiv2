@@ -12,6 +12,7 @@ import re
 import pytz
 
 from django.http.response import HttpResponse
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from breathecode.utils.cache import Cache
 from django.shortcuts import render
 from django.utils import timezone
@@ -134,29 +135,14 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
     """
     List all snippets, or create a new snippet.
     """
-    cache = EventCache()
+    extensions = APIViewExtensions(cache=EventCache, sort='-starting_at', paginate=True)
 
     @capable_of('read_event')
-    def get(self, request, format=None, academy_id=None, event_id=None):
-        city = self.request.GET.get('city')
-        country = self.request.GET.get('country')
-        zip_code = self.request.GET.get('zip_code')
-        upcoming = self.request.GET.get('upcoming')
-        past = self.request.GET.get('past')
+    def get(self, request, academy_id=None, event_id=None):
+        handler = self.extensions(request)
 
-        cache_kwargs = {
-            'academy_id': academy_id,
-            'event_id': event_id,
-            'city': city,
-            'country': country,
-            'zip_code': zip_code,
-            'upcoming': upcoming,
-            'past': past,
-            **self.pagination_params(request),
-        }
-
-        cache = self.cache.get(**cache_kwargs)
-        if cache:
+        cache = handler.cache.get()
+        if cache is not None:
             return Response(cache, status=status.HTTP_200_OK)
 
         if event_id is not None:
@@ -165,20 +151,25 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
                 raise ValidationException('Event not found', 404)
 
             serializer = EventSmallSerializer(single_event, many=False)
-            self.cache.set(serializer.data, **cache_kwargs)
-            return Response(serializer.data)
+            return handler.response(serializer.data)
 
         items = Event.objects.filter(academy__id=academy_id)
         lookup = {}
 
+        city = self.request.GET.get('city')
         if city:
             lookup['venue__city__iexact'] = city
 
+        country = self.request.GET.get('country')
         if country:
             lookup['venue__country__iexact'] = country
 
+        zip_code = self.request.GET.get('zip_code')
         if zip_code:
             lookup['venue__zip_code'] = zip_code
+
+        upcoming = self.request.GET.get('upcoming')
+        past = self.request.GET.get('past')
 
         if upcoming:
             lookup['starting_at__gte'] = timezone.now()
@@ -188,16 +179,11 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
             if past == 'true':
                 lookup['starting_at__lte'] = timezone.now()
 
-        items = items.filter(**lookup).order_by('-starting_at')
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+        serializer = EventSmallSerializerNoAcademy(items, many=True)
 
-        page = self.paginate_queryset(items, request)
-        serializer = EventSmallSerializerNoAcademy(page, many=True)
-
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data, cache=self.cache, cache_kwargs=cache_kwargs)
-        else:
-            self.cache.set(serializer.data, **cache_kwargs)
-            return Response(serializer.data, status=200)
+        return handler.response(serializer.data)
 
     @capable_of('crud_event')
     def post(self, request, format=None, academy_id=None):
@@ -222,7 +208,6 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
 
         serializer = EventSerializer(data={**data, 'academy': academy.id}, context={'academy_id': academy_id})
         if serializer.is_valid():
-            self.cache.clear()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -250,7 +235,6 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
 
         serializer = EventSerializer(already, data=data, context={'academy_id': academy_id})
         if serializer.is_valid():
-            self.cache.clear()
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -269,7 +253,6 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
             for item in items:
                 item.delete()
 
-            self.cache.clear()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if academy_id is None or event_id is None:
@@ -283,7 +266,6 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
             raise ValidationException('Only draft events can be deleted')
 
         event.delete()
-        self.cache.clear()
         return Response(None, status=status.HTTP_204_NO_CONTENT)
 
 
@@ -309,8 +291,12 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
     """
     List all snippets, or create a new snippet.
     """
+
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
     @capable_of('read_eventcheckin')
     def get(self, request, format=None, academy_id=None):
+        handler = self.extensions(request)
 
         items = EventCheckin.objects.filter(event__academy__id=academy_id)
         lookup = {}
@@ -340,15 +326,11 @@ class EventCheckinView(APIView, HeaderLimitOffsetPagination):
             end_date = datetime.strptime(end, '%Y-%m-%d').date()
             items = items.filter(created_at__lte=end_date)
 
-        items = items.filter(**lookup).order_by('-created_at')
+        items = items.filter(**lookup)
+        items = handler.queryset(items)
+        serializer = EventCheckinSerializer(items, many=True)
 
-        page = self.paginate_queryset(items, request)
-        serializer = EventCheckinSerializer(page, many=True)
-
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=200)
+        return handler.response(serializer.data)
 
 
 @api_view(['POST'])
