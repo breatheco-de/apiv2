@@ -33,6 +33,7 @@ from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
 from breathecode.utils import ValidationException
+from breathecode.utils import response_207
 from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 import breathecode.events.receivers
 
@@ -266,10 +267,24 @@ class AcademyEventView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixi
 
         if lookups:
             items = Event.objects.filter(**lookups, academy__id=academy_id, status='DRAFT')
+            draft = list(items.values('slug'))
             for item in items:
                 item.delete()
 
             self.cache.clear()
+            if (len(lookups['id__in']) != len(items)):
+                not_draft = Event.objects.filter(**lookups, academy__id=academy_id).exclude(status='DRAFT')
+
+                status_code = 400
+                detail = 'Event is not of type draft'
+
+                return response_207(success=draft,
+                                    success_key='slug',
+                                    failure=not_draft,
+                                    failure_key='slug',
+                                    status_code=status_code,
+                                    detail=detail)
+
             return Response(None, status=status.HTTP_204_NO_CONTENT)
 
         if academy_id is None or event_id is None:
