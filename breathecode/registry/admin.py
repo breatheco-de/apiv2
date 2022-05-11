@@ -56,8 +56,8 @@ def pull_content_from_github(modeladmin, request, queryset):
     queryset.update(sync_status='PENDING', status_text='Starting to sync...')
     assets = queryset.all()
     for a in assets:
-        #async_pull_from_github.delay(a.slug, request.user.id)
-        pull_from_github(a.slug)  # uncomment for testing purposes
+        async_pull_from_github.delay(a.slug, request.user.id)
+        # pull_from_github(a.slug)  # uncomment for testing purposes
 
 
 def make_me_author(modeladmin, request, queryset):
@@ -213,6 +213,13 @@ class AssetAdmin(admin.ModelAdmin):
         generate_spanish_translation,
         remove_dot_from_slug,
     ] + change_field(['DRAFT', 'UNNASIGNED', 'OK'], name='status') + change_field(['us', 'es'], name='lang')
+
+    def get_form(self, request, obj=None, **kwargs):
+
+        if obj is not None and 'ipynb' in obj.url and len(obj.readme) > 2000:
+            self.exclude = ('readme', 'html')
+        form = super(AssetAdmin, self).get_form(request, obj, **kwargs)
+        return form
 
     def url_path(self, obj):
         return format_html(f"""

@@ -1202,3 +1202,178 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
             call(cache=EventCache, sort='-starting_at', paginate=True),
         ])
+
+    """
+    🔽🔽🔽 DELETE
+    """
+
+    def test_academy_event__delete__without_lookups(self):
+        status = 'DRAFT'
+        self.headers(academy=1)
+
+        event = {'status': status}
+        model = self.generate_models(authenticate=True,
+                                     role=1,
+                                     capability='crud_event',
+                                     profile_academy=1,
+                                     event=(2, event))
+
+        url = reverse_lazy('events:academy_event')
+
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {'detail': 'without-lookups-and-event-id', 'status_code': 400}
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(self.bc.database.list_of('events.Event'), self.bc.format.to_dict(model.event))
+
+    def test_academy_event__delete__can_delete(self):
+        status = 'DRAFT'
+        self.headers(academy=1)
+
+        event = {'status': status}
+        model = self.generate_models(authenticate=True,
+                                     role=1,
+                                     capability='crud_event',
+                                     profile_academy=1,
+                                     event=(2, event))
+
+        url = reverse_lazy('events:academy_event') + f'?id={",".join([str(x.id) for x in model.event])}'
+
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(self.bc.database.list_of('events.Event'), [])
+
+    def test_academy_event__delete__bad_status(self):
+        statuses = ['ACTIVE', 'DELETED']
+        for status in statuses:
+
+            event = {'status': status}
+            model = self.generate_models(user=1,
+                                         role=1,
+                                         capability='crud_event',
+                                         profile_academy=1,
+                                         event=(2, event))
+
+            self.bc.request.set_headers(academy=model.academy.id)
+            self.bc.request.authenticate(model.user)
+
+            url = reverse_lazy('events:academy_event') + f'?id={",".join([str(x.id) for x in model.event])}'
+
+            response = self.client.delete(url)
+            json = response.json()
+            expected = {
+                'failure': [{
+                    'detail':
+                    'non-draft-event',
+                    'resources': [{
+                        'display_field': 'slug',
+                        'display_value': model.event[0].slug,
+                        'pk': model.event[0].id,
+                    }, {
+                        'display_field': 'slug',
+                        'display_value': model.event[1].slug,
+                        'pk': model.event[1].id,
+                    }],
+                    'status_code':
+                    400,
+                }],
+                'success': []
+            }
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, 207)
+            self.assertEqual(self.bc.database.list_of('events.Event'), self.bc.format.to_dict(model.event))
+
+            self.bc.database.delete('events.Event')
+
+    def test_academy_event__delete__all_errors_and_success_cases(self):
+        bad_statuses = ['ACTIVE', 'DELETED']
+
+        events_with_bad_statuses = [{
+            'status': status,
+            'slug': self.bc.fake.slug(),
+        } for status in bad_statuses]
+        events_from_other_academy = [{
+            'status': 'DRAFT',
+            'academy_id': 2,
+            'slug': None,
+        }, {
+            'status': 'DRAFT',
+            'academy_id': 2,
+            'slug': None,
+        }]
+        right_events = [{
+            'status': 'DRAFT',
+            'academy_id': 1,
+            'slug': self.bc.fake.slug(),
+        }, {
+            'status': 'DRAFT',
+            'academy_id': 1,
+            'slug': self.bc.fake.slug(),
+        }]
+        events = events_with_bad_statuses + events_from_other_academy + right_events
+        model = self.generate_models(user=1,
+                                     role=1,
+                                     academy=2,
+                                     capability='crud_event',
+                                     profile_academy=1,
+                                     event=events)
+
+        self.bc.request.set_headers(academy=1)
+        self.bc.request.authenticate(model.user)
+
+        url = reverse_lazy('events:academy_event') + f'?id={",".join([str(x.id) for x in model.event])}'
+
+        response = self.client.delete(url)
+        json = response.json()
+        expected = {
+            'success': [{
+                'status_code':
+                204,
+                'resources': [{
+                    'pk': model.event[4].id,
+                    'display_field': 'slug',
+                    'display_value': model.event[4].slug,
+                }, {
+                    'pk': model.event[5].id,
+                    'display_field': 'slug',
+                    'display_value': model.event[5].slug,
+                }],
+            }],
+            'failure': [{
+                'detail':
+                'not-found',
+                'status_code':
+                400,
+                'resources': [{
+                    'pk': model.event[2].id,
+                    'display_field': 'slug',
+                    'display_value': model.event[2].slug,
+                }, {
+                    'pk': model.event[3].id,
+                    'display_field': 'slug',
+                    'display_value': model.event[3].slug,
+                }],
+            }, {
+                'detail':
+                'non-draft-event',
+                'status_code':
+                400,
+                'resources': [{
+                    'pk': model.event[0].id,
+                    'display_field': 'slug',
+                    'display_value': model.event[0].slug,
+                }, {
+                    'pk': model.event[1].id,
+                    'display_field': 'slug',
+                    'display_value': model.event[1].slug,
+                }],
+            }]
+        }
+
+        self.assertEqual(json, expected)
+        self.assertEqual(response.status_code, 207)
+        self.assertEqual(self.bc.database.list_of('events.Event'), self.bc.format.to_dict(model.event[:4]))

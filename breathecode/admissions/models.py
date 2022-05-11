@@ -153,11 +153,21 @@ class Syllabus(models.Model):
         return self.slug if self.slug else 'unknown'
 
 
+PUBLISHED = 'PUBLISHED'
+DRAFT = 'DRAFT'
+VERSION_STATUS = (
+    (PUBLISHED, 'Published'),
+    (DRAFT, 'Draft'),
+)
+
+
 class SyllabusVersion(models.Model):
     json = models.JSONField()
 
     version = models.PositiveSmallIntegerField()
     syllabus = models.ForeignKey(Syllabus, on_delete=models.CASCADE)
+    status = models.CharField(max_length=15, choices=VERSION_STATUS, default=PUBLISHED)
+    change_log_details = models.TextField(max_length=450, blank=True, null=True, default=None)
 
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True, editable=False)

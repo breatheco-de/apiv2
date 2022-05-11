@@ -18,6 +18,8 @@ from django.shortcuts import render
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+
+from breathecode.utils.multi_status_response import MultiStatusResponse
 from .models import Event, EventType, EventCheckin, Organization, Venue, EventbriteWebhook, Organizer
 from breathecode.admissions.models import Academy, Cohort, CohortTimeSlot, CohortUser
 from rest_framework.decorators import api_view, permission_classes
@@ -34,6 +36,7 @@ from breathecode.renderers import PlainTextRenderer
 from breathecode.services.eventbrite import Eventbrite
 from .tasks import async_eventbrite_webhook
 from breathecode.utils import ValidationException
+from breathecode.utils import response_207
 from icalendar import Calendar as iCalendar, Event as iEvent, vCalAddress, vText
 import breathecode.events.receivers
 
@@ -243,27 +246,57 @@ class AcademyEventView(APIView, GenerateLookupsMixin):
     def delete(self, request, academy_id=None, event_id=None):
         lookups = self.generate_lookups(request, many_fields=['id'])
 
+        if not lookups and not event_id:
+            raise ValidationException('provide arguments in the url',
+                                      code=400,
+                                      slug='without-lookups-and-event-id')
+
         if lookups and event_id:
             raise ValidationException(
                 'event_id in url '
-                'in bulk mode request, use querystring style instead', code=400)
+                'in bulk mode request, use querystring style instead',
+                code=400,
+                slug='lookups-and-event-id-together')
 
         if lookups:
-            items = Event.objects.filter(**lookups, academy__id=academy_id, status='DRAFT')
-            for item in items:
-                item.delete()
+            alls = Event.objects.filter(**lookups)
+            valids = alls.filter(academy__id=academy_id, status='DRAFT')
+            from_other_academy = alls.exclude(academy__id=academy_id)
+            not_draft = alls.exclude(status='DRAFT')
 
+            responses = []
+            if valids:
+                responses.append(MultiStatusResponse(code=204, queryset=valids))
+
+            if from_other_academy:
+                responses.append(
+                    MultiStatusResponse('Event doest not exist or does not belong to this academy',
+                                        code=400,
+                                        slug='not-found',
+                                        queryset=from_other_academy))
+
+            if not_draft:
+                responses.append(
+                    MultiStatusResponse('Only draft events can be deleted',
+                                        code=400,
+                                        slug='non-draft-event',
+                                        queryset=not_draft))
+
+            if from_other_academy or not_draft:
+                response = response_207(responses, 'slug')
+                valids.delete()
+                return response
+
+            valids.delete()
             return Response(None, status=status.HTTP_204_NO_CONTENT)
-
-        if academy_id is None or event_id is None:
-            raise ValidationException('Missing event_id or academy_id', code=400)
 
         event = Event.objects.filter(academy__id=academy_id, id=event_id).first()
         if event is None:
-            raise ValidationException('Event doest not exist or does not belong to this academy')
+            raise ValidationException('Event doest not exist or does not belong to this academy',
+                                      slug='not-found')
 
         if event.status != 'DRAFT':
-            raise ValidationException('Only draft events can be deleted')
+            raise ValidationException('Only draft events can be deleted', slug='non-draft-event')
 
         event.delete()
         return Response(None, status=status.HTTP_204_NO_CONTENT)

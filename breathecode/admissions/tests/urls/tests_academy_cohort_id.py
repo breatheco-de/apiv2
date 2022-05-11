@@ -1,6 +1,7 @@
 """
 Test /cohort
 """
+from datetime import timedelta
 from django.utils import timezone
 from breathecode.admissions.caches import CohortCache
 from unittest.mock import MagicMock, call, patch
@@ -184,6 +185,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': True,
+            'remote_available': True,
             'private': False,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -221,6 +223,55 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
         self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
         self.assertEqual(cohort_saved.send.call_args_list,
                          [call(instance=model.cohort, sender=model.cohort.__class__, created=False)])
+
+    """
+    🔽🔽🔽 Put with date, kickoff_date greater than ending_date
+    """
+
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    def test_cohort_id__put__kickoff_date_greater_than_ending_date(self):
+        """Test /cohort/:id without auth"""
+        from breathecode.admissions.signals import cohort_saved
+
+        self.headers(academy=1)
+        url = reverse_lazy('admissions:academy_cohort_id', kwargs={'cohort_id': 1})
+        utc_now = timezone.now()
+        cohort = {'kickoff_date': utc_now, 'ending_date': utc_now + timedelta(seconds=1)}
+        model = self.generate_models(authenticate=True,
+                                     cohort=cohort,
+                                     profile_academy=True,
+                                     capability='crud_cohort',
+                                     role='potato')
+
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        cases = [
+            {
+                'kickoff_date': utc_now + timedelta(seconds=2),
+            },
+            {
+                'ending_date': utc_now - timedelta(seconds=1),
+            },
+            {
+                'kickoff_date': utc_now + timedelta(seconds=1),
+                'ending_date': utc_now,
+            },
+        ]
+
+        for data in cases:
+            response = self.client.put(url, data)
+            json = response.json()
+
+            expected = {'detail': 'kickoff-date-greather-than-ending-date', 'status_code': 400}
+
+            self.assertEqual(json, expected)
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+            self.assertEqual(self.bc.database.list_of('admissions.Cohort'), [
+                self.model_to_dict(model, 'cohort'),
+            ])
+            self.assertEqual(self.bc.database.list_of('admissions.CohortTimeSlot'), [])
+            self.assertEqual(cohort_saved.send.call_args_list, [])
 
     """
     🔽🔽🔽 Put syllabus with id instead of {slug}.v{id}
@@ -524,6 +575,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             data['name'],
             'never_ends':
             False,
+            'remote_available':
+            True,
             'private':
             False,
             'language':
@@ -563,6 +616,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -677,6 +731,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             data['name'],
             'never_ends':
             False,
+            'remote_available':
+            True,
             'private':
             False,
             'language':
@@ -715,6 +771,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -835,6 +892,8 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             data['name'],
             'never_ends':
             False,
+            'remote_available':
+            True,
             'private':
             False,
             'language':
@@ -874,6 +933,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -990,6 +1050,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': data['slug'],
             'name': data['name'],
             'never_ends': False,
+            'remote_available': True,
             'private': False,
             'language': data['language'],
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
@@ -1008,6 +1069,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -1090,6 +1152,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': model['cohort'].never_ends,
+            'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -1108,6 +1171,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -1196,6 +1260,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'slug': model['cohort'].slug,
             'name': model['cohort'].name,
             'never_ends': model['cohort'].never_ends,
+            'remote_available': model['cohort'].remote_available,
             'private': model['cohort'].private,
             'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
             'ending_date': model['cohort'].ending_date,
@@ -1214,6 +1279,7 @@ class AcademyCohortIdTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,

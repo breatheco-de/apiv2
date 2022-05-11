@@ -157,6 +157,7 @@ class SyllabusVersionSmallSerializer(serpy.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
     version = serpy.Field()
+    status = serpy.Field()
     slug = serpy.MethodField()
     name = serpy.MethodField()
     syllabus = serpy.MethodField()
@@ -199,6 +200,8 @@ class GetSyllabusVersionSerializer(serpy.Serializer):
     """The serializer schema definition."""
     json = serpy.Field()
     version = serpy.Field()
+    status = serpy.Field()
+    change_log_details = serpy.Field()
     updated_at = serpy.Field()
     created_at = serpy.Field()
     updated_at = serpy.Field()
@@ -266,6 +269,7 @@ class GetCohortSerializer(serpy.Serializer):
     slug = serpy.Field()
     name = serpy.Field()
     never_ends = serpy.Field()
+    remote_available = serpy.Field()
     private = serpy.Field()
     language = serpy.Field()
     kickoff_date = serpy.Field()
@@ -470,11 +474,21 @@ class CohortSerializerMixin(serializers.ModelSerializer):
 
     def validate(self, data):
 
+        kickoff_date = (data['kickoff_date'] if 'kickoff_date' in data else
+                        None) or (self.instance.kickoff_date if self.instance else None)
+
+        ending_date = (data['ending_date'] if 'ending_date' in data else None) or (self.instance.ending_date
+                                                                                   if self.instance else None)
+
+        if kickoff_date and ending_date and kickoff_date > ending_date:
+            raise ValidationException('kickoff_date cannot be greather than ending_date',
+                                      slug='kickoff-date-greather-than-ending-date')
+
         if 'stage' in data:
             possible_stages = [stage_slug for stage_slug, stage_label in COHORT_STAGE]
             if data['stage'] not in possible_stages:
-                raise ValidationException(
-                    f"Invalid cohort stage {data['stage']}', slug='invalid-cohort-stage")
+                raise ValidationException(f"Invalid cohort stage {data['stage']}",
+                                          slug='invalid-cohort-stage')
 
         if 'syllabus' in data:
             strings = data['syllabus'].split('.v')
@@ -546,9 +560,9 @@ class CohortSerializer(CohortSerializerMixin):
 
     class Meta:
         model = Cohort
-        fields = ('id', 'slug', 'name', 'kickoff_date', 'current_day', 'academy', 'syllabus', 'schedule',
-                  'syllabus_version', 'ending_date', 'stage', 'language', 'created_at', 'updated_at',
-                  'never_ends', 'online_meeting_url', 'timezone')
+        fields = ('id', 'slug', 'name', 'remote_available', 'kickoff_date', 'current_day', 'academy',
+                  'syllabus', 'schedule', 'syllabus_version', 'ending_date', 'stage', 'language',
+                  'created_at', 'updated_at', 'never_ends', 'online_meeting_url', 'timezone')
 
     def create(self, validated_data):
         del self.context['request']
@@ -846,7 +860,7 @@ class SyllabusVersionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SyllabusVersion
-        fields = ['json', 'version', 'syllabus']
+        fields = ['json', 'version', 'syllabus', 'status', 'change_log_details']
         exclude = ()
         extra_kwargs = {
             'syllabus': {

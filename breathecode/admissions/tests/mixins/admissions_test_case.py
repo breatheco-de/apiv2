@@ -71,6 +71,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'slug': model['cohort'].slug,
                 'name': model['cohort'].name,
                 'never_ends': False,
+                'remote_available': True,
                 'kickoff_date': self.datetime_to_iso(model['cohort'].kickoff_date),
                 'current_day': model['cohort'].current_day,
                 'online_meeting_url': model['cohort'].online_meeting_url,
@@ -173,6 +174,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].name,
                 'never_ends':
                 model['cohort'].never_ends,
+                'remote_available':
+                model['cohort'].remote_available,
                 'private':
                 model['cohort'].private,
                 'kickoff_date':
@@ -211,6 +214,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'syllabus_version': {
                     'name': model.syllabus.name,
                     'slug': model.syllabus.slug,
+                    'status': model['cohort'].syllabus_version.status,
                     'version': model['cohort'].syllabus_version.version,
                     'syllabus': model['cohort'].syllabus_version.syllabus.id,
                     'duration_in_days': model.syllabus.duration_in_days,
@@ -292,6 +296,8 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 model['cohort'].name,
                 'never_ends':
                 model['cohort'].never_ends,
+                'remote_available':
+                model['cohort'].remote_available,
                 'private':
                 model['cohort'].private,
                 'kickoff_date':
@@ -330,6 +336,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'syllabus_version': {
                     'name': model.syllabus.name,
                     'slug': model.syllabus.slug,
+                    'status': model['cohort'].syllabus_version.status,
                     'version': model['cohort'].syllabus_version.version,
                     'syllabus': model['cohort'].syllabus_version.syllabus.id,
                     'duration_in_days': model.syllabus.duration_in_days,

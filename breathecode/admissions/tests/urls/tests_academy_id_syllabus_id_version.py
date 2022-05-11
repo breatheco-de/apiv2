@@ -125,6 +125,8 @@ class CertificateTestSuite(AdmissionsTestCase):
             'private': model.syllabus.private,
             'week_hours': model.syllabus.week_hours,
             'main_technologies': None,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
         }]
 
         self.assertEqual(json, expected)
@@ -210,6 +212,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             'syllabus': 1,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'version': 1,
             **data,
         }
@@ -218,6 +222,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_syllabus_version_dict(), [{
             'id': 1,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'json': {},
             'syllabus_id': 1,
             'version': 1
@@ -246,6 +252,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             'syllabus': 1,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'version': model.syllabus_version.version + 1,
             **data,
         }
@@ -256,6 +264,8 @@ class CertificateTestSuite(AdmissionsTestCase):
             **self.model_to_dict(model, 'syllabus_version')
         }, {
             'id': 2,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'json': {},
             'syllabus_id': 1,
             'version': model.syllabus_version.version + 1,
