@@ -245,7 +245,10 @@ def generate_mentor_bills(mentor, reset=False):
 
     previous_bill = MentorshipBill.objects.filter(mentor__id=mentor.id,
                                                   academy__id=mentor.service.academy.id,
-                                                  status='DUE').first()
+                                                  status='DUE').order_by('-started_at').first()
+
+    if previous_bill.ended_at > timezone.now():
+        return generated_bills
 
     monthly_unpaid_sessions = None
     while end_at is None or end_at < timezone.now():
