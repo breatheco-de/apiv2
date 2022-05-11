@@ -10,6 +10,8 @@ from random import choice
 from datetime import datetime, timedelta
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import AdmissionsTestCase
 
 
@@ -36,7 +38,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         """Test /cohort/:id without auth"""
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort')
-        self.generate_models(authenticate=True)
+        self.bc.database.create(authenticate=True)
         response = self.client.get(url)
         json = response.json()
 
@@ -58,13 +60,13 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     syllabus=True)
+        model = self.bc.database.create(authenticate=True,
+                                        cohort=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -90,15 +92,15 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     syllabus_schedule=True,
-                                     syllabus=True,
-                                     syllabus_kwargs=syllabus_kwargs)
+        model = self.bc.database.create(authenticate=True,
+                                        cohort=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -128,15 +130,15 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_schedule=True,
-                                     syllabus_kwargs=syllabus_kwargs)
+        model = self.bc.database.create(authenticate=True,
+                                        cohort=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        syllabus_schedule=True,
+                                        syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -165,7 +167,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
     #     from breathecode.admissions.signals import cohort_saved
     #
     #     self.headers(academy=1)
-    #     model = self.generate_models(authenticate=True,
+    #     model = self.bc.database.create(authenticate=True,
     #                                  user=True,
     #                                  profile_academy=True,
     #                                  capability='crud_cohort',
@@ -201,17 +203,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
-        model = self.generate_models(authenticate=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     syllabus_schedule=True,
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     skip_cohort=True,
-                                     syllabus_schedule_time_slot=True,
-                                     syllabus_kwargs=syllabus_kwargs)
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -244,17 +246,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
-        model = self.generate_models(authenticate=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     syllabus_schedule=True,
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     skip_cohort=True,
-                                     syllabus_schedule_time_slot=True,
-                                     syllabus_kwargs=syllabus_kwargs)
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -289,17 +291,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
-        model = self.generate_models(authenticate=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     syllabus_schedule=True,
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     skip_cohort=True,
-                                     syllabus_schedule_time_slot=True,
-                                     syllabus_kwargs=syllabus_kwargs)
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -337,17 +339,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         syllabus_version = {'version': 1}
-        model = self.generate_models(authenticate=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     syllabus_schedule=True,
-                                     syllabus=True,
-                                     syllabus_version=syllabus_version,
-                                     skip_cohort=True,
-                                     syllabus_schedule_time_slot=True,
-                                     syllabus_kwargs=syllabus_kwargs)
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=syllabus_version,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -379,17 +381,17 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
-        model = self.generate_models(authenticate=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     syllabus_schedule=True,
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     skip_cohort=True,
-                                     syllabus_schedule_time_slot=True,
-                                     syllabus_kwargs=syllabus_kwargs)
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -501,18 +503,18 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         academy_kwargs = {'timezone': 'America/Caracas'}
-        model = self.generate_models(authenticate=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     syllabus_schedule=True,
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     skip_cohort=True,
-                                     syllabus_schedule_time_slot=True,
-                                     syllabus_kwargs=syllabus_kwargs,
-                                     academy_kwargs=academy_kwargs)
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs,
+                                        academy_kwargs=academy_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -590,18 +592,18 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         syllabus_kwargs = {'slug': 'they-killed-kenny'}
         academy_kwargs = {'timezone': 'America/Caracas'}
-        model = self.generate_models(authenticate=True,
-                                     user=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     syllabus_schedule=True,
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     skip_cohort=True,
-                                     syllabus_schedule_time_slot=True,
-                                     syllabus_kwargs=syllabus_kwargs,
-                                     academy_kwargs=academy_kwargs)
+        model = self.bc.database.create(authenticate=True,
+                                        user=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus_schedule=True,
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        skip_cohort=True,
+                                        syllabus_schedule_time_slot=True,
+                                        syllabus_kwargs=syllabus_kwargs,
+                                        academy_kwargs=academy_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -686,12 +688,12 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort')
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='read_all_cohort',
-                                     role='potato',
-                                     syllabus=True,
-                                     skip_cohort=True)
+        model = self.bc.database.create(authenticate=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        skip_cohort=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -724,11 +726,11 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         url = reverse_lazy('admissions:academy_cohort')
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato',
-                                     syllabus=True)
+        model = self.bc.database.create(authenticate=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato',
+                                        syllabus=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -752,14 +754,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     capability='read_all_cohort',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True)
+        model = self.bc.database.create(authenticate=True,
+                                        cohort=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -793,6 +795,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -831,14 +834,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         self.clear_cache()
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     capability='read_all_cohort',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True)
+        model = self.bc.database.create(authenticate=True,
+                                        cohort=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -865,15 +868,15 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         cohort_kwargs = {
             'kickoff_date': timezone.now() + timedelta(days=1),
         }
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     capability='read_all_cohort',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True,
-                                     cohort_kwargs=cohort_kwargs)
+        model = self.bc.database.create(authenticate=True,
+                                        cohort=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        syllabus_schedule=True,
+                                        cohort_kwargs=cohort_kwargs)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -907,6 +910,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -944,15 +948,15 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     impossible_kickoff_date=True,
-                                     profile_academy=True,
-                                     capability='read_all_cohort',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True)
+        model = self.bc.database.create(authenticate=True,
+                                        cohort=True,
+                                        impossible_kickoff_date=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -976,14 +980,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     capability='read_all_cohort',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True)
+        model = self.bc.database.create(authenticate=True,
+                                        cohort=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -1017,6 +1021,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -1054,14 +1059,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     capability='read_all_cohort',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True)
+        model = self.bc.database.create(authenticate=True,
+                                        cohort=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -1095,6 +1100,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -1133,20 +1139,20 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         models = [
-            self.generate_models(authenticate=True,
-                                 cohort=True,
-                                 profile_academy=True,
-                                 capability='read_all_cohort',
-                                 role='potato',
-                                 syllabus=True,
-                                 syllabus_version=True,
-                                 syllabus_schedule=True)
+            self.bc.database.create(authenticate=True,
+                                    cohort=True,
+                                    profile_academy=True,
+                                    capability='read_all_cohort',
+                                    role='potato',
+                                    syllabus=True,
+                                    syllabus_version=True,
+                                    syllabus_schedule=True)
         ]
 
         base = models[0].copy()
         del base['cohort']
 
-        models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 9)]
+        models = models + [self.bc.database.create(cohort=True, models=base) for index in range(0, 9)]
         models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
 
         # reset because this call are coming from mixer
@@ -1182,6 +1188,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -1222,18 +1229,18 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_all_cohort',
-                                    role='potato',
-                                    skip_cohort=True)
+        base = self.bc.database.create(authenticate=True,
+                                       profile_academy=True,
+                                       capability='read_all_cohort',
+                                       role='potato',
+                                       skip_cohort=True)
 
         models = [
-            self.generate_models(cohort=True,
-                                 syllabus=True,
-                                 syllabus_version=True,
-                                 syllabus_schedule=True,
-                                 models=base) for _ in range(0, 2)
+            self.bc.database.create(cohort=True,
+                                    syllabus=True,
+                                    syllabus_version=True,
+                                    syllabus_schedule=True,
+                                    models=base) for _ in range(0, 2)
         ]
 
         # reset because this call are coming from mixer
@@ -1268,6 +1275,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -1305,14 +1313,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     capability='read_all_cohort',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True)
+        model = self.bc.database.create(authenticate=True,
+                                        cohort=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -1336,14 +1344,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     capability='read_all_cohort',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True)
+        model = self.bc.database.create(authenticate=True,
+                                        cohort=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -1377,6 +1385,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -1414,14 +1423,14 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     cohort=True,
-                                     profile_academy=True,
-                                     capability='read_all_cohort',
-                                     role='potato',
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True)
+        model = self.bc.database.create(authenticate=True,
+                                        cohort=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        syllabus_version=True,
+                                        syllabus_schedule=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -1455,6 +1464,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -1493,20 +1503,20 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
 
         self.headers(academy=1)
         models = [
-            self.generate_models(authenticate=True,
-                                 cohort=True,
-                                 profile_academy=True,
-                                 capability='read_all_cohort',
-                                 role='potato',
-                                 syllabus=True,
-                                 syllabus_version=True,
-                                 syllabus_schedule=True)
+            self.bc.database.create(authenticate=True,
+                                    cohort=True,
+                                    profile_academy=True,
+                                    capability='read_all_cohort',
+                                    role='potato',
+                                    syllabus=True,
+                                    syllabus_version=True,
+                                    syllabus_schedule=True)
         ]
 
         base = models[0].copy()
         del base['cohort']
 
-        models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 9)]
+        models = models + [self.bc.database.create(cohort=True, models=base) for index in range(0, 9)]
         models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
 
         # reset because this call are coming from mixer
@@ -1542,6 +1552,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
             'syllabus_version': {
                 'name': model.syllabus.name,
                 'slug': model.syllabus.slug,
+                'status': model['cohort'].syllabus_version.status,
                 'version': model['cohort'].syllabus_version.version,
                 'syllabus': model['cohort'].syllabus_version.syllabus.id,
                 'duration_in_days': model.syllabus.duration_in_days,
@@ -1573,350 +1584,15 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.assertEqual(cohort_saved.send.call_args_list, [])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    def test_academy_cohort_with_ten_datas_with_location_with_comma_just_get_100(self):
-        """Test /cohort without auth"""
-        from breathecode.admissions.signals import cohort_saved
-
-        self.headers(academy=1)
-        models = [
-            self.generate_models(authenticate=True,
-                                 cohort=True,
-                                 profile_academy=True,
-                                 capability='read_all_cohort',
-                                 role='potato',
-                                 syllabus=True,
-                                 syllabus_version=True,
-                                 syllabus_schedule=True)
-        ]
-
-        base = models[0].copy()
-        del base['cohort']
-
-        models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 105)]
-        models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
-
-        # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
-
-        self.client.force_authenticate(user=models[0]['user'])
-        base_url = reverse_lazy('admissions:academy_cohort')
-        params = ','.join([model['academy'].slug for model in models])
-        url = f'{base_url}?location={params}'
-        response = self.client.get(url)
-        json = response.json()
-        expected = [{
-            'id': model['cohort'].id,
-            'slug': model['cohort'].slug,
-            'name': model['cohort'].name,
-            'never_ends': model['cohort'].never_ends,
-            'remote_available': model['cohort'].remote_available,
-            'private': model['cohort'].private,
-            'language': model['cohort'].language,
-            'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
-            'ending_date': model['cohort'].ending_date,
-            'stage': model['cohort'].stage,
-            'current_day': model['cohort'].current_day,
-            'current_module': None,
-            'online_meeting_url': model['cohort'].online_meeting_url,
-            'timezone': model['cohort'].timezone,
-            'timeslots': [],
-            'schedule': {
-                'id': model['cohort'].schedule.id,
-                'name': model['cohort'].schedule.name,
-                'syllabus': model['cohort'].schedule.syllabus.id,
-            },
-            'syllabus_version': {
-                'name': model.syllabus.name,
-                'slug': model.syllabus.slug,
-                'version': model['cohort'].syllabus_version.version,
-                'syllabus': model['cohort'].syllabus_version.syllabus.id,
-                'duration_in_days': model.syllabus.duration_in_days,
-                'duration_in_hours': model.syllabus.duration_in_hours,
-                'github_url': model.syllabus.github_url,
-                'logo': model.syllabus.logo,
-                'private': model.syllabus.private,
-                'week_hours': model.syllabus.week_hours,
-            },
-            'academy': {
-                'id': model['cohort'].academy.id,
-                'slug': model['cohort'].academy.slug,
-                'name': model['cohort'].academy.name,
-                'country': {
-                    'code': model['cohort'].academy.country.code,
-                    'name': model['cohort'].academy.country.name,
-                },
-                'city': {
-                    'name': model['cohort'].academy.city.name,
-                },
-                'logo_url': model['cohort'].academy.logo_url,
-            },
-        } for model in models[:100]]
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
-
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_first_five(self):
-        """Test /cohort without auth"""
-        from breathecode.admissions.signals import cohort_saved
-
-        self.headers(academy=1)
-        models = [
-            self.generate_models(authenticate=True,
-                                 cohort=True,
-                                 profile_academy=True,
-                                 capability='read_all_cohort',
-                                 role='potato',
-                                 syllabus=True,
-                                 syllabus_version=True,
-                                 syllabus_schedule=True)
-        ]
-
-        base = models[0].copy()
-        del base['cohort']
-
-        models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 9)]
-        models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
-
-        # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
-
-        self.client.force_authenticate(user=models[0]['user'])
-        base_url = reverse_lazy('admissions:academy_cohort')
-        params = ','.join([model['academy'].slug for model in models])
-        url = f'{base_url}?limit=5&location={params}&offset=0'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            None,
-            'next':
-            'http://testserver/v1/admissions/academy/cohort?limit=5&'
-            f'location={params}&offset=5',
-            'previous':
-            None,
-            'last':
-            'http://testserver/v1/admissions/academy/cohort?limit=5&'
-            f'location={params}&offset=5',
-            'results': [{
-                'id': model['cohort'].id,
-                'slug': model['cohort'].slug,
-                'name': model['cohort'].name,
-                'never_ends': model['cohort'].never_ends,
-                'remote_available': model['cohort'].remote_available,
-                'private': model['cohort'].private,
-                'language': model['cohort'].language,
-                'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
-                'ending_date': model['cohort'].ending_date,
-                'stage': model['cohort'].stage,
-                'current_day': model['cohort'].current_day,
-                'current_module': None,
-                'online_meeting_url': model['cohort'].online_meeting_url,
-                'timezone': model['cohort'].timezone,
-                'timeslots': [],
-                'schedule': {
-                    'id': model['cohort'].schedule.id,
-                    'name': model['cohort'].schedule.name,
-                    'syllabus': model['cohort'].schedule.syllabus.id,
-                },
-                'syllabus_version': {
-                    'name': model.syllabus.name,
-                    'slug': model.syllabus.slug,
-                    'version': model['cohort'].syllabus_version.version,
-                    'syllabus': model['cohort'].syllabus_version.syllabus.id,
-                    'duration_in_days': model.syllabus.duration_in_days,
-                    'duration_in_hours': model.syllabus.duration_in_hours,
-                    'github_url': model.syllabus.github_url,
-                    'logo': model.syllabus.logo,
-                    'private': model.syllabus.private,
-                    'week_hours': model.syllabus.week_hours,
-                },
-                'academy': {
-                    'id': model['cohort'].academy.id,
-                    'slug': model['cohort'].academy.slug,
-                    'name': model['cohort'].academy.name,
-                    'country': {
-                        'code': model['cohort'].academy.country.code,
-                        'name': model['cohort'].academy.country.name,
-                    },
-                    'city': {
-                        'name': model['cohort'].academy.city.name,
-                    },
-                    'logo_url': model['cohort'].academy.logo_url,
-                },
-            } for model in models[:5]],
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
-
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_last_five(self):
-        """Test /cohort without auth"""
-        from breathecode.admissions.signals import cohort_saved
-
-        self.headers(academy=1)
-        models = [
-            self.generate_models(authenticate=True,
-                                 cohort=True,
-                                 profile_academy=True,
-                                 capability='read_all_cohort',
-                                 role='potato',
-                                 syllabus=True,
-                                 syllabus_version=True,
-                                 syllabus_schedule=True)
-        ]
-
-        base = models[0].copy()
-        del base['cohort']
-
-        models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 9)]
-        models.sort(key=lambda x: x.cohort.kickoff_date, reverse=True)
-
-        # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
-
-        self.client.force_authenticate(user=models[0]['user'])
-        base_url = reverse_lazy('admissions:academy_cohort')
-        params = ','.join([model['academy'].slug for model in models])
-        url = f'{base_url}?limit=5&location={params}&offset=5'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            'http://testserver/v1/admissions/academy/cohort?limit=5&'
-            f'location={params}',
-            'next':
-            None,
-            'previous':
-            'http://testserver/v1/admissions/academy/cohort?limit=5&'
-            f'location={params}',
-            'last':
-            None,
-            'results': [{
-                'id': model['cohort'].id,
-                'slug': model['cohort'].slug,
-                'name': model['cohort'].name,
-                'never_ends': model['cohort'].never_ends,
-                'remote_available': model['cohort'].remote_available,
-                'private': model['cohort'].private,
-                'language': model['cohort'].language,
-                'kickoff_date': datetime_to_iso_format(model['cohort'].kickoff_date),
-                'ending_date': model['cohort'].ending_date,
-                'stage': model['cohort'].stage,
-                'current_day': model['cohort'].current_day,
-                'current_module': None,
-                'online_meeting_url': model['cohort'].online_meeting_url,
-                'timezone': model['cohort'].timezone,
-                'timeslots': [],
-                'schedule': {
-                    'id': model['cohort'].schedule.id,
-                    'name': model['cohort'].schedule.name,
-                    'syllabus': model['cohort'].schedule.syllabus.id,
-                },
-                'syllabus_version': {
-                    'name': model.syllabus.name,
-                    'slug': model.syllabus.slug,
-                    'version': model['cohort'].syllabus_version.version,
-                    'syllabus': model['cohort'].syllabus_version.syllabus.id,
-                    'duration_in_days': model.syllabus.duration_in_days,
-                    'duration_in_hours': model.syllabus.duration_in_hours,
-                    'github_url': model.syllabus.github_url,
-                    'logo': model.syllabus.logo,
-                    'private': model.syllabus.private,
-                    'week_hours': model.syllabus.week_hours,
-                },
-                'academy': {
-                    'id': model['cohort'].academy.id,
-                    'slug': model['cohort'].academy.slug,
-                    'name': model['cohort'].academy.name,
-                    'country': {
-                        'code': model['cohort'].academy.country.code,
-                        'name': model['cohort'].academy.country.name,
-                    },
-                    'city': {
-                        'name': model['cohort'].academy.city.name,
-                    },
-                    'logo_url': model['cohort'].academy.logo_url,
-                },
-            } for model in models[5:]],
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), self.all_model_dict([x.cohort for x in models]))
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
-
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    def test_academy_cohort_with_ten_datas_with_location_with_comma_pagination_after_last_five(self):
-        """Test /cohort without auth"""
-        from breathecode.admissions.signals import cohort_saved
-
-        self.headers(academy=1)
-        models = [
-            self.generate_models(authenticate=True,
-                                 cohort=True,
-                                 profile_academy=True,
-                                 capability='read_all_cohort',
-                                 role='potato',
-                                 syllabus=True,
-                                 syllabus_version=True,
-                                 syllabus_schedule=True)
-        ]
-
-        base = models[0].copy()
-        del base['cohort']
-
-        models = models + [self.generate_models(cohort=True, models=base) for index in range(0, 9)]
-
-        # reset because this call are coming from mixer
-        cohort_saved.send.call_args_list = []
-
-        models_dict = self.all_cohort_dict()
-        self.client.force_authenticate(user=models[0]['user'])
-        base_url = reverse_lazy('admissions:academy_cohort')
-        params = ','.join([model['academy'].slug for model in models])
-        url = f'{base_url}?limit=5&location={params}&offset=10'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/admissions/academy/cohort?limit=5&'
-            f'location={params}',
-            'next': None,
-            'previous': 'http://testserver/v1/admissions/academy/cohort?limit=5&'
-            f'location={params}&offset=5',
-            'last': None,
-            'results': [],
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_cohort_dict(), models_dict)
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
-        self.assertEqual(cohort_saved.send.call_args_list, [])
-
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
     def test_academy_cohort_delete_without_args_in_url_or_bulk(self):
         """Test /cohort/:id/user without auth"""
         from breathecode.admissions.signals import cohort_saved
 
         self.headers(academy=1)
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato')
+        model = self.bc.database.create(authenticate=True,
+                                        profile_academy=True,
+                                        capability='crud_cohort',
+                                        role='potato')
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
@@ -1942,7 +1618,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         many_fields = ['id']
 
-        base = self.generate_models(academy=True, capability='crud_cohort', role='potato')
+        base = self.bc.database.create(academy=True, capability='crud_cohort', role='potato')
 
         expected = {
             'detail': 'cohort-has-students',
@@ -1950,10 +1626,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         }
 
         for field in many_fields:
-            model = self.generate_models(authenticate=True,
-                                         profile_academy=True,
-                                         cohort_user=True,
-                                         models=base)
+            model = self.bc.database.create(authenticate=True,
+                                            profile_academy=True,
+                                            cohort_user=True,
+                                            models=base)
 
             # reset because this call are coming from mixer
             cohort_saved.send.call_args_list = []
@@ -1978,7 +1654,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
 
         many_fields = ['id']
-        base = self.generate_models(academy=True, capability='crud_cohort', role='potato')
+        base = self.bc.database.create(academy=True, capability='crud_cohort', role='potato')
 
         for field in many_fields:
             cohort_kwargs = {
@@ -1986,10 +1662,10 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'ending_date': datetime.now(),
                 'timezone': choice(['-1', '-2', '-3', '-4', '-5']),
             }
-            model = self.generate_models(authenticate=True,
-                                         profile_academy=True,
-                                         cohort_kwargs=cohort_kwargs,
-                                         models=base)
+            model = self.bc.database.create(authenticate=True,
+                                            profile_academy=True,
+                                            cohort_kwargs=cohort_kwargs,
+                                            models=base)
 
             # reset because this call are coming from mixer
             cohort_saved.send.call_args_list = []
@@ -2013,7 +1689,7 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
         self.headers(academy=1)
         many_fields = ['id']
 
-        base = self.generate_models(academy=True, capability='crud_cohort', role='potato')
+        base = self.bc.database.create(academy=True, capability='crud_cohort', role='potato')
 
         for field in many_fields:
             cohort_kwargs = {
@@ -2021,21 +1697,21 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                 'ending_date': datetime.now(),
                 'timezone': choice(['-1', '-2', '-3', '-4', '-5']),
             }
-            model1 = self.generate_models(authenticate=True,
-                                          profile_academy=True,
-                                          syllabus=True,
-                                          cohort_kwargs=cohort_kwargs,
-                                          models=base)
+            model1 = self.bc.database.create(authenticate=True,
+                                             profile_academy=True,
+                                             syllabus=True,
+                                             cohort_kwargs=cohort_kwargs,
+                                             models=base)
 
             cohort_kwargs = {
                 'kickoff_date': datetime.now(),
                 'ending_date': datetime.now(),
                 'timezone': choice(['-1', '-2', '-3', '-4', '-5']),
             }
-            model2 = self.generate_models(profile_academy=True,
-                                          syllabus=True,
-                                          cohort_kwargs=cohort_kwargs,
-                                          models=base)
+            model2 = self.bc.database.create(profile_academy=True,
+                                             syllabus=True,
+                                             cohort_kwargs=cohort_kwargs,
+                                             models=base)
 
             # reset because this call are coming from mixer
             cohort_saved.send.call_args_list = []
@@ -2058,130 +1734,49 @@ class AcademyCohortTestSuite(AdmissionsTestCase):
                              [call(instance=model1.cohort, sender=model1.cohort.__class__, created=False)])
 
     @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    def test_academy_cohort_with_data_testing_cache(self):
-        """Test /cohort without auth"""
-        cache_keys = [
-            'Cohort__resource=None&academy_id=1&upcoming=None&stage=None&academy='
-            'None&location=None&like=None&sort=None&limit=None&offset=None'
-        ]
-
-        self.assertEqual(self.cache.keys(), [])
-
-        old_models = self.check_academy_cohort__with_data()
-        self.assertEqual(self.cache.keys(), cache_keys)
-
-        self.check_academy_cohort__with_data(old_models)
-        self.assertEqual(self.cache.keys(), cache_keys)
-        self.assertEqual(self.all_cohort_time_slot_dict(), [])
-
-    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
-    def test_academy_cohort_with_data_testing_cache_and_remove_in_post(self):
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_academy_cohort__spy_extensions(self):
         """Test /cohort without auth"""
         from breathecode.admissions.signals import cohort_saved
 
-        cache_keys = [
-            'Cohort__resource=None&academy_id=1&upcoming=None&stage=None&academy='
-            'None&location=None&like=None&sort=None&limit=None&offset=None'
-        ]
-
-        self.assertEqual(self.cache.keys(), [])
-
-        old_models = self.check_academy_cohort__with_data()
-        self.assertEqual(self.cache.keys(), cache_keys)
-
         self.headers(academy=1)
-
-        base = old_models[0].copy()
-
-        del base['profile_academy']
-        del base['capability']
-        del base['role']
-        del base['user']
-
-        syllabus_kwargs = {'slug': 'they-killed-kenny'}
-        academy_kwargs = {'timezone': 'America/Caracas'}
-        model = self.generate_models(authenticate=True,
-                                     profile_academy=True,
-                                     capability='crud_cohort',
-                                     role='potato2',
-                                     syllabus=True,
-                                     syllabus_version=True,
-                                     syllabus_schedule=True,
-                                     syllabus_schedule_time_slot=True,
-                                     syllabus_kwargs=syllabus_kwargs,
-                                     academy_kwargs=academy_kwargs,
-                                     models=base)
+        url = reverse_lazy('admissions:academy_cohort')
+        model = self.bc.database.create(authenticate=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        skip_cohort=True)
 
         # reset because this call are coming from mixer
         cohort_saved.send.call_args_list = []
 
-        url = reverse_lazy('admissions:academy_cohort')
-        data = {
-            'syllabus': f'{model.syllabus.slug}.v{model.syllabus_version.version}',
-            'slug': 'they-killed-kenny',
-            'name': 'They killed kenny',
-            'kickoff_date': self.datetime_to_iso(datetime.today()),
-            'never_ends': True,
-            'remote_available': True,
-            'schedule': 1,
-        }
+        self.client.get(url)
 
-        response = self.client.post(url, data)
-        json = response.json()
-        cohort = self.get_cohort(2)
-
-        data['syllabus_version'] = data['syllabus']
-        del data['syllabus']
-
-        expected = {
-            'id': cohort.id,
-            'current_day': cohort.current_day,
-            'academy': {
-                'id': cohort.academy.id,
-                'slug': cohort.academy.slug,
-                'name': cohort.academy.name,
-                'street_address': cohort.academy.street_address,
-                'country': cohort.academy.country.code,
-                'city': cohort.academy.city.id,
-            },
-            'ending_date': cohort.ending_date,
-            'stage': cohort.stage,
-            'language': cohort.language,
-            'online_meeting_url': model['cohort'].online_meeting_url,
-            'timezone': model.academy.timezone,
-            'created_at': self.datetime_to_iso(cohort.created_at),
-            'updated_at': self.datetime_to_iso(cohort.updated_at),
-            **data,
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.cache.keys(), [])
-
-        self.assertEqual(self.all_cohort_dict(), [
-            {
-                **self.model_to_dict(old_models[0], 'cohort')
-            },
-            {
-                **self.model_to_dict({
-                    **model,
-                    'cohort': cohort,
-                    'timezone': 'America/Caracas',
-                }, 'cohort')
-            },
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['CacheExtension', 'PaginationExtension', 'SortExtension']),
         ])
 
-        self.assertEqual(self.all_cohort_time_slot_dict(), [{
-            **self.fill_cohort_timeslot(1, 2, model.syllabus_schedule_time_slot),
-            'timezone':
-            'America/Caracas',
-        }])
+    @patch('breathecode.admissions.signals.cohort_saved.send', MagicMock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_academy_cohort__spy_extension_arguments(self):
+        """Test /cohort without auth"""
+        from breathecode.admissions.signals import cohort_saved
 
-        base = [
-            self.generate_models(authenticate=True, models=old_models[0]),
-            self.generate_models(cohort=cohort, models=base)
-        ]
+        self.headers(academy=1)
+        url = reverse_lazy('admissions:academy_cohort')
+        model = self.bc.database.create(authenticate=True,
+                                        profile_academy=True,
+                                        capability='read_all_cohort',
+                                        role='potato',
+                                        syllabus=True,
+                                        skip_cohort=True)
 
-        self.check_academy_cohort__with_data(base)
-        self.assertEqual(self.cache.keys(), cache_keys)
-        self.assertEqual(cohort_saved.send.call_args_list,
-                         [call(instance=cohort, sender=cohort.__class__, created=True)])
+        # reset because this call are coming from mixer
+        cohort_saved.send.call_args_list = []
+
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(cache=CohortCache, sort='-kickoff_date', paginate=True),
+        ])

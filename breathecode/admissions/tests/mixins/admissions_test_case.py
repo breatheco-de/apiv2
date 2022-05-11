@@ -214,6 +214,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'syllabus_version': {
                     'name': model.syllabus.name,
                     'slug': model.syllabus.slug,
+                    'status': model['cohort'].syllabus_version.status,
                     'version': model['cohort'].syllabus_version.version,
                     'syllabus': model['cohort'].syllabus_version.syllabus.id,
                     'duration_in_days': model.syllabus.duration_in_days,
@@ -335,6 +336,7 @@ class AdmissionsTestCase(APITestCase, GenerateModelsMixin, CacheMixin, GenerateQ
                 'syllabus_version': {
                     'name': model.syllabus.name,
                     'slug': model.syllabus.slug,
+                    'status': model['cohort'].syllabus_version.status,
                     'version': model['cohort'].syllabus_version.version,
                     'syllabus': model['cohort'].syllabus_version.syllabus.id,
                     'duration_in_days': model.syllabus.duration_in_days,

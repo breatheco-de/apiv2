@@ -1,20 +1,11 @@
 import re
 
-from rest_framework import status
 from breathecode.events.caches import EventCache
 from django.urls.base import reverse_lazy
-from datetime import datetime
-from breathecode.utils import Cache
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
+
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins.new_events_tests_case import EventTestCase
-from breathecode.tests.mocks import (
-    GOOGLE_CLOUD_PATH,
-    apply_google_cloud_client_mock,
-    apply_google_cloud_bucket_mock,
-    apply_google_cloud_blob_mock,
-)
-from breathecode.services import datetime_to_iso_format
-from django.utils import timezone
 
 
 class AcademyEventTestSuite(EventTestCase):
@@ -358,202 +349,36 @@ class AcademyEventTestSuite(EventTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.all_event_checkin_dict(), [{**self.model_to_dict(model, 'event_checkin')}])
 
-    def test_academy_checkin_pagination_with_105(self):
-        """Test /academy/member"""
+    """
+    🔽🔽🔽 Spy the extensions
+    """
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_academy_checkin__spy_extensions(self):
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_eventcheckin',
-                                    role='potato')
-
-        event_kwargs = {'academy': base['academy']}
-        event_checkin_kwargs = {'attended_at': self.datetime_now()}
-        models = [
-            self.generate_models(event=True,
-                                 event_checkin=True,
-                                 event_checkin_kwargs=event_checkin_kwargs,
-                                 event_kwargs=event_kwargs,
-                                 models=base) for _ in range(0, 105)
-        ]
-        ordened_models = sorted(models, key=lambda x: x['event_checkin'].created_at, reverse=True)
-
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_eventcheckin',
+                                     role='potato')
         url = reverse_lazy('events:academy_checkin')
-        response = self.client.get(url)
-        json = response.json()
-        expected = [{
-            'attendee': {
-                'first_name': model['event_checkin'].attendee.first_name,
-                'id': model['event_checkin'].attendee.id,
-                'last_name': model['event_checkin'].attendee.last_name
-            },
-            'email': model['event_checkin'].email,
-            'event': {
-                'ending_at': self.datetime_to_iso(model['event_checkin'].event.ending_at),
-                'event_type': model['event_checkin'].event.event_type,
-                'id': model['event_checkin'].event.id,
-                'starting_at': self.datetime_to_iso(model['event_checkin'].event.starting_at),
-                'title': model['event_checkin'].event.title
-            },
-            'id': model['event_checkin'].id,
-            'status': model['event_checkin'].status,
-            'created_at': self.datetime_to_iso(model['event_checkin'].created_at),
-            'attended_at': self.datetime_to_iso(model['event_checkin'].attended_at)
-        } for model in ordened_models][:100]
 
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_event_checkin_dict(), [{
-            **self.model_to_dict(model, 'event_checkin')
-        } for model in models])
+        self.client.get(url)
 
-    def test_academy_checkin_pagination_first_five(self):
-        """Test /academy/member"""
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['PaginationExtension', 'SortExtension']),
+        ])
+
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_academy_checkin__spy_extension_arguments(self):
         self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_eventcheckin',
-                                    role='potato')
+        model = self.generate_models(authenticate=True,
+                                     profile_academy=True,
+                                     capability='read_eventcheckin',
+                                     role='potato')
+        url = reverse_lazy('events:academy_checkin')
 
-        event_kwargs = {'academy': base['academy']}
-        event_checkin_kwargs = {'attended_at': self.datetime_now()}
-        models = [
-            self.generate_models(event=True,
-                                 event_checkin=True,
-                                 event_checkin_kwargs=event_checkin_kwargs,
-                                 event_kwargs=event_kwargs,
-                                 models=base) for _ in range(0, 10)
-        ]
-        ordened_models = sorted(models, key=lambda x: x['event_checkin'].created_at, reverse=True)
+        self.client.get(url)
 
-        url = reverse_lazy('events:academy_checkin') + '?limit=5&offset=0'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            None,
-            'last':
-            'http://testserver/v1/events/academy/checkin?limit=5&offset=5',
-            'next':
-            'http://testserver/v1/events/academy/checkin?limit=5&offset=5',
-            'previous':
-            None,
-            'results': [{
-                'attendee': {
-                    'first_name': model['event_checkin'].attendee.first_name,
-                    'id': model['event_checkin'].attendee.id,
-                    'last_name': model['event_checkin'].attendee.last_name
-                },
-                'email': model['event_checkin'].email,
-                'event': {
-                    'ending_at': self.datetime_to_iso(model['event_checkin'].event.ending_at),
-                    'event_type': model['event_checkin'].event.event_type,
-                    'id': model['event_checkin'].event.id,
-                    'starting_at': self.datetime_to_iso(model['event_checkin'].event.starting_at),
-                    'title': model['event_checkin'].event.title
-                },
-                'id': model['event_checkin'].id,
-                'status': model['event_checkin'].status,
-                'created_at': self.datetime_to_iso(model['event_checkin'].created_at),
-                'attended_at': self.datetime_to_iso(model['event_checkin'].attended_at)
-            } for model in ordened_models][:5]
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_event_checkin_dict(), [{
-            **self.model_to_dict(model, 'event_checkin')
-        } for model in models])
-
-    def test_academy_checkin_pagination_last_five(self):
-        """Test /academy/member"""
-        self.headers(academy=1)
-        role = 'hitman'
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_eventcheckin',
-                                    role='potato')
-
-        event_kwargs = {'academy': base['academy']}
-        event_checkin_kwargs = {'attended_at': self.datetime_now()}
-        models = [
-            self.generate_models(event=True,
-                                 event_checkin=True,
-                                 event_checkin_kwargs=event_checkin_kwargs,
-                                 event_kwargs=event_kwargs,
-                                 models=base) for _ in range(0, 10)
-        ]
-        ordened_models = sorted(models, key=lambda x: x['event_checkin'].created_at, reverse=True)
-
-        url = reverse_lazy('events:academy_checkin') + '?limit=5&offset=5'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            'http://testserver/v1/events/academy/checkin?limit=5',
-            'last':
-            None,
-            'next':
-            None,
-            'previous':
-            'http://testserver/v1/events/academy/checkin?limit=5',
-            'results': [{
-                'attendee': {
-                    'first_name': model['event_checkin'].attendee.first_name,
-                    'id': model['event_checkin'].attendee.id,
-                    'last_name': model['event_checkin'].attendee.last_name
-                },
-                'email': model['event_checkin'].email,
-                'event': {
-                    'ending_at': self.datetime_to_iso(model['event_checkin'].event.ending_at),
-                    'event_type': model['event_checkin'].event.event_type,
-                    'id': model['event_checkin'].event.id,
-                    'starting_at': self.datetime_to_iso(model['event_checkin'].event.starting_at),
-                    'title': model['event_checkin'].event.title
-                },
-                'id': model['event_checkin'].id,
-                'status': model['event_checkin'].status,
-                'created_at': self.datetime_to_iso(model['event_checkin'].created_at),
-                'attended_at': self.datetime_to_iso(model['event_checkin'].attended_at)
-            } for model in ordened_models][5:]
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_event_checkin_dict(), [{
-            **self.model_to_dict(model, 'event_checkin')
-        } for model in models])
-
-    def test_academy_checkin_pagination_after_last_five(self):
-        """Test /academy/member"""
-        self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_eventcheckin',
-                                    role='potato')
-
-        event_kwargs = {'academy': base['academy']}
-        models = [
-            self.generate_models(event=True, event_checkin=True, event_kwargs=event_kwargs, models=base)
-            for _ in range(0, 10)
-        ]
-        url = reverse_lazy('events:academy_checkin') + '?limit=5&offset=10'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/events/academy/checkin?limit=5',
-            'last': None,
-            'next': None,
-            'previous': 'http://testserver/v1/events/academy/checkin?limit=5&offset=5',
-            'results': []
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_event_checkin_dict(), [{
-            **self.model_to_dict(model, 'event_checkin')
-        } for model in models])
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(sort='-created_at', paginate=True),
+        ])

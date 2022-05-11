@@ -2,7 +2,7 @@
 Test /answer
 """
 import re, urllib
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from breathecode.tests.mocks import (
@@ -11,6 +11,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import MediaTestCase
 
 
@@ -121,132 +122,6 @@ class MediaTestSuite(MediaTestCase):
         }])
         self.assertEqual(self.all_category_dict(), [{**self.model_to_dict(model, 'category')}])
 
-    def test_category_pagination_with_105(self):
-        """Test /academy/student"""
-        self.headers(academy=1)
-        role = 'student'
-        base = self.generate_models(authenticate=True,
-                                    role=role,
-                                    capability='read_media',
-                                    profile_academy=True)
-
-        models = [self.generate_models(category=True, models=base) for _ in range(0, 105)]
-        url = reverse_lazy('media:category')
-        response = self.client.get(url)
-        json = response.json()
-        expected = [{
-            'id': model['category'].id,
-            'medias': 0,
-            'name': model['category'].name,
-            'slug': model['category'].slug,
-        } for model in models if model['category'].id < 101]
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.all_category_dict(), [{
-            **self.model_to_dict(model, 'category')
-        } for model in models])
-
-    def test_category_pagination_first_five(self):
-        """Test /academy/student"""
-        self.headers(academy=1)
-        role = 'student'
-        base = self.generate_models(authenticate=True,
-                                    role=role,
-                                    capability='read_media',
-                                    profile_academy=True)
-
-        models = [self.generate_models(category=True, models=base) for _ in range(0, 10)]
-        url = reverse_lazy('media:category') + '?limit=5&offset=0'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            None,
-            'last':
-            'http://testserver/v1/media/category?limit=5&offset=5',
-            'next':
-            'http://testserver/v1/media/category?limit=5&offset=5',
-            'previous':
-            None,
-            'results': [{
-                'id': model['category'].id,
-                'medias': 0,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            } for model in models if model['category'].id < 6]
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.all_category_dict(), [{
-            **self.model_to_dict(model, 'category')
-        } for model in models])
-
-    def test_category_pagination_last_five(self):
-        """Test /academy/student"""
-        self.headers(academy=1)
-        role = 'student'
-        base = self.generate_models(authenticate=True,
-                                    role=role,
-                                    capability='read_media',
-                                    profile_academy=True)
-
-        models = [self.generate_models(category=True, models=base) for _ in range(0, 10)]
-        url = reverse_lazy('media:category') + '?limit=5&offset=5'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            'http://testserver/v1/media/category?limit=5',
-            'last':
-            None,
-            'next':
-            None,
-            'previous':
-            'http://testserver/v1/media/category?limit=5',
-            'results': [{
-                'id': model['category'].id,
-                'medias': 0,
-                'name': model['category'].name,
-                'slug': model['category'].slug,
-            } for model in models if model['category'].id > 5]
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.all_category_dict(), [{
-            **self.model_to_dict(model, 'category')
-        } for model in models])
-
-    def test_category_pagination_after_last_five(self):
-        """Test /academy/student"""
-        self.headers(academy=1)
-        role = 'student'
-        base = self.generate_models(authenticate=True,
-                                    role=role,
-                                    capability='read_media',
-                                    profile_academy=True)
-
-        models = [self.generate_models(category=True, models=base) for _ in range(0, 10)]
-        url = reverse_lazy('media:category') + '?limit=5&offset=10'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/media/category?limit=5',
-            'last': None,
-            'next': None,
-            'previous': 'http://testserver/v1/media/category?limit=5&offset=5',
-            'results': []
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.all_category_dict(), [{
-            **self.model_to_dict(model, 'category')
-        } for model in models])
-
     @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
     @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
     @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
@@ -275,3 +150,41 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.all_category_dict(), [expected])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_category__spy_extensions(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        models = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      capability='read_media',
+                                      role='potato')
+
+        url = reverse_lazy('media:category')
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['PaginationExtension']),
+        ])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_category__spy_extension_arguments(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        models = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      capability='read_media',
+                                      role='potato')
+
+        url = reverse_lazy('media:category')
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(paginate=True),
+        ])

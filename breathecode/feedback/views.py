@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from django.http import HttpResponse
 from breathecode.admissions.models import CohortUser, Academy
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .models import Answer, Survey, ReviewPlatform, Review
 from .tasks import generate_user_cohort_survey_answers
 from rest_framework import serializers
@@ -64,12 +65,16 @@ def get_survey_questions(request, survey_id=None):
 
 
 # Create your views here.
-class GetAnswerView(APIView, HeaderLimitOffsetPagination):
+class GetAnswerView(APIView):
     """
     List all snippets, or create a new snippet.
     """
+
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
     @capable_of('read_nps_answers')
     def get(self, request, format=None, academy_id=None):
+        handler = self.extensions(request)
 
         items = Answer.objects.filter(academy__id=academy_id)
         lookup = {}
@@ -102,19 +107,16 @@ class GetAnswerView(APIView, HeaderLimitOffsetPagination):
         if surveys is not None and surveys != '':
             items = items.filter(survey__id__in=surveys.split(','))
 
-        items = items.filter(**lookup).order_by('-created_at')
+        items = items.filter(**lookup)
 
         like = request.GET.get('like', None)
         if like is not None:
             items = query_like_by_full_name(like=like, items=items, prefix='user__')
 
-        page = self.paginate_queryset(items, request)
-        serializer = AnswerSerializer(page, many=True)
+        items = handler.queryset(items)
+        serializer = AnswerSerializer(items, many=True)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=status.HTTP_200_OK)
+        return handler.response(serializer.data)
 
 
 class AnswerMeView(APIView):

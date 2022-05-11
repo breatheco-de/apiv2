@@ -9,6 +9,7 @@ from rest_framework import status
 from django.utils import timezone
 from random import choice
 import breathecode.notify.actions as actions
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ...models import ProfileAcademy
 from ..mixins.new_auth_test_case import AuthTestCase
 
@@ -665,248 +666,43 @@ class StudentGetTestSuite(AuthTestCase):
 
             self.bc.database.delete('authenticate.ProfileAcademy')
 
+    """
+    🔽🔽🔽 Spy the extensions
+    """
 
-class StudentGetPaginationTestSuite(AuthTestCase):
-    def test_academy_student_pagination_with_105(self):
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_academy_student__spy_extensions(self):
         """Test /academy/student"""
         self.headers(academy=1)
-        role = 'student'
+        role = 'konan'
         model = self.bc.database.create(authenticate=True,
                                         role=role,
                                         capability='read_student',
                                         profile_academy=True)
 
-        base = model.copy()
-        del base['user']
-        del base['profile_academy']
-
-        models = [model] + [self.bc.database.create(profile_academy=True, models=base) for _ in range(0, 105)]
         url = reverse_lazy('authenticate:academy_student')
-        response = self.client.get(url)
-        json = response.json()
-        expected = [{
-            'academy': {
-                'id': model['profile_academy'].academy.id,
-                'name': model['profile_academy'].academy.name,
-                'slug': model['profile_academy'].academy.slug
-            },
-            'address': model['profile_academy'].address,
-            'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
-            'email': model['profile_academy'].email,
-            'first_name': model['profile_academy'].first_name,
-            'id': model['profile_academy'].id,
-            'last_name': model['profile_academy'].last_name,
-            'phone': model['profile_academy'].phone,
-            'role': {
-                'id': 'student',
-                'name': 'student',
-                'slug': 'student'
-            },
-            'status': 'INVITED',
-            'user': {
-                'email': model['profile_academy'].user.email,
-                'first_name': model['profile_academy'].user.first_name,
-                'profile': None,
-                'id': model['profile_academy'].user.id,
-                'last_name': model['profile_academy'].user.last_name
-            }
-        } for model in models if model['profile_academy'].id < 101]
+        self.client.get(url)
 
-        self.assertEqual(json, expected)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': model['profile_academy'].id,
-            'last_name': None,
-            'phone': '',
-            'role_id': 'student',
-            'status': 'INVITED',
-            'user_id': model['user'].id
-        } for model in models])
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['PaginationExtension']),
+        ])
 
-    def test_academy_student_pagination_first_five(self):
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_academy_student__spy_extension_arguments(self):
         """Test /academy/student"""
         self.headers(academy=1)
-        role = 'student'
+        role = 'konan'
         model = self.bc.database.create(authenticate=True,
                                         role=role,
                                         capability='read_student',
                                         profile_academy=True)
 
-        base = model.copy()
-        del base['user']
-        del base['profile_academy']
+        url = reverse_lazy('authenticate:academy_student')
+        self.client.get(url)
 
-        models = [model] + [self.bc.database.create(profile_academy=True, models=base) for _ in range(0, 9)]
-        url = reverse_lazy('authenticate:academy_student') + '?limit=5&offset=0'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            None,
-            'last':
-            'http://testserver/v1/auth/academy/student?limit=5&offset=5',
-            'next':
-            'http://testserver/v1/auth/academy/student?limit=5&offset=5',
-            'previous':
-            None,
-            'results': [{
-                'academy': {
-                    'id': model['profile_academy'].academy.id,
-                    'name': model['profile_academy'].academy.name,
-                    'slug': model['profile_academy'].academy.slug
-                },
-                'address': model['profile_academy'].address,
-                'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
-                'email': model['profile_academy'].email,
-                'first_name': model['profile_academy'].first_name,
-                'id': model['profile_academy'].id,
-                'last_name': model['profile_academy'].last_name,
-                'phone': model['profile_academy'].phone,
-                'role': {
-                    'id': 'student',
-                    'name': 'student',
-                    'slug': 'student'
-                },
-                'status': 'INVITED',
-                'user': {
-                    'email': model['profile_academy'].user.email,
-                    'first_name': model['profile_academy'].user.first_name,
-                    'profile': None,
-                    'id': model['profile_academy'].user.id,
-                    'last_name': model['profile_academy'].user.last_name
-                }
-            } for model in models if model['profile_academy'].id < 6]
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': model['profile_academy'].id,
-            'last_name': None,
-            'phone': '',
-            'role_id': 'student',
-            'status': 'INVITED',
-            'user_id': model['user'].id
-        } for model in models])
-
-    def test_academy_student_pagination_last_five(self):
-        """Test /academy/student"""
-        self.headers(academy=1)
-        role = 'student'
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='read_student',
-                                        profile_academy=True)
-
-        base = model.copy()
-        del base['user']
-        del base['profile_academy']
-
-        models = [model] + [self.bc.database.create(profile_academy=True, models=base) for _ in range(0, 9)]
-        url = reverse_lazy('authenticate:academy_student') + '?limit=5&offset=5'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            'http://testserver/v1/auth/academy/student?limit=5',
-            'last':
-            None,
-            'next':
-            None,
-            'previous':
-            'http://testserver/v1/auth/academy/student?limit=5',
-            'results': [{
-                'academy': {
-                    'id': model['profile_academy'].academy.id,
-                    'name': model['profile_academy'].academy.name,
-                    'slug': model['profile_academy'].academy.slug
-                },
-                'address': model['profile_academy'].address,
-                'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
-                'email': model['profile_academy'].email,
-                'first_name': model['profile_academy'].first_name,
-                'id': model['profile_academy'].id,
-                'last_name': model['profile_academy'].last_name,
-                'phone': model['profile_academy'].phone,
-                'role': {
-                    'id': 'student',
-                    'name': 'student',
-                    'slug': 'student'
-                },
-                'status': 'INVITED',
-                'user': {
-                    'email': model['profile_academy'].user.email,
-                    'first_name': model['profile_academy'].user.first_name,
-                    'profile': None,
-                    'id': model['profile_academy'].user.id,
-                    'last_name': model['profile_academy'].user.last_name
-                }
-            } for model in models if model['profile_academy'].id > 5]
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': model['profile_academy'].id,
-            'last_name': None,
-            'phone': '',
-            'role_id': 'student',
-            'status': 'INVITED',
-            'user_id': model['user'].id
-        } for model in models])
-
-    def test_academy_student_pagination_after_last_five(self):
-        """Test /academy/student"""
-        self.headers(academy=1)
-        role = 'student'
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='read_student',
-                                        profile_academy=True)
-
-        base = model.copy()
-        del base['user']
-        del base['profile_academy']
-
-        models = [model] + [self.bc.database.create(profile_academy=True, models=base) for _ in range(0, 9)]
-        url = reverse_lazy('authenticate:academy_student') + '?limit=5&offset=10'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/auth/academy/student?limit=5',
-            'last': None,
-            'next': None,
-            'previous': 'http://testserver/v1/auth/academy/student?limit=5&offset=5',
-            'results': []
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.all_profile_academy_dict(), [{
-            'academy_id': 1,
-            'address': None,
-            'email': None,
-            'first_name': None,
-            'id': model['profile_academy'].id,
-            'last_name': None,
-            'phone': '',
-            'role_id': 'student',
-            'status': 'INVITED',
-            'user_id': model['user'].id
-        } for model in models])
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(paginate=True),
+        ])
 
 
 class StudentPostTestSuite(AuthTestCase):

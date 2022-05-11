@@ -15,6 +15,7 @@ from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Count, F, Func, Value, CharField
 from breathecode.utils import (APIException, localize_query, capable_of, ValidationException,
                                GenerateLookupsMixin, HeaderLimitOffsetPagination)
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .serializers import (
     PostFormEntrySerializer,
     FormEntrySerializer,
@@ -483,12 +484,16 @@ class AcademyWonLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMi
             return Response(serializer.data, status=200)
 
 
-class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class AcademyLeadView(APIView, GenerateLookupsMixin):
     """
     List all snippets, or create a new snippet.
     """
+
+    extensions = APIViewExtensions(sort='-created_at', paginate=True)
+
     @capable_of('read_lead')
-    def get(self, request, format=None, academy_id=None):
+    def get(self, request, academy_id=None):
+        handler = self.extensions(request)
 
         academy = Academy.objects.get(id=academy_id)
         items = FormEntry.objects.filter(academy__id=academy.id)
@@ -520,23 +525,16 @@ class AcademyLeadView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
             param = self.request.GET.get('location')
             lookup['location'] = param
 
-        sort_by = '-created_at'
-        if 'sort' in self.request.GET and self.request.GET['sort'] != '':
-            sort_by = self.request.GET.get('sort')
-
-        items = items.filter(**lookup).order_by(sort_by)
+        items = items.filter(**lookup)
 
         like = request.GET.get('like', None)
         if like is not None:
             items = query_like_by_full_name(like=like, items=items)
 
-        page = self.paginate_queryset(items, request)
-        serializer = FormEntrySmallSerializer(page, many=True)
+        items = handler.queryset(items)
+        serializer = FormEntrySmallSerializer(items, many=True)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=200)
+        return handler.response(serializer.data)
 
     @capable_of('crud_lead')
     def delete(self, request, academy_id=None):

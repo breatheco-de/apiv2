@@ -125,7 +125,9 @@ class CertificateTestSuite(AdmissionsTestCase):
             'github_url': model.syllabus.github_url,
             'logo': model.syllabus.logo,
             'private': model.syllabus.private,
+            'status': 'PUBLISHED',
             'main_technologies': None,
+            'change_log_details': None,
             'week_hours': model.syllabus.week_hours,
         }
 

@@ -31,6 +31,8 @@ def capable_of(capability=None):
             academy_id = get_academy_from_capability(kwargs, request, capability)
             if academy_id:
                 kwargs['academy_id'] = academy_id
+                # add the new kwargs argument to the context to be used by APIViewExtensions
+                request.parser_context['kwargs']['academy_id'] = academy_id
                 return function(*args, **kwargs)
 
         return wrapper

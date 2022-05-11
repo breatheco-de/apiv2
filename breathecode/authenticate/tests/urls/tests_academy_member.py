@@ -10,6 +10,7 @@ from random import choice
 from rest_framework.response import Response
 from rest_framework import status
 from breathecode.utils import capable_of
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins.new_auth_test_case import AuthTestCase
 import breathecode.notify.actions as actions
 import urllib.parse
@@ -1280,252 +1281,43 @@ class MemberGetTestSuite(AuthTestCase):
             'user_id': 1 + index,
         } for index in range(0, 2)])
 
+    """
+    🔽🔽🔽 Spy the extensions
+    """
 
-class MemberGetPaginationTestSuite(AuthTestCase):
-    def test_academy_member_pagination_with_105(self):
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_academy_member__spy_extensions(self):
         """Test /academy/member"""
+
         self.bc.request.set_headers(academy=1)
         role = 'hitman'
         model = self.bc.database.create(authenticate=True,
                                         role=role,
                                         capability='read_member',
                                         profile_academy=True)
-
-        base = model.copy()
-        del base['user']
-        del base['profile_academy']
-
-        models = [model] + [self.bc.database.create(profile_academy=True, models=base) for _ in range(0, 105)]
         url = reverse_lazy('authenticate:academy_member')
-        response = self.client.get(url)
-        json = response.json()
-        expected = [{
-            'academy': {
-                'id': model['profile_academy'].academy.id,
-                'name': model['profile_academy'].academy.name,
-                'slug': model['profile_academy'].academy.slug
-            },
-            'address': model['profile_academy'].address,
-            'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
-            'email': model['profile_academy'].email,
-            'first_name': model['profile_academy'].first_name,
-            'id': model['profile_academy'].id,
-            'last_name': model['profile_academy'].last_name,
-            'phone': model['profile_academy'].phone,
-            'role': {
-                'id': 'hitman',
-                'name': 'hitman',
-                'slug': 'hitman'
-            },
-            'status': 'INVITED',
-            'user': {
-                'email': model['profile_academy'].user.email,
-                'first_name': model['profile_academy'].user.first_name,
-                'profile': None,
-                'id': model['profile_academy'].user.id,
-                'last_name': model['profile_academy'].user.last_name
-            }
-        } for model in models if model['profile_academy'].id < 101]
+        self.client.get(url)
 
-        self.assertEqual(json, expected)
-        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
-                         [{
-                             'academy_id': 1,
-                             'address': None,
-                             'email': None,
-                             'first_name': None,
-                             'id': model['profile_academy'].id,
-                             'last_name': None,
-                             'phone': '',
-                             'role_id': 'hitman',
-                             'status': 'INVITED',
-                             'user_id': model['user'].id
-                         } for model in models])
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['PaginationExtension']),
+        ])
 
-    def test_academy_member_pagination_first_five(self):
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_academy_member__spy_extension_arguments(self):
         """Test /academy/member"""
+
         self.bc.request.set_headers(academy=1)
         role = 'hitman'
         model = self.bc.database.create(authenticate=True,
                                         role=role,
                                         capability='read_member',
                                         profile_academy=True)
+        url = reverse_lazy('authenticate:academy_member')
+        self.client.get(url)
 
-        base = model.copy()
-        del base['user']
-        del base['profile_academy']
-
-        models = [model] + [self.bc.database.create(profile_academy=True, models=base) for _ in range(0, 9)]
-        url = reverse_lazy('authenticate:academy_member') + '?limit=5&offset=0'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            None,
-            'last':
-            'http://testserver/v1/auth/academy/member?limit=5&offset=5',
-            'next':
-            'http://testserver/v1/auth/academy/member?limit=5&offset=5',
-            'previous':
-            None,
-            'results': [{
-                'academy': {
-                    'id': model['profile_academy'].academy.id,
-                    'name': model['profile_academy'].academy.name,
-                    'slug': model['profile_academy'].academy.slug
-                },
-                'address': model['profile_academy'].address,
-                'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
-                'email': model['profile_academy'].email,
-                'first_name': model['profile_academy'].first_name,
-                'id': model['profile_academy'].id,
-                'last_name': model['profile_academy'].last_name,
-                'phone': model['profile_academy'].phone,
-                'role': {
-                    'id': 'hitman',
-                    'name': 'hitman',
-                    'slug': 'hitman'
-                },
-                'status': 'INVITED',
-                'user': {
-                    'email': model['profile_academy'].user.email,
-                    'first_name': model['profile_academy'].user.first_name,
-                    'profile': None,
-                    'id': model['profile_academy'].user.id,
-                    'last_name': model['profile_academy'].user.last_name
-                }
-            } for model in models if model['profile_academy'].id < 6]
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
-                         [{
-                             'academy_id': 1,
-                             'address': None,
-                             'email': None,
-                             'first_name': None,
-                             'id': model['profile_academy'].id,
-                             'last_name': None,
-                             'phone': '',
-                             'role_id': 'hitman',
-                             'status': 'INVITED',
-                             'user_id': model['user'].id
-                         } for model in models])
-
-    def test_academy_member_pagination_last_five(self):
-        """Test /academy/member"""
-        self.bc.request.set_headers(academy=1)
-        role = 'hitman'
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='read_member',
-                                        profile_academy=True)
-
-        base = model.copy()
-        del base['user']
-        del base['profile_academy']
-
-        models = [model] + [self.bc.database.create(profile_academy=True, models=base) for _ in range(0, 9)]
-        url = reverse_lazy('authenticate:academy_member') + '?limit=5&offset=5'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            'http://testserver/v1/auth/academy/member?limit=5',
-            'last':
-            None,
-            'next':
-            None,
-            'previous':
-            'http://testserver/v1/auth/academy/member?limit=5',
-            'results': [{
-                'academy': {
-                    'id': model['profile_academy'].academy.id,
-                    'name': model['profile_academy'].academy.name,
-                    'slug': model['profile_academy'].academy.slug
-                },
-                'address': model['profile_academy'].address,
-                'created_at': self.datetime_to_iso(model['profile_academy'].created_at),
-                'email': model['profile_academy'].email,
-                'first_name': model['profile_academy'].first_name,
-                'id': model['profile_academy'].id,
-                'last_name': model['profile_academy'].last_name,
-                'phone': model['profile_academy'].phone,
-                'role': {
-                    'id': 'hitman',
-                    'name': 'hitman',
-                    'slug': 'hitman'
-                },
-                'status': 'INVITED',
-                'user': {
-                    'email': model['profile_academy'].user.email,
-                    'first_name': model['profile_academy'].user.first_name,
-                    'profile': None,
-                    'id': model['profile_academy'].user.id,
-                    'last_name': model['profile_academy'].user.last_name
-                }
-            } for model in models if model['profile_academy'].id > 5]
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
-                         [{
-                             'academy_id': 1,
-                             'address': None,
-                             'email': None,
-                             'first_name': None,
-                             'id': model['profile_academy'].id,
-                             'last_name': None,
-                             'phone': '',
-                             'role_id': 'hitman',
-                             'status': 'INVITED',
-                             'user_id': model['user'].id
-                         } for model in models])
-
-    def test_academy_member_pagination_after_last_five(self):
-        """Test /academy/member"""
-        self.bc.request.set_headers(academy=1)
-        role = 'hitman'
-        model = self.bc.database.create(authenticate=True,
-                                        role=role,
-                                        capability='read_member',
-                                        profile_academy=True)
-
-        base = model.copy()
-        del base['user']
-        del base['profile_academy']
-
-        models = [model] + [self.bc.database.create(profile_academy=True, models=base) for _ in range(0, 9)]
-        url = reverse_lazy('authenticate:academy_member') + '?limit=5&offset=10'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/auth/academy/member?limit=5',
-            'last': None,
-            'next': None,
-            'previous': 'http://testserver/v1/auth/academy/member?limit=5&offset=5',
-            'results': []
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.bc.database.list_of('authenticate.ProfileAcademy'),
-                         [{
-                             'academy_id': 1,
-                             'address': None,
-                             'email': None,
-                             'first_name': None,
-                             'id': model['profile_academy'].id,
-                             'last_name': None,
-                             'phone': '',
-                             'role_id': 'hitman',
-                             'status': 'INVITED',
-                             'user_id': model['user'].id
-                         } for model in models])
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(paginate=True),
+        ])
 
 
 class MemberPostTestSuite(AuthTestCase):

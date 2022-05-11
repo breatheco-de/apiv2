@@ -2,7 +2,7 @@
 Test /answer
 """
 import re, urllib
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from breathecode.tests.mocks import (
@@ -11,6 +11,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import MediaTestCase
 
 
@@ -1318,163 +1319,40 @@ class MediaTestSuite(MediaTestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(self.all_media_dict(), [])
 
-    """
-    🔽🔽🔽 Pagination tests
-    """
-
-    def test_root__pagination__with_105(self):
-        """Test /academy/student"""
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_root__spy_extensions(self):
+        """Test /answer without auth"""
         self.headers(academy=1)
-        role = 'student'
-        base = self.generate_models(authenticate=True,
-                                    role=role,
-                                    capability='read_media',
-                                    profile_academy=True)
-
-        models = [self.generate_models(media=True, models=base) for _ in range(0, 105)]
-
-        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
+        models = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      capability='read_media',
+                                      role='potato')
 
         url = reverse_lazy('media:root')
-        response = self.client.get(url)
-        json = response.json()
-        expected = [{
-            'categories': [],
-            'hash': model['media'].hash,
-            'hits': model['media'].hits,
-            'id': model['media'].id,
-            'mime': model['media'].mime,
-            'name': model['media'].name,
-            'slug': model['media'].slug,
-            'thumbnail': f'{model.media.url}-thumbnail',
-            'url': model['media'].url,
-            'academy': {
-                'id': model['academy'].id,
-                'slug': model['academy'].slug,
-                'name': model['academy'].name,
-            }
-        } for model in ordened_models[:100]]
+        self.client.get(url)
 
-        self.assertEqual(json, expected)
-        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['PaginationExtension', 'SortExtension']),
+        ])
 
-    def test_root__pagination__first_five(self):
-        """Test /academy/student"""
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_root__spy_extension_arguments(self):
+        """Test /answer without auth"""
         self.headers(academy=1)
-        role = 'student'
-        base = self.generate_models(authenticate=True,
-                                    role=role,
-                                    capability='read_media',
-                                    profile_academy=True)
+        models = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      capability='read_media',
+                                      role='potato')
 
-        models = [self.generate_models(media=True, models=base) for _ in range(0, 10)]
+        url = reverse_lazy('media:root')
+        self.client.get(url)
 
-        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
-
-        url = reverse_lazy('media:root') + '?limit=5&offset=0'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            None,
-            'last':
-            'http://testserver/v1/media/?limit=5&offset=5',
-            'next':
-            'http://testserver/v1/media/?limit=5&offset=5',
-            'previous':
-            None,
-            'results': [{
-                'categories': [],
-                'hash': model['media'].hash,
-                'hits': model['media'].hits,
-                'id': model['media'].id,
-                'mime': model['media'].mime,
-                'name': model['media'].name,
-                'slug': model['media'].slug,
-                'thumbnail': f'{model.media.url}-thumbnail',
-                'url': model['media'].url,
-                'academy': {
-                    'id': model['academy'].id,
-                    'slug': model['academy'].slug,
-                    'name': model['academy'].name,
-                }
-            } for model in ordened_models[:5]]
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
-
-    def test_root__pagination__last_five(self):
-        """Test /academy/student"""
-        self.headers(academy=1)
-        role = 'student'
-        base = self.generate_models(authenticate=True,
-                                    role=role,
-                                    capability='read_media',
-                                    profile_academy=True)
-
-        models = [self.generate_models(media=True, models=base) for _ in range(0, 10)]
-
-        ordened_models = sorted(models, key=lambda x: x['media'].created_at, reverse=True)
-
-        url = reverse_lazy('media:root') + '?limit=5&offset=5'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count':
-            10,
-            'first':
-            'http://testserver/v1/media/?limit=5',
-            'last':
-            None,
-            'next':
-            None,
-            'previous':
-            'http://testserver/v1/media/?limit=5',
-            'results': [{
-                'categories': [],
-                'hash': model['media'].hash,
-                'hits': model['media'].hits,
-                'id': model['media'].id,
-                'mime': model['media'].mime,
-                'name': model['media'].name,
-                'slug': model['media'].slug,
-                'thumbnail': f'{model.media.url}-thumbnail',
-                'url': model['media'].url,
-                'academy': {
-                    'id': model['academy'].id,
-                    'slug': model['academy'].slug,
-                    'name': model['academy'].name,
-                }
-            } for model in ordened_models[5:]]
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
-
-    def test_root__pagination__after_last_five(self):
-        """Test /academy/student"""
-        self.headers(academy=1)
-        role = 'student'
-        base = self.generate_models(authenticate=True,
-                                    role=role,
-                                    capability='read_media',
-                                    profile_academy=True)
-
-        models = [self.generate_models(media=True, models=base) for _ in range(0, 10)]
-        url = reverse_lazy('media:root') + '?limit=5&offset=10'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/media/?limit=5',
-            'last': None,
-            'next': None,
-            'previous': 'http://testserver/v1/media/?limit=5&offset=5',
-            'results': []
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(self.all_media_dict(), [{**self.model_to_dict(model, 'media')} for model in models])
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(sort='-created_at', paginate=True),
+        ])

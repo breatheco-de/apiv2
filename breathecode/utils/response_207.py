@@ -1,21 +1,33 @@
 from rest_framework import status
 from rest_framework.response import Response
 
+__all__ = ['response_207']
 
-def response_207(success, failure, status_code, detail, success_key='slug', failure_key='slug'):
-    failure = list(failure.values(success_key))
-    if type(status_code) is not list:
-        status_code = [status_code] * len(failure)
-    status_code = [{'status_code': s} for s in status_code]
 
-    if type(detail) is not list:
-        detail = [detail] * len(failure)
-    detail = [{'detail': detail} for detail in detail]
+def format_response(data, key):
+    response = {}
 
-    failure = [{'resources': [d['slug']]} for d in failure]
+    if 'detail' in data and data['detail']:
+        response['detail'] = data['detail']
 
-    for i in range(len(failure)):
-        failure[i] = {**failure[i], **detail[i], **status_code[i]}
+    if 'status_code' in data:
+        response['status_code'] = data['status_code']
 
-    content = {'success': [d[success_key] for d in success], 'failure': failure}
+    if 'queryset' in data:
+        response['resources'] = [{
+            'pk': x.pk,
+            'display_field': key,
+            'display_value': getattr(x, key) if hasattr(x, key) else None,
+        } for x in data['queryset']]
+
+    return response
+
+
+def response_207(responses, display_name):
+    alls = [x._get_response_info() for x in responses]
+
+    success = [format_response(x, display_name) for x in alls if x['status_code'] < 400]
+    failure = [format_response(x, display_name) for x in alls if x['status_code'] >= 400]
+
+    content = {'success': success, 'failure': failure}
     return Response(content, status=status.HTTP_207_MULTI_STATUS)

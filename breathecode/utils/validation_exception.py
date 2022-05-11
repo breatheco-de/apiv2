@@ -1,6 +1,8 @@
 import os
 import logging
+from typing import Optional
 from rest_framework.exceptions import APIException
+from django.db.models import QuerySet
 
 __all__ = ['ValidationException', 'APIException']
 
@@ -9,12 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 class ValidationException(APIException):
-    status_code = 400
-    default_detail = 'There is an error in your request'
-    default_code = 'client_error'
-    slug = None
+    status_code: int = 400
+    default_detail: str = 'There is an error in your request'
+    default_code: str = 'client_error'
+    slug: Optional[str] = None
 
-    def __init__(self, details, code=400, slug=None):
+    def __init__(self, details: str, code: int = 400, slug: Optional[str] = None):
         self.status_code = code
         self.default_detail = details
         self.slug = slug

@@ -26,6 +26,7 @@ from datetime import datetime
 
 from breathecode.mentorship.models import MentorProfile
 from breathecode.mentorship.serializers import GETMentorSmallSerializer
+from breathecode.utils.api_view_extensions.api_view_extensions import APIViewExtensions
 from .authentication import ExpiringTokenAuthentication
 
 from .forms import PickPasswordForm, PasswordChangeCustomForm, ResetPasswordForm, LoginForm, InviteForm
@@ -132,9 +133,13 @@ class WaitingListView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class MemberView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(paginate=True)
+
     @capable_of('read_member')
     def get(self, request, academy_id, user_id_or_email=None):
+        handler = self.extensions(request)
+
         if user_id_or_email is not None:
             item = None
             if user_id_or_email.isnumeric():
@@ -167,13 +172,10 @@ class MemberView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
 
         items = items.exclude(user__email__contains='@token.com')
 
-        page = self.paginate_queryset(items, request)
-        serializer = GetProfileAcademySmallSerializer(page, many=True)
+        items = handler.queryset(items)
+        serializer = GetProfileAcademySmallSerializer(items, many=True)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=200)
+        return handler.response(serializer.data)
 
     @capable_of('crud_member')
     def post(self, request, academy_id=None):
@@ -423,9 +425,13 @@ class AcademyInviteView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMix
         return Response(serializer.data)
 
 
-class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
+class StudentView(APIView, GenerateLookupsMixin):
+    extensions = APIViewExtensions(paginate=True)
+
     @capable_of('read_student')
     def get(self, request, academy_id=None, user_id_or_email=None):
+        handler = self.extensions(request)
+
         if user_id_or_email is not None:
             profile = None
             if user_id_or_email.isnumeric():
@@ -451,13 +457,10 @@ class StudentView(APIView, HeaderLimitOffsetPagination, GenerateLookupsMixin):
         if status is not None:
             items = items.filter(status__iexact=status)
 
-        page = self.paginate_queryset(items, request)
-        serializer = GetProfileAcademySmallSerializer(page, many=True)
+        items = handler.queryset(items)
+        serializer = GetProfileAcademySmallSerializer(items, many=True)
 
-        if self.is_paginate(request):
-            return self.get_paginated_response(serializer.data)
-        else:
-            return Response(serializer.data, status=200)
+        return handler.response(serializer.data)
 
     @capable_of('crud_student')
     def post(self, request, academy_id=None):

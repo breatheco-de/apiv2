@@ -2,7 +2,7 @@
 Test /answer
 """
 import re, urllib
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
 from breathecode.tests.mocks import (
@@ -11,6 +11,7 @@ from breathecode.tests.mocks import (
     apply_google_cloud_bucket_mock,
     apply_google_cloud_blob_mock,
 )
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import FeedbackTestCase
 
 
@@ -726,247 +727,6 @@ class AnswerTestSuite(FeedbackTestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertEqual(self.all_answer_dict(), [db])
 
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_answer_with_data_without_pagination_get_just_100(self):
-        """Test /answer without auth"""
-        self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_nps_answers',
-                                    role='potato')
-
-        models = [self.generate_models(answer=True, models=base) for _ in range(0, 105)]
-        ordened_models = sorted(models, key=lambda x: x['answer'].created_at, reverse=True)
-
-        url = reverse_lazy('feedback:answer')
-        response = self.client.get(url)
-        json = response.json()
-
-        json = [{**x, 'created_at': None} for x in json if self.assertDatetime(x['created_at'])]
-
-        expected = [{
-            'id': model['answer'].id,
-            'title': model['answer'].title,
-            'lowest': model['answer'].lowest,
-            'highest': model['answer'].highest,
-            'lang': model['answer'].lang,
-            'comment': model['answer'].comment,
-            'score': model['answer'].score,
-            'status': model['answer'].status,
-            'created_at': None,
-            'user': {
-                'id': model['user'].id,
-                'first_name': model['user'].first_name,
-                'last_name': model['user'].last_name,
-                'profile': None,
-            },
-            'academy': {
-                'id': model['answer'].academy.id,
-                'slug': model['answer'].academy.slug,
-                'name': model['answer'].academy.name,
-            },
-            'cohort': {
-                'id': model['answer'].cohort.id,
-                'slug': model['answer'].cohort.slug,
-                'name': model['answer'].cohort.name,
-            },
-            'mentor': {
-                'id': model['answer'].mentor.id,
-                'first_name': model['answer'].mentor.first_name,
-                'last_name': model['answer'].mentor.last_name,
-                'profile': None,
-            },
-            'event': model['answer'].event,
-        } for model in ordened_models][:100]
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [{
-            **self.model_to_dict(model, 'answer'),
-        } for model in models])
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_answer_with_data_with_pagination_first_five(self):
-        """Test /answer without auth"""
-        self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_nps_answers',
-                                    role='potato')
-
-        models = [self.generate_models(answer=True, models=base) for _ in range(0, 10)]
-        ordened_models = sorted(models, key=lambda x: x['answer'].created_at, reverse=True)
-
-        url = reverse_lazy('feedback:answer') + '?limit=5&offset=0'
-        response = self.client.get(url)
-        json = response.json()
-
-        prev_results = json['results']
-        json['results'] = [{
-            **x, 'created_at': None
-        } for x in prev_results if self.assertDatetime(x['created_at'])]
-
-        results = [{
-            'id': model['answer'].id,
-            'title': model['answer'].title,
-            'lowest': model['answer'].lowest,
-            'highest': model['answer'].highest,
-            'lang': model['answer'].lang,
-            'comment': model['answer'].comment,
-            'score': model['answer'].score,
-            'status': model['answer'].status,
-            'created_at': None,
-            'user': {
-                'id': model['user'].id,
-                'first_name': model['user'].first_name,
-                'last_name': model['user'].last_name,
-                'profile': None,
-            },
-            'academy': {
-                'id': model['answer'].academy.id,
-                'slug': model['answer'].academy.slug,
-                'name': model['answer'].academy.name,
-            },
-            'cohort': {
-                'id': model['answer'].cohort.id,
-                'slug': model['answer'].cohort.slug,
-                'name': model['answer'].cohort.name,
-            },
-            'mentor': {
-                'id': model['answer'].mentor.id,
-                'first_name': model['answer'].mentor.first_name,
-                'last_name': model['answer'].mentor.last_name,
-                'profile': None,
-            },
-            'event': model['answer'].event,
-        } for model in ordened_models][:5]
-
-        expected = {
-            'count': 10,
-            'first': None,
-            'next': 'http://testserver/v1/feedback/academy/answer?limit=5&'
-            f'offset=5',
-            'previous': None,
-            'last': 'http://testserver/v1/feedback/academy/answer?limit=5&'
-            f'offset=5',
-            'results': results
-        }
-
-        self.assertEqual(json, expected)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [{
-            **self.model_to_dict(model, 'answer'),
-        } for model in models])
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_answer_with_data_with_pagination_last_five(self):
-        """Test /answer without auth"""
-        self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_nps_answers',
-                                    role='potato')
-
-        models = [self.generate_models(answer=True, models=base) for _ in range(0, 10)]
-        ordened_models = sorted(models, key=lambda x: x['answer'].created_at, reverse=True)
-
-        url = reverse_lazy('feedback:answer') + '?limit=5&offset=5'
-        response = self.client.get(url)
-        json = response.json()
-
-        prev_results = json['results']
-        json['results'] = [{
-            **x, 'created_at': None
-        } for x in prev_results if self.assertDatetime(x['created_at'])]
-
-        results = [{
-            'id': model['answer'].id,
-            'title': model['answer'].title,
-            'lowest': model['answer'].lowest,
-            'highest': model['answer'].highest,
-            'lang': model['answer'].lang,
-            'comment': model['answer'].comment,
-            'score': model['answer'].score,
-            'status': model['answer'].status,
-            'created_at': None,
-            'user': {
-                'id': model['user'].id,
-                'first_name': model['user'].first_name,
-                'last_name': model['user'].last_name,
-                'profile': None,
-            },
-            'academy': {
-                'id': model['answer'].academy.id,
-                'slug': model['answer'].academy.slug,
-                'name': model['answer'].academy.name,
-            },
-            'cohort': {
-                'id': model['answer'].cohort.id,
-                'slug': model['answer'].cohort.slug,
-                'name': model['answer'].cohort.name,
-            },
-            'mentor': {
-                'id': model['answer'].mentor.id,
-                'first_name': model['answer'].mentor.first_name,
-                'last_name': model['answer'].mentor.last_name,
-                'profile': None,
-            },
-            'event': model['answer'].event,
-        } for model in ordened_models][5:]
-
-        expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/feedback/academy/answer?limit=5',
-            'next': None,
-            'previous': 'http://testserver/v1/feedback/academy/answer?limit=5',
-            'last': None,
-            'results': results,
-        }
-
-        self.assertEqual(json, expected)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [{
-            **self.model_to_dict(model, 'answer'),
-        } for model in models])
-
-    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
-    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
-    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
-    def test_answer_with_data_with_pagination_last_five(self):
-        """Test /answer without auth"""
-        self.headers(academy=1)
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_nps_answers',
-                                    role='potato')
-
-        models = [self.generate_models(answer=True, models=base) for _ in range(0, 10)]
-        url = reverse_lazy('feedback:answer') + '?limit=5&offset=10'
-        response = self.client.get(url)
-        json = response.json()
-        expected = {
-            'count': 10,
-            'first': 'http://testserver/v1/feedback/academy/answer?limit=5',
-            'next': None,
-            'previous': 'http://testserver/v1/feedback/academy/answer?limit=5&offset=5',
-            'last': None,
-            'results': [],
-        }
-
-        self.assertEqual(json, expected)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_answer_dict(), [{
-            **self.model_to_dict(model, 'answer'),
-        } for model in models])
-
     """
     🔽🔽🔽 With full like querystring
     """
@@ -1247,3 +1007,45 @@ class AnswerTestSuite(FeedbackTestCase):
 
         self.assertEqual(json, expected)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    """
+    🔽🔽🔽 Spy extensions
+    """
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_answer__spy_extensions(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        models = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      capability='read_nps_answers',
+                                      role='potato')
+
+        url = reverse_lazy('feedback:answer')
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['PaginationExtension', 'SortExtension']),
+        ])
+
+    @patch(GOOGLE_CLOUD_PATH['client'], apply_google_cloud_client_mock())
+    @patch(GOOGLE_CLOUD_PATH['bucket'], apply_google_cloud_bucket_mock())
+    @patch(GOOGLE_CLOUD_PATH['blob'], apply_google_cloud_blob_mock())
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_answer__spy_extension_arguments(self):
+        """Test /answer without auth"""
+        self.headers(academy=1)
+        models = self.generate_models(authenticate=True,
+                                      profile_academy=True,
+                                      capability='read_nps_answers',
+                                      role='potato')
+
+        url = reverse_lazy('feedback:answer')
+        self.client.get(url)
+
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(sort='-created_at', paginate=True),
+        ])

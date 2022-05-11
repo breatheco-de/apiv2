@@ -1,8 +1,11 @@
 """
 Test /certificate
 """
+from unittest.mock import MagicMock, call, patch
 from django.urls.base import reverse_lazy
 from rest_framework import status
+
+from breathecode.utils.api_view_extensions.api_view_extension_handlers import APIViewExtensionHandlers
 from ..mixins import AdmissionsTestCase
 
 
@@ -187,178 +190,36 @@ class CertificateTestSuite(AdmissionsTestCase):
             **data,
         }])
 
-    """
-    🔽🔽🔽 Pagination
-    """
-
-    def test_syllabus__with_data__without_pagination__get_just_100(self):
+    @patch.object(APIViewExtensionHandlers, '_spy_extensions', MagicMock())
+    def test_syllabus__spy_extensions(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     syllabus_schedule=True,
+                                     profile_academy=True,
+                                     capability='read_syllabus',
+                                     role='potato')
 
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_syllabus',
-                                    role='potato')
-
-        models = [self.generate_models(syllabus=True, models=base) for _ in range(0, 105)]
         url = reverse_lazy('admissions:syllabus')
-        response = self.client.get(url)
-        json = response.json()
+        self.client.get(url)
 
-        self.assertEqual(json, [{
-            'main_technologies': None,
-            'slug': model.syllabus.slug,
-            'name': model.syllabus.name,
-            'academy_owner': {
-                'id': model.syllabus.academy_owner.id,
-                'name': model.syllabus.academy_owner.name,
-                'slug': model.syllabus.academy_owner.slug
-            },
-            'duration_in_days': model.syllabus.duration_in_days,
-            'duration_in_hours': model.syllabus.duration_in_hours,
-            'week_hours': model.syllabus.week_hours,
-            'github_url': model.syllabus.github_url,
-            'id': model.syllabus.id,
-            'logo': model.syllabus.logo,
-            'private': model.syllabus.private,
-            'created_at': self.datetime_to_iso(model.syllabus.created_at),
-            'updated_at': self.datetime_to_iso(model.syllabus.updated_at),
-        } for model in models if model['syllabus'].id <= 100])
+        self.assertEqual(APIViewExtensionHandlers._spy_extensions.call_args_list, [
+            call(['PaginationExtension']),
+        ])
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_syllabus_dict(), [{
-            **self.model_to_dict(model, 'syllabus'),
-        } for model in models])
-
-    def test_syllabus__with_data__with_pagination__first_five(self):
+    @patch.object(APIViewExtensionHandlers, '_spy_extension_arguments', MagicMock())
+    def test_syllabus__spy_extension_arguments(self):
         """Test /certificate without auth"""
         self.headers(academy=1)
+        model = self.generate_models(authenticate=True,
+                                     syllabus_schedule=True,
+                                     profile_academy=True,
+                                     capability='read_syllabus',
+                                     role='potato')
 
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_syllabus',
-                                    role='potato')
+        url = reverse_lazy('admissions:syllabus')
+        self.client.get(url)
 
-        models = [self.generate_models(syllabus=True, models=base) for _ in range(0, 10)]
-        url = reverse_lazy('admissions:syllabus') + '?limit=5&offset=0'
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(
-            json, {
-                'count':
-                10,
-                'first':
-                None,
-                'last':
-                'http://testserver/v1/admissions/syllabus?limit=5&offset=5',
-                'next':
-                'http://testserver/v1/admissions/syllabus?limit=5&offset=5',
-                'previous':
-                None,
-                'results': [{
-                    'main_technologies': None,
-                    'slug': model.syllabus.slug,
-                    'name': model.syllabus.name,
-                    'academy_owner': {
-                        'id': model.syllabus.academy_owner.id,
-                        'name': model.syllabus.academy_owner.name,
-                        'slug': model.syllabus.academy_owner.slug
-                    },
-                    'duration_in_days': model.syllabus.duration_in_days,
-                    'duration_in_hours': model.syllabus.duration_in_hours,
-                    'week_hours': model.syllabus.week_hours,
-                    'github_url': model.syllabus.github_url,
-                    'id': model.syllabus.id,
-                    'logo': model.syllabus.logo,
-                    'private': model.syllabus.private,
-                    'created_at': self.datetime_to_iso(model.syllabus.created_at),
-                    'updated_at': self.datetime_to_iso(model.syllabus.updated_at),
-                } for model in models if model['syllabus'].id <= 5]
-            })
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_syllabus_dict(), [{
-            **self.model_to_dict(model, 'syllabus'),
-        } for model in models])
-
-    def test_syllabus__with_data__with_pagination__last_five(self):
-        """Test /certificate without auth"""
-        self.headers(academy=1)
-
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_syllabus',
-                                    role='potato')
-
-        models = [self.generate_models(syllabus=True, models=base) for _ in range(0, 10)]
-        url = reverse_lazy('admissions:syllabus') + '?limit=5&offset=5'
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(
-            json, {
-                'count':
-                10,
-                'first':
-                'http://testserver/v1/admissions/syllabus?limit=5',
-                'last':
-                None,
-                'next':
-                None,
-                'previous':
-                'http://testserver/v1/admissions/syllabus?limit=5',
-                'results': [{
-                    'main_technologies': None,
-                    'slug': model.syllabus.slug,
-                    'name': model.syllabus.name,
-                    'academy_owner': {
-                        'id': model.syllabus.academy_owner.id,
-                        'name': model.syllabus.academy_owner.name,
-                        'slug': model.syllabus.academy_owner.slug
-                    },
-                    'duration_in_days': model.syllabus.duration_in_days,
-                    'duration_in_hours': model.syllabus.duration_in_hours,
-                    'week_hours': model.syllabus.week_hours,
-                    'github_url': model.syllabus.github_url,
-                    'id': model.syllabus.id,
-                    'logo': model.syllabus.logo,
-                    'private': model.syllabus.private,
-                    'created_at': self.datetime_to_iso(model.syllabus.created_at),
-                    'updated_at': self.datetime_to_iso(model.syllabus.updated_at),
-                } for model in models if model['syllabus'].id > 5],
-            })
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_syllabus_dict(), [{
-            **self.model_to_dict(model, 'syllabus'),
-        } for model in models])
-
-    def test_syllabus__with_data__with_pagination__after_last_five(self):
-        """Test /certificate without auth"""
-        self.headers(academy=1)
-
-        base = self.generate_models(authenticate=True,
-                                    profile_academy=True,
-                                    capability='read_syllabus',
-                                    role='potato')
-
-        models = [self.generate_models(syllabus=True, models=base) for _ in range(0, 10)]
-        url = reverse_lazy('admissions:syllabus') + '?limit=5&offset=10'
-        response = self.client.get(url)
-        json = response.json()
-
-        self.assertEqual(
-            json, {
-                'count': 10,
-                'first': 'http://testserver/v1/admissions/syllabus?limit=5',
-                'last': None,
-                'next': None,
-                'previous': 'http://testserver/v1/admissions/syllabus?limit=5&offset=5',
-                'results': [],
-            })
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.all_syllabus_dict(), [{
-            **self.model_to_dict(model, 'syllabus'),
-        } for model in models])
+        self.assertEqual(APIViewExtensionHandlers._spy_extension_arguments.call_args_list, [
+            call(paginate=True),
+        ])
