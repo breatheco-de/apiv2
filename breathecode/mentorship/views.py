@@ -11,7 +11,7 @@ from breathecode.authenticate.models import Token
 from breathecode.utils.views import private_view, render_message, set_query_parameter
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
 from .forms import CloseMentoringSessionForm
-from .actions import close_mentoring_session, get_pending_sessions_or_create, render_session
+from .actions import close_mentoring_session, get_pending_sessions_or_create, render_session, generate_mentor_bills
 from rest_framework import serializers
 from breathecode.notify.actions import get_template_content
 from rest_framework.exceptions import ValidationError, NotFound
@@ -398,6 +398,25 @@ class ServiceView(APIView, HeaderLimitOffsetPagination):
             return self.get_paginated_response(serializer.data)
         else:
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class MentorBillView(APIView, HeaderLimitOffsetPagination):
+    # """
+    # List all snippets, or create a new snippet.
+    # """
+    @capable_of('crud_mentor')
+    def post(self, request, academy_id=None, mentor_id=None):
+
+        if mentor_id is None:
+            raise ValidationException('Missing mentor ID on the URL', 404)
+
+        mentor = MentorProfile.objects.filter(id=mentor_id, service__academy__id=academy_id).first()
+        if mentor is None:
+            raise ValidationException('This mentor does not exist for this academy', 404)
+
+        bills = generate_mentor_bills(mentor)
+        serializer = GETBillSmallSerializer(bills, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class MentorView(APIView, HeaderLimitOffsetPagination):

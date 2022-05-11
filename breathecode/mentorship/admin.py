@@ -2,7 +2,7 @@ import json, pytz, logging, requests, re
 from django.contrib import admin, messages
 from django import forms
 from .models import MentorProfile, MentorshipService, MentorshipSession, MentorshipBill
-from .actions import generate_mentor_bill, mentor_is_ready
+from .actions import generate_mentor_bills, mentor_is_ready
 from django.utils.html import format_html
 from breathecode.utils.admin import change_field
 from django.contrib.admin import SimpleListFilter
@@ -29,10 +29,12 @@ class MentorForm(forms.ModelForm):
         self.fields['timezone'] = forms.ChoiceField(choices=timezones)
 
 
-def generate_bill(modeladmin, request, queryset):
+def generate_bills(modeladmin, request, queryset):
     mentors = queryset.all()
     for m in mentors:
-        generate_mentor_bill(m, reset=True)
+        bills = generate_mentor_bills(m, reset=True)
+        messages.success(request,
+                         message=f'{len(bills)} bills generated for {m.user.first_name} {m.user.last_name}')
 
 
 def mark_as_active(modeladmin, request, queryset):
@@ -77,7 +79,7 @@ class MentorAdmin(admin.ModelAdmin):
     search_fields = ['name', 'user__first_name', 'user__last_name', 'email', 'user__email']
     list_filter = ['service__academy__slug', 'status', 'service__slug']
     readonly_fields = ('token', )
-    actions = [generate_bill, mark_as_active, generate_slug_based_on_calendly] + change_field(
+    actions = [generate_bills, mark_as_active, generate_slug_based_on_calendly] + change_field(
         ['INNACTIVE', 'INVITED'], name='status')
 
     def current_status(self, obj):

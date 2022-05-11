@@ -120,6 +120,8 @@ class CertificateTestSuite(AdmissionsTestCase):
                 'slug': model['syllabus'].academy_owner.slug,
             },
             'version': model['syllabus_version'].version,
+            'change_log_details': model['syllabus_version'].change_log_details,
+            'status': model['syllabus_version'].status,
             'duration_in_days': model.syllabus.duration_in_days,
             'duration_in_hours': model.syllabus.duration_in_hours,
             'github_url': model.syllabus.github_url,
@@ -216,6 +218,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             'syllabus': 1,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'version': 1,
             **data,
         }
@@ -225,6 +229,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         self.assertEqual(self.all_syllabus_version_dict(), [{
             'id': 1,
             'json': {},
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'syllabus_id': 1,
             'version': 1
         }])
@@ -254,6 +260,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         json = response.json()
         expected = {
             'syllabus': 1,
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'version': model.syllabus_version.version + 1,
             **data,
         }
@@ -265,6 +273,8 @@ class CertificateTestSuite(AdmissionsTestCase):
         }, {
             'id': 2,
             'json': {},
+            'change_log_details': None,
+            'status': 'PUBLISHED',
             'syllabus_id': 1,
             'version': model.syllabus_version.version + 1,
         }])

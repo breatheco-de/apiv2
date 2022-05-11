@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from .views import (ServiceView, MentorView, SessionView, render_html_bill, BillView, ServiceSessionView,
-                    MentorSessionView)
+                    MentorSessionView, MentorBillView)
 
 app_name = 'mentorship'
 urlpatterns = [
@@ -16,6 +16,7 @@ urlpatterns = [
     path('academy/bill/<int:id>/html', render_html_bill),
     path('academy/service/<int:service_id>', ServiceView.as_view(), name='academy_service_id'),
     path('academy/mentor/<int:mentor_id>', MentorView.as_view(), name='academy_mentor_id'),
+    path('academy/mentor/<int:mentor_id>/bill', MentorBillView.as_view(), name='generate_mentor_bill'),
     path('academy/bill', BillView.as_view(), name='academy_bill'),
     path('academy/bill/<int:bill_id>', BillView.as_view(), name='academy_bill_id'),
     path('academy/session/<int:session_id>', SessionView.as_view(), name='academy_session_id'),

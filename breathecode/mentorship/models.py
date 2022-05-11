@@ -310,7 +310,7 @@ class MentorshipSession(models.Model):
     updated_at = models.DateTimeField(auto_now=True, editable=False)
 
     def __str__(self):
-        return f'(Session {self.id} with {str(self.mentor)} and {str(self.mentee)})'
+        return f'(Session {self.id} with {str(self.mentor)} and {str(self.mentee if self.mentee is not None else "no one")})'
 
     def save(self, *args, **kwargs):
 
