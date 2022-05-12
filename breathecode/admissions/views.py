@@ -1196,7 +1196,7 @@ class SyllabusVersionView(APIView):
                 syllabus_version = SyllabusVersion.objects.filter(
                     Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
                     Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
-                ).order_by('-version').first()
+                ).filter(status='PUBLISHED').order_by('-version').first()
 
             if syllabus_version is None and version is not None and version != 'latest':
                 syllabus_version = SyllabusVersion.objects.filter(
@@ -1206,7 +1206,7 @@ class SyllabusVersionView(APIView):
                 ).first()
 
             if syllabus_version is None:
-                raise ValidationException(f'It syllabus version {version} not found',
+                raise ValidationException(f'Syllabus version "{version}" not found or is a draft',
                                           code=404,
                                           slug='syllabus-version-not-found')
 
@@ -1217,6 +1217,10 @@ class SyllabusVersionView(APIView):
             Q(syllabus__id=syllabus_id) | Q(syllabus__slug=syllabus_slug),
             Q(syllabus__academy_owner__id=academy_id) | Q(syllabus__private=False),
         ).order_by('version')
+
+        _status = request.GET.get('status', None)
+        if _status is not None:
+            syllabus_version = syllabus_version.filter(status__in=_status.upper().split(','))
 
         serializer = GetSyllabusVersionSerializer(syllabus_version, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
