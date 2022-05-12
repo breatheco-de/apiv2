@@ -217,50 +217,102 @@ def get_accounted_time(_session):
     return _duration
 
 
-def generate_mentor_bill(mentor, reset=False):
+def last_month_date(current_date):
+    # getting next month
+    # using replace to get to last day + offset
+    # to reach next month
+    nxt_mnth = current_date.replace(day=28, hour=23, minute=59, second=59) + datetime.timedelta(days=4)
 
-    open_bill = MentorshipBill.objects.filter(mentor__id=mentor.id,
-                                              academy__id=mentor.service.academy.id,
-                                              status='DUE').first()
-    if open_bill is None:
-        open_bill = MentorshipBill(mentor=mentor, academy=mentor.service.academy)
+    # subtracting the days from next month date to
+    # get last date of current Month
+    last_datetime = (nxt_mnth - datetime.timedelta(days=nxt_mnth.day))
+
+    return last_datetime
+
+
+def generate_mentor_bills(mentor, reset=False):
+
+    generated_bills = []
+    start_at = None
+    end_at = None
+
+    def get_unpaid_sessions():
+        return MentorshipSession.objects.filter(
+            allow_billing=True, mentor__id=mentor.id,
+            status__in=['COMPLETED', 'FAILED']).filter(started_at__isnull=False).filter(
+                Q(bill__isnull=True)
+                | Q(bill__status='DUE', bill__academy=mentor.service.academy)).order_by('started_at')
+
+    previous_bill = MentorshipBill.objects.filter(mentor__id=mentor.id,
+                                                  academy__id=mentor.service.academy.id,
+                                                  status='DUE').order_by('-started_at').first()
+
+    if previous_bill is not None and previous_bill.ended_at > timezone.now():
+        return generated_bills
+
+    monthly_unpaid_sessions = None
+    while end_at is None or end_at < timezone.now():
+
+        unpaid_sessions = get_unpaid_sessions()
+        #print("Sessions: " + "".join([str(s.started_at) for s in unpaid_sessions]))
+        if unpaid_sessions.count() == 0:
+            return generated_bills
+
+        if previous_bill is None:
+            start_at = unpaid_sessions.first().started_at
+            end_at = last_month_date(start_at)
+        else:
+            start_at = previous_bill.ended_at + datetime.timedelta(seconds=1)
+            end_at = last_month_date(start_at)
+            # raise Exception(f"Starting from {start_at} to {end_at}")
+
+        open_bill = MentorshipBill(mentor=mentor,
+                                   academy=mentor.service.academy,
+                                   started_at=start_at,
+                                   ended_at=end_at)
         open_bill.save()
 
-    unpaid_sessions = MentorshipSession.objects.filter(
-        allow_billing=True, mentor__id=mentor.id, status__in=[
-            'COMPLETED', 'FAILED'
-        ]).filter(Q(bill__isnull=True) | Q(bill__status='DUE', bill__academy=mentor.service.academy))
-    total = {'minutes': 0, 'overtime_minutes': 0}
+        monthly_unpaid_sessions = unpaid_sessions.filter(started_at__gte=start_at, started_at__lte=end_at)
+        print(
+            f'There are {len(monthly_unpaid_sessions)} unpaid sessions starting from {start_at} to {end_at}')
+        total = {'minutes': 0, 'overtime_minutes': 0}
 
-    for session in unpaid_sessions:
-        session.bill = open_bill
+        for session in monthly_unpaid_sessions:
+            session.bill = open_bill
 
-        _result = get_accounted_time(session)
-        session.suggested_accounted_duration = _result['accounted_duration']
-        session.status_message = _result['status_message']
-        # if is null and reset=true all the sessions durations will be rest to the suggested one
-        if session.accounted_duration is None or reset == True:
-            session.accounted_duration = _result['accounted_duration']
+            _result = get_accounted_time(session)
+            session.suggested_accounted_duration = _result['accounted_duration']
+            session.status_message = _result['status_message']
+            # if is null and reset=true all the sessions durations will be rest to the suggested one
+            if session.accounted_duration is None or reset == True:
+                session.accounted_duration = _result['accounted_duration']
 
-        extra_minutes = 0
-        if session.accounted_duration > session.mentor.service.duration:
-            extra_minutes = (session.accounted_duration - session.mentor.service.duration).seconds / 60
+            extra_minutes = 0
+            if session.accounted_duration > session.mentor.service.duration:
+                extra_minutes = (session.accounted_duration - session.mentor.service.duration).seconds / 60
 
-        total['minutes'] = total['minutes'] + (session.accounted_duration.seconds / 60)
-        total['overtime_minutes'] = total['overtime_minutes'] + extra_minutes
+            total['minutes'] = total['minutes'] + (session.accounted_duration.seconds / 60)
+            total['overtime_minutes'] = total['overtime_minutes'] + extra_minutes
 
-        session.save()
+            session.save()
 
-    total['hours'] = round(total['minutes'] / 60, 2)
-    total['price'] = total['hours'] * mentor.price_per_hour
+        total['hours'] = round(total['minutes'] / 60, 2)
+        total['price'] = total['hours'] * mentor.price_per_hour
 
-    open_bill.total_duration_in_hours = total['hours']
-    open_bill.total_duration_in_minutes = total['minutes']
-    open_bill.overtime_minutes = total['overtime_minutes']
-    open_bill.total_price = total['price']
-    open_bill.save()
+        open_bill.total_duration_in_hours = total['hours']
+        open_bill.total_duration_in_minutes = total['minutes']
+        open_bill.overtime_minutes = total['overtime_minutes']
+        open_bill.total_price = total['price']
+        open_bill.save()
 
-    return open_bill
+        generated_bills.append(open_bill)
+        print(f'Added bill with total ammount {open_bill.total_duration_in_hours}')
+
+        # the recently created bill is not the previous because we moving on to the next cycle
+        previous_bill = open_bill
+        print(f'Billing until {end_at} vs {timezone.now()}')
+
+    return generated_bills
 
 
 def mentor_is_ready(mentor):
